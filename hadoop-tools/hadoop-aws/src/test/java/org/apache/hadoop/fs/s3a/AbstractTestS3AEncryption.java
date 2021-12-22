@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 
 import org.junit.Test;
 
@@ -81,10 +82,18 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     skipIfEncryptionTestsDisabled(getFileSystem().getConf());
   }
 
+  /**
+   * Skipping tests when running against mandatory encryption bucket
+   * which allows only certain encryption method
+   */
   @Override
   public void setup() throws Exception {
-    super.setup();
-    requireEncryptedFileSystem();
+    try {
+      super.setup();
+      requireEncryptedFileSystem();
+    } catch (AccessDeniedException e) {
+      skip("Bucket does not allow " + getSSEAlgorithm() + " encryption method");
+    }
   }
 
   /**
