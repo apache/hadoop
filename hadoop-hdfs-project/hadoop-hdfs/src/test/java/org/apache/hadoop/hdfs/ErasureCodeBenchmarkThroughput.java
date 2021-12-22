@@ -382,7 +382,7 @@ public class ErasureCodeBenchmarkThroughput
         throws IOException {
       long count = 0;
       long bytesRead;
-      byte buf[] = new byte[BUFFER_SIZE_MB * 1024 * 1024];
+      byte[] buf = new byte[BUFFER_SIZE_MB * 1024 * 1024];
       while (true) {
         bytesRead = inputStream.read(count, buf, 0, buf.length);
         if (bytesRead < 0) {
@@ -407,7 +407,6 @@ public class ErasureCodeBenchmarkThroughput
         }
       }
       return count;
-
     }
 
     private long readFile(Path path) throws IOException {
@@ -420,6 +419,9 @@ public class ErasureCodeBenchmarkThroughput
         case STATEFUL: totalRead = doStateful(inputStream); break;
         case POSITIONAL: totalRead = doPositional(inputStream); break;
         case RANDOM: totalRead = doRandom(inputStream); break;
+        default:
+          throw new RuntimeException(String.format("Illegal readType: %s",
+              readType));
         }
         System.out.println("Finished " + readType + " read " + path
             + ". Time taken: " + sw.now(TimeUnit.SECONDS) + " s.");
