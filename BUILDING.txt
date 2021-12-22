@@ -57,7 +57,7 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
   $ sudo apt-get install software-properties-common
   $ sudo add-apt-repository ppa:webupd8team/java
   $ sudo apt-get update
-  $ sudo apt-get install oracle-java8-installer
+  $ sudo apt-get -y install openjdk-8-jdk
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
