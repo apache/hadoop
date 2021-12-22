@@ -296,7 +296,7 @@ public class TestBlockScanner {
     conf.setLong(DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND, -1L);
     TestContext ctx = new TestContext(conf, 1);
     try {
-      Assert.assertFalse(ctx.datanode.getBlockScanner().isEnabled());
+      assertFalse(ctx.datanode.getBlockScanner().isEnabled());
     } finally {
       ctx.close();
     }
