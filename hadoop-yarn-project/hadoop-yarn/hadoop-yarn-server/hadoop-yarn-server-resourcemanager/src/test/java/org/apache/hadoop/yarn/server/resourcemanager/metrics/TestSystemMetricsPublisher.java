@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -28,6 +26,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -64,19 +70,33 @@ import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+@RunWith(Parameterized.class)
 public class TestSystemMetricsPublisher {
+
+  @Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {{false, 0}, {true, 1}});
+  }
 
   private static ApplicationHistoryServer timelineServer;
   private static TimelineServiceV1Publisher metricsPublisher;
   private static TimelineStore store;
 
-  @BeforeClass
-  public static void setup() throws Exception {
+  private boolean rmTimelineServerV1PublisherBatchEnabled;
+  private int rmTimelineServerV1PublisherInterval;
+
+  public TestSystemMetricsPublisher(boolean rmTimelineServerV1PublisherBatchEnabled,
+      int rmTimelineServerV1PublisherInterval) {
+    this.rmTimelineServerV1PublisherBatchEnabled = rmTimelineServerV1PublisherBatchEnabled;
+    this.rmTimelineServerV1PublisherInterval = rmTimelineServerV1PublisherInterval;
+  }
+
+  @Before
+  public void setup() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
@@ -87,6 +107,10 @@ public class TestSystemMetricsPublisher {
     conf.setInt(
         YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE,
         2);
+    conf.setBoolean(YarnConfiguration.RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED,
+        rmTimelineServerV1PublisherBatchEnabled);
+    conf.setInt(YarnConfiguration.RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL,
+        rmTimelineServerV1PublisherInterval);
 
     timelineServer = new ApplicationHistoryServer();
     timelineServer.init(conf);
@@ -98,8 +122,8 @@ public class TestSystemMetricsPublisher {
     metricsPublisher.start();
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (metricsPublisher != null) {
       metricsPublisher.stop();
     }
