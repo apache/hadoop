@@ -97,6 +97,22 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   }
 
   @Test
+  public void testVectoredReadAndReadFully()  throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(100, 100));
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      byte[] readFullRes = new byte[100];
+      in.readFully(100, readFullRes);
+      ByteBuffer vecRes = FutureIOSupport.awaitFuture(fileRanges.get(0).getData());
+      Assertions.assertThat(vecRes)
+              .describedAs("Result from vectored read and readFully must match")
+              .isEqualByComparingTo(ByteBuffer.wrap(readFullRes));
+    }
+  }
+
+  @Test
   public void testOverlappingRanges() throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();

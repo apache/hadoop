@@ -24,6 +24,7 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
@@ -913,17 +914,21 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param buffer buffer to fill.
    */
   private void readSingleRange(FileRange range, ByteBuffer buffer) {
+    S3Object objectRange = null;
+    S3ObjectInputStream objectContent = null;
     try {
       long position = range.getOffset();
       int length = range.getLength();
       final String operationName = "readVectored";
-      S3Object objectRange = getS3Object(operationName, position, length);
-      S3ObjectInputStream objectContent = objectRange.getObjectContent();
+      objectRange = getS3Object(operationName, position, length);
+      objectContent = objectRange.getObjectContent();
       populateBuffer(length, buffer, objectContent);
       range.getData().complete(buffer);
     } catch (IOException ex) {
       LOG.error("Exception while reading a range {} ", range, ex);
       range.getData().completeExceptionally(ex);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, objectRange, objectContent);
     }
   }
 
