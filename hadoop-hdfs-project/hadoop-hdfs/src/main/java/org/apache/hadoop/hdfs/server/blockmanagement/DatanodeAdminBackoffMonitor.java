@@ -198,7 +198,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
         int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
         if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
           LOG.warn(
-              "There are {} nodes decommissioning but only {} nodes will be tracked at a time. "
+              "{} nodes are decommissioning but only {} nodes will be tracked at a time. "
                   + "{} nodes are currently queued waiting to be decommissioned.",
               numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
 
@@ -206,7 +206,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           final List<DatanodeDescriptor> unhealthyDns = outOfServiceNodeBlocks.keySet().stream()
               .filter(dn -> !blockManager.isNodeHealthyForDecommissionOrMaintenance(dn))
               .collect(Collectors.toList());
-          identifyUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
+          getUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
             getPendingNodes().add(dn);
             outOfServiceNodeBlocks.remove(dn);
             pendingRep.remove(dn);

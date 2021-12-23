@@ -61,12 +61,9 @@ public class TestDatanodeAdminMonitorBase {
   @Test
   public void testPendingNodesQueueOrdering() {
     final PriorityQueue<DatanodeDescriptor> pendingNodes =
-        new PriorityQueue<>(10,
-            DatanodeAdminMonitorBase.PENDING_NODES_QUEUE_COMPARATOR);
+        new PriorityQueue<>(DatanodeAdminMonitorBase.PENDING_NODES_QUEUE_COMPARATOR);
 
-    for (int i = 0; i < NUM_DATANODE; i++) {
-      pendingNodes.add(NODES[i]);
-    }
+    pendingNodes.addAll(Arrays.asList(NODES));
 
     for (int i = 0; i < NUM_DATANODE; i++) {
       final DatanodeDescriptor dn = pendingNodes.poll();

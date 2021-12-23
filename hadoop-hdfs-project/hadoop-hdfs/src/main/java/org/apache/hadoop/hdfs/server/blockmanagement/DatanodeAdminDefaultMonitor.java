@@ -287,12 +287,12 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
     int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
     if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
       LOG.warn(
-          "There are {} nodes decommissioning but only {} nodes will be tracked at a time. "
+          "{} nodes are decommissioning but only {} nodes will be tracked at a time. "
               + "{} nodes are currently queued waiting to be decommissioned.",
           numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
 
       // Re-queue unhealthy nodes to make space for decommissioning healthy nodes
-      identifyUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
+      getUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
         getPendingNodes().add(dn);
         outOfServiceNodeBlocks.remove(dn);
       });

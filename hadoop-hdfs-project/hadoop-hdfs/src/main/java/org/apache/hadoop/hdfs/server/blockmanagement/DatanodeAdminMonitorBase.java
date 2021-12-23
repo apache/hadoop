@@ -42,7 +42,7 @@ public abstract class DatanodeAdminMonitorBase
    * Sort by lastUpdate time descending order, such that unhealthy
    * nodes are de-prioritized given they cannot be decommissioned.
    */
-  public static final Comparator<DatanodeDescriptor> PENDING_NODES_QUEUE_COMPARATOR =
+  static final Comparator<DatanodeDescriptor> PENDING_NODES_QUEUE_COMPARATOR =
       (dn1, dn2) -> Long.compare(dn2.getLastUpdate(), dn1.getLastUpdate());
 
   protected BlockManager blockManager;
@@ -171,9 +171,9 @@ public abstract class DatanodeAdminMonitorBase
    *
    * @param unhealthyDns The unhealthy datanodes which may be re-queued
    * @param numDecommissioningNodes The total number of nodes being decommissioned
-   * @return List of unhealthy nodes to be re-queued
+   * @return Stream of unhealthy nodes to be re-queued
    */
-  Stream<DatanodeDescriptor> identifyUnhealthyNodesToRequeue(
+  Stream<DatanodeDescriptor> getUnhealthyNodesToRequeue(
       final List<DatanodeDescriptor> unhealthyDns, int numDecommissioningNodes) {
     if (!unhealthyDns.isEmpty()) {
       // Compute the number of unhealthy nodes to re-queue
