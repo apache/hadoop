@@ -54,7 +54,6 @@ import org.apache.hadoop.util.ProcessUtils;
  * //  --minwidth px     skip frames smaller than px (double)
  * //  --reverse         generate stack-reversed FlameGraph / Call tree
  * <p>
- * <p>
  * Example:
  * If Namenode http address is 9870, and ResourceManager http address is 8088,
  * ProfileServlet running with async-profiler setup can be accessed with
@@ -65,7 +64,7 @@ import org.apache.hadoop.util.ProcessUtils;
  * - To collect 10 second CPU profile of pid 12345 (returns FlameGraph svg)
  * curl "http://localhost:9870/prof?pid=12345" (For instance, provide pid of Datanode)
  * - To collect 30 second CPU profile of pid 12345 (returns FlameGraph svg)
- * curl "http://localhost:9870/prof?pid=12345&duration=30"
+ * curl "http://localhost:9870/prof?pid=12345&amp;duration=30"
  * - To collect 1 minute CPU profile of current process and output in tree format (html)
  * curl "http://localhost:9870/prof?output=tree&amp;duration=60"
  * - To collect 10 second heap allocation profile of current process (returns FlameGraph svg)
@@ -166,8 +165,7 @@ public class ProfileServlet extends HttpServlet {
     HTML
   }
 
-  @SuppressWarnings("The class is never serialized nor restored.")
-  private transient final Lock profilerLock = new ReentrantLock();
+  private final Lock profilerLock = new ReentrantLock();
   private transient volatile Process process;
   private final String asyncProfilerHome;
   private Integer pid;
