@@ -80,7 +80,7 @@ public class TestFsVolumeList {
   private String baseDir;
   private BlockScanner blockScanner;
   private final static int NUM_DATANODES = 3;
-  private final static int STORAGES_PER_DATANODE = 5;
+  private final static int STORAGES_PER_DATANODE = 3;
   private final static int DEFAULT_BLOCK_SIZE = 102400;
   private final static int BUFFER_LENGTH = 1024;
 
@@ -640,7 +640,7 @@ public class TestFsVolumeList {
     // Enable datanode disk metrics collector.
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY, 30);
     // Enable excluding slow disks when choosing volume.
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_BE_EXCLUDED_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, 1);
     // Ensure that each volume capacity is larger than the DEFAULT_BLOCK_SIZE.
     long capacity = 10 * DEFAULT_BLOCK_SIZE;
     long[][] capacities = new long[NUM_DATANODES][STORAGES_PER_DATANODE];
@@ -704,9 +704,9 @@ public class TestFsVolumeList {
     // Wait until the data on the slow disk is collected successfully.
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override public Boolean get() {
-        return dn0.getDiskMetrics().getSlowDisksToBeExcluded().size() == 1 &&
-            dn1.getDiskMetrics().getSlowDisksToBeExcluded().size() == 1 &&
-            dn2.getDiskMetrics().getSlowDisksToBeExcluded().size() == 1;
+        return dn0.getDiskMetrics().getSlowDisksToExclude().size() == 1 &&
+            dn1.getDiskMetrics().getSlowDisksToExclude().size() == 1 &&
+            dn2.getDiskMetrics().getSlowDisksToExclude().size() == 1;
       }
     }, 1000, 5000);
 

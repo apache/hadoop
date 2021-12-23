@@ -107,9 +107,9 @@ class FsVolumeList {
 
     // Exclude slow disks when choosing volume.
     if (diskMetrics != null) {
-      List<String> slowDisksToBeExcluded = diskMetrics.getSlowDisksToBeExcluded();
+      List<String> slowDisksToExclude = diskMetrics.getSlowDisksToExclude();
       list = list.stream()
-          .filter(volume -> !slowDisksToBeExcluded.contains(volume.getBaseURI().getPath()))
+          .filter(volume -> !slowDisksToExclude.contains(volume.getBaseURI().getPath()))
           .collect(Collectors.toList());
     }
 

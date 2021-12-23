@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -77,11 +78,11 @@ public class DataNodeDiskMetrics {
   /**
    * The number of slow disks that needs to be excluded.
    */
-  private int maxSlowDisksToBeExcluded;
+  private int maxSlowDisksToExclude;
   /**
    * List of slow disks that need to be excluded.
    */
-  private List<String> slowDisksToBeExcluded = new ArrayList<>();
+  private List<String> slowDisksToExclude = new ArrayList<>();
 
   public DataNodeDiskMetrics(DataNode dn, long diskOutlierDetectionIntervalMs,
       Configuration conf) {
@@ -93,9 +94,9 @@ public class DataNodeDiskMetrics {
     lowThresholdMs =
         conf.getLong(DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY,
             DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT);
-    maxSlowDisksToBeExcluded =
-        conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_BE_EXCLUDED_KEY,
-            DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_BE_EXCLUDED_DEFAULT);
+    maxSlowDisksToExclude =
+        conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY,
+            DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT);
     slowDiskDetector =
         new OutlierDetector(minOutlierDetectionDisks, lowThresholdMs);
     shouldRun = true;
@@ -144,14 +145,19 @@ public class DataNodeDiskMetrics {
             detectAndUpdateDiskOutliers(metadataOpStats, readIoStats,
                 writeIoStats);
 
-            // Sort the slow disks by latency.
-            if (maxSlowDisksToBeExcluded > 0) {
+            // Sort the slow disks by latency and .
+            if (maxSlowDisksToExclude > 0) {
               ArrayList<DiskLatency> diskLatencies = new ArrayList<>();
               for (Map.Entry<String, Map<DiskOp, Double>> diskStats :
                   diskOutliersStats.entrySet()) {
                 diskLatencies.add(new DiskLatency(diskStats.getKey(), diskStats.getValue()));
               }
-              sortSlowDisks(diskLatencies);
+
+              Collections.sort(diskLatencies, (o1, o2)
+                  -> Double.compare(o2.getMaxLatency(), o1.getMaxLatency()));
+
+              slowDisksToExclude = diskLatencies.stream().limit(maxSlowDisksToExclude)
+                  .map(DiskLatency::getSlowDisk).collect(Collectors.toList());
             }
           }
 
@@ -195,29 +201,6 @@ public class DataNodeDiskMetrics {
       diskOutliersStats = diskStats;
       LOG.debug("Updated disk outliers.");
     }
-  }
-
-  private void sortSlowDisks(ArrayList<DiskLatency> diskLatencies) {
-    if (diskOutliersStats.isEmpty()) {
-      return;
-    }
-
-    final PriorityQueue<DiskLatency> topNReports = new PriorityQueue<>(
-        diskLatencies.size(),
-        (o1, o2) -> Doubles.compare(
-            o1.getMaxLatency(), o2.getMaxLatency()));
-
-    for (DiskLatency diskLatency : diskLatencies) {
-      if (topNReports.size() < maxSlowDisksToBeExcluded) {
-        topNReports.add(diskLatency);
-      } else if (topNReports.peek().getMaxLatency() <
-          diskLatency.getMaxLatency()) {
-        topNReports.poll();
-        topNReports.add(diskLatency);
-      }
-    }
-    slowDisksToBeExcluded =
-        topNReports.stream().map(DiskLatency::getSlowDisk).collect(Collectors.toList());
   }
 
   /**
@@ -285,7 +268,7 @@ public class DataNodeDiskMetrics {
     }
   }
 
-  public List<String> getSlowDisksToBeExcluded() {
-    return slowDisksToBeExcluded;
+  public List<String> getSlowDisksToExclude() {
+    return slowDisksToExclude;
   }
 }
