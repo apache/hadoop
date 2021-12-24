@@ -69,9 +69,11 @@ Following options from async-profiler can be specified as query paramater.
 
 
 Example:
-If Namenode http address is 9870, and ResourceManager http address is 8088,
-ProfileServlet running with async-profiler setup can be accessed with
-http://localhost:9870/prof and http://localhost:8088/prof
+If Namenode http address is localhost:9870, and ResourceManager http
+address is localhost:8088, ProfileServlet running with async-profiler
+setup can be accessed with http://localhost:9870/prof and
+http://localhost:8088/prof for Namenode and ResourceManager processes
+respectively.
 
 Diving deep into some params:
 

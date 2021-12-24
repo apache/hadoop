@@ -55,9 +55,10 @@ import org.apache.hadoop.util.ProcessUtils;
  * //  --reverse         generate stack-reversed FlameGraph / Call tree
  * <p>
  * Example:
- * If Namenode http address is 9870, and ResourceManager http address is 8088,
+ * If Namenode http address is localhost:9870, and ResourceManager http address is localhost:8088,
  * ProfileServlet running with async-profiler setup can be accessed with
- * http://localhost:9870/prof and http://localhost:8088/prof
+ * http://localhost:9870/prof and http://localhost:8088/prof for Namenode and ResourceManager
+ * processes respectively.
  * Deep dive into some params:
  * - To collect 10 second CPU profile of current process i.e. Namenode (returns FlameGraph svg)
  * curl "http://localhost:9870/prof"
