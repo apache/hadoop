@@ -240,7 +240,7 @@ public class AuxServices extends AbstractService
     }
 
     return AuxiliaryServiceWithCustomClassLoader.getInstance(conf, className,
-        appLocalClassPath, getSystemClasses(service, className));
+        appLocalClassPath, getSystemClasses(service));
   }
 
   /**
@@ -292,7 +292,7 @@ public class AuxServices extends AbstractService
           + " is using the custom classloader with classpath " + destFiles);
       return AuxiliaryServiceWithCustomClassLoader.getInstance(conf,
           className, StringUtils.join(File.pathSeparatorChar, destFiles),
-          getSystemClasses(service, className));
+          getSystemClasses(service));
     } else {
       return createAuxServiceFromConfiguration(service);
     }
@@ -681,15 +681,12 @@ public class AuxServices extends AbstractService
     return serviceConf.getProperty(CLASS_NAME);
   }
 
-  private static String[] getSystemClasses(AuxServiceRecord service, String
-      className) {
-    AuxServiceConfiguration serviceConf =
-        service.getConfiguration();
-    if (serviceConf == null) {
-      return new String[]{className};
+  private static String[] getSystemClasses(AuxServiceRecord service) {
+    AuxServiceConfiguration serviceConf = service.getConfiguration();
+    if (serviceConf == null || serviceConf.getProperty(SYSTEM_CLASSES) == null) {
+      return new String[]{};
     }
-    return StringUtils.split(serviceConf.getProperty(SYSTEM_CLASSES,
-        className));
+    return StringUtils.split(serviceConf.getProperty(SYSTEM_CLASSES));
   }
 
   /**
