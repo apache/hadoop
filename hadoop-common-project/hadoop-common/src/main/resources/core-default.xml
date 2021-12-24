@@ -78,7 +78,7 @@
   <value>false</value>
   <description>
     Indicates if administrator ACLs are required to access
-    instrumentation servlets (JMX, METRICS, CONF, STACKS).
+    instrumentation servlets (JMX, METRICS, CONF, STACKS, PROF).
   </description>
 </property>
 

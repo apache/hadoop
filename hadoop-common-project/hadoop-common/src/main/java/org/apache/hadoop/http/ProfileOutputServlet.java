@@ -48,6 +48,13 @@ public class ProfileOutputServlet extends DefaultServlet {
   @Override
   protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
       throws ServletException, IOException {
+    if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(), req, resp)) {
+      resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      ProfileServlet.setResponseHeader(resp);
+      resp.getWriter().write("Unauthorized: Instrumentation access is not allowed!");
+      return;
+    }
+
     String absoluteDiskPath = getServletContext().getRealPath(req.getPathInfo());
     File requestedFile = new File(absoluteDiskPath);
     // async-profiler version 1.4 writes 'Started [cpu] profiling' to output file when profiler is
