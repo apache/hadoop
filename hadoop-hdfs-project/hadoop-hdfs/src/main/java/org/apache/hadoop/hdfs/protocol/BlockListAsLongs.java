@@ -482,7 +482,7 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
     public Iterator<BlockReportReplica> iterator() {
       return new Iterator<BlockReportReplica>() {
         private final BlockReportReplica block = new BlockReportReplica();
-        int idx = 0;
+        private int idx = 0;
         private int currentBlockIndex = 0;
 
         @Override
