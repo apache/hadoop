@@ -108,7 +108,7 @@ public class DNConf {
   private final long lifelineIntervalMs;
   volatile long blockReportInterval;
   volatile long blockReportSplitThreshold;
-  final boolean peerStatsEnabled;
+  volatile boolean peerStatsEnabled;
   final boolean diskStatsEnabled;
   final long outliersReportIntervalMs;
   final long ibrInterval;
@@ -506,5 +506,9 @@ public class DNConf {
   void setInitBRDelayMs(String delayMs) {
     dn.getConf().set(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, delayMs);
     initBlockReportDelay();
+  }
+
+  void setPeerStatsEnabled(boolean enablePeerStats) {
+    peerStatsEnabled = enablePeerStats;
   }
 }
