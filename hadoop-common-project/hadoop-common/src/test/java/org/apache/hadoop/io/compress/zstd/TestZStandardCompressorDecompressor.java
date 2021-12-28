@@ -282,8 +282,8 @@ public class TestZStandardCompressorDecompressor {
       byte[] result = new byte[byteSize];
       inflateIn.read(result);
       assertArrayEquals(
-              "original array not equals compress/decompressed array", result,
-              bytes);
+              "original array not equals compress/decompressed array", bytes,
+              result);
     } finally {
       IOUtils.closeStream(deflateOut);
       IOUtils.closeStream(inflateIn);
