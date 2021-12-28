@@ -156,6 +156,8 @@ public class CachedDNSToSwitchMapping extends AbstractDNSToSwitchMapping {
 
   @Override
   public void reloadCachedMappings(List<String> names) {
+    // normalize all input names to be in the form of IP addresses
+    names = NetUtils.normalizeHostNames(names);
     for (String name : names) {
       cache.remove(name);
     }
