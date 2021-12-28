@@ -25,6 +25,7 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.*;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,6 +39,8 @@ import java.util.function.Supplier;
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -653,5 +656,39 @@ public class TestDataNodeMetrics {
     assertCounter("HeartbeatsForns1-nn0NumOps", 1L, rb);
     assertCounter("HeartbeatsForns1-nn1NumOps", 1L, rb);
     assertCounter("HeartbeatsNumOps", 4L, rb);
+  }
+
+  @Test
+  public void testNodeLocalMetrics() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    DomainSocket.disableBindPathValidation();
+    conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
+        new File(sockDir.getDir(),
+            "TestShortCircuitLocalRead._PORT.sock").getAbsolutePath());
+    SimulatedFSDataset.setFactory(conf);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      Path testFile = new Path("/testNodeLocalMetrics.txt");
+      long file_len = 10;
+      DFSTestUtil.createFile(fs, testFile, file_len, (short)1, 1L);
+      DFSTestUtil.readFile(fs, testFile);
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+
+      // Write related metrics
+      assertCounter("WritesFromLocalClient", 1L, rb);
+      // Read related metrics
+      assertCounter("ReadsFromLocalClient", 1L, rb);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }
