@@ -5522,6 +5522,14 @@
 </property>
 
 <property>
+  <name>dfs.pipeline.slownode</name>
+  <value>false</value>
+  <description>
+    If true, allows slownode information to be replied to Client via PipelineAck.
+  </description>
+</property>
+
+<property>
   <name>dfs.qjournal.accept-recovery.timeout.ms</name>
   <value>120000</value>
   <description>
@@ -6308,6 +6316,16 @@
     <description>
       Nameservice resolver implementation used by datanode.
       Effective with dfs.nameservices.resolution-enabled on.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.mark.slownode.as.badnode.threshold</name>
+    <value>10</value>
+    <description>
+      The threshold to mark a slownode as a badnode. If we get PipelineAck from
+      a slownode continuously for ${dfs.client.treat.slownode.as.badnode.threshold}
+      times, we should mark it as a badnode.
     </description>
   </property>
 </configuration>

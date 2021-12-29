@@ -376,6 +376,7 @@ public class DataNode extends ReconfigurableBase
   private final String confVersion;
   private final long maxNumberOfBlocksToLog;
   private final boolean pipelineSupportECN;
+  private final boolean pipelineSupportSlownode;
 
   private final List<String> usersWithLocalPathAccess;
   private final boolean connectToDnViaHostname;
@@ -433,6 +434,7 @@ public class DataNode extends ReconfigurableBase
     this.connectToDnViaHostname = false;
     this.blockScanner = new BlockScanner(this, this.getConf());
     this.pipelineSupportECN = false;
+    this.pipelineSupportSlownode = false;
     this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
     this.dnConf = new DNConf(this);
     initOOBTimeout();
@@ -471,6 +473,9 @@ public class DataNode extends ReconfigurableBase
     this.pipelineSupportECN = conf.getBoolean(
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED,
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED_DEFAULT);
+    this.pipelineSupportSlownode = conf.getBoolean(
+        DFSConfigKeys.DFS_PIPELINE_SLOWNODE_ENABLED,
+        DFSConfigKeys.DFS_PIPELINE_SLOWNODE_ENABLED_DEFAULT);
 
     confVersion = "core-" +
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
@@ -673,6 +678,23 @@ public class DataNode extends ReconfigurableBase
         .getSystemLoadAverage();
     return load > NUM_CORES * CONGESTION_RATIO ? PipelineAck.ECN.CONGESTED :
         PipelineAck.ECN.SUPPORTED;
+  }
+
+  /**
+   * The SLOW bit for the DataNode of the specific BlockPool.
+   * The DataNode should return:
+   * <ul>
+   *   <li>SLOW.DISABLED when SLOW is disabled
+   *   <li>SLOW.NORMAL when SLOW is enabled and DN is not slownode.</li>
+   *   <li>SLOW.SLOW when SLOW is enabled and DN is slownode.</li>
+   * </ul>
+   */
+  public PipelineAck.SLOW getSLOWByBlockPoolId(String bpId) {
+    if (!pipelineSupportSlownode) {
+      return PipelineAck.SLOW.DISABLED;
+    }
+    return isSlownodeByBlockPoolId(bpId) ? PipelineAck.SLOW.SLOW :
+        PipelineAck.SLOW.NORMAL;
   }
 
   public FileIoProvider getFileIoProvider() {
