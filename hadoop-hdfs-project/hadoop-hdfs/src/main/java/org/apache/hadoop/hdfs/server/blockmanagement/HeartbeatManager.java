@@ -256,9 +256,12 @@ class HeartbeatManager implements DatanodeStatistics {
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
     stats.subtract(node);
-    blockManager.updateHeartbeat(node, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
-    stats.add(node);
+    try {
+      blockManager.updateHeartbeat(node, reports, cacheCapacity, cacheUsed,
+          xceiverCount, failedVolumes, volumeFailureSummary);
+    } finally {
+      stats.add(node);
+    }
   }
 
   synchronized void updateLifeline(final DatanodeDescriptor node,
@@ -266,13 +269,16 @@ class HeartbeatManager implements DatanodeStatistics {
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
     stats.subtract(node);
-    // This intentionally calls updateHeartbeatState instead of
-    // updateHeartbeat, because we don't want to modify the
-    // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
-    // not count as arrival of the first heartbeat.
-    blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
-    stats.add(node);
+    try {
+      // This intentionally calls updateHeartbeatState instead of
+      // updateHeartbeat, because we don't want to modify the
+      // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
+      // not count as arrival of the first heartbeat.
+      blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
+          xceiverCount, failedVolumes, volumeFailureSummary);
+    } finally {
+      stats.add(node);
+    }
   }
 
   synchronized void startDecommission(final DatanodeDescriptor node) {
