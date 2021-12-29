@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecommissioningEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -96,6 +97,10 @@ public class DecommissioningNodesWatcher {
 
     private long lastUpdateTime;
 
+    // Maintenance is equivalent to Decommissioning except the node will
+    // not be put into Decommissioned state.
+    private boolean maintenance;
+
     public DecommissioningNodeContext(NodeId nodeId, int timeoutSec) {
       this.nodeId = nodeId;
       this.appIds = new ArrayList<>();
@@ -105,6 +110,14 @@ public class DecommissioningNodesWatcher {
 
     void updateTimeout(int timeoutSec) {
       this.timeoutMs = 1000L * timeoutSec;
+    }
+
+    public void setMaintenance(boolean maintenance) {
+      this.maintenance = maintenance;
+    }
+
+    public boolean isMaintenance() {
+      return maintenance;
     }
   }
 
@@ -149,15 +162,28 @@ public class DecommissioningNodesWatcher {
       } else if (now - context.decommissionedTime > 60000L) {
         decomNodes.remove(rmNode.getNodeID());
       }
-    } else if (rmNode.getState() == NodeState.DECOMMISSIONING) {
+    } else if (rmNode.getState() == NodeState.DECOMMISSIONING ||
+        remoteNodeStatus.isMaintenance()) {
+      Integer decommissioningTimeout = rmNode.getDecommissioningTimeout() != null ?
+          rmNode.getDecommissioningTimeout() : -1;
       if (context == null) {
         context = new DecommissioningNodeContext(rmNode.getNodeID(),
-            rmNode.getDecommissioningTimeout());
+            decommissioningTimeout);
+        if(remoteNodeStatus.isMaintenance() && !context.isMaintenance()) {
+          context.setMaintenance(true);
+          this.rmContext.getDispatcher().getEventHandler()
+              .handle(new RMNodeDecommissioningEvent(rmNode.getNodeID(), -1));
+        }
         decomNodes.put(rmNode.getNodeID(), context);
         context.nodeState = rmNode.getState();
         context.decommissionedTime = 0;
+      } else if (!remoteNodeStatus.isMaintenance() && context.isMaintenance()) {
+        decomNodes.remove(rmNode.getNodeID());
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMNodeEvent(rmNode.getNodeID(), RMNodeEventType.RECOMMISSION));
+        return;
       }
-      context.updateTimeout(rmNode.getDecommissioningTimeout());
+      context.updateTimeout(decommissioningTimeout);
       context.lastUpdateTime = now;
 
       context.appIds = rmNode.getRunningApps();
@@ -231,7 +257,7 @@ public class DecommissioningNodesWatcher {
 
   public DecommissioningNodeStatus checkDecommissioningStatus(NodeId nodeId) {
     DecommissioningNodeContext context = decomNodes.get(nodeId);
-    if (context == null) {
+    if (context == null || context.isMaintenance()) {
       return DecommissioningNodeStatus.NONE;
     }
 

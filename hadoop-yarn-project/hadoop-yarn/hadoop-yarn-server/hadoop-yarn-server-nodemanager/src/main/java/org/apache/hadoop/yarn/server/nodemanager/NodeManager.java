@@ -29,6 +29,7 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -85,6 +86,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -481,6 +483,22 @@ public class NodeManager extends CompositeService
     ((NMContext) context).setNodeStatusUpdater(nodeStatusUpdater);
     nmStore.setNodeStatusUpdater(nodeStatusUpdater);
 
+    String[] yarnppServices =
+        conf.getStrings(YarnConfiguration.YARNPP_NM_SERVICES);
+    if (yarnppServices != null) {
+      for (String yarnppService : yarnppServices) {
+        Class<?> clazz = conf.getClassByNameOrNull(yarnppService);
+
+        if (clazz == null || !AbstractService.class.isAssignableFrom(clazz))
+          throw new RuntimeException(
+              clazz + " does not implement " + AbstractService.class);
+
+        Constructor<?> cons = clazz.getConstructor(NodeManager.class);
+        AbstractService service = (AbstractService) cons.newInstance(this);
+        addService(service);
+      }
+    }
+
     // Do secure login before calling init for added services.
     try {
       doSecureLogin();
@@ -647,6 +665,7 @@ public class NodeManager extends CompositeService
     private boolean isDecommissioned = false;
     private final ConcurrentLinkedQueue<LogAggregationReport>
         logAggregationReportForApps;
+    private boolean maintenance = false;
     private NodeStatusUpdater nodeStatusUpdater;
     private final boolean isDistSchedulingEnabled;
     private DeletionService deletionService;
@@ -802,6 +821,14 @@ public class NodeManager extends CompositeService
     public ConcurrentLinkedQueue<LogAggregationReport>
         getLogAggregationStatusForApps() {
       return this.logAggregationReportForApps;
+    }
+
+    public boolean isMaintenance() {
+      return this.maintenance;
+    }
+
+    public void setMaintenance(boolean maintenance) {
+      this.maintenance = maintenance;
     }
 
     public NodeStatusUpdater getNodeStatusUpdater() {

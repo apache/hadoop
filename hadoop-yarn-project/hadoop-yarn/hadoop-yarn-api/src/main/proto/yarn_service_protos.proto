@@ -573,3 +573,15 @@ message ContainerLocalizationStatusesProto {
   optional ContainerIdProto container_id = 1;
   repeated LocalizationStatusProto localization_statuses = 2;
 }
+
+/////// MaintenanceTracker protos  /////////////////
+//////////////////////////////////////////////////////
+message SetMaintenanceModeRequestProto {
+  optional bool maintenance = 1;
+  optional int64 minimum_maintenance_time = 2;
+}
+
+message SetMaintenanceModeResponseProto {
+  optional int64 running_containers_count = 1;
+  optional int64 elapsed_time_since_last_retention_in_milliseconds = 2 [default = 18000000];
+}

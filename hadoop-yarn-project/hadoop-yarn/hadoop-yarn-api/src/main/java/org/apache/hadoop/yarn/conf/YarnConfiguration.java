@@ -4620,6 +4620,28 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX =
       "workflowid:";
 
+  /** Maintenance tracker ports and host name properties */
+  public static final int DEFAULT_NM_MAINTENANCE_TRACKER_PORT = 9034;
+  public static final String DEFAULT_NM_MAINTENANCE_TRACKER_ADDRESS =
+      "0.0.0.0:" + DEFAULT_NM_MAINTENANCE_TRACKER_PORT;
+
+  /** Timeout for a Node to react to the maintenance command. */
+  public static final String MAINTENANCE_COMMAND_TIMEOUT =
+      YarnConfiguration.YARN_PREFIX + "rpc.maintenance-command-timeout";
+
+  public static final int DEFAULT_MAINTENANCE_COMMAND_TIMEOUT_MS = 60000;
+
+  public static final String NM_MAINTENANCE_MODE_PROVIDER_CLASSNAMES =
+      YarnConfiguration.NM_PREFIX + "maintenance.mode.provider.classnames";
+  public static final String NM_MAINTENANCE_MODE_CONSUMER_CLASSNAMES =
+      YarnConfiguration.NM_PREFIX + "maintenance.mode.consumer.classnames";
+
+  /**
+   * All required NM Services classes need to be added in config for it to
+   * be started.
+   */
+  public static final String YARNPP_NM_SERVICES = "yarnpp.nm.services";
+
   public YarnConfiguration() {
     super();
   }

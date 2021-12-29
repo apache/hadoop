@@ -525,10 +525,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     ResourceUtilization nodeUtilization = getNodeUtilization();
     List<org.apache.hadoop.yarn.api.records.Container> increasedContainers
         = getIncreasedContainers();
-    NodeStatus nodeStatus =
-        NodeStatus.newInstance(nodeId, responseId, containersStatuses,
-          createKeepAliveApplicationList(), nodeHealthStatus,
-          containersUtilization, nodeUtilization, increasedContainers);
+    boolean decommissioningMode = ((NMContext) context).isMaintenance();
+    NodeStatus nodeStatus = NodeStatus
+        .newInstance(nodeId, responseId, containersStatuses,
+            createKeepAliveApplicationList(), nodeHealthStatus,
+            containersUtilization, nodeUtilization, increasedContainers,
+            decommissioningMode);
 
     nodeStatus.setOpportunisticContainersStatus(
         getOpportunisticContainersStatus());

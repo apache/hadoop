@@ -72,6 +72,33 @@ public abstract class NodeStatus {
     return nodeStatus;
   }
 
+  /**
+   * Create a new {@code NodeStatus}.
+   * @param nodeId Identifier for this node.
+   * @param responseId Identifier for the response.
+   * @param containerStatuses Status of the containers running in this node.
+   * @param keepAliveApplications Applications to keep alive.
+   * @param nodeHealthStatus Health status of the node.
+   * @param containersUtilization Utilization of the containers in this node.
+   * @param nodeUtilization Utilization of the node.
+   * @param increasedContainers Containers whose resource has been increased.
+   * @param maintenance Node is marked for maintenance.
+   * @return New {@code NodeStatus} with the provided information.
+   */
+  public static NodeStatus newInstance(NodeId nodeId, int responseId,
+      List<ContainerStatus> containerStatuses,
+      List<ApplicationId> keepAliveApplications,
+      NodeHealthStatus nodeHealthStatus,
+      ResourceUtilization containersUtilization,
+      ResourceUtilization nodeUtilization,
+      List<Container> increasedContainers, boolean maintenance) {
+    NodeStatus nodeStatus = newInstance(nodeId, responseId, containerStatuses,
+        keepAliveApplications, nodeHealthStatus, containersUtilization,
+        nodeUtilization, increasedContainers);
+    nodeStatus.setMaintenance(maintenance);
+    return nodeStatus;
+  }
+
   public abstract NodeId getNodeId();
   public abstract int getResponseId();
   
@@ -132,4 +159,10 @@ public abstract class NodeStatus {
   @Unstable
   public abstract void setOpportunisticContainersStatus(
       OpportunisticContainersStatus opportunisticContainersStatus);
+
+  @Private
+  public abstract void setMaintenance(boolean maintenance);
+
+  @Private
+  public abstract boolean isMaintenance();
 }
