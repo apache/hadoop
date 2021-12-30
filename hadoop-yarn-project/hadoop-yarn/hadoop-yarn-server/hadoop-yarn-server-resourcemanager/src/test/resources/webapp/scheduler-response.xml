@@ -8,6 +8,7 @@
     <queueName>root</queueName>
     <queuePath>root</queuePath>
     <maxParallelApps>2147483647</maxParallelApps>
+    <isAbsoluteResource>false</isAbsoluteResource>
     <queues>
       <queue>
         <queuePath>root.a</queuePath>

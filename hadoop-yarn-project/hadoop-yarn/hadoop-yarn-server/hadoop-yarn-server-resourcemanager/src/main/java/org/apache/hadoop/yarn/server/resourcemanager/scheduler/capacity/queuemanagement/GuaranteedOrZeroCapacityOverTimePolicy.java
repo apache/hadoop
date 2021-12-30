@@ -20,35 +20,22 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .SchedulerDynamicEditException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .AbstractAutoCreatedLeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .AutoCreatedLeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .AutoCreatedLeafQueueConfig;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .AutoCreatedQueueManagementPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractAutoCreatedLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueueConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueManagementPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .CapacitySchedulerContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .LeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .ManagedParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .ParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .QueueCapacities;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .QueueManagementChange;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
-    .FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementChange;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -82,7 +69,6 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     implements AutoCreatedQueueManagementPolicy {
 
   private static final int DEFAULT_QUEUE_PRINT_SIZE_LIMIT = 25;
-  private CapacitySchedulerContext scheduler;
   private ManagedParentQueue managedParentQueue;
 
   private static final Logger LOG =
@@ -136,7 +122,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       return false;
     }
 
-    public boolean createLeafQueueStateIfNotExists(LeafQueue leafQueue,
+    public boolean createLeafQueueStateIfNotExists(AbstractLeafQueue leafQueue,
         String partition) {
       return addLeafQueueStateIfNotExists(leafQueue.getQueuePath(), partition,
           new LeafQueueStatePerPartition());
@@ -275,9 +261,9 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
     @Override
     public int compare(FiCaSchedulerApp app1, FiCaSchedulerApp app2) {
-      RMApp rmApp1 = scheduler.getRMContext().getRMApps().get(
+      RMApp rmApp1 = managedParentQueue.getQueueContext().getRMApp(
           app1.getApplicationId());
-      RMApp rmApp2 = scheduler.getRMContext().getRMApps().get(
+      RMApp rmApp2 = managedParentQueue.getQueueContext().getRMApp(
           app2.getApplicationId());
       if (rmApp1 != null && rmApp2 != null) {
         return Long.compare(rmApp1.getSubmitTime(), rmApp2.getSubmitTime());
@@ -295,10 +281,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       new PendingApplicationComparator();
 
   @Override
-  public void init(final CapacitySchedulerContext schedulerContext,
-      final ParentQueue parentQueue) throws IOException {
-    this.scheduler = schedulerContext;
-
+  public void init(final ParentQueue parentQueue) throws IOException {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -384,7 +367,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       //Populate new entitlements
       return leafQueueEntitlements.mapToQueueManagementChanges((leafQueueName, capacities) -> {
         AutoCreatedLeafQueue leafQueue =
-            (AutoCreatedLeafQueue) scheduler.getCapacitySchedulerQueueManager()
+            (AutoCreatedLeafQueue) managedParentQueue.getQueueContext().getQueueManager()
                 .getQueue(leafQueueName);
         AutoCreatedLeafQueueConfig newTemplate = buildTemplate(capacities);
         return new QueueManagementChange.UpdateQueue(leafQueue, newTemplate);
@@ -482,9 +465,9 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       Set<String> newQueues = new HashSet<>();
 
       for (CSQueue newQueue : managedParentQueue.getChildQueues()) {
-        if (newQueue instanceof LeafQueue) {
+        if (newQueue instanceof AbstractLeafQueue) {
           for (String nodeLabel : leafQueueTemplateNodeLabels) {
-            leafQueueState.createLeafQueueStateIfNotExists((LeafQueue) newQueue,
+            leafQueueState.createLeafQueueStateIfNotExists((AbstractLeafQueue) newQueue,
                 nodeLabel);
             newPartitions.add(nodeLabel);
           }
@@ -590,7 +573,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       if (leafQueue != null) {
         if (isActive(leafQueue, nodeLabel) && !hasPendingApps(leafQueue)) {
           QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueue(leafQueue);
-          updateToZeroCapacity(capacities, nodeLabel, (LeafQueue)childQueue);
+          updateToZeroCapacity(capacities, nodeLabel, (AbstractLeafQueue) childQueue);
           deactivatedQueues.put(leafQueue.getQueuePath(), leafQueueTemplateCapacities);
         }
       } else {
@@ -663,7 +646,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
                   .mergeCapacities(updatedQueueTemplate.getQueueCapacities());
               leafQueue.getQueueResourceQuotas()
                   .setConfiguredMinResource(Resources.multiply(
-                      this.scheduler.getClusterResource(), updatedQueueTemplate
+                      managedParentQueue.getQueueContext().getClusterResource(),
+                      updatedQueueTemplate
                           .getQueueCapacities().getCapacity(nodeLabel)));
               deactivate(leafQueue, nodeLabel);
             }
@@ -705,8 +689,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   @Override
-  public void reinitialize(CapacitySchedulerContext schedulerContext,
-      final ParentQueue parentQueue) throws IOException {
+  public void reinitialize(final ParentQueue parentQueue) throws IOException {
     if (!(parentQueue instanceof ManagedParentQueue)) {
       throw new IllegalStateException(
           "Expected instance of type " + ManagedParentQueue.class + " found  "
@@ -780,7 +763,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   private void updateToZeroCapacity(QueueCapacities capacities,
-      String nodeLabel, LeafQueue leafQueue) {
+      String nodeLabel, AbstractLeafQueue leafQueue) {
     capacities.setCapacity(nodeLabel, 0.0f);
     capacities.setMaximumCapacity(nodeLabel,
         leafQueueTemplateCapacities.getMaximumCapacity(nodeLabel));
@@ -801,7 +784,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   @VisibleForTesting
-  LeafQueueStatePerPartition getLeafQueueState(LeafQueue queue,
+  LeafQueueStatePerPartition getLeafQueueState(AbstractLeafQueue queue,
       String partition) throws SchedulerDynamicEditException {
     readLock.lock();
     try {
