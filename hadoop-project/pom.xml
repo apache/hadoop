@@ -129,7 +129,7 @@
     <okhttp.version>2.7.5</okhttp.version>
     <jdom.version>1.1</jdom.version>
     <grizzly.version>2.2.21</grizzly.version>
-    <gson.version>2.2.4</gson.version>
+    <gson.version>2.8.9</gson.version>
     <htrace3.version>3.1.0-incubating</htrace3.version>
     <htrace4.version>4.1.0-incubating</htrace4.version>
     <metrics.version>3.2.4</metrics.version>
