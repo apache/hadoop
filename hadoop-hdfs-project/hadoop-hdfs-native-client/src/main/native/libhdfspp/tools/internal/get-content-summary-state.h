@@ -30,8 +30,8 @@ struct GetContentSummaryState {
   GetContentSummaryState(std::function<void(const hdfs::Status &)> handler,
                          const uint64_t request_counter,
                          const bool find_is_done)
-      : handler(std::move(handler)), request_counter(request_counter),
-        find_is_done(find_is_done), status(), lock() {}
+      : handler{std::move(handler)}, request_counter{request_counter},
+        find_is_done{find_is_done} {}
 
   const std::function<void(const hdfs::Status &)> handler;
 

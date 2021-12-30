@@ -23,8 +23,8 @@
 #include <sstream>
 #include <string>
 
-#include "get-content-summary-state.h"
 #include "hdfs-du.h"
+#include "internal/get-content-summary-state.h"
 #include "tools_common.h"
 
 namespace hdfs::tools {
@@ -39,8 +39,8 @@ bool Du::Initialize() {
   add_options("path", po::value<std::string>(),
               "The path indicating the filesystem that needs to be du-ed");
 
-  // We allow only one argument to be passed to this tool. An exception is
-  // thrown if multiple arguments are passed.
+  // We allow only one positional argument to be passed to this tool. An
+  // exception is thrown if multiple arguments are passed.
   pos_opt_desc_.add("path", 1);
 
   po::store(po::command_line_parser(argc_, argv_)
@@ -142,7 +142,7 @@ bool Du::HandlePath(const std::string &path, bool recursive) const {
     auto handler_get_content_summary =
         [state](const hdfs::Status &status_get_summary,
                 const hdfs::ContentSummary &si) {
-          std::lock_guard<std::mutex> guard(state->lock);
+          std::lock_guard guard(state->lock);
           std::cout << si.str_du() << std::endl;
           // Decrement the counter once since we are done with this async call.
           if (!status_get_summary.ok() && state->status.ok()) {
@@ -186,11 +186,10 @@ bool Du::HandlePath(const std::string &path, bool recursive) const {
     return true;
   };
 
+  // Asynchronous call to Find.
   if (!recursive) {
-    // Asynchronous call to Find
     fs->GetListing(uri.get_path(), handler_find);
   } else {
-    // Asynchronous call to Find
     fs->Find(uri.get_path(), "*", hdfs::FileSystem::GetDefaultFindMaxDepth(),
              handler_find);
   }

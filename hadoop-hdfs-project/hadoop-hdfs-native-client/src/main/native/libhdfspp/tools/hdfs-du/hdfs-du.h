@@ -27,8 +27,8 @@
 
 namespace hdfs::tools {
 /**
- * {@class Du} is an {@class HdfsTool} that displays size, used space, and
- * available space of the entire filesystem where the given path is located.
+ * {@class Du} is an {@class HdfsTool} that displays the size of the directories
+ * and files.
  */
 class Du : public HdfsTool {
 public:
@@ -73,7 +73,9 @@ protected:
   /**
    * Handle the path argument that's passed to this tool.
    *
-   * @param path The path to the directory for which we need df info.
+   * @param path The path to the directory for which we need du info.
+   * @param recursive A boolean indicating whether du needs to be
+   * performed recursively for the given {@param path}.
    *
    * @return A boolean indicating the result of this operation.
    */
