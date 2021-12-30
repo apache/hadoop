@@ -100,7 +100,7 @@ bool Du::HandleHelp() const {
 }
 
 bool Du::HandlePath(const std::string &path, bool recursive) const {
-  // Building a URI object from the given uri_path
+  // Building a URI object from the given uri_path.
   auto uri = hdfs::parse_path_or_exit(path);
 
   const auto fs = hdfs::doConnect(uri, true);
