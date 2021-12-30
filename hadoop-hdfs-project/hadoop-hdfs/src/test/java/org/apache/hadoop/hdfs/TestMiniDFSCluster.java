@@ -309,6 +309,14 @@ public class TestMiniDFSCluster {
             DFSUtil.addKeySuffixes(
             DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1")));
       }
+
+      // Shutdown namenodes individually.
+      cluster.shutdownNameNode(0);
+      cluster.shutdownNameNode(1);
+
+      // Restart namenodes individually with wait active, both should be successful.
+      cluster.restartNameNode(0);
+      cluster.restartNameNode(1);
     }
   }
 }

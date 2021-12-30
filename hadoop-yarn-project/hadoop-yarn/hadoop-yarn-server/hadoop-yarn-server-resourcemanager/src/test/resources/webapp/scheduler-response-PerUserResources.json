@@ -8,6 +8,7 @@
   "queueName": "root",
   "queuePath": "root",
   "maxParallelApps": 2147483647,
+  "isAbsoluteResource": false,
   "queues": {"queue": [
     {
       "queuePath": "root.a",

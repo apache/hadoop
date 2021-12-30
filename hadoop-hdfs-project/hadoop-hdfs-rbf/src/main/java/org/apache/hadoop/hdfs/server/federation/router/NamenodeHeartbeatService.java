@@ -267,12 +267,16 @@ public class NamenodeHeartbeatService extends PeriodicService {
       LOG.error("Namenode is not operational: {}", getNamenodeDesc());
     } else if (report.haStateValid()) {
       // block and HA status available
-      LOG.debug("Received service state: {} from HA namenode: {}",
-          report.getState(), getNamenodeDesc());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received service state: {} from HA namenode: {}",
+            report.getState(), getNamenodeDesc());
+      }
     } else if (localTarget == null) {
       // block info available, HA status not expected
-      LOG.debug(
-          "Reporting non-HA namenode as operational: " + getNamenodeDesc());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Reporting non-HA namenode as operational: {}", getNamenodeDesc());
+      }
     } else {
       // block info available, HA status should be available, but was not
       // fetched do nothing and let the current state stand

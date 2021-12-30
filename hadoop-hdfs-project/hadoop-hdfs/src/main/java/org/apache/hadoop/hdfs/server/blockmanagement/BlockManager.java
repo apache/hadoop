@@ -2741,6 +2741,8 @@ public class BlockManager implements BlockStatsMXBean {
     Collection<Block> invalidatedBlocks = Collections.emptyList();
     String strBlockReportId =
         context != null ? Long.toHexString(context.getReportId()) : "";
+    String fullBrLeaseId =
+        context != null ? Long.toHexString(context.getLeaseId()) : "";
 
     try {
       node = datanodeManager.getDatanode(nodeID);
@@ -2763,10 +2765,10 @@ public class BlockManager implements BlockStatsMXBean {
       if (namesystem.isInStartupSafeMode()
           && !StorageType.PROVIDED.equals(storageInfo.getStorageType())
           && storageInfo.getBlockReportCount() > 0) {
-        blockLog.info("BLOCK* processReport 0x{}: "
+        blockLog.info("BLOCK* processReport 0x{} with lease ID 0x{}: "
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase",
-            strBlockReportId, nodeID);
+            strBlockReportId, fullBrLeaseId, nodeID);
         blockReportLeaseManager.removeLease(node);
         return !node.hasStaleStorages();
       }
@@ -2774,9 +2776,9 @@ public class BlockManager implements BlockStatsMXBean {
       if (storageInfo.getBlockReportCount() == 0) {
         // The first block report can be processed a lot more efficiently than
         // ordinary block reports.  This shortens restart times.
-        blockLog.info("BLOCK* processReport 0x{}: Processing first "
+        blockLog.info("BLOCK* processReport 0x{} with lease ID 0x{}: Processing first "
             + "storage report for {} from datanode {}",
-            strBlockReportId,
+            strBlockReportId, fullBrLeaseId,
             storageInfo.getStorageID(),
             nodeID);
         processFirstBlockReport(storageInfo, newReport);
@@ -2795,8 +2797,8 @@ public class BlockManager implements BlockStatsMXBean {
 
     if(blockLog.isDebugEnabled()) {
       for (Block b : invalidatedBlocks) {
-        blockLog.debug("BLOCK* processReport 0x{}: {} on node {} size {} " +
-                        "does not belong to any file.", strBlockReportId, b,
+        blockLog.debug("BLOCK* processReport 0x{} with lease ID 0x{}: {} on node {} size {} " +
+                        "does not belong to any file.", strBlockReportId, fullBrLeaseId, b,
                          node, b.getNumBytes());
       }
     }
@@ -2806,9 +2808,9 @@ public class BlockManager implements BlockStatsMXBean {
     if (metrics != null) {
       metrics.addStorageBlockReport((int) (endTime - startTime));
     }
-    blockLog.info("BLOCK* processReport 0x{}: from storage {} node {}, " +
+    blockLog.info("BLOCK* processReport 0x{} with lease ID 0x{}: from storage {} node {}, " +
         "blocks: {}, hasStaleStorage: {}, processing time: {} msecs, " +
-        "invalidatedBlocks: {}", strBlockReportId, storage.getStorageID(),
+        "invalidatedBlocks: {}", strBlockReportId, fullBrLeaseId, storage.getStorageID(),
         nodeID, newReport.getNumberOfBlocks(),
         node.hasStaleStorages(), (endTime - startTime),
         invalidatedBlocks.size());

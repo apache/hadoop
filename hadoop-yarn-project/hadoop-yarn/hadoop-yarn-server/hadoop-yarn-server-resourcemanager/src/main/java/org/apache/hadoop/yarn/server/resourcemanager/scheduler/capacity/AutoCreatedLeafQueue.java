@@ -36,15 +36,15 @@ import java.util.Set;
  * ManagedParentQueue for auto created dynamic queues
  */
 public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
-
   private static final Logger LOG = LoggerFactory
       .getLogger(AutoCreatedLeafQueue.class);
 
-  public AutoCreatedLeafQueue(CapacitySchedulerContext cs, String queueName,
+  public AutoCreatedLeafQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       ManagedParentQueue parent) throws IOException {
-    super(cs, parent.getLeafQueueConfigs(queueName),
-        queueName,
-        parent, null);
+    super(queueContext, queueName, parent, null);
+    parent.setLeafQueueConfigs(queueName);
+    super.setupQueueConfigs(queueContext.getClusterResource());
+
     updateCapacitiesToZero();
   }
 
@@ -57,8 +57,8 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
       ManagedParentQueue managedParentQueue = (ManagedParentQueue) parent;
 
-      super.reinitialize(newlyParsedQueue, clusterResource, managedParentQueue
-          .getLeafQueueConfigs(newlyParsedQueue.getQueueShortName()));
+      managedParentQueue.setLeafQueueConfigs(newlyParsedQueue.getQueueShortName());
+      super.reinitialize(newlyParsedQueue, clusterResource);
 
       //Reset capacities to 0 since reinitialize above
       // queueCapacities to initialize to configured capacity which might
@@ -70,8 +70,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
     }
   }
 
-  public void reinitializeFromTemplate(AutoCreatedLeafQueueConfig
-      leafQueueTemplate) throws SchedulerDynamicEditException, IOException {
+  public void reinitializeFromTemplate(AutoCreatedLeafQueueConfig leafQueueTemplate) {
 
     writeLock.lock();
     try {
@@ -101,7 +100,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
           .getAbsoluteMaximumCapacity(nodeLabel));
 
       Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
-          csContext.getClusterResource());
+          queueContext.getClusterResource());
       getQueueResourceQuotas().setEffectiveMinResource(nodeLabel,
           Resources.multiply(resourceByLabel,
               queueCapacities.getAbsoluteCapacity(nodeLabel)));
@@ -124,17 +123,16 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
   }
 
   @Override
-  protected void setDynamicQueueProperties(
-      CapacitySchedulerConfiguration configuration) {
+  protected void setDynamicQueueProperties() {
     String parentTemplate = String.format("%s.%s", getParent().getQueuePath(),
         CapacitySchedulerConfiguration
             .AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);
-    Set<String> parentNodeLabels = csContext
-        .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+    Set<String> parentNodeLabels = queueContext
+        .getQueueManager().getConfiguredNodeLabelsForAllQueues()
         .getLabelsByQueue(parentTemplate);
 
     if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
-      csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+      queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues()
           .setLabelsByQueue(getQueuePath(),
               new HashSet<>(parentNodeLabels));
     }

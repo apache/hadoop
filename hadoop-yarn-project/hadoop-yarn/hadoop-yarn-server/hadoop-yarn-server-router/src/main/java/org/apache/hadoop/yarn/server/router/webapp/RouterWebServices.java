@@ -637,13 +637,13 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
-  public Response removeFromCluserNodeLabels(
+  public Response removeFromClusterNodeLabels(
       @QueryParam(RMWSConsts.LABELS) Set<String> oldNodeLabels,
       @Context HttpServletRequest hsr) throws Exception {
     init();
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor()
-        .removeFromCluserNodeLabels(oldNodeLabels, hsr);
+        .removeFromClusterNodeLabels(oldNodeLabels, hsr);
   }
 
   @GET
