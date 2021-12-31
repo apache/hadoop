@@ -299,9 +299,9 @@ public class TestCSAllocateCustomResource {
     // Define top-level queues
     newConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {"a", "b", "c"});
-    newConf.setMinimumResourceRequirement("", "root.a",
+    newConf.setMinimumResourceRequirement("", new QueuePath("root", "a"),
         aMINRES);
-    newConf.setMaximumResourceRequirement("", "root.a",
+    newConf.setMaximumResourceRequirement("", new QueuePath("root", "a"),
         aMAXRES);
 
     newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,

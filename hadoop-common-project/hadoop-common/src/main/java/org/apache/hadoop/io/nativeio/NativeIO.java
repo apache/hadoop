@@ -141,7 +141,7 @@ public class NativeIO {
       }
     }
 
-    // Denotes the state of supporting PMDK. The value is set by JNI.
+    // Denotes the state of supporting PMDK. The actual value is set via JNI.
     private static SupportState pmdkSupportState =
         SupportState.UNSUPPORTED;
 

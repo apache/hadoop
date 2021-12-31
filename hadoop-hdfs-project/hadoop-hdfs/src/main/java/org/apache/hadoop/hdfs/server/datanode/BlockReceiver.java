@@ -1327,7 +1327,8 @@ class BlockReceiver implements Closeable {
       LOG.info("Sending an out of band ack of type " + ackStatus);
       try {
         sendAckUpstreamUnprotected(null, PipelineAck.UNKOWN_SEQNO, 0L, 0L,
-            PipelineAck.combineHeader(datanode.getECN(), ackStatus));
+            PipelineAck.combineHeader(datanode.getECN(), ackStatus,
+                datanode.getSLOWByBlockPoolId(block.getBlockPoolId())));
       } finally {
         // Let others send ack. Unless there are miltiple OOB send
         // calls, there can be only one waiter, the responder thread.
@@ -1409,7 +1410,8 @@ class BlockReceiver implements Closeable {
                 LOG.info("Relaying an out of band ack of type " + oobStatus);
                 sendAckUpstream(ack, PipelineAck.UNKOWN_SEQNO, 0L, 0L,
                     PipelineAck.combineHeader(datanode.getECN(),
-                      Status.SUCCESS));
+                      Status.SUCCESS,
+                      datanode.getSLOWByBlockPoolId(block.getBlockPoolId())));
                 continue;
               }
               seqno = ack.getSeqno();
@@ -1499,7 +1501,8 @@ class BlockReceiver implements Closeable {
           Status myStatus = pkt != null ? pkt.ackStatus : Status.SUCCESS;
           sendAckUpstream(ack, expected, totalAckTimeNanos,
             (pkt != null ? pkt.offsetInBlock : 0),
-            PipelineAck.combineHeader(datanode.getECN(), myStatus));
+              PipelineAck.combineHeader(datanode.getECN(), myStatus,
+                  datanode.getSLOWByBlockPoolId(block.getBlockPoolId())));
           if (pkt != null) {
             // remove the packet from the ack queue
             removeAckHead();
@@ -1620,8 +1623,10 @@ class BlockReceiver implements Closeable {
         // downstream nodes, reply should contain one reply.
         replies = new int[] { myHeader };
       } else if (mirrorError) { // ack read error
-        int h = PipelineAck.combineHeader(datanode.getECN(), Status.SUCCESS);
-        int h1 = PipelineAck.combineHeader(datanode.getECN(), Status.ERROR);
+        int h = PipelineAck.combineHeader(datanode.getECN(), Status.SUCCESS,
+            datanode.getSLOWByBlockPoolId(block.getBlockPoolId()));
+        int h1 = PipelineAck.combineHeader(datanode.getECN(), Status.ERROR,
+            datanode.getSLOWByBlockPoolId(block.getBlockPoolId()));
         replies = new int[] {h, h1};
       } else {
         short ackLen = type == PacketResponderType.LAST_IN_PIPELINE ? 0 : ack
@@ -1631,6 +1636,7 @@ class BlockReceiver implements Closeable {
         for (int i = 0; i < ackLen; ++i) {
           replies[i + 1] = ack.getHeaderFlag(i);
         }
+        DataNodeFaultInjector.get().markSlow(mirrorAddr, replies);
         // If the mirror has reported that it received a corrupt packet,
         // do self-destruct to mark myself bad, instead of making the
         // mirror node bad. The mirror is guaranteed to be good without

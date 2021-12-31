@@ -578,11 +578,6 @@ public class NNThroughputBenchmark implements Tool {
       }
     }
 
-    void dummyActionNoSynch(int daemonId, int fileIdx) {
-      for(int i=0; i < 2000; i++)
-        fileNames[daemonId][fileIdx].contains(""+i);
-    }
-
     /**
      * returns client name
      */
@@ -598,7 +593,6 @@ public class NNThroughputBenchmark implements Tool {
     long executeOp(int daemonId, int inputIdx, String clientName) 
     throws IOException {
       long start = Time.now();
-      // dummyActionNoSynch(fileIdx);
       clientProto.create(fileNames[daemonId][inputIdx],
           FsPermission.getDefault(), clientName,
           new EnumSetWritable<CreateFlag>(EnumSet
