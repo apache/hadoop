@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.Lists;
+import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -660,15 +661,15 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testNodeLocalMetrics() throws Exception {
+    Assume.assumeTrue(null == DomainSocket.getLoadingFailureReason());
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
     DomainSocket.disableBindPathValidation();
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         new File(sockDir.getDir(),
-            "TestShortCircuitLocalRead._PORT.sock").getAbsolutePath());
-    SimulatedFSDataset.setFactory(conf);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+            "testNodeLocalMetrics._PORT.sock").getAbsolutePath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
