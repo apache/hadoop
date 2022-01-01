@@ -101,7 +101,7 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
    * RunImmediately should set true, if we skip the first refresh.
    * @param runImmediately The param default should be false.
    */
-  private void initRefreshThread (boolean runImmediately) {
+  private void initRefreshThread(boolean runImmediately) {
     if (refreshInterval > 0) {
       refreshUsed = new Thread(new RefreshThread(this, runImmediately),
           "refreshUsed-" + dirPath);
