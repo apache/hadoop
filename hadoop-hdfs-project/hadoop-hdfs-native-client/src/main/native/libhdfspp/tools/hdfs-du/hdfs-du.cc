@@ -99,13 +99,13 @@ bool Du::HandleHelp() const {
   return true;
 }
 
-bool Du::HandlePath(const std::string &path, bool recursive) const {
-  // Building a URI object from the given uri_path.
+bool Du::HandlePath(const std::string &path, const bool recursive) const {
+  // Building a URI object from the given path.
   auto uri = hdfs::parse_path_or_exit(path);
 
   const auto fs = hdfs::doConnect(uri, true);
   if (!fs) {
-    std::cerr << "Could not connect the file system. " << std::endl;
+    std::cerr << "Could not connect to the file system." << std::endl;
     return false;
   }
 
