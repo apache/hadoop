@@ -75,7 +75,7 @@ protected:
    *
    * @param path The path to the directory for which we need du info.
    * @param recursive A boolean indicating whether du needs to be
-   * performed recursively for the given {@param path}.
+   * performed recursively for the given path.
    *
    * @return A boolean indicating the result of this operation.
    */

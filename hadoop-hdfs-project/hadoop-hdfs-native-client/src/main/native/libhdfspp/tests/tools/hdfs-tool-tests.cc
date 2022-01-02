@@ -123,7 +123,11 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsDu, HdfsToolNegativeTestThrows,
-    testing::Values(Pass2Paths<hdfs::tools::test::DuMock>));
+    testing::Values(Pass2Paths<hdfs::tools::test::DuMock>,
+                    Pass3Paths<hdfs::tools::test::DuMock>,
+                    PassNOptAndAPath<hdfs::tools::test::DuMock>,
+                    PassOwnerAndAPath<hdfs::tools::test::DuMock>,
+                    PassPermissionsAndAPath<hdfs::tools::test::DuMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsCat, HdfsToolNegativeTestThrows,

@@ -26,6 +26,10 @@
 #include "hdfspp/hdfspp.h"
 
 namespace hdfs::tools {
+/**
+ * The {@class GetContentSummaryState} is used to hold intermediate information
+ * during the execution of {@link hdfs::FileSystem#GetContentSummary}.
+ */
 struct GetContentSummaryState {
   GetContentSummaryState(std::function<void(const hdfs::Status &)> handler,
                          const uint64_t request_counter,
