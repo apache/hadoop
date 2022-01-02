@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.security;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -28,7 +27,7 @@ import javax.crypto.SecretKey;
 import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +40,6 @@ public class EncryptionAdapter implements Destroyable {
   private final EncryptionContextProvider provider;
   private String encodedKey = null;
   private String encodedKeySHA = null;
-  private static final Logger LOG =
-      LoggerFactory.getLogger(EncryptionAdapter.class);
 
   public EncryptionAdapter(EncryptionContextProvider provider, String path,
       byte[] encryptionContext) throws IOException {
