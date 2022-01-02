@@ -37,6 +37,9 @@ struct GetContentSummaryState {
       : handler{std::move(handler)}, request_counter{request_counter},
         find_is_done{find_is_done} {}
 
+  /**
+   * The handler that is used to update the status asynchronously.
+   */
   const std::function<void(const hdfs::Status &)> handler;
 
   /**
