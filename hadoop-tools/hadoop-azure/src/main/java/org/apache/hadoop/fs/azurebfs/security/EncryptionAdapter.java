@@ -28,8 +28,6 @@ import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
 
 import org.apache.hadoop.util.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 
@@ -46,7 +44,7 @@ public class EncryptionAdapter implements Destroyable {
     this(provider, path);
     Preconditions.checkNotNull(encryptionContext,
         "Encryption context should not be null.");
-    this.encryptionContext = new ABFSSecretKey(Base64.getDecoder().decode(encryptionContext));
+    this.encryptionContext = new ABFSKey(Base64.getDecoder().decode(encryptionContext));
   }
 
   public EncryptionAdapter(EncryptionContextProvider provider, String path)
@@ -96,10 +94,10 @@ public class EncryptionAdapter implements Destroyable {
     provider.destroy();
   }
 
-  public class ABFSSecretKey implements SecretKey {
-    private final byte[] secret;
-    public ABFSSecretKey(byte[] secret) {
-      this.secret = secret;
+  public class ABFSKey implements SecretKey {
+    private final byte[] bytes;
+    public ABFSKey(byte[] bytes) {
+      this.bytes = bytes;
     }
 
     @Override
@@ -114,12 +112,12 @@ public class EncryptionAdapter implements Destroyable {
 
     @Override
     public byte[] getEncoded() {
-      return secret;
+      return bytes;
     }
 
     @Override
     public void destroy() {
-      Arrays.fill(secret, (byte) 0);
+      Arrays.fill(bytes, (byte) 0);
     }
   }
 
