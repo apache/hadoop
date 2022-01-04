@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
