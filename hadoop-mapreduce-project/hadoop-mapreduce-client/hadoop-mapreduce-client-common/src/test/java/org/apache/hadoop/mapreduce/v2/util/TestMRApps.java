@@ -377,11 +377,11 @@ public class TestMRApps {
     when(mockFs.resolvePath(archivePath)).thenReturn(archivePath);
     when(mockFs.resolvePath(filePath)).thenReturn(filePath);
     
-    DistributedCache.addCacheArchive(archive, conf);
+    Job.addCacheArchive(archive, conf);
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, "true");
-    DistributedCache.addCacheFile(file, conf);
+    Job.addCacheFile(file, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
@@ -416,8 +416,8 @@ public class TestMRApps {
     when(mockFs.resolvePath(filePath)).thenReturn(filePath);
     when(mockFs.resolvePath(file2Path)).thenReturn(file2Path);
     
-    DistributedCache.addCacheFile(file, conf);
-    DistributedCache.addCacheFile(file2, conf);
+    Job.addCacheFile(file, conf);
+    Job.addCacheFile(file2, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "10,11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "10,11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true,true");
@@ -452,11 +452,11 @@ public class TestMRApps {
     when(mockFs.resolvePath(archivePath)).thenReturn(archivePath);
     when(mockFs.resolvePath(filePath)).thenReturn(filePath);
     
-    DistributedCache.addCacheArchive(archive, conf);
+    Job.addCacheArchive(archive, conf);
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, "true");
-    DistributedCache.addCacheFile(file, conf);
+    Job.addCacheFile(file, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");

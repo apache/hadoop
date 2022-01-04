@@ -174,7 +174,7 @@ public class TestLocalDistributedCacheManager {
       }
     });
 
-    DistributedCache.addCacheFile(file, conf);
+    Job.addCacheFile(file, conf);
     Map<String, Boolean> policies = new HashMap<String, Boolean>();
     policies.put(file.toString(), true);
     Job.setFileSharedCacheUploadPolicies(conf, policies);
@@ -286,8 +286,8 @@ public class TestLocalDistributedCacheManager {
       }
     });
 
-    DistributedCache.addCacheFile(file, conf);
-    DistributedCache.addCacheFile(file, conf);
+    Job.addCacheFile(file, conf);
+    Job.addCacheFile(file, conf);
     Map<String, Boolean> policies = new HashMap<String, Boolean>();
     policies.put(file.toString(), true);
     Job.setFileSharedCacheUploadPolicies(conf, policies);

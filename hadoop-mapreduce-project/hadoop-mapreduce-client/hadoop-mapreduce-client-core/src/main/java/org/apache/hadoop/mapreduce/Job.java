@@ -1121,7 +1121,12 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
    */
   public void setCacheArchives(URI[] archives) {
     ensureState(JobState.DEFINE);
-    DistributedCache.setCacheArchives(archives, conf);
+    setCacheArchives(archives, conf);
+  }
+
+  public static void setCacheArchives(URI[] archives, Configuration conf) {
+    String cacheArchives = StringUtils.uriToString(archives);
+    conf.set(MRJobConfig.CACHE_ARCHIVES, cacheArchives);
   }
 
   /**
@@ -1130,7 +1135,12 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
    */
   public void setCacheFiles(URI[] files) {
     ensureState(JobState.DEFINE);
-    DistributedCache.setCacheFiles(files, conf);
+    setCacheFiles(files, conf);
+  }
+
+  public static void setCacheFiles(URI[] files, Configuration conf) {
+    String cacheFiles = StringUtils.uriToString(files);
+    conf.set(MRJobConfig.CACHE_FILES, cacheFiles);
   }
 
   /**
@@ -1139,16 +1149,28 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
    */
   public void addCacheArchive(URI uri) {
     ensureState(JobState.DEFINE);
-    DistributedCache.addCacheArchive(uri, conf);
+    addCacheArchive(uri, conf);
   }
-  
+
+  public static void addCacheArchive(URI uri, Configuration conf) {
+    String archives = conf.get(MRJobConfig.CACHE_ARCHIVES);
+    conf.set(MRJobConfig.CACHE_ARCHIVES,
+        archives == null ? uri.toString() : archives + "," + uri.toString());
+  }
+
   /**
    * Add a file to be localized
    * @param uri The uri of the cache to be localized
    */
   public void addCacheFile(URI uri) {
     ensureState(JobState.DEFINE);
-    DistributedCache.addCacheFile(uri, conf);
+    addCacheFile(uri, conf);
+  }
+
+  public static void addCacheFile(URI uri, Configuration conf) {
+    String files = conf.get(MRJobConfig.CACHE_FILES);
+    conf.set(MRJobConfig.CACHE_FILES,
+        files == null ? uri.toString() : files + "," + uri.toString());
   }
 
   /**
@@ -1165,7 +1187,22 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
   public void addFileToClassPath(Path file)
     throws IOException {
     ensureState(JobState.DEFINE);
-    DistributedCache.addFileToClassPath(file, conf, file.getFileSystem(conf));
+    addFileToClassPath(file, conf, file.getFileSystem(conf));
+  }
+
+  public static void addFileToClassPath(Path file, Configuration conf, FileSystem fs) {
+    addFileToClassPath(file, conf, fs, true);
+  }
+
+  public static void addFileToClassPath(Path file, Configuration conf, FileSystem fs,
+      boolean addToCache) {
+    String classpath = conf.get(MRJobConfig.CLASSPATH_FILES);
+    conf.set(MRJobConfig.CLASSPATH_FILES,
+        classpath == null ? file.toString() : classpath + "," + file.toString());
+    if (addToCache) {
+      URI uri = fs.makeQualified(file).toUri();
+      Job.addCacheFile(uri, conf);
+    }
   }
 
   /**
@@ -1180,7 +1217,15 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
   public void addArchiveToClassPath(Path archive)
     throws IOException {
     ensureState(JobState.DEFINE);
-    DistributedCache.addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
+    addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
+  }
+
+  public static void addArchiveToClassPath(Path archive, Configuration conf, FileSystem fs) {
+    String classpath = conf.get(MRJobConfig.CLASSPATH_ARCHIVES);
+    conf.set(MRJobConfig.CLASSPATH_ARCHIVES,
+        classpath == null ? archive.toString() : classpath + "," + archive.toString());
+    URI uri = fs.makeQualified(archive).toUri();
+    Job.addCacheArchive(uri, conf);
   }
 
   /**
