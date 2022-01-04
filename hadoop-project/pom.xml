@@ -31,7 +31,7 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2021</release-year>
+    <release-year>2022</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <!--Whether to proceed to next module if any test failures exist-->
