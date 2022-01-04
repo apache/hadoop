@@ -530,35 +530,37 @@ public class LeaseManager {
     /** Check leases periodically. */
     @Override
     public void run() {
-      for(; shouldRunMonitor && fsnamesystem.isRunning(); ) {
-        boolean needSync = false;
-        try {
-          // sleep now to avoid infinite loop if an exception was thrown.
-          Thread.sleep(fsnamesystem.getLeaseRecheckIntervalMs());
-
-          // pre-filter the leases w/o the fsn lock.
-          Collection<Lease> candidates = getExpiredCandidateLeases();
-          if (candidates.isEmpty()) {
-            continue;
-          }
-
-          fsnamesystem.writeLockInterruptibly();
+      try {
+        for (; shouldRunMonitor && fsnamesystem.isRunning(); ) {
+          boolean needSync = false;
           try {
-            if (!fsnamesystem.isInSafeMode()) {
-              needSync = checkLeases(candidates);
+            // sleep now to avoid infinite loop if an exception was thrown.
+            Thread.sleep(fsnamesystem.getLeaseRecheckIntervalMs());
+
+            // pre-filter the leases w/o the fsn lock.
+            Collection<Lease> candidates = getExpiredCandidateLeases();
+            if (candidates.isEmpty()) {
+              continue;
             }
-          } finally {
-            fsnamesystem.writeUnlock("leaseManager");
-            // lease reassignments should to be sync'ed.
-            if (needSync) {
-              fsnamesystem.getEditLog().logSync();
+
+            fsnamesystem.writeLockInterruptibly();
+            try {
+              if (!fsnamesystem.isInSafeMode()) {
+                needSync = checkLeases(candidates);
+              }
+            } finally {
+              fsnamesystem.writeUnlock("leaseManager");
+              // lease reassignments should to be sync'ed.
+              if (needSync) {
+                fsnamesystem.getEditLog().logSync();
+              }
             }
+          } catch (InterruptedException ie) {
+            LOG.debug("{} is interrupted", name, ie);
           }
-        } catch(InterruptedException ie) {
-          LOG.debug("{} is interrupted", name, ie);
-        } catch(Throwable e) {
-          LOG.warn("Unexpected throwable: ", e);
         }
+      } catch (Throwable e) {
+        LOG.error("Unexpected throwable in LeaseMonitor: ", e);
       }
     }
   }
