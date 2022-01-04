@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.yarn.sls.synthetic;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonFactoryBuilder;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
@@ -30,18 +37,13 @@ import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.sls.appmaster.MRAMSimulator;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.codehaus.jackson.JsonParser.Feature.INTERN_FIELD_NAMES;
-import static org.codehaus.jackson.map.DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 /**
  * This is a JobStoryProducer that operates from distribution of different
@@ -84,15 +86,16 @@ public class SynthTraceJobProducer implements JobStoryProducer {
     this.conf = conf;
     this.rand = new JDKRandomGenerator();
 
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.configure(INTERN_FIELD_NAMES, true);
+    JsonFactoryBuilder jsonFactoryBuilder = new JsonFactoryBuilder();
+    jsonFactoryBuilder.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true);
+    ObjectMapper mapper = new ObjectMapper(jsonFactoryBuilder.build());
     mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     FileSystem ifs = path.getFileSystem(conf);
     FSDataInputStream fileIn = ifs.open(path);
 
     // Initialize the random generator and the seed
-    this.trace = mapper.readValue(fileIn, Trace.class);
+    this.trace = mapper.readValue(fileIn.getWrappedStream(), Trace.class);
     this.seed = trace.rand_seed;
     this.rand.setSeed(seed);
     // Initialize the trace
@@ -538,9 +541,9 @@ public class SynthTraceJobProducer implements JobStoryProducer {
       if(val!=null){
         if(std==null){
           // Constant
-          if(dist!=null || discrete!=null || weights!=null){
-            throw new JsonMappingException("Instantiation of " + Sample.class
-                + " failed");
+          if (dist != null || discrete != null || weights != null) {
+            throw JsonMappingException
+                .from((JsonParser) null, "Instantiation of " + Sample.class + " failed");
           }
           mode = Mode.CONST;
           this.val = val;
@@ -550,9 +553,9 @@ public class SynthTraceJobProducer implements JobStoryProducer {
           this.weights = null;
         } else {
           // Distribution
-          if(discrete!=null || weights != null){
-            throw new JsonMappingException("Instantiation of " + Sample.class
-                + " failed");
+          if (discrete != null || weights != null) {
+            throw JsonMappingException
+                .from((JsonParser) null, "Instantiation of " + Sample.class + " failed");
           }
           mode = Mode.DIST;
           this.val = val;
@@ -563,9 +566,9 @@ public class SynthTraceJobProducer implements JobStoryProducer {
         }
       } else {
         // Discrete
-        if(discrete==null){
-          throw new JsonMappingException("Instantiation of " + Sample.class
-              + " failed");
+        if (discrete == null) {
+          throw JsonMappingException
+              .from((JsonParser) null, "Instantiation of " + Sample.class + " failed");
         }
         mode = Mode.DISC;
         this.val = 0;
@@ -576,9 +579,9 @@ public class SynthTraceJobProducer implements JobStoryProducer {
           weights = new ArrayList<>(Collections.nCopies(
               discrete.size(), 1.0));
         }
-        if(weights.size() != discrete.size()){
-          throw new JsonMappingException("Instantiation of " + Sample.class
-              + " failed");
+        if (weights.size() != discrete.size()) {
+          throw JsonMappingException
+              .from((JsonParser) null, "Instantiation of " + Sample.class + " failed");
         }
         this.weights = weights;
       }

@@ -29,11 +29,13 @@ add_executable(hdfs_tool_tests
                 hdfs-tool-test-fixtures.cc
                 hdfs-tool-tests.cc
                 hdfs-df-mock.cc
+                hdfs-du-mock.cc
                 main.cc)
 target_include_directories(hdfs_tool_tests PRIVATE
                             ../tools
                             ../../tools
                             ../../tools/hdfs-df
+                            ../../tools/hdfs-du
                             ../../tools/hdfs-allow-snapshot
                             ../../tools/hdfs-disallow-snapshot
                             ../../tools/hdfs-delete-snapshot
@@ -46,6 +48,7 @@ target_include_directories(hdfs_tool_tests PRIVATE
 target_link_libraries(hdfs_tool_tests PRIVATE
                        gmock_main
                        hdfs_df_lib
+                       hdfs_du_lib
                        hdfs_allowSnapshot_lib
                        hdfs_disallowSnapshot_lib
                        hdfs_deleteSnapshot_lib

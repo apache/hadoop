@@ -31,7 +31,6 @@ import java.util.Set;
 public class QueueNodeLabelsSettings {
   private final CSQueue parent;
   private final String queuePath;
-  private final CapacitySchedulerContext csContext;
   private Set<String> accessibleLabels;
   private Set<String> configuredNodeLabels;
   private String defaultLabelExpression;
@@ -39,18 +38,18 @@ public class QueueNodeLabelsSettings {
   public QueueNodeLabelsSettings(CapacitySchedulerConfiguration configuration,
       CSQueue parent,
       String queuePath,
-      CapacitySchedulerContext csContext) throws IOException {
+      ConfiguredNodeLabels configuredNodeLabels) throws IOException {
     this.parent = parent;
     this.queuePath = queuePath;
-    this.csContext = csContext;
-    initializeNodeLabels(configuration);
+    initializeNodeLabels(configuration, configuredNodeLabels);
   }
 
-  private void initializeNodeLabels(CapacitySchedulerConfiguration configuration)
+  private void initializeNodeLabels(CapacitySchedulerConfiguration configuration,
+      ConfiguredNodeLabels configuredNodeLabels)
       throws IOException {
     initializeAccessibleLabels(configuration);
     initializeDefaultLabelExpression(configuration);
-    initializeConfiguredNodeLabels();
+    initializeConfiguredNodeLabels(configuration, configuredNodeLabels);
     validateNodeLabels();
   }
 
@@ -73,19 +72,17 @@ public class QueueNodeLabelsSettings {
     }
   }
 
-  private void initializeConfiguredNodeLabels() {
-    if (csContext.getCapacitySchedulerQueueManager() != null
-        && csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels() != null) {
+  private void initializeConfiguredNodeLabels(CapacitySchedulerConfiguration configuration,
+      ConfiguredNodeLabels configuredNodeLabelsParam) {
+    if (configuredNodeLabelsParam != null) {
       if (queuePath.equals(ROOT)) {
-        this.configuredNodeLabels = csContext.getCapacitySchedulerQueueManager()
-            .getConfiguredNodeLabels().getAllConfiguredLabels();
+        this.configuredNodeLabels = configuredNodeLabelsParam.getAllConfiguredLabels();
       } else {
-        this.configuredNodeLabels = csContext.getCapacitySchedulerQueueManager()
-            .getConfiguredNodeLabels().getLabelsByQueue(queuePath);
+        this.configuredNodeLabels = configuredNodeLabelsParam.getLabelsByQueue(queuePath);
       }
     } else {
       // Fallback to suboptimal but correct logic
-      this.configuredNodeLabels = csContext.getConfiguration().getConfiguredNodeLabels(queuePath);
+      this.configuredNodeLabels = configuration.getConfiguredNodeLabels(queuePath);
     }
   }
 

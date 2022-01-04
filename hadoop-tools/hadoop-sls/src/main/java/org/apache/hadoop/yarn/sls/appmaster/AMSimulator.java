@@ -75,6 +75,7 @@ import org.slf4j.LoggerFactory;
 @Private
 @Unstable
 public abstract class AMSimulator extends TaskRunner.Task {
+  private static final long FINISH_TIME_NOT_INITIALIZED = Long.MIN_VALUE;
   // resource manager
   protected ResourceManager rm;
   // main
@@ -102,7 +103,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
   protected long traceStartTimeMS;
   protected long traceFinishTimeMS;
   protected long simulateStartTimeMS;
-  protected long simulateFinishTimeMS;
+  protected long simulateFinishTimeMS = FINISH_TIME_NOT_INITIALIZED;
   // whether tracked in Metrics
   protected boolean isTracked;
   // progress
@@ -226,6 +227,16 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
   @Override
   public void lastStep() throws Exception {
+    if (simulateFinishTimeMS != FINISH_TIME_NOT_INITIALIZED) {
+      // The finish time is already recorded.
+      // Different value from zero means lastStep was called before.
+      // We want to prevent lastStep to be called more than once.
+      // See YARN-10427 for more details.
+      LOG.warn("Method AMSimulator#lastStep was already called. " +
+          "Skipping execution of method for application: {}", appId);
+      return;
+    }
+
     LOG.info("Application {} is shutting down.", appId);
     // unregister tracking
     if (isTracked) {
