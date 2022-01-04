@@ -783,10 +783,10 @@ public final class HttpServer2 implements FilterContainer {
       if (Files.notExists(tmpDir)) {
         Files.createDirectories(tmpDir);
       }
-      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output");
+      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hadoop");
       genCtx.addServlet(ProfileOutputServlet.class, "/*");
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
-      genCtx.setDisplayName("prof-output");
+      genCtx.setDisplayName("prof-output-hadoop");
     } else {
       addServlet("prof", "/prof", ProfilerDisabledServlet.class);
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "

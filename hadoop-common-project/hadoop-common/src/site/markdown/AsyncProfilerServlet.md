@@ -28,6 +28,9 @@ HotSpot-specific APIs to collect stack traces and to track memory
 allocations. The profiler works with OpenJDK, Oracle JDK and other
 Java runtimes based on the HotSpot JVM.
 
+Hadoop profiler servlet supports Async Profiler major versions
+1.x and 2.x.
+
 Prerequisites
 -------------
 

@@ -110,7 +110,7 @@ public class ProfileServlet extends HttpServlet {
   private static final int DEFAULT_DURATION_SECONDS = 10;
   private static final AtomicInteger ID_GEN = new AtomicInteger(0);
 
-  static final String OUTPUT_DIR = System.getProperty("java.io.tmpdir") + "/prof-output";
+  static final String OUTPUT_DIR = System.getProperty("java.io.tmpdir") + "/prof-output-hadoop";
 
   private enum Event {
 
@@ -279,7 +279,7 @@ public class ProfileServlet extends HttpServlet {
             // set response and set refresh header to output location
             setResponseHeader(resp);
             resp.setStatus(HttpServletResponse.SC_ACCEPTED);
-            String relativeUrl = "/prof-output/" + outputFile.getName();
+            String relativeUrl = "/prof-output-hadoop/" + outputFile.getName();
             resp.getWriter().write("Started [" + event.getInternalName()
                 + "] profiling. This page will automatically redirect to " + relativeUrl + " after "
                 + duration + " seconds. "

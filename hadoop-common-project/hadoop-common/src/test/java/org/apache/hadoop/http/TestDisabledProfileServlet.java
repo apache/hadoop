@@ -62,18 +62,27 @@ public class TestDisabledProfileServlet extends HttpServerFunctionalTest {
         (HttpURLConnection) new URL(baseUrl, "/prof").openConnection();
     assertEquals("GET", conn.getHeaderField(ProfileServlet.ACCESS_CONTROL_ALLOW_METHODS));
     assertNotNull(conn.getHeaderField(ProfileServlet.ACCESS_CONTROL_ALLOW_ORIGIN));
+    conn.disconnect();
   }
 
   @Test
   public void testRequestMethods() throws IOException {
+    HttpURLConnection connection = getConnection("PUT");
     assertEquals("Unexpected response code", HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-        getConnection("PUT").getResponseCode());
+        connection.getResponseCode());
+    connection.disconnect();
+    connection = getConnection("POST");
     assertEquals("Unexpected response code", HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-        getConnection("POST").getResponseCode());
+        connection.getResponseCode());
+    connection.disconnect();
+    connection = getConnection("DELETE");
     assertEquals("Unexpected response code", HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-        getConnection("DELETE").getResponseCode());
+        connection.getResponseCode());
+    connection.disconnect();
+    connection = getConnection("GET");
     assertEquals("Unexpected response code", HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-        getConnection("GET").getResponseCode());
+        connection.getResponseCode());
+    connection.disconnect();
   }
 
   private HttpURLConnection getConnection(final String method) throws IOException {
