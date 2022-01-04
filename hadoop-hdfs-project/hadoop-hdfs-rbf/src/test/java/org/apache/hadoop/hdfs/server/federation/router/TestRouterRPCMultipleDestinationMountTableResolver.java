@@ -679,7 +679,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
           rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
       assertNotNull(serverDefaults);
     } finally {
-      dfsCluster.restartNameNode(0, false);
+      dfsCluster.restartNameNode(0);
       dfsCluster.restartNameNode(1);
     }
   }
