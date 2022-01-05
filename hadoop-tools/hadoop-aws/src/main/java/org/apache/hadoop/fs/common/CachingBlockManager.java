@@ -488,12 +488,10 @@ public abstract class CachingBlockManager extends BlockManager {
     }
   }
 
-  // @VisibleForTesting
   protected BlockCache createCache() {
     return new SingleFilePerBlockCache();
   }
 
-  // @VisibleForTesting
   protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {
     if (this.closed) {
       return;
@@ -563,7 +561,6 @@ public abstract class CachingBlockManager extends BlockManager {
     return this.numReadErrors.get();
   }
 
-  // @VisibleForTesting
   BufferData getData(int blockNumber) {
     return this.bufferPool.tryAcquire(blockNumber);
   }

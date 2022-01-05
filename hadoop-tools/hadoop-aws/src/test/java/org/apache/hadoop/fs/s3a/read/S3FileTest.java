@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import static org.junit.Assert.*;
-
 import com.twitter.util.ExecutorServiceFuturePool;
 import com.twitter.util.FuturePool;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
@@ -31,7 +29,6 @@ import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -75,13 +72,5 @@ public class S3FileTest {
         IllegalArgumentException.class,
         "'changeTracker' must not be null",
         () -> new S3File(readContext, attrs, client, stats, null));
-  }
-
-  @Test
-  public void testProperties() throws IOException {
-    // S3File file = new S3File(client, "bucket", "key", 10);
-
-    // assertEquals("s3://bucket/key", file.getPath());
-    // assertEquals(10, file.size());
   }
 }

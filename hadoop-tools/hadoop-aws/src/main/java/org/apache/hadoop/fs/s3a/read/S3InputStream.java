@@ -369,7 +369,6 @@ public abstract class S3InputStream
     }
   }
 
-  // @VisibleForTesting
   protected S3File getS3File() {
     return new S3File(
         this.context,
@@ -403,6 +402,8 @@ public abstract class S3InputStream
     this.closed = true;
 
     this.blockData = null;
+    this.reader.close();
+    this.reader = null;
     this.s3File = null;
     this.fpos.invalidate();
     try {

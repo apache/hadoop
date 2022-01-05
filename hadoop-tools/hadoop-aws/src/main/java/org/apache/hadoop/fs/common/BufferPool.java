@@ -261,13 +261,11 @@ public class BufferPool implements Closeable {
   }
 
   // Number of ByteBuffers created so far.
-  // @VisibleForTesting
   public synchronized int numCreated() {
     return this.pool.numCreated();
   }
 
   // Number of ByteBuffers available to be acquired.
-  // @VisibleForTesting
   public synchronized int numAvailable() {
     this.releaseDoneBlocks();
     return this.pool.numAvailable();

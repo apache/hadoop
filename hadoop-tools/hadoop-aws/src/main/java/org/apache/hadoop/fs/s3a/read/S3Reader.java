@@ -37,6 +37,9 @@ import java.nio.ByteBuffer;
 public class S3Reader implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(S3Reader.class);
 
+  // We read from the underlying input stream in blocks of this size.
+  private static final int READ_BUFFER_SIZE = 64 * 1024;
+
   // The S3 file to read.
   private final S3File s3File;
 
@@ -117,8 +120,6 @@ public class S3Reader implements Closeable {
     this.s3File.getStatistics().readOperationCompleted(size, numBytesRead);
     return numBytesRead;
   }
-
-  private static final int READ_BUFFER_SIZE = 64 * 1024;
 
   private void readOneBlock(ByteBuffer buffer, long offset, int size) throws IOException {
     int readSize = Math.min(size, buffer.remaining());

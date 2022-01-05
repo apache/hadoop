@@ -84,9 +84,22 @@ public class S3CachingInputStream extends S3InputStream {
     this.throwIfClosed();
     this.throwIfInvalidSeek(pos);
 
+    // The call to setAbsolute() returns true if the target position is valid and
+    // within the current block. Therefore, no additional work is needed when we get back true.
     if (!this.getFilePosition().setAbsolute(pos)) {
       LOG.info("seek({})", getOffsetStr(pos));
+      // We could be here in two cases:
+      // -- the target position is invalid:
+      //    We ignore this case here as the next read will return an error.
+      // -- it is valid but outside of the current block.
       if (this.getFilePosition().isValid()) {
+        // There are two cases to consider:
+        // -- the seek was issued after this buffer was fully read.
+        //    In this case, it is very unlikely that this buffer will be needed again;
+        //    therefore we release the buffer without caching.
+        // -- if we are jumping out of the buffer before reading it completely then
+        //    we will likely need this buffer again (as observed empirically for Parquet)
+        //    therefore we issue an async request to cache this buffer.
         if (!this.getFilePosition().bufferFullyRead()) {
           this.blockManager.requestCaching(this.getFilePosition().data());
         } else {
@@ -169,7 +182,6 @@ public class S3CachingInputStream extends S3InputStream {
     return sb.toString();
   }
 
-  // @VisibleForTesting
   protected BlockManager createBlockManager(
       FuturePool futurePool,
       S3Reader reader,

@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Ecapsulates low level interactions with S3 object on AWS.
+ * Encapsulates low level interactions with S3 object on AWS.
  */
 public class S3File implements Closeable {
 
