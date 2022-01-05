@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -45,8 +46,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -105,6 +108,45 @@ public class TestAHSv2ClientImpl {
     assertThat(report.getFinishTime()).isEqualTo(Integer.MAX_VALUE + 2L);
     assertThat(report.getOriginalTrackingUrl()).
         isEqualTo("test original tracking url");
+  }
+
+  @Test
+  public void testGetContainerByAppAttempt() throws IOException, YarnException {
+    final ApplicationId appId1 = ApplicationId.newInstance(0, 1);
+    final ApplicationId appId2 = ApplicationId.newInstance(0, 2);
+
+    final ApplicationAttemptId appAttemptId1 =
+            ApplicationAttemptId.newInstance(appId1, 1);
+    final ApplicationAttemptId appAttemptId2 =
+            ApplicationAttemptId.newInstance(appId2, 2);
+
+    final ContainerId containerId1 = ContainerId.newContainerId(appAttemptId1, 1);
+    final ContainerId containerId2 = ContainerId.newContainerId(appAttemptId2, 2);
+
+
+    Map<String, String> filter1 = new HashMap<>();
+    filter1.put("appattemptId", appAttemptId1.toString());
+    Map<String, String> filter2 = new HashMap<>();
+    filter2.put("appattemptId", appAttemptId2.toString());
+    when(spyTimelineReaderClient.getContainerEntities(appId1, "ALL", filter1,
+            0, null))
+            .thenReturn(createContainerEntities(containerId1));
+    when(spyTimelineReaderClient.getContainerEntities(appId2, "ALL", filter2,
+            0, null))
+            .thenReturn(createContainerEntities(containerId2));
+
+    when(spyTimelineReaderClient.getApplicationEntity(appId1, "ALL", null))
+            .thenReturn(createApplicationTimelineEntity(appId1, true,
+                    false));
+    when(spyTimelineReaderClient.getApplicationEntity(appId2, "ALL", null))
+            .thenReturn(createApplicationTimelineEntity(appId2, true,
+                    false));
+
+    List<ContainerReport> containerList1 = client.getContainers(appAttemptId1);
+    List<ContainerReport> containerList2 = client.getContainers(appAttemptId2);
+
+    assertThat(containerList1.size()).isEqualTo(1);
+    assertThat(containerList2.size()).isEqualTo(1);
   }
 
   @Test
@@ -247,5 +289,37 @@ public class TestAHSv2ClientImpl {
     entity.addEvent(tEvent);
 
     return entity;
+  }
+
+  private static List<TimelineEntity> createContainerEntities(ContainerId containerId) {
+    List<TimelineEntity> entities = new ArrayList<>();
+
+    TimelineEntity entity = new TimelineEntity();
+    entity.setType(ContainerMetricsConstants.ENTITY_TYPE);
+    entity.setId(containerId.toString());
+    Map<String, Object> entityInfo = new HashMap<String, Object>();
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO, 1024);
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO, 8);
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_INFO,
+            "test host");
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_INFO, 100);
+    entityInfo
+            .put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO, -1);
+    entityInfo.put(ContainerMetricsConstants
+            .ALLOCATED_HOST_HTTP_ADDRESS_INFO, "http://test:1234");
+    entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
+            "test diagnostics info");
+    entityInfo.put(ContainerMetricsConstants.EXIT_STATUS_INFO, -1);
+    entityInfo.put(ContainerMetricsConstants.STATE_INFO,
+            ContainerState.COMPLETE.toString());
+    entity.setInfo(entityInfo);
+
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE);
+    tEvent.setTimestamp(123456);
+    entity.addEvent(tEvent);
+
+    entities.add(entity);
+    return entities;
   }
 }
