@@ -1662,6 +1662,7 @@ to AWS services.
 * Try and get other people, especially anyone with their own endpoints,
   apps or different deployment environments, to run their own tests.
 * Run the load tests, especially `ILoadTestS3ABulkDeleteThrottling`.
+* Checkout cloudstore, build it against your version of hadoop, then use its CLI to run some commands (`storediag` etc)
 
 ### Dealing with Deprecated APIs and New Features
 
