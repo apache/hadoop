@@ -1014,6 +1014,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.leaseRecheckIntervalMs = conf.getLong(
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT);
+      Preconditions.checkArgument(
+              leaseRecheckIntervalMs > 0,
+              DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY +
+                      " must be greater than zero");
       this.maxLockHoldToReleaseLeaseMs = conf.getLong(
           DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_KEY,
           DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_DEFAULT);
