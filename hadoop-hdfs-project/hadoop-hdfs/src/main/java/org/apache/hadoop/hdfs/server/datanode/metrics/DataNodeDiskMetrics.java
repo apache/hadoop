@@ -143,7 +143,7 @@ public class DataNodeDiskMetrics {
             detectAndUpdateDiskOutliers(metadataOpStats, readIoStats,
                 writeIoStats);
 
-            // Sort the slow disks by latency and .
+            // Sort the slow disks by latency and extract the top n by maxSlowDisksToExclude.
             if (maxSlowDisksToExclude > 0) {
               ArrayList<DiskLatency> diskLatencies = new ArrayList<>();
               for (Map.Entry<String, Map<DiskOp, Double>> diskStats :
