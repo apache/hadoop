@@ -255,6 +255,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
       assertEquals("actively allocated blocks in " + streamStatistics,
           0, streamStatistics.getBlocksActivelyAllocated());
     }
+    assertStorageClass(fileToCreate);
   }
 
   /**
@@ -393,6 +394,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     FileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
     assertEquals("File size in " + status, filesize, status.getLen());
+    assertStorageClass(hugefile);
   }
 
   /**
@@ -482,7 +484,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
    */
   @Test
   public void test_090_verifyRenameSourceEncryption() throws IOException {
-    if(isEncrypted(getFileSystem())) {
+    if (isEncrypted(getFileSystem())) {
       assertEncrypted(getHugefile());
     }
   }
@@ -491,8 +493,20 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     //Concrete classes will have implementation.
   }
 
+  protected void assertStorageClass(Path hugeFile) throws IOException {
+    Configuration conf = getConfiguration();
+    String expected = conf.get(STORAGE_CLASS);
+
+    S3AFileSystem fs = getFileSystem();
+    String actual = fs.getObjectMetadata(hugeFile).getStorageClass();
+
+    assertEquals("Storage class of object is " + actual + ", expected " + expected, expected,
+        actual);
+  }
+
   /**
    * Checks if the encryption is enabled for the file system.
+   *
    * @param fileSystem
    * @return
    */
@@ -518,6 +532,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
     FileStatus destFileStatus = fs.getFileStatus(hugefileRenamed);
     assertEquals(size, destFileStatus.getLen());
+    assertStorageClass(hugefileRenamed);
 
     // rename back
     ContractTestUtils.NanoTimer timer2 = new ContractTestUtils.NanoTimer();

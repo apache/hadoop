@@ -1079,6 +1079,17 @@ options are covered in [Testing](./testing.md).
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.storage.class</name>
+  <value></value>
+  <description>
+      Storage class: STANDARD, REDUCED_REDUNDANCY, INTELLIGENT_TIERING, etc.
+      Specify the storage class for S3A put object requests.
+      If not set the storage class will be null
+      and mapped to default STANDARD class on S3.
+  </description>
+</property>
+
 ```
 
 ## <a name="retry_and_recovery"></a>Retry and Recovery

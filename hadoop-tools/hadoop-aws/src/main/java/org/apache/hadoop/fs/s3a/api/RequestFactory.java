@@ -107,6 +107,12 @@ public interface RequestFactory {
   String getContentEncoding();
 
   /**
+   * Get the object storage class (e.g. STANDARD, REDUCED_REDUNDANCY) or return null if none.
+   * @return storage class
+   */
+  String getStorageClass();
+
+  /**
    * Create a new object metadata instance.
    * Any standard metadata headers are added here, for example:
    * encryption.

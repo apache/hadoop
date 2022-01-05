@@ -117,6 +117,11 @@ public class RequestFactoryImpl implements RequestFactory {
   private final String contentEncoding;
 
   /**
+   * Storage class.
+   */
+  private final String storageClass;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -128,6 +133,7 @@ public class RequestFactoryImpl implements RequestFactory {
     this.multipartPartCountLimit = builder.multipartPartCountLimit;
     this.requestPreparer = builder.requestPreparer;
     this.contentEncoding = builder.contentEncoding;
+    this.storageClass = builder.storageClass;
   }
 
   /**
@@ -198,6 +204,15 @@ public class RequestFactoryImpl implements RequestFactory {
   @Override
   public String getContentEncoding() {
     return contentEncoding;
+  }
+
+  /**
+   * Get the object storage class (e.g. STANDARD, REDUCED_REDUNDANCY) or return null if none.
+   * @return storage class
+   */
+  @Override
+  public String getStorageClass() {
+    return storageClass;
   }
 
   /**
@@ -343,7 +358,7 @@ public class RequestFactoryImpl implements RequestFactory {
   }
   /**
    * Create a putObject request.
-   * Adds the ACL and metadata
+   * Adds the ACL, storage class and metadata
    * @param key key of object
    * @param metadata metadata header
    * @param srcfile source file
@@ -357,6 +372,7 @@ public class RequestFactoryImpl implements RequestFactory {
         srcfile);
     setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
+    putObjectRequest.setStorageClass(storageClass);
     putObjectRequest.setMetadata(metadata);
     return prepareRequest(putObjectRequest);
   }
@@ -431,6 +447,7 @@ public class RequestFactoryImpl implements RequestFactory {
             destKey,
             newObjectMetadata(-1));
     initiateMPURequest.setCannedACL(getCannedACL());
+    initiateMPURequest.withStorageClass(getStorageClass());
     setOptionalMultipartUploadRequestParameters(initiateMPURequest);
     return prepareRequest(initiateMPURequest);
   }
@@ -611,6 +628,11 @@ public class RequestFactoryImpl implements RequestFactory {
     private String contentEncoding;
 
     /**
+     * Storage class.
+     */
+    private String storageClass;
+
+    /**
      * Multipart limit.
      */
     private long multipartPartCountLimit = DEFAULT_UPLOAD_PART_COUNT_LIMIT;
@@ -638,6 +660,16 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     public RequestFactoryBuilder withContentEncoding(final String value) {
       contentEncoding = value;
+      return this;
+    }
+
+    /**
+     * Storage class.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withStorageClass(final String value) {
+      storageClass = value;
       return this;
     }
 

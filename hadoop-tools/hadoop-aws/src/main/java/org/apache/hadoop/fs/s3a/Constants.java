@@ -429,6 +429,11 @@ public final class Constants {
    */
   public static final String CONTENT_ENCODING = "fs.s3a.object.content.encoding";
 
+  /**
+   * S3 storage class: STANDARD, REDUCED_REDUNDANCY, INTELLIGENT_TIERING etc.
+   */
+  public static final String STORAGE_CLASS = "fs.s3a.storage.class";
+
   // should we try to purge old multipart uploads when starting up
   public static final String PURGE_EXISTING_MULTIPART =
       "fs.s3a.multipart.purge";

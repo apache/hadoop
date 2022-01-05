@@ -963,6 +963,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // Any encoding type
     String contentEncoding = getConf().getTrimmed(CONTENT_ENCODING, null);
 
+    String storageClass = getConf().getTrimmed(STORAGE_CLASS, null);
+
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))
         .withCannedACL(getCannedACL())
@@ -970,6 +972,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withMultipartPartCountLimit(partCountLimit)
         .withRequestPreparer(getAuditManager()::requestCreated)
         .withContentEncoding(contentEncoding)
+        .withStorageClass(storageClass)
         .build();
   }
 
