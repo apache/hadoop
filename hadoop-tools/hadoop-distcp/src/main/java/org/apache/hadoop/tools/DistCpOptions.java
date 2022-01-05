@@ -244,7 +244,7 @@ public final class DistCpOptions {
     Set<Path> uniquePaths = new LinkedHashSet<>();
     for (Path path : srcPaths) {
       if (!uniquePaths.add(path)) {
-        LOG.warn("Path: {} added multiple times, ignoring the redundant entry.", path);
+        LOG.info("Path: {} added multiple times, ignoring the redundant entry.", path);
       }
     }
     return new ArrayList<>(uniquePaths);
