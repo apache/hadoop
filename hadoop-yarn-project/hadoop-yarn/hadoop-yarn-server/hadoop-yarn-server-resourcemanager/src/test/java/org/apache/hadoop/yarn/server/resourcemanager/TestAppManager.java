@@ -71,7 +71,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
@@ -144,6 +146,8 @@ public class TestAppManager extends AppManagerTestBase{
   private ResourceScheduler scheduler;
 
   private static final String USER_ID_PREFIX = "userid=";
+  private static final String AUTO_QUEUE_CREATION_LEAF_TEMPLATE =
+      "yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.leaf-template";
 
   public synchronized RMAppEventType getAppEventType() {
     return appEventType;
@@ -496,6 +500,68 @@ public class TestAppManager extends AppManagerTestBase{
         newMockRMContext,
         "user1",
         "root.parent.user2");
+  }
+
+  @Test
+  public void testFlexibleAutoCreatedQueuesWithACLTemplates()
+      throws IOException, YarnException {
+    YarnConfiguration conf = new YarnConfiguration(new Configuration(false));
+    conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(
+        conf, false);
+    csConf.set(PREFIX + "root.queues", "parent");
+    csConf.set(PREFIX + "root.acl_submit_applications", " ");
+    csConf.set(PREFIX + "root.acl_administer_queue", " ");
+
+    csConf.setCapacity("root.parent", "1w");
+    csConf.set(PREFIX + "root.parent.acl_administer_queue", "user1");
+    csConf.set(PREFIX + "root.parent.acl_submit_applications", "user1");
+    conf.set("yarn.scheduler.capacity.queue-mappings", "u:%user:parent.%user");
+
+    csConf.setAutoQueueCreationV2Enabled("root.parent", true);
+    csConf.set(AUTO_QUEUE_CREATION_LEAF_TEMPLATE + ".capacity", "1w");
+    csConf.set(AUTO_QUEUE_CREATION_LEAF_TEMPLATE + ".acl_administer_queue", "user2");
+    csConf.set(AUTO_QUEUE_CREATION_LEAF_TEMPLATE + ".acl_submit_applications", "user2");
+
+    MockRM newMockRM = new MockRM(csConf);
+
+    RMContext newMockRMContext = newMockRM.getRMContext();
+    TestRMAppManager newAppMonitor = createAppManager(newMockRMContext, conf);
+
+    // user1 has permission on root.parent so a queue would be created
+    newMockRMContext.setQueuePlacementManager(createMockPlacementManager(
+        "user1", "user1", "root.parent"));
+    verifyAppSubmission(createAppSubmissionContext(MockApps.newAppID(1)),
+        newAppMonitor,
+        newMockRMContext,
+        "user1",
+        "root.parent.user1");
+
+    // user2 doesn't have permission on root.parent so no queue will be created
+    newMockRMContext.setQueuePlacementManager(createMockPlacementManager(
+        "user2", "user2", "root.parent"));
+    verifyAppSubmissionFailure(newAppMonitor,
+        createAppSubmissionContext(MockApps.newAppID(2)),
+        "user2");
+
+    // create the root.parent.user2 manually
+    CapacityScheduler cs =
+        ((CapacityScheduler) newMockRM.getResourceScheduler());
+    cs.getCapacitySchedulerQueueManager().createQueue(new QueuePath("root.parent.user2"));
+    LeafQueue autoCreatedLeafQueue = (LeafQueue) cs.getQueue("user2");
+    Assert.assertNotNull("Auto Creation of Queue failed", autoCreatedLeafQueue);
+    ParentQueue parentQueue = (ParentQueue) cs.getQueue("parent");
+    assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
+    // reinitialize to load the ACLs for the queue
+    cs.reinitialize(csConf, newMockRMContext);
+
+    // Flexible Auto Queue Creation does not support QueueACLs on templates at all
+    verifyAppSubmissionFailure(newAppMonitor,
+        createAppSubmissionContext(MockApps.newAppID(3)),
+        "user2");
   }
 
   private static void verifyAppSubmissionFailure(TestRMAppManager appManager,
