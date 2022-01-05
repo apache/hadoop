@@ -1649,6 +1649,11 @@ public class ParentQueue extends AbstractCSQueue {
             isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 
+  @Override
+  public boolean isParent() {
+    return true;
+  }
+
   public AutoCreatedQueueTemplate getAutoCreatedQueueTemplate() {
     return autoCreatedQueueTemplate;
   }

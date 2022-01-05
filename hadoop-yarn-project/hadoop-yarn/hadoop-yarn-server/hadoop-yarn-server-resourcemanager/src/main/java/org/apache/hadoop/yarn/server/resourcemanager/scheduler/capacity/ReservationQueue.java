@@ -21,7 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +75,10 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
     } finally {
       writeLock.unlock();
     }
+  }
+
+  public void initializeEntitlements() throws SchedulerDynamicEditException {
+    setEntitlement(new QueueEntitlement(1.0f, 1.0f));
   }
 
   private void updateQuotas(float userLimit, float userLimitFactor,

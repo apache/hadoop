@@ -2458,4 +2458,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         && queueContext.getConfiguration().
         isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
+
+  @Override
+  public boolean isParent() {
+    return false;
+  }
 }
