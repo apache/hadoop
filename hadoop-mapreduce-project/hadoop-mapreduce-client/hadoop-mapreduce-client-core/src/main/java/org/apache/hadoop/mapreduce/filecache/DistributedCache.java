@@ -298,9 +298,8 @@ public class DistributedCache {
    * @see Job#addFileToClassPath(Path)
    */
   @Deprecated
-  public static void addFileToClassPath(Path file, Configuration conf)
-    throws IOException {
-	  Job.addFileToClassPath(file, conf, file.getFileSystem(conf));
+  public static void addFileToClassPath(Path file, Configuration conf) throws IOException {
+    Job.addFileToClassPath(file, conf, file.getFileSystem(conf));
   }
 
   /**
