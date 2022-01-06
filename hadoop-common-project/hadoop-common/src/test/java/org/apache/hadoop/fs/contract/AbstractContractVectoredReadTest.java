@@ -35,6 +35,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   public static final int DATASET_LEN = 1024;
   private static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   private static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
+  private static final String VECTORED_READ_FILE_1MB_NAME = "vectored_file_1M.txt";
+  private static final byte[] DATASET_MB = ContractTestUtils.dataset(1024 * 1024, 'a', 256);
+
 
   private final IntFunction<ByteBuffer> allocate;
 
@@ -57,6 +60,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     Path path = path(VECTORED_READ_FILE_NAME);
     FileSystem fs = getFileSystem();
     createFile(fs, path, true, DATASET);
+    Path bigFile = path(VECTORED_READ_FILE_1MB_NAME);
+    createFile(fs, bigFile, true, DATASET_MB);
   }
 
   /**
@@ -109,6 +114,21 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       Assertions.assertThat(vecRes)
               .describedAs("Result from vectored read and readFully must match")
               .isEqualByComparingTo(ByteBuffer.wrap(readFullRes));
+    }
+  }
+
+
+  @Test
+  public void testVectoredReadBigFile()  throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(1293, 25837));
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_1MB_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      ByteBuffer vecRes = FutureIOSupport.awaitFuture(fileRanges.get(0).getData());
+      FileRange resRange = fileRanges.get(0);
+      assertDatasetEquals((int) resRange.getOffset(), "vecRead",
+              vecRes, resRange.getLength(), DATASET_MB);
     }
   }
 
@@ -173,7 +193,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       byte[] res = new byte[200];
       in.read(res, 0, 200);
       ByteBuffer buffer = ByteBuffer.wrap(res);
-      assertDatasetEquals(0, "normal_read", buffer, 200);
+      assertDatasetEquals(0, "normal_read", buffer, 200, DATASET);
       Assertions.assertThat(in.getPos())
               .describedAs("Vectored read shouldn't change file pointer.")
               .isEqualTo(200);
@@ -190,7 +210,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       byte[] res = new byte[200];
       in.read(res, 0, 200);
       ByteBuffer buffer = ByteBuffer.wrap(res);
-      assertDatasetEquals(0, "normal_read", buffer, 200);
+      assertDatasetEquals(0, "normal_read", buffer, 200, DATASET);
       Assertions.assertThat(in.getPos())
               .describedAs("Vectored read shouldn't change file pointer.")
               .isEqualTo(200);
@@ -223,7 +243,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       CompletableFuture<ByteBuffer> data = res.getData();
       try {
         ByteBuffer buffer = FutureIOSupport.awaitFuture(data);
-        assertDatasetEquals((int) res.getOffset(), "vecRead", buffer, res.getLength());
+        assertDatasetEquals((int) res.getOffset(), "vecRead", buffer, res.getLength(), DATASET);
       } catch (Exception ex) {
         LOG.error("Exception while running vectored read ", ex);
         Assert.fail("Exception while running vectored read " + ex);
@@ -251,21 +271,21 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * Assert that the data read matches the dataset at the given offset.
    * This helps verify that the seek process is moving the read pointer
    * to the correct location in the file.
-   *
-   * @param readOffset the offset in the file where the read began.
+   *  @param readOffset the offset in the file where the read began.
    * @param operation  operation name for the assertion.
    * @param data       data read in.
    * @param length     length of data to check.
+   * @param originalData
    */
   private void assertDatasetEquals(
           final int readOffset, final String operation,
           final ByteBuffer data,
-          int length) {
+          int length, byte[] originalData) {
     for (int i = 0; i < length; i++) {
       int o = readOffset + i;
       assertEquals(operation + " with read offset " + readOffset
                       + ": data[" + i + "] != DATASET[" + o + "]",
-              DATASET[o], data.get());
+              originalData[o], data.get());
     }
   }
 }
