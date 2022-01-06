@@ -67,6 +67,9 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
   public static final String CREDENTIAL_PASSWORD_FILE_KEY =
       CommonConfigurationKeysPublic.
           HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY;
+  public static final String CREDENTIAL_PASSWORD_CONFIG_KEY =
+      CommonConfigurationKeysPublic.
+          HADOOP_SECURITY_CREDENTIAL_PASSWORD_CONFIG_KEY;
   public static final String CREDENTIAL_PASSWORD_DEFAULT = "none";
 
   private Path path;
@@ -308,15 +311,24 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
   /**
    * Open up and initialize the keyStore.
    *
+   * Password evaluation precedence order:
+   * 1. this.conf (HADOOP_SECURITY_CREDENTIAL_PASSWORD_CONFIG_KEY)
+   * 2. environment (HADOOP_CREDSTORE_PASSWORD)
+   * 3. password file (HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY)
+   * 4. default (CREDENTIAL_PASSWORD_DEFAULT)
+   *
    * @throws IOException If there is a problem reading the password file
    * or a problem reading the keystore.
    */
   private void locateKeystore() throws IOException {
     try {
-      password = ProviderUtils.locatePassword(CREDENTIAL_PASSWORD_ENV_VAR,
-          conf.get(CREDENTIAL_PASSWORD_FILE_KEY));
+      password = conf.getPasswordFromConfig(CREDENTIAL_PASSWORD_CONFIG_KEY);
       if (password == null) {
-        password = CREDENTIAL_PASSWORD_DEFAULT.toCharArray();
+        password = ProviderUtils.locatePassword(CREDENTIAL_PASSWORD_ENV_VAR,
+            conf.get(CREDENTIAL_PASSWORD_FILE_KEY));
+        if (password == null) {
+          password = CREDENTIAL_PASSWORD_DEFAULT.toCharArray();
+        }
       }
       KeyStore ks;
       ks = KeyStore.getInstance(getKeyStoreType());

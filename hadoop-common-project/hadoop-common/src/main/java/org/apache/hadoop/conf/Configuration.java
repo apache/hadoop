@@ -2485,7 +2485,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param name
    * @return clear text password or null
    */
-  protected char[] getPasswordFromConfig(String name) {
+  public char[] getPasswordFromConfig(String name) {
     char[] pass = null;
     if (getBoolean(CredentialProvider.CLEAR_TEXT_FALLBACK,
         CommonConfigurationKeysPublic.
