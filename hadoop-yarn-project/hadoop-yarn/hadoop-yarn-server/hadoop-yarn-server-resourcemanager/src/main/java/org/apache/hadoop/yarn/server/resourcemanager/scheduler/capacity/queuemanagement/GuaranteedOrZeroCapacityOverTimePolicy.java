@@ -643,7 +643,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
                * leads to incorrect results.
                */
               leafQueue
-                  .mergeCapacities(updatedQueueTemplate.getQueueCapacities());
+                  .mergeCapacities(updatedQueueTemplate.getQueueCapacities(), leafQueueTemplate.getResourceQuotas());
               leafQueue.getQueueResourceQuotas()
                   .setConfiguredMinResource(Resources.multiply(
                       managedParentQueue.getQueueContext().getClusterResource(),
@@ -817,6 +817,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     AutoCreatedLeafQueueConfig.Builder templateBuilder =
         new AutoCreatedLeafQueueConfig.Builder();
     templateBuilder.capacities(capacities);
+    templateBuilder.resourceQuotas(managedParentQueue.getLeafQueueTemplate().getResourceQuotas());
     return new AutoCreatedLeafQueueConfig(templateBuilder);
   }
 }
