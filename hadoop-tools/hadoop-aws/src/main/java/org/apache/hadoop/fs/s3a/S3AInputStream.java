@@ -878,7 +878,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * Update data in child range from combined range.
    * @param child child range.
    * @param combinedBuffer combined buffer.
-   * @param combinedFileRange
+   * @param combinedFileRange combined range.
    */
   private void updateOriginalRange(FileRange child,
                                    ByteBuffer combinedBuffer,
@@ -887,18 +887,22 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
             child.getOffset(), child.getLength(), combinedFileRange.getOffset(), combinedFileRange.getLength());
     ByteBuffer childBuffer = sliceTo(combinedBuffer, combinedFileRange.getOffset(), child);
     child.getData().complete(childBuffer);
-    LOG.trace("End Filling original range ");
+    LOG.trace("End Filling original range [{}, {}) from combined range [{}, {}) ",
+            child.getOffset(), child.getLength(), combinedFileRange.getOffset(), combinedFileRange.getLength());
   }
 
   /**
    * Validates range parameters.
-   * @param range
-   * @throws EOFException
+   * @param range requested range.
+   * @throws EOFException end of file exception.
    */
   private void validateRangeRequest(FileRange range) throws EOFException {
     VectoredReadUtils.validateRangeRequest(range);
     if(range.getOffset() + range.getLength() > contentLength) {
-      throw new EOFException("Requested range is beyond EOF");
+      LOG.error("Requested range [{}, {}) is beyond EOF",
+              range.getOffset(), range.getLength());
+      throw new EOFException("Requested range [" + range.getOffset() +", "
+              + range.getLength() + ") is beyond EOF");
     }
   }
 
@@ -914,6 +918,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param buffer buffer to fill.
    */
   private void readSingleRange(FileRange range, ByteBuffer buffer) {
+    LOG.debug("Start reading range {} ", range);
     S3Object objectRange = null;
     S3ObjectInputStream objectContent = null;
     try {
@@ -922,6 +927,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       final String operationName = "readVectored";
       objectRange = getS3Object(operationName, position, length);
       objectContent = objectRange.getObjectContent();
+      if (objectContent == null) {
+        throw new PathIOException(uri,
+                "Null IO stream received during " + operationName);
+      }
       populateBuffer(length, buffer, objectContent);
       range.getData().complete(buffer);
     } catch (IOException ex) {
@@ -930,6 +939,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     } finally {
       IOUtils.cleanupWithLogger(LOG, objectRange, objectContent);
     }
+    LOG.debug("Finished reading range {} ", range);
   }
 
   /**
@@ -958,31 +968,28 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * This also handles if file has been changed while http call
    * is getting executed. If file has been changed RemoteFileChangedException
    * is thrown.
-   * TODO: add retries here.
-   * @param operationName
-   * @param position
-   * @param length
-   * @return
-   * @throws IOException
+   * @param operationName name of the operation for which get object on S3 is called.
+   * @param position position of the object to be read from S3.
+   * @param length length from position of the object to be read from S3.
+   * @return S3Object
+   * @throws IOException exception if any.
    */
   private S3Object getS3Object(String operationName, long position,
                                int length) throws IOException {
     final GetObjectRequest request = client.newGetRequest(key)
             .withRange(position, position + length - 1);
-    String text = String.format("%s %s at %d length %d",
-            operationName, uri, position, length);
     changeTracker.maybeApplyConstraint(request);
     DurationTracker tracker = streamStatistics.initiateGetRequest();
     S3Object objectRange;
+    Invoker invoker = context.getReadInvoker();
     try {
-      objectRange = Invoker.once(text, uri,
+      objectRange = invoker.retry(operationName, uri, true,
               () -> client.getObject(request));
     } catch (IOException ex) {
       tracker.failed();
       throw ex;
     } finally {
       tracker.close();
-
     }
     changeTracker.processResponse(objectRange, operationName,
             position);
