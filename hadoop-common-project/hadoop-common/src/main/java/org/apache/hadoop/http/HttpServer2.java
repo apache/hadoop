@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -771,6 +772,26 @@ public final class HttpServer2 implements FilterContainer {
 
     addDefaultServlets();
     addPrometheusServlet(conf);
+    addAsyncProfilerServlet(contexts);
+  }
+
+  private void addAsyncProfilerServlet(ContextHandlerCollection contexts) throws IOException {
+    final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
+    if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
+      addServlet("prof", "/prof", ProfileServlet.class);
+      Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
+      if (Files.notExists(tmpDir)) {
+        Files.createDirectories(tmpDir);
+      }
+      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hadoop");
+      genCtx.addServlet(ProfileOutputServlet.class, "/*");
+      genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
+      genCtx.setDisplayName("prof-output-hadoop");
+    } else {
+      addServlet("prof", "/prof", ProfilerDisabledServlet.class);
+      LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
+          + "not specified. Disabling /prof endpoint.");
+    }
   }
 
   private void addPrometheusServlet(Configuration conf) {
