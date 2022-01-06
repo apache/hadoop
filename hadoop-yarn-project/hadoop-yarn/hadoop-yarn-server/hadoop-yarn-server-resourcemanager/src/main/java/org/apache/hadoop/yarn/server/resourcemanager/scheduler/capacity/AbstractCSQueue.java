@@ -359,7 +359,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Initialize the queue state based on previous state, configured state
       // and its parent state
-      initializeQueueState();
+      QueueStateHelper.setQueueState(this);
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
@@ -561,60 +561,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   public QueueCapacityVector getConfiguredCapacityVector(
       String label) {
     return configuredCapacityVectors.get(label);
-  }
-
-  private void initializeQueueState() {
-    QueueState previousState = getState();
-    QueueState configuredState = queueContext.getConfiguration()
-        .getConfiguredState(getQueuePath());
-    QueueState parentState = (parent == null) ? null : parent.getState();
-
-    // verify that we can not any value for State other than RUNNING/STOPPED
-    if (configuredState != null && configuredState != QueueState.RUNNING
-        && configuredState != QueueState.STOPPED) {
-      throw new IllegalArgumentException("Invalid queue state configuration."
-          + " We can only use RUNNING or STOPPED.");
-    }
-    // If we did not set state in configuration, use Running as default state
-    QueueState defaultState = QueueState.RUNNING;
-
-    if (previousState == null) {
-      // If current state of the queue is null, we would inherit the state
-      // from its parent. If this queue does not has parent, such as root queue,
-      // we would use the configured state.
-      if (parentState == null) {
-        updateQueueState((configuredState == null) ? defaultState
-            : configuredState);
-      } else {
-        if (configuredState == null) {
-          updateQueueState((parentState == QueueState.DRAINING) ?
-              QueueState.STOPPED : parentState);
-        } else if (configuredState == QueueState.RUNNING
-            && parentState != QueueState.RUNNING) {
-          throw new IllegalArgumentException(
-              "The parent queue:" + parent.getQueuePath()
-                  + " cannot be STOPPED as the child queue:" + getQueuePath()
-                  + " is in RUNNING state.");
-        } else {
-          updateQueueState(configuredState);
-        }
-      }
-    } else {
-      // when we get a refreshQueue request from AdminService,
-      if (previousState == QueueState.RUNNING) {
-        if (configuredState == QueueState.STOPPED) {
-          stopQueue();
-        }
-      } else {
-        if (configuredState == QueueState.RUNNING) {
-          try {
-            activateQueue();
-          } catch (YarnException ex) {
-            throw new IllegalArgumentException(ex.getMessage());
-          }
-        }
-      }
-    }
   }
 
   protected QueueInfo getQueueInfo() {
