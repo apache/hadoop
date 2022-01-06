@@ -508,7 +508,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
 
     List<org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
         ContainerState> containerStates =
-        listener.states.get(createContainerId(0));
+        listener.getStates().get(createContainerId(0));
     Assert.assertEquals(Arrays.asList(
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
             ContainerState.NEW,
@@ -529,7 +529,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
             ContainerState.DONE), containerStates);
     List<ContainerEventType> containerEventTypes =
-        listener.events.get(createContainerId(0));
+        listener.getEvents().get(createContainerId(0));
     Assert.assertEquals(Arrays.asList(ContainerEventType.INIT_CONTAINER,
         ContainerEventType.CONTAINER_LAUNCHED,
         ContainerEventType.PAUSE_CONTAINER,
@@ -1083,7 +1083,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
 
     List<org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
         ContainerState> containerStates =
-        listener.states.get(createContainerId(1));
+        listener.getStates().get(createContainerId(1));
     Assert.assertEquals(Arrays.asList(
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
             ContainerState.NEW,
@@ -1094,7 +1094,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
             ContainerState.RUNNING), containerStates);
     List<ContainerEventType> containerEventTypes =
-        listener.events.get(createContainerId(1));
+        listener.getEvents().get(createContainerId(1));
     Assert.assertEquals(Arrays.asList(
         ContainerEventType.INIT_CONTAINER,
         ContainerEventType.UPDATE_CONTAINER_TOKEN,
@@ -1107,7 +1107,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
   @Test
   public void testContainerUpdateExecTypeGuaranteedToOpportunistic()
       throws Exception {
-    delayContainers = true;
+    setDelayContainers(true);
     containerManager.start();
     // Construct the Container-id
     ContainerId cId = createContainerId(0);

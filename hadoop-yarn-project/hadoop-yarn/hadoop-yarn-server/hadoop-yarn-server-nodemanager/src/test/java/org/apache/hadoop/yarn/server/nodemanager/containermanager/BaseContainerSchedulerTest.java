@@ -66,10 +66,18 @@ public class BaseContainerSchedulerTest extends BaseContainerManagerTest {
 
   public static class Listener implements ContainerStateTransitionListener {
 
-    public final Map<ContainerId, List<ContainerState>> states =
+    private final Map<ContainerId, List<ContainerState>> states =
         new HashMap<>();
-    public final Map<ContainerId, List<ContainerEventType>> events =
+    private final Map<ContainerId, List<ContainerEventType>> events =
         new HashMap<>();
+
+    public Map<ContainerId, List<ContainerEventType>> getEvents() {
+      return events;
+    }
+
+    public Map<ContainerId, List<ContainerState>> getStates() {
+      return states;
+    }
 
     @Override
     public void init(Context context) {}
@@ -93,13 +101,17 @@ public class BaseContainerSchedulerTest extends BaseContainerManagerTest {
     }
   }
 
-  protected boolean delayContainers = true;
+  private boolean delayContainers = true;
+
+  protected void setDelayContainers(final boolean delayContainersParam) {
+    this.delayContainers = delayContainersParam;
+  }
 
   @Override
   protected ContainerManagerImpl createContainerManager(
       DeletionService delSrvc) {
     return new ContainerManagerImpl(context, exec, delSrvc,
-        nodeStatusUpdater, metrics, dirsHandler) {
+        getNodeStatusUpdater(), metrics, dirsHandler) {
 
       @Override
       protected UserGroupInformation getRemoteUgi() throws YarnException {

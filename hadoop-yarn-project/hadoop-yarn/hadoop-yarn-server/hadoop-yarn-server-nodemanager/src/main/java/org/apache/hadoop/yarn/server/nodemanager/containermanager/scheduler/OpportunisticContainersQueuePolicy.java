@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+
 /**
  * Determines how to schedule opportunistic containers at the NodeManager,
  * i.e., whether or not to accept, queue, or reject a container run request.
@@ -25,7 +27,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 public enum OpportunisticContainersQueuePolicy {
   /**
    * Determines whether or not to run a container by the queue capacity:
-   * {@link org.apache.hadoop.yarn.conf.YarnConfiguration#NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH}.
+   * {@link YarnConfiguration#NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH}.
    * If there's enough capacity in the queue,
    * queues the container, otherwise rejects it.
    */

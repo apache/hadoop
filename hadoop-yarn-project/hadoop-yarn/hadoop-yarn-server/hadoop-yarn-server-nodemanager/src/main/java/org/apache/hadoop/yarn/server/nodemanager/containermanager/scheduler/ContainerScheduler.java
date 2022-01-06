@@ -126,7 +126,7 @@ public class ContainerScheduler extends AbstractService implements
   }
 
   private static OpportunisticContainersQueuePolicy
-  getOppContainersQueuePolicyFromConf(final Context context) {
+      getOppContainersQueuePolicyFromConf(final Context context) {
     final OpportunisticContainersQueuePolicy queuePolicy;
     if (context == null || context.getConf() == null) {
       queuePolicy = OpportunisticContainersQueuePolicy.DEFAULT;

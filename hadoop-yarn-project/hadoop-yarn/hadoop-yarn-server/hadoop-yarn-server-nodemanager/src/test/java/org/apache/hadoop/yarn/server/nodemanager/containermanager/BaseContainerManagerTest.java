@@ -160,7 +160,7 @@ public abstract class BaseContainerManagerTest {
   private NodeResourceMonitorImpl nodeResourceMonitor = mock(
       NodeResourceMonitorImpl.class);
   private NodeHealthCheckerService nodeHealthCheckerService;
-  protected NodeStatusUpdater nodeStatusUpdater;
+  private NodeStatusUpdater nodeStatusUpdater;
   protected ContainerManagerImpl containerManager = null;
 
   public NodeStatusUpdater getNodeStatusUpdater() {

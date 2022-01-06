@@ -232,7 +232,7 @@ public class TestContainerSchedulerOppContainersByResources
 
     // Wait for the OContainer to get killed
     BaseContainerManagerTest.waitForNMContainerState(containerManager,
-        createContainerId(1), ContainerState.DONE,40);
+        createContainerId(1), ContainerState.DONE, 40);
 
     // Get container statuses.
     // Container 0 should be running and container 1 should be killed
