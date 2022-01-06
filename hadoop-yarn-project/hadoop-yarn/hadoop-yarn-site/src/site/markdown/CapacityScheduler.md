@@ -640,11 +640,11 @@ support other pre-configured queues to co-exist along with auto-created queues. 
 
 * Configuring **legacy** `Auto-Created Leaf Queues` with `CapacityScheduler`
 
-The parent queue which has been enabled for auto leaf queue creation,supports
- the configuration of template parameters for automatic configuration of the auto-created leaf queues. The auto-created queues support all of the
- leaf queue configuration parameters except for **Queue ACL**, **Absolute
- Resource** configurations. Queue ACLs are
- currently inherited from the parent queue i.e they are not configurable on the leaf queue template
+The parent queue which has been enabled for auto leaf queue creation, supports
+ the configuration of template parameters for automatic configuration of the auto-created leaf queues. The auto-created queues support all the
+ leaf queue configuration parameters. There is one caveat to the QueueACLs: at auto queue creation the Queue ACLs in the leaf queue templates are not in effect yet,
+ the parent's QueueACLs determines whether the queue can be created by the user. When the auto-created leaf queue already exists then the QueueACLs in the leaf queue template
+ also applies.
 
 | Property | Description |
 |:---- |:---- |
