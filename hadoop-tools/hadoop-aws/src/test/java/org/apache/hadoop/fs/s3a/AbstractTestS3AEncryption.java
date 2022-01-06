@@ -84,7 +84,9 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
 
   /**
    * Skipping tests when running against mandatory encryption bucket
-   * which allows only certain encryption method
+   * which allows only certain encryption method.
+   * S3 throw AmazonS3Exception with status 403 AccessDenied
+   * then it is translated into AccessDeniedException by S3AUtils.translateException(...)
    */
   @Override
   public void setup() throws Exception {
