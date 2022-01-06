@@ -955,11 +955,27 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
                               S3ObjectInputStream objectContent) throws IOException {
     if (buffer.isDirect()) {
       byte[] tmp = new byte[length];
-      objectContent.read(tmp, 0, length);
+      readByteArray(objectContent, tmp, 0, length);
       buffer.put(tmp);
       buffer.flip();
     } else {
-      objectContent.read(buffer.array(), buffer.arrayOffset(), length);
+      readByteArray(objectContent, buffer.array(), 0, length);
+    }
+  }
+
+  public void readByteArray(S3ObjectInputStream objectContent,
+                            byte[] dest,
+                            int offset,
+                            int length) throws IOException {
+    int readBytes = 0;
+    while ( readBytes < length) {
+      int readBytesCurr = objectContent.read(dest,
+              offset + readBytes,
+              length - readBytes);
+      readBytes +=readBytesCurr;
+      if (readBytesCurr < 0) {
+        throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
+      }
     }
   }
 
