@@ -52,6 +52,11 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
   }
 
   @Override
+  protected boolean requireRenameResilience() {
+    return true;
+  }
+
+  @Override
   protected int filesToCreate() {
     return 20;
   }

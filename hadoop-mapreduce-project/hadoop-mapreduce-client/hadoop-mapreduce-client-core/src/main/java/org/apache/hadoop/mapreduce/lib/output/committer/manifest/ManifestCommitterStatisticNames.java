@@ -109,10 +109,16 @@ public final class ManifestCommitterStatisticNames {
   public static final String IO_ACQUIRE_WRITE_PERMIT_BLOCKED = "io_acquire_write_permit_blocked";
 
   /**
-   * A file renamed during the commit operation {@value}..
+   * A file renamed during the commit operation {@value}.
    */
   public static final String OP_COMMIT_FILE_RENAME =
       "commit_file_rename";
+
+  /**
+   * A file rename during the commit operation was recovered from a failure {@value}.
+   */
+  public static final String OP_COMMIT_FILE_RENAME_RECOVERED =
+      "commit_file_rename_recovered";
 
   /** Directory creation {@value}. */
   public static final String OP_CREATE_DIRECTORIES = "op_create_directories";

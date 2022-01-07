@@ -53,6 +53,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -878,11 +879,22 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     client.breakLease(getRelativePath(path), tracingContext);
   }
 
-  public void rename(final Path source,
+  /**
+   * Rename a file or directory.
+   * If a source etag is passed in, the operation will attempt to recover
+   * from a missing source file by probing the destination for
+   * existence and comparing etags.
+   * @param source path to source file
+   * @param destination destination of rename.
+   * @param tracingContext trace context
+   * @param sourceEtag etag of source file. may be null or empty
+   * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
+   * @return true if recovery was needed and succeeded.
+   */
+  public boolean rename(final Path source,
       final Path destination,
-      TracingContext tracingContext,
-      final String sourceEtag,
-      final FileStatus sourceStatus) throws
+      final TracingContext tracingContext,
+      final String sourceEtag) throws
           AzureBlobFileSystemException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
@@ -902,12 +914,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     String sourceRelativePath = getRelativePath(source);
     String destinationRelativePath = getRelativePath(destination);
+    final AtomicBoolean recovered = new AtomicBoolean(false);
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
         AbfsRestOperation op = client
             .renamePath(sourceRelativePath, destinationRelativePath,
-                continuation, tracingContext);
+                continuation, tracingContext, sourceEtag, recovered);
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
@@ -919,6 +932,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       }
     } while (shouldContinue);
+    return recovered.get();
   }
 
   public void delete(final Path path, final boolean recursive,
@@ -1936,33 +1950,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param result response to process.
    * @return the quote-unwrapped etag.
    */
-  private static String extractEtagHeader(AbfsHttpOperation result) {
-    String etag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
-    if (etag != null) {
-      // strip out any wrapper "" quotes which come back, for consistency with
-      // list calls
-      if (etag.startsWith("W/\"")) {
-        // Weak etag
-        etag = etag.substring(3);
-      } else if (etag.startsWith("\"")) {
-        // strong etag
-        etag = etag.substring(1);
-      }
-      if (etag.endsWith("\"")) {
-        // trailing quote
-        etag = etag.substring(0, etag.length() - 1);
-      }
-    }
-    return etag;
-  }
-
-  /**
-   * Get the etag header from a response, stripping any quotations.
-   * see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
-   * @param result response to process.
-   * @return the quote-unwrapped etag.
-   */
-  private static String extractEtagHeader(AbfsHttpOperation result) {
+  public static String extractEtagHeader(AbfsHttpOperation result) {
     String etag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
     if (etag != null) {
       // strip out any wrapper "" quotes which come back, for consistency with

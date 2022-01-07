@@ -59,7 +59,6 @@ public final class InternalConstants {
       OP_STAGE_TASK_SCAN_DIRECTORY,
       OP_STAGE_TASK_SETUP,
 
-
       /* Lower level store/fs operations. */
       OP_COMMIT_FILE_RENAME,
       OP_CREATE_DIRECTORIES,
@@ -99,6 +98,7 @@ public final class InternalConstants {
       COMMITTER_TASK_DIRECTORY_DEPTH_MEAN,
       COMMITTER_TASK_FILE_COUNT_MEAN,
       COMMITTER_TASK_FILE_SIZE_MEAN,
+      OP_COMMIT_FILE_RENAME_RECOVERED,
   };
 
   /**

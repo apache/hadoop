@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
@@ -204,6 +203,17 @@ public abstract class StoreOperations implements Closeable {
   }
 
   /**
+   * Does the store provide rename resilience through etags?
+   * If true then {@link #commitFile(FileOrDirEntry)} will
+   * have any supplied etags used to recover from rename
+   * failures.
+   * @return true if etag comparison is used for recovery.
+   */
+  public boolean storeSupportsResilientCommitThroughEtags() {
+    return false;
+  }
+
+  /**
    * Commit one file.
    * The uses {@link #renameFile(Path, Path)}.
    * If etags were collected during task commit, these will be
@@ -213,63 +223,54 @@ public abstract class StoreOperations implements Closeable {
    * @throws IOException failure.
    */
   public CommitFileResult commitFile(FileOrDirEntry entry) throws IOException {
-    return new CommitFileResult(renameFile(entry.getSourcePath(), entry.getDestPath()));
+    return CommitFileResult.fromRename(renameFile(entry.getSourcePath(), entry.getDestPath()));
   }
 
   /**
    * Outcome from the commit.
    */
-  public static final class CommitFileResult implements IOStatisticsSource {
-
-    /** Was this committed through the resilient API? */
-    private final boolean committedByResilientOperation;
+  public static final class CommitFileResult {
 
     /** result of any rename() call. */
     private final boolean renameOutcome;
 
-    /** The IOStatistics source from the resilient API. */
-    private final IOStatisticsSource source;
+    /** Did recovery take place? */
+    private final boolean recovered;
 
     /**
      * Create from a classic rename.
      * @param renameOutcome the outcome
      */
-    public CommitFileResult(final boolean renameOutcome) {
-      this.renameOutcome = renameOutcome;
-      this.committedByResilientOperation = false;
-      this.source = null;
+    public static CommitFileResult fromRename(final boolean renameOutcome) {
+        return new CommitFileResult(false, renameOutcome);
     }
 
     /**
      * Full commit result.
-     * @param committedByResilientOperation Was this committed through the resilient API?
-     * @param renameOutcome result of any rename() call.
-     * @param statisticsSource The IOStatistics source from the resilient API
+     * @param recovered Did recovery take place?
      */
-    public CommitFileResult(
-        final boolean committedByResilientOperation,
-        final boolean renameOutcome,
-        final IOStatisticsSource statisticsSource) {
+    public static CommitFileResult fromResilientCommit(final boolean recovered) {
+        return new CommitFileResult(recovered, true);
+    }
+
+    /**
+     * Full commit result.
+     * @param recovered Did recovery take place?
+     * @param renameOutcome result of any rename() call.
+     */
+    private CommitFileResult(
+        final boolean recovered,
+        final boolean renameOutcome) {
       this.renameOutcome = renameOutcome;
-      this.committedByResilientOperation = committedByResilientOperation;
-      this.source = statisticsSource;
+      this.recovered = recovered;
     }
 
     public boolean isRenameOutcome() {
       return renameOutcome;
     }
 
-    public boolean isCommittedByResilientOperation() {
-      return committedByResilientOperation;
-    }
-
-    /**
-     * Get any IOStatistics from the commit result.
-     * @return null or IOStatistics.
-     */
-    @Override
-    public IOStatistics getIOStatistics() {
-      return source != null ? source.getIOStatistics() : null;
+    public boolean isRecovered() {
+      return recovered;
     }
 
     /**
@@ -279,7 +280,7 @@ public abstract class StoreOperations implements Closeable {
      * @return true if the operation successfully moved the file.
      */
     public boolean success() {
-      return committedByResilientOperation || renameOutcome;
+      return recovered || renameOutcome;
     }
   }
 

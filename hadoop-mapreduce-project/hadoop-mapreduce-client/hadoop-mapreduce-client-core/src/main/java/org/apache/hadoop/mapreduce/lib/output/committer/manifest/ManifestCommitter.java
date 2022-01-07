@@ -59,6 +59,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_COMPLETED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_FAILED_COUNT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_ABORT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
@@ -346,8 +347,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
   @Override
   public void commitJob(final JobContext jobContext) throws IOException {
 
-    ManifestCommitterConfig committerConfig = enterCommitter(false,
-        jobContext);
+    ManifestCommitterConfig committerConfig = enterCommitter(false, jobContext);
 
     // create the initial success data.
     // this is overwritten by that created during the operation sequence,
@@ -395,6 +395,12 @@ public class ManifestCommitter extends PathOutputCommitter implements
       LOG.info("{}: Job Commit statistics {}",
           committerConfig.getName(),
           ioStatisticsToPrettyString(iostatistics));
+      // and warn of rename problems
+      final Long recoveries = iostatistics.counters().get(OP_COMMIT_FILE_RENAME_RECOVERED);
+      if (recoveries != null && recoveries > 0) {
+        LOG.warn("{}: rename failures were recovered from. Number of recoveries: {}",
+            committerConfig.getName(), recoveries);
+      }
     }
   }
 

@@ -26,13 +26,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
 
 /**
  * Extension of StoreOperationsThroughFileSystem with ABFS awareness.
- * Currently there is no explicit handling other than a validation of
- * the binding filesystem type.
- * Declared public as job configurations can enable it.
+ * Declared public as job configurations can create it.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -43,6 +42,8 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
    */
   public static final String NAME
       = "org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations";
+
+  private ResilientCommitByRename resilientCommitByRename;
 
   @Override
   public AzureBlobFileSystem getFileSystem() {
@@ -56,6 +57,33 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
           "Not an abfs filesystem: " + filesystem.getClass());
     }
     super.bindToFileSystem(filesystem, path);
+    resilientCommitByRename = getFileSystem().createResilientCommitSupport();
   }
 
+  @Override
+  public boolean storePreservesEtagsThroughRenames(final Path path) {
+    return true;
+  }
+
+  @Override
+  public boolean storeSupportsResilientCommitThroughEtags() {
+    return true;
+  }
+
+  /**
+   * Commit a file.
+   * This uses an internal ABFS operation.
+   * @param entry entry to commit
+   * @return the outcome
+   * @throws IOException any failure in resilient commit, some failures in classic rename.
+   */
+  @Override
+  public CommitFileResult commitFile(final FileOrDirEntry entry) throws IOException {
+    final AzureBlobFileSystem fileSystem = getFileSystem();
+    final boolean recovered = resilientCommitByRename.commitSingleFileByRename(
+        entry.getSourcePath(),
+        entry.getDestPath(),
+        entry.getEtag());
+    return CommitFileResult.fromResilientCommit(recovered);
+  }
 }

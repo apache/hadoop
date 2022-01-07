@@ -30,9 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.Trash;
-import org.apache.hadoop.fs.impl.ResilientCommitByRename;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
 
@@ -127,35 +125,6 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
   public boolean renameFile(Path source, Path dest)
       throws IOException {
     return fileSystem.rename(source, dest);
-  }
-
-  /**
-   * Commit a file.
-   * If the store supports {@link ResilientCommitByRename} then
-   * its API is used to commit the file, passing in the etag.
-   * @param entry entry to commit
-   * @return the outcome
-   * @throws IOException any failure in resilient commit, some failures in classic rename.
-   */
-  @Override
-  public CommitFileResult commitFile(final FileOrDirEntry entry) throws IOException {
-    if (fileSystem instanceof ResilientCommitByRename
-        && fileSystem.hasPathCapability(entry.getSourcePath(),
-        ResilientCommitByRename.RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY)) {
-
-      // use the better file rename operation.
-      final ResilientCommitByRename.CommitByRenameOutcome outcome =
-          ((ResilientCommitByRename) fileSystem).commitSingleFileByRename(
-              entry.getSourcePath(),
-              entry.getDestPath(),
-              entry.getEtag(),
-              null);
-
-      return new CommitFileResult(true, true, outcome);
-    } else {
-      // fall back to rename.
-      return new CommitFileResult(renameFile(entry.getSourcePath(), entry.getDestPath()));
-    }
   }
 
   @Override

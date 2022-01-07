@@ -35,11 +35,11 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.RenameFilesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
-import static org.apache.hadoop.fs.impl.ResilientCommitByRename.RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
@@ -63,9 +63,15 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
    * Fault Injection.
    */
   private UnreliableStoreOperations failures;
-  private boolean resilientCommit;
-  private boolean etagsPreserved;
+
+  /** etags returned in listing/file status operations? */
   private boolean etagsSupported;
+
+  /** etags preserved through rename? */
+  private boolean etagsPreserved;
+
+  /** resilient commit expected? */
+  private boolean resilientCommit;
 
   protected boolean isResilientCommit() {
     return resilientCommit;
@@ -88,12 +94,27 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
         CommonPathCapabilities.ETAGS_AVAILABLE);
     etagsPreserved = fs.hasPathCapability(methodPath,
         CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME);
-    resilientCommit = fs.hasPathCapability(methodPath,
-        RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY);
 
+    final StoreOperations wrappedOperations = getStoreOperations();
     failures
-        = new UnreliableStoreOperations(getStoreOperations());
+        = new UnreliableStoreOperations(wrappedOperations);
     setStoreOperations(failures);
+    resilientCommit = wrappedOperations.storeSupportsResilientCommitThroughEtags();
+  }
+
+  /**
+   * Does this test suite require rename resilience in the store/FS?
+   * @return true if the store operations are resilient.
+   */
+  protected boolean requireRenameResilience() {
+    return false;
+  }
+
+  @Test
+  public void testResilienceAsExpected() throws Throwable {
+    Assertions.assertThat(isResilientCommit())
+        .describedAs("resilient commit support")
+        .isEqualTo(requireRenameResilience());
   }
 
   @Test
@@ -177,11 +198,9 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     expectRenameFailure(
         new RenameFilesStage(stageConfig),
         manifest,
-
         filesToCommit.size(),
         FAILED_TO_RENAME,
         PathIOException.class);
-
   }
 
   private void createFileset(final Path destDir,
@@ -225,7 +244,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
    * @param manifests list of manifests
    * @param files number of files being renamed.
    * @param errorText text which must be in the exception string
-   * @param exceptionClass
+   * @param exceptionClass class of the exception
    * @return the caught exception
    * @throws Exception if anything else went wrong, or no exception was raised.
    */
@@ -235,6 +254,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
       int files,
       String errorText,
       Class<E> exceptionClass) throws Exception {
+
     List<TaskManifest> manifests = new ArrayList<>();
     manifests.add(manifest);
     ProgressCounter progressCounter = getProgressCounter();

@@ -37,8 +37,8 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractM
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.OperationDuration;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -57,6 +57,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_READ_PERMIT_BLOCKED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_WRITE_PERMIT_BLOCKED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_DIR;
@@ -702,11 +703,16 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     final Path dest = entry.getDestPath();
 
     maybeDeleteDest(deleteDest, dest);
-    executeRenamingOperation("commitFile",
+    final StoreOperations.CommitFileResult result = executeRenamingOperation(
+        "commitFile",
         source, dest,
         OP_COMMIT_FILE_RENAME, PERMIT_WRITE_COMMIT_FILE, () ->
             operations.commitFile(entry),
         StoreOperations.CommitFileResult::success);
+    if (result.isRecovered()) {
+      // recovery took place.
+      getIOStatistics().incrementCounter(OP_COMMIT_FILE_RENAME_RECOVERED);
+    }
     return new CommitOutcome();
   }
 
@@ -775,26 +781,26 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     }
     // escalate the failure; this is done out of the duration tracker
     // so its file status probes aren't included.
-    escalateRenameFailure(operation, source, dest);
-    return null;
+    throw escalateRenameFailure(operation, source, dest);
   }
 
   /**
    * Escalate a rename failure to an exception.
-   * This never returns
+   * Returns an error exception to throw if one was not
+   * triggered when probing for the source.
    * @param operation operation name
    * @param source source path
    * @param dest dest path
-   * @throws IOException always
+   * @return an exception to throw
+   * @throws IOException raised probing for source or dest
    */
-  private void escalateRenameFailure(String operation, Path source, Path dest)
-      throws IOException {
+  private PathIOException escalateRenameFailure(String operation,
+      Path source, Path dest) throws IOException {
     // rename just returned false.
     // collect information for a meaningful error message
     // and include in an exception raised.
 
-    // get the source status; this will implicitly raise
-    // a FNFE.
+    // get the source status; this will implicitly raise a FNFE.
     final FileStatus sourceStatus = getFileStatus(source);
 
     // and look to see if there is anything at the destination
@@ -806,7 +812,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
         getName(), operation, source, dest,
         sourceStatus, destStatus);
 
-    throw new PathIOException(source.toString(),
+    return new PathIOException(source.toString(),
         FAILED_TO_RENAME + operation + " to " + dest);
   }
 
