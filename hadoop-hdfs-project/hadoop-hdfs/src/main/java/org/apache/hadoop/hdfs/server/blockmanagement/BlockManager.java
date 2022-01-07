@@ -4990,8 +4990,8 @@ public class BlockManager implements BlockStatsMXBean {
           }
         }
         if (isSleep) {
-          LOG.info("Clear markedDeleteQueue over " + deleteBlockLockTimeMs
-              + " millisecond to release the write lock");
+          LOG.debug("Clear markedDeleteQueue over {}" +
+              " millisecond to release the write lock", deleteBlockLockTimeMs);
         }
         try {
           Thread.sleep(deleteBlockUnlockIntervalTimeMs);
