@@ -1124,6 +1124,12 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     setCacheArchives(archives, conf);
   }
 
+  /**
+   * Set the configuration with the given set of archives.
+   *
+   * @param archives The list of archives that need to be localized.
+   * @param conf Configuration which will be changed.
+   */
   public static void setCacheArchives(URI[] archives, Configuration conf) {
     String cacheArchives = StringUtils.uriToString(archives);
     conf.set(MRJobConfig.CACHE_ARCHIVES, cacheArchives);
@@ -1138,6 +1144,12 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     setCacheFiles(files, conf);
   }
 
+  /**
+   * Set the configuration with the given set of files.
+   *
+   * @param files The list of files that need to be localized.
+   * @param conf Configuration which will be changed.
+   */
   public static void setCacheFiles(URI[] files, Configuration conf) {
     String cacheFiles = StringUtils.uriToString(files);
     conf.set(MRJobConfig.CACHE_FILES, cacheFiles);
@@ -1152,6 +1164,12 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     addCacheArchive(uri, conf);
   }
 
+  /**
+   * Add an archives to be localized to the conf.
+   *
+   * @param uri  The uri of the cache to be localized.
+   * @param conf Configuration to add the cache to.
+   */
   public static void addCacheArchive(URI uri, Configuration conf) {
     String archives = conf.get(MRJobConfig.CACHE_ARCHIVES);
     conf.set(MRJobConfig.CACHE_ARCHIVES,
@@ -1167,6 +1185,25 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     addCacheFile(uri, conf);
   }
 
+  /**
+   * Add a file to be localized to the conf. The localized file will be
+   * downloaded to the execution node(s), and a link will be created to the
+   * file from the job's working directory. If the last part of URI's path name
+   * is "*", then the entire parent directory will be localized and links
+   * will be created from the job's working directory to each file in the
+   * parent directory.
+   * <p>
+   * The access permissions of the file will determine whether the localized
+   * file will be shared across jobs. If the file is not readable by other or
+   * if any of its parent directories is not executable by other, then the
+   * file will not be shared. In the case of a path that ends in "/*",
+   * sharing of the localized files will be determined solely from the
+   * access permissions of the parent directories. The access permissions of
+   * the individual files will be ignored.
+   *
+   * @param uri  The uri of the cache to be localized.
+   * @param conf Configuration to add the cache to.
+   */
   public static void addCacheFile(URI uri, Configuration conf) {
     String files = conf.get(MRJobConfig.CACHE_FILES);
     conf.set(MRJobConfig.CACHE_FILES,
@@ -1190,10 +1227,27 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     addFileToClassPath(file, conf, file.getFileSystem(conf));
   }
 
+  /**
+   * Add a file path to the current set of classpath entries. The file will
+   * also be added to the cache.
+   *
+   * @param file Path of the file to be added.
+   * @param conf Configuration that contains the classpath setting.
+   * @param fs FileSystem with respect to which {@code file} should be interpreted.
+   */
   public static void addFileToClassPath(Path file, Configuration conf, FileSystem fs) {
     addFileToClassPath(file, conf, fs, true);
   }
 
+  /**
+   * Add a file path to the current set of classpath entries. The file will
+   * also be added to the cache if {@code addToCache} is true.
+   *
+   * @param file Path of the file to be added.
+   * @param conf Configuration that contains the classpath setting.
+   * @param fs FileSystem with respect to which {@code file} should be interpreted.
+   * @param addToCache Whether the file should also be added to the cache list.
+   */
   public static void addFileToClassPath(Path file, Configuration conf, FileSystem fs,
       boolean addToCache) {
     String classpath = conf.get(MRJobConfig.CLASSPATH_FILES);
@@ -1220,6 +1274,14 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
   }
 
+  /**
+   * Add an archive path to the current set of classpath entries. It adds the
+   * archive to cache as well.
+   *
+   * @param archive Path of the archive to be added.
+   * @param conf Configuration that contains the classpath setting.
+   * @param fs FileSystem with respect to which {@code archive} should be interpreted.
+   */
   public static void addArchiveToClassPath(Path archive, Configuration conf, FileSystem fs) {
     String classpath = conf.get(MRJobConfig.CLASSPATH_ARCHIVES);
     conf.set(MRJobConfig.CLASSPATH_ARCHIVES,
