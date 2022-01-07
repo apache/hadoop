@@ -2529,6 +2529,28 @@ public class TestConfiguration {
   }
 
   @Test
+  public void testGetPasswordFromConfig() {
+    String password = "none";
+    char[] expectedPassword = password.toCharArray();
+
+    Configuration conf = new Configuration();
+    conf.set("pass", password);
+
+    assertTrue(Arrays.equals(expectedPassword, conf.getPasswordFromConfig("pass")));
+  }
+
+  @Test
+  public void testGetPasswordFromConfigDisabledClearTextFallback() {
+    String password = "none";
+
+    Configuration conf = new Configuration();
+    conf.set("pass", password);
+    conf.setBoolean(CredentialProvider.CLEAR_TEXT_FALLBACK, false);
+
+    assertTrue(Arrays.equals(null, conf.getPasswordFromConfig("pass")));
+  }
+
+  @Test
   public void testGettingPropertiesWithPrefix() throws Exception {
     Configuration conf = new Configuration();
     for (int i = 0; i < 10; i++) {

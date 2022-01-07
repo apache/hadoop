@@ -358,6 +358,14 @@
 </property>
 
 <property>
+  <name>hadoop.security.credstore.java-keystore-provider.password-config-key</name>
+  <value></value>
+  <description>
+    Keystore password to be used on provider path. If defined, overrides value in environment.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.ssl.truststore</name>
   <value></value>
   <description>

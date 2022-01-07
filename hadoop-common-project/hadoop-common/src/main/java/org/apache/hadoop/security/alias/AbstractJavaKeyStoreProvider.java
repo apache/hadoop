@@ -312,10 +312,10 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
    * Open up and initialize the keyStore.
    *
    * Password evaluation precedence order:
-   * 1. this.conf (HADOOP_SECURITY_CREDENTIAL_PASSWORD_CONFIG_KEY)
-   * 2. environment (HADOOP_CREDSTORE_PASSWORD)
-   * 3. password file (HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY)
-   * 4. default (CREDENTIAL_PASSWORD_DEFAULT)
+   * <li>1. this.conf (HADOOP_SECURITY_CREDENTIAL_PASSWORD_CONFIG_KEY)</li>
+   * <li>2. environment (HADOOP_CREDSTORE_PASSWORD)</li>
+   * <li>3. password file (HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY)</li>
+   * <li>4. default (CREDENTIAL_PASSWORD_DEFAULT)</li>
    *
    * @throws IOException If there is a problem reading the password file
    * or a problem reading the keystore.

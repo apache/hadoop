@@ -2482,9 +2482,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Fallback to clear text passwords in configuration.
+   * This method is only for use in the hadoop security code, e.g. when
+   * the caller is already somewhere on the CredentialProvider codepath, where
+   * using getPassword would cause an infinite recursion.
    * @param name
    * @return clear text password or null
    */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
   public char[] getPasswordFromConfig(String name) {
     char[] pass = null;
     if (getBoolean(CredentialProvider.CLEAR_TEXT_FALLBACK,
