@@ -647,6 +647,9 @@ public class TestIPC {
         fail("Expected an exception to have been thrown");
       } catch (EOFException e) {
         LOG.info("Got expected exception", e);
+      } catch (IOException e) {
+        Assert.assertTrue(e.getMessage().contains("java.io.IOException: Connection reset by peer"));
+        LOG.info("Got expected exception", e);
       } catch (Throwable t) {
         LOG.warn("Got unexpected error", t);
         fail("Expected an EOFException to have been thrown");
