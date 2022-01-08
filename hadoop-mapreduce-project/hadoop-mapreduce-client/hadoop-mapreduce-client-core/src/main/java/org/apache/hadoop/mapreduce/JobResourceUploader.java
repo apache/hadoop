@@ -332,13 +332,12 @@ class JobResourceUploader {
           // separately.
           foundFragment = (newURI.getFragment() != null) && !fromSharedCache;
         }
-        DistributedCache.addFileToClassPath(new Path(newURI.getPath()), conf,
-            jtFs, false);
+        Job.addFileToClassPath(new Path(newURI.getPath()), conf, jtFs, false);
         if (fromSharedCache) {
           // We simply add this URI to the distributed cache. It will not come
           // from the staging directory (it is in the shared cache), so we
           // must add it to the cache regardless of the wildcard feature.
-          DistributedCache.addCacheFile(newURI, conf);
+          Job.addCacheFile(newURI, conf);
         } else {
           libjarURIs.add(newURI);
         }
@@ -352,10 +351,10 @@ class JobResourceUploader {
         // Add the whole directory to the cache using a wild card
         Path libJarsDirWildcard =
             jtFs.makeQualified(new Path(libjarsDir, DistributedCache.WILDCARD));
-        DistributedCache.addCacheFile(libJarsDirWildcard.toUri(), conf);
+        Job.addCacheFile(libJarsDirWildcard.toUri(), conf);
       } else {
         for (URI uri : libjarURIs) {
-          DistributedCache.addCacheFile(uri, conf);
+          Job.addCacheFile(uri, conf);
         }
       }
     }
@@ -847,8 +846,8 @@ class JobResourceUploader {
       }
       Path tmp = new Path(tmpURI);
       Path newPath = copyRemoteFiles(fileDir, tmp, conf, replication);
-      DistributedCache.addFileToClassPath(new Path(newPath.toUri().getPath()),
-          conf);
+      Path path = new Path(newPath.toUri().getPath());
+      Job.addFileToClassPath(path, conf, path.getFileSystem(conf));
     }
   }
 
