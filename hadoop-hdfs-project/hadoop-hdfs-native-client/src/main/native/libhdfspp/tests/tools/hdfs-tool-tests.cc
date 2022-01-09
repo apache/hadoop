@@ -24,6 +24,7 @@
 #include "hdfs-chgrp-mock.h"
 #include "hdfs-chmod-mock.h"
 #include "hdfs-chown-mock.h"
+#include "hdfs-copy-to-local-mock.h"
 #include "hdfs-create-snapshot-mock.h"
 #include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-df-mock.h"
@@ -98,6 +99,11 @@ INSTANTIATE_TEST_SUITE_P(
                     PassOwnerAndAPath<hdfs::tools::test::ChgrpMock>,
                     PassRecursiveOwnerAndAPath<hdfs::tools::test::ChgrpMock>));
 
+INSTANTIATE_TEST_SUITE_P(
+    HdfsCopyToLocal, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::CopyToLocalMock>,
+                    Pass2Paths<hdfs::tools::test::CopyToLocalMock>));
+
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
@@ -132,6 +138,14 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsCat, HdfsToolNegativeTestThrows,
     testing::Values(Pass2Paths<hdfs::tools::test::CatMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsCopyToLocal, HdfsToolNegativeTestThrows,
+    testing::Values(Pass3Paths<hdfs::tools::test::CopyToLocalMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsCopyToLocal, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::CopyToLocalMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsDeleteSnapshot, HdfsToolNegativeTestNoThrow,
