@@ -27,8 +27,8 @@
 
 namespace hdfs::tools {
 /**
- * {@class CopyToLocal} is an {@class HdfsTool} that reads the contents of the
- * file located at an HDFS path and writes to stdout.
+ * {@class CopyToLocal} is an {@class HdfsTool} that copies the file from the
+ * given HDFS source path to the destination path on the local machine.
  */
 class CopyToLocal : public HdfsTool {
 public:
@@ -73,8 +73,8 @@ protected:
   /**
    * Handle the path argument that's passed to this tool.
    *
-   * @param source The path to the directory that needs to be made
-   * snapshot-able.
+   * @param source The source file path in HDFS.
+   * @param target The target file path on the local machine.
    *
    * @return A boolean indicating the result of this operation.
    */
