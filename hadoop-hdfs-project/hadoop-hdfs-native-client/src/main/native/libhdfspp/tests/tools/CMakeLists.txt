@@ -31,6 +31,7 @@ add_executable(hdfs_tool_tests
                 hdfs-df-mock.cc
                 hdfs-du-mock.cc
                 hdfs-copy-to-local-mock.cc
+                hdfs-move-to-local-mock.cc
                 main.cc)
 target_include_directories(hdfs_tool_tests PRIVATE
                             ../tools
@@ -46,6 +47,7 @@ target_include_directories(hdfs_tool_tests PRIVATE
                             ../../tools/hdfs-chgrp
                             ../../tools/hdfs-chmod
                             ../../tools/hdfs-copy-to-local
+                            ../../tools/hdfs-move-to-local
                             ../../tools/hdfs-cat)
 target_link_libraries(hdfs_tool_tests PRIVATE
                        gmock_main
@@ -60,5 +62,6 @@ target_link_libraries(hdfs_tool_tests PRIVATE
                        hdfs_chgrp_lib
                        hdfs_chmod_lib
                        hdfs_copyToLocal_lib
+                       hdfs_moveToLocal_lib
                        hdfs_cat_lib)
 add_test(hdfs_tool_tests hdfs_tool_tests)
