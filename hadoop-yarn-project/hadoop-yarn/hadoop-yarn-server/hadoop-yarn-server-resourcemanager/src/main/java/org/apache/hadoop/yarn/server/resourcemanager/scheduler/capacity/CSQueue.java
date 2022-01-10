@@ -96,12 +96,6 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   QueuePath getQueuePathObject();
 
   /**
-   * Checks whether the queue is a ParentQueue (capable of storing child queues).
-   * @return true, if it is a parent, false otherwise
-   */
-  boolean isParent();
-
-  /**
    * Checks whether the queue is a dynamic queue (created dynamically in the fashion of auto queue
    * creation v2).
    * @return true, if it is a dynamic queue, false otherwise
