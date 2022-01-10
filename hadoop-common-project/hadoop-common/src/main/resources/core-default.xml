@@ -1359,12 +1359,6 @@
 </property>
 
 <property>
-  <name>fs.s3a.delegation.tokens.enabled</name>
-  <value>false</value>
-  <description></description>
-</property>
-
-<property>
   <name>fs.s3a.delegation.token.binding</name>
   <value></value>
   <description>
