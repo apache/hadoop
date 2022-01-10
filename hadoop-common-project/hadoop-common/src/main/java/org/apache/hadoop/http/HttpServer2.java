@@ -772,10 +772,11 @@ public final class HttpServer2 implements FilterContainer {
 
     addDefaultServlets();
     addPrometheusServlet(conf);
-    addAsyncProfilerServlet(contexts);
+    addAsyncProfilerServlet(contexts, conf);
   }
 
-  private void addAsyncProfilerServlet(ContextHandlerCollection contexts) throws IOException {
+  private void addAsyncProfilerServlet(ContextHandlerCollection contexts, Configuration conf)
+      throws IOException {
     final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
     if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
       addServlet("prof", "/prof", ProfileServlet.class);
@@ -787,6 +788,7 @@ public final class HttpServer2 implements FilterContainer {
       genCtx.addServlet(ProfileOutputServlet.class, "/*");
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
       genCtx.setDisplayName("prof-output-hadoop");
+      setContextAttributes(genCtx, conf);
     } else {
       addServlet("prof", "/prof", ProfilerDisabledServlet.class);
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
