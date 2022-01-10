@@ -22,7 +22,6 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsScaleTest;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import org.junit.Before;
