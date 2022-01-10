@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -203,7 +204,7 @@ public class AbstractResourceUsage {
   public Set<String> getNodePartitionsSet() {
     readLock.lock();
     try {
-      return usages.keySet();
+      return ImmutableSet.copyOf(usages.keySet());
     } finally {
       readLock.unlock();
     }
