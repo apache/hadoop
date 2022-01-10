@@ -30,8 +30,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-
 /**
  * Information about a single remote NameNode
  */

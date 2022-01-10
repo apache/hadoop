@@ -182,7 +182,7 @@ ACLs (Access Control Lists)
 
 In addition to the traditional POSIX permissions model, HDFS also supports POSIX ACLs (Access Control Lists). ACLs are useful for implementing permission requirements that differ from the natural organizational hierarchy of users and groups. An ACL provides a way to set different permissions for specific named users or named groups, not only the file's owner and the file's group.
 
-By default, support for ACLs is disabled, and the NameNode disallows creation of ACLs. To enable support for ACLs, set `dfs.namenode.acls.enabled` to true in the NameNode configuration.
+By default, support for ACLs is enabled, and the NameNode allows creation of ACLs. To disable support for ACLs, set `dfs.namenode.acls.enabled` to false in the NameNode configuration.
 
 An ACL consists of a set of ACL entries. Each ACL entry names a specific user or group and grants or denies read, write and execute permissions for that specific user or group. For example:
 

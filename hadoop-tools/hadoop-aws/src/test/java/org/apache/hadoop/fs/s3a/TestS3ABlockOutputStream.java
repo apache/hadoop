@@ -141,6 +141,10 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
    */
   @Test
   public void testSyncableUnsupported() throws Exception {
+    final S3ABlockOutputStream.BlockOutputStreamBuilder
+        builder = mockS3ABuilder();
+    builder.withDowngradeSyncableExceptions(false);
+    stream = spy(new S3ABlockOutputStream(builder));
     intercept(UnsupportedOperationException.class, () -> stream.hflush());
     intercept(UnsupportedOperationException.class, () -> stream.hsync());
   }

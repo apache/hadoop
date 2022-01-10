@@ -27,6 +27,7 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.util.Shell;
@@ -35,7 +36,7 @@ import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 class VEDeviceDiscoverer {
   private static final String STATE_TERMINATING = "TERMINATING";
@@ -58,11 +59,11 @@ class VEDeviceDiscoverer {
 
   public Set<Device> getDevicesFromPath(String path) throws IOException {
     MutableInt counter = new MutableInt(0);
-
-    return Files.walk(Paths.get(path), 1)
-      .filter(p -> p.toFile().getName().startsWith("veslot"))
-      .map(p -> toDevice(p, counter))
-      .collect(Collectors.toSet());
+    try (Stream<Path> stream = Files.walk(Paths.get(path), 1)) {
+      return stream.filter(p -> p.toFile().getName().startsWith("veslot"))
+            .map(p -> toDevice(p, counter))
+            .collect(Collectors.toSet());
+    }
   }
 
   private Device toDevice(Path p, MutableInt counter) {

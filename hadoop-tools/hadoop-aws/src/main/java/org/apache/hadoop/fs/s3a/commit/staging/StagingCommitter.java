@@ -49,7 +49,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.util.Preconditions.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;

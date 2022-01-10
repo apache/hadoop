@@ -47,7 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * JNI wrappers for various native IO-related calls not available in Java.
@@ -141,7 +141,7 @@ public class NativeIO {
       }
     }
 
-    // Denotes the state of supporting PMDK. The value is set by JNI.
+    // Denotes the state of supporting PMDK. The actual value is set via JNI.
     private static SupportState pmdkSupportState =
         SupportState.UNSUPPORTED;
 

@@ -50,7 +50,7 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.tools.util.RetriableCommand;
 import org.apache.hadoop.tools.util.ThrottledInputStream;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
 
@@ -154,7 +154,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       if (!source.isSplit()) {
         DistCpUtils.compareFileLengthsAndChecksums(source.getLen(), sourceFS,
                 sourcePath, sourceChecksum, targetFS,
-                targetPath, skipCrc, source.getLen());
+                targetPath, skipCrc, offset + bytesRead);
       }
       // it's not append or direct write (preferred for s3a) case, thus we first
       // write to a temporary file, then rename it to the target path.

@@ -21,8 +21,6 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-
 /**
  * The IdentityHashStore stores (key, value) mappings in an array.
  * It is similar to java.util.HashTable, but much more lightweight.

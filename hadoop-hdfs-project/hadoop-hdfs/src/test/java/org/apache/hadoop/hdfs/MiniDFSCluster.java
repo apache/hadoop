@@ -148,7 +148,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -2267,9 +2267,11 @@ public class MiniDFSCluster implements AutoCloseable {
     info.nameNode = nn;
     info.setStartOpt(startOpt);
     if (waitActive) {
-      waitClusterUp();
+      if (numDataNodes > 0) {
+        waitNameNodeUp(nnIndex);
+      }
       LOG.info("Restarted the namenode");
-      waitActive();
+      waitActive(nnIndex);
     }
   }
 
@@ -2483,12 +2485,8 @@ public class MiniDFSCluster implements AutoCloseable {
 
   public void waitDatanodeFullyStarted(DataNode dn, int timeout)
       throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return dn.isDatanodeFullyStarted();
-      }
-    }, 100, timeout);
+    GenericTestUtils.waitFor(dn::isDatanodeFullyStarted, 100, timeout,
+        "Datanode is not started even after " + timeout + " ms of waiting");
   }
 
   private void waitDataNodeFullyStarted(final DataNode dn)
@@ -2779,11 +2777,25 @@ public class MiniDFSCluster implements AutoCloseable {
     DFSClient client = new DFSClient(addr, conf);
 
     // ensure all datanodes have registered and sent heartbeat to the namenode
-    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
+    int failedCount = 0;
+    while (true) {
       try {
-        LOG.info("Waiting for cluster to become active");
-        Thread.sleep(100);
+        while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
+          LOG.info("Waiting for cluster to become active");
+          Thread.sleep(100);
+        }
+        break;
+      } catch (IOException e) {
+        failedCount++;
+        // Cached RPC connection to namenode, if any, is expected to fail once
+        if (failedCount > 1) {
+          LOG.warn("Tried waitActive() " + failedCount
+              + " time(s) and failed, giving up.  " + StringUtils
+              .stringifyException(e));
+          throw e;
+        }
       } catch (InterruptedException e) {
+        throw new IOException(e);
       }
     }
 
@@ -2819,22 +2831,7 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public void waitActive() throws IOException {
     for (int index = 0; index < namenodes.size(); index++) {
-      int failedCount = 0;
-      while (true) {
-        try {
-          waitActive(index);
-          break;
-        } catch (IOException e) {
-          failedCount++;
-          // Cached RPC connection to namenode, if any, is expected to fail once
-          if (failedCount > 1) {
-            LOG.warn("Tried waitActive() " + failedCount
-                + " time(s) and failed, giving up.  "
-                + StringUtils.stringifyException(e));
-            throw e;
-          }
-        }
-      }
+      waitActive(index);
     }
     LOG.info("Cluster is active");
   }

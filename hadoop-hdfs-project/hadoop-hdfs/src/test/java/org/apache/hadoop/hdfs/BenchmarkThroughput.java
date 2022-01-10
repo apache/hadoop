@@ -187,7 +187,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
     }
     Configuration conf = getConf();
     // the size of the file to write
-    long SIZE = conf.getLong("dfsthroughput.file.size",
+    long fileSize = conf.getLong("dfsthroughput.file.size",
         10L * 1024 * 1024 * 1024);
     BUFFER_SIZE = conf.getInt("dfsthroughput.buffer.size", 4 * 1024);
 
@@ -203,9 +203,9 @@ public class BenchmarkThroughput extends Configured implements Tool {
     ChecksumFileSystem checkedLocal = FileSystem.getLocal(conf);
     FileSystem rawLocal = checkedLocal.getRawFileSystem();
     for(int i=0; i < reps; ++i) {
-      writeAndReadLocalFile("local", conf, SIZE);
-      writeAndReadFile(rawLocal, "raw", conf, SIZE);
-      writeAndReadFile(checkedLocal, "checked", conf, SIZE);
+      writeAndReadLocalFile("local", conf, fileSize);
+      writeAndReadFile(rawLocal, "raw", conf, fileSize);
+      writeAndReadFile(checkedLocal, "checked", conf, fileSize);
     }
     MiniDFSCluster cluster = null;
     try {
@@ -214,7 +214,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
       cluster.waitActive();
       FileSystem dfs = cluster.getFileSystem();
       for(int i=0; i < reps; ++i) {
-        writeAndReadFile(dfs, "dfs", conf, SIZE);
+        writeAndReadFile(dfs, "dfs", conf, fileSize);
       }
     } finally {
       if (cluster != null) {

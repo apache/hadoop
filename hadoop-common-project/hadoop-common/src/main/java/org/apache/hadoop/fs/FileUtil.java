@@ -58,6 +58,7 @@ import java.util.zip.ZipInputStream;
 import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -182,7 +183,7 @@ public class FileUtil {
       return true;
     }
     // handle nonempty directory deletion
-    if (!fullyDeleteContents(dir, tryGrantPermissions)) {
+    if (!FileUtils.isSymlink(dir) && !fullyDeleteContents(dir, tryGrantPermissions)) {
       return false;
     }
     return deleteImpl(dir, true);
@@ -398,12 +399,6 @@ public class FileUtil {
                              Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
-
-    if (srcFS.makeQualified(src).equals(dstFS.makeQualified(dst))) {
-      throw new PathOperationException("Source (" + src + ") and destination " +
-          "(" + dst + ") are equal in the copy command.");
-    }
-
     if (srcStatus.isDirectory()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {

@@ -41,6 +41,8 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
  */
 public interface CapacitySchedulerContext {
   CapacitySchedulerConfiguration getConfiguration();
+
+  CapacitySchedulerQueueContext getQueueContext();
   
   Resource getMinimumResourceCapability();
 

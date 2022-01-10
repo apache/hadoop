@@ -27,6 +27,7 @@ import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.wsrs.BooleanParam;
 import org.apache.hadoop.lib.wsrs.EnumParam;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
+import org.apache.hadoop.lib.wsrs.IntegerParam;
 import org.apache.hadoop.lib.wsrs.LongParam;
 import org.apache.hadoop.lib.wsrs.Param;
 import org.apache.hadoop.lib.wsrs.ParametersProvider;
@@ -112,6 +113,9 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.RENAMESNAPSHOT,
             new Class[] {OldSnapshotNameParam.class,
                 SnapshotNameParam.class});
+    PARAMS_DEF.put(Operation.GETSNAPSHOTDIFFLISTING,
+        new Class[] {OldSnapshotNameParam.class, SnapshotNameParam.class,
+            SnapshotDiffStartPathParam.class, SnapshotDiffIndexParam.class});
     PARAMS_DEF.put(Operation.GETSNAPSHOTDIFF,
         new Class[] {OldSnapshotNameParam.class,
             SnapshotNameParam.class});
@@ -667,6 +671,44 @@ public class HttpFSParametersProvider extends ParametersProvider {
     public OldSnapshotNameParam() {
       super(NAME, null);
     }
+  }
+
+  /**
+   * Class for SnapshotDiffStartPath parameter.
+   */
+  public static class SnapshotDiffStartPathParam extends StringParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.SNAPSHOT_DIFF_START_PATH;
+
+    /**
+     * Constructor.
+     */
+    public SnapshotDiffStartPathParam() {
+      super(NAME, "");
+    }
+
+  }
+
+  /**
+   * Class for SnapshotDiffStartPath parameter.
+   */
+  public static class SnapshotDiffIndexParam extends IntegerParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.SNAPSHOT_DIFF_INDEX;
+
+    /**
+     * Constructor.
+     */
+    public SnapshotDiffIndexParam() {
+      super(NAME, null);
+    }
+
   }
 
   /**

@@ -58,6 +58,17 @@ public class TestConfigurationProperties {
     Assert.assertTrue(props.containsKey("4.5"));
     Assert.assertEquals("TEST_VALUE_3_2", props.get("4.5"));
 
+    // Test the scenario where the prefix has a dot appended to it
+    // (see CapacitySchedulerConfiguration.getQueuePrefix(String queue)).
+    // The dot is disregarded.
+    props = configurationProperties
+        .getPropertiesWithPrefix("root.1.2.4.");
+
+    Assert.assertEquals(2, props.size());
+    Assert.assertTrue(props.containsKey(""));
+    Assert.assertEquals("TEST_VALUE_3_1", props.get(""));
+    Assert.assertTrue(props.containsKey("5"));
+    Assert.assertEquals("TEST_VALUE_3_2", props.get("5"));
 
     Map<String, String> propsWithRootPrefix = configurationProperties
         .getPropertiesWithPrefix("root");

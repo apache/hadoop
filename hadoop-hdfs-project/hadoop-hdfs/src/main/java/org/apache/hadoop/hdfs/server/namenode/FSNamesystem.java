@@ -24,12 +24,16 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_C
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_KEY;
@@ -341,9 +345,9 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -397,6 +401,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
 
+  private static final String CLIENT_PORT_STR = "clientPort";
+  private final String contextFieldSeparator;
+
   boolean isAuditEnabled() {
     return (!isDefaultAuditLogger || auditLog.isInfoEnabled())
         && !auditLoggers.isEmpty();
@@ -411,7 +418,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String dst, FileStatus stat) throws IOException {
     if (isAuditEnabled() && isExternalInvocation()) {
       logAuditEvent(succeeded, Server.getRemoteUser(), Server.getRemoteIp(),
-                    cmd, src, dst, stat);
+          cmd, src, dst, stat);
     }
   }
 
@@ -442,12 +449,33 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     for (AuditLogger logger : auditLoggers) {
       if (logger instanceof HdfsAuditLogger) {
         HdfsAuditLogger hdfsLogger = (HdfsAuditLogger) logger;
+        if (auditLogWithRemotePort) {
+          appendClientPortToCallerContextIfAbsent();
+        }
         hdfsLogger.logAuditEvent(succeeded, ugiStr, addr, cmd, src, dst,
             status, CallerContext.getCurrent(), ugi, dtSecretManager);
       } else {
         logger.logAuditEvent(succeeded, ugiStr, addr, cmd, src, dst, status);
       }
     }
+  }
+
+  private void appendClientPortToCallerContextIfAbsent() {
+    final CallerContext ctx = CallerContext.getCurrent();
+    if (isClientPortInfoAbsent(ctx)) {
+      String origContext = ctx == null ? null : ctx.getContext();
+      byte[] origSignature = ctx == null ? null : ctx.getSignature();
+      CallerContext.setCurrent(
+          new CallerContext.Builder(origContext, contextFieldSeparator)
+              .append(CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
+              .setSignature(origSignature)
+              .build());
+    }
+  }
+
+  private boolean isClientPortInfoAbsent(CallerContext ctx){
+    return ctx == null || ctx.getContext() == null
+        || !ctx.getContext().contains(CLIENT_PORT_STR);
   }
 
   /**
@@ -501,6 +529,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   // underlying logger is disabled, and avoid some unnecessary work.
   private final boolean isDefaultAuditLogger;
   private final List<AuditLogger> auditLoggers;
+  private final boolean auditLogWithRemotePort;
 
   /** The namespace tree. */
   FSDirectory dir;
@@ -833,6 +862,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       LOG.info("Enabling async auditlog");
       enableAsyncAuditLog(conf);
     }
+    auditLogWithRemotePort =
+        conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY,
+            DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_DEFAULT);
+    this.contextFieldSeparator =
+        conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
+            HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
     cond = fsLock.newWriteLockCondition();
     cpLock = new ReentrantLock();
@@ -979,6 +1014,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.leaseRecheckIntervalMs = conf.getLong(
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT);
+      Preconditions.checkArgument(
+              leaseRecheckIntervalMs > 0,
+              DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY +
+                      " must be greater than zero");
       this.maxLockHoldToReleaseLeaseMs = conf.getLong(
           DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_KEY,
           DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_DEFAULT);
@@ -1458,8 +1497,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     LOG.info("Stopping services started for active state");
     writeLock();
     try {
-      if (blockManager != null && blockManager.getSPSManager() != null) {
-        blockManager.getSPSManager().stop();
+      if (blockManager != null) {
+        blockManager.stopReconstructionInitializer();
+        if (blockManager.getSPSManager() != null) {
+          blockManager.getSPSManager().stop();
+        }
       }
       stopSecretManager();
       leaseManager.stopMonitor();
@@ -2719,11 +2761,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       iip = FSDirWriteFileOp.resolvePathForStartFile(
           dir, pc, src, flag, createParent);
 
-
       if (blockSize < minBlockSize) {
-        throw new IOException("Specified block size is less than configured" +
-            " minimum value (" + DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY
-            + "): " + blockSize + " < " + minBlockSize);
+        throw new IOException("Specified block size " + blockSize +
+            " is less than configured minimum value " +
+            DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY + "=" + minBlockSize);
       }
 
       if (shouldReplicate) {
@@ -3356,7 +3397,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * From the given list, incrementally remove the blocks from blockManager
-   * Writelock is dropped and reacquired every BLOCK_DELETION_INCREMENT to
+   * Writelock is dropped and reacquired every blockDeletionIncrement to
    * ensure that other waiters on the lock can get in. See HDFS-2938
    * 
    * @param blocks
@@ -4384,8 +4425,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           haContext.getState().getServiceState(),
           getFSImage().getCorrectLastAppliedOrWrittenTxId());
 
+      Set<String> slownodes = DatanodeManager.getSlowNodesUuidSet();
+      boolean isSlownode = slownodes.contains(nodeReg.getDatanodeUuid());
+
       return new HeartbeatResponse(cmds, haState, rollingUpgradeInfo,
-          blockReportLeaseId);
+          blockReportLeaseId, isSlownode);
     } finally {
       readUnlock("handleHeartbeat");
     }
@@ -4639,6 +4683,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return getFSImage().getEditLog();
   }
 
+  private NNStorage getNNStorage() {
+    return getFSImage().getStorage();
+  }
+
   @Metric({"MissingBlocks", "Number of missing blocks"})
   public long getMissingBlocksCount() {
     // not locking
@@ -4662,7 +4710,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "Number of transactions since last checkpoint"})
   public long getTransactionsSinceLastCheckpoint() {
     return getFSImage().getLastAppliedOrWrittenTxId() -
-        getFSImage().getStorage().getMostRecentCheckpointTxId();
+        getNNStorage().getMostRecentCheckpointTxId();
   }
   
   @Metric({"TransactionsSinceLastLogRoll",
@@ -4697,7 +4745,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"LastCheckpointTime",
       "Time in milliseconds since the epoch of the last checkpoint"})
   public long getLastCheckpointTime() {
-    return getFSImage().getStorage().getMostRecentCheckpointTime();
+    return getNNStorage().getMostRecentCheckpointTime();
   }
 
   /** @see ClientProtocol#getStats() */
@@ -4967,10 +5015,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       
       // if it is disabled - enable it and vice versa.
       if(arg.equals("check")) {
-        val = getFSImage().getStorage().getRestoreFailedStorage();
+        val = getNNStorage().getRestoreFailedStorage();
       } else {
         val = arg.equals("true");  // false if not
-        getFSImage().getStorage().setRestoreFailedStorage(val);
+        getNNStorage().setRestoreFailedStorage(val);
       }
     } finally {
       writeUnlock(operationName, getLockReportInfoSupplier(null));
@@ -5710,7 +5758,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Increments, logs and then returns the stamp
+   * Increments, logs and then returns the stamp.
    */
   long nextGenerationStamp(boolean legacyBlock)
       throws IOException {
@@ -5842,7 +5890,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Get a new generation stamp together with an access token for 
-   * a block under construction
+   * a block under construction.
    * 
    * This method is called for recovering a failed write or setting up
    * a block for appended.
@@ -5880,7 +5928,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /**
-   * Update a pipeline for a block under construction
+   * Update a pipeline for a block under construction.
    * 
    * @param clientName the name of the client
    * @param oldBlock and old block
@@ -5969,11 +6017,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       NamenodeRegistration nnReg) throws IOException {
     writeLock();
     try {
-      if(getFSImage().getStorage().getNamespaceID() 
+      if(getNNStorage().getNamespaceID()
          != bnReg.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
             + " Namenode namespaceID = "
-            + getFSImage().getStorage().getNamespaceID() + "; "
+            + getNNStorage().getNamespaceID() + "; "
             + bnReg.getRole() +
             " node namespaceID = " + bnReg.getNamespaceID());
       if (bnReg.getRole() == NamenodeRole.BACKUP) {
@@ -5997,11 +6045,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      if(getFSImage().getStorage().getNamespaceID()
+      if(getNNStorage().getNamespaceID()
          != registration.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
             + " Namenode namespaceID = "
-            + getFSImage().getStorage().getNamespaceID() + "; "
+            + getNNStorage().getNamespaceID() + "; "
             + registration.getRole() +
             " node namespaceID = " + registration.getNamespaceID());
       getEditLog().releaseBackupStream(registration);
@@ -6290,7 +6338,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Log the updateMasterKey operation to edit logs
+   * Log the updateMasterKey operation to edit logs.
    * 
    * @param key new delegation key.
    */
@@ -6307,7 +6355,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /**
-   * Log the cancellation of expired tokens to edit logs
+   * Log the cancellation of expired tokens to edit logs.
    * 
    * @param id token identifier to cancel
    */
@@ -6344,7 +6392,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /**
-   * Returns authentication method used to establish the connection
+   * Returns authentication method used to establish the connection.
    * @return AuthenticationMethod used to establish connection
    * @throws IOException
    */
@@ -6397,7 +6445,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Class representing Namenode information for JMX interfaces
+   * Class representing Namenode information for JMX interfaces.
    */
   @Override // NameNodeMXBean
   public String getVersion() {
@@ -6493,7 +6541,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Returned information is a JSON representation of map with host name as the
-   * key and value is a map of live node attribute keys to its values
+   * key and value is a map of live node attribute keys to its values.
    */
   @Override // NameNodeMXBean
   public String getLiveNodes() {
@@ -6537,6 +6585,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (node.getUpgradeDomain() != null) {
         innerinfo.put("upgradeDomain", node.getUpgradeDomain());
       }
+      StorageReport[] storageReports = node.getStorageReports();
+      innerinfo.put("blockPoolUsedPercentStdDev",
+          Util.getBlockPoolUsedPercentStdDev(storageReports));
       info.put(node.getXferAddrWithHostname(), innerinfo.build());
     }
     return JSON.toString(info);
@@ -6544,7 +6595,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Returned information is a JSON representation of map with host name as the
-   * key and value is a map of dead node attribute keys to its values
+   * key and value is a map of dead node attribute keys to its values.
    */
   @Override // NameNodeMXBean
   public String getDeadNodes() {
@@ -6568,7 +6619,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Returned information is a JSON representation of map with host name as the
    * key and value is a map of decommissioning node attribute keys to its
-   * values
+   * values.
    */
   @Override // NameNodeMXBean
   public String getDecomNodes() {
@@ -6635,7 +6686,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override  // NameNodeMXBean
   public String getClusterId() {
-    return getFSImage().getStorage().getClusterID();
+    return getNNStorage().getClusterID();
   }
   
   @Override  // NameNodeMXBean
@@ -6650,14 +6701,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     
     Map<File, StorageDirType> activeDirs = new HashMap<File, StorageDirType>();
     for (Iterator<StorageDirectory> it
-        = getFSImage().getStorage().dirIterator(); it.hasNext();) {
+        = getNNStorage().dirIterator(); it.hasNext();) {
       StorageDirectory st = it.next();
       activeDirs.put(st.getRoot(), st.getStorageDirType());
     }
     statusMap.put("active", activeDirs);
     
     List<Storage.StorageDirectory> removedStorageDirs
-        = getFSImage().getStorage().getRemovedStorageDirs();
+        = getNNStorage().getRemovedStorageDirs();
     Map<File, StorageDirType> failedDirs = new HashMap<File, StorageDirType>();
     for (StorageDirectory st : removedStorageDirs) {
       failedDirs.put(st.getRoot(), st.getStorageDirType());
@@ -6908,7 +6959,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override // NameNodeStatusMXBean
   public String getNameDirSize() {
-    return getFSImage().getStorage().getNNDirectorySize();
+    return getNNStorage().getNNDirectorySize();
   }
 
   /**
@@ -8565,7 +8616,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         src = iip.getPath();
         INode inode = iip.getLastINode();
         if (inode == null) {
-          throw new FileNotFoundException("Path not found");
+          throw new FileNotFoundException("Path not found: " + src);
         }
         if (isPermissionEnabled) {
           dir.checkPathAccess(pc, iip, mode);
@@ -8755,18 +8806,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             callerContext != null &&
             callerContext.isContextValid()) {
           sb.append("\t").append("callerContext=");
-          if (callerContext.getContext().length() > callerContextMaxLen) {
-            sb.append(callerContext.getContext().substring(0,
-                callerContextMaxLen));
+          String context = escapeJava(callerContext.getContext());
+          if (context.length() > callerContextMaxLen) {
+            sb.append(context, 0, callerContextMaxLen);
           } else {
-            sb.append(callerContext.getContext());
+            sb.append(context);
           }
           if (callerContext.getSignature() != null &&
               callerContext.getSignature().length > 0 &&
               callerContext.getSignature().length <= callerSignatureMaxLen) {
             sb.append(":")
-                .append(new String(callerContext.getSignature(),
-                CallerContext.SIGNATURE_ENCODING));
+                .append(escapeJava(new String(callerContext.getSignature(),
+                CallerContext.SIGNATURE_ENCODING)));
           }
         }
         logAuditMessage(sb.toString());

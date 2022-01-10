@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -155,4 +155,6 @@ public class DataNodeFaultInjector {
    * into an erasure coding reconstruction.
    */
   public void badDecoding(ByteBuffer[] outputs) {}
+
+  public void markSlow(String dnAddr, int[] replies) {}
 }

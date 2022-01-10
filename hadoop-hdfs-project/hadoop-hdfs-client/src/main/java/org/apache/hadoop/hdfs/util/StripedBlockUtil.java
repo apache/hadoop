@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.util;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.DFSStripedOutputStream;
@@ -245,8 +245,7 @@ public class StripedBlockUtil {
     Arrays.sort(cpy);
     // full stripe is a stripe has at least dataBlkNum full cells.
     // lastFullStripeIdx is the index of the last full stripe.
-    int lastFullStripeIdx =
-        (int) (cpy[cpy.length - dataBlkNum] / cellSize);
+    long lastFullStripeIdx = cpy[cpy.length - dataBlkNum] / cellSize;
     return lastFullStripeIdx * stripeSize; // return the safeLength
     // TODO: Include lastFullStripeIdx+1 stripe in safeLength, if there exists
     // such a stripe (and it must be partial).
@@ -271,9 +270,9 @@ public class StripedBlockUtil {
    */
   public static long offsetInBlkToOffsetInBG(int cellSize, int dataBlkNum,
       long offsetInBlk, int idxInBlockGroup) {
-    int cellIdxInBlk = (int) (offsetInBlk / cellSize);
+    long cellIdxInBlk = offsetInBlk / cellSize;
     return cellIdxInBlk * cellSize * dataBlkNum // n full stripes before offset
-        + idxInBlockGroup * cellSize // m full cells before offset
+        + (long)idxInBlockGroup * cellSize // m full cells before offset
         + offsetInBlk % cellSize; // partial cell
   }
 

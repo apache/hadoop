@@ -1012,6 +1012,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.safemode.recheck.interval</name>
+  <value>1000</value>
+  <description>
+    Interval in msec for checking safe mode.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.safemode.extension</name>
   <value>30000</value>
   <description>
@@ -2476,6 +2484,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.max.slowdisks.to.exclude</name>
+  <value>0</value>
+  <description>
+    The number of slow disks that needs to be excluded. By default, this parameter is set to 0,
+    which disables excluding slow disk when choosing volume.
+  </description>
+</property>
+
+<property>
   <name>hadoop.user.group.metrics.percentiles.intervals</name>
   <value></value>
   <description>
@@ -2868,6 +2885,10 @@
     maintain a mapping of cached blocks to DataNodes via processing DataNode
     cache reports.  Based on these reports and addition and removal of caching
     directives, the NameNode will schedule caching and uncaching work.
+    In the current implementation, centralized caching introduces additional
+    write lock overhead (see CacheReplicationMonitor#rescan) even if no path
+    to cache is specified, so we recommend disabling this feature when not in
+    use. We will disable centralized caching by default in later versions.
   </description>
 </property>
 
@@ -2967,6 +2988,16 @@
     The maximum number of threads per volume to use for caching new data
     on the datanode. These threads consume both I/O and CPU. This can affect
     normal datanode operations.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.fsdatasetasyncdisk.max.threads.per.volume</name>
+  <value>4</value>
+  <description>
+    The maximum number of threads per volume used to process async disk
+    operations on the datanode. These threads consume I/O and CPU at the
+    same time. This will affect normal data node operations.
   </description>
 </property>
 
@@ -3993,7 +4024,7 @@
   <value>10000,6,60000,10</value>
   <description>
     Specify a policy of multiple linear random retry for WebHDFS client,
-    e.g. given pairs of number of retries and sleep time (n0, t0), (n1, t1),
+    e.g. given pairs of sleep time and number of retries (t0, n0), (t1, n1),
     ..., the first n0 retries sleep t0 milliseconds on average,
     the following n1 retries sleep t1 milliseconds on average, and so on.
   </description>
@@ -4442,7 +4473,10 @@
   <name>dfs.client.retry.policy.spec</name>
   <value>10000,6,60000,10</value>
   <description>
-    Set to pairs of timeouts and retries for DFSClient.
+    Specify a policy of multiple linear random retry for the DFS client,
+    e.g. given pairs of sleep time and number of retries (t0, n0), (t1, n1),
+    ..., the first n0 retries sleep t0 milliseconds on average,
+    the following n1 retries sleep t1 milliseconds on average, and so on.
   </description>
 </property>
 
@@ -5042,6 +5076,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.audit.log.with.remote.port</name>
+  <value>false</value>
+  <description>
+    If true, adds a port of RPC call to callerContext for all audit log events.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.available-space-block-placement-policy.balanced-space-preference-fraction</name>
   <value>0.6</value>
   <description>
@@ -5051,6 +5093,18 @@
     placing blocks on Datanodes with less disk space used.
   </description>
 </property>
+
+  <property>
+    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance</name>
+    <value>5</value>
+    <description>
+      Only used when the dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+      Special value between 0 and 20, inclusive. if the value is set beyond the scope,
+      this value will be set as 5 by default, Increases tolerance of
+      placing blocks on Datanodes with similar disk space used.
+    </description>
+  </property>
 
 <property>
   <name>
@@ -5077,7 +5131,17 @@
     high load increases as the value reaches near 0.
   </description>
 </property>
-
+<property>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-tolerance</name>
+  <value>5</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
+    Special value between 0 and 20, inclusive. if the value is set beyond the scope,
+    this value will be set as 5 by default, Increases tolerance of
+    placing blocks on Datanodes with similar disk space used.
+  </description>
+</property>
 <property>
   <name>dfs.namenode.backup.dnrpc-address</name>
   <value></value>
@@ -5463,6 +5527,14 @@
   <description>
     If true, allows ECN (explicit congestion notification) from the
     Datanode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.pipeline.slownode</name>
+  <value>false</value>
+  <description>
+    If true, allows slownode information to be replied to Client via PipelineAck.
   </description>
 </property>
 
@@ -6253,6 +6325,16 @@
     <description>
       Nameservice resolver implementation used by datanode.
       Effective with dfs.nameservices.resolution-enabled on.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.mark.slownode.as.badnode.threshold</name>
+    <value>10</value>
+    <description>
+      The threshold to mark a slownode as a badnode. If we get PipelineAck from
+      a slownode continuously for ${dfs.client.treat.slownode.as.badnode.threshold}
+      times, we should mark it as a badnode.
     </description>
   </property>
 </configuration>

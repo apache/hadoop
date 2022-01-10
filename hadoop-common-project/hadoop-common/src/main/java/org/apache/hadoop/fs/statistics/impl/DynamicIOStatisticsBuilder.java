@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkState;
+import static org.apache.hadoop.util.Preconditions.checkState;
 
 /**
  * Builder of {@link DynamicIOStatistics}.

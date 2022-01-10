@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -472,6 +472,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   /**
    * Create an IOStatistics store which updates FS metrics
    * as well as IOStatistics.
+   * @return instance of the store.
    */
   public IOStatisticsStore createMetricsUpdatingStore() {
     return new MetricsUpdatingIOStatisticsStore();

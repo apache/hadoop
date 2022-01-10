@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.maybeAwaitCompletion;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 

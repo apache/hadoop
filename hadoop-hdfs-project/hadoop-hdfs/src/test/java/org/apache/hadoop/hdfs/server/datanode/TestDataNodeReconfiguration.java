@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
 import static org.junit.Assert.assertEquals;
@@ -292,5 +294,75 @@ public class TestDataNodeReconfiguration {
 
     assertEquals("should not be able to get thread quota", false,
         dataNode.xserver.balanceThrottler.acquire());
+  }
+
+  @Test
+  public void testBlockReportIntervalReconfiguration()
+      throws ReconfigurationException, IOException {
+    int blockReportInterval = 300 * 1000;
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Try invalid values.
+      try {
+        dn.reconfigureProperty(
+            DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, "text");
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting NumberFormatException",
+            expected.getCause() instanceof NumberFormatException);
+      }
+      try {
+        dn.reconfigureProperty(
+            DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+            String.valueOf(-1));
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting IllegalArgumentException",
+            expected.getCause() instanceof IllegalArgumentException);
+      }
+
+      // Change properties.
+      dn.reconfigureProperty(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+          String.valueOf(blockReportInterval));
+
+      // Verify change.
+      assertEquals(String.format("%s has wrong value",
+          DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+          blockReportInterval,
+          dn.getDnConf().getBlockReportInterval());
+      for (BPOfferService bpos : dn.getAllBpOs()) {
+        if (bpos != null) {
+          for (BPServiceActor actor : bpos.getBPServiceActors()) {
+            assertEquals(String.format("%s has wrong value",
+                DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+                blockReportInterval,
+                actor.getScheduler().getBlockReportIntervalMs());
+          }
+        }
+      }
+
+      // Revert to default.
+      dn.reconfigureProperty(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+          null);
+      assertEquals(String.format("%s has wrong value",
+          DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+          DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT,
+          dn.getDnConf().getBlockReportInterval());
+      // Verify default.
+      for (BPOfferService bpos : dn.getAllBpOs()) {
+        if (bpos != null) {
+          for (BPServiceActor actor : bpos.getBPServiceActors()) {
+            assertEquals(String.format("%s has wrong value",
+                DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+                DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT,
+                actor.getScheduler().getBlockReportIntervalMs());
+          }
+        }
+      }
+      assertEquals(String.format("expect %s is not configured",
+          DFS_BLOCKREPORT_INTERVAL_MSEC_KEY), null, dn
+          .getConf().get(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY));
+    }
   }
 }

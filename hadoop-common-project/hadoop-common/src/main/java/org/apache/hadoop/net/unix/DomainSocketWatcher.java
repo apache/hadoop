@@ -34,9 +34,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

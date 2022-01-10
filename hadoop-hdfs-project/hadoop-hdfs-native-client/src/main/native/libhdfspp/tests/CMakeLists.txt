@@ -67,6 +67,7 @@ endfunction(add_memcheck_test)
 
 add_subdirectory(x-platform)
 add_subdirectory(utils)
+add_subdirectory(tools)
 
 add_executable(uri_test uri_test.cc)
 target_link_libraries(uri_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})

@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
@@ -28,15 +31,19 @@ import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
+import org.apache.hadoop.net.MockDomainNameResolver;
 import org.apache.hadoop.service.Service.STATE;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -202,5 +209,65 @@ public class TestRouterNamenodeHeartbeat {
     // Standby
     standby = normalNss.get(1);
     assertEquals(NAMENODES[1], standby.getNamenodeId());
+  }
+
+  @Test
+  public void testNamenodeHeartbeatServiceNNResolution() {
+    String nsId = "test-ns";
+    String nnId = "nn";
+    int rpcPort = 1000;
+    int servicePort = 1001;
+    int lifelinePort = 1002;
+    int webAddressPort = 1003;
+    Configuration conf = generateNamenodeConfiguration(nsId, nnId,
+        rpcPort, servicePort, lifelinePort, webAddressPort);
+
+    Router testRouter = new Router();
+    testRouter.setConf(conf);
+
+    Collection<NamenodeHeartbeatService> heartbeatServices =
+        testRouter.createNamenodeHeartbeatServices();
+
+    assertEquals(2, heartbeatServices.size());
+
+    Iterator<NamenodeHeartbeatService> iterator = heartbeatServices.iterator();
+    NamenodeHeartbeatService service = iterator.next();
+    service.init(conf);
+    assertEquals("test-ns-nn-host01.test:host01.test:1001",
+        service.getNamenodeDesc());
+
+    service = iterator.next();
+    service.init(conf);
+    assertEquals("test-ns-nn-host02.test:host02.test:1001",
+        service.getNamenodeDesc());
+
+  }
+
+  private Configuration generateNamenodeConfiguration(
+      String nsId, String nnId,
+      int rpcPort, int servicePort,
+      int lifelinePort, int webAddressPort) {
+    Configuration conf = new HdfsConfiguration();
+    String suffix = nsId + "." + nnId;
+
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE, false);
+    conf.set(RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE, nsId + "." + nnId);
+
+    conf.setBoolean(
+        RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED + "." + nsId, true);
+    conf.set(
+        RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE_RESOLVER_IMPL + "." + nsId,
+        MockDomainNameResolver.class.getName());
+
+    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY + "." + suffix,
+        MockDomainNameResolver.DOMAIN + ":" + rpcPort);
+    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + "." + suffix,
+        MockDomainNameResolver.DOMAIN + ":" + servicePort);
+    conf.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY + "." + suffix,
+        MockDomainNameResolver.DOMAIN + ":" + lifelinePort);
+    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY + "." + suffix,
+        MockDomainNameResolver.DOMAIN + ":" + webAddressPort);
+
+    return conf;
   }
 }

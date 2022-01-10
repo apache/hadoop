@@ -97,7 +97,7 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1373,7 +1373,7 @@ public class Client {
       resourcesStr = resourcesStr.substring(1);
     }
     if (resourcesStr.endsWith("]")) {
-      resourcesStr = resourcesStr.substring(0, resourcesStr.length());
+      resourcesStr = resourcesStr.substring(0, resourcesStr.length() - 1);
     }
 
     for (String resource : resourcesStr.trim().split(",")) {

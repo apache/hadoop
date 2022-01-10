@@ -924,30 +924,48 @@ connector isn't saving any data at all. The `Syncable` API, especially the
 `hsync()` call, are critical for applications such as HBase to safely
 persist data.
 
-The S3A connector throws an `UnsupportedOperationException` when these API calls
-are made, because the guarantees absolutely cannot be met: nothing is being flushed
-or saved.
+When configured to do so, the S3A connector throws an `UnsupportedOperationException`
+when these API calls are made, because the API guarantees absolutely cannot be met:
+_nothing is being flushed or saved_.
 
-* Applications which intend to invoke the Syncable APIs call `hasCapability("hsync")` on
+* Applications which intend to invoke the Syncable APIs should call `hasCapability("hsync")` on
   the stream to see if they are supported.
 * Or catch and downgrade `UnsupportedOperationException`.
 
-These recommendations _apply to all filesystems_. 
+These recommendations _apply to all filesystems_.
 
-To downgrade the S3A connector to simply warning of the use of
+For consistency with other filesystems, S3A output streams
+do not by default reject the `Syncable` calls -instead
+they print a warning of its use.
+
+
+The count of invocations of the two APIs are collected in the S3A filesystem
+Statistics/IOStatistics and so their use can be monitored.
+
+To switch the S3A connector to rejecting all use of
 `hsync()` or `hflush()` calls, set the option
-`fs.s3a.downgrade.syncable.exceptions` to true.
+`fs.s3a.downgrade.syncable.exceptions` to `false`.
 
 ```xml
 <property>
   <name>fs.s3a.downgrade.syncable.exceptions</name>
-  <value>true</value>
+  <value>false</value>
 </property>
 ```
 
-The count of invocations of the two APIs are collected
-in the S3A filesystem Statistics/IOStatistics and so
-their use can be monitored.
+Regardless of the setting, the `Syncable` API calls do not work.
+Telling the store to *not* downgrade the calls is a way to
+1. Prevent applications which require Syncable to work from being deployed
+  against S3.
+2. Identify applications which are making the calls even though they don't
+  need to. These applications can then be fixed -something which may take
+  time.
+
+Put differently: it is safest to disable downgrading syncable exceptions.
+However, enabling the downgrade stops applications unintentionally using the API
+from breaking.
+
+*Tip*: try turning it on in staging environments to see what breaks.
 
 ### `RemoteFileChangedException` and read-during-overwrite
 
@@ -1209,12 +1227,12 @@ KMS key ID is required for CSE-KMS to encrypt data, not providing one leads
 ```
 2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize fileystem
 s3a://ap-south-cse/: java.lang.IllegalArgumentException: CSE-KMS
-method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to set it.
--ls: CSE-KMS method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to
+method requires KMS key ID. Use fs.s3a.encryption.key property to set it.
+-ls: CSE-KMS method requires KMS key ID. Use fs.s3a.encryption.key property to
  set it.
 ```
 
-set `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` generated through AWS console.
+set `fs.s3a.encryption.key=<KMS_KEY_ID>` generated through AWS console.
 
 ### `com.amazonaws.services.kms.model.IncorrectKeyException` The key ID in the request does not identify a CMK that can perform this operation.
 
@@ -1354,7 +1372,7 @@ work.
 
 ### com.amazonaws.services.kms.model.NotFoundException: Invalid keyId
 
-If the value in `fs.s3a.server-side-encryption.key` property, does not exist
+If the value in `fs.s3a.encryption.key` property, does not exist
 /valid in AWS KMS CMK(Customer managed keys), then this error would be seen.
 
 ```
@@ -1390,7 +1408,7 @@ Caused by: com.amazonaws.services.kms.model.NotFoundException: Invalid keyId abc
     ... 49 more
 ```
 
-Check if `fs.s3a.server-side-encryption.key` is set correctly and matches the
+Check if `fs.s3a.encryption.key` is set correctly and matches the
 same on AWS console.
 
 ### com.amazonaws.services.kms.model.AWSKMSException: User: <User_ARN> is not authorized to perform : kms :GenerateDataKey on resource: <KEY_ID>
@@ -1431,7 +1449,7 @@ User: arn:aws:iam::152813717728:user/<user> is not authorized to perform: kms:Ge
 ```
 
 The user trying to use the KMS Key ID should have the right permissions to access
-(encrypt/decrypt) using the AWS KMS Key used via `fs.s3a.server-side-encryption.key`.
+(encrypt/decrypt) using the AWS KMS Key used via `fs.s3a.encryption.key`.
 If not, then add permission(or IAM role) in "Key users" section by selecting the
 AWS-KMS CMK Key on AWS console.
 

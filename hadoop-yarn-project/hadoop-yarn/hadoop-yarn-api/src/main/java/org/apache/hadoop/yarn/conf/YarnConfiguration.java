@@ -762,6 +762,20 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE = 10;
 
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.batch-size";
+  public static final int
+      DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE =
+      1000;
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.interval-seconds";
+  public static final int DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL =
+      60;
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.enable-batch";
+  public static final boolean DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED =
+      false;
+
   //RM delegation token related keys
   public static final String RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY =
     RM_PREFIX + "delegation.key.update-interval";
@@ -3188,6 +3202,12 @@ public class YarnConfiguration extends Configuration {
   public static final int
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETAIN_SECONDS_DEFAULT =
         7 * 24 * 60 * 60;
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RECOVERY_ENABLED =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "recovery-enabled";
+  public static final boolean
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RECOVERY_ENABLED_DEFAULT = true;
 
   // how old the most recent log of an UNKNOWN app needs to be in the active
   // directory before we treat it as COMPLETED

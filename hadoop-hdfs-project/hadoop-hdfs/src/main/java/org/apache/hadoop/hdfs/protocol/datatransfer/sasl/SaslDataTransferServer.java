@@ -21,7 +21,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSF
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -52,10 +52,12 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyExceptio
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto.DataTransferEncryptorStatus;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -441,6 +443,14 @@ public class SaslDataTransferServer {
         // error, the client will get a new encryption key from the NN and retry
         // connecting to this DN.
         sendInvalidKeySaslErrorMessage(out, ioe.getCause().getMessage());
+      } else if (ioe instanceof SaslException &&
+          ioe.getCause() != null &&
+          (ioe.getCause() instanceof InvalidBlockTokenException ||
+              ioe.getCause() instanceof SecretManager.InvalidToken)) {
+        // This could be because the client is long-lived and block token is expired
+        // The client will get new block token from the NN, upon receiving this error
+        // and retry connecting to this DN
+        sendInvalidTokenSaslErrorMessage(out, ioe.getCause().getMessage());
       } else {
         sendGenericSaslErrorMessage(out, ioe.getMessage());
       }
@@ -459,5 +469,17 @@ public class SaslDataTransferServer {
       String message) throws IOException {
     sendSaslMessage(out, DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY, null,
         message);
+  }
+
+  /**
+   * Sends a SASL negotiation message indicating an invalid token error.
+   *
+   * @param out     stream to receive message
+   * @param message to send
+   * @throws IOException for any error
+   */
+  private static void sendInvalidTokenSaslErrorMessage(DataOutputStream out,
+      String message) throws IOException {
+    sendSaslMessage(out, DataTransferEncryptorStatus.ERROR, null, message, null, true);
   }
 }

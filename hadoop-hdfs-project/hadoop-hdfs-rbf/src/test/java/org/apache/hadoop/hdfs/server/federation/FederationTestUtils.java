@@ -165,7 +165,7 @@ public final class FederationTestUtils {
    * @param resolver Active namenode resolver.
    * @param nsId Nameservice identifier.
    * @param nnId Namenode identifier.
-   * @param finalState State to check for.
+   * @param state State to check for.
    * @throws Exception Failed to verify State Store registration of namenode
    *                   nsId:nnId for state.
    */
@@ -357,7 +357,7 @@ public final class FederationTestUtils {
    *
    * @param stateManager number of routers to be registered.
    * @param routerCount number of routers to be registered.
-   * @param tiemout max wait time in ms
+   * @param timeout max wait time in ms
    */
   public static void waitRouterRegistered(RouterStore stateManager,
       long routerCount, int timeout) throws Exception {
