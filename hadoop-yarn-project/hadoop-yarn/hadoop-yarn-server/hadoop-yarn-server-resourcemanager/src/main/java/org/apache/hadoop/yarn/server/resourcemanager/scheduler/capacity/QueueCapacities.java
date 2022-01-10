@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -322,7 +323,7 @@ public class QueueCapacities {
   public Set<String> getExistingNodeLabels() {
     readLock.lock();
     try {
-      return new HashSet<String>(capacitiesMap.keySet());
+      return ImmutableSet.copyOf(capacitiesMap.keySet());
     } finally {
       readLock.unlock();
     }
@@ -337,13 +338,5 @@ public class QueueCapacities {
       readLock.unlock();
     }
   }
-  
-  public Set<String> getNodePartitionsSet() {
-    readLock.lock();
-    try {
-      return capacitiesMap.keySet();
-    } finally {
-      readLock.unlock();
-    }
-  }
+
 }

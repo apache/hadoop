@@ -1000,25 +1000,30 @@ public abstract class AbstractCSQueue implements CSQueue {
     return null;
   }
 
+  /**
+   * Get all node labels that are available and accessible by the queue. The available node labels
+   * could be restricted by setting the accessible-node-labels property of the queue.
+   * @return all available node labels
+   */
   @Override
   public Set<String> getNodeLabelsForQueue() {
     // if queue's label is *, queue can access any labels. Instead of
     // considering all labels in cluster, only those labels which are
     // use some resource of this queue can be considered.
-    Set<String> nodeLabels = new HashSet<String>();
+    Set<String> nodeLabels = new HashSet<>();
     if (this.getAccessibleNodeLabels() != null && this.getAccessibleNodeLabels()
         .contains(RMNodeLabelsManager.ANY)) {
-      nodeLabels.addAll(Sets.union(this.getQueueCapacities().getNodePartitionsSet(),
-          this.getQueueResourceUsage().getNodePartitionsSet()));
+      nodeLabels.addAll(Sets.union(Sets.union(this.getQueueCapacities().getExistingNodeLabels(),
+              this.getQueueResourceUsage().getNodePartitionsSet()),
+          queueNodeLabelsSettings.getConfiguredNodeLabels()));
     } else {
       nodeLabels.addAll(this.getAccessibleNodeLabels());
     }
 
     // Add NO_LABEL also to this list as NO_LABEL also can be granted with
     // resource in many general cases.
-    if (!nodeLabels.contains(RMNodeLabelsManager.NO_LABEL)) {
-      nodeLabels.add(RMNodeLabelsManager.NO_LABEL);
-    }
+    nodeLabels.add(RMNodeLabelsManager.NO_LABEL);
+
     return nodeLabels;
   }
 
@@ -1204,8 +1209,8 @@ public abstract class AbstractCSQueue implements CSQueue {
       parentQueueCapacities = parent.getQueueCapacities();
     }
 
-    CSQueueUtils.updateAbsoluteCapacitiesByNodeLabels(queueCapacities,
-        parentQueueCapacities, queueCapacities.getExistingNodeLabels());
+    CSQueueUtils.updateAbsoluteCapacitiesByNodeLabels(queueCapacities, parentQueueCapacities,
+        getNodeLabelsForQueue());
   }
 
   private Resource createNormalizedMinResource(Resource minResource,

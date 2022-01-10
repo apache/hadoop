@@ -1729,12 +1729,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       String nodePartition) {
     writeLock.lock();
     try {
-      ResourceUsage queueResourceUsage = getQueueResourceUsage();
-
       if (nodePartition == null) {
-        for (String partition : Sets.union(
-            getQueueCapacities().getNodePartitionsSet(),
-            queueResourceUsage.getNodePartitionsSet())) {
+        for (String partition : getNodeLabelsForQueue()) {
           usersManager.updateUsageRatio(partition, clusterResource);
         }
       } else {

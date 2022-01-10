@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -205,7 +206,7 @@ public class ParentQueue extends AbstractCSQueue {
     StringBuilder diagMsg = new StringBuilder();
 
     for (CSQueue queue : queues) {
-      for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
+      for (String nodeLabel : getNodeLabelsForQueue()) {
         float capacityByLabel = queue.getQueueCapacities().getCapacity(nodeLabel);
         if (capacityByLabel > 0) {
           percentageIsSet = true;
@@ -288,6 +289,7 @@ public class ParentQueue extends AbstractCSQueue {
    */
   void setChildQueues(Collection<CSQueue> childQueues) throws IOException {
     writeLock.lock();
+    Set<String> availableNodeLabels = getNodeLabelsForQueue();
     try {
       QueueCapacityType childrenCapacityType =
           getCapacityConfigurationTypeForQueues(childQueues);
@@ -307,7 +309,7 @@ public class ParentQueue extends AbstractCSQueue {
 
         // Ensure that for each parent queue: parent.min-resource >=
         // Σ(child.min-resource).
-        for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
+        for (String nodeLabel : availableNodeLabels) {
           Resource minRes = Resources.createResource(0, 0);
           for (CSQueue queue : childQueues) {
             // Accumulate all min/max resource configured for all child queues.
@@ -332,7 +334,7 @@ public class ParentQueue extends AbstractCSQueue {
       if (childrenCapacityType == QueueCapacityType.PERCENT) {
         float childrenPctSum = 0;
         // check label capacities
-        for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
+        for (String nodeLabel : availableNodeLabels) {
           // check children's labels
           childrenPctSum = 0;
           for (CSQueue queue : childQueues) {
@@ -1199,10 +1201,11 @@ public class ParentQueue extends AbstractCSQueue {
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits resourceLimits) {
     writeLock.lock();
+    Set<String> availableNodeLabels = getNodeLabelsForQueue();
     try {
       // Special handle root queue
       if (rootQueue) {
-        for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
+        for (String nodeLabel : availableNodeLabels) {
           if (queueCapacities.getWeight(nodeLabel) > 0) {
             queueCapacities.setNormalizedWeight(nodeLabel, 1f);
           }
@@ -1217,7 +1220,7 @@ public class ParentQueue extends AbstractCSQueue {
       // labels, this is important because existing node labels could keep
       // changing when new node added, or node label mapping changed. We need
       // this to ensure auto created queue can access all labels.
-      for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
+      for (String nodeLabel : availableNodeLabels) {
         for (CSQueue queue : childQueues) {
           // For dynamic queue, we will set weight to 1 every time, because it
           // is possible new labels added to the parent.
@@ -1232,12 +1235,11 @@ public class ParentQueue extends AbstractCSQueue {
       // Normalize weight of children
       if (getCapacityConfigurationTypeForQueues(childQueues)
           == QueueCapacityType.WEIGHT) {
-        for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
+        for (String nodeLabel : availableNodeLabels) {
           float sumOfWeight = 0;
 
           for (CSQueue queue : childQueues) {
-            if (queue.getQueueCapacities().getExistingNodeLabels()
-                .contains(nodeLabel)) {
+            if (queue.getNodeLabelsForQueue().contains(nodeLabel)) {
               float weight = Math.max(0,
                   queue.getQueueCapacities().getWeight(nodeLabel));
               sumOfWeight += weight;
@@ -1247,8 +1249,7 @@ public class ParentQueue extends AbstractCSQueue {
           // normalized weight will be 0).
           if (Math.abs(sumOfWeight) > 1e-6) {
             for (CSQueue queue : childQueues) {
-              if (queue.getQueueCapacities().getExistingNodeLabels()
-                  .contains(nodeLabel)) {
+              if (queue.getNodeLabelsForQueue().contains(nodeLabel)) {
                 queue.getQueueCapacities().setNormalizedWeight(nodeLabel,
                     queue.getQueueCapacities().getWeight(nodeLabel) /
                         sumOfWeight);
@@ -1259,7 +1260,7 @@ public class ParentQueue extends AbstractCSQueue {
       }
 
       // Update effective capacity in all parent queue.
-      for (String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
+      for (String label : availableNodeLabels) {
         calculateEffectiveResourcesAndCapacity(label, clusterResource);
       }
 

@@ -223,8 +223,7 @@ public class CSQueueUtils {
     ResourceUsage queueResourceUsage = childQueue.getQueueResourceUsage();
 
     if (nodePartition == null) {
-      for (String partition : Sets.union(queueCapacities.getNodePartitionsSet(),
-          queueResourceUsage.getNodePartitionsSet())) {
+      for (String partition : childQueue.getNodeLabelsForQueue()) {
         updateUsedCapacity(rc, nlm.getResourceByLabel(partition, cluster),
             partition, childQueue);
 

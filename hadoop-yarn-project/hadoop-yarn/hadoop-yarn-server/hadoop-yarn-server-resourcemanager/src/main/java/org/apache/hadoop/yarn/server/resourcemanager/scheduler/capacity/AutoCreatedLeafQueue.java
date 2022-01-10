@@ -149,8 +149,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
   private void updateCapacitiesToZero() throws IOException {
     try {
-      for( String nodeLabel : parent.getQueueCapacities().getExistingNodeLabels
-          ()) {
+      for( String nodeLabel : parent.getNodeLabelsForQueue()) {
         setEntitlement(nodeLabel, new QueueEntitlement(0.0f,
             parent.getLeafQueueTemplate()
                 .getQueueCapacities()
