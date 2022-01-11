@@ -68,10 +68,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     setPageSize(10);
     final List<String> fileNames = createFilesUnderDirectory(testDir);
 
-    ListingSupport listngSupport = Mockito.spy(getFileSystem().getAbfsStore());
-    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(
-        getFileSystem().getFileStatus(testDir), listngSupport,
-        getTestTracingContext(getFileSystem(), true));
+    ListingSupport listingSupport = Mockito.spy(getFileSystem().getAbfsStore());
+    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(testDir,
+        listingSupport, getTestTracingContext(getFileSystem(), true));
     Assertions.assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
@@ -84,7 +83,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     }
     verifyIteratorResultCount(itrCount, fileNames);
     int minNumberOfInvocations = TEST_FILES_NUMBER / 10;
-    verify(listngSupport, Mockito.atLeast(minNumberOfInvocations))
+    verify(listingSupport, Mockito.atLeast(minNumberOfInvocations))
         .listStatus(any(Path.class), nullable(String.class),
             anyList(), anyBoolean(),
             nullable(String.class),
@@ -97,10 +96,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     setPageSize(10);
     final List<String> fileNames = createFilesUnderDirectory(testDir);
 
-    ListingSupport listngSupport = Mockito.spy(getFileSystem().getAbfsStore());
-    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(
-        getFileSystem().getFileStatus(testDir), listngSupport,
-        getTestTracingContext(getFileSystem(), true));
+    ListingSupport listingSupport = Mockito.spy(getFileSystem().getAbfsStore());
+    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(testDir,
+        listingSupport, getTestTracingContext(getFileSystem(), true));
     Assertions.assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
@@ -114,7 +112,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     LambdaTestUtils.intercept(NoSuchElementException.class, fsItr::next);
     verifyIteratorResultCount(itrCount, fileNames);
     int minNumberOfInvocations = TEST_FILES_NUMBER / 10;
-    verify(listngSupport, Mockito.atLeast(minNumberOfInvocations))
+    verify(listingSupport, Mockito.atLeast(minNumberOfInvocations))
         .listStatus(any(Path.class), nullable(String.class),
             anyList(), anyBoolean(),
             nullable(String.class),
@@ -169,10 +167,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   public void testNextWhenNoMoreElementsPresent() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
-    RemoteIterator<FileStatus> fsItr =
-        new AbfsListStatusRemoteIterator(getFileSystem().getFileStatus(testDir),
-            getFileSystem().getAbfsStore(),
-            getTestTracingContext(getFileSystem(), true));
+    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(testDir,
+        getFileSystem().getAbfsStore(),
+        getTestTracingContext(getFileSystem(), true));
     fsItr = Mockito.spy(fsItr);
     Mockito.doReturn(false).when(fsItr).hasNext();
 
@@ -212,12 +209,11 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     getFileSystem().mkdirs(testDir);
 
     String exceptionMessage = "test exception";
-    ListingSupport lsSupport =getMockListingSupport(exceptionMessage);
-    RemoteIterator<FileStatus> fsItr =
-        new AbfsListStatusRemoteIterator(getFileSystem().getFileStatus(testDir),
-        lsSupport, getTestTracingContext(getFileSystem(), true));
+    ListingSupport lsSupport = getMockListingSupport(exceptionMessage);
 
-    LambdaTestUtils.intercept(IOException.class, fsItr::next);
+    LambdaTestUtils.intercept(IOException.class,
+        () -> new AbfsListStatusRemoteIterator(testDir, lsSupport,
+            getTestTracingContext(getFileSystem(), true)));
   }
 
   @Test

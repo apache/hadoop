@@ -1193,7 +1193,7 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.LISTSTATUS, true, tracingHeaderFormat, listener);
       AbfsListStatusRemoteIterator abfsLsItr =
-          new AbfsListStatusRemoteIterator(getFileStatus(path, tracingContext), abfsStore,
+          new AbfsListStatusRemoteIterator(path, abfsStore,
               tracingContext);
       return RemoteIterators.typeCastingRemoteIterator(abfsLsItr);
     } else {
@@ -1368,9 +1368,9 @@ public class AzureBlobFileSystem extends FileSystem
    * @throws IOException if the exception error code is not on the allowed list.
    */
   @VisibleForTesting
-  static void checkException(final Path path,
-                              final AzureBlobFileSystemException exception,
-                              final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
+  public static void checkException(final Path path,
+      final AzureBlobFileSystemException exception,
+      final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
     if (exception instanceof AbfsRestOperationException) {
       AbfsRestOperationException ere = (AbfsRestOperationException) exception;
 
