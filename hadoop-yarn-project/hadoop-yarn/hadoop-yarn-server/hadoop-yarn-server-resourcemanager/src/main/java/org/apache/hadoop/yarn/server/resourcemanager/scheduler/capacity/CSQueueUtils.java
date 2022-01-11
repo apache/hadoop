@@ -33,9 +33,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class CSQueueUtils {
 
   public final static float EPSILON = 0.0001f;
-  private static final Set<QueueState> VALID_STATE_CONFIGURATIONS = ImmutableSet.of(
-      QueueState.RUNNING, QueueState.STOPPED);
-  private static final QueueState DEFAULT_STATE = QueueState.RUNNING;
 
   /*
    * Used only by tests

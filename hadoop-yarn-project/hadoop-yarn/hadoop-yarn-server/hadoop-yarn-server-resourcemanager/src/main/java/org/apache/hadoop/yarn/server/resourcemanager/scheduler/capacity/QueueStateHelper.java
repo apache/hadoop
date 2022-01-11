@@ -80,15 +80,17 @@ public final class QueueStateHelper {
       AbstractCSQueue queue, QueueState configuredState, QueueState parentState) {
     QueueState currentState = configuredState == null ? DEFAULT_STATE : configuredState;
 
-    if (configuredState == QueueState.RUNNING && parentState != QueueState.RUNNING) {
-      throw new IllegalArgumentException(
-          "The parent queue:" + queue.getParent().getQueuePath()
-              + " cannot be STOPPED as the child queue:" + queue.getQueuePath()
-              + " is in RUNNING state.");
-    }
+    if (parentState != null) {
+      if (configuredState == QueueState.RUNNING && parentState != QueueState.RUNNING) {
+        throw new IllegalArgumentException(
+            "The parent queue:" + queue.getParent().getQueuePath()
+                + " cannot be STOPPED as the child queue:" + queue.getQueuePath()
+                + " is in RUNNING state.");
+      }
 
-    if (parentState != null && configuredState == null) {
-      currentState = parentState == QueueState.DRAINING ? QueueState.STOPPED : parentState;
+      if (configuredState == null) {
+        currentState = parentState == QueueState.DRAINING ? QueueState.STOPPED : parentState;
+      }
     }
 
     queue.updateQueueState(currentState);
