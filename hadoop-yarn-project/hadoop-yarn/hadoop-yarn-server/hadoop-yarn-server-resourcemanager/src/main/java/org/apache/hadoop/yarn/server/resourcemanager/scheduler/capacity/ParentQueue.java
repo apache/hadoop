@@ -289,8 +289,8 @@ public class ParentQueue extends AbstractCSQueue {
    */
   void setChildQueues(Collection<CSQueue> childQueues) throws IOException {
     writeLock.lock();
-    Set<String> availableNodeLabels = getNodeLabelsForQueue();
     try {
+      Set<String> availableNodeLabels = getNodeLabelsForQueue();
       QueueCapacityType childrenCapacityType =
           getCapacityConfigurationTypeForQueues(childQueues);
       QueueCapacityType parentCapacityType =
@@ -1201,8 +1201,8 @@ public class ParentQueue extends AbstractCSQueue {
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits resourceLimits) {
     writeLock.lock();
-    Set<String> availableNodeLabels = getNodeLabelsForQueue();
     try {
+      Set<String> availableNodeLabels = getNodeLabelsForQueue();
       // Special handle root queue
       if (rootQueue) {
         for (String nodeLabel : availableNodeLabels) {

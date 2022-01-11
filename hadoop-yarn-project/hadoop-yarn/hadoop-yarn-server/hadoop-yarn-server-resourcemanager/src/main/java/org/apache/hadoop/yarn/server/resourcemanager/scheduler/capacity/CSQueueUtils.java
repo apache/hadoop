@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.Set;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -219,9 +218,6 @@ public class CSQueueUtils {
       final ResourceCalculator rc, final Resource cluster,
       final AbstractCSQueue childQueue, final RMNodeLabelsManager nlm,
       final String nodePartition) {
-    QueueCapacities queueCapacities = childQueue.getQueueCapacities();
-    ResourceUsage queueResourceUsage = childQueue.getQueueResourceUsage();
-
     if (nodePartition == null) {
       for (String partition : childQueue.getNodeLabelsForQueue()) {
         updateUsedCapacity(rc, nlm.getResourceByLabel(partition, cluster),
