@@ -133,7 +133,8 @@ public class TestAllocateLatenciesMetrics {
     List<Container> allocatedContainers =
         am1.allocate(new ArrayList<ResourceRequest>(),
             new ArrayList<ContainerId>()).getAllocatedContainers();
-    while (allocatedContainers.size() != 2) {
+    int maxRetries = 20;
+    while (allocatedContainers.size() != 2 && maxRetries-- >= 0) {
       nm1.nodeHeartbeat(true);
       allocatedContainers.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers());

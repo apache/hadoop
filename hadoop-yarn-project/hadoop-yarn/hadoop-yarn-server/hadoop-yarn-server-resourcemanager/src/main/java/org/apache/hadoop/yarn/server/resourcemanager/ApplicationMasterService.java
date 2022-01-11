@@ -495,7 +495,12 @@ public class ApplicationMasterService extends AbstractService implements
     if (appAttemptId == null) {
       return null;
     }
-    RMApp app = this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
+    ConcurrentMap<ApplicationId, RMApp>  apps = this.rmContext.getRMApps();
+    ApplicationId appId = appAttemptId.getApplicationId();
+    if (appId == null) {
+      return null;
+    }
+    RMApp app = apps.get(appId);
     if (app == null) {
       return null;
     }
