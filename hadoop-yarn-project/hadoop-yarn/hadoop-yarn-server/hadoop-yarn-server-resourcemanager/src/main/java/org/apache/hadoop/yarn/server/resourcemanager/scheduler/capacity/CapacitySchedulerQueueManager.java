@@ -238,7 +238,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       CSQueueStore oldQueues,
       QueueHook hook) throws IOException {
     CSQueue queue;
-    String fullQueueName = (parent == null) ? queueName : (parent.getQueuePath() + "." + queueName);
+    String fullQueueName = (parent == null) ? queueName :
+        (QueuePath.createFromQueues(parent.getQueuePath(), queueName).getFullPath());
     String[] staticChildQueueNames = conf.getQueues(fullQueueName);
     List<String> childQueueNames = staticChildQueueNames != null ?
         Arrays.asList(staticChildQueueNames) : Collections.emptyList();
@@ -248,9 +249,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(fullQueueName);
     // if a queue is eligible for auto queue creation v2 it must be a ParentQueue
     // (even if it is empty)
-    boolean isAutoQueueCreationEnabledParent = (oldQueue instanceof ParentQueue
-        && oldQueue.isDynamicQueue()) || conf.isAutoQueueCreationV2Enabled(fullQueueName)
-        || isAutoCreateEnabled;
+    final boolean isDynamicParent = oldQueue instanceof ParentQueue && oldQueue.isDynamicQueue();
+    boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
+        fullQueueName) || isAutoCreateEnabled;
 
     if (childQueueNames.size() == 0 && !isAutoQueueCreationEnabledParent) {
       if (parent == null) {
@@ -263,9 +264,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         ReservationQueue defaultResQueue = ((PlanQueue) queue).initializeDefaultInternalQueue();
         newQueues.add(defaultResQueue);
       } else {
-        queue = new LeafQueue(queueContext, queueName, parent,
-            oldQueues.get(fullQueueName));
+        queue = new LeafQueue(queueContext, queueName, parent, oldQueues.get(fullQueueName));
       }
+      
       queue = hook.hook(queue);
     } else {
       if (isReservableQueue) {
@@ -288,7 +289,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
             oldQueues, hook);
         childQueues.add(childQueue);
       }
-      parentQueue.setChildQueues(childQueues);
+
+      if (!childQueues.isEmpty()) {
+        parentQueue.setChildQueues(childQueues);
+      }
+
     }
 
     newQueues.add(queue);
