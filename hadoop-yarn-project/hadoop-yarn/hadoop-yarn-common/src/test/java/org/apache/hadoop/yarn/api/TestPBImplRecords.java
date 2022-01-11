@@ -185,6 +185,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerRetryContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.EnhancedHeadroomPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ExecutionTypeRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
@@ -1332,5 +1333,11 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   public void testGetNodesToAttributesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetNodesToAttributesResponsePBImpl.class,
         YarnServiceProtos.GetNodesToAttributesResponseProto.class);
+  }
+
+  @Test
+  public void testGetEnhancedHeadroomPBImpl() throws Exception {
+    validatePBImplRecord(EnhancedHeadroomPBImpl.class,
+        YarnServiceProtos.EnhancedHeadroomProto.class);
   }
 }

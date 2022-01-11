@@ -38,25 +38,25 @@ public abstract class EnhancedHeadroom {
   }
 
   /**
-   * Set total pending container count
+   * Set total pending container count.
    * @param totalPendingCount the pending container count
    */
   public abstract void setTotalPendingCount(int totalPendingCount);
 
   /**
-   * Get total pending container count
+   * Get total pending container count.
    * @return the pending container count
    */
   public abstract int getTotalPendingCount();
 
   /**
-   * Set total active cores for the cluster
+   * Set total active cores for the cluster.
    * @param totalActiveCores the total active cores for the cluster
    */
   public abstract void setTotalActiveCores(int totalActiveCores);
 
   /**
-   * Get total active cores for the cluster
+   * Get total active cores for the cluster.
    * @return totalActiveCores the total active cores for the cluster
    */
   public abstract int getTotalActiveCores();
