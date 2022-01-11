@@ -147,8 +147,8 @@ public class TestAllocateLatenciesMetrics {
         return true;
       } catch (Exception e) {
         LOG.error("Error in allocating container " + e);
+        return false;
       }
-      return false;
     }, 100, 2000);
 
     Container container = allocatedContainers.get(0);
