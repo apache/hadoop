@@ -44,6 +44,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +53,8 @@ import java.util.HashMap;
 import java.util.List;
 
 public class TestAllocateLatenciesMetrics {
-
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAllocateLatenciesMetrics.class);
   private static final int GB = 1024;
 
   private MockRM rm;
@@ -133,13 +136,20 @@ public class TestAllocateLatenciesMetrics {
     List<Container> allocatedContainers =
         am1.allocate(new ArrayList<ResourceRequest>(),
             new ArrayList<ContainerId>()).getAllocatedContainers();
-    int maxRetries = 20;
-    while (allocatedContainers.size() != 2 && maxRetries-- >= 0) {
-      nm1.nodeHeartbeat(true);
-      allocatedContainers.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
-          new ArrayList<ContainerId>()).getAllocatedContainers());
-      Thread.sleep(100);
-    }
+    GenericTestUtils.waitFor(() -> {
+      try {
+        nm1.nodeHeartbeat(true);
+        allocatedContainers.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>()).getAllocatedContainers());
+        if (allocatedContainers.size() < 2) {
+          return false;
+        }
+        return true;
+      } catch (Exception e) {
+        LOG.error("Error in allocating container " + e);
+      }
+      return false;
+    }, 100, 2000);
 
     Container container = allocatedContainers.get(0);
     MockNM allocNode = nodes.get(container.getNodeId());
