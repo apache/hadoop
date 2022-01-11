@@ -53,8 +53,7 @@ public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
         CHANGE_DETECT_SOURCE,
         CHANGE_DETECT_MODE,
         RETRY_LIMIT,
-        RETRY_INTERVAL,
-        METADATASTORE_AUTHORITATIVE);
+        RETRY_INTERVAL);
     conf.setInt(RETRY_LIMIT, 2);
     conf.set(RETRY_INTERVAL, "1ms");
     return conf;

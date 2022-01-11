@@ -109,11 +109,6 @@ public class MinimalOperationCallbacks
   }
 
   @Override
-  public boolean allowAuthoritative(Path p) {
-    return false;
-  }
-
-  @Override
   public RemoteIterator<S3AFileStatus> listObjects(
       Path path,
       String key)

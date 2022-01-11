@@ -227,9 +227,6 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * being deleted in the separate thread.
    * <p>
    * After all listed objects are queued for deletion,
-   * if the path is considered authoritative in the client, a final scan
-   * of S3 <i>without S3Guard</i> is executed, so as to find and delete
-   * any out-of-band objects in the tree.
    * @param path directory path
    * @param dirKey directory key
    * @throws IOException failure

@@ -541,13 +541,23 @@ public final class Constants {
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 
-  /** Whether or not to allow MetadataStore to be source of truth for a path prefix */
+  /**
+   * Paths considered "authoritative".
+   * When S3guard was supported, this skipped checks to s3 on directory listings.
+   * It is also use to optionally disable marker retentation purely on these
+   * paths -a feature which is still retained/available.
+   * */
   public static final String AUTHORITATIVE_PATH = "fs.s3a.authoritative.path";
   public static final String[] DEFAULT_AUTHORITATIVE_PATH = {};
 
-  /** Whether or not to allow MetadataStore to be source of truth. */
+  /**
+   * Whether or not to allow MetadataStore to be source of truth.
+   * @deprecated no longer supported
+   */
+  @Deprecated
   public static final String METADATASTORE_AUTHORITATIVE =
       "fs.s3a.metadatastore.authoritative";
+  @Deprecated
   public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
 
   /**
@@ -566,6 +576,7 @@ public final class Constants {
 
   /**
    * How long a directory listing in the MS is considered as authoritative.
+   * @deprecated no longer supported
    */
   @Deprecated
   public static final String METADATASTORE_METADATA_TTL =
@@ -915,11 +926,13 @@ public final class Constants {
   /**
    * Default retry limit: {@value}.
    */
+  @Deprecated
   public static final int S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT = 7;
 
   /**
    * Initial retry interval: {@value}.
    */
+  @Deprecated
   public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL =
       "fs.s3a.s3guard.consistency.retry.interval";
 

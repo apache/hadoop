@@ -301,12 +301,11 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     readonlyFS.getFileStatus(noReadDir);
 
     readonlyFS.getFileStatus(emptyDir);
-    // now look at a file; the outcome depends on the mode.
+    // now look at a file
     accessDenied(() ->
         readonlyFS.getFileStatus(subdirFile));
 
-    // irrespective of mode, the attempt to read the data will fail.
-    // the only variable is where the failure occurs
+    // the attempt to read the data will also fail.
     accessDenied(() ->
         ContractTestUtils.readUTF8(readonlyFS, subdirFile, HELLO.length));
 
@@ -322,7 +321,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     describe("Glob Status operations");
     // baseline: the real filesystem on a subdir
     globFS(getFileSystem(), subdirFile, null, false, 1);
-    // a file fails if not in auth mode
+    // a file fails
     globFS(readonlyFS, subdirFile, null, true, 1);
     // empty directories don't fail.
     FileStatus[] st = globFS(readonlyFS, emptyDir, null, false, 1);

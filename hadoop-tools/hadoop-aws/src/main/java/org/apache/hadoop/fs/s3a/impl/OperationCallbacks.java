@@ -158,17 +158,6 @@ public interface OperationCallbacks {
       IOException;
 
   /**
-   * Is the path for this instance considered authoritative on the client.
-   * Now S3Guard is removed, a key aspect of this "no list/head requests on S3"
-   * is gone. However, if directory marker retention is set to
-   * "authoritative", this predicate will determine whether or not
-   * markers are to be retained under a path.
-   * @param p path
-   * @return true iff the path is authoritative on the client.
-   */
-  boolean allowAuthoritative(Path p);
-
-  /**
    * Create an iterator over objects in S3.
    * The listing includes the key itself, if found.
    * @param path  path of the listing.

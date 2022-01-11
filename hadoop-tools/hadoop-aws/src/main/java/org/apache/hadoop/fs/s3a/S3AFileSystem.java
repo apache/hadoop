@@ -2058,11 +2058,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public boolean allowAuthoritative(final Path p) {
-      return S3AFileSystem.this.allowAuthoritative(p);
-    }
-
-    @Override
     @Retries.RetryTranslated
     public RemoteIterator<S3AFileStatus> listObjects(
         final Path path,
@@ -2172,9 +2167,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       ChangeTracker changeTracker, Invoker changeInvoker, String operation)
       throws IOException {
     String key = pathToKey(path);
-    return once(operation, path.toString(),
-        () ->
-            // this always does a full HEAD to the object
+    return once(operation, path.toString(), () ->
+            // HEAD against the object
             getObjectMetadata(
                 key, changeTracker, changeInvoker, operation));
   }
@@ -3929,8 +3923,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String action = "copyFile(" + srcKey + ", " + dstKey + ")";
     Invoker readInvoker = readContext.getReadInvoker();
 
-    ObjectMetadata srcom = once(action, srcKey, () ->
-        getObjectMetadata(srcKey, changeTracker, readInvoker, "copy"));
+    ObjectMetadata srcom;
+    try {
+      srcom = once(action, srcKey,
+          () ->
+              getObjectMetadata(srcKey, changeTracker, readInvoker, "copy"));
+    } catch (FileNotFoundException e) {
+      // if rename fails at this point it means that the expected file was not
+      // found.
+      // This means the File was deleted since LIST enumerated it.
+      LOG.debug("getObjectMetadata({}) failed to find an expected file",
+          srcKey, e);
+      // We create an exception, but the text depends on the S3Guard state
+      throw new RemoteFileChangedException(
+          keyToQualifiedPath(srcKey).toString(),
+          action,
+          RemoteFileChangedException.FILE_NOT_FOUND_SINGLE_ATTEMPT,
+          e);
+    }
 
     return readInvoker.retry(
         action, srcKey,
