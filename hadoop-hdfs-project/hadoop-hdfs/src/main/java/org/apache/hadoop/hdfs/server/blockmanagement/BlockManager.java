@@ -4940,6 +4940,7 @@ public class BlockManager implements BlockStatsMXBean {
   private class MarkedDeleteBlockScrubber implements Runnable {
     private Iterator<BlockInfo> toDeleteIterator = null;
     private boolean isSleep;
+    private NameNodeMetrics metrics;
 
     private void remove(long time) {
       if (checkToDeleteIterator()) {
@@ -4947,6 +4948,7 @@ public class BlockManager implements BlockStatsMXBean {
         try {
           while (toDeleteIterator.hasNext()) {
             removeBlock(toDeleteIterator.next());
+            metrics.decrPendingDeleteBlocksCount();
             if (Time.monotonicNow() - time > deleteBlockLockTimeMs) {
               isSleep = true;
               break;
@@ -4969,7 +4971,7 @@ public class BlockManager implements BlockStatsMXBean {
           !Thread.currentThread().isInterrupted()) {
         if (!markedDeleteQueue.isEmpty() || checkToDeleteIterator()) {
           try {
-            NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+            metrics = NameNode.getNameNodeMetrics();
             metrics.setDeleteBlocksQueued(markedDeleteQueue.size());
             isSleep = false;
             long startTime = Time.monotonicNow();
@@ -5351,8 +5353,15 @@ public class BlockManager implements BlockStatsMXBean {
     return blockIdManager;
   }
 
+  @VisibleForTesting
   public ConcurrentLinkedQueue<List<BlockInfo>> getMarkedDeleteQueue() {
     return markedDeleteQueue;
+  }
+
+  public void addBLocksToMarkedDeleteQueue(List<BlockInfo> blockInfos) {
+    markedDeleteQueue.add(blockInfos);
+    NameNode.getNameNodeMetrics().
+        incrPendingDeleteBlocksCount(blockInfos.size());
   }
 
   public long nextGenerationStamp(boolean legacyBlock) throws IOException {
