@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.TestContainerSchedulerQueuing;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,11 @@ import java.util.concurrent.ConcurrentMap;
 
 import static org.mockito.Mockito.spy;
 
+/**
+ * Base test class that overrides the behavior of
+ * {@link ContainerStateTransitionListener} for testing
+ * the {@link ContainerScheduler}.
+ */
 public class BaseContainerSchedulerTest extends BaseContainerManagerTest {
   private static final long TWO_GB = 2048 * 1024 * 1024L;
 

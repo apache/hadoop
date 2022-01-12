@@ -33,7 +33,7 @@ public enum OpportunisticContainersQueuePolicy {
    */
   BY_QUEUE_LEN,
   /**
-   * Determines wheether or not to run a container based on the amount of
+   * Determines whether or not to run a container based on the amount of
    * resource capacity the node has.
    * Sums up the resources running + already queued at the node, compares
    * it with the total capacity of the node, and accepts the new container only
