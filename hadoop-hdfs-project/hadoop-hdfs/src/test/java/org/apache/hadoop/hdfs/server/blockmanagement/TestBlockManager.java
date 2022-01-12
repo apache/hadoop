@@ -236,7 +236,17 @@ public class TestBlockManager {
         "Was: " + pipeline[1],
         rackB.contains(pipeline[1].getDatanodeDescriptor()));
   }
-  
+
+  @Test
+  public void testBlocksMapCapacity() {
+    Configuration conf = new HdfsConfiguration();
+    double capacityPercentage = conf.getDouble(DFSConfigKeys.
+                    DFS_NAMENODE_BLOCKSMAP_CAPACITY_PERCENTAGE_KEY,
+            DFSConfigKeys.DFS_NAMENODE_BLOCKSMAP_CAPACITY_PERCENTAGE_DEFAULT);
+    int otherCapacity = LightWeightGSet.computeCapacity(capacityPercentage,
+            "Other-BlocksMap");
+    Assert.assertEquals(otherCapacity, bm.getCapacity());
+  }
 
   /**
    * Regression test for HDFS-1480

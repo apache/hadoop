@@ -170,6 +170,8 @@ public class BlockManager implements BlockStatsMXBean {
   private static final String QUEUE_REASON_FUTURE_GENSTAMP =
     "generation stamp is in the future";
 
+  private static final String BLOCKSMAP = "BlocksMap";
+
   private static final long BLOCK_RECOVERY_TIMEOUT_MULTIPLIER = 30;
 
   private final Namesystem namesystem;
@@ -476,9 +478,11 @@ public class BlockManager implements BlockStatsMXBean {
         startupDelayBlockDeletionInMs,
         blockIdManager);
 
-    // Compute the map capacity by allocating 2% of total memory
+    double capacityPercentage = conf.getDouble(DFSConfigKeys.
+                    DFS_NAMENODE_BLOCKSMAP_CAPACITY_PERCENTAGE_KEY,
+            DFSConfigKeys.DFS_NAMENODE_BLOCKSMAP_CAPACITY_PERCENTAGE_DEFAULT);
     blocksMap = new BlocksMap(
-        LightWeightGSet.computeCapacity(2.0, "BlocksMap"));
+        LightWeightGSet.computeCapacity(capacityPercentage, BLOCKSMAP));
     placementPolicies = new BlockPlacementPolicies(
       conf, datanodeManager.getFSClusterStats(),
       datanodeManager.getNetworkTopology(),

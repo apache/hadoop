@@ -6143,6 +6143,14 @@
   </property>
 
   <property>
+    <name>dfs.namenode.blocksmap.capacity.percentage</name>
+    <value>2</value>
+    <description>
+      The percentage of the initial capacity of BlocksMap in BlockManager.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.storage.dir.perm</name>
     <value>700</value>
     <description>

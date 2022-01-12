@@ -280,6 +280,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY =
       "dfs.namenode.safemode.replication.min";
 
+  public static final String  DFS_NAMENODE_BLOCKSMAP_CAPACITY_PERCENTAGE_KEY =
+          "dfs.namenode.blocksmap.capacity.percentage";
+  public static final double
+          DFS_NAMENODE_BLOCKSMAP_CAPACITY_PERCENTAGE_DEFAULT = 2;
+
   public static final String  DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY =
       "dfs.namenode.reconstruction.pending.timeout-sec";
   public static final int
