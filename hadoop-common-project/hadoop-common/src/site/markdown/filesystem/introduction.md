@@ -343,7 +343,7 @@ stores pretend that they are a FileSystem, a FileSystem with the same
 features and operations as HDFS. This is &mdash;ultimately&mdash;a pretence:
 they have different characteristics and occasionally the illusion fails.
 
-1. **Consistency**. Object mqy be *Eventually Consistent*: it
+1. **Consistency**. Object may be *Eventually Consistent*: it
 can take time for changes to objects &mdash;creation, deletion and updates&mdash;
 to become visible to all callers. Indeed, there is no guarantee a change is
 immediately visible to the client which just made the change. As an example,

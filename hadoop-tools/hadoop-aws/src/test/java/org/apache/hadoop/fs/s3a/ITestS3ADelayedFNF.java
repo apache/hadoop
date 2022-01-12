@@ -33,7 +33,6 @@ import java.io.FileNotFoundException;
 
 import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
 import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
