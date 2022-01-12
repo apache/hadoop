@@ -32,11 +32,13 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_DYNAMO;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_LOCAL;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 
 /**
  * Logic for integrating MetadataStore with S3A.
@@ -48,25 +50,75 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
 public final class S3Guard {
   private static final Logger LOG = LoggerFactory.getLogger(S3Guard.class);
 
+  static final String NULL_METADATA_STORE
+      = "org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore";
+
   // Utility class.  All static functions.
   private S3Guard() {
   }
 
   /**
-   * Assert that there is no S3Guard.
+   * Assert that the FS is not configured to use an unsupported S3Guard
+   * option.
+   * the empty/null option is preferred.
+   * if the local store or null store is requested, the configuration is
+   * allowed.
+   * request for a DynamoDB or other store class will raise an exception.
    * @param fsURI FileSystem URI
    * @param conf configuration
-   * @throws PathIOException if the metastore is enabled.
+   * @return true if an option was set but ignored
+   * @throws PathIOException if an unsupported metastore was found.
    */
-  public static void checkNoS3Guard(URI fsURI, Configuration conf) throws PathIOException {
-    final String classname = conf.getTrimmed(Constants.S3_METADATA_STORE_IMPL, "");
-    if (!"org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore".equals(classname)
-        && !classname.isEmpty()) {
-      LOG.error("Metastore option source {}",
-          (Object) conf.getPropertySources(Constants.S3_METADATA_STORE_IMPL));
-      throw new PathIOException(fsURI.toString(),
-          "Filesystem is configured to use Unsupported S3Guard store " + classname);
+  public static boolean checkNoS3Guard(URI fsURI, Configuration conf) throws PathIOException {
+    final String classname = conf.getTrimmed(S3_METADATA_STORE_IMPL, "");
+
+    if (classname.isEmpty()) {
+      // all good. declare nothing was found.
+      return false;
     }
+    // there is a s3guard configuration option
+    // ignore if harmless; reject if DDB or unknown
+    final String[] sources = conf.getPropertySources(S3_METADATA_STORE_IMPL);
+    final String origin = sources == null
+        ? "unknown"
+        : sources[0];
+    final String fsPath = fsURI.toString();
+    switch (classname) {
+    case NULL_METADATA_STORE:
+      // harmless
+      LOG.debug("Ignoring S3Guard store option of {} -no longer needed " +
+              "Origin {}",
+          NULL_METADATA_STORE, origin);
+      break;
+    case S3GUARD_METASTORE_LOCAL:
+      // used in some libraries (e.g. hboss) to force a consistent s3 in a test
+      // run.
+      // print a message and continue
+      LOG.warn("Ignoring S3Guard store option of {} -no longer needed or supported. "
+              + "Origin {}",
+          S3GUARD_METASTORE_LOCAL, origin);
+      break;
+    case S3GUARD_METASTORE_DYNAMO:
+      // this is the dangerous one, as it is a sign that a config is in use where
+      // older releases will use DDB for listing metadata, yet this
+      // client will not update it.
+      final String message = String.format("S3Guard is no longer needed/supported,"
+              + " yet %s is configured to use DynamoDB as the S3Guard metadata store."
+              + " This is no longer needed or supported. " +
+              "Origin of setting is %s",
+          fsPath, origin);
+      LOG.error(message);
+      throw new PathIOException(fsPath, message);
+
+    default:
+      // an unknown store entirely.
+      throw new PathIOException(fsPath,
+          "Filesystem is configured to use unknown S3Guard store " + classname
+              + " origin " + origin);
+    }
+
+    // an option was set, but it was harmless
+    return true;
   }
 
   public static Collection<String> getAuthoritativePaths(S3AFileSystem fs) {

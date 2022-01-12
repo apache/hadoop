@@ -33,8 +33,10 @@ It did not compensate for update inconsistency, though by storing the etag
 values of objects in the database, it could detect and report problems.
 
 Now that S3 is consistent, _there is no need for S3Guard at all._
-Accordingly, it has been removed from the source.
-Attempting to create an S3A connector instance with S3Guard enabled will now fail.
+Accordingly, it was removed from the source in 2022 in [HADOOP-17409](https://issues.apache.org/jira/browse/HADOOP-17409), _Remove S3Guard_.
+
+Attempting to create an S3A connector instance with S3Guard set to anything but the
+null or local metastores will now fail.
 
 
 ### S3Guard History
@@ -65,22 +67,27 @@ For links to early design documents and related patches, see
 
 ## Moving off S3Guard
 
-How to move off S3Guard, given it is no longer needed.
+How to move off S3Guard
 
 1. Unset the option `fs.s3a.metadatastore.impl` globally/for all buckets for which it
    was selected.
-1. If the option `org.apache.hadoop.fs.s3a.s3guard.disabled.warn.level` has been changed from
-the default (`SILENT`), change it back. You no longer need to be warned that S3Guard is disabled.
 1. Restart all applications.
 
 Once you are confident that all applications have been restarted, _Delete the DynamoDB table_.
 This is to avoid paying for a database you no longer need.
-This is best done from the AWS GUI.
+This can be done from the AWS GUI.
 
 ## Removing S3Guard Configurations
 
-The `fs.s3a.metadatastore.impl` option must be deleted, set to the empty string "",
-or to the "Null" Metadata store `org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore`.
+The `fs.s3a.metadatastore.impl` option must be one of
+* unset
+* set to the empty string ""
+* set to the "Null" Metadata store `org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore`.
+
+To aid the migration of external components which used the Local store for a consistent
+view within the test process, the Local Metadata store option is also recognized:
+`org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore`. 
+When this option is used the S3A connector will warn and continue.
 
 
 ```xml
@@ -97,13 +104,39 @@ or to the "Null" Metadata store `org.apache.hadoop.fs.s3a.s3guard.NullMetadataSt
 </property>
 ```
 
+## Issue: Increased number/cost of S3 IO calls.
+
+More AWS S3 calls may be made once S3Guard is disabled, both for LIST and HEAD operations.
+
+While this may seem to increase cost, as the DDB table is no longer needed, users will
+save on DDB table storage and use costs.
+
+Some deployments of Apache Hive declared their managed tables to be "authoritative".
+The S3 store was no longer checked when listing directories or for updates to
+entries. The S3Guard table in DynamoDB was used exclusively.
+
+Without S3Guard, listing performance may be slower. However, Hadoop 3.3.0+ has significantly
+improved listing performance ([HADOOP-17400](https://issues.apache.org/jira/browse/HADOOP-17400)
+_Optimize S3A for maximum performance in directory listings_) so this should not be apparent.
+
+We recommend disabling [directory marker deletion](directory_markers.html) to reduce
+the number of DELETE operations made when writing files.
+this reduces the load on the S3 partition and so the risk of throttling, which can
+impact performance. 
+This is very important when working with versioned S3 buckets, as the tombstone markers
+created will slow down subsequent listing operations.
+
+Finally, the S3A [auditing](auditing.html) feature adds information to the S3 server logs
+about which jobs, users and filesystem operations have been making S3 requests.
+This auditing information can be used to identify opportunities to reduce load.
+
 
 ## S3Guard Command Line Interface (CLI)
 
 
 ### Display information about a bucket, `s3guard bucket-info`
 
-Prints and optionally checks the s3guard and encryption status of a bucket.
+Prints and optionally checks the status of a bucket.
 
 ```bash
 hadoop s3guard bucket-info [-guarded] [-unguarded] [-auth] [-nonauth] [-magic] [-encryption ENCRYPTION] [-markers MARKER] s3a://BUCKET
@@ -113,13 +146,13 @@ Options
 
 | argument | meaning |
 |-----------|-------------|
-| `-guarded` | Require S3Guard to be enabled. This is always force |
-| `-unguarded` | Require S3Guard to be disabled. Thi is always true |
-| `-auth` | Require the S3Guard mode to be "authoritative" |
-| `-nonauth` | Require the S3Guard mode to be "non-authoritative" |
+| `-guarded` | Require S3Guard to be enabled. This will now always fail |
+| `-unguarded` | Require S3Guard to be disabled. This will now always succeed |
+| `-auth` | Require the S3Guard mode to be "authoritative". This will now always fail |
+| `-nonauth` | Require the S3Guard mode to be "non-authoritative". This will now always fail |
 | `-magic` | Require the S3 filesystem to be support the "magic" committer |
 | `-markers` | Directory marker status: `aware`, `keep`, `delete`, `authoritative` |
-| `-encryption <type>` | Require a specific server-side encryption algorithm  |
+| `-encryption <type>` | Require a specific encryption algorithm  |
 
 The server side encryption options are not directly related to S3Guard, but
 it is often convenient to check them at the same time.

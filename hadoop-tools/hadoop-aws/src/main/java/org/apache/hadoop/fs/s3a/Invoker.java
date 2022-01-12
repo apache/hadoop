@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.SdkBaseException;
-import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +36,7 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Class to provide lambda expression invocation of AWS operations.
@@ -162,6 +162,7 @@ public class Invoker {
       throw S3AUtils.translateException(action, path, e);
     }
   }
+
   /**
    * Execute an operation and ignore all raised IOExceptions; log at INFO;
    * full stack only at DEBUG.
