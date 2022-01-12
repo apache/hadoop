@@ -44,8 +44,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Periodically refresh the underlying cached {@link LocatedBlocks} for eligible registered {@link DFSInputStream}s.
- * DFSInputStreams are eligible for refreshing if they have any deadNodes or any blocks are lacking local replicas.
+ * Periodically refresh the underlying cached {@link LocatedBlocks} for eligible registered
+ * {@link DFSInputStream}s.  DFSInputStreams are eligible for refreshing if they have any
+ * deadNodes or any blocks are lacking local replicas.
  * Disabled by default, unless an interval is configured.
  */
 public class LocatedBlocksRefresher extends Daemon {
@@ -59,9 +60,10 @@ public class LocatedBlocksRefresher extends Daemon {
   private final long jitter;
   private final ExecutorService refreshThreadPool;
 
-  // Use WeakHashMap so that we don't hold onto references that might have not been explicitly closed
-  // because they were created and thrown away.
-  private final Set<DFSInputStream> registeredInputStreams = Collections.newSetFromMap(new WeakHashMap<>());
+  // Use WeakHashMap so that we don't hold onto references that might have not been explicitly
+  // closed because they were created and thrown away.
+  private final Set<DFSInputStream> registeredInputStreams =
+      Collections.newSetFromMap(new WeakHashMap<>());
 
   private int runCount;
   private int refreshCount;
@@ -116,7 +118,8 @@ public class LocatedBlocksRefresher extends Daemon {
         phaser.register();
         refreshThreadPool.submit(() -> {
           try {
-            if (isInputStreamTracked(inputStream) && inputStream.refreshBlockLocations(addressCache)) {
+            if (isInputStreamTracked(inputStream) &&
+                inputStream.refreshBlockLocations(addressCache)) {
               neededRefresh.incrementAndGet();
             }
           } finally {
@@ -175,11 +178,11 @@ public class LocatedBlocksRefresher extends Daemon {
   }
 
   /**
-   * Collects the DFSInputStreams to a list within synchronization, so that we can iterate them without
-   * potentially blocking callers to {@link #addInputStream(DFSInputStream)} or
+   * Collects the DFSInputStreams to a list within synchronization, so that we can iterate them
+   * without potentially blocking callers to {@link #addInputStream(DFSInputStream)} or
    * {@link #removeInputStream(DFSInputStream)}. We don't care so much about missing additions,
-   * and we'll guard against removals by doing an additional {@link #isInputStreamTracked(DFSInputStream)}
-   * track during iteration.
+   * and we'll guard against removals by doing an additional
+   * {@link #isInputStreamTracked(DFSInputStream)} track during iteration.
    */
   private synchronized Collection<DFSInputStream> getInputStreams() {
     return new ArrayList<>(registeredInputStreams);

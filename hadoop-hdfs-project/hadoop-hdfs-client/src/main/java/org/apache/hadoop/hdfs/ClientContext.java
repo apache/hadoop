@@ -136,13 +136,13 @@ public class ClientContext {
   private volatile DeadNodeDetector deadNodeDetector = null;
 
   /**
-   * The switch for the {@link LocatedBlocksRefresher}
+   * The switch for the {@link LocatedBlocksRefresher}.
    */
   private final boolean locatedBlocksRefresherEnabled;
 
   /**
    * Periodically refresh the {@link org.apache.hadoop.hdfs.protocol.LocatedBlocks} backing
-   * registered {@link DFSInputStream}s, to take advantage of changes in block placement
+   * registered {@link DFSInputStream}s, to take advantage of changes in block placement.
    */
   private volatile LocatedBlocksRefresher locatedBlocksRefresher = null;
 
@@ -321,7 +321,7 @@ public class ClientContext {
 
   /**
    * If true, LocatedBlocksRefresher will be periodically refreshing LocatedBlocks
-   * of registered DFSInputStreams
+   * of registered DFSInputStreams.
    */
   public boolean isLocatedBlocksRefresherEnabled() {
     return locatedBlocksRefresherEnabled;

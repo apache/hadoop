@@ -235,10 +235,10 @@ public class TestDFSInputStreamBlockLocations {
   }
 
   private Path createFile(String fileName) throws IOException {
-    Path filePath = new Path(fileName);
-    try (FSDataOutputStream fout = fs.create(filePath, REPLICATION_FACTOR)) {
+    Path path = new Path(fileName);
+    try (FSDataOutputStream fout = fs.create(path, REPLICATION_FACTOR)) {
       fout.write(new byte[(fileLength)]);
     }
-    return filePath;
+    return path;
   }
 }

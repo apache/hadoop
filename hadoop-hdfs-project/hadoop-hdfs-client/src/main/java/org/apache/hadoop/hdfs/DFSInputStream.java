@@ -307,10 +307,10 @@ public class DFSInputStream extends FSInputStream
     return newInfo;
   }
 
-  private long getLastBlockLength(LocatedBlocks locatedBlocks) throws IOException{
+  private long getLastBlockLength(LocatedBlocks blocks) throws IOException{
     long lastBlockBeingWrittenLength = 0;
-    if (!locatedBlocks.isLastBlockComplete()) {
-      final LocatedBlock last = locatedBlocks.getLastLocatedBlock();
+    if (!blocks.isLastBlockComplete()) {
+      final LocatedBlock last = blocks.getLastLocatedBlock();
       if (last != null) {
         if (last.getLocations().length == 0) {
           if (last.getBlockSize() == 0) {
@@ -1948,7 +1948,7 @@ public class DFSInputStream extends FSInputStream
   }
 
   /**
-   * De-register periodic refresh of this inputstream, if it was added to begin with
+   * De-register periodic refresh of this inputstream, if it was added to begin with.
    */
   private void maybeDeRegisterBlockRefresh() {
     if (refreshingBlockLocations.get()) {
@@ -1957,24 +1957,24 @@ public class DFSInputStream extends FSInputStream
   }
 
   /**
-   * Refresh blocks for the input stream, if necessary
+   * Refresh blocks for the input stream, if necessary.
    *
    * @param addressCache optional map to use as a cache for resolving datanode InetSocketAddress
    * @return whether a refresh was performed or not
    */
   boolean refreshBlockLocations(Map<String, InetSocketAddress> addressCache) {
-    LocatedBlocks locatedBlocks;
+    LocatedBlocks blocks;
     synchronized (infoLock) {
-      locatedBlocks = getLocatedBlocks();
+      blocks = getLocatedBlocks();
     }
 
-    if (getLocalDeadNodes().isEmpty() && allBlocksLocal(locatedBlocks, addressCache)) {
+    if (getLocalDeadNodes().isEmpty() && allBlocksLocal(blocks, addressCache)) {
       return false;
     }
 
     try {
       DFSClient.LOG.debug("Refreshing {} for path {}", this, getSrc());
-      LocatedBlocks newLocatedBlocks = fetchAndCheckLocatedBlocks(locatedBlocks);
+      LocatedBlocks newLocatedBlocks = fetchAndCheckLocatedBlocks(blocks);
       long lastBlockLength = getLastBlockLength(newLocatedBlocks);
       if (lastBlockLength == -1) {
         DFSClient.LOG.debug(
@@ -1995,10 +1995,10 @@ public class DFSInputStream extends FSInputStream
    * Once new LocatedBlocks have been fetched, sets them on the DFSInputStream and
    * updates stateful read location within the necessary locks.
    */
-  private synchronized void setRefreshedValues(LocatedBlocks locatedBlocks, long lastBlockLength)
+  private synchronized void setRefreshedValues(LocatedBlocks blocks, long lastBlockLength)
       throws IOException {
     synchronized (infoLock) {
-      setLocatedBlocksFields(locatedBlocks, lastBlockLength);
+      setLocatedBlocksFields(blocks, lastBlockLength);
     }
 
     getLocalDeadNodes().clear();
@@ -2009,14 +2009,15 @@ public class DFSInputStream extends FSInputStream
     }
   }
 
-  private boolean allBlocksLocal(LocatedBlocks locatedBlocks, Map<String, InetSocketAddress> addressCache) {
+  private boolean allBlocksLocal(LocatedBlocks blocks,
+      Map<String, InetSocketAddress> addressCache) {
     if (addressCache == null) {
       addressCache = new HashMap<>();
     }
 
     // we only need to check the first location of each block, because the blocks are already
     // sorted by distance from the current host
-    for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
+    for (LocatedBlock lb : blocks.getLocatedBlocks()) {
       if (lb.getLocations().length == 0) {
         return false;
       }

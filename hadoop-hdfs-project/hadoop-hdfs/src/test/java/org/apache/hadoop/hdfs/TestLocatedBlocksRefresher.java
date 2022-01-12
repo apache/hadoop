@@ -105,7 +105,8 @@ public class TestLocatedBlocksRefresher {
   @Test
   public void testEnabledOnNonZeroInterval() throws Exception {
     setupTest(1000);
-    LocatedBlocksRefresher refresher = cluster.getFileSystem().getClient().getLocatedBlockRefresher();
+    LocatedBlocksRefresher refresher =
+        cluster.getFileSystem().getClient().getLocatedBlockRefresher();
     assertNotNull(refresher);
     assertNoMoreRefreshes(refresher);
   }
@@ -205,7 +206,8 @@ public class TestLocatedBlocksRefresher {
     int runCount = refresher.getRunCount();
     int refreshCount = refresher.getRefreshCount();
 
-    LOG.info("Waiting for at least {} runs, from current {}, expecting no refreshes", runCount + 3, runCount);
+    LOG.info("Waiting for at least {} runs, from current {}, expecting no refreshes",
+        runCount + 3, runCount);
     // wait for it to run 3 times, with some buffer
     awaitWithTimeout(() -> refresher.getRunCount() > runCount + 3, 5 * interval);
 
@@ -213,7 +215,8 @@ public class TestLocatedBlocksRefresher {
     assertEquals(refreshCount, refresher.getRefreshCount());
   }
 
-  private void assertRefreshes(LocatedBlocksRefresher refresher, int expectedRefreshes) throws InterruptedException {
+  private void assertRefreshes(LocatedBlocksRefresher refresher, int expectedRefreshes)
+      throws InterruptedException {
     int runCount = refresher.getRunCount();
     int refreshCount = refresher.getRefreshCount();
     int expectedRuns = 3;
@@ -222,18 +225,22 @@ public class TestLocatedBlocksRefresher {
       expectedRefreshes = expectedRuns;
     }
 
-    LOG.info("Waiting for at least {} runs, from current {}. Expecting {} refreshes, from current {}",
-        runCount + expectedRuns, runCount, refreshCount + expectedRefreshes, refreshCount);
+    LOG.info(
+        "Waiting for at least {} runs, from current {}. Expecting {} refreshes, from current {}",
+        runCount + expectedRuns, runCount, refreshCount + expectedRefreshes, refreshCount
+    );
 
     // wait for it to run 3 times
     awaitWithTimeout(() -> refresher.getRunCount() >= runCount + expectedRuns, 10_000);
 
-    // the values may not be identical due to any refreshes that occurred before we opened the DFSInputStream
-    // but the difference should be identical since we are refreshing every time
+    // the values may not be identical due to any refreshes that occurred before we opened
+    // the DFSInputStream but the difference should be identical since we are refreshing
+    // every time
     assertEquals(expectedRefreshes, refresher.getRefreshCount() - refreshCount);
   }
 
-  private void awaitWithTimeout(Supplier<Boolean> test, long timeoutMillis) throws InterruptedException {
+  private void awaitWithTimeout(Supplier<Boolean> test, long timeoutMillis)
+      throws InterruptedException {
     long now = Time.monotonicNow();
 
     while(!test.get()) {
