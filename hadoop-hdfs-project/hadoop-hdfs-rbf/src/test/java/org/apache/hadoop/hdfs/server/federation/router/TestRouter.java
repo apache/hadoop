@@ -238,12 +238,16 @@ public class TestRouter {
   private void assertRouterHeartbeater(boolean expectedRouterHeartbeat,
       boolean expectedNNHeartbeat) throws IOException {
     final Router router = new Router();
-    Configuration baseCfg = new RouterConfigBuilder(conf).rpc().build();
+    Configuration baseCfg = new RouterConfigBuilder(conf).rpc(false).build();
     baseCfg.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
         expectedRouterHeartbeat);
     baseCfg.setBoolean(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_ENABLE,
         expectedNNHeartbeat);
     router.init(baseCfg);
+
+    // RouterId can not be null , used by RouterHeartbeatService.updateStateStore()
+    assertNotNull(router.getRouterId());
+
     RouterHeartbeatService routerHeartbeatService =
         router.getRouterHeartbeatService();
     if (expectedRouterHeartbeat) {

@@ -194,6 +194,15 @@ public class Router extends CompositeService implements
       this.rpcServer = createRpcServer();
       addService(this.rpcServer);
       this.setRpcServerAddress(rpcServer.getRpcAddress());
+    } else {
+      InetSocketAddress confRpcAddress = conf.getSocketAddr(
+              RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
+              RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
+              RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
+              RBFConfigKeys.DFS_ROUTER_RPC_PORT_DEFAULT);
+
+      String hostname = InetAddress.getLocalHost().getHostName();
+      setRouterId(hostname + ":" + confRpcAddress.getPort());
     }
 
     if (conf.getBoolean(
