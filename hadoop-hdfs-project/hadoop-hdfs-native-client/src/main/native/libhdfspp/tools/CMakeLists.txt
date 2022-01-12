@@ -66,11 +66,9 @@ add_subdirectory(hdfs-du)
 add_executable(hdfs_get hdfs_get.cc)
 target_link_libraries(hdfs_get tools_common hdfspp_static)
 
-add_executable(hdfs_copyToLocal hdfs_copyToLocal.cc)
-target_link_libraries(hdfs_copyToLocal tools_common hdfspp_static)
+add_subdirectory(hdfs-copy-to-local)
 
-add_executable(hdfs_moveToLocal hdfs_moveToLocal.cc)
-target_link_libraries(hdfs_moveToLocal tools_common hdfspp_static)
+add_subdirectory(hdfs-move-to-local)
 
 add_executable(hdfs_setrep hdfs_setrep.cc)
 target_link_libraries(hdfs_setrep tools_common hdfspp_static)
