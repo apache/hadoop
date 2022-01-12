@@ -664,16 +664,11 @@ public class DataNode extends ReconfigurableBase
     String result;
     try {
       LOG.info("Reconfiguring {} to {}", property, newVal);
-      if (property.equals(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY)) {
-        Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
-        int threads = (newVal == null ? DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT :
-            Integer.parseInt(newVal));
-        result = Integer.toString(threads);
-        getXferServer().setMaxXceiverCount(threads);
-      } else {
-        throw new IllegalArgumentException("Unexpected property " + property +
-            " in reconfDataXceiverParameters");
-      }
+      Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
+      int threads = (newVal == null ? DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT :
+          Integer.parseInt(newVal));
+      result = Integer.toString(threads);
+      getXferServer().setMaxXceiverCount(threads);
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
     } catch (IllegalArgumentException e) {

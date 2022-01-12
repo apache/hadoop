@@ -25,6 +25,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -400,8 +401,8 @@ public class TestDataNodeReconfiguration {
       assertEquals(String.format("%s has wrong value", DFS_DATANODE_MAX_RECEIVER_THREADS_KEY),
           DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT, dn.getXferServer().getMaxXceiverCount());
 
-      assertEquals(String.format("expect %s is not configured",
-          DFS_DATANODE_MAX_RECEIVER_THREADS_KEY), null,
+      assertNull(String.format("expect %s is not configured",
+          DFS_DATANODE_MAX_RECEIVER_THREADS_KEY),
           dn.getConf().get(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY));
     }
   }
