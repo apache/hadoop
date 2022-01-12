@@ -38,7 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -67,7 +66,6 @@ import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MATERIALIZE_FILE;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
-import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
 
@@ -430,12 +428,6 @@ public class CommitOperations extends AbstractStoreOperation
     if (addMetrics) {
       addFileSystemStatistics(successData.getMetrics());
     }
-    // add any diagnostics
-    Configuration conf = fs.getConf();
-    successData.addDiagnostic(S3_METADATA_STORE_IMPL, "");
-    successData.addDiagnostic(METADATASTORE_AUTHORITATIVE, "false");
-    successData.addDiagnostic(AUTHORITATIVE_PATH,
-        conf.getTrimmed(AUTHORITATIVE_PATH, ""));
 
     // now write
     Path markerPath = new Path(outputPath, _SUCCESS);
