@@ -4047,6 +4047,13 @@ public class BlockManager implements BlockStatsMXBean {
         List<DatanodeStorageInfo> replicasToDelete = placementPolicy
             .chooseReplicasToDelete(nonExcess, candidates, (short) 1,
                 excessTypes, null, null);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Choose redundant EC replicas to delete, blockId: {}, targetIndex: {}, " +
+                  "nonExcess: {}, found: {}, duplicated: {}, storage2index: {}, " +
+                  "candidates: {}, replicasToDelete: {}",
+              sblk.getBlockId(), targetIndex, new ArrayList<>(nonExcess), found, duplicated,
+              storage2index, candidates, replicasToDelete);
+        }
         for (DatanodeStorageInfo chosen : replicasToDelete) {
           processChosenExcessRedundancy(nonExcess, chosen, storedBlock);
           candidates.remove(chosen);
