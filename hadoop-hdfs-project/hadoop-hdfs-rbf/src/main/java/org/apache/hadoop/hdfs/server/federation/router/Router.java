@@ -187,23 +187,8 @@ public class Router extends CompositeService implements
       throw new IOException("Cannot find subcluster resolver");
     }
 
-    if (conf.getBoolean(
-        RBFConfigKeys.DFS_ROUTER_RPC_ENABLE,
-        RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_DEFAULT)) {
-      // Create RPC server
-      this.rpcServer = createRpcServer();
-      addService(this.rpcServer);
-      this.setRpcServerAddress(rpcServer.getRpcAddress());
-    } else {
-      InetSocketAddress confRpcAddress = conf.getSocketAddr(
-              RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
-              RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
-              RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
-              RBFConfigKeys.DFS_ROUTER_RPC_PORT_DEFAULT);
-
-      String hostname = InetAddress.getLocalHost().getHostName();
-      setRouterId(hostname + ":" + confRpcAddress.getPort());
-    }
+    // whether create rpc server or not, set routerId anyway.
+    setRpcServer();
 
     if (conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_ADMIN_ENABLE,
@@ -394,6 +379,26 @@ public class Router extends CompositeService implements
   /////////////////////////////////////////////////////////
   // RPC Server
   /////////////////////////////////////////////////////////
+
+  private void setRpcServer() throws IOException {
+    if (conf.getBoolean(
+            RBFConfigKeys.DFS_ROUTER_RPC_ENABLE,
+            RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_DEFAULT)) {
+      // Create RPC server
+      this.rpcServer = createRpcServer();
+      addService(this.rpcServer);
+      this.setRpcServerAddress(rpcServer.getRpcAddress());
+    } else {
+      InetSocketAddress confRpcAddress = conf.getSocketAddr(
+              RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
+              RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
+              RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
+              RBFConfigKeys.DFS_ROUTER_RPC_PORT_DEFAULT);
+
+      String hostname = InetAddress.getLocalHost().getHostName();
+      setRouterId(hostname + ":" + confRpcAddress.getPort());
+    }
+  }
 
   /**
    * Create a new Router RPC server to proxy ClientProtocol requests.

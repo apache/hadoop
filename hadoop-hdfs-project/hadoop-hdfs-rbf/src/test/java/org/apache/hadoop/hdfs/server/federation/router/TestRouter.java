@@ -223,14 +223,14 @@ public class TestRouter {
 
   @Test
   public void testSwitchRouter() throws IOException {
-    assertRouterHeartbeater(true,true, true);
-    assertRouterHeartbeater(true,true, false);
-    assertRouterHeartbeater(true,false, true);
-    assertRouterHeartbeater(true,false, false);
-    assertRouterHeartbeater(false,true, true);
-    assertRouterHeartbeater(false,true, false);
-    assertRouterHeartbeater(false,false, true);
-    assertRouterHeartbeater(false,false, false);
+    assertRouterHeartbeater(true, true, true);
+    assertRouterHeartbeater(true, true, false);
+    assertRouterHeartbeater(true, false, true);
+    assertRouterHeartbeater(true, false, false);
+    assertRouterHeartbeater(false, true, true);
+    assertRouterHeartbeater(false, true, false);
+    assertRouterHeartbeater(false, false, true);
+    assertRouterHeartbeater(false, false, false);
   }
 
   /**
