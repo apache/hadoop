@@ -187,10 +187,13 @@ public class BlockManagerTestUtil {
   /**
    * Wait for the processing of the marked deleted block to complete.
    */
-  public static void waitForMarkedDeleteQueueIsEmpty(
+  public static void waitForDeleteFinish(
       BlockManager blockManager) throws InterruptedException {
     while (true) {
-      if (blockManager.getMarkedDeleteQueue().isEmpty()) {
+      if (blockManager.getMarkedDeleteQueue().isEmpty() &&
+          blockManager.getCollectBlockForInodeQueue().isEmpty() &&
+          blockManager.getWaitingReclaimContextQueue().isEmpty()
+      ){
         return;
       }
       Thread.sleep(SLEEP_TIME);

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -131,6 +132,8 @@ public class TestSnapshotBlocksMap {
           blockmanager);
       BlockInfo[] blocks = f2.getBlocks();
       hdfs.delete(sub2, true);
+      BlockManagerTestUtil.waitForDeleteFinish(
+          cluster.getNamesystem(0).getBlockManager());
       // The INode should have been removed from the blocksMap
       for(BlockInfo b : blocks) {
         assertEquals(INVALID_INODE_ID, b.getBlockCollectionId());
@@ -169,6 +172,8 @@ public class TestSnapshotBlocksMap {
     
     // Delete file0
     hdfs.delete(file0, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // Make sure the blocks of file0 is still in blocksMap
     for(BlockInfo b : blocks0) {
       assertNotEquals(INVALID_INODE_ID, b.getBlockCollectionId());
@@ -293,6 +298,8 @@ public class TestSnapshotBlocksMap {
     assertEquals(0, blks[1].getNumBytes());
 
     hdfs.delete(bar, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     final Path sbar = SnapshotTestHelper.getSnapshotPath(foo, "s1",
         bar.getName());
     barNode = fsdir.getINode(sbar.toString()).asFile();
@@ -330,6 +337,8 @@ public class TestSnapshotBlocksMap {
     assertEquals(0, blks[1].getNumBytes());
 
     hdfs.delete(subDir, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     final Path sbar = SnapshotTestHelper.getSnapshotPath(foo, "s1", "sub/bar");
     barNode = fsdir.getINode(sbar.toString()).asFile();
     blks = barNode.getBlocks();
@@ -374,7 +383,8 @@ public class TestSnapshotBlocksMap {
 
     // delete subDir
     hdfs.delete(subDir, true);
-    
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     final Path sbar = SnapshotTestHelper.getSnapshotPath(foo, "s1", "sub/bar");
     barNode = fsdir.getINode(sbar.toString()).asFile();
     blks = barNode.getBlocks();
@@ -410,7 +420,8 @@ public class TestSnapshotBlocksMap {
     
     // Delete the file.
     hdfs.delete(bar, true);
-    
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // Now make sure that the NN can still save an fsimage successfully.
     cluster.getNameNode().getRpcServer().setSafeMode(
         SafeModeAction.SAFEMODE_ENTER, false);

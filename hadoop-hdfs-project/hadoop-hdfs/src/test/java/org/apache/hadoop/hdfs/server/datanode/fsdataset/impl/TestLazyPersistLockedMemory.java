@@ -176,7 +176,7 @@ public class TestLazyPersistLockedMemory extends LazyPersistTestCase {
 
     // Delete the file and ensure locked RAM goes to zero.
     fs.delete(path, false);
-    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+    BlockManagerTestUtil.waitForDeleteFinish(
         cluster.getNamesystem(0).getBlockManager());
     DataNodeTestUtils.triggerBlockReport(cluster.getDataNodes().get(0));
     waitForLockedBytesUsed(fsd, 0);

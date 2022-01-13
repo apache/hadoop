@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -1599,6 +1600,8 @@ public abstract class FSAclBaseTest {
     {
       // verify the reference count on deletion of dir with ACL
       fs.delete(child1, true);
+      BlockManagerTestUtil.waitForDeleteFinish(
+          cluster.getNamesystem(0).getBlockManager());
       assertEquals("Reference count should be 0", 0,
           child1AclFeature.getRefCount());
     }
@@ -1641,9 +1644,13 @@ public abstract class FSAclBaseTest {
     {
       // reference count should be decreased on deletion of files with ACLs
       fs.delete(file2, true);
+      BlockManagerTestUtil.waitForDeleteFinish(
+          cluster.getNamesystem(0).getBlockManager());
       assertEquals("Reference count should be decreased on delete of the file",
           1, fileAclFeature.getRefCount());
       fs.delete(file1, true);
+      BlockManagerTestUtil.waitForDeleteFinish(
+          cluster.getNamesystem(0).getBlockManager());
       assertEquals("Reference count should be decreased on delete of the file",
           0, fileAclFeature.getRefCount());
 

@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -1508,6 +1509,8 @@ public class TestEncryptionZones {
     // Now delete the encryption zone, recreate the dir, and take another
     // snapshot
     fsWrapper.delete(zone, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
     final Path snap2 = fs.createSnapshot(zoneParent, "snap2");
     final Path snap2Zone = new Path(snap2, zone.getName());

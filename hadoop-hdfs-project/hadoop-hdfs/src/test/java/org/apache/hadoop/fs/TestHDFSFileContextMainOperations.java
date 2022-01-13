@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
@@ -272,6 +273,8 @@ public class TestHDFSFileContextMainOperations extends
     fs.setQuota(dst1.getParent(), 2, HdfsConstants.QUOTA_DONT_SET);
     // Free up quota for a subsequent rename
     fs.delete(dst1, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     oldRename(src1, dst1, true, false);
     
     // Restart the cluster and ensure the above operations can be
@@ -301,6 +304,8 @@ public class TestHDFSFileContextMainOperations extends
     fs.setQuota(dst1.getParent(), 2, HdfsConstants.QUOTA_DONT_SET);
     // Free up quota for a subsequent rename
     fs.delete(dst1, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     rename(src1, dst1, false, true, Rename.OVERWRITE);
     
     // Restart the cluster and ensure the above operations can be

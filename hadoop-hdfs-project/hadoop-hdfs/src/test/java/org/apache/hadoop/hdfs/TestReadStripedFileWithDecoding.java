@@ -152,7 +152,7 @@ public class TestReadStripedFileWithDecoding {
     try {
       // delete the file
       dfs.delete(file, true);
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+      BlockManagerTestUtil.waitForDeleteFinish(
           cluster.getNamesystem().getBlockManager());
       // check the block is added to invalidateBlocks
       final FSNamesystem fsn = cluster.getNamesystem();

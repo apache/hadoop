@@ -1357,7 +1357,7 @@ public class TestFileCreation {
       assertBlocks(bm, oldBlocks, true);
       
       out = dfs.create(filePath, true);
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+      BlockManagerTestUtil.waitForDeleteFinish(
           cluster.getNamesystem(0).getBlockManager());
       byte[] newData = AppendTestUtil.randomBytes(seed, fileSize);
       try {
@@ -1366,7 +1366,7 @@ public class TestFileCreation {
         out.close();
       }
       dfs.deleteOnExit(filePath);
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+      BlockManagerTestUtil.waitForDeleteFinish(
           cluster.getNamesystem(0).getBlockManager());
       
       LocatedBlocks newBlocks = NameNodeAdapter.getBlockLocations(

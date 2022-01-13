@@ -1088,13 +1088,13 @@ public class TestNameNodeMXBean {
 
       // delete replicated files
       fs.delete(replDirPath, true);
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+      BlockManagerTestUtil.waitForDeleteFinish(
           cluster.getNamesystem(0).getBlockManager());
       verifyTotalBlocksMetrics(0L, 3L, activeNn.getTotalBlocks());
 
       // delete ec files
       fs.delete(ecDirPath, true);
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+      BlockManagerTestUtil.waitForDeleteFinish(
           cluster.getNamesystem(0).getBlockManager());
       verifyTotalBlocksMetrics(0L, 0L, activeNn.getTotalBlocks());
       verifyTotalBlocksMetrics(0L, 0L, standbyNn.getTotalBlocks());

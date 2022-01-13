@@ -661,7 +661,7 @@ public class TestNameNodeMetrics {
     // verify ExcessBlocks metric is decremented and
     // excessReplicateMap is cleared after deleting a file
     fs.delete(file, true);
-    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+    BlockManagerTestUtil.waitForDeleteFinish(
         cluster.getNamesystem().getBlockManager());
     rb = getMetrics(NS_METRICS);
     assertGauge("ExcessBlocks", 0L, rb);

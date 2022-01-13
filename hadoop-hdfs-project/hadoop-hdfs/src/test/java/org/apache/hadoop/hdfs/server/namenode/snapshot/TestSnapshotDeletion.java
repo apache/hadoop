@@ -257,6 +257,8 @@ public class TestSnapshotDeletion {
     hdfs.setQuota(dir, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
     checkQuotaUsageComputation(dir, 10, BLOCKSIZE * REPLICATION * 4);
     hdfs.delete(deleteDir, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     checkQuotaUsageComputation(dir, 8, BLOCKSIZE * REPLICATION * 3);
 
     // create snapshot s0
@@ -271,6 +273,8 @@ public class TestSnapshotDeletion {
         tempFile.toString(), 1, fsdir, blockmanager);
     BlockInfo[] blocks = temp.getBlocks();
     hdfs.delete(tempDir, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // check dir's quota usage
     checkQuotaUsageComputation(dir, 8, BLOCKSIZE * REPLICATION * 3);
     // check blocks of tempFile
@@ -302,6 +306,8 @@ public class TestSnapshotDeletion {
     // sure the deletion goes through an INodeDirectory, we delete the parent
     // of noChangeDir
     hdfs.delete(noChangeDirParent, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // while deletion, we add a diff for metaChangeFile2 as its snapshot copy
     // for s1, we also add diffs for both sub and noChangeDirParent
     checkQuotaUsageComputation(dir, 9L, BLOCKSIZE * REPLICATION * 4);
@@ -348,6 +354,8 @@ public class TestSnapshotDeletion {
     blocks = newFileNode.getBlocks();
     checkQuotaUsageComputation(dir, 10L, BLOCKSIZE * REPLICATION * 5);
     hdfs.delete(sub, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // while deletion, we add diff for subsub and metaChangeFile1, and remove
     // newFile
     checkQuotaUsageComputation(dir, 9L, BLOCKSIZE * REPLICATION * 4);
@@ -496,6 +504,8 @@ public class TestSnapshotDeletion {
     
     // delete /TestSnapshot/sub/noChangeDir/metaChangeDir/toDeleteFile
     hdfs.delete(toDeleteFile, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // the deletion adds diff of toDeleteFile and metaChangeDir
     checkQuotaUsageComputation(dir, 7, 3 * BLOCKSIZE * REPLICATION);
     // change metadata of /TestSnapshot/sub/noChangeDir/metaChangeDir and
@@ -601,8 +611,9 @@ public class TestSnapshotDeletion {
 
     NameNodeAdapter.enterSafeMode(cluster.getNameNode(), false);
     NameNodeAdapter.saveNamespace(cluster.getNameNode());
-
     // restart NN
+    fsn = cluster.getNamesystem();
+    fsdir = fsn.getFSDirectory();
     cluster.restartNameNodes();
   }
 
@@ -693,7 +704,8 @@ public class TestSnapshotDeletion {
     // delete subsubdir and subDir2
     hdfs.delete(subsubDir, true);
     hdfs.delete(subDir2, true);
-    
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // add diff of s2 to subDir1, subsubDir, and subDir2
     checkQuotaUsageComputation(dir, 7, BLOCKSIZE * 2 * REPLICATION);
     
@@ -740,6 +752,8 @@ public class TestSnapshotDeletion {
     
     // delete file11
     hdfs.delete(file11, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 4, 8 * BLOCKSIZE);
     
     // modify file12
@@ -768,6 +782,8 @@ public class TestSnapshotDeletion {
     
     // delete file12
     hdfs.delete(file12, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 19 * BLOCKSIZE);
     
     // modify file13
@@ -776,6 +792,8 @@ public class TestSnapshotDeletion {
     
     // delete file14: (c, 0) + (0, d)
     hdfs.delete(file14, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 19 * BLOCKSIZE);
     
     // modify file15
@@ -980,6 +998,8 @@ public class TestSnapshotDeletion {
     
     // make changes on sub
     hdfs.delete(subFile1, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     checkQuotaUsageComputation(new Path("/"), 8, BLOCKSIZE * 11);
     checkQuotaUsageComputation(dir, 7, BLOCKSIZE * 11);
     checkQuotaUsageComputation(sub, 6, BLOCKSIZE * 11);
@@ -1111,7 +1131,8 @@ public class TestSnapshotDeletion {
 
     // delete the subdir
     hdfs.delete(subDir, true);
-
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // roll the edit log
     NameNode ann = cluster.getNameNode(0);
     ann.getRpcServer().rollEditLog();
@@ -1152,8 +1173,8 @@ public class TestSnapshotDeletion {
     hdfs.delete(foo, true);
 
     cluster.restartNameNode(0);
-    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
-        cluster.getNamesystem().getBlockManager());
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     assertEquals(0, cluster.getNamesystem().getBlocksTotal());
   }
 

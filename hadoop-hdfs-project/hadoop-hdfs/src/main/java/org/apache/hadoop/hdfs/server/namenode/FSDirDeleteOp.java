@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode.ReclaimContext;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.util.ChunkedArrayList;
 
 import java.io.IOException;
@@ -39,38 +40,43 @@ class FSDirDeleteOp {
    *
    * @param fsd the FSDirectory instance
    * @param iip the INodesInPath instance containing all the INodes for the path
-   * @param collectedBlocks Blocks under the deleted directory
-   * @param removedINodes INodes that should be removed from inodeMap
-   * @return the number of files that have been removed
+   * @return boolean
    */
-  static long delete(FSDirectory fsd, INodesInPath iip,
-      BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
-      List<Long> removedUCFiles, long mtime) throws IOException {
+  static boolean delete(FSDirectory fsd, INodesInPath iip, long mtime) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + iip.getPath());
     }
-    long filesRemoved = -1;
+    boolean ret = false;
     FSNamesystem fsn = fsd.getFSNamesystem();
     fsd.writeLock();
     try {
       if (deleteAllowed(iip)) {
         List<INodeDirectory> snapshottableDirs = new ArrayList<>();
         FSDirSnapshotOp.checkSnapshot(fsd, iip, snapshottableDirs);
-        ReclaimContext context = new ReclaimContext(
-            fsd.getBlockStoragePolicySuite(), collectedBlocks, removedINodes,
-            removedUCFiles);
-        if (unprotectedDelete(fsd, iip, context, mtime)) {
-          filesRemoved = context.quotaDelta().getNsDelta();
+        ReclaimContext reclaimContext = new ReclaimContext(
+            fsd.getBlockStoragePolicySuite(),
+            new BlocksMapUpdateInfo(), new ChunkedArrayList<>(),
+            new ChunkedArrayList<>(), iip);
+        ret = unprotectedDelete(fsd, iip, reclaimContext, mtime, false);
+        if (ret) {
           fsn.removeSnapshottableDirs(snapshottableDirs);
+          final int latestSnapshot = iip.getLatestSnapshotId();
+          NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+          if (!iip.getLastINode().isInLatestSnapshot(latestSnapshot)) {
+            fsd.getBlockManager().getCollectBlockForInodeSet().add(iip.getLastINode());
+            if (metrics != null) {
+              metrics.incrPendingCollectBlockForInodeQueueCount();
+            }
+            fsd.getBlockManager().getCollectBlockForInodeQueue().offer(iip);
+          } else {
+            fsd.getBlockManager().getWaitingReclaimContextQueue().offer(reclaimContext);
+          }
         }
-        fsd.updateReplicationFactor(context.collectedBlocks()
-                                        .toUpdateReplicationInfo());
-        fsd.updateCount(iip, context.quotaDelta(), false);
       }
     } finally {
       fsd.writeUnlock();
     }
-    return filesRemoved;
+    return ret;
   }
 
   /**
@@ -88,10 +94,10 @@ class FSDirDeleteOp {
    * @param recursive boolean true to apply to all sub-directories recursively
    * @param logRetryCache whether to record RPC ids in editlog for retry cache
    *          rebuilding
-   * @return blocks collected from the deleted path
+   * @return true only if the existing file or directory was removed.
    * @throws IOException
    */
-  static BlocksMapUpdateInfo delete(
+  static boolean delete(
       FSNamesystem fsn, FSPermissionChecker pc, String src, boolean recursive,
       boolean logRetryCache) throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();
@@ -112,7 +118,6 @@ class FSDirDeleteOp {
       }
       DFSUtil.checkProtectedDescendants(fsd, iip);
     }
-
     return deleteInternal(fsn, iip, logRetryCache);
   }
 
@@ -143,7 +148,7 @@ class FSDirDeleteOp {
     boolean filesRemoved = unprotectedDelete(fsd, iip,
         new ReclaimContext(fsd.getBlockStoragePolicySuite(),
             collectedBlocks, removedINodes, removedUCFiles),
-        mtime);
+        mtime, true);
 
     if (filesRemoved) {
       fsn.removeSnapshottableDirs(snapshottableDirs);
@@ -164,10 +169,10 @@ class FSDirDeleteOp {
    * @param iip the INodesInPath instance containing all the INodes for the path
    * @param logRetryCache whether to record RPC ids in editlog for retry cache
    *          rebuilding
-   * @return blocks collected from the deleted path
+   * @return true only if the existing file or directory was removed.
    * @throws IOException
    */
-  static BlocksMapUpdateInfo deleteInternal(
+  static boolean deleteInternal(
       FSNamesystem fsn, INodesInPath iip, boolean logRetryCache)
       throws IOException {
     assert fsn.hasWriteLock();
@@ -176,27 +181,16 @@ class FSDirDeleteOp {
     }
 
     FSDirectory fsd = fsn.getFSDirectory();
-    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    List<INode> removedINodes = new ChunkedArrayList<>();
-    List<Long> removedUCFiles = new ChunkedArrayList<>();
-
+    boolean success;
     long mtime = now();
     // Unlink the target directory from directory tree
-    long filesRemoved = delete(
-        fsd, iip, collectedBlocks, removedINodes, removedUCFiles, mtime);
-    if (filesRemoved < 0) {
-      return null;
-    }
+    success = delete(fsd, iip, mtime);
     fsd.getEditLog().logDelete(iip.getPath(), mtime, logRetryCache);
-    incrDeletedFileCount(filesRemoved);
-
-    fsn.removeLeasesAndINodes(removedUCFiles, removedINodes, true);
-
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug(
           "DIR* Namesystem.delete: " + iip.getPath() +" is removed");
     }
-    return collectedBlocks;
+    return success;
   }
 
   static void incrDeletedFileCount(long count) {
@@ -227,10 +221,11 @@ class FSDirDeleteOp {
    * @param iip the inodes resolved from the path
    * @param reclaimContext used to collect blocks and inodes to be removed
    * @param mtime the time the inode is removed
+   * @param isFromEditLog if true from editLog
    * @return true if there are inodes deleted
    */
   private static boolean unprotectedDelete(FSDirectory fsd, INodesInPath iip,
-      ReclaimContext reclaimContext, long mtime) {
+      ReclaimContext reclaimContext, long mtime, boolean isFromEditLog) {
     assert fsd.hasWriteLock();
 
     // check if target node exists
@@ -254,10 +249,11 @@ class FSDirDeleteOp {
     parent.updateModificationTime(mtime, latestSnapshot);
 
     // collect block and update quota
-    if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
-      targetNode.destroyAndCollectBlocks(reclaimContext);
-    } else {
+    boolean isInLatestSnapshot = targetNode.isInLatestSnapshot(latestSnapshot);
+    if (isInLatestSnapshot) {
       targetNode.cleanSubtree(reclaimContext, CURRENT_STATE_ID, latestSnapshot);
+    } else if (isFromEditLog) {
+      targetNode.destroyAndCollectBlocks(reclaimContext);
     }
 
     if (NameNode.stateChangeLog.isDebugEnabled()) {

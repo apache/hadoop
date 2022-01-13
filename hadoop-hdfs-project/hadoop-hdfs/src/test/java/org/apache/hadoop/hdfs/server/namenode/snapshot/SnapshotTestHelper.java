@@ -270,6 +270,7 @@ public class SnapshotTestHelper {
 
   public static void dumpTree2File(FSDirectory fsdir, File f) throws IOException{
     final PrintWriter out = new PrintWriter(new FileWriter(f, false), true);
+    fsdir.awaitForDeleteFinish();
     fsdir.getINode("/").dumpTreeRecursively(out, new StringBuilder(),
         Snapshot.CURRENT_STATE_ID);
     out.close();

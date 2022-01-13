@@ -780,6 +780,8 @@ public class FSDirectory implements Closeable {
         iip = INodesInPath.fromINode(inode);
       }
     }
+    // check if the inode has been removed
+    checkInodeInDeleting(iip.getLastINode(), src);
     return iip;
   }
 
@@ -1009,7 +1011,26 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Update usage count without replication factor change
+   * Update quota and clean inode
+   *
+   * @param fsn the FSNamesystem instance
+   * @param reclaimContext used to collect blocks and inodes to be removed
+   */
+  public static void clearFileAndUpdateQuota(FSNamesystem fsn, INode.ReclaimContext reclaimContext)
+      throws QuotaExceededException {
+    FSDirectory fsd = fsn.getFSDirectory();
+    fsd.updateReplicationFactor(reclaimContext.collectedBlocks()
+        .toUpdateReplicationInfo());
+    NameNode.getNameNodeMetrics().incrFilesDeleted(reclaimContext.quotaDelta().getNsDelta());
+    fsn.removeLeasesAndINodes(
+        reclaimContext.removedUCFiles, reclaimContext.removedINodes, true);
+    fsd.updateReplicationFactor(reclaimContext.collectedBlocks()
+        .toUpdateReplicationInfo());
+    fsd.updateCount(reclaimContext.getINodesInPath(), reclaimContext.quotaDelta(), false);
+  }
+
+  /**
+   * Update usage count without replication factor change.
    */
   void updateCount(INodesInPath iip, long nsDelta, long ssDelta, short replication,
       boolean checkQuota) throws QuotaExceededException {
@@ -1465,6 +1486,72 @@ public class FSDirectory implements Closeable {
       src = src.substring(0, src.length() - 1);
     }
     return src;
+  }
+
+  /**
+   * check inode whether in deleting.
+   */
+  void checkInodeInDeleting(INode inode, String src) throws FileNotFoundException {
+    if (inode == null) {
+      throw new FileNotFoundException("File does not exist: " + src);
+    }
+    INode tmpNode = inode;
+    INode rootParent;
+    INode parentNode;
+    while (true) {
+      if (namesystem.getBlockManager().getCollectBlockForInodeSet().contains(tmpNode)) {
+        throw new FileNotFoundException("File does not exist: " + src);
+      }
+      parentNode = tmpNode.getParent();
+      if (parentNode == null) {
+        rootParent = tmpNode;
+        break;
+      }
+      tmpNode = parentNode;
+    }
+    if (!rootParent.isRoot()) {
+      throw new FileNotFoundException("File does not exist: " + src);
+    }
+  }
+
+  /**
+   * await Deleting is empty.
+   */
+  @VisibleForTesting
+  public void awaitForDeleteFinish() {
+    LOG.debug("wait for the deletion process to complete");
+    BlockManager blockManager = namesystem.getBlockManager();
+    while (true) {
+      if (blockManager.getMarkedDeleteQueue().isEmpty() &&
+          blockManager.getCollectBlockForInodeQueue().isEmpty() &&
+          blockManager.getWaitingReclaimContextQueue().isEmpty()
+      ) {
+        return;
+      }
+      try {
+        Thread.sleep(100);
+      } catch (Exception e) {
+        LOG.warn("Namenode is down");
+      }
+    }
+  }
+
+  /**
+   * await CollectBlockForInodeSet is empty.
+   */
+  public void awaitCollectBlockForInodeQueueIsEmpty() {
+    BlockManager blockManager = namesystem.getBlockManager();
+    while (true) {
+      if (blockManager.getCollectBlockForInodeQueue().isEmpty()
+      ) {
+        return;
+      }
+      try {
+        Thread.sleep(100);
+      } catch (Exception e) {
+        LOG.warn("Namenode is down");
+      }
+    }
   }
 
   @VisibleForTesting

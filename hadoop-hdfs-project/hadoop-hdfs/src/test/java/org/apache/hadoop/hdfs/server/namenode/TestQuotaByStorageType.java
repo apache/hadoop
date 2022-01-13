@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -201,6 +202,8 @@ public class TestQuotaByStorageType {
 
     // Delete file and verify the consumed space of the storage type is updated
     dfs.delete(createdFile1, false);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     storageTypeConsumed = fnode.asDirectory().getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getTypeSpaces().get(StorageType.SSD);
     assertEquals(0, storageTypeConsumed);
@@ -457,7 +460,8 @@ public class TestQuotaByStorageType {
     assertEquals(fileLen * REPLICATION, cnt.getStorageSpace());
 
     dfs.delete(createdFile, true);
-
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     QuotaCounts cntAfterDelete = fnode.asDirectory().getDirectoryWithQuotaFeature()
         .getSpaceConsumed();
     assertEquals(1, cntAfterDelete.getNameSpace());
