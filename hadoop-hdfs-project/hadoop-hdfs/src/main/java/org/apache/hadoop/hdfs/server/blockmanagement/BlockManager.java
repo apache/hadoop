@@ -491,9 +491,7 @@ public class BlockManager implements BlockStatsMXBean {
         datanodeManager.getBlockInvalidateLimit(),
         startupDelayBlockDeletionInMs,
         blockIdManager);
-
     markedDeleteQueue = new ConcurrentLinkedQueue<>();
-
     // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(
         LightWeightGSet.computeCapacity(2.0, "BlocksMap"));
