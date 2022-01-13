@@ -128,6 +128,7 @@ public class RpcMetrics {
   MutableCounterLong rpcClientBackoff;
   @Metric("Number of Slow RPC calls")
   MutableCounterLong rpcSlowCalls;
+  @Metric("Requeue time") MutableRate rpcRequeueTime;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
@@ -247,6 +248,15 @@ public class RpcMetrics {
       }
     }
   }
+
+  /**
+   * Add an RPC Requeue time sample
+   * @param requeueTime the requeue time
+   */
+  public void addRpcRequeueTime(long requeueTime) {
+    rpcRequeueTime.add(requeueTime);
+  }
+
 
   public void addRpcLockWaitTime(long waitTime) {
     rpcLockWaitTime.add(waitTime);

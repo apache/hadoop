@@ -593,6 +593,9 @@ public abstract class Server {
     long queueTime = details.get(Timing.QUEUE, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcQueueTime(queueTime);
 
+    long requeueTime = details.get(Timing.REQUEUE, rpcMetrics.getMetricsTimeUnit());
+    rpcMetrics.addRpcRequeueTime(requeueTime);
+
     if (call.isResponseDeferred() || connDropped) {
       // call was skipped; don't include it in processing metrics
       return;
@@ -3158,6 +3161,9 @@ public abstract class Server {
         throws IOException, InterruptedException {
       try {
         internalQueueCall(call, false);
+        long deltaNanos = Time.monotonicNowNanos() - call.timestampNanos;
+        call.getProcessingDetails().set(Timing.REQUEUE, deltaNanos,
+                                        TimeUnit.NANOSECONDS);
       } catch (RpcServerException rse) {
         call.doResponse(rse.getCause(), rse.getRpcStatusProto());
       }
