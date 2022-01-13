@@ -342,9 +342,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     if (destStatus != null
         && destStatus.isEmptyDirectory() == Tristate.TRUE) {
       // delete unnecessary fake directory at the destination.
-      // this MUST be done before anything else so that
-      // rollback code doesn't get confused and insert a tombstone
-      // marker.
+
       LOG.debug("Deleting fake directory marker at destination {}",
           destStatus.getPath());
       // Although the dir marker policy doesn't always need to do this,

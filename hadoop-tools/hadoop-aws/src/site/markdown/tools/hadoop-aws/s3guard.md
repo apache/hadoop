@@ -86,7 +86,7 @@ The `fs.s3a.metadatastore.impl` option must be one of
 
 To aid the migration of external components which used the Local store for a consistent
 view within the test process, the Local Metadata store option is also recognized:
-`org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore`. 
+`org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore`.
 When this option is used the S3A connector will warn and continue.
 
 
@@ -122,7 +122,7 @@ _Optimize S3A for maximum performance in directory listings_) so this should not
 We recommend disabling [directory marker deletion](directory_markers.html) to reduce
 the number of DELETE operations made when writing files.
 this reduces the load on the S3 partition and so the risk of throttling, which can
-impact performance. 
+impact performance.
 This is very important when working with versioned S3 buckets, as the tombstone markers
 created will slow down subsequent listing operations.
 

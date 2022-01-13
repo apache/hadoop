@@ -19,10 +19,6 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -31,23 +27,21 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_DYNAMO;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_LOCAL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.NULL_METADATA_STORE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * verify thqt the metastore checking
+ * Verify thqt the metastore checking
  * is forgiving for local/null stores, and unforgiving for
- * DDB or other bindings
+ * DDB or other bindings.
  */
+@SuppressWarnings("deprecation")
 public class TestMetastoreChecking extends AbstractHadoopTestBase {
 
   private final Path root = new Path("/");

@@ -58,16 +58,6 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   private final List<S3GuardTool> toolsToClose = new ArrayList<>();
 
   /**
-   * The test timeout is increased in case previous tests have created
-   * many tombstone markers which now need to be purged.
-   * @return the test timeout.
-   */
-  @Override
-  protected int getTestTimeoutMillis() {
-    return SCALE_TEST_TIMEOUT_SECONDS * 1000;
-  }
-
-  /**
    * Declare that the tool is to be closed in teardown.
    * @param tool tool to close
    * @return the tool.

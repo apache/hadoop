@@ -225,11 +225,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
 
     S3AFileSystem realFS = getFileSystem();
 
-    // avoiding the parameterization to steer clear of accidentally creating
-    // patterns; a timestamp is used to ensure tombstones from previous runs
-    // do not interfere
-    basePath = path("testNoReadAccess-"
-        + "-" + System.currentTimeMillis() / 1000);
+    basePath = methodPath();
 
     // define the paths and create them.
     describe("Creating test directories and files");

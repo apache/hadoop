@@ -217,9 +217,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * Delete a directory tree.
    * <p>
    * This is done by asking the filesystem for a list of all objects under
-   * the directory path, without using any S3Guard tombstone markers to hide
-   * objects which may be returned in S3 listings but which are considered
-   * deleted.
+   * the directory path.
    * <p>
    * Once the first {@link #pageSize} worth of objects has been listed, a batch
    * delete is queued for execution in a separate thread; subsequent batches
@@ -242,7 +240,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       resetDeleteList();
       deleteFuture = null;
 
-      // list files including any under tombstones through S3Guard
+      // list files
       LOG.debug("Getting objects for directory prefix {} to delete", dirKey);
       final RemoteIterator<S3ALocatedFileStatus> locatedFiles =
           callbacks.listFilesAndDirectoryMarkers(path, status,

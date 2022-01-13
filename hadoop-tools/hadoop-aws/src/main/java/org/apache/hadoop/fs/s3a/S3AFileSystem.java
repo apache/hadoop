@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -313,7 +312,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
-  private WriteOperationHelper writeHelper;
   private boolean useListV1;
   private MagicCommitIntegration committerIntegration;
 
@@ -491,11 +489,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // create the requestFactory.
       // requires the audit manager to be initialized.
       requestFactory = createRequestFactory();
-
-      // create the static write operation helper.
-      // this doesn't have a short-lived span; auditors which
-      // require one may reject usages.
-      writeHelper = createWriteOperationHelper(getActiveAuditSpan());
 
       // create an initial span for all other operations.
       span = createSpan(INITIALIZE_SPAN, bucket, null);
@@ -3067,8 +3060,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Path path = qualify(f);
     return trackDurationAndSpan(INVOCATION_LIST_STATUS, path, () ->
         once("listStatus", path.toString(),
-            () -> iteratorToStatuses(innerListStatus(path),
-                new HashSet<>())));
+            () -> iteratorToStatuses(innerListStatus(path))));
   }
 
   /**
@@ -3474,12 +3466,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // children, so ask for two entries, so as to find
         // a child
         String dirKey = maybeAddTrailingSlash(key);
-        // list size is dir marker + at least one non-tombstone entry
-        // there's a corner case: more tombstones than you have in a
-        // single page list. We assume that if you have been deleting
-        // that many files, then the AWS listing will have purged some
-        // by the time of listing so that the response includes some
-        // which have not.
+        // list size is dir marker + at least one entry
 
         final int listSize = 2;
         S3ListRequest request = createListObjectsRequest(dirKey, "/",
@@ -3488,7 +3475,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3ListResult listResult = listObjects(request,
             getDurationTrackerFactory());
 
-        if (listResult.hasPrefixesOrObjects(contextAccessors, null)) {
+        if (listResult.hasPrefixesOrObjects()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Found path as directory (with /)");
             listResult.logAtDebug(LOG);
@@ -3498,8 +3485,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           // children.
           // So the listing must contain the marker entry only.
           if (needEmptyDirectoryFlag
-              && listResult.representsEmptyDirectory(
-                  contextAccessors, dirKey, null)) {
+              && listResult.representsEmptyDirectory(dirKey)) {
             return new S3AFileStatus(Tristate.TRUE, path, username);
           }
           // either an empty directory is not needed, or the

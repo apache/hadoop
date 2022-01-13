@@ -114,11 +114,8 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
     super.setup();
     S3AFileSystem fs
         = getFileSystem();
-    // avoiding the parameterization to steer clear of accidentally creating
-    // patterns; a timestamp is used to ensure tombstones from previous runs
-    // do not interfere
-    basePath = path("ITestLocatedFileStatusFetcher-"
-        + System.currentTimeMillis() / 1000);
+
+    basePath = methodPath();
 
     // define the paths and create them.
     describe("Creating test directories and files");

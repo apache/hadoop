@@ -88,7 +88,6 @@ import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
-import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
 /**
  * Utility methods for S3A code.
@@ -1384,21 +1383,16 @@ public final class S3AUtils {
 
   /**
    * Convert the data of an iterator of {@link S3AFileStatus} to
-   * an array. Given tombstones are filtered out. If the iterator
-   * does return any item, an empty array is returned.
+   * an array.
    * @param iterator a non-null iterator
-   * @param tombstones possibly empty set of tombstones
    * @return a possibly-empty array of file status entries
    * @throws IOException failure
    */
   public static S3AFileStatus[] iteratorToStatuses(
-      RemoteIterator<S3AFileStatus> iterator, Set<Path> tombstones)
+      RemoteIterator<S3AFileStatus> iterator)
       throws IOException {
-    // this will close the span afterwards
-    RemoteIterator<S3AFileStatus> source = filteringRemoteIterator(iterator,
-        st -> !tombstones.contains(st.getPath()));
     S3AFileStatus[] statuses = RemoteIterators
-        .toArray(source, new S3AFileStatus[0]);
+        .toArray(iterator, new S3AFileStatus[0]);
     return statuses;
   }
 

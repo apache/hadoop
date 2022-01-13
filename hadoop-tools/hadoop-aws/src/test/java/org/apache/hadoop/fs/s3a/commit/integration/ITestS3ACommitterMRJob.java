@@ -213,9 +213,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     // that and URI creation fails.
 
     Path outputPath = path("ITestS3ACommitterMRJob-execute-"+ committerName());
-    // create and delete to force in a tombstone marker -see HADOOP-16207
-    fs.mkdirs(outputPath);
-    fs.delete(outputPath, true);
 
     String commitUUID = UUID.randomUUID().toString();
     String suffix = isUniqueFilenames() ? ("-" + commitUUID) : "";
