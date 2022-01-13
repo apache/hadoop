@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.regions.Regions;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,14 @@ import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+/**
+ * Verifies the mapping of ARN declaration of resource to the associated
+ * access point.
+ * The region mapping assertions have been brittle to changes across AWS SDK
+ * versions to only verify partial matches, rather than the FQDN of the
+ * endpoints.
+ *
+ */
 public class TestArnResource extends HadoopTestBase {
   private final static Logger LOG = LoggerFactory.getLogger(TestArnResource.class);
 
@@ -37,10 +46,10 @@ public class TestArnResource extends HadoopTestBase {
     String accessPoint = "testAp";
     String accountId = "123456789101";
     String[][] regionPartitionEndpoints = new String[][] {
-        {Regions.EU_WEST_1.getName(), "aws", "s3-accesspoint.eu-west-1.amazonaws.com"},
+        {Regions.EU_WEST_1.getName(), "aws", "eu-west-1.amazonaws.com"},
         {Regions.US_GOV_EAST_1.getName(), "aws-us-gov",
-            "s3-accesspoint.us-gov-east-1.amazonaws.com"},
-        {Regions.CN_NORTH_1.getName(), "aws-cn", "s3-accesspoint.cn-north-1.amazonaws.com.cn"},
+            "us-gov-east-1.amazonaws.com"},
+        {Regions.CN_NORTH_1.getName(), "aws-cn", "cn-north-1.amazonaws.com"},
     };
 
     for (String[] testPair : regionPartitionEndpoints) {
@@ -57,7 +66,9 @@ public class TestArnResource extends HadoopTestBase {
       assertEquals("Access Point name does not match", accessPoint, resource.getName());
       assertEquals("Account Id does not match", accountId, resource.getOwnerAccountId());
       assertEquals("Region does not match", region, resource.getRegion());
-      assertEquals("Endpoint does not match", endpoint, resource.getEndpoint());
+      Assertions.assertThat(resource.getEndpoint())
+          .describedAs("Endpoint does not match")
+          .contains(endpoint);
     }
   }
 
