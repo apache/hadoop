@@ -746,6 +746,11 @@ public class BlockManager implements BlockStatsMXBean {
     return placementPolicies.getPolicy(CONTIGUOUS);
   }
 
+  @VisibleForTesting
+  public BlockPlacementPolicy getStriptedBlockPlacementPolicy() {
+    return placementPolicies.getPolicy(STRIPED);
+  }
+
   /** Dump meta data to out. */
   public void metaSave(PrintWriter out) {
     assert namesystem.hasReadLock(); // TODO: block manager read lock and NS write lock
