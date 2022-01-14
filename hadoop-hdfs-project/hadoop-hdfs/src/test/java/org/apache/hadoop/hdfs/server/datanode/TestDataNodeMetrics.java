@@ -674,8 +674,7 @@ public class TestDataNodeMetrics {
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       Path testFile = new Path("/testNodeLocalMetrics.txt");
-      long file_len = 10;
-      DFSTestUtil.createFile(fs, testFile, file_len, (short)1, 1L);
+      DFSTestUtil.createFile(fs, testFile, 10L, (short)1, 1L);
       DFSTestUtil.readFile(fs, testFile);
       List<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(datanodes.size(), 1);
