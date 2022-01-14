@@ -1018,6 +1018,64 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     assertEquals(chosen, storages[1]);
   }
 
+  /**
+   * Test for the chooseReplicaToDelete are processed based on
+   * EC and STRIPED Policy.
+   */
+  @Test
+  public void testStripedChooseReplicaToDelete() throws Exception {
+    List<DatanodeStorageInfo> replicaList = new ArrayList<>();
+    List<DatanodeStorageInfo> candidate = new ArrayList<>();
+    final Map<String, List<DatanodeStorageInfo>> rackMap
+        = new HashMap<String, List<DatanodeStorageInfo>>();
+
+    replicaList.add(storages[0]);
+    replicaList.add(storages[1]);
+    replicaList.add(storages[2]);
+    replicaList.add(storages[4]);
+
+    candidate.add(storages[0]);
+    candidate.add(storages[2]);
+    candidate.add(storages[4]);
+
+    // Refresh the last update time for all the datanodes
+    for (int i = 0; i < dataNodes.length; i++) {
+      DFSTestUtil.resetLastUpdatesWithOffset(dataNodes[i], 0);
+    }
+
+    List<DatanodeStorageInfo> first = new ArrayList<>();
+    List<DatanodeStorageInfo> second = new ArrayList<>();
+    BlockPlacementPolicy policy = getStriptedPolicy();
+    policy.splitNodesWithRack(replicaList, candidate, rackMap, first,
+        second);
+    // storages[0] is in first set as its rack has two replica nodes,
+    // while storages[2] and dataNodes[4] are in second set.
+    assertEquals(1, first.size());
+    assertEquals(2, second.size());
+    List<StorageType> excessTypes = new ArrayList<>();
+    excessTypes.add(StorageType.DEFAULT);
+    DatanodeStorageInfo chosen = ((BlockPlacementPolicyDefault) policy)
+        .chooseReplicaToDelete(first, second, excessTypes, rackMap);
+    // Within all storages, storages[0] is in the rack that has two replica blocks
+    assertEquals(chosen, storages[0]);
+    policy.adjustSetsWithChosenReplica(rackMap, first, second, chosen);
+    assertEquals(0, first.size());
+    assertEquals(2, second.size());
+
+    // Within second set, storages[2] should be next to be deleted in order.
+    excessTypes.add(StorageType.DEFAULT);
+    chosen = ((BlockPlacementPolicyDefault) policy).chooseReplicaToDelete(
+        first, second, excessTypes, rackMap);
+    assertEquals(chosen, storages[2]);
+    policy.adjustSetsWithChosenReplica(rackMap, first, second, chosen);
+    assertEquals(0, first.size());
+    assertEquals(1, second.size());
+
+    chosen = ((BlockPlacementPolicyDefault) policy).chooseReplicaToDelete(
+        first, second, excessTypes, rackMap);
+    assertEquals(chosen, null);
+  }
+
   private long calculateRemaining(DatanodeDescriptor dataNode) {
     long sum = 0;
     for (DatanodeStorageInfo storageInfo: dataNode.getStorageInfos()){
