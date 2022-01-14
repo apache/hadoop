@@ -38,6 +38,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OOB_TIMEOUT_DEFAULT;
@@ -303,7 +305,8 @@ public class DataNode extends ReconfigurableBase
           Arrays.asList(
               DFS_DATANODE_DATA_DIR_KEY,
               DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
-              DFS_BLOCKREPORT_INTERVAL_MSEC_KEY));
+              DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+              DFS_DATANODE_MAX_RECEIVER_THREADS_KEY));
 
   public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
 
@@ -647,11 +650,30 @@ public class DataNode extends ReconfigurableBase
       }
       break;
     }
+    case DFS_DATANODE_MAX_RECEIVER_THREADS_KEY:
+      return reconfDataXceiverParameters(property, newVal);
     default:
       break;
     }
     throw new ReconfigurationException(
         property, newVal, getConf().get(property));
+  }
+
+  private String reconfDataXceiverParameters(String property, String newVal)
+      throws ReconfigurationException {
+    String result;
+    try {
+      LOG.info("Reconfiguring {} to {}", property, newVal);
+      Preconditions.checkNotNull(getXferServer(), "DataXceiverServer has not been initialized.");
+      int threads = (newVal == null ? DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT :
+          Integer.parseInt(newVal));
+      result = Integer.toString(threads);
+      getXferServer().setMaxXceiverCount(threads);
+      LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return result;
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
   }
 
   /**
