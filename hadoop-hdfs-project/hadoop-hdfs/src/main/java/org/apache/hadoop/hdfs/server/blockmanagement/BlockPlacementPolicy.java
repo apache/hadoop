@@ -196,8 +196,9 @@ public abstract class BlockPlacementPolicy {
     if (moreThanOne.remove(cur)) {
       if (storages.size() == 1) {
         final DatanodeStorageInfo remaining = storages.get(0);
-        moreThanOne.remove(remaining);
-        exactlyOne.add(remaining);
+        if (moreThanOne.remove(remaining)) {
+          exactlyOne.add(remaining);
+        }
       }
     } else {
       exactlyOne.remove(cur);
