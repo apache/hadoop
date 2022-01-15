@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -140,6 +141,8 @@ public class TestLargeDirectoryDelete {
     
     final long start = Time.now();
     mc.getFileSystem().delete(new Path("/root"), true); // recursive delete
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        mc.getNamesystem(0).getBlockManager());
     final long end = Time.now();
     threads[0].endThread();
     threads[1].endThread();

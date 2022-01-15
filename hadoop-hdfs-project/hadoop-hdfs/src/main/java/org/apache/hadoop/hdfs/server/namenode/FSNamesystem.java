@@ -2277,8 +2277,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       getEditLog().logSync();
       if (!toRemoveBlocks.getToDeleteList().isEmpty()) {
-        removeBlocks(toRemoveBlocks);
-        toRemoveBlocks.clear();
+        blockManager.addBLocksToMarkedDeleteQueue(
+            toRemoveBlocks.getToDeleteList());
       }
       logAuditEvent(true, operationName, src, null, r.getFileStatus());
     } catch (AccessControlException e) {
@@ -2717,8 +2717,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (!skipSync) {
         getEditLog().logSync();
         if (toRemoveBlocks != null) {
-          removeBlocks(toRemoveBlocks);
-          toRemoveBlocks.clear();
+          blockManager.addBLocksToMarkedDeleteQueue(
+              toRemoveBlocks.getToDeleteList());
         }
       }
     }
@@ -3236,8 +3236,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     BlocksMapUpdateInfo collectedBlocks = res.collectedBlocks;
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
-      removeBlocks(collectedBlocks);
-      collectedBlocks.clear();
+      blockManager.addBLocksToMarkedDeleteQueue(
+          collectedBlocks.getToDeleteList());
     }
 
     logAuditEvent(true, operationName + " (options=" +
@@ -3276,7 +3276,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logSync();
     logAuditEvent(ret, operationName, src);
     if (toRemovedBlocks != null) {
-      removeBlocks(toRemovedBlocks); // Incremental deletion of blocks
+      blockManager.addBLocksToMarkedDeleteQueue(
+          toRemovedBlocks.getToDeleteList());
     }
     return ret;
   }
@@ -3286,30 +3287,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return dir.getPermissionChecker();
   }
 
-  /**
-   * From the given list, incrementally remove the blocks from blockManager
-   * Writelock is dropped and reacquired every BLOCK_DELETION_INCREMENT to
-   * ensure that other waiters on the lock can get in. See HDFS-2938
-   * 
-   * @param blocks
-   *          An instance of {@link BlocksMapUpdateInfo} which contains a list
-   *          of blocks that need to be removed from blocksMap
-   */
-  void removeBlocks(BlocksMapUpdateInfo blocks) {
-    List<BlockInfo> toDeleteList = blocks.getToDeleteList();
-    Iterator<BlockInfo> iter = toDeleteList.iterator();
-    while (iter.hasNext()) {
-      writeLock();
-      try {
-        for (int i = 0; i < blockDeletionIncrement && iter.hasNext(); i++) {
-          blockManager.removeBlock(iter.next());
-        }
-      } finally {
-        writeUnlock("removeBlocks");
-      }
-    }
-  }
-  
   /**
    * Remove leases and inodes related to a given path
    * @param removedUCFiles INodes whose leases need to be released
@@ -4508,7 +4485,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                   INodesInPath.fromINode((INodeFile) bc), false);
           changed |= toRemoveBlocks != null;
           if (toRemoveBlocks != null) {
-            removeBlocks(toRemoveBlocks); // Incremental deletion of blocks
+            blockManager.addBLocksToMarkedDeleteQueue(
+                toRemoveBlocks.getToDeleteList());
           }
         }
       } finally {
@@ -7170,7 +7148,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // Breaking the pattern as removing blocks have to happen outside of the
     // global lock
     if (blocksToBeDeleted != null) {
-      removeBlocks(blocksToBeDeleted);
+      blockManager.addBLocksToMarkedDeleteQueue(
+          blocksToBeDeleted.getToDeleteList());
     }
     logAuditEvent(true, operationName, rootPath, null, null);
   }
