@@ -407,7 +407,7 @@ public class TestFsVolumeList {
     fs.close();
     FsDatasetImpl fsDataset = (FsDatasetImpl) cluster.getDataNodes().get(0)
         .getFSDataset();
-    ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
+    ReplicaMap volumeMap = new ReplicaMap(fsDataset.acquireDatasetLockManager());
     RamDiskReplicaTracker ramDiskReplicaMap = RamDiskReplicaTracker
         .getInstance(conf, fsDataset);
     FsVolumeImpl vol = (FsVolumeImpl) fsDataset.getFsVolumeReferences().get(0);

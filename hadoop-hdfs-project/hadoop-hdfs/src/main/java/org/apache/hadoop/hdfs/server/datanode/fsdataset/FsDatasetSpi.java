@@ -35,6 +35,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.server.common.LockManager;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -657,21 +658,12 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   ReplicaInfo moveBlockAcrossVolumes(final ExtendedBlock block,
       FsVolumeSpi destination) throws IOException;
 
-  /**
-   * Acquire the lock of the data set. This prevents other threads from
-   * modifying the volume map structure inside the datanode, but other changes
-   * are still possible. For example modifying the genStamp of a block instance.
-   */
-  AutoCloseableLock acquireDatasetLock();
-
   /***
-   * Acquire the read lock of the data set. This prevents other threads from
-   * modifying the volume map structure inside the datanode, but other changes
-   * are still possible. For example modifying the genStamp of a block instance.
+   * Acquire lock Manager for the data set. This prevents other threads from
+   * modifying the volume map structure inside the datanode.
    * @return The AutoClosable read lock instance.
    */
-  AutoCloseableLock acquireDatasetReadLock();
-
+  LockManager<? extends AutoCloseableLock> acquireDatasetLockManager();
 
   /**
    * Deep copy the replica info belonging to given block pool.

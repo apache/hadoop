@@ -914,7 +914,7 @@ class BlockPoolSlice {
 
   private boolean readReplicasFromCache(ReplicaMap volumeMap,
       final RamDiskReplicaTracker lazyWriteReplicaMap) {
-    ReplicaMap tmpReplicaMap = new ReplicaMap(new ReentrantReadWriteLock());
+    ReplicaMap tmpReplicaMap = new ReplicaMap();
     File replicaFile = new File(replicaCacheDir, REPLICA_CACHE_FILE);
     // Check whether the file exists or not.
     if (!replicaFile.exists()) {

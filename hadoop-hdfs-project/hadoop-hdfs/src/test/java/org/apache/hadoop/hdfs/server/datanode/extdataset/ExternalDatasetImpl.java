@@ -23,6 +23,7 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.server.common.LockManager;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -452,12 +453,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public AutoCloseableLock acquireDatasetLock() {
-    return null;
-  }
-
-  @Override
-  public AutoCloseableLock acquireDatasetReadLock() {
+  public LockManager<AutoCloseableLock> acquireDatasetLockManager() {
     return null;
   }
 

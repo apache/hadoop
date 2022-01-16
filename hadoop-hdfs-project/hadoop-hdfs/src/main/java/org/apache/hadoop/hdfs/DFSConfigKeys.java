@@ -1658,6 +1658,20 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_NAMESERVICES_RESOLVER_IMPL =
       "dfs.datanode.nameservices.resolver.impl";
 
+  public static final String
+      DFS_DATANODE_BLOCKPOOL_LOCK_FAIR =
+      "dfs.blockpool.lock.fair";
+
+  public static final boolean
+      DFS_DATANODE_BLOCKPOOL_LOCK_FAIR_DEFAULT = false;
+
+  public static final String
+      DFS_DATANODE_BLOCKPOOL_LOCK_TRACE =
+      "dfs.blockpool.lock.trace";
+
+  public static final boolean
+      DFS_DATANODE_BLOCKPOOL_LOCK_TRACE_DEFAULT = false;
+
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY

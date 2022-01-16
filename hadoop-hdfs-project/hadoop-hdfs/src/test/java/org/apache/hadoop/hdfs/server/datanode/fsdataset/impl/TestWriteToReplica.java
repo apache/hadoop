@@ -550,7 +550,7 @@ public class TestWriteToReplica {
           bpList.size() == 2);
       
       createReplicas(bpList, volumes, cluster.getFsDatasetTestUtils(dn));
-      ReplicaMap oldReplicaMap = new ReplicaMap(new ReentrantReadWriteLock());
+      ReplicaMap oldReplicaMap = new ReplicaMap();
       oldReplicaMap.addAll(dataSet.volumeMap);
 
       cluster.restartDataNode(0);

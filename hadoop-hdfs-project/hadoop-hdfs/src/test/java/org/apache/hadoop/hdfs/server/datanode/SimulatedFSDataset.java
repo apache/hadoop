@@ -40,6 +40,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.hadoop.hdfs.server.common.LockManager;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
 import org.apache.hadoop.thirdparty.com.google.common.math.LongMath;
 import org.apache.commons.lang3.ArrayUtils;
@@ -48,7 +49,6 @@ import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImplTestUtils;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -162,7 +162,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   static final byte[] nullCrcFileData;
 
-  private final AutoCloseableLock datasetLock;
+  private final LockManager datasetLockManager;
   private final FileIoProvider fileIoProvider;
 
   static {
@@ -707,6 +707,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   public SimulatedFSDataset(DataNode datanode, DataStorage storage, Configuration conf) {
     this.datanode = datanode;
+    this.datasetLockManager = datanode == null ? new DataSetLockManager() :
+        datanode.getDataSetLockManager();
     int storageCount;
     if (storage != null && storage.getNumStorageDirs() > 0) {
       storageCount = storage.getNumStorageDirs();
@@ -721,9 +723,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     registerMBean(datanodeUuid);
     this.fileIoProvider = new FileIoProvider(conf, datanode);
-
-    this.datasetLock = new AutoCloseableLock();
-
     this.storages = new ArrayList<>();
     for (int i = 0; i < storageCount; i++) {
       this.storages.add(new SimulatedStorage(
@@ -1587,14 +1586,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public AutoCloseableLock acquireDatasetLock() {
-    return datasetLock.acquire();
-  }
-
-  @Override
-  public AutoCloseableLock acquireDatasetReadLock() {
-    // No RW lock implementation in simulated dataset currently.
-    return datasetLock.acquire();
+  public LockManager acquireDatasetLockManager() {
+    return null;
   }
 
   @Override

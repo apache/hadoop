@@ -252,10 +252,8 @@ public class TestBlockRecovery2 {
           final BlockRecoveryCommand.RecoveringBlock recoveringBlock =
               new BlockRecoveryCommand.RecoveringBlock(block.getBlock(),
                   locations, block.getBlock().getGenerationStamp() + 1);
-          try(AutoCloseableLock lock = dataNode.data.acquireDatasetLock()) {
-            Thread.sleep(2000);
-            dataNode.initReplicaRecovery(recoveringBlock);
-          }
+          Thread.sleep(2000);
+          dataNode.initReplicaRecovery(recoveringBlock);
         } catch (Exception e) {
           LOG.error("Something went wrong.", e);
           recoveryInitResult.set(false);

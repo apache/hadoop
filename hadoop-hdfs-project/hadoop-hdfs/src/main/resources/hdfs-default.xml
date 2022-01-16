@@ -6337,4 +6337,25 @@
       times, we should mark it as a badnode.
     </description>
   </property>
+
+  <property>
+    <name>dfs.blockpool.lock.fair</name>
+    <value>false</value>
+    <description>
+      If this is true, the Datanode FsDataset lock will be used in Fair
+      mode, which will help to prevent writer threads from being starved, but can
+      lower lock throughput. See java.util.concurrent.locks.ReentrantReadWriteLock
+      for more information on fair/non-fair locks.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.blockpool.lock.trace</name>
+    <value>false</value>
+    <description>
+      If this is true, after shout down datanode lock Manager will print all leak
+      thread that not release by lock Manager. Only used for test or trace dead lock
+      problem. In produce default set false, because it's have little performance loss.
+    </description>
+  </property>
 </configuration>
