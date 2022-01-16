@@ -354,17 +354,17 @@ public class TestDataNodeLifeline {
    */
   @Test
   public void testHeartbeatAndLifelineOnError() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
-    conf.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY, "0.0.0.0:0");
+    final Configuration config = new HdfsConfiguration();
+    config.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY, "0.0.0.0:0");
 
     try(MiniDFSCluster cluster =
-            new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
+            new MiniDFSCluster.Builder(config).numDataNodes(1).build()) {
       cluster.waitActive();
-      final FSNamesystem namesystem = cluster.getNamesystem();
+      final FSNamesystem fsNamesystem = cluster.getNamesystem();
 
       // Get capacityTotal before triggering heartbeat and lifeline.
       DatanodeStatistics datanodeStatistics =
-          namesystem.getBlockManager().getDatanodeManager().getDatanodeStatistics();
+          fsNamesystem.getBlockManager().getDatanodeManager().getDatanodeStatistics();
       long capacityTotalBefore = datanodeStatistics.getCapacityTotal();
 
       // Mock an exception in HeartbeatManager#updateHeartbeat and HeartbeatManager#updateLifeline.
