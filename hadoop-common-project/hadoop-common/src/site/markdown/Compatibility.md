@@ -477,19 +477,12 @@ rolled back to the older layout.
 
 ##### AWS S3A Guard Metadata
 
-For each operation in the Hadoop S3 client (s3a) that reads or modifies
-file metadata, a shadow copy of that file metadata is stored in a separate
-metadata store, which offers HDFS-like consistency for the metadata, and may
-also provide faster lookups for things like file status or directory listings.
-S3A guard tables are created with a version marker which indicates
-compatibility.
+The S3Guard metastore used to store metadata in DynamoDB tables;
+as such it had to maintain a compatibility strategy.
+Now that S3Guard is removed, the tables are not needed.
 
-###### Policy
-
-The S3A guard metadata schema SHALL be considered
-[Private](./InterfaceClassification.html#Private) and
-[Unstable](./InterfaceClassification.html#Unstable). Any incompatible change
-to the schema MUST result in the version number of the schema being incremented.
+Applications configured to use an S3A metadata store other than
+the "null" store will fail.
 
 ##### YARN Resource Manager State Store
 

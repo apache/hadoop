@@ -128,8 +128,7 @@ public class S3ADelegationTokens extends AbstractDTService {
 
   /**
    * The access policies we want for operations.
-   * There's no attempt to ask for "admin" permissions here, e.g.
-   * those to manipulate S3Guard tables.
+   * There's no attempt to ask for "admin" permissions here.
    */
   protected static final EnumSet<AWSPolicyProvider.AccessLevel> ACCESS_POLICY
       = EnumSet.of(
@@ -420,8 +419,6 @@ public class S3ADelegationTokens extends AbstractDTService {
     requireServiceStarted();
     checkArgument(encryptionSecrets != null,
         "Null encryption secrets");
-    // this isn't done in in advance as it needs S3Guard initialized in the
-    // filesystem before it can generate complete policies.
     List<RoleModel.Statement> statements = getPolicyProvider()
         .listAWSPolicyRules(ACCESS_POLICY);
     Optional<RoleModel.Policy> rolePolicy =

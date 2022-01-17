@@ -337,7 +337,7 @@ public class SelectInputStream extends FSInputStream implements
 
   /**
    * Build an exception to raise when an operation is not supported here.
-   * @param action action which is unsupported.
+   * @param action action which is Unsupported.
    * @return an exception to throw.
    */
   protected PathIOException unsupported(final String action) {
