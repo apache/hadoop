@@ -92,6 +92,7 @@ public class AbfsClient implements Closeable {
   private final String clientProvidedEncryptionKeySHA;
 
   private final String accountName;
+  private final String primaryAccountName;
   private final AuthType authType;
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
@@ -110,6 +111,8 @@ public class AbfsClient implements Closeable {
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
+    this.primaryAccountName = abfsConfiguration.getPrimaryAccountName().substring(0, abfsConfiguration.getPrimaryAccountName().
+            indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
 
     String encryptionKey = this.abfsConfiguration
@@ -986,7 +989,7 @@ public class AbfsClient implements Closeable {
       try {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         if (cachedSasToken == null) {
-          sasToken = sasTokenProvider.getSASToken(this.accountName,
+          sasToken = sasTokenProvider.getSASToken(this.primaryAccountName,
               this.filesystem, path, operation);
           if ((sasToken == null) || sasToken.isEmpty()) {
             throw new UnsupportedOperationException("SASToken received is empty or null");
