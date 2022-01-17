@@ -263,7 +263,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           + " " + targetPos);
     }
 
-    if (this.contentLength <= 0) {
+    if (this.contentLength == 0) {
       return;
     }
 
@@ -831,12 +831,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       long contentLength,
       long readahead) {
     // if content length is unknown
-    // range limit should be set to more than 0
-    // since readahead and length can be 0
-    // we should select from the one with higher value
+    // set content length to be as far as possible
     // SDK will handle it and response within content length limit
     if (contentLength < 0) {
-      contentLength = Math.max(readahead, length);
+      contentLength = targetPos + Math.max(readahead, length);
     }
 
     long rangeLimit;

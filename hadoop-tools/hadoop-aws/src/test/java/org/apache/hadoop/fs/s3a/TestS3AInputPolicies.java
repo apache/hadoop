@@ -83,7 +83,8 @@ public class TestS3AInputPolicies {
         {S3AInputPolicy.Random, 0, _1MB, -1, _256K, _1MB},
         {S3AInputPolicy.Random, 0, _1MB, -1, 0, _1MB},
         {S3AInputPolicy.Random, _10MB + _64K, _1MB, _10MB, _256K, _10MB},
-
+        {S3AInputPolicy.Random, _10MB, _64K, -1, _256K, _10MB + _256K},
+        {S3AInputPolicy.Random, _10MB, _1MB, -1, _256K, _10MB + _1MB},
     });
   }
 
