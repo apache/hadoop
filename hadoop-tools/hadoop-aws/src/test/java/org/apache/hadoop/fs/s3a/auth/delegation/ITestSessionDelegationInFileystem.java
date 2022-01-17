@@ -329,7 +329,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         + " if role restricted, permissions are tightened.");
     S3AFileSystem fs = getFileSystem();
     // force a probe of the remote FS to make sure its endpoint is valid
-    // (this always hits S3, even when S3Guard is enabled)
     fs.getObjectMetadata(new Path("/"));
     readLandsatMetadata(fs);
 
