@@ -57,6 +57,7 @@ public class TestRouterHeartbeatService {
   @Before
   public void setup() throws Exception {
     router = new Router();
+    router.setRouterId(routerId);
     Configuration conf = new Configuration();
     conf.setInt(RBFConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS, 1);
     Configuration routerConfig =
@@ -75,8 +76,6 @@ public class TestRouterHeartbeatService {
     curatorFramework.start();
     routerConfig.set(CommonConfigurationKeys.ZK_ADDRESS, connectStr);
     router.init(routerConfig);
-    // set custom routerid after router.init()
-    router.setRouterId(routerId);
     router.start();
 
 
