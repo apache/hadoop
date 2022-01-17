@@ -114,7 +114,9 @@ public class Find extends FsCommand {
       if (expr.isOperator()) {
         operators.add(expr);
       } else {
-        primaries.add(expr);
+        if (expr != null) {
+          primaries.add(expr);
+        }
       }
     }
     Collections.sort(operators, new Comparator<Expression>() {
