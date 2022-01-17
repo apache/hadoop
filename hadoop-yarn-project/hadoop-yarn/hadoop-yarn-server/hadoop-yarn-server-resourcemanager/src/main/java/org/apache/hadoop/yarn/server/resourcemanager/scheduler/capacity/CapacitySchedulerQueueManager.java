@@ -229,11 +229,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @throws IOException
    */
   static CSQueue parseQueue(
-      CapacitySchedulerQueueContext queueContext,
-      CapacitySchedulerConfiguration conf,
-      CSQueue parent, String queueName,
-      CSQueueStore newQueues,
-      CSQueueStore oldQueues,
+      CapacitySchedulerQueueContext queueContext, CapacitySchedulerConfiguration conf,
+      CSQueue parent, String queueName, CSQueueStore newQueues, CSQueueStore oldQueues,
       QueueHook hook) throws IOException {
     CSQueue queue;
     String fullQueueName = (parent == null) ? queueName :
@@ -252,10 +249,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         fullQueueName) || isAutoCreateEnabled;
 
     if (childQueueNames.size() == 0 && !isAutoQueueCreationEnabledParent) {
-      if (parent == null) {
-        throw new IllegalStateException("Queue configuration missing child queue names for "
-            + queueName);
-      }
+      validateParent(parent, queueName);
       // Check if the queue will be dynamically managed by the Reservation system
       if (isReservableQueue) {
         queue = new PlanQueue(queueContext, queueName, parent, oldQueues.get(fullQueueName));
@@ -273,6 +267,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
       ParentQueue parentQueue;
       if (isAutoCreateEnabled) {
+        validateParent(parent, queueName);
         parentQueue = new ManagedParentQueue(queueContext, queueName, parent, oldQueues.get(
             fullQueueName));
       } else {
@@ -685,5 +680,12 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     // newQueues but they are deleted automatically, so it is safe to assume
     // that existingQueues contain valid dynamic queues.
     return !isDynamicQueue(parent);
+  }
+
+  private static void validateParent(CSQueue parent, String queueName) {
+    if (parent == null) {
+      throw new IllegalStateException("Queue configuration missing child queue names for "
+          + queueName);
+    }
   }
 }
