@@ -3350,8 +3350,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   @Retries.RetryTranslated
   S3AFileStatus innerGetFileStatus(final Path f,
+                                   final boolean needEmptyDirectoryFlag,
+                                   final Set<StatusProbeEnum> probes) throws IOException {
+    return innerGetFileStatus(f, needEmptyDirectoryFlag, probes, false);
+  }
+
+  @VisibleForTesting
+  @Retries.RetryTranslated
+  S3AFileStatus innerGetFileStatus(final Path f,
       final boolean needEmptyDirectoryFlag,
-      final Set<StatusProbeEnum> probes) throws IOException {
+      final Set<StatusProbeEnum> probes,
+      final boolean skipHead) throws IOException {
     final Path path = qualify(f);
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({}); needEmptyDirectory={}",
@@ -3359,7 +3368,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return s3GetFileStatus(path,
         key,
         probes,
-        needEmptyDirectoryFlag);
+        needEmptyDirectoryFlag,
+        skipHead);
 
   }
 
@@ -3410,9 +3420,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   @Retries.RetryTranslated
   S3AFileStatus s3GetFileStatus(final Path path,
+                                final String key,
+                                final Set<StatusProbeEnum> probes,
+                                final boolean needEmptyDirectoryFlag) throws IOException {
+    return s3GetFileStatus(path, key, probes, needEmptyDirectoryFlag, false);
+  }
+
+  @VisibleForTesting
+  @Retries.RetryTranslated
+  S3AFileStatus s3GetFileStatus(final Path path,
       final String key,
       final Set<StatusProbeEnum> probes,
-      final boolean needEmptyDirectoryFlag) throws IOException {
+      final boolean needEmptyDirectoryFlag,
+      final boolean skipHead) throws IOException {
     LOG.debug("S3GetFileStatus {}", path);
     // either you aren't looking for the directory flag, or you are,
     // and if you are, the probe list must contain list.
@@ -3430,12 +3450,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // look for the simple file
         ObjectMetadata meta = getObjectMetadata(key);
         LOG.debug("Found exact file: normal file {}", key);
-        long contentLength = meta.getContentLength();
-        // check if CSE is enabled, then strip padded length.
-        if (isCSEEnabled
-            && meta.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
-            && contentLength >= CSE_PADDING_LENGTH) {
-          contentLength -= CSE_PADDING_LENGTH;
+        long contentLength;
+        if (skipHead) {
+          contentLength = -1;
+        } else {
+          contentLength = meta.getContentLength();
+          // check if CSE is enabled, then strip padded length.
+          if (isCSEEnabled
+                  && meta.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
+                  && contentLength >= CSE_PADDING_LENGTH) {
+            contentLength -= CSE_PADDING_LENGTH;
+          }
         }
         return new S3AFileStatus(contentLength,
             dateToLong(meta.getLastModified()),
@@ -4891,7 +4916,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO failure
    */
   private S3AFileStatus extractOrFetchSimpleFileStatus(
-      final Path path, final Optional<S3AFileStatus> optStatus)
+          final Path path, final Optional<S3AFileStatus> optStatus)
+          throws IOException {
+    return extractOrFetchSimpleFileStatus(path, optStatus, false);
+  }
+
+  private S3AFileStatus extractOrFetchSimpleFileStatus(
+      final Path path, final Optional<S3AFileStatus> optStatus, final boolean skipHead)
       throws IOException {
     S3AFileStatus fileStatus;
     if (optStatus.isPresent()) {
@@ -4906,7 +4937,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // therefore: if there is is a dir marker, this
       // will raise a FileNotFoundException
       fileStatus = innerGetFileStatus(path, false,
-          StatusProbeEnum.HEAD_ONLY);
+          StatusProbeEnum.HEAD_ONLY,
+          skipHead);
     }
 
     return fileStatus;

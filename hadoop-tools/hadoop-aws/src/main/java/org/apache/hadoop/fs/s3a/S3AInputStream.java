@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -103,7 +105,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private final String bucket;
   private final String key;
   private final String pathStr;
-  private final long contentLength;
+  private long contentLength;
   private final String uri;
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AInputStream.class);
@@ -215,6 +217,14 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     try {
       object = Invoker.once(text, uri,
           () -> client.getObject(request));
+
+      // Update content length from first read
+      // by getting information con Content-Range header
+      if (contentLength < 0) {
+        contentLength = getContentLength(object.getObjectMetadata());
+        LOG.debug("Updating contentLength to {}", contentLength);
+      }
+
     } catch(IOException e) {
       // input function failed: note it
       tracker.failed();
@@ -821,6 +831,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       long length,
       long contentLength,
       long readahead) {
+    // if content length is unknown
+    // range limit should be set to more than 0
+    // since readahead and length can be 0
+    // we should select from the one with higher value
+    // SDK will handle it and response within content length limit
+    if (contentLength < 0) {
+      contentLength = Math.max(readahead, length);
+    }
+
     long rangeLimit;
     switch (inputPolicy) {
     case Random:
@@ -832,6 +851,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     case Sequential:
       // sequential: plan for reading the entire object.
+      // if range limit exceed content length
+      // SDK will handle it and response within content length limit
       rangeLimit = contentLength;
       break;
 
@@ -919,5 +940,22 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     S3Object getObject(GetObjectRequest request);
 
   }
+
+  private long getContentLength(ObjectMetadata objectMetadata) {
+    String contentRange = (String)objectMetadata.getRawMetadataValue("Content-Range");
+    long length = 0;
+    if (contentRange != null) {
+      String[] tokens = contentRange.split("[ -/]+");
+
+      try {
+        length = Long.parseLong(tokens[tokens.length - 1]);
+      } catch (NumberFormatException var5) {
+        throw new SdkClientException("Unable to parse content range. Header 'Content-Range' has corrupted data" + var5.getMessage(), var5);
+      }
+    }
+
+    return length;
+  }
+
 
 }
