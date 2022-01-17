@@ -513,7 +513,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           // by onReadFailure, then wrappedStream will be null. But the **retry** may
           // re-execute this block and cause NPE if we don't check wrappedStream
           if (wrappedStream == null) {
-            reopen("failure recovery", getPos(), 1, false);
+            return 0;
           }
           try {
             bytes = wrappedStream.read(buf, off, len);

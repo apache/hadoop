@@ -53,7 +53,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
   @Test
   public void testInputStreamReadRetryForException() throws IOException {
-    S3AInputStream s3AInputStream = getMockedS3AInputStream();
+    S3AInputStream s3AInputStream = getMockedS3AInputStream(true);
 
     assertEquals("'a' from the test input stream 'ab' should be the first " +
         "character being read", INPUT.charAt(0), s3AInputStream.read());
@@ -64,18 +64,21 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   @Test
   public void testInputStreamReadLengthRetryForException() throws IOException {
     byte[] result = new byte[INPUT.length()];
-    S3AInputStream s3AInputStream = getMockedS3AInputStream();
-    s3AInputStream.read(result, 0, INPUT.length());
+    S3AInputStream s3AInputStream = getMockedS3AInputStream(true);
+    int bytesRead = s3AInputStream.read(result, 0, INPUT.length());
+
+    assertEquals("Zero bytes should be read on failure", 0, bytesRead);
 
     assertArrayEquals(
-        "The read result should equals to the test input stream content",
-        INPUT.getBytes(), result);
+        "The read result should be empty",
+            new byte[INPUT.length()], result);
   }
 
   @Test
   public void testInputStreamReadFullyRetryForException() throws IOException {
     byte[] result = new byte[INPUT.length()];
-    S3AInputStream s3AInputStream = getMockedS3AInputStream();
+
+    S3AInputStream s3AInputStream = getMockedS3AInputStream(false);
     s3AInputStream.readFully(0, result);
 
     assertArrayEquals(
@@ -83,7 +86,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         INPUT.getBytes(), result);
   }
 
-  private S3AInputStream getMockedS3AInputStream() {
+  private S3AInputStream getMockedS3AInputStream(boolean triggerGetObjectFailure) {
     Path path = new Path("test-path");
     String eTag = "test-etag";
     String versionId = "test-version-id";
@@ -109,7 +112,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     return new S3AInputStream(
         s3AReadOpContext,
         s3ObjectAttributes,
-        getMockedInputStreamCallback());
+        getMockedInputStreamCallback(triggerGetObjectFailure));
   }
 
   /**
@@ -117,7 +120,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    *
    * @return mocked object.
    */
-  private S3AInputStream.InputStreamCallbacks getMockedInputStreamCallback() {
+  private S3AInputStream.InputStreamCallbacks getMockedInputStreamCallback(boolean triggerGetObjectFailure) {
     return new S3AInputStream.InputStreamCallbacks() {
 
       private final S3Object mockedS3Object = getMockedS3Object();
@@ -140,7 +143,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         //  -> retry(3) -> wrappedStream==null -> reopen -> getObject (mockedS3ObjectIndex=4)
         //        -> getObjectContent(objectInputStreamGood)-> objectInputStreamGood
         //        -> wrappedStream.read
-        if (mockedS3ObjectIndex == 3) {
+        if (mockedS3ObjectIndex == 3 && triggerGetObjectFailure) {
           throw new SdkClientException("Failed to get S3Object");
         }
         return mockedS3Object;
@@ -207,20 +210,21 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
       @Override
       public int read() throws IOException {
-        int result = super.read();
         if (triggerFailure) {
           throw exception;
         }
-        return result;
+
+        return super.read();
       }
 
       @Override
       public int read(byte[] b, int off, int len) throws IOException {
-        int result = super.read(b, off, len);
+
         if (triggerFailure) {
           throw exception;
         }
-        return result;
+
+        return super.read(b, off, len);
       }
     };
   }
