@@ -1412,7 +1412,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // this span is passed into the stream.
     final AuditSpan auditSpan = entryPoint(INVOCATION_OPEN, path);
     S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
-        providedStatus);
+        providedStatus, true);
 
     S3AReadOpContext readContext;
     if (options.isPresent()) {

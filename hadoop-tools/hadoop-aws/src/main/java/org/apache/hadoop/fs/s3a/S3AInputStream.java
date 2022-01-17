@@ -153,7 +153,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
     long l = s3Attributes.getLen();
-    Preconditions.checkArgument(l >= 0, "Negative content length");
     this.context = ctx;
     this.bucket = s3Attributes.getBucket();
     this.key = s3Attributes.getKey();
@@ -406,7 +405,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Retries.RetryTranslated
   public synchronized int read() throws IOException {
     checkNotClosed();
-    if (this.contentLength == 0 || (nextReadPos >= contentLength)) {
+    if (this.contentLength == 0 || (contentLength > 0 && nextReadPos >= contentLength)) {
       return -1;
     }
 
@@ -490,7 +489,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       return 0;
     }
 
-    if (this.contentLength == 0 || (nextReadPos >= contentLength)) {
+    if (this.contentLength == 0 || (contentLength > 0 && nextReadPos >= contentLength)) {
       return -1;
     }
 
