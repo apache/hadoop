@@ -22,9 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -304,17 +303,17 @@ public class TestAHSv2ClientImpl {
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO, 1024);
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO, 8);
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_INFO,
-            "test host");
+        "test host");
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_INFO, 100);
     entityInfo
-            .put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO, -1);
+        .put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO, -1);
     entityInfo.put(ContainerMetricsConstants
-            .ALLOCATED_HOST_HTTP_ADDRESS_INFO, "http://test:1234");
+        .ALLOCATED_HOST_HTTP_ADDRESS_INFO, "http://test:1234");
     entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
-            "test diagnostics info");
+        "test diagnostics info");
     entityInfo.put(ContainerMetricsConstants.EXIT_STATUS_INFO, -1);
     entityInfo.put(ContainerMetricsConstants.STATE_INFO,
-            ContainerState.COMPLETE.toString());
+        ContainerState.COMPLETE.toString());
     entity.setInfo(entityInfo);
 
     TimelineEvent tEvent = new TimelineEvent();
