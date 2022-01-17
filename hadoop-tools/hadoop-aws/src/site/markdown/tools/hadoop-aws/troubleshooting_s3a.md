@@ -1496,6 +1496,56 @@ The specified bucket does not exist
     at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1367)
 ```
 
+
+## <a name="s3guard"></a> S3Guard Errors
+
+S3Guard has been completely cut from the s3a connector
+[HADOOP-17409 Remove S3Guard - no longer needed](HADOOP-17409 Remove S3Guard - no longer needed).
+
+To avoid consistency problems with older releases, if an S3A filesystem is configured to use DynamoDB the filesystem
+will fail to initialize.
+
+### <a name="s3guard unsupported"></a> S3Guard is no longer needed/supported
+
+The option `fs.s3a.metadatastore.impl` or the per-bucket version has a value of
+`org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore`
+
+```
+org.apache.hadoop.fs.PathIOException: `s3a://production-london': S3Guard is no longer needed/supported,
+ yet s3a://production-london is configured to use DynamoDB as the S3Guard metadata store.
+ This is no longer needed or supported.
+ Origin of setting is fs.s3a.bucket.production-london.metadatastore.impl via [core-site.xml]
+        at org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard(S3Guard.java:111)
+        at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:540)
+        at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3459)
+        at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:171)
+        at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3564)
+        at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3511)
+        at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:538)
+        at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
+        at org.apache.hadoop.fs.shell.PathData.expandAsGlob(PathData.java:342)
+        at org.apache.hadoop.fs.shell.Command.expandArgument(Command.java:252)
+        at org.apache.hadoop.fs.shell.Command.expandArguments(Command.java:235)
+        at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:105)
+        at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
+        at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+        at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
+        at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
+        at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+
+ls: `s3a://production-london': S3Guard is no longer needed/supported,
+    yet s3a://production-london is configured to use DynamoDB as the S3Guard metadata store.
+    This is no longer needed or supported.
+    Origin of setting is fs.s3a.bucket.production-london.metadatastore.impl via [core-site.xml]
+```
+
+The error message will state the property from where it came, here `fs.s3a.bucket.production-london.metadatastore.impl` and which
+file the option was set if known, here `core-site.xml`.
+
+Fix: remove the configuration options enabling S3Guard.
+
+Consult the [S3Guard documentation](s3guard.html) for more details.
+
 ## <a name="other"></a> Other Errors
 
 ### <a name="integrity"></a> `SdkClientException` Unable to verify integrity of data upload
