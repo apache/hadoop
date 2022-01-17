@@ -430,12 +430,6 @@ public class Router extends CompositeService implements
   protected void setRpcServerAddress(InetSocketAddress address) {
     this.rpcAddress = address;
 
-    try {
-      InetAddress.getLocalHost();
-    } catch (UnknownHostException e) {
-      e.printStackTrace();
-    }
-
     // Use the RPC address as our unique router Id
     if (this.rpcAddress != null) {
       try {
