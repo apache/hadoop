@@ -54,7 +54,6 @@ import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.IntFunction;
 
@@ -93,6 +92,14 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public static final String OPERATION_REOPEN = "re-open";
 
   /**
+   * This is the maximum temporary buffer size we use while
+   * populating the data in direct byte buffers during a vectored IO
+   * operation. This is to ensure that when a big range of data is
+   * requested in direct byte buffer doesn't leads to OOM errors.
+   */
+  private static final int TMP_BUFFER_MAX_SIZE = 64 * 1024;
+
+  /**
    * This is the public position; the one set in {@link #seek(long)}
    * and returned in {@link #getPos()}.
    */
@@ -114,6 +121,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private S3ObjectInputStream wrappedStream;
   private final S3AReadOpContext context;
   private final InputStreamCallbacks client;
+
+  /**
+   * Thread pool used for vectored IO operation.
+   */
   private final ThreadPoolExecutor unboundedThreadPool;
   private final String bucket;
   private final String key;
@@ -808,14 +819,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Override
   public void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
-    // TODO   Cancelling of vectored read calls.
-    // No upfront cancelling is supported right now but all runnable
-    // tasks will be aborted when threadpool will shutdown during S3AFS.close();
-    // TODO   unbounded corner cases like starvation etc.
-    // think of creating a separate thread pool
-    // for vectored read api such that its bad usage doesn't cause
-    // starvation for other api's like list, delete etc.
-    // TODO: what if combined range becomes so big that memory can't be allocated.
+
+    LOG.debug("Starting vectored read on path {} for ranges {} ", pathStr, ranges);
     checkNotClosed();
     for (FileRange range : ranges) {
       validateRangeRequest(range);
@@ -824,13 +829,18 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
 
     if (isOrderedDisjoint(ranges, 1, minSeekForVectorReads())) {
+      LOG.debug("Not merging the ranges as they are disjoint");
       for(FileRange range: ranges) {
         ByteBuffer buffer = allocate.apply(range.getLength());
         unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
       }
     } else {
-      for(CombinedFileRange combinedFileRange: sortAndMergeRanges(ranges, 1, minSeekForVectorReads(),
-              maxReadSizeForVectorReads())) {
+      LOG.debug("Trying to merge the ranges as they are not disjoint");
+      List<CombinedFileRange> combinedFileRanges = sortAndMergeRanges(ranges, 1, minSeekForVectorReads(),
+              maxReadSizeForVectorReads());
+      LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
+              ranges.size(), combinedFileRanges.size());
+      for(CombinedFileRange combinedFileRange: combinedFileRanges) {
         CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
         ByteBuffer buffer = allocate.apply(combinedFileRange.getLength());
         combinedFileRange.setData(result);
@@ -838,6 +848,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
                 () -> readCombinedRangeAndUpdateChildren(combinedFileRange, buffer));
       }
     }
+    LOG.debug("Finished submitting vectored read to threadpool" +
+            " on path {} for ranges {} ", pathStr, ranges);
   }
 
   /**
@@ -855,7 +867,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         updateOriginalRange(child, combinedBuffer, combinedFileRange);
       }
     } catch (IOException ex) {
-      LOG.error("Exception occurred while reading combined range ", ex);
+      LOG.warn("Exception occurred while reading combined range from file {}", pathStr, ex);
       for(FileRange child : combinedFileRange.getUnderlying()) {
         child.getData().completeExceptionally(ex);
       }
@@ -880,6 +892,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
+   *  // Check if we can use contentLength returned by http GET request.
    * Validates range parameters.
    * @param range requested range.
    * @throws EOFException end of file exception.
@@ -887,10 +900,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void validateRangeRequest(FileRange range) throws EOFException {
     VectoredReadUtils.validateRangeRequest(range);
     if(range.getOffset() + range.getLength() > contentLength) {
-      LOG.error("Requested range [{}, {}) is beyond EOF",
-              range.getOffset(), range.getLength());
+      LOG.warn("Requested range [{}, {}) is beyond EOF for path {}",
+              range.getOffset(), range.getLength(), pathStr);
       throw new EOFException("Requested range [" + range.getOffset() +", "
-              + range.getLength() + ") is beyond EOF");
+              + range.getLength() + ") is beyond EOF for path " + pathStr);
     }
   }
 
@@ -906,13 +919,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param buffer buffer to fill.
    */
   private void readSingleRange(FileRange range, ByteBuffer buffer) {
-    LOG.debug("Start reading range {} ", range);
+    LOG.debug("Start reading range {} from path {} ", range, pathStr);
     S3Object objectRange = null;
     S3ObjectInputStream objectContent = null;
     try {
       long position = range.getOffset();
       int length = range.getLength();
-      final String operationName = "readVectored";
+      final String operationName = "readRange";
       objectRange = getS3Object(operationName, position, length);
       objectContent = objectRange.getObjectContent();
       if (objectContent == null) {
@@ -921,13 +934,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       }
       populateBuffer(length, buffer, objectContent);
       range.getData().complete(buffer);
-    } catch (IOException ex) {
-      LOG.error("Exception while reading a range {} ", range, ex);
+    } catch (Exception ex) {
+      LOG.warn("Exception while reading a range {} from path {} ", range, pathStr, ex);
       range.getData().completeExceptionally(ex);
     } finally {
       IOUtils.cleanupWithLogger(LOG, objectRange, objectContent);
     }
-    LOG.debug("Finished reading range {} ", range);
+    LOG.debug("Finished reading range {} from path {} ", range, pathStr);
   }
 
   /**
@@ -942,9 +955,18 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
                               ByteBuffer buffer,
                               S3ObjectInputStream objectContent) throws IOException {
     if (buffer.isDirect()) {
-      byte[] tmp = new byte[length];
-      readByteArray(objectContent, tmp, 0, length);
-      buffer.put(tmp);
+      int readBytes = 0;
+      int offset = 0;
+      byte[] tmp = new byte[TMP_BUFFER_MAX_SIZE];
+      while (readBytes < length) {
+        int currentLength = readBytes + TMP_BUFFER_MAX_SIZE < length ?
+                TMP_BUFFER_MAX_SIZE
+                : length - readBytes;
+        readByteArray(objectContent, tmp, 0, currentLength);
+        buffer.put(tmp, 0, currentLength);
+        offset = offset + currentLength;
+        readBytes = readBytes + currentLength;
+      }
       buffer.flip();
     } else {
       readByteArray(objectContent, buffer.array(), 0, length);
@@ -987,7 +1009,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     S3Object objectRange;
     Invoker invoker = context.getReadInvoker();
     try {
-      objectRange = invoker.retry(operationName, uri, true,
+      objectRange = invoker.retry(operationName, pathStr, true,
               () -> client.getObject(request));
     } catch (IOException ex) {
       tracker.failed();

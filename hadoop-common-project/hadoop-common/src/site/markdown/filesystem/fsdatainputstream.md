@@ -447,7 +447,7 @@ from position `position`
 
 Read fully data for a list of ranges asynchronously. The default implementation
 iterates through the ranges, tries to coalesce the ranges based on values of
-`minSeekForVectorReads` and `maxReadSizeForVectorReads` and then read each merged 
+`minSeekForVectorReads` and `maxReadSizeForVectorReads` and then read each merged
 ranges synchronously, but the intent is sub classes can implement efficient
 implementation.
 
@@ -463,7 +463,7 @@ For each requested range:
 For each requested range:
 
     range.getData() returns CompletableFuture<ByteBuffer> which will have data
-    from range.getOffset to range.getLength. 
+    from range.getOffset to range.getLength.
 
 ### `minSeekForVectorReads()`
 

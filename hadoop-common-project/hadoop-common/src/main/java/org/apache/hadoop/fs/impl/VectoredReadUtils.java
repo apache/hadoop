@@ -33,11 +33,16 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.util.Preconditions;
 
+/**
+ * Utility class which implements helper methods used
+ * in vectored IO implementation.
+ */
 public class VectoredReadUtils {
 
   /**
-   * @param range
-   * @throws EOFException
+   * Validate a single range.
+   * @param range file range.
+   * @throws EOFException any EOF Exception.
    */
   public static void validateRangeRequest(FileRange range)
           throws EOFException {
@@ -48,6 +53,11 @@ public class VectoredReadUtils {
     }
   }
 
+  /**
+   * Validate a list of vectored read ranges.
+   * @param ranges list of ranges.
+   * @throws EOFException any EOF exception.
+   */
   public static void validateVectoredReadRanges(List<? extends FileRange> ranges)
           throws EOFException {
     for (FileRange range : ranges) {
@@ -147,10 +157,10 @@ public class VectoredReadUtils {
    *   <li>the start and end of each range is a multiple of chunkSize</li>
    * </ul>
    *
-   * @param input the list of input ranges
-   * @param chunkSize the size of the chunks that the offset & end must align to
-   * @param minimumSeek the minimum distance between ranges
-   * @return true if we can use the input list as is
+   * @param input the list of input ranges.
+   * @param chunkSize the size of the chunks that the offset and end must align to.
+   * @param minimumSeek the minimum distance between ranges.
+   * @return true if we can use the input list as is.
    */
   public static boolean isOrderedDisjoint(List<? extends FileRange> input,
                                           int chunkSize,
@@ -169,6 +179,12 @@ public class VectoredReadUtils {
     return true;
   }
 
+  /**
+   * Calculates floor value of offset based on chunk size.
+   * @param offset file offset.
+   * @param chunkSize file chunk size.
+   * @return  floor value.
+   */
   public static long roundDown(long offset, int chunkSize) {
     if (chunkSize > 1) {
       return offset - (offset % chunkSize);
@@ -177,6 +193,12 @@ public class VectoredReadUtils {
     }
   }
 
+  /**
+   * Calculates the ceil value of offset based on chunk size.
+   * @param offset file offset.
+   * @param chunkSize file chunk size.
+   * @return ceil value.
+   */
   public static long roundUp(long offset, int chunkSize) {
     if (chunkSize > 1) {
       long next = offset + chunkSize - 1;
@@ -247,6 +269,9 @@ public class VectoredReadUtils {
     return readData;
   }
 
+  /**
+   * private constructor.
+   */
   private VectoredReadUtils() {
     throw new UnsupportedOperationException();
   }

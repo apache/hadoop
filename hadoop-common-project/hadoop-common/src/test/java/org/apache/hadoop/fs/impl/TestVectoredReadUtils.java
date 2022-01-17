@@ -18,16 +18,6 @@
 
 package org.apache.hadoop.fs.impl;
 
-import org.apache.hadoop.fs.ByteBufferPositionedReadable;
-import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.FileRangeImpl;
-import org.apache.hadoop.fs.PositionedReadable;
-import org.junit.Test;
-
-import org.apache.hadoop.test.HadoopTestBase;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -37,14 +27,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
-import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionaly;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.FileRangeImpl;
+import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.test.HadoopTestBase;
+
 import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionally;
 
 /**
  * Test behavior of {@link VectoredReadUtils}.
@@ -96,8 +90,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
       assertEquals("i = "+ i, 5, VectoredReadUtils.roundDown(i, 5));
       assertEquals("i = "+ i, 10, VectoredReadUtils.roundUp(i+1, 5));
     }
-    assertEquals(13, VectoredReadUtils.roundDown(13, 1));
-    assertEquals(13, VectoredReadUtils.roundUp(13, 1));
+    assertEquals("Error while roundDown", 13, VectoredReadUtils.roundDown(13, 1));
+    assertEquals("Error while roundUp", 13, VectoredReadUtils.roundUp(13, 1));
   }
 
   @Test
@@ -106,35 +100,37 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     CombinedFileRange mergeBase = new CombinedFileRange(2000, 3000, base);
 
     // test when the gap between is too big
-    assertFalse(mergeBase.merge(5000, 6000,
+    assertFalse("Large gap ranges shouldn't get merged", mergeBase.merge(5000, 6000,
         new FileRangeImpl(5000, 1000), 2000, 4000));
-    assertEquals(1, mergeBase.getUnderlying().size());
-    assertEquals(2000, mergeBase.getOffset());
-    assertEquals(1000, mergeBase.getLength());
+    assertEquals("Number of ranges in merged range shouldn't increase",
+            1, mergeBase.getUnderlying().size());
+    assertEquals("post merge offset", 2000, mergeBase.getOffset());
+    assertEquals("post merge length", 1000, mergeBase.getLength());
 
     // test when the total size gets exceeded
-    assertFalse(mergeBase.merge(5000, 6000,
+    assertFalse("Large size ranges shouldn't get merged", mergeBase.merge(5000, 6000,
         new FileRangeImpl(5000, 1000), 2001, 3999));
-    assertEquals(1, mergeBase.getUnderlying().size());
-    assertEquals(2000, mergeBase.getOffset());
-    assertEquals(1000, mergeBase.getLength());
+    assertEquals("Number of ranges in merged range shouldn't increase",
+            1, mergeBase.getUnderlying().size());
+    assertEquals("post merge offset", 2000, mergeBase.getOffset());
+    assertEquals("post merge length", 1000, mergeBase.getLength());
 
     // test when the merge works
-    assertTrue(mergeBase.merge(5000, 6000,
+    assertTrue("ranges should get merged ", mergeBase.merge(5000, 6000,
         new FileRangeImpl(5000, 1000), 2001, 4000));
-    assertEquals(2, mergeBase.getUnderlying().size());
-    assertEquals(2000, mergeBase.getOffset());
-    assertEquals(4000, mergeBase.getLength());
+    assertEquals("post merge size", 2, mergeBase.getUnderlying().size());
+    assertEquals("post merge offset", 2000, mergeBase.getOffset());
+    assertEquals("post merge length", 4000, mergeBase.getLength());
 
     // reset the mergeBase and test with a 10:1 reduction
     mergeBase = new CombinedFileRange(200, 300, base);
     assertEquals(200, mergeBase.getOffset());
     assertEquals(100, mergeBase.getLength());
-    assertTrue(mergeBase.merge(500, 600,
+    assertTrue("ranges should get merged ", mergeBase.merge(500, 600,
         new FileRangeImpl(5000, 1000), 201, 400));
-    assertEquals(2, mergeBase.getUnderlying().size());
-    assertEquals(200, mergeBase.getOffset());
-    assertEquals(400, mergeBase.getLength());
+    assertEquals("post merge size", 2, mergeBase.getUnderlying().size());
+    assertEquals("post merge offset", 200, mergeBase.getOffset());
+    assertEquals("post merge length", 400, mergeBase.getLength());
   }
 
   @Test
@@ -144,39 +140,43 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         new FileRangeImpl(2100, 100),
         new FileRangeImpl(1000, 100)
         );
-    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
+    assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
     List<CombinedFileRange> outputList = VectoredReadUtils.sortAndMergeRanges(
         input, 100, 1001, 2500);
-    assertEquals(1, outputList.size());
+    assertEquals("merged range size", 1, outputList.size());
     CombinedFileRange output = outputList.get(0);
-    assertEquals(3, output.getUnderlying().size());
+    assertEquals("merged range underlying size", 3, output.getUnderlying().size());
     assertEquals("range[1000,3100)", output.toString());
-    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 100, 800));
+    assertTrue("merged output ranges are disjoint",
+            VectoredReadUtils.isOrderedDisjoint(outputList, 100, 800));
 
     // the minSeek doesn't allow the first two to merge
-    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 100, 1000));
+    assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 1000));
     outputList = VectoredReadUtils.sortAndMergeRanges(input, 100, 1000, 2100);
-    assertEquals(2, outputList.size());
+    assertEquals("merged range size", 2, outputList.size());
     assertEquals("range[1000,1100)", outputList.get(0).toString());
     assertEquals("range[2100,3100)", outputList.get(1).toString());
-    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 100, 1000));
+    assertTrue("merged output ranges are disjoint",
+            VectoredReadUtils.isOrderedDisjoint(outputList, 100, 1000));
 
     // the maxSize doesn't allow the third range to merge
-    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
+    assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
     outputList = VectoredReadUtils.sortAndMergeRanges(input, 100, 1001, 2099);
-    assertEquals(2, outputList.size());
+    assertEquals("merged range size", 2, outputList.size());
     assertEquals("range[1000,2200)", outputList.get(0).toString());
     assertEquals("range[3000,3100)", outputList.get(1).toString());
-    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 100, 800));
+    assertTrue("merged output ranges are disjoint",
+            VectoredReadUtils.isOrderedDisjoint(outputList, 100, 800));
 
     // test the round up and round down (the maxSize doesn't allow any merges)
-    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 16, 700));
+    assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 16, 700));
     outputList = VectoredReadUtils.sortAndMergeRanges(input, 16, 1001, 100);
-    assertEquals(3, outputList.size());
+    assertEquals("merged range size", 3, outputList.size());
     assertEquals("range[992,1104)", outputList.get(0).toString());
     assertEquals("range[2096,2208)", outputList.get(1).toString());
     assertEquals("range[2992,3104)", outputList.get(2).toString());
-    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 16, 700));
+    assertTrue("merged output ranges are disjoint",
+            VectoredReadUtils.isOrderedDisjoint(outputList, 16, 700));
   }
 
   @Test
@@ -187,22 +187,24 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             new FileRangeImpl(2100, 100),
             new FileRangeImpl(1000, 100)
     );
-    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
+    assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
     List<CombinedFileRange> outputList = VectoredReadUtils.sortAndMergeRanges(
             input, 1, 1001, 2500);
-    assertEquals(1, outputList.size());
+    assertEquals("merged range size", 1, outputList.size());
     CombinedFileRange output = outputList.get(0);
-    assertEquals(4, output.getUnderlying().size());
+    assertEquals("merged range underlying size", 4, output.getUnderlying().size());
     assertEquals("range[1000,3110)", output.toString());
-    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
+    assertTrue("merged output ranges are disjoint",
+            VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
 
     outputList = VectoredReadUtils.sortAndMergeRanges(
             input, 100, 1001, 2500);
-    assertEquals(1, outputList.size());
+    assertEquals("merged range size", 1, outputList.size());
     output = outputList.get(0);
-    assertEquals(4, output.getUnderlying().size());
+    assertEquals("merged range underlying size", 4, output.getUnderlying().size());
     assertEquals("range[1000,3200)", output.toString());
-    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
+    assertTrue("merged output ranges are disjoint",
+            VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
 
   }
   interface Stream extends PositionedReadable, ByteBufferPositionedReadable {
@@ -229,7 +231,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         ByteBuffer::allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
-    assertEquals(100, buffer.remaining());
+    assertEquals("Size of result buffer", 100, buffer.remaining());
     byte b = 0;
     while (buffer.remaining() > 0) {
       assertEquals("remain = " + buffer.remaining(), b++, buffer.get());
@@ -243,7 +245,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     result =
         VectoredReadUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
             ByteBuffer::allocate);
-    assertFutureFailedExceptionaly(result);
+    assertFutureFailedExceptionally(result);
   }
 
   static void runReadRangeFromPositionedReadable(IntFunction<ByteBuffer> allocate) throws Exception {
@@ -263,7 +265,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
-    assertEquals(100, buffer.remaining());
+    assertEquals("Size of result buffer", 100, buffer.remaining());
     byte b = 0;
     while (buffer.remaining() > 0) {
       assertEquals("remain = " + buffer.remaining(), b++, buffer.get());
@@ -278,7 +280,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     result =
         VectoredReadUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
             ByteBuffer::allocate);
-    assertFutureFailedExceptionaly(result);
+    assertFutureFailedExceptionally(result);
   }
 
   @Test
@@ -300,7 +302,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   }
 
   @Test
-  public void testReadAsync() throws Exception {
+  public void testReadVectored() throws Exception {
     List<FileRange> input = Arrays.asList(new FileRangeImpl(0, 100),
         new FileRangeImpl(100_000, 100),
         new FileRangeImpl(200_000, 100));
@@ -320,7 +322,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   }
 
   @Test
-  public void testReadAsyncMerge() throws Exception {
+  public void testReadVectoredMerge() throws Exception {
     List<FileRange> input = Arrays.asList(new FileRangeImpl(2000, 100),
         new FileRangeImpl(1000, 100),
         new FileRangeImpl(0, 100));

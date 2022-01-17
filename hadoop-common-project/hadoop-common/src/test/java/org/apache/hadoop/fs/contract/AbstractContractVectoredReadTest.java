@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -43,7 +61,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   private final String bufferType;
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "Buffer type : {0}")
   public static List<String> params() {
     return Arrays.asList("direct", "array");
   }
@@ -64,23 +82,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     createFile(fs, bigFile, true, DATASET_MB);
   }
 
-  /**
-   * TODO: Improve coverage here by adding :
-   * 1. Some disjoint along with combinable ranges.
-   * 2. Non overlapping ranges.
-   * 3. Overlapping + Non overlapping ranges.
-   * 4. Limit buffer allocation.
-   * 5. Trying to exhaust thread pool -> maybe scale tests.
-   * 6. testNormalReadAfterVectoredRead
-   * 7. testVectoredReadAfterNormalRead
-   * 8. testMultipleVectoredReads
-   * 9. test allocate capacity limit errors.
-   *
-   * @throws Exception
-   */
   @Test
   public void testVectoredReadMultipleRanges() throws Exception {
-    describe("Running with buffer type : " + bufferType);
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
@@ -119,11 +122,14 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
 
   @Test
-  public void testVectoredReadBigFile()  throws Exception {
+  public void testVectoredRead1MBFile()  throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(new FileRangeImpl(1293, 25837));
-    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_1MB_NAME))) {
+    CompletableFuture<FSDataInputStream> builder =
+            fs.openFile(path(VECTORED_READ_FILE_1MB_NAME))
+            .build();
+    try (FSDataInputStream in = builder.get()) {
       in.readVectored(fileRanges, allocate);
       ByteBuffer vecRes = FutureIOSupport.awaitFuture(fileRanges.get(0).getData());
       FileRange resRange = fileRanges.get(0);
@@ -257,7 +263,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     boolean exRaised = false;
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       // Can we intercept here as done in S3 tests ??
-      in.readVectored(fileRanges, ByteBuffer::allocate);
+      in.readVectored(fileRanges, allocate);
     } catch (EOFException | IllegalArgumentException ex) {
       // expected.
       exRaised = true;

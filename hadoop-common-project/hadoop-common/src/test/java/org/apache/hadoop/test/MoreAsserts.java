@@ -80,7 +80,7 @@ public class MoreAsserts {
             .isFalse();
   }
 
-  public static <T> void assertFutureFailedExceptionaly(CompletableFuture<T> future) {
+  public static <T> void assertFutureFailedExceptionally(CompletableFuture<T> future) {
     Assertions.assertThat(future.isCompletedExceptionally())
             .describedAs("This future is supposed to be " +
                     "completed exceptionally")
