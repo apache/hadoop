@@ -129,8 +129,7 @@ public class CapacitySchedulerQueueContext {
     return csContext.getApplicationAttempt(applicationAttemptId);
   }
 
-  // TODO this is used in GuaranteedOrZeroCapacityOverTimePolicy, refactor the comparator there
-  public RMApp getRMApp(ApplicationId applicationId) {
-    return csContext.getRMContext().getRMApps().get(applicationId);
+  public CapacityScheduler.PendingApplicationComparator getApplicationComparator() {
+    return csContext.getPendingApplicationComparator();
   }
 }
