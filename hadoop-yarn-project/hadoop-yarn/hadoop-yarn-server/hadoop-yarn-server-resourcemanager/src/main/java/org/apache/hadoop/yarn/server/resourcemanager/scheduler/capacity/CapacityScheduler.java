@@ -3566,7 +3566,7 @@ public class CapacityScheduler extends
   }
 
   /**
-   * Comparator that orders applications by their submit time
+   * Comparator that orders applications by their submit time.
    */
   class PendingApplicationComparator
       implements Comparator<FiCaSchedulerApp> {
