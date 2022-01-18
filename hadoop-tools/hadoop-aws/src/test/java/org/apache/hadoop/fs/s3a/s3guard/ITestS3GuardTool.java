@@ -21,180 +21,36 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.Test;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import org.junit.Assume;
-import org.junit.Test;
-
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.Tristate;
-
-import static org.apache.hadoop.fs.s3a.MultipartTestUtils.*;
+import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
+import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
+import static org.apache.hadoop.fs.s3a.MultipartTestUtils.countUploadsAt;
+import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createPartUpload;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Uploads;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test S3Guard related CLI commands against a LocalMetadataStore.
- * Also responsible for testing the non s3guard-specific commands that, for
- * now, live under the s3guard CLI command.
+ * Test S3Guard Tool CLI commands.
  */
-public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
+public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
-  private static final String LOCAL_METADATA = "local://metadata";
-  private static final String[] ABORT_FORCE_OPTIONS = new String[] {"-abort",
+  private static final String[] ABORT_FORCE_OPTIONS = new String[]{
+      "-abort",
       "-force", "-verbose"};
-
-  @Override
-  public void setup() throws Exception {
-    super.setup();
-    MetadataStore ms = getMetadataStore();
-    Assume.assumeTrue("Test only applies when a local store is used for S3Guard;"
-            + "Store is " + (ms == null ? "none" : ms.toString()),
-        ms instanceof LocalMetadataStore);
-  }
-
-  @Test
-  public void testImportCommand() throws Exception {
-    S3AFileSystem fs = getFileSystem();
-    MetadataStore ms = getMetadataStore();
-    Path parent = path("test-import");
-    fs.mkdirs(parent);
-    Path dir = new Path(parent, "a");
-    fs.mkdirs(dir);
-    Path emptyDir = new Path(parent, "emptyDir");
-    fs.mkdirs(emptyDir);
-    for (int i = 0; i < 10; i++) {
-      String child = String.format("file-%d", i);
-      try (FSDataOutputStream out = fs.create(new Path(dir, child))) {
-        out.write(1);
-      }
-    }
-
-    S3GuardTool.Import cmd = toClose(new S3GuardTool.Import(fs.getConf()));
-    try {
-      cmd.setStore(ms);
-      exec(cmd, "import", parent.toString());
-    } finally {
-      cmd.setStore(new NullMetadataStore());
-    }
-
-    DirListingMetadata children =
-        ms.listChildren(dir);
-    assertEquals("Unexpected number of paths imported", 10, children
-        .getListing().size());
-    assertEquals("Expected 2 items: empty directory and a parent directory", 2,
-        ms.listChildren(parent).getListing().size());
-    assertTrue(children.isAuthoritative());
-  }
-
-  @Test
-  public void testImportCommandRepairsETagAndVersionId() throws Exception {
-    S3AFileSystem fs = getFileSystem();
-    MetadataStore ms = getMetadataStore();
-    Path path = path("test-version-metadata");
-    try (FSDataOutputStream out = fs.create(path)) {
-      out.write(1);
-    }
-    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(path);
-
-    // put in bogus ETag and versionId
-    S3AFileStatus bogusStatus = S3AFileStatus.fromFileStatus(originalStatus,
-        Tristate.FALSE, "bogusETag", "bogusVersionId");
-    ms.put(new PathMetadata(bogusStatus));
-
-    // sanity check that bogus status is actually persisted
-    S3AFileStatus retrievedBogusStatus = (S3AFileStatus) fs.getFileStatus(path);
-    assertEquals("bogus ETag was not persisted",
-        "bogusETag", retrievedBogusStatus.getETag());
-    assertEquals("bogus versionId was not persisted",
-        "bogusVersionId", retrievedBogusStatus.getVersionId());
-
-    // execute the import
-    S3GuardTool.Import cmd = toClose(new S3GuardTool.Import(fs.getConf()));
-    cmd.setStore(ms);
-    try {
-      exec(cmd, "import", path.toString());
-    } finally {
-      cmd.setStore(new NullMetadataStore());
-    }
-
-    // make sure ETag and versionId were corrected
-    S3AFileStatus updatedStatus = (S3AFileStatus) fs.getFileStatus(path);
-    assertEquals("ETag was not corrected",
-        originalStatus.getETag(), updatedStatus.getETag());
-    assertEquals("VersionId was not corrected",
-        originalStatus.getVersionId(), updatedStatus.getVersionId());
-  }
-
-  @Test
-  public void testDestroyBucketExistsButNoTable() throws Throwable {
-    run(Destroy.NAME,
-        "-meta", LOCAL_METADATA,
-        getLandsatCSVFile(getConfiguration()));
-  }
-
-  @Test
-  public void testImportNoFilesystem() throws Throwable {
-    final Import importer = toClose(new S3GuardTool.Import(getConfiguration()));
-    importer.setStore(getMetadataStore());
-    try {
-      intercept(IOException.class,
-          () -> importer.run(
-              new String[]{
-                  "import",
-                  "-meta", LOCAL_METADATA,
-                  S3A_THIS_BUCKET_DOES_NOT_EXIST
-              }));
-    } finally {
-      importer.setStore(new NullMetadataStore());
-    }
-  }
-
-  @Test
-  public void testInfoBucketAndRegionNoFS() throws Throwable {
-    intercept(FileNotFoundException.class,
-        () -> run(BucketInfo.NAME, "-meta",
-            LOCAL_METADATA, "-region",
-            "any-region", S3A_THIS_BUCKET_DOES_NOT_EXIST));
-  }
-
-  @Test
-  public void testInitNegativeRead() throws Throwable {
-    runToFailure(INVALID_ARGUMENT,
-        Init.NAME, "-meta", LOCAL_METADATA, "-region",
-        "eu-west-1",
-        READ_FLAG, "-10");
-  }
-
-  @Test
-  public void testInit() throws Throwable {
-    run(Init.NAME,
-        "-meta", LOCAL_METADATA,
-        "-region", "us-west-1");
-  }
-
-  @Test
-  public void testInitTwice() throws Throwable {
-    run(Init.NAME,
-        "-meta", LOCAL_METADATA,
-        "-region", "us-west-1");
-    run(Init.NAME,
-        "-meta", LOCAL_METADATA,
-        "-region", "us-west-1");
-  }
 
   @Test
   public void testLandsatBucketUnguarded() throws Throwable {
@@ -209,7 +65,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
         BucketInfo.NAME,
         "-" + BucketInfo.GUARDED_FLAG,
         getLandsatCSVFile(
-            ITestS3GuardToolLocal.this.getConfiguration()));
+            ITestS3GuardTool.this.getConfiguration()));
   }
 
   @Test
@@ -225,38 +81,17 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
         BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG,
         "AES256", getLandsatCSVFile(
-            ITestS3GuardToolLocal.this.getConfiguration()));
+            ITestS3GuardTool.this.getConfiguration()));
   }
 
   @Test
   public void testStoreInfo() throws Throwable {
     S3GuardTool.BucketInfo cmd =
         toClose(new S3GuardTool.BucketInfo(getFileSystem().getConf()));
-    cmd.setStore(getMetadataStore());
-    try {
-      String output = exec(cmd, cmd.getName(),
-          "-" + BucketInfo.GUARDED_FLAG,
-          getFileSystem().getUri().toString());
-      LOG.info("Exec output=\n{}", output);
-    } finally {
-      cmd.setStore(new NullMetadataStore());
-    }
-  }
-
-  @Test
-  public void testSetCapacity() throws Throwable {
-    S3GuardTool cmd = toClose(
-        new S3GuardTool.SetCapacity(getFileSystem().getConf()));
-    cmd.setStore(getMetadataStore());
-    try {
-      String output = exec(cmd, cmd.getName(),
-          "-" + READ_FLAG, "100",
-          "-" + WRITE_FLAG, "100",
-          getFileSystem().getUri().toString());
-      LOG.info("Exec output=\n{}", output);
-    } finally {
-      cmd.setStore(new NullMetadataStore());
-    }
+    String output = exec(cmd, cmd.getName(),
+        "-" + BucketInfo.UNGUARDED_FLAG,
+        getFileSystem().getUri().toString());
+    LOG.info("Exec output=\n{}", output);
   }
 
   private final static String UPLOAD_PREFIX = "test-upload-prefix";

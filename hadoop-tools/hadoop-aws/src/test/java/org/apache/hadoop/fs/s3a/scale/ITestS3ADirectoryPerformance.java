@@ -53,7 +53,6 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -148,9 +147,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           listContinueRequests,
           listStatusCalls,
           getFileStatusCalls);
-      if (!fs.hasMetadataStore()) {
-        assertEquals(listRequests.toString(), 1, listRequests.diff());
-      }
+      assertEquals(listRequests.toString(), 1, listRequests.diff());
       reset(metadataRequests,
           listRequests,
           listContinueRequests,
@@ -197,7 +194,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
             getConfigurationWithConfiguredBatchSize(batchSize);
 
     removeBaseAndBucketOverrides(conf,
-        S3_METADATA_STORE_IMPL,
         DIRECTORY_MARKER_POLICY);
     // force directory markers = keep to save delete requests on every
     // file created.
@@ -210,7 +206,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
 
     NanoTimer uploadTimer = new NanoTimer();
     try {
-      assume("Test is only for raw fs", !fs.hasMetadataStore());
       fs.create(dir);
 
       // create a span for the write operations
@@ -321,9 +316,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           .describedAs("Listing results using listLocatedStatus() must" +
               "match with original list of files")
           .hasSameElementsAs(originalListOfFiles);
-      // delete in this FS so S3Guard is left out of it.
-      // and so that the incremental listing is tested through
-      // the delete operation.
       fs.delete(dir, true);
     } finally {
       executorService.shutdown();

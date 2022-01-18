@@ -383,7 +383,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   /**
    * This is the set of actions to perform when verifying the file actually
-   * was created. With the s3guard committer, the file doesn't come into
+   * was created. With the S3A committer, the file doesn't come into
    * existence; a different set of assertions must be checked.
    */
   @Test

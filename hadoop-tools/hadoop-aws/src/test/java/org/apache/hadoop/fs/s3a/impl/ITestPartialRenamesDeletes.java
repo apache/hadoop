@@ -29,7 +29,6 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
@@ -72,9 +71,6 @@ import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
@@ -83,9 +79,7 @@ import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.test.LambdaTestUtils.eval;
 
 /**
- * Test partial failures of delete and rename operations, especially
- * that the S3Guard tables are consistent with the state of
- * the filesystem.
+ * Test partial failures of delete and rename operations,.
  *
  * All these test have a unique path for each run, with a roleFS having
  * full RW access to part of it, and R/O access to a restricted subdirectory
@@ -105,11 +99,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  *   </li>
  * </ol>
  *
- * This test manages to create lots of load on the s3guard prune command
- * when that is tested in a separate test suite;
- * too many tombstone files for the test to complete.
- * An attempt is made in {@link #deleteTestDirInTeardown()} to prune these test
- * files.
  */
 @SuppressWarnings("ThrowableNotThrown")
 @RunWith(Parameterized.class)
@@ -261,7 +250,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // create the baseline assumed role
     assumedRoleConfig = createAssumedRoleConfig();
     bindRolePolicyStatements(assumedRoleConfig,
-        STATEMENT_S3GUARD_CLIENT,
         STATEMENT_ALLOW_SSE_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,  // root:     r-x
         new Statement(Effects.Allow)       // dest:     rwx
@@ -335,14 +323,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     removeBucketOverrides(bucketName, conf,
         MAX_THREADS,
         MAXIMUM_CONNECTIONS,
-        S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
         DIRECTORY_MARKER_POLICY,
         BULK_DELETE_PAGE_SIZE);
     conf.setInt(MAX_THREADS, EXECUTOR_THREAD_COUNT);
     conf.setInt(MAXIMUM_CONNECTIONS, EXECUTOR_THREAD_COUNT * 2);
-    // turn off prune delays, so as to stop scale tests creating
-    // so much cruft that future CLI prune commands take forever
-    conf.setInt(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY, 0);
     // use the keep policy to ensure that surplus markers exist
     // to complicate failures
     conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_KEEP);
@@ -406,7 +390,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     describe("rename with parent paths not writeable; multi=%s", multiDelete);
     final Configuration conf = createAssumedRoleConfig();
     bindRolePolicyStatements(conf,
-        STATEMENT_S3GUARD_CLIENT,
         STATEMENT_ALLOW_SSE_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,
         new Statement(Effects.Allow)
@@ -510,34 +493,19 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       // look in that exception for a multidelete
       MultiObjectDeleteException mde = extractCause(
           MultiObjectDeleteException.class, deniedException);
-      final List<Path> undeleted
-          = extractUndeletedPaths(mde, fs::keyToQualifiedPath);
-
-      List<Path> expectedUndeletedFiles = new ArrayList<>(createdFiles);
-      if (getFileSystem().getDirectoryMarkerPolicy()
-          .keepDirectoryMarkers(readOnlyDir)) {
-        // directory markers are being retained,
-        // so will also be in the list of undeleted files
-        expectedUndeletedFiles.addAll(dirs);
-      }
-      Assertions.assertThat(undeleted)
-          .as("files which could not be deleted")
-          .containsExactlyInAnyOrderElementsOf(expectedUndeletedFiles);
     }
     LOG.info("Result of renaming read-only files is as expected",
         deniedException);
     assertFileCount("files in the source directory", roleFS,
         readOnlyDir, expectedFileCount);
     // now lets look at the destination.
-    // even with S3Guard on, we expect the destination to match that of
+    // we expect the destination to match that of
     // the remote state.
-    // the test will exist
     describe("Verify destination directory exists");
     assertIsDirectory(writableDir);
     assertFileCount("files in the dest directory", roleFS,
         writableDir, expectedFileCount);
     // all directories in the source tree must still exist,
-    // which for S3Guard means no tombstone markers were added
     LOG.info("Verifying all directories still exist");
     for (Path dir : dirs) {
       assertIsDirectory(dir);
@@ -653,17 +621,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     Path head = deletableFiles.remove(0);
     assertTrue("delete " + head + " failed",
         roleFS.delete(head, false));
-    List<Path> allFiles = Stream.concat(
-        readOnlyFiles.stream(),
-        deletableFiles.stream())
-        .collect(Collectors.toList());
-    List<MultiObjectDeleteSupport.KeyPath> keyPaths = allFiles.stream()
-        .map(path ->
-            new MultiObjectDeleteSupport.KeyPath(
-                storeContext.pathToKey(path),
-                path,
-                false))
-        .collect(Collectors.toList());
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);
@@ -697,34 +654,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     ex = expectDeleteForbidden(basePath);
     String iostats = ioStatisticsSourceToString(roleFS);
 
-    if (multiDelete) {
-      // multi-delete status checks
-      deleteVerbCount.assertDiffEquals("Wrong delete request count", 0);
-      bulkDeleteVerbCount.assertDiffEquals(
-          "Wrong count of delete operations in " + iostats, 1);
-      MultiObjectDeleteException mde = extractCause(
-          MultiObjectDeleteException.class, ex);
-      List<MultiObjectDeleteSupport.KeyPath> undeletedKeyPaths =
-          removeUndeletedPaths(mde, keyPaths, storeContext::keyToPath);
-      final List<Path> undeleted = toPathList(
-          undeletedKeyPaths);
-      deleteObjectCount.assertDiffEquals(
-          "Wrong count of objects in delete request",
-          allFiles.size());
-      Assertions.assertThat(undeleted)
-          .as("files which could not be deleted")
-          .containsExactlyInAnyOrderElementsOf(readOnlyFiles);
-      Assertions.assertThat(toPathList(keyPaths))
-          .as("files which were deleted")
-          .containsExactlyInAnyOrderElementsOf(deletableFiles);
-      rejectionCount.assertDiffEquals("Wrong rejection count",
-          readOnlyFiles.size());
-    }
     reset(rejectionCount, deleteVerbCount);
 
     // build the set of all paths under the directory tree through
     // a directory listing (i.e. not getFileStatus()).
-    // small risk of observed inconsistency here on unguarded stores.
     final Set<Path> readOnlyListing = listFilesUnderPath(readOnlyDir, true);
 
     String directoryList = readOnlyListing.stream()
@@ -734,25 +667,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     Assertions.assertThat(readOnlyListing)
         .as("ReadOnly directory " + directoryList)
         .containsExactlyInAnyOrderElementsOf(readOnlyFiles);
-  }
-
-  /**
-   * Verifies the logic of handling directory markers in
-   * delete operations, specifically:
-   * <ol>
-   *   <li>all markers above empty directories MUST be deleted</li>
-   *   <li>all markers above non-empty directories MUST NOT be deleted</li>
-   * </ol>
-   * As the delete list may include subdirectories, we need to work up from
-   * the bottom of the list of deleted files before probing the parents,
-   * that being done by a s3guard get(path, need-empty-directory) call.
-   * <p></p>
-   * This is pretty sensitive code.
-   */
-  @Test
-  public void testSubdirDeleteFailures() throws Throwable {
-    describe("Multiobject delete handling of directorYesFory markers");
-    assume("Multiobject delete only", multiDelete);
   }
 
   /**
@@ -913,9 +827,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * Verifies that s3:DeleteObjectVersion is not required for rename.
    * <p></p>
    * See HADOOP-17621.
-   * <p></p>
-   * This test will only show a regression if the bucket has versioning
-   * enabled *and* S3Guard is enabled.
    */
   @Test
   public void testRenamePermissionRequirements() throws Throwable {
@@ -928,7 +839,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // and then delete.
     Configuration roleConfig = createAssumedRoleConfig();
     bindRolePolicyStatements(roleConfig,
-        STATEMENT_S3GUARD_CLIENT,
         STATEMENT_ALLOW_SSE_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,  // root:     r-x
         new Statement(Effects.Allow)       // dest:     rwx
