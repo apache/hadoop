@@ -107,7 +107,10 @@ public final class ArnResource {
    */
   public String getEndpoint() {
     return RegionUtils.getRegion(accessPointRegionKey)
-        .getServiceEndpoint("s3");
+        .getServiceEndpoint("s3")
+        // There's a slight issue with getServiceEndpoint which breaks an endpoint related to
+        // access points, i.e. the correct one starts with "s3-accesspoint."
+        .replace("s3.accesspoint-", "s3-accesspoint.");
   }
 
   /**
