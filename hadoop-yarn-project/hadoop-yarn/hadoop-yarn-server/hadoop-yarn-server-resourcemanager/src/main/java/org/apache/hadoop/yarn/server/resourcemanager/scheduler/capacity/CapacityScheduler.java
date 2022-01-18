@@ -3560,7 +3560,8 @@ public class CapacityScheduler extends
     }
   }
 
-  public PendingApplicationComparator getApplicationComparator(){
+  @Override
+  public PendingApplicationComparator getPendingApplicationComparator(){
     return applicationComparator;
   }
 
