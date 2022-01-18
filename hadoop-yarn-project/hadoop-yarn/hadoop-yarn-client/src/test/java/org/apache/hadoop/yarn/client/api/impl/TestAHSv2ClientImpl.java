@@ -33,7 +33,6 @@ import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.client.api.TimelineReaderClient;
@@ -124,9 +123,7 @@ public class TestAHSv2ClientImpl {
 
     when(spyTimelineReaderClient.getContainerEntities(
             appId, "ALL",
-            ImmutableMap.<String, String>builder()
-                    .put("appattemptId", appAttemptId.toString())
-                    .build(),
+            ImmutableMap.of("appattemptId", appAttemptId.toString()),
             0, null))
             .thenReturn(Arrays.asList(createContainerEntity(containerId)));
 
@@ -144,24 +141,22 @@ public class TestAHSv2ClientImpl {
 
   @Test
   public void testGetMultipleContainersByAppAttempt() throws IOException, YarnException {
-    int multipleContainerSize = 4;
-    int appMultipleId = 3;
-    int appAttemptMultipleId = 3;
-    ApplicationId appMultiple = ApplicationId.newInstance(0, appMultipleId);
+    int numContainers = 4;
+    int applicationId = 3;
+    int applicationAttemptId = 3;
+    ApplicationId appMultiple = ApplicationId.newInstance(0, applicationId);
     ApplicationAttemptId appAttemptIdMultiple =
-            ApplicationAttemptId.newInstance(appMultiple, appAttemptMultipleId);
+            ApplicationAttemptId.newInstance(appMultiple, applicationAttemptId);
 
     List<TimelineEntity> containerEntities = new ArrayList<>();
-    for (int newEntityIdx = 0; newEntityIdx < multipleContainerSize; ++newEntityIdx) {
+    for (int containerId = 0; containerId < numContainers; ++containerId) {
       containerEntities.add(createContainerEntity(ContainerId.newContainerId(
-              appAttemptIdMultiple, newEntityIdx)));
+              appAttemptIdMultiple, containerId)));
     }
 
     when(spyTimelineReaderClient.getContainerEntities(
             appMultiple, "ALL",
-            ImmutableMap.<String, String>builder()
-                    .put("appattemptId", appAttemptIdMultiple.toString())
-                    .build(),
+            ImmutableMap.of("appattemptId", appAttemptIdMultiple.toString()),
             0, null))
             .thenReturn(containerEntities);
 
@@ -171,14 +166,14 @@ public class TestAHSv2ClientImpl {
 
     List<ContainerReport> containerListMultiple = client.getContainers(appAttemptIdMultiple);
 
-    assertThat(containerListMultiple.size()).isEqualTo(multipleContainerSize);
+    assertThat(containerListMultiple.size()).isEqualTo(numContainers);
     for (int containerIdx = 0; containerIdx < containerListMultiple.size(); ++containerIdx) {
       ContainerReport report = containerListMultiple.get(containerIdx);
       assertThat(report.getContainerId().getContainerId()).isEqualTo(containerIdx);
       assertThat(report.getContainerId().getApplicationAttemptId().getAttemptId())
-              .isEqualTo(appAttemptMultipleId);
+              .isEqualTo(applicationAttemptId);
       assertThat(report.getContainerId().getApplicationAttemptId().getApplicationId().getId())
-              .isEqualTo(appMultipleId);
+              .isEqualTo(applicationId);
     }
   }
 
