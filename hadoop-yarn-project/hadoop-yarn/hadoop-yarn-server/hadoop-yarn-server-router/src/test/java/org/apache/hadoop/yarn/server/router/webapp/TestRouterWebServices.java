@@ -132,7 +132,7 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
     Response response4 = addToClusterNodeLabels(user);
     Assert.assertNotNull(response4);
 
-    Response response5 = removeFromCluserNodeLabels(user);
+    Response response5 = removeFromClusterNodeLabels(user);
     Assert.assertNotNull(response5);
 
     NodeLabelsInfo nodeLabelsInfo2 = getLabelsOnNode(user);

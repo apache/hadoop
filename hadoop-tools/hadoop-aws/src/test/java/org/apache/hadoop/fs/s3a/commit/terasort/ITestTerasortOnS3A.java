@@ -125,15 +125,6 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     this.committerName = committerName;
   }
 
-  /**
-   * Not using special paths here.
-   * @return false
-   */
-  @Override
-  public boolean useInconsistentClient() {
-    return false;
-  }
-
   @Override
   protected String committerName() {
     return committerName;

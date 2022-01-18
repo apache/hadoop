@@ -77,7 +77,6 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
    * set too low. Alternatively, consider reducing the
    * <code>scale.test.operation.count</code> parameter in
    * <code>getOperationCount()</code>.
-   * If it is slow: look at the size of any S3Guard Table used.
    * @see #getOperationCount()
    */
   @Test

@@ -38,6 +38,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -45,6 +46,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import static java.util.concurrent.TimeUnit.*;
 
@@ -2686,5 +2688,32 @@ public class TestConfiguration {
     assertEquals(">cdata\nmultiline<>", conf.get("cdata-multiline"));
     assertEquals("  prefix >cdata\nsuffix  ", conf.get("cdata-whitespace"));
     return conf;
+  }
+
+  @Test
+  public void testConcurrentModificationDuringIteration() throws InterruptedException {
+    Configuration configuration = new Configuration();
+    new Thread(() -> {
+      while (true) {
+        configuration.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
+      }
+    }).start();
+
+    AtomicBoolean exceptionOccurred = new AtomicBoolean(false);
+
+    new Thread(() -> {
+      while (true) {
+        try {
+          configuration.iterator();
+        } catch (final ConcurrentModificationException e) {
+          exceptionOccurred.set(true);
+          break;
+        }
+      }
+    }).start();
+
+    Thread.sleep(1000); //give enough time for threads to run
+
+    assertFalse("ConcurrentModificationException occurred", exceptionOccurred.get());
   }
 }

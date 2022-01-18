@@ -24,6 +24,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 
 /**
  * This is a helper class which represents a queue path, and has easy access
@@ -60,6 +61,16 @@ public class QueuePath implements Iterable<String> {
   }
 
   /**
+   * Constructor to create Queue path from queue names.
+   * The provided queue names will be concatenated by dots, giving a full queue path.
+   * @param parts Parts of queue path
+   * @return QueuePath object
+   */
+  public static QueuePath createFromQueues(String... parts) {
+    return new QueuePath(String.join(DOT, parts));
+  }
+
+  /**
    * This method is responsible for splitting up a full queue path into parent
    * path and leaf name.
    * @param fullPath Full path of the queue to be processed
@@ -67,6 +78,11 @@ public class QueuePath implements Iterable<String> {
   private void setFromFullPath(String fullPath) {
     parent = null;
     leaf = fullPath;
+
+    if (leaf == null) {
+      leaf = "";
+      return;
+    }
 
     int lastDotIdx = fullPath.lastIndexOf(DOT);
     if (lastDotIdx > -1) {
@@ -119,6 +135,14 @@ public class QueuePath implements Iterable<String> {
    */
   public boolean hasParent() {
     return parent != null;
+  }
+
+  /**
+   * Convenience getter to check if the queue is the root queue.
+   * @return True if the path is root
+   */
+  public boolean isRoot() {
+    return !hasParent() && leaf.equals(ROOT);
   }
 
   /**

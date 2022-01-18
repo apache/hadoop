@@ -138,17 +138,6 @@ public final class InternalConstants {
   public static final int CSE_PADDING_LENGTH = 16;
 
   /**
-   * Error message to indicate S3-CSE is incompatible with S3Guard.
-   */
-  public static final String CSE_S3GUARD_INCOMPATIBLE = "S3-CSE cannot be "
-      + "used with S3Guard";
-
-  /**
-   * Error message to indicate Access Points are incompatible with S3Guard.
-   */
-  public static final String AP_S3GUARD_INCOMPATIBLE = "Access Points cannot be used with S3Guard";
-
-  /**
    * Error message to indicate Access Points are required to be used for S3 access.
    */
   public static final String AP_REQUIRED_EXCEPTION = "Access Points usage is required" +
