@@ -2799,6 +2799,13 @@
     <value>60000</value>
   </property>
 
+  <property>
+    <description>The base URL of the Knox topology used for RM web UI to
+    use it as a prefix for the Job Tracking URLs.</description>
+    <name>yarn.web-proxy.gateway.url</name>
+    <value/>
+  </property>
+
   <!-- Applications' Configuration -->
 
   <property>
