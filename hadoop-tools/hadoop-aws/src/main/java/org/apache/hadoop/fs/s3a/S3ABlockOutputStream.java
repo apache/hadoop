@@ -674,7 +674,7 @@ class S3ABlockOutputStream extends OutputStream implements
     }
     // downgrading.
     WARN_ON_SYNCABLE.warn("Application invoked the Syncable API against"
-        + " stream writing to {}. This is unsupported",
+        + " stream writing to {}. This is Unsupported",
         key);
     // and log at debug
     LOG.debug("Downgrading Syncable call", ex);

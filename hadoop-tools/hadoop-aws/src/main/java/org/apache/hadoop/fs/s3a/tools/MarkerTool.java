@@ -73,10 +73,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
 /**
- * Audit and S3 bucket for directory markers.
- * <p></p>
- * This tool does not go anywhere near S3Guard; its scan bypasses any
- * metastore as we are explicitly looking for marker objects.
+ * Audit an S3 bucket for directory markers.
  */
 @InterfaceAudience.LimitedPrivate("management tools")
 @InterfaceStability.Unstable
@@ -818,10 +815,9 @@ public final class MarkerTool extends S3GuardTool {
       int end = Math.min(start + deletePageSize, size);
       List<DeleteObjectsRequest.KeyVersion> page = markerKeys.subList(start,
           end);
-      List<Path> undeleted = new ArrayList<>();
       once("Remove S3 Keys",
           tracker.getBasePath().toString(), () ->
-              operations.removeKeys(page, true, undeleted, null, false));
+              operations.removeKeys(page, true, false));
       summary.deleteRequests++;
       // and move to the start of the next page
       start = end;

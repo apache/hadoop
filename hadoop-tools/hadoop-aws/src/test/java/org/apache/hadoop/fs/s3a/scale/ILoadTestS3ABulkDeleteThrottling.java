@@ -247,7 +247,7 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
             new ContractTestUtils.NanoTimer();
         Exception ex = null;
         try {
-          fs.removeKeys(fileList, false, null);
+          fs.removeKeys(fileList, false);
         } catch (IOException e) {
           ex = e;
         }

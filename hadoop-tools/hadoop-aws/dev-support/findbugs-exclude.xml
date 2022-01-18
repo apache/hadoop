@@ -30,20 +30,6 @@
   </Match>
 
   <!--
-    This extends the serializable S3Object, so findbug checks
-    serializability. It is never serialized however, so its
-    warnings are false positives.
-  -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.InconsistentS3Object" />
-    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.InconsistentS3Object" />
-    <Bug pattern="SE_NO_SERIALVERSIONID" />
-  </Match>
-
-  <!--
    findbugs gets confused by lambda expressions in synchronized methods
    and considers references to fields to be unsynchronized.
    As you can't disable the methods individually, we have to disable

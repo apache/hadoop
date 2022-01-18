@@ -53,8 +53,6 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
-import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
@@ -82,7 +80,7 @@ import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan
  *   upload process.</li>
  *   <li>Other low-level access to S3 functions, for private use.</li>
  *   <li>Failure handling, including converting exceptions to IOEs.</li>
- *   <li>Integration with instrumentation and S3Guard.</li>
+ *   <li>Integration with instrumentation.</li>
  *   <li>Evolution to add more low-level operations, such as S3 select.</li>
  * </ul>
  *
@@ -324,7 +322,7 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Finalize a multipart PUT operation.
    * This completes the upload, and, if that works, calls
-   * {@link S3AFileSystem#finishedWrite(String, long, String, String, BulkOperationState)}
+   * {@link S3AFileSystem#finishedWrite(String, long, String, String)}
    * to update the filesystem.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
@@ -332,7 +330,6 @@ public class WriteOperationHelper implements WriteOperations {
    * @param partETags list of partial uploads
    * @param length length of the upload
    * @param retrying retrying callback
-   * @param operationState (nullable) operational state for a bulk update
    * @return the result of the operation.
    * @throws IOException on problems.
    */
@@ -342,8 +339,7 @@ public class WriteOperationHelper implements WriteOperations {
       String uploadId,
       List<PartETag> partETags,
       long length,
-      Retried retrying,
-      @Nullable BulkOperationState operationState) throws IOException {
+      Retried retrying) throws IOException {
     if (partETags.isEmpty()) {
       throw new PathIOException(destKey,
           "No upload parts in multipart upload");
@@ -361,7 +357,7 @@ public class WriteOperationHelper implements WriteOperations {
                   request);
           });
       owner.finishedWrite(destKey, length, uploadResult.getETag(),
-          uploadResult.getVersionId(), operationState);
+          uploadResult.getVersionId());
       return uploadResult;
     }
   }
@@ -397,8 +393,8 @@ public class WriteOperationHelper implements WriteOperations {
         uploadId,
         partETags,
         length,
-        (text, e, r, i) -> errorCount.incrementAndGet(),
-        null);
+        (text, e, r, i) -> errorCount.incrementAndGet()
+    );
   }
 
   /**
@@ -587,16 +583,14 @@ public class WriteOperationHelper implements WriteOperations {
    * Relies on retry code in filesystem
    * @throws IOException on problems
    * @param destKey destination key
-   * @param operationState operational state for a bulk update
    */
   @Retries.OnceTranslated
-  public void revertCommit(String destKey,
-      @Nullable BulkOperationState operationState) throws IOException {
+  public void revertCommit(String destKey) throws IOException {
     once("revert commit", destKey,
         withinAuditSpan(getAuditSpan(), () -> {
           Path destPath = owner.keyToQualifiedPath(destKey);
           owner.deleteObjectAtPath(destPath,
-              destKey, true, operationState);
+              destKey, true);
           owner.maybeCreateFakeParentDirectory(destPath);
         }));
   }
@@ -610,7 +604,6 @@ public class WriteOperationHelper implements WriteOperations {
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
    * @param length length of the upload
-   * @param operationState operational state for a bulk update
    * @return the result of the operation.
    * @throws IOException if problems arose which could not be retried, or
    * the retry count was exceeded
@@ -620,8 +613,7 @@ public class WriteOperationHelper implements WriteOperations {
       String destKey,
       String uploadId,
       List<PartETag> partETags,
-      long length,
-      @Nullable BulkOperationState operationState)
+      long length)
       throws IOException {
     checkNotNull(uploadId);
     checkNotNull(partETags);
@@ -631,32 +623,8 @@ public class WriteOperationHelper implements WriteOperations {
         uploadId,
         partETags,
         length,
-        Invoker.NO_OP,
-        operationState);
-  }
-
-  /**
-   * Initiate a commit operation through any metastore.
-   * @param path path under which the writes will all take place.
-   * @return an possibly null operation state from the metastore.
-   * @throws IOException failure to instantiate.
-   */
-  public BulkOperationState initiateCommitOperation(
-      Path path) throws IOException {
-    return initiateOperation(path, BulkOperationState.OperationType.Commit);
-  }
-
-  /**
-   * Initiate a commit operation through any metastore.
-   * @param path path under which the writes will all take place.
-   * @param operationType operation to initiate
-   * @return an possibly null operation state from the metastore.
-   * @throws IOException failure to instantiate.
-   */
-  public BulkOperationState initiateOperation(final Path path,
-      final BulkOperationState.OperationType operationType) throws IOException {
-    return S3Guard.initiateBulkWrite(owner.getMetadataStore(),
-        operationType, path);
+        Invoker.NO_OP
+    );
   }
 
   /**
