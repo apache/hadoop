@@ -113,6 +113,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testRandomRead() throws Exception {
+    Assume.assumeFalse("Secondary account does not support this test,", getIsSecondaryAccount());
     Assume.assumeFalse("This test does not support namespace enabled account",
         getIsNamespaceEnabled(getFileSystem()));
     Path testPath = path(TEST_FILE_PREFIX + "_testRandomRead");

@@ -49,6 +49,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       LoggerFactory.getLogger(ITestWasbAbfsCompatibility.class);
 
   public ITestWasbAbfsCompatibility() throws Exception {
+    Assume.assumeFalse("Secondary account does not support this test,", getIsSecondaryAccount());
     Assume.assumeFalse("Emulator is not supported", isIPAddress());
   }
 

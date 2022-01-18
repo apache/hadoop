@@ -144,6 +144,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
+  protected boolean getIsSecondaryAccount() {
+    return !(abfsConfig.getAccountName().equals(abfsConfig.getPrimaryAccountName()));
+  }
   protected boolean getIsNamespaceEnabled(AzureBlobFileSystem fs)
       throws IOException {
     return fs.getIsNamespaceEnabled(getTestTracingContext(fs, false));
