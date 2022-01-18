@@ -339,6 +339,16 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return false;
   }
 
+  /**
+   * Check whether this inode itself set storage policy
+   */
+  public boolean isSetStoragePolicy() {
+    if (isSymlink()) {
+      return false;
+    }
+    return getLocalStoragePolicyID() != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+  }
+
   /** Cast this inode to an {@link INodeFile}.  */
   public INodeFile asFile() {
     throw new IllegalStateException("Current inode is not a file: "
