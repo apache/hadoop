@@ -79,15 +79,12 @@ public class TestContainerSchedulerOppContainersByResources
     switch (subState) {
     case RUNNING:
     case COMPLETING:
-    case DONE:
-      if (subState == ContainerSubState.DONE) {
-        // If the state is not COMPLETE, then the
-        // container is a failed container
-        return state ==
-            org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE;
-      }
-
       return true;
+    case DONE:
+      // If the state is not COMPLETE, then the
+      // container is a failed container
+      return state ==
+          org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE;
     default:
       return false;
     }
@@ -256,6 +253,7 @@ public class TestContainerSchedulerOppContainersByResources
     for (int i = 0; i < numContainers; i++) {
       statList.add(createContainerId(i));
     }
+
 
     verifyRunAndKilledContainers(
         statList, numContainers, runContainers, killedContainers);
