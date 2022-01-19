@@ -1215,6 +1215,7 @@ class BPServiceActor implements Runnable {
 
     void forceFullBlockReportNow() {
       forceFullBlockReport.set(true);
+      resetBlockReportTime = true;
     }
 
     /**
