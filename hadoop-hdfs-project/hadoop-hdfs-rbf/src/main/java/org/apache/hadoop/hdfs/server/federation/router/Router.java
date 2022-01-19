@@ -316,12 +316,12 @@ public class Router extends CompositeService implements
    */
   private void checkRouterId() {
     if (this.routerId == null) {
-      InetSocketAddress ConfRpcAddress = conf.getSocketAddr(
+      InetSocketAddress confRpcAddress = conf.getSocketAddr(
           RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
           RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
           RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
           RBFConfigKeys.DFS_ROUTER_RPC_PORT_DEFAULT);
-      setRpcServerAddress(ConfRpcAddress);
+      setRpcServerAddress(confRpcAddress);
     }
   }
 
