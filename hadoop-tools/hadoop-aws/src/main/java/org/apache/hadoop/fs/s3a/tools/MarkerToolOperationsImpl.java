@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 
 /**
  * Implement the marker tool operations by forwarding to the
@@ -59,12 +58,10 @@ public class MarkerToolOperationsImpl implements MarkerToolOperations {
   public DeleteObjectsResult removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final boolean deleteFakeDir,
-      final List<Path> undeletedObjectsOnFailure,
-      final BulkOperationState operationState,
       final boolean quiet)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     return operationCallbacks.removeKeys(keysToDelete, deleteFakeDir,
-        undeletedObjectsOnFailure, operationState, quiet);
+        quiet);
   }
 
 }

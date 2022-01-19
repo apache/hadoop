@@ -21,11 +21,11 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Optional;
+import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.SdkBaseException;
-import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +34,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.FutureIO;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Class to provide lambda expression invocation of AWS operations.
@@ -135,6 +137,30 @@ public class Invoker {
           operation.apply();
           return null;
         });
+  }
+
+
+  /**
+   *
+   * Wait for a future, translating AmazonClientException into an IOException.
+   * @param action action to execute (used in error messages)
+   * @param path path of work (used in error messages)
+   * @param future future to await for
+   * @param <T> type of return value
+   * @return the result of the function call
+   * @throws IOException any IOE raised, or translated exception
+   * @throws RuntimeException any other runtime exception
+   */
+  @Retries.OnceTranslated
+  public static <T> T onceInTheFuture(String action,
+      String path,
+      final Future<T> future)
+      throws IOException {
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
+      return FutureIO.awaitFuture(future);
+    } catch (AmazonClientException e) {
+      throw S3AUtils.translateException(action, path, e);
+    }
   }
 
   /**

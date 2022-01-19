@@ -498,6 +498,7 @@ public abstract class Server {
   private Map<Integer, Listener> auxiliaryListenerMap;
   private Responder responder = null;
   private Handler[] handlers = null;
+  private final AtomicInteger numInProcessHandler = new AtomicInteger();
 
   private boolean logSlowRPC = false;
 
@@ -507,6 +508,10 @@ public abstract class Server {
    */
   protected boolean isLogSlowRPC() {
     return logSlowRPC;
+  }
+
+  public int getNumInProcessHandler() {
+    return numInProcessHandler.get();
   }
 
   /**
@@ -3080,6 +3085,7 @@ public abstract class Server {
 
         try {
           call = callQueue.take(); // pop the queue; maybe blocked here
+          numInProcessHandler.incrementAndGet();
           startTimeNanos = Time.monotonicNowNanos();
           if (alignmentContext != null && call.isCallCoordinated() &&
               call.getClientStateId() > alignmentContext.getLastSeenStateId()) {
@@ -3133,6 +3139,7 @@ public abstract class Server {
           }
         } finally {
           CurCall.set(null);
+          numInProcessHandler.decrementAndGet();
           IOUtils.cleanupWithLogger(LOG, traceScope);
           if (call != null) {
             updateMetrics(call, startTimeNanos, connDropped);

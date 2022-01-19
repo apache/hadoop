@@ -66,7 +66,7 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
 
   public ITestS3AMiscOperationCost(final String name,
       final boolean keepMarkers) {
-    super(false, keepMarkers, false);
+    super(keepMarkers);
   }
 
   /**
@@ -105,11 +105,13 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
     Path childDir = new Path(baseDir, "subdir/child");
     touch(fs, childDir);
 
+    // look at path to see if it is a file
+    // it is not: so LIST
     final ContentSummary summary = verifyMetrics(
         () -> getContentSummary(baseDir),
         with(INVOCATION_GET_CONTENT_SUMMARY, 1),
         with(AUDIT_SPAN_CREATION, 1),
-        whenRaw(FILE_STATUS_FILE_PROBE    // look at path to see if it is a file
+        always(FILE_STATUS_FILE_PROBE    // look at path to see if it is a file
             .plus(LIST_OPERATION)         // it is not: so LIST
             .plus(LIST_OPERATION)));       // and a LIST on the child dir
     Assertions.assertThat(summary.getDirectoryCount())
@@ -128,7 +130,7 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
         "", () -> getContentSummary(baseDir),
         with(INVOCATION_GET_CONTENT_SUMMARY, 1),
         with(AUDIT_SPAN_CREATION, 1),
-        whenRaw(FILE_STATUS_FILE_PROBE
+        always(FILE_STATUS_FILE_PROBE
             .plus(FILE_STATUS_FILE_PROBE)
             .plus(LIST_OPERATION)
             .plus(LIST_OPERATION)));

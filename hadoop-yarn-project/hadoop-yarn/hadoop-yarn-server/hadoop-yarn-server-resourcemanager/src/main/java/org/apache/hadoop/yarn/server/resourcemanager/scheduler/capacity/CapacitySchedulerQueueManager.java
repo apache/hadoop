@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +73,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     }
   }
 
-  private static final int MAXIMUM_DYNAMIC_QUEUE_DEPTH = 2;
   private static final QueueHook NOOP = new QueueHook();
   private CapacitySchedulerContext csContext;
   private final YarnAuthorizationProvider authorizer;
@@ -592,14 +592,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         && parentCandidate.length() != 0) {
       ++firstStaticParentDistance;
 
-      if (firstStaticParentDistance > MAXIMUM_DYNAMIC_QUEUE_DEPTH) {
-        throw new SchedulerDynamicEditException(
-            "Could not auto create queue " + queue.getFullPath()
-                + ". The distance of the LeafQueue from the first static " +
-                "ParentQueue is " + firstStaticParentDistance + ", which is " +
-                "above the limit.");
-      }
-
       if (firstExistingParent == null) {
         parentsToCreate.addFirst(parentCandidate.toString());
       }
@@ -612,6 +604,16 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       }
 
       firstExistingStaticParent = getQueue(parentCandidate.toString());
+    }
+
+    int maximumDepthOfStaticParent = csContext.getConfiguration().getMaximumAutoCreatedQueueDepth(
+        firstExistingStaticParent.getQueuePath());
+    if (firstStaticParentDistance > maximumDepthOfStaticParent) {
+      throw new SchedulerDynamicEditException(
+          "Could not auto create queue " + queue.getFullPath()
+              + ". The distance of the LeafQueue from the first static " +
+              "ParentQueue is " + firstStaticParentDistance + ", which is " +
+              "above the limit.");
     }
 
     if (!(firstExistingParent instanceof ParentQueue)) {

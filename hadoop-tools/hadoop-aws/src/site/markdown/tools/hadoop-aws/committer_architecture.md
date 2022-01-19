@@ -1818,7 +1818,7 @@ directory on the job commit, so is *very* expensive, and not something which
 we recommend when working with S3.
 
 
-To use a S3Guard committer, it must also be identified as the Parquet committer.
+To use an S3A committer, it must also be identified as the Parquet committer.
 The fact that instances are dynamically instantiated somewhat complicates the process.
 
 In early tests; we can switch committers for ORC output without making any changes
@@ -1927,12 +1927,6 @@ files.
 
 ### Security Risks of all committers
 
-
-#### Visibility
-
-[Obsolete] If S3Guard is used for storing metadata, then the metadata is visible to
-all users with read access. A malicious user with write access could delete
-entries of newly generated files, so they would not be visible.
 
 
 #### Malicious Serialized Data

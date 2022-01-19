@@ -496,7 +496,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
    */
   @Test
   public void testSelectUnsupportedInputFormat() throws Throwable {
-    describe("Request an unsupported input format");
+    describe("Request an Unsupported input format");
     FutureDataInputStreamBuilder builder = getFileSystem().openFile(csvPath)
         .must(SELECT_SQL, SELECT_ODD_ENTRIES)
         .must(SELECT_INPUT_FORMAT, "pptx");
@@ -510,7 +510,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
    */
   @Test
   public void testSelectUnsupportedOutputFormat() throws Throwable {
-    describe("Request a (currently) unsupported output format");
+    describe("Request a (currently) Unsupported output format");
     FutureDataInputStreamBuilder builder = getFileSystem().openFile(csvPath)
         .must(SELECT_SQL, SELECT_ODD_ENTRIES)
         .must(SELECT_INPUT_FORMAT, "csv")
@@ -567,7 +567,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     FutureDataInputStreamBuilder builder =
         getFileSystem().openFile(path("/"))
             .must(SELECT_SQL, SELECT_ODD_ENTRIES);
-    interceptFuture(FileNotFoundException.class,
+    interceptFuture(IOException.class,
         "", builder.build());
   }
 

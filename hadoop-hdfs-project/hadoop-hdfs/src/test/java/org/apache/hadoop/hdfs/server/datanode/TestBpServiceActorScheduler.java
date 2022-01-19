@@ -141,6 +141,23 @@ public class TestBpServiceActorScheduler {
     }
   }
 
+  /**
+   * force trigger full block report multi times, the next block report
+   * must be scheduled in the range (now + BLOCK_REPORT_INTERVAL_SEC).
+   */
+  @Test
+  public void testScheduleNextBlockReport4() {
+    for (final long now : getTimestamps()) {
+      Scheduler scheduler = makeMockScheduler(now);
+      for (int i = 0; i < getTimestamps().size(); ++i) {
+        scheduler.forceFullBlockReportNow();
+        scheduler.scheduleNextBlockReport();
+      }
+      assertTrue(scheduler.getNextBlockReportTime() - now >= 0);
+      assertTrue(scheduler.getNextBlockReportTime() - now <= BLOCK_REPORT_INTERVAL_MS);
+    }
+  }
+
   @Test
   public void testScheduleHeartbeat() {
     for (final long now : getTimestamps()) {

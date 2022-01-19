@@ -336,13 +336,6 @@ spark.sql.hive.metastore.sharedPrefixes com.amazonaws.
 You are trying to use session/temporary credentials and the session token
 supplied is considered invalid.
 
-```
-org.apache.hadoop.fs.s3a.AWSBadRequestException: initTable on bucket:
-  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
-  The security token included in the request is invalid
-  (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: UnrecognizedClientException)
-```
-
 This can surface if your configuration is setting the `fs.s3a.secret.key`,
 `fs.s3a.access.key` and `fs.s3a.session.key` correctly, but the
 AWS credential provider list set in `AWS_CREDENTIALS_PROVIDER` does not include
@@ -1030,32 +1023,6 @@ before versioning was enabled.
 See [Handling Read-During-Overwrite](./index.html#handling_read-during-overwrite)
 for more information.
 
-### `RemoteFileChangedException`: "File to rename not found on guarded S3 store after repeated attempts"
-
-A file being renamed and listed in the S3Guard table could not be found
-in the S3 bucket even after multiple attempts.
-
-Now that S3 is consistent, this is sign that the S3Guard table is out of sync with
-the S3 Data. 
-
-Fix: disable S3Guard: it is no longer needed.
-
-```
-org.apache.hadoop.fs.s3a.RemoteFileChangedException: copyFile(/sourcedir/missing, /destdir/)
- `s3a://example/sourcedir/missing': File not found on S3 after repeated attempts: `s3a://example/sourcedir/missing'
-at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFile(S3AFileSystem.java:3231)
-at org.apache.hadoop.fs.s3a.S3AFileSystem.access$700(S3AFileSystem.java:177)
-at org.apache.hadoop.fs.s3a.S3AFileSystem$RenameOperationCallbacksImpl.copyFile(S3AFileSystem.java:1368)
-at org.apache.hadoop.fs.s3a.impl.RenameOperation.copySourceAndUpdateTracker(RenameOperation.java:448)
-at org.apache.hadoop.fs.s3a.impl.RenameOperation.lambda$initiateCopy$0(RenameOperation.java:412)
-```
-
-If error occurs and the file is on S3, consider increasing the value of
-`fs.s3a.s3guard.consistency.retry.limit`.
-
-We also recommend using applications/application
-options which do  not rename files when committing work or when copying data
-to S3, but instead write directly to the final destination.
 
 ### Rename not behaving as "expected"
 
@@ -1453,30 +1420,6 @@ The user trying to use the KMS Key ID should have the right permissions to acces
 If not, then add permission(or IAM role) in "Key users" section by selecting the
 AWS-KMS CMK Key on AWS console.
 
-### S3-CSE cannot be used with S3Guard
-
-S3-CSE not supported for S3Guard enabled buckets.
-```
-org.apache.hadoop.fs.PathIOException: `s3a://test-bucket': S3-CSE cannot be used with S3Guard
-    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:543)
-    at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3460)
-    at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:172)
-    at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3565)
-    at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3512)
-    at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:539)
-    at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
-    at org.apache.hadoop.fs.shell.PathData.expandAsGlob(PathData.java:342)
-    at org.apache.hadoop.fs.shell.Command.expandArgument(Command.java:252)
-    at org.apache.hadoop.fs.shell.Command.expandArguments(Command.java:235)
-    at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:105)
-    at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
-    at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
-    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
-    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
-    at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
-```
-If you want to use S3Guard then disable S3-CSE or disable S3Guard if you want
-to use S3-CSE.
 
 ### <a name="not_all_bytes_were_read"></a> Message appears in logs "Not all bytes were read from the S3ObjectInputStream"
 
@@ -1552,6 +1495,56 @@ The specified bucket does not exist
     at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1712)
     at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1367)
 ```
+
+
+## <a name="s3guard"></a> S3Guard Errors
+
+S3Guard has been completely cut from the s3a connector
+[HADOOP-17409 Remove S3Guard - no longer needed](HADOOP-17409 Remove S3Guard - no longer needed).
+
+To avoid consistency problems with older releases, if an S3A filesystem is configured to use DynamoDB the filesystem
+will fail to initialize.
+
+### <a name="s3guard unsupported"></a> S3Guard is no longer needed/supported
+
+The option `fs.s3a.metadatastore.impl` or the per-bucket version has a value of
+`org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore`
+
+```
+org.apache.hadoop.fs.PathIOException: `s3a://production-london': S3Guard is no longer needed/supported,
+ yet s3a://production-london is configured to use DynamoDB as the S3Guard metadata store.
+ This is no longer needed or supported.
+ Origin of setting is fs.s3a.bucket.production-london.metadatastore.impl via [core-site.xml]
+        at org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard(S3Guard.java:111)
+        at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:540)
+        at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3459)
+        at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:171)
+        at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3564)
+        at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3511)
+        at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:538)
+        at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
+        at org.apache.hadoop.fs.shell.PathData.expandAsGlob(PathData.java:342)
+        at org.apache.hadoop.fs.shell.Command.expandArgument(Command.java:252)
+        at org.apache.hadoop.fs.shell.Command.expandArguments(Command.java:235)
+        at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:105)
+        at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
+        at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+        at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
+        at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
+        at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+
+ls: `s3a://production-london': S3Guard is no longer needed/supported,
+    yet s3a://production-london is configured to use DynamoDB as the S3Guard metadata store.
+    This is no longer needed or supported.
+    Origin of setting is fs.s3a.bucket.production-london.metadatastore.impl via [core-site.xml]
+```
+
+The error message will state the property from where it came, here `fs.s3a.bucket.production-london.metadatastore.impl` and which
+file the option was set if known, here `core-site.xml`.
+
+Fix: remove the configuration options enabling S3Guard.
+
+Consult the [S3Guard documentation](s3guard.html) for more details.
 
 ## <a name="other"></a> Other Errors
 
@@ -1925,44 +1918,6 @@ renaming() the directory tree or uploading files to the same location.
 Please don't do that. Given that the emulated directory rename and delete operations
 are not atomic, even without retries, multiple S3 clients working with the same
 paths can interfere with each other
-
-### <a name="retries"></a> Tuning S3Guard open/rename Retry Policies
-
-When the S3A connector attempts to open a file for which it has an entry in
-its database, it will retry if the desired file is not found. This is
-done if:
-
-* No file is found in S3.
-* There is a file but its version or etag is not consistent with S3Guard table.
-
-These can be symptoms of S3's eventual consistency, hence the retries.
-They can also be caused by changes having been made to the S3 Store without
-SGuard being kept up to date.
-
-For this reason, the number of retry events are limited.
-
-```xml
-<property>
-  <name>fs.s3a.s3guard.consistency.retry.limit</name>
-  <value>7</value>
-  <description>
-    Number of times to retry attempts to read/open/copy files when
-    S3Guard believes a specific version of the file to be available,
-    but the S3 request does not find any version of a file, or a different
-    version.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.consistency.retry.interval</name>
-  <value>2s</value>
-  <description>
-    Initial interval between attempts to retry operations while waiting for S3
-    to become consistent with the S3Guard data.
-    An exponential back-off is used here: every failure doubles the delay.
-  </description>
-</property>
-```
 
 ### <a name="aws-timeouts"></a> Tuning AWS request timeouts
 
