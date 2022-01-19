@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
@@ -310,7 +312,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DATANODE_DATA_DIR_KEY,
               DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
               DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
-              DFS_DATANODE_MAX_RECEIVER_THREADS_KEY));
+              DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
+              DFS_CACHEREPORT_INTERVAL_MSEC_KEY));
 
   public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
 
@@ -651,6 +654,8 @@ public class DataNode extends ReconfigurableBase
     }
     case DFS_DATANODE_MAX_RECEIVER_THREADS_KEY:
       return reconfDataXceiverParameters(property, newVal);
+    case DFS_CACHEREPORT_INTERVAL_MSEC_KEY:
+      return reconfCacheReportParameters(property, newVal);
     default:
       break;
     }
@@ -668,6 +673,23 @@ public class DataNode extends ReconfigurableBase
           Integer.parseInt(newVal));
       result = Integer.toString(threads);
       getXferServer().setMaxXceiverCount(threads);
+      LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return result;
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
+
+  private String reconfCacheReportParameters(String property, String newVal)
+      throws ReconfigurationException {
+    String result;
+    try {
+      LOG.info("Reconfiguring {} to {}", property, newVal);
+      Preconditions.checkNotNull(dnConf, "DNConf has not been initialized.");
+      long reportInterval = (newVal == null ? DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT :
+          Long.parseLong(newVal));
+      result = Long.toString(reportInterval);
+      dnConf.setCacheReportInterval(reportInterval);
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
     } catch (IllegalArgumentException e) {
