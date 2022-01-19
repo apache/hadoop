@@ -47,12 +47,17 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -73,6 +78,26 @@ public class TestBalancerWithHANameNodes {
 
   static {
     TestBalancer.initTestSetup();
+  }
+
+  public static void waitStoragesNoStale(MiniDFSCluster cluster,
+      ClientProtocol client, int nnIndex) throws Exception {
+    // trigger a full block report and wait all storages out of stale
+    cluster.triggerBlockReports();
+    DatanodeInfo[] dataNodes = client.getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
+    GenericTestUtils.waitFor(() -> {
+      BlockManager bm = cluster.getNamesystem(nnIndex).getBlockManager();
+      for (DatanodeInfo dn : dataNodes) {
+        DatanodeStorageInfo[] storageInfos = bm.getDatanodeManager()
+            .getDatanode(dn.getDatanodeUuid()).getStorageInfos();
+        for (DatanodeStorageInfo s : storageInfos) {
+          if (s.areBlockContentsStale()) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }, 300, 60000);
   }
 
   /**
@@ -103,13 +128,17 @@ public class TestBalancerWithHANameNodes {
       client = NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
           ClientProtocol.class).getProxy();
 
-      doTest(conf);
+      doTest(conf, true);
     } finally {
       cluster.shutdown();
     }
   }
 
   void doTest(Configuration conf) throws Exception {
+    doTest(conf, false);
+  }
+
+  void doTest(Configuration conf, boolean withHA) throws Exception {
     int numOfDatanodes = TEST_CAPACITIES.length;
     long totalCapacity = TestBalancer.sum(TEST_CAPACITIES);
     // fill up the cluster to be 30% full
@@ -123,6 +152,12 @@ public class TestBalancerWithHANameNodes {
       HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
           cluster.getNameNode(1));
     }
+
+    // all storages are stale after HA
+    if (withHA) {
+      waitStoragesNoStale(cluster, client, 0);
+    }
+
     // start up an empty node with the same capacity and on the same rack
     long newNodeCapacity = TestBalancer.CAPACITY; // new node's capacity
     String newNodeRack = TestBalancer.RACK2; // new node's rack
