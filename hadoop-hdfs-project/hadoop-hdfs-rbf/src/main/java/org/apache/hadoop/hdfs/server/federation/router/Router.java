@@ -312,16 +312,16 @@ public class Router extends CompositeService implements
 
   /**
    * Set the router id if not set to prevent RouterHeartbeatService
-   * update state store with a null router id
+   * update state store with a null router id.
    */
   private void checkRouterId() {
     if (this.routerId == null) {
-      InetSocketAddress rpcAddress = conf.getSocketAddr(
+      InetSocketAddress ConfRpcAddress = conf.getSocketAddr(
           RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
           RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
           RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
           RBFConfigKeys.DFS_ROUTER_RPC_PORT_DEFAULT);
-      setRpcServerAddress(rpcAddress);
+      setRpcServerAddress(ConfRpcAddress);
     }
   }
 
