@@ -195,7 +195,9 @@ public class Router extends CompositeService implements
       addService(this.rpcServer);
       this.setRpcServerAddress(rpcServer.getRpcAddress());
     }
+
     checkRouterId();
+
     if (conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_ADMIN_ENABLE,
         RBFConfigKeys.DFS_ROUTER_ADMIN_ENABLE_DEFAULT)) {
@@ -308,19 +310,18 @@ public class Router extends CompositeService implements
     }
   }
 
+  /**
+   * Set the router id if not set to prevent RouterHeartbeatService
+   * update state store with a null router id
+   */
   private void checkRouterId() {
     if (this.routerId == null) {
-      try {
-        String hostname = InetAddress.getLocalHost().getHostName();
-        InetSocketAddress confRpcAddress = conf.getSocketAddr(
-                RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
-                RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
-                RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
-                RBFConfigKeys.DFS_ROUTER_RPC_PORT_DEFAULT);
-        setRouterId(hostname + ":" + confRpcAddress.getPort());
-      } catch (UnknownHostException ex) {
-        LOG.error("Cannot set unique router ID, address not resolvable");
-      }
+      InetSocketAddress rpcAddress = conf.getSocketAddr(
+          RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
+          RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
+          RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
+          RBFConfigKeys.DFS_ROUTER_RPC_PORT_DEFAULT);
+      setRpcServerAddress(rpcAddress);
     }
   }
 
