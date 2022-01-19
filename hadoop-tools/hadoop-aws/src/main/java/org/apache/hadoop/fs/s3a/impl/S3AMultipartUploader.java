@@ -38,13 +38,12 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BBPartHandle;
 import org.apache.hadoop.fs.BBUploadHandle;
 import org.apache.hadoop.fs.PartHandle;
@@ -55,8 +54,8 @@ import org.apache.hadoop.fs.UploadHandle;
 import org.apache.hadoop.fs.impl.AbstractMultipartUploader;
 import org.apache.hadoop.fs.s3a.WriteOperations;
 import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 
@@ -81,16 +80,6 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
   private final S3AMultipartUploaderStatistics statistics;
 
   /**
-   * Bulk state; demand created and then retained.
-   */
-  private BulkOperationState operationState;
-
-  /**
-   * Was an operation state requested but not returned?
-   */
-  private boolean noOperationState;
-
-  /**
    * Instatiate; this is called by the builder.
    * @param builder builder
    * @param writeOperations writeOperations
@@ -110,14 +99,6 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
   }
 
   @Override
-  public void close() throws IOException {
-    if (operationState != null) {
-      operationState.close();
-    }
-    super.close();
-  }
-
-  @Override
   public IOStatistics getIOStatistics() {
     return statistics.getIOStatistics();
   }
@@ -131,22 +112,6 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
         ioStatisticsToString(statistics.getIOStatistics()));
     sb.append('}');
     return sb.toString();
-  }
-
-  /**
-   * Retrieve the operation state; create one on demand if needed
-   * <i>and there has been no unsuccessful attempt to create one.</i>
-   * @return an active operation state.
-   * @throws IOException failure
-   */
-  private synchronized BulkOperationState retrieveOperationState()
-      throws IOException {
-    if (operationState == null && !noOperationState) {
-      operationState = writeOperations.initiateOperation(getBasePath(),
-          BulkOperationState.OperationType.Upload);
-      noOperationState = operationState != null;
-    }
-    return operationState;
   }
 
   @Override
@@ -238,7 +203,6 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
         "Duplicate PartHandles");
 
     // retrieve/create operation state for scalability of completion.
-    final BulkOperationState state = retrieveOperationState();
     long finalLen = totalLength;
     return context.submit(new CompletableFuture<>(),
         () -> {
@@ -247,8 +211,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
                   key,
                   uploadIdStr,
                   eTags,
-                  finalLen,
-                  state);
+                  finalLen
+              );
 
           byte[] eTag = result.getETag().getBytes(Charsets.UTF_8);
           statistics.uploadCompleted();

@@ -242,7 +242,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     } catch (YarnException e) {
       Assert.assertTrue(
           e.getMessage().startsWith("Missing submitApplication request or "
-              + "applicationSubmissionContex information."));
+              + "applicationSubmissionContext information."));
     }
     try {
       interceptor.submitApplication(SubmitApplicationRequest.newInstance(null));
@@ -250,7 +250,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     } catch (YarnException e) {
       Assert.assertTrue(
           e.getMessage().startsWith("Missing submitApplication request or "
-              + "applicationSubmissionContex information."));
+              + "applicationSubmissionContext information."));
     }
     try {
       ApplicationSubmissionContext context = ApplicationSubmissionContext
@@ -262,7 +262,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     } catch (YarnException e) {
       Assert.assertTrue(
           e.getMessage().startsWith("Missing submitApplication request or "
-              + "applicationSubmissionContex information."));
+              + "applicationSubmissionContext information."));
     }
   }
 
