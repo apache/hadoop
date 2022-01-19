@@ -358,7 +358,7 @@ public class TestAppManager extends AppManagerTestBase{
   }
 
   @Test
-  public void testQueueSubmitWithACLsEnabledWithQueueMappingForAutoCreatedQueue()
+  public void testQueueSubmitWithACLsEnabledWithQueueMappingForLegacyAutoCreatedQueue()
       throws IOException, YarnException {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
