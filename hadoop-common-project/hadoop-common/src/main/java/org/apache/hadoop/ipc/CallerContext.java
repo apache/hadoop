@@ -17,12 +17,6 @@
  */
 package org.apache.hadoop.ipc;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -30,8 +24,19 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY;
 
 /**
  * A class defining the caller context for auditing coarse granularity
@@ -43,10 +48,11 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_C
 @InterfaceStability.Evolving
 public final class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
+
   /** The caller context.
    *
-   * It will be truncated if it exceeds the maximum allowed length in
-   * server. The default length limit is
+   * It will be truncated if it exceeds the maximum allowed length.
+   * The default length limit is
    * {@link org.apache.hadoop.fs.CommonConfigurationKeysPublic#HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT}
    */
   private final String context;
@@ -54,15 +60,15 @@ public final class CallerContext {
   /** The caller's signature for validation.
    *
    * The signature is optional. The null or empty signature will be abandoned.
-   * If the signature exceeds the maximum allowed length in server, the caller
-   * context will be abandoned. The default length limit is
+   * If the signature exceeds the maximum allowed length, the caller context
+   * will be abandoned. The default length limit is
    * {@link org.apache.hadoop.fs.CommonConfigurationKeysPublic#HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT}
    */
   private final byte[] signature;
 
-  private CallerContext(Builder builder) {
-    this.context = builder.getContext();
-    this.signature = builder.getSignature();
+  private CallerContext(String context, byte[] signature) {
+    this.context = context;
+    this.signature = signature;
   }
 
   public String getContext() {
@@ -114,114 +120,160 @@ public final class CallerContext {
     return str;
   }
 
-  /** The caller context builder. */
-  public static final class Builder {
+  /**
+   * The caller context related configs.
+   * Use singleton to avoid creating new instance every time.
+   */
+  private static final class Configs {
+
+    /** the maximum length limit for a context string*/
+    private int contextMaxLen;
+    /** the maximum length limit for a signature byte array*/
+    private int signatureMaxLen;
+    /** the filed separator for a context string */
+    private String fieldSeparator;
+
     private static final String KEY_VALUE_SEPARATOR = ":";
+
     /**
      * The illegal separators include '\t', '\n', '='.
-     * User should not set illegal separator.
+     * If the configured separator is illegal, use default
+     * {@link org.apache.hadoop.fs.CommonConfigurationKeysPublic#HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT}.
      */
     private static final Set<String> ILLEGAL_SEPARATORS =
         Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList("\t", "\n", "=")));
-    private final String fieldSeparator;
-    private final StringBuilder sb = new StringBuilder();
+
+    private static volatile Configs INSTANCE;
+
+    private Configs(Configuration conf) {
+      this.init(conf);
+    }
+
+    private void init(Configuration conf) {
+      this.contextMaxLen = conf.getInt(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY,
+          HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT);
+      if (this.contextMaxLen < 0) {
+        this.contextMaxLen = HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT;
+      }
+
+      this.signatureMaxLen =
+          conf.getInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY,
+              HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT);
+      if (this.signatureMaxLen < 0) {
+        this.signatureMaxLen = HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT;
+      }
+
+      this.fieldSeparator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
+          HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
+      if (ILLEGAL_SEPARATORS.contains(fieldSeparator)) {
+        this.fieldSeparator = HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
+      }
+    }
+
+    private static Configs getInstance(Configuration conf) {
+      if (INSTANCE == null) {
+        synchronized (Configs.class) {
+          if (INSTANCE == null) {
+            if (conf == null) {
+              conf = new Configuration();
+            }
+            INSTANCE = new Configs(conf);
+          }
+        }
+      }
+      return INSTANCE;
+    }
+  }
+
+  /** The caller context builder. */
+  public static final class Builder {
+
     private byte[] signature;
+    private final Configs configs;
+    private final StringBuilder ctx = new StringBuilder();
 
     public Builder(String context) {
-      this(context, HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
+      this(context, null);
     }
 
     public Builder(String context, Configuration conf) {
-      if (isValid(context)) {
-        sb.append(context);
+      if (isValidFiled(context)) {
+        ctx.append(context);
       }
-      fieldSeparator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
-          HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
-      checkFieldSeparator(fieldSeparator);
+      configs = Configs.getInstance(conf);
     }
 
-    public Builder(String context, String separator) {
-      if (isValid(context)) {
-        sb.append(context);
-      }
-      fieldSeparator = separator;
-      checkFieldSeparator(fieldSeparator);
-    }
-
-    /**
-     * Check whether the separator is legal.
-     * The illegal separators include '\t', '\n', '='.
-     * Throw IllegalArgumentException if the separator is Illegal.
-     * @param separator the separator of fields.
-     */
-    private void checkFieldSeparator(String separator) {
-      if (ILLEGAL_SEPARATORS.contains(separator)) {
-        throw new IllegalArgumentException("Illegal field separator: "
-            + separator);
+    @VisibleForTesting
+    Builder(String context, Configuration conf, boolean refresh) {
+      this(context, null);
+      if (refresh) {
+        configs.init(conf); // refresh configs for testing
       }
     }
 
     /**
      * Whether the field is valid.
-     * @param field one of the fields in context.
+     * @param field target field.
      * @return true if the field is not null or empty.
      */
-    private boolean isValid(String field) {
+    private boolean isValidFiled(String field) {
       return field != null && field.length() > 0;
     }
 
     public Builder setSignature(byte[] signature) {
-      if (signature != null && signature.length > 0) {
+      if (isSignatureValid(signature)) {
         this.signature = Arrays.copyOf(signature, signature.length);
       }
       return this;
     }
 
     /**
-     * Get the context.
-     * For example, the context is "key1:value1,key2:value2".
-     * @return the valid context or null.
+     * Whether the signature is valid.
+     * @param signature target signature.
+     * @return true if the signature is not null and the length of signature
+     *         is greater than 0 and less than or equal to the length limit.
      */
-    public String getContext() {
-      return sb.length() > 0 ? sb.toString() : null;
+    private boolean isSignatureValid(byte[] signature) {
+      return signature != null && signature.length > 0
+          && signature.length <= configs.signatureMaxLen;
     }
 
     /**
-     * Get the signature.
-     * @return the signature.
-     */
-    public byte[] getSignature() {
-      return signature;
-    }
-
-    /**
-     * Append new field to the context.
+     * Append new field to the context if the filed is not empty and length
+     * of the context is not exceeded limit.
      * @param field one of fields to append.
      * @return the builder.
      */
     public Builder append(String field) {
-      if (isValid(field)) {
-        if (sb.length() > 0) {
-          sb.append(fieldSeparator);
+      if (isValidFiled(field) && !isContextLengthExceedLimit()) {
+        if (ctx.length() > 0) {
+          ctx.append(configs.fieldSeparator);
         }
-        sb.append(field);
+        ctx.append(field);
       }
       return this;
     }
 
+    private boolean isContextLengthExceedLimit() {
+      return ctx.length() > configs.contextMaxLen;
+    }
+
     /**
-     * Append new field which contains key and value to the context.
+     * Append new field which contains key and value to the context if the
+     * filed is not empty and length of the context is not exceeded limit.
+     *
      * @param key the key of field.
      * @param value the value of field.
      * @return the builder.
      */
     public Builder append(String key, String value) {
-      if (isValid(key) && isValid(value)) {
-        if (sb.length() > 0) {
-          sb.append(fieldSeparator);
+      if (isValidFiled(key) && isValidFiled(value)
+          && !isContextLengthExceedLimit()) {
+        if (ctx.length() > 0) {
+          ctx.append(configs.fieldSeparator);
         }
-        sb.append(key).append(KEY_VALUE_SEPARATOR).append(value);
+        ctx.append(key).append(Configs.KEY_VALUE_SEPARATOR).append(value);
       }
       return this;
     }
@@ -234,20 +286,18 @@ public final class CallerContext {
      * @return the builder.
      */
     public Builder appendIfAbsent(String key, String value) {
-      if (sb.toString().contains(key + KEY_VALUE_SEPARATOR)) {
+      if (ctx.toString().contains(key + Configs.KEY_VALUE_SEPARATOR)) {
         return this;
       }
-      if (isValid(key) && isValid(value)) {
-        if (sb.length() > 0) {
-          sb.append(fieldSeparator);
-        }
-        sb.append(key).append(KEY_VALUE_SEPARATOR).append(value);
-      }
-      return this;
+      return append(key, value);
     }
 
     public CallerContext build() {
-      return new CallerContext(this);
+      String context = isContextLengthExceedLimit() ?
+          ctx.substring(0, configs.contextMaxLen) :
+          ctx.toString();
+
+      return new CallerContext(context, signature);
     }
   }
 

@@ -17,22 +17,28 @@
  */
 package org.apache.hadoop.ipc;
 
-import org.apache.hadoop.conf.Configuration;
+import java.nio.charset.StandardCharsets;
+
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY;
 
 public class TestCallerContext {
   @Test
   public void testBuilderAppend() {
     Configuration conf = new Configuration();
     conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "$");
-    CallerContext.Builder builder = new CallerContext.Builder(null, conf);
-    CallerContext context = builder.append("context1")
-        .append("context2").append("key3", "value3").build();
-    Assert.assertEquals(true,
-        context.getContext().contains("$"));
+    CallerContext.Builder builder = new CallerContext.Builder(null, conf, true);
+    CallerContext context =
+        builder.append("context1").append("context2").append("key3", "value3")
+            .build();
+    Assert.assertEquals(true, context.getContext().contains("$"));
     String[] items = context.getContext().split("\\$");
     Assert.assertEquals(3, items.length);
     Assert.assertEquals("key3:value3", items[2]);
@@ -46,17 +52,15 @@ public class TestCallerContext {
   public void testBuilderAppendIfAbsent() {
     Configuration conf = new Configuration();
     conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "$");
-    CallerContext.Builder builder = new CallerContext.Builder(null, conf);
+    CallerContext.Builder builder = new CallerContext.Builder(null, conf, true);
     builder.append("key1", "value1");
-    Assert.assertEquals("key1:value1",
-        builder.build().getContext());
+    Assert.assertEquals("key1:value1", builder.build().getContext());
 
     // Append an existed key with different value.
     builder.appendIfAbsent("key1", "value2");
     String[] items = builder.build().getContext().split("\\$");
     Assert.assertEquals(1, items.length);
-    Assert.assertEquals("key1:value1",
-        builder.build().getContext());
+    Assert.assertEquals("key1:value1", builder.build().getContext());
 
     // Append an absent key.
     builder.appendIfAbsent("key2", "value2");
@@ -73,12 +77,76 @@ public class TestCallerContext {
         builder.build().getContext());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test()
   public void testNewBuilder() {
     Configuration conf = new Configuration();
     // Set illegal separator.
     conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "\t");
-    CallerContext.Builder builder = new CallerContext.Builder(null, conf);
-    builder.build();
+    CallerContext.Builder builder =
+        new CallerContext.Builder("filed1", conf, true);
+    builder.append("filed2");
+    String context = builder.build().getContext();
+    // assert use default separator ',' instead
+    Assert.assertEquals(context, "filed1,filed2");
   }
+
+  @Test()
+  public void testContextLengthExceedLimit() {
+
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, "16");
+    conf.set(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, "8");
+    CallerContext.Builder builder =
+        new CallerContext.Builder("filed1", conf, true);
+    builder.setSignature("sig1".getBytes(StandardCharsets.UTF_8));
+    CallerContext context = builder.build();
+
+    Assert.assertEquals(context.getContext().length(), 6);
+    Assert.assertEquals(context.getSignature().length, 4);
+
+    builder = new CallerContext.Builder("filed1", conf, true);
+    builder.append("filed2").append("filed3").append("filed4");
+    builder.setSignature("signature".getBytes(StandardCharsets.UTF_8));
+    context = builder.build();
+
+    // assert context was truncated
+    Assert.assertEquals(context.getContext().length(), 16);
+    // assert signature was abandoned
+    Assert.assertNull(context.getSignature());
+  }
+
+  @Test()
+  public void testWrongLengthLimitConfigs() {
+
+    Configuration conf = new Configuration();
+
+    // Set illegal size limit.
+    conf.set(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, "-1");
+    conf.set(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, "-1");
+
+    CallerContext.Builder builder =
+        new CallerContext.Builder("filed1", conf, true);
+    builder.setSignature("signature1".getBytes(StandardCharsets.UTF_8));
+    CallerContext context = builder.build();
+
+    Assert.assertEquals(context.getContext().length(), 6);
+    Assert.assertEquals(context.getSignature().length, 10);
+
+    StringBuilder sig = new StringBuilder();
+    builder = new CallerContext.Builder("", conf, true);
+    for (int i = 0; i < 20; i++) {
+      builder.append("filed").append(String.valueOf(i));
+      sig.append("s").append(i);
+    }
+
+    builder.setSignature(sig.toString().getBytes(StandardCharsets.UTF_8));
+    context = builder.build();
+
+    // assert context was truncated to default length
+    Assert.assertEquals(context.getContext().length(),
+        HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT);
+    // assert signature was abandoned
+    Assert.assertNull(context.getSignature());
+  }
+
 }

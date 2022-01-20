@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
@@ -124,8 +122,6 @@ public class RouterRpcClient {
   private final RetryPolicy retryPolicy;
   /** Optional perf monitor. */
   private final RouterRpcMonitor rpcMonitor;
-  /** Field separator of CallerContext. */
-  private final String contextFieldSeparator;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -154,9 +150,6 @@ public class RouterRpcClient {
     this.namenodeResolver = resolver;
 
     Configuration clientConf = getClientConfiguration(conf);
-    this.contextFieldSeparator =
-        clientConf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
-            HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     this.connectionManager = new ConnectionManager(clientConf);
     this.connectionManager.start();
     this.routerRpcFairnessPolicyController =
@@ -595,7 +588,7 @@ public class RouterRpcClient {
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
     CallerContext.setCurrent(
-        new CallerContext.Builder(origContext, contextFieldSeparator)
+        new CallerContext.Builder(origContext)
             .appendIfAbsent(CLIENT_IP_STR, Server.getRemoteAddress())
             .appendIfAbsent(CLIENT_PORT_STR,
                 Integer.toString(Server.getRemotePort()))

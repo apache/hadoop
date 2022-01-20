@@ -22,12 +22,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -402,7 +396,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
 
   private static final String CLIENT_PORT_STR = "clientPort";
-  private final String contextFieldSeparator;
 
   boolean isAuditEnabled() {
     return (!isDefaultAuditLogger || auditLog.isInfoEnabled())
@@ -466,7 +459,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String origContext = ctx == null ? null : ctx.getContext();
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
       CallerContext.setCurrent(
-          new CallerContext.Builder(origContext, contextFieldSeparator)
+          new CallerContext.Builder(origContext)
               .append(CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
               .setSignature(origSignature)
               .build());
@@ -865,9 +858,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     auditLogWithRemotePort =
         conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY,
             DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_DEFAULT);
-    this.contextFieldSeparator =
-        conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
-            HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
     cond = fsLock.newWriteLockCondition();
     cpLock = new ReentrantLock();
@@ -8724,12 +8714,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       isCallerContextEnabled = conf.getBoolean(
           HADOOP_CALLER_CONTEXT_ENABLED_KEY,
           HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT);
-      callerContextMaxLen = conf.getInt(
-          HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY,
-          HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT);
-      callerSignatureMaxLen = conf.getInt(
-          HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY,
-          HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT);
       logTokenTrackingId = conf.getBoolean(
           DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY,
           DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT);
@@ -8780,24 +8764,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
           sb.append(trackingId);
         }
-        sb.append("\t").append("proto=")
-            .append(Server.getProtocol());
+        sb.append("\t").append("proto=").append(Server.getProtocol());
         if (isCallerContextEnabled &&
             callerContext != null &&
             callerContext.isContextValid()) {
           sb.append("\t").append("callerContext=");
-          String context = escapeJava(callerContext.getContext());
-          if (context.length() > callerContextMaxLen) {
-            sb.append(context, 0, callerContextMaxLen);
-          } else {
-            sb.append(context);
-          }
-          if (callerContext.getSignature() != null &&
-              callerContext.getSignature().length > 0 &&
-              callerContext.getSignature().length <= callerSignatureMaxLen) {
-            sb.append(":")
-                .append(escapeJava(new String(callerContext.getSignature(),
-                CallerContext.SIGNATURE_ENCODING)));
+          sb.append(escapeJava(callerContext.getContext()));
+
+          if (callerContext.getSignature() != null
+              && callerContext.getSignature().length > 0) {
+            sb.append(":").append(escapeJava(
+                new String(callerContext.getSignature(),
+                    CallerContext.SIGNATURE_ENCODING)));
           }
         }
         logAuditMessage(sb.toString());
