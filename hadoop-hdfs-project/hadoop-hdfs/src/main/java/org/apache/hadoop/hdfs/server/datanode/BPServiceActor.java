@@ -1166,6 +1166,11 @@ class BPServiceActor implements Runnable {
       return (monotonicNow() - lastBlockReportTime)/1000;
     }
 
+    @VisibleForTesting
+    long getNextBlockReportTime() {
+      return nextBlockReportTime;
+    }
+
     long scheduleNextLifeline(long baseTime) {
       // Numerical overflow is possible here and is okay.
       nextLifelineTime = baseTime + lifelineIntervalMs;
