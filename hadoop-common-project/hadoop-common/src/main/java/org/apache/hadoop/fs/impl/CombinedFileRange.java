@@ -59,12 +59,12 @@ public class CombinedFileRange extends FileRangeImpl {
    */
   public boolean merge(long otherOffset, long otherEnd, FileRange other,
                        int minSeek, int maxSize) {
-    long end = offset + length;
+    long end = this.getOffset() + this.getLength();
     long newEnd = Math.max(end, otherEnd);
-    if (otherOffset - end >= minSeek || newEnd - offset > maxSize) {
+    if (otherOffset - end >= minSeek || newEnd - this.getOffset() > maxSize) {
       return false;
     }
-    length = (int) (newEnd - offset);
+    this.setLength((int) (newEnd - this.getOffset()));
     underlying.add(other);
     return true;
   }

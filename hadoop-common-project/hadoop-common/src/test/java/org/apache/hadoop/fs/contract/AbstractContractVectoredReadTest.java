@@ -50,12 +50,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractContractVectoredReadTest.class);
 
-  public static final int DATASET_LEN = 1024;
+  public static final int DATASET_LEN = 64*1024;
   private static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   private static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
   private static final String VECTORED_READ_FILE_1MB_NAME = "vectored_file_1M.txt";
   private static final byte[] DATASET_MB = ContractTestUtils.dataset(1024 * 1024, 'a', 256);
-
 
   private final IntFunction<ByteBuffer> allocate;
 
@@ -120,6 +119,71 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
+  /**
+   * As the minimum seek value is 4*1024,none of the below ranges
+   * will get merged.
+   */
+  @Test
+  public void testDisjointRanges() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(0, 100));
+    fileRanges.add(new FileRangeImpl(4 *1024 + 101, 100));
+    fileRanges.add(new FileRangeImpl(16*1024 + 101, 100));
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges);
+    }
+  }
+
+  /**
+   * As the minimum seek value is 4*1024, all the below ranges
+   * will get merged into one.
+   */
+  @Test
+  public void testAllRangesMergedIntoOne() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(0, 100));
+    fileRanges.add(new FileRangeImpl(4 *1024 - 101, 100));
+    fileRanges.add(new FileRangeImpl(8*1024 - 101, 100));
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges);
+    }
+  }
+
+  /**
+   * As the minimum seek value is 4*1024, the first three ranges will be
+   * merged into and other two will remain as it is.
+   */
+  @Test
+  public void testSomeRangesMergedSomeUnmerged() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(8*1024, 100));
+    fileRanges.add(new FileRangeImpl(14*1024, 100));
+    fileRanges.add(new FileRangeImpl(10*1024, 100));
+    fileRanges.add(new FileRangeImpl(2 *1024 - 101, 100));
+    fileRanges.add(new FileRangeImpl(40*1024, 1024));
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges);
+    }
+  }
+
+  @Test(timeout = 1800000)
+  public void testSameRanges() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(8*1024, 1000));
+    fileRanges.add(new FileRangeImpl(8*1024, 1000));
+    fileRanges.add(new FileRangeImpl(8*1024, 1000));
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges);
+    }
+  }
 
   @Test
   public void testVectoredRead1MBFile()  throws Exception {
@@ -142,8 +206,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   public void testOverlappingRanges() throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(new FileRangeImpl(0, 100));
-    fileRanges.add(new FileRangeImpl(90, 50));
+    fileRanges.add(new FileRangeImpl(0, 1000));
+    fileRanges.add(new FileRangeImpl(90, 900));
+    fileRanges.add(new FileRangeImpl(50, 900));
+    fileRanges.add(new FileRangeImpl(10, 980));
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges);
@@ -244,7 +310,17 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     fileRanges.add(new FileRangeImpl(90, 50));
     return fileRanges;
   }
-  protected void validateVectoredReadResult(List<FileRange> fileRanges) {
+
+  protected void validateVectoredReadResult(List<FileRange> fileRanges)
+          throws ExecutionException, InterruptedException {
+    CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
+    int i = 0;
+    for (FileRange res : fileRanges) {
+      completableFutures[i++] = res.getData();
+    }
+    CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
+    combinedFuture.get();
+
     for (FileRange res : fileRanges) {
       CompletableFuture<ByteBuffer> data = res.getData();
       try {

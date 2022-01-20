@@ -70,10 +70,10 @@ public class VectoredReadBenchmark {
   public static class FileSystemChoice {
 
     @Param({"local", "raw"})
-    String fileSystemKind;
+    private String fileSystemKind;
 
-    Configuration conf;
-    FileSystem fs;
+    private Configuration conf;
+    private FileSystem fs;
 
     @Setup(Level.Trial)
     public void setup() {
@@ -90,9 +90,9 @@ public class VectoredReadBenchmark {
   @State(Scope.Thread)
   public static class BufferChoice {
     @Param({"direct", "array"})
-    String bufferKind;
+    private String bufferKind;
 
-    IntFunction<ByteBuffer> allocate;
+    private IntFunction<ByteBuffer> allocate;
     @Setup(Level.Trial)
     public void setup() {
       allocate = "array".equals(bufferKind)
@@ -160,7 +160,8 @@ public class VectoredReadBenchmark {
     }
   }
 
-  static class FileRangeCallback extends FileRangeImpl implements CompletionHandler<Integer, FileRangeCallback> {
+  static class FileRangeCallback extends FileRangeImpl implements
+          CompletionHandler<Integer, FileRangeCallback> {
     private final AsynchronousFileChannel channel;
     private final ByteBuffer buffer;
     private int completed = 0;
@@ -181,8 +182,8 @@ public class VectoredReadBenchmark {
         failed(new EOFException("Read past end of file"), this);
       }
       completed += bytes;
-      if (completed < length) {
-        channel.read(buffer, offset + completed, this, this);
+      if (completed < this.getLength()) {
+        channel.read(buffer, this.getOffset() + completed, this, this);
       } else {
         buffer.flip();
         joiner.finish();
@@ -191,7 +192,7 @@ public class VectoredReadBenchmark {
 
     @Override
     public void failed(Throwable exc, FileRangeCallback attachment) {
-       joiner.failed(exc, this);
+      joiner.failed(exc, this);
     }
   }
 
@@ -231,6 +232,7 @@ public class VectoredReadBenchmark {
   /**
    * Run the benchmarks.
    * @param args the pathname of a 100MB data file
+   * @throws Exception any ex.
    */
   public static void main(String[] args) throws Exception {
     OptionsBuilder opts = new OptionsBuilder();

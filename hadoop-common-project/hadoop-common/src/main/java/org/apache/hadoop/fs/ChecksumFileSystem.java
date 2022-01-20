@@ -352,10 +352,10 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       IntBuffer sums = sumsBytes.asIntBuffer();
       sums.position(offset / FSInputChecker.CHECKSUM_SIZE);
       ByteBuffer current = data.duplicate();
-      int NUM_CHUNKS = data.remaining() / bytesPerSum;
+      int numChunks = data.remaining() / bytesPerSum;
       CRC32 crc = new CRC32();
       // check each chunk to ensure they match
-      for(int c = 0; c < NUM_CHUNKS; ++c) {
+      for(int c = 0; c < numChunks; ++c) {
         // set the buffer position and the limit
         current.limit((c + 1) * bytesPerSum);
         current.position(c * bytesPerSum);

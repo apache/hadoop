@@ -47,27 +47,27 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
   @Test
   public void testSliceTo() {
-    final int SIZE = 64 * 1024;
-    ByteBuffer buffer = ByteBuffer.allocate(SIZE);
+    final int size = 64 * 1024;
+    ByteBuffer buffer = ByteBuffer.allocate(size);
     // fill the buffer with data
     IntBuffer intBuffer = buffer.asIntBuffer();
-    for(int i=0; i < SIZE / Integer.BYTES; ++i) {
+    for(int i=0; i < size / Integer.BYTES; ++i) {
       intBuffer.put(i);
     }
     // ensure we don't make unnecessary slices
     ByteBuffer slice = VectoredReadUtils.sliceTo(buffer, 100,
-        new FileRangeImpl(100, SIZE));
+        new FileRangeImpl(100, size));
     Assertions.assertThat(buffer)
             .describedAs("Slicing on the same offset shouldn't " +
                     "create a new buffer")
             .isEqualTo(slice);
 
     // try slicing a range
-    final int OFFSET = 100;
-    final int SLICE_START = 1024;
-    final int SLICE_LENGTH = 16 * 1024;
-    slice = VectoredReadUtils.sliceTo(buffer, OFFSET,
-        new FileRangeImpl(OFFSET + SLICE_START, SLICE_LENGTH));
+    final int offset = 100;
+    final int sliceStart = 1024;
+    final int sliceLength = 16 * 1024;
+    slice = VectoredReadUtils.sliceTo(buffer, offset,
+        new FileRangeImpl(offset + sliceStart, sliceLength));
     // make sure they aren't the same, but use the same backing data
     Assertions.assertThat(buffer)
             .describedAs("Slicing on new offset should " +
@@ -79,8 +79,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             .isEqualTo(slice.array());
     // test the contents of the slice
     intBuffer = slice.asIntBuffer();
-    for(int i=0; i < SLICE_LENGTH / Integer.BYTES; ++i) {
-      assertEquals("i = " + i, i + SLICE_START / Integer.BYTES, intBuffer.get());
+    for(int i=0; i < sliceLength / Integer.BYTES; ++i) {
+      assertEquals("i = " + i, i + sliceStart / Integer.BYTES, intBuffer.get());
     }
   }
 
@@ -248,7 +248,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertFutureFailedExceptionally(result);
   }
 
-  static void runReadRangeFromPositionedReadable(IntFunction<ByteBuffer> allocate) throws Exception {
+  static void runReadRangeFromPositionedReadable(IntFunction<ByteBuffer> allocate)
+          throws Exception {
     PositionedReadable stream = Mockito.mock(PositionedReadable.class);
     Mockito.doAnswer(invocation -> {
       byte b=0;

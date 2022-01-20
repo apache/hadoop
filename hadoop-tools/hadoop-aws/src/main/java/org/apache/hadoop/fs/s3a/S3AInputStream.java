@@ -169,6 +169,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param ctx operation context
    * @param s3Attributes object attributes
    * @param client S3 client to use
+   * @param unboundedThreadPool thread pool to use.
    */
   public S3AInputStream(S3AReadOpContext ctx,
                         S3ObjectAttributes s3Attributes,
@@ -836,7 +837,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       }
     } else {
       LOG.debug("Trying to merge the ranges as they are not disjoint");
-      List<CombinedFileRange> combinedFileRanges = sortAndMergeRanges(ranges, 1, minSeekForVectorReads(),
+      List<CombinedFileRange> combinedFileRanges = sortAndMergeRanges(ranges,
+              1, minSeekForVectorReads(),
               maxReadSizeForVectorReads());
       LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
               ranges.size(), combinedFileRanges.size());
@@ -845,7 +847,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         ByteBuffer buffer = allocate.apply(combinedFileRange.getLength());
         combinedFileRange.setData(result);
         unboundedThreadPool.submit(
-                () -> readCombinedRangeAndUpdateChildren(combinedFileRange, buffer));
+          () -> readCombinedRangeAndUpdateChildren(combinedFileRange, buffer));
       }
     }
     LOG.debug("Finished submitting vectored read to threadpool" +
@@ -862,11 +864,17 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
                                                   ByteBuffer buffer) {
     readSingleRange(combinedFileRange, buffer);
     try {
+      // In case of single range we return the original byte buffer else
+      // we return slice byte buffers for each child ranges.
       ByteBuffer combinedBuffer = FutureIOSupport.awaitFuture(combinedFileRange.getData());
-      for(FileRange child : combinedFileRange.getUnderlying()) {
-        updateOriginalRange(child, combinedBuffer, combinedFileRange);
+      if (combinedFileRange.getUnderlying().size() == 1) {
+        combinedFileRange.getUnderlying().get(0).getData().complete(combinedBuffer);
+      } else {
+        for (FileRange child : combinedFileRange.getUnderlying()) {
+          updateOriginalRange(child, combinedBuffer, combinedFileRange);
+        }
       }
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       LOG.warn("Exception occurred while reading combined range from file {}", pathStr, ex);
       for(FileRange child : combinedFileRange.getUnderlying()) {
         child.getData().completeExceptionally(ex);
@@ -884,11 +892,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
                                    ByteBuffer combinedBuffer,
                                    CombinedFileRange combinedFileRange) {
     LOG.trace("Start Filling original range [{}, {}) from combined range [{}, {}) ",
-            child.getOffset(), child.getLength(), combinedFileRange.getOffset(), combinedFileRange.getLength());
+            child.getOffset(), child.getLength(),
+            combinedFileRange.getOffset(), combinedFileRange.getLength());
     ByteBuffer childBuffer = sliceTo(combinedBuffer, combinedFileRange.getOffset(), child);
     child.getData().complete(childBuffer);
     LOG.trace("End Filling original range [{}, {}) from combined range [{}, {}) ",
-            child.getOffset(), child.getLength(), combinedFileRange.getOffset(), combinedFileRange.getLength());
+            child.getOffset(), child.getLength(),
+            combinedFileRange.getOffset(), combinedFileRange.getLength());
   }
 
   /**
@@ -978,7 +988,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
                             int offset,
                             int length) throws IOException {
     int readBytes = 0;
-    while ( readBytes < length) {
+    while (readBytes < length) {
       int readBytesCurr = objectContent.read(dest,
               offset + readBytes,
               length - readBytes);
@@ -1010,7 +1020,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     Invoker invoker = context.getReadInvoker();
     try {
       objectRange = invoker.retry(operationName, pathStr, true,
-              () -> client.getObject(request));
+         () -> client.getObject(request));
     } catch (IOException ex) {
       tracker.failed();
       throw ex;

@@ -26,8 +26,9 @@ import java.util.concurrent.CompletableFuture;
  * {@link PositionedReadable#readVectored}.
  */
 public interface FileRange {
+
   /**
-   * Get the starting offset of the range
+   * Get the starting offset of the range.
    * @return the byte offset of the start
    */
   long getOffset();

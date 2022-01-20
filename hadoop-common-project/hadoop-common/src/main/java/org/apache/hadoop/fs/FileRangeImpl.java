@@ -25,8 +25,8 @@ import java.util.concurrent.CompletableFuture;
  * for zero copy.
  */
 public class FileRangeImpl implements FileRange {
-  protected long offset;
-  protected int length;
+  private long offset;
+  private int length;
   private CompletableFuture<ByteBuffer> reader;
 
   public FileRangeImpl(long offset, int length) {
@@ -49,9 +49,17 @@ public class FileRangeImpl implements FileRange {
     return length;
   }
 
+  public void setOffset(long offset) {
+    this.offset = offset;
+  }
+
+  public void setLength(int length) {
+    this.length = length;
+  }
+
   @Override
-  public void setData(CompletableFuture<ByteBuffer> reader) {
-    this.reader = reader;
+  public void setData(CompletableFuture<ByteBuffer> pReader) {
+    this.reader = pReader;
   }
 
   @Override

@@ -37,7 +37,7 @@ import org.apache.hadoop.util.Preconditions;
  * Utility class which implements helper methods used
  * in vectored IO implementation.
  */
-public class VectoredReadUtils {
+public final class VectoredReadUtils {
 
   /**
    * Validate a single range.
@@ -150,7 +150,7 @@ public class VectoredReadUtils {
   }
 
   /**
-   * Is the given input list:
+   * Is the given input list.
    * <ul>
    *   <li>already sorted by offset</li>
    *   <li>each range is more than minimumSeek apart</li>
@@ -250,7 +250,9 @@ public class VectoredReadUtils {
   /**
    * Slice the data that was read to the user's request.
    * This function assumes that the user's request is completely subsumed by the
-   * read data.
+   * read data. This always creates a new buffer pointing to the same underlying
+   * data but with its own mark and position fields such that reading one buffer
+   * can't effect other's mark and position.
    * @param readData the buffer with the readData
    * @param readOffset the offset in the file for the readData
    * @param request the user's request
@@ -260,12 +262,9 @@ public class VectoredReadUtils {
                                    FileRange request) {
     int offsetChange = (int) (request.getOffset() - readOffset);
     int requestLength = request.getLength();
-    // If we need to change the offset or length, make a copy and do it
-    if (offsetChange != 0 || readData.remaining() != requestLength) {
-      readData = readData.slice();
-      readData.position(offsetChange);
-      readData.limit(offsetChange + requestLength);
-    }
+    readData = readData.slice();
+    readData.position(offsetChange);
+    readData.limit(offsetChange + requestLength);
     return readData;
   }
 
