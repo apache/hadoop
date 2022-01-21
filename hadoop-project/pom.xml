@@ -1355,6 +1355,10 @@
             <artifactId>kerby-config</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
           </exclusion>
@@ -2212,6 +2216,9 @@
                     <exclude>com.sun.jersey.jersey-test-framework:*</exclude>
                     <exclude>com.google.inject:guice</exclude>
                     <exclude>org.ow2.asm:asm</exclude>
+
+                    <exclude>org.slf4j:slf4j-log4j12</exclude>
+                    <exclude>log4j:log4j</exclude>
                   </excludes>
                   <includes>
                     <!-- for JDK 8 support -->
