@@ -755,10 +755,10 @@ in configuration option fs.s3a.committer.magic.enabled
 The Job is configured to use the magic committer, but the S3A bucket has not been explicitly
 declared as supporting it.
 
+The Job is configured to use the magic committer, but the S3A bucket has not been explicitly declared as supporting it.
 
-This can be done for those buckets which are known to be consistent, either
-because [S3Guard](s3guard.html) is used to provide consistency,
-or because the S3-compatible filesystem is known to be strongly consistent.
+As this is now true by default, this error will only surface with a configuration which has explicitly disabled it.
+Remove all global/per-bucket declarations of `fs.s3a.bucket.magic.enabled` or set them to `true`
 
 ```xml
 <property>
@@ -767,29 +767,35 @@ or because the S3-compatible filesystem is known to be strongly consistent.
 </property>
 ```
 
-
 Tip: you can verify that a bucket supports the magic committer through the
 `hadoop s3guard bucket-info` command:
 
 
 ```
 > hadoop s3guard bucket-info -magic s3a://landsat-pds/
-
-Filesystem s3a://landsat-pds
 Location: us-west-2
-Filesystem s3a://landsat-pds is not using S3Guard
-The "magic" committer is not supported
 
 S3A Client
-  Signing Algorithm: fs.s3a.signing-algorithm=(unset)
-  Endpoint: fs.s3a.endpoint=s3.amazonaws.com
-  Encryption: fs.s3a.server-side-encryption-algorithm=none
-  Input seek policy: fs.s3a.experimental.input.fadvise=normal
-  Change Detection Source: fs.s3a.change.detection.source=etag
-  Change Detection Mode: fs.s3a.change.detection.mode=server
-Delegation token support is disabled
-2019-05-17 13:53:38,245 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) -
- Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
+        Signing Algorithm: fs.s3a.signing-algorithm=(unset)
+        Endpoint: fs.s3a.endpoint=s3.amazonaws.com
+        Encryption: fs.s3a.encryption.algorithm=none
+        Input seek policy: fs.s3a.experimental.input.fadvise=normal
+        Change Detection Source: fs.s3a.change.detection.source=etag
+        Change Detection Mode: fs.s3a.change.detection.mode=server
+
+S3A Committers
+        The "magic" committer is supported in the filesystem
+        S3A Committer factory class: mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory
+        S3A Committer name: fs.s3a.committer.name=magic
+        Store magic committer integration: fs.s3a.committer.magic.enabled=true
+
+Security
+        Delegation token support is disabled
+
+Directory Markers
+        The directory marker policy is "delete"
+        Available Policies: delete, keep, authoritative
+        Authoritative paths: fs.s3a.authoritative.path=```
 ```
 
 ### Error message: "File being created has a magic path, but the filesystem has magic file support disabled"
@@ -801,11 +807,6 @@ files which are actually written to a different destination than their stated pa
 This message should not appear through the committer itself &mdash;it will
 fail with the error message in the previous section, but may arise
 if other applications are attempting to create files under the path `/__magic/`.
-
-Make sure the filesystem meets the requirements of the magic committer
-(a consistent S3A filesystem through S3Guard or the S3 service itself),
-and set the `fs.s3a.committer.magic.enabled` flag to indicate that magic file
-writes are supported.
 
 
 ### `FileOutputCommitter` appears to be still used (from logs or delays in commits)

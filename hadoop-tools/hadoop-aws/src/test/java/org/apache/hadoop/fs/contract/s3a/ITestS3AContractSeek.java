@@ -52,7 +52,6 @@ import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_SEQUENTIAL;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.Constants.SSL_CHANNEL_MODE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.FS_S3A_IMPL_DISABLE_CACHE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
         SSLChannelMode.Default_JSSE;
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
@@ -105,7 +104,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   }
 
   /**
-   * Create a configuration, possibly patching in S3Guard options.
+   * Create a configuration.
    * The FS is set to be uncached and the readahead and seek policies
    * of the bucket itself are removed, so as to guarantee that the
    * parameterized and test settings are
@@ -114,8 +113,6 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
     // purge any per-bucket overrides.
     try {
       URI bucketURI = new URI(checkNotNull(conf.get("fs.contract.test.fs.s3a")));

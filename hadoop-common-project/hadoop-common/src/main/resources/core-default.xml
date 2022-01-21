@@ -1229,7 +1229,7 @@
     com.amazonaws.auth.AWSCredentialsProvider.
 
     When S3A delegation tokens are not enabled, this list will be used
-    to directly authenticate with S3 and DynamoDB services.
+    to directly authenticate with S3 and other AWS services.
     When S3A Delegation tokens are enabled, depending upon the delegation
     token binding it may be used
     to communicate wih the STS endpoint to request session/role
@@ -1687,171 +1687,9 @@
 </property>
 
 <property>
-    <name>fs.s3a.metadatastore.authoritative</name>
-    <value>false</value>
-    <description>
-        When true, allow MetadataStore implementations to act as source of
-        truth for getting file status and directory listings.  Even if this
-        is set to true, MetadataStore implementations may choose not to
-        return authoritative results.  If the configured MetadataStore does
-        not support being authoritative, this setting will have no effect.
-    </description>
-</property>
-
-<property>
-    <name>fs.s3a.metadatastore.metadata.ttl</name>
-    <value>15m</value>
-    <description>
-        This value sets how long an entry in a MetadataStore is valid.
-    </description>
-</property>
-
-<property>
-    <name>fs.s3a.metadatastore.impl</name>
-    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
-    <description>
-        Fully-qualified name of the class that implements the MetadataStore
-        to be used by s3a.  The default class, NullMetadataStore, has no
-        effect: s3a will continue to treat the backing S3 service as the one
-        and only source of truth for file and directory metadata.
-    </description>
-</property>
-
-<property>
-  <name>fs.s3a.metadatastore.fail.on.write.error</name>
-  <value>true</value>
-  <description>
-    When true (default), FileSystem write operations generate
-    org.apache.hadoop.fs.s3a.MetadataPersistenceException if the metadata
-    cannot be saved to the metadata store.  When false, failures to save to
-    metadata store are logged at ERROR level, but the overall FileSystem
-    write operation succeeds.
-  </description>
-</property>
-
-<property>
-    <name>fs.s3a.s3guard.cli.prune.age</name>
-    <value>86400000</value>
-    <description>
-        Default age (in milliseconds) after which to prune metadata from the
-        metadatastore when the prune command is run.  Can be overridden on the
-        command-line.
-    </description>
-</property>
-
-
-<property>
   <name>fs.s3a.impl</name>
   <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
   <description>The implementation class of the S3A Filesystem</description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.region</name>
-  <value></value>
-  <description>
-    AWS DynamoDB region to connect to. An up-to-date list is
-    provided in the AWS Documentation: regions and endpoints. Without this
-    property, the S3Guard will operate table in the associated S3 bucket region.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table</name>
-  <value></value>
-  <description>
-    The DynamoDB table name to operate. Without this property, the respective
-    S3 bucket name will be used.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.create</name>
-  <value>false</value>
-  <description>
-    If true, the S3A client will create the table if it does not already exist.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-  <value>0</value>
-  <description>
-    Provisioned throughput requirements for read operations in terms of capacity
-    units for the DynamoDB table. This config value will only be used when
-    creating a new DynamoDB table.
-    If set to 0 (the default), new tables are created with "per-request" capacity.
-    If a positive integer is provided for this and the write capacity, then
-    a table with "provisioned capacity" will be created.
-    You can change the capacity of an existing provisioned-capacity table
-    through the "s3guard set-capacity" command.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-  <value>0</value>
-  <description>
-    Provisioned throughput requirements for write operations in terms of
-    capacity units for the DynamoDB table.
-    If set to 0 (the default), new tables are created with "per-request" capacity.
-    Refer to related configuration option fs.s3a.s3guard.ddb.table.capacity.read
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.sse.enabled</name>
-  <value>false</value>
-  <description>
-    Whether server-side encryption (SSE) is enabled or disabled on the table.
-    By default it's disabled, meaning SSE is set to AWS owned CMK.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.sse.cmk</name>
-  <value/>
-  <description>
-    The KMS Customer Master Key (CMK) used for the KMS encryption on the table.
-    To specify a CMK, this config value can be its key ID, Amazon Resource Name
-    (ARN), alias name, or alias ARN. Users only need to provide this config if
-    the key is different from the default DynamoDB KMS Master Key, which is
-    alias/aws/dynamodb.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.max.retries</name>
-  <value>9</value>
-    <description>
-      Max retries on throttled/incompleted DynamoDB operations
-      before giving up and throwing an IOException.
-      Each retry is delayed with an exponential
-      backoff timer which starts at 100 milliseconds and approximately
-      doubles each time.  The minimum wait before throwing an exception is
-      sum(100, 200, 400, 800, .. 100*2^N-1 ) == 100 * ((2^N)-1)
-    </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.throttle.retry.interval</name>
-  <value>100ms</value>
-    <description>
-      Initial interval to retry after a request is throttled events;
-      the back-off policy is exponential until the number of retries of
-      fs.s3a.s3guard.ddb.max.retries is reached.
-    </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.background.sleep</name>
-  <value>25ms</value>
-  <description>
-    Length (in milliseconds) of pause between each batch of deletes when
-    pruning metadata.  Prevents prune operations (which can typically be low
-    priority background operations) from overly interfering with other I/O
-    operations.
-  </description>
 </property>
 
 <property>
@@ -1859,7 +1697,7 @@
   <value>7</value>
   <description>
     Number of times to retry any repeatable S3 client request on failure,
-    excluding throttling requests and S3Guard inconsistency resolution.
+    excluding throttling requests.
   </description>
 </property>
 
@@ -1868,7 +1706,7 @@
   <value>500ms</value>
   <description>
     Initial retry interval when retrying operations for any reason other
-    than S3 throttle errors and S3Guard inconsistency resolution.
+    than S3 throttle errors.
   </description>
 </property>
 
@@ -1888,27 +1726,6 @@
     i.e. for an intial value of 3000ms, the initial delay would be in the range 1500ms to 4500ms.
     Backoffs are exponential; again randomness is used to avoid the thundering heard problem.
     500ms is the default value used by the AWS S3 Retry policy.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.consistency.retry.limit</name>
-  <value>7</value>
-  <description>
-    Number of times to retry attempts to read/open/copy files when
-    S3Guard believes a specific version of the file to be available,
-    but the S3 request does not find any version of a file, or a different
-    version.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.consistency.retry.interval</name>
-  <value>2s</value>
-  <description>
-    Initial interval between attempts to retry operations while waiting for S3
-    to become consistent with the S3Guard data.
-    An exponential back-off is used here: every failure doubles the delay.
   </description>
 </property>
 

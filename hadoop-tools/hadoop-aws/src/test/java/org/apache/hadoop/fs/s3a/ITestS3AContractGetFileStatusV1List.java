@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import static org.apache.hadoop.fs.s3a.Constants.LIST_VERSION;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
  * S3A contract tests for getFileStatus, using the v1 List Objects API.
@@ -50,7 +49,6 @@ public class ITestS3AContractGetFileStatusV1List
     Configuration conf = super.createConfiguration();
     disableFilesystemCaching(conf);
     conf.setInt(Constants.MAX_PAGING_KEYS, 2);
-    maybeEnableS3Guard(conf);
 
     // Use v1 List Objects API
     conf.setInt(LIST_VERSION, 1);
