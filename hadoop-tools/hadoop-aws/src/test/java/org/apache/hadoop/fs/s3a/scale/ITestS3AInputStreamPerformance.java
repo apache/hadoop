@@ -489,6 +489,35 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   }
 
   @Test
+  public void testSkip() throws Throwable {
+
+    in = openTestFile(S3AInputPolicy.Random, DEFAULT_READAHEAD_RANGE);
+
+    in.skip(_4K);
+    // Skip within read ahead range, will not make a new get request
+    in.skip(_8K);
+    // Skip outside read ahead range, should make a new get request
+    in.skip(_256K);
+
+    IOStatistics ioStatistics = streamStatistics.getIOStatistics();
+
+    verifyStatisticCounterValue(
+            ioStatistics,
+            StreamStatisticNames.STREAM_SKIP_OPERATIONS,
+            3);
+    verifyStatisticCounterValue(
+            ioStatistics,
+            StreamStatisticNames.STREAM_READ_OPENED,
+            2
+    );
+    verifyStatisticCounterValue(
+            ioStatistics,
+            StreamStatisticNames.STREAM_READ_SEEK_BYTES_DISCARDED,
+            _8K
+    );
+  }
+
+  @Test
   public void testRandomIONormalPolicy() throws Throwable {
     skipIfClientSideEncryption();
     long expectedOpenCount = RANDOM_IO_SEQUENCE.length;

@@ -807,6 +807,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong bytesDiscardedInVectoredIO;
     private final AtomicLong readVectoredIncomingRanges;
     private final AtomicLong readVectoredCombinedRanges;
+    private final AtomicLong skipOperations;
 
     /** Bytes read by the application and any when draining streams . */
     private final AtomicLong totalBytesRead;
@@ -857,7 +858,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
               StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
               StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ,
-              StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ)
+              StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ,
+              StreamStatisticNames.STREAM_SKIP_OPERATIONS)
           .build();
       setIOStatistics(st);
       aborted = st.getCounterReference(
@@ -902,6 +904,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
       totalBytesRead = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_TOTAL_BYTES);
+      skipOperations = st.getCounterReference(
+              StreamStatisticNames.STREAM_SKIP_OPERATIONS);
       setIOStatistics(st);
       // create initial snapshot of merged statistics
       mergedStats = snapshotIOStatistics(st);
@@ -1070,6 +1074,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public void executorAcquired(Duration timeInQueue) {
       // update the duration fields in the IOStatistics.
       localIOStatistics().addTimedOperation(ACTION_EXECUTOR_ACQUIRED, timeInQueue);
+    }
+
+    @Override
+    public void skipOperationStarted() {
+      skipOperations.incrementAndGet();
     }
 
     /**
@@ -1323,6 +1332,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public long getInputPolicy() {
       return localIOStatistics().gauges()
           .get(STREAM_READ_GAUGE_INPUT_POLICY);
+    }
+
+    @Override
+    public long getSkipOperations() {
+      return lookupCounterValue(
+              StreamStatisticNames.STREAM_SKIP_OPERATIONS);
     }
 
     @Override

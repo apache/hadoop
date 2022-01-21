@@ -120,6 +120,8 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
    */
   void inputPolicySet(int updatedPolicy);
 
+  void skipOperationStarted();
+
   /**
    * Get a reference to the change tracker statistics for this
    * stream.
@@ -182,6 +184,8 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
   long getVersionMismatches();
 
   long getInputPolicy();
+
+  long getSkipOperations();
 
   /**
    * Get the value of a counter.
