@@ -703,6 +703,14 @@ public class TestRegistryDNS extends Assertions {
     assertNull(recs, "Record is not null");
   }
 
+  @Test
+  public void testNODATA() throws Exception {
+    Name name = Name.fromString("example.com.");
+    RegistryDNS.RemoteAnswer ra = getRegistryDNS().getRecords(name, Type.CNAME);
+    assertNull("CNAME record for example.com. should be null.", ra.answers);
+    assertEquals("The result of DNS query for example.com. should be NOERROR.", Rcode.NOERROR, ra.rcode);
+  }
+
   public RegistryDNS getRegistryDNS() {
     return registryDNS;
   }
