@@ -163,7 +163,7 @@ public class LoadManifestsStage extends
           "Not a valid manifest file; file status = " + status);
     }
     // load the manifest, which includes validation.
-    final TaskManifest manifest = loadManifest(status);
+    final TaskManifest manifest = loadManifest(status).getJson();
     final String id = manifest.getTaskAttemptID();
     final int filecount = manifest.getFilesToCommit().size();
     final long size = manifest.getTotalFileSize();

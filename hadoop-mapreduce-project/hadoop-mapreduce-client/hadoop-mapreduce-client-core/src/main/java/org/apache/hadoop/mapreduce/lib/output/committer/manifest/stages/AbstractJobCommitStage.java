@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractM
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.OperationDuration;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
@@ -535,7 +536,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return the manifest.
    * @throws IOException IO Failure.
    */
-  protected final TaskManifest loadManifest(
+  protected final JsonSerialization.JsonWithIOStatistics<TaskManifest> loadManifest(
       final FileStatus status)
       throws IOException {
     LOG.trace("{}: loadManifest('{}')", getName(), status);

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
@@ -351,18 +352,18 @@ public class UnreliableStoreOperations extends StoreOperations {
   }
 
   @Override
-  public TaskManifest loadTaskManifest(JsonSerialization<TaskManifest> serializer,
+  public JsonSerialization.JsonWithIOStatistics<TaskManifest> loadTaskManifest(JsonSerialization<TaskManifest> serializer,
       final FileStatus st) throws IOException {
     verifyExists(st.getPath());
     return wrappedOperations.loadTaskManifest(serializer, st);
   }
 
   @Override
-  public <T extends AbstractManifestData<T>> void save(T manifestData,
+  public <T extends AbstractManifestData<T>> IOStatisticsSource save(T manifestData,
       final Path path,
       final boolean overwrite) throws IOException {
     maybeRaiseIOE("save", path, saveToFail);
-    wrappedOperations.save(manifestData, path, overwrite);
+    return wrappedOperations.save(manifestData, path, overwrite);
   }
 
   @Override

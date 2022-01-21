@@ -50,7 +50,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
    * @return a number > 0.
    */
   protected int numberOfTaskAttempts() {
-    return 200;
+    return ManifestCommitterTestSupport.NUMBER_OF_TASK_ATTEMPTS;
   }
 
   @Override

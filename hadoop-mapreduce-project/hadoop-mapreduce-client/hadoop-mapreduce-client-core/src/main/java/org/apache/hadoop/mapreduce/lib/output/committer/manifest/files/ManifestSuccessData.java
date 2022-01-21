@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 import org.apache.hadoop.util.JsonSerialization;
 
@@ -191,11 +192,11 @@ public class ManifestSuccessData
   }
 
   @Override
-  public void save(FileSystem fs, Path path, boolean overwrite)
+  public IOStatisticsSource save(FileSystem fs, Path path, boolean overwrite)
       throws IOException {
     // always set the name field before being saved.
     name = NAME;
-    serializer().save(fs, path, this, overwrite);
+    return serializer().saveWithStatistics(fs, path, this, overwrite);
   }
 
   @Override

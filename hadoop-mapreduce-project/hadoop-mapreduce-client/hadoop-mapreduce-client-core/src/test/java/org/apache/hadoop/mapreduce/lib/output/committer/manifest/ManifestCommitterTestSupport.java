@@ -61,9 +61,16 @@ public final class ManifestCommitterTestSupport {
 
   /**
    * Build directory property.
+   * Value: {@value}.
    */
   public static final String PROJECT_BUILD_DIRECTORY_PROPERTY
       = "project.build.directory";
+
+  /**
+   * default number of task attempts for some tests.
+   * Value: {@value}.
+   */
+  public static final int NUMBER_OF_TASK_ATTEMPTS = 200;
 
   private ManifestCommitterTestSupport() {
   }

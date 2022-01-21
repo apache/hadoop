@@ -46,8 +46,6 @@ final class AbfsCommitTestHelper {
     conf.set(OPT_STORE_OPERATIONS_CLASS,
         AbfsManifestStoreOperations.NAME);
 
-    // validate output, including etags
-    conf.setBoolean(OPT_VALIDATE_OUTPUT, true);
     return conf;
   }
 }

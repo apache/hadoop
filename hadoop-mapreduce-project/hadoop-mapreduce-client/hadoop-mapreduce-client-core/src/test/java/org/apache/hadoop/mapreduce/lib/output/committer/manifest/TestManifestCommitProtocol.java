@@ -96,7 +96,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * This is a contract test for the commit protocol on a target filesystem.
- * It is subclassed in the ABFS integration tests.
+ * It is subclassed in the ABFS integration tests and elsewhere.
  * Derived from the S3A protocol suite, which was itself based off
  * the test suite {@code TestFileOutputCommitter}.
  *
@@ -705,7 +705,7 @@ public class TestManifestCommitProtocol
    * @throws IOException failure to load
    */
   TaskManifest loadManifest(Path path) throws IOException {
-    return TaskManifest.load(getFileSystem(), path);
+    return TaskManifest.load(getFileSystem(), path).getJson();
   }
 
   /**

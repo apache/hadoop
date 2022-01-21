@@ -291,10 +291,10 @@ public abstract class AbstractManifestCommitterTest
     return new LocalFSContract(conf);
   }
 
+  /** Enable the manifest committer options in the configuration. */
   @Override
   protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    return conf;
+    return enableManifestCommitter(super.createConfiguration());
   }
 
   @Override

@@ -87,13 +87,16 @@ public abstract class AbstractManifestData<T extends AbstractManifestData>
   public abstract byte[] toBytes() throws IOException;
 
   /**
-   * Save to a hadoop filesystem.
+   * Save to a Hadoop filesystem, returning the closed
+   * output stream as an IOStatisticsSource.
+   *
    * @param fs filesystem
    * @param path path
    * @param overwrite should any existing file be overwritten
    * @throws IOException IO exception
+   * @return the IOStatisticsSource of the closed output stream
    */
-  public abstract void save(FileSystem fs, Path path, boolean overwrite)
+  public abstract IOStatisticsSource save(FileSystem fs, Path path, boolean overwrite)
       throws IOException;
 
   /**

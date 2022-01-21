@@ -143,7 +143,7 @@ public abstract class StoreOperations implements Closeable {
    * @return the manifest
    * @throws IOException failure to load/parse
    */
-  public abstract TaskManifest loadTaskManifest(
+  public abstract JsonSerialization.JsonWithIOStatistics<TaskManifest> loadTaskManifest(
       JsonSerialization<TaskManifest> serializer,
       FileStatus st) throws IOException;
 
@@ -154,8 +154,9 @@ public abstract class StoreOperations implements Closeable {
    * @param path temp path for the initial save
    * @param overwrite should create(overwrite=true) be used?
    * @throws IOException failure to load/parse
+   * @return the IOStatisticsSource of the closed output stream
    */
-  public abstract <T extends AbstractManifestData<T>> void save(
+  public abstract <T extends AbstractManifestData<T>> IOStatisticsSource save(
       T manifestData,
       Path path,
       boolean overwrite) throws IOException;

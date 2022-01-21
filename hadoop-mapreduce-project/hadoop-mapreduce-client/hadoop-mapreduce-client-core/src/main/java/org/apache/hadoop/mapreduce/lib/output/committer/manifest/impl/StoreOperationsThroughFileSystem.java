@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
@@ -134,18 +135,18 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
   }
 
   @Override
-  public TaskManifest loadTaskManifest(
+  public JsonSerialization.JsonWithIOStatistics<TaskManifest> loadTaskManifest(
       JsonSerialization<TaskManifest> serializer,
       FileStatus st) throws IOException {
     return TaskManifest.load(serializer, fileSystem, st.getPath(), st);
   }
 
   @Override
-  public <T extends AbstractManifestData<T>> void save(
+  public <T extends AbstractManifestData<T>> IOStatisticsSource save(
       final T manifestData,
       final Path path,
       final boolean overwrite) throws IOException {
-    manifestData.save(fileSystem, path, overwrite);
+    return manifestData.save(fileSystem, path, overwrite);
   }
 
   @Override

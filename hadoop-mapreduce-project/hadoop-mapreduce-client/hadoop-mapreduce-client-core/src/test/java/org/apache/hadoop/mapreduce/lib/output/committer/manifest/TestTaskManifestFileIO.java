@@ -37,7 +37,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Test Reading/writing manifest file.
  */
-public class TestTaskManifestFile extends AbstractManifestCommitterTest {
+public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
 
   private TaskManifest source;
 

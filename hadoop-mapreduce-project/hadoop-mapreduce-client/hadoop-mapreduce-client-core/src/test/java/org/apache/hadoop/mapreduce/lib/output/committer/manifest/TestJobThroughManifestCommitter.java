@@ -381,7 +381,7 @@ public class TestJobThroughManifestCommitter
 
     // load the manifest from the FS, not the return value,
     // so we can verify that last task to commit wins.
-    TaskManifest manifest = TaskManifest.load(getFileSystem(), manifestPath);
+    TaskManifest manifest = TaskManifest.load(getFileSystem(), manifestPath).getJson();
     manifest.validate();
     // clear the IOStats to reduce the size of the printed JSON.
     manifest.setIOStatistics(null);
@@ -429,7 +429,7 @@ public class TestJobThroughManifestCommitter
     Path manifestPathForTask1 = manifestPathForTask(dirs.getTaskManifestDir(),
         TASK_IDS.getTaskId(TASK1));
     verifyManifestTaskAttemptID(
-        TaskManifest.load(getFileSystem(), manifestPathForTask1),
+        TaskManifest.load(getFileSystem(), manifestPathForTask1).getJson(),
         taskAttempt10);
 
   }
