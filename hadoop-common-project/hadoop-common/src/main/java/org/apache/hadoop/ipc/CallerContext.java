@@ -24,6 +24,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -126,11 +129,11 @@ public final class CallerContext {
    */
   private static final class Configs {
 
-    /** the maximum length limit for a context string*/
+    /** the maximum length limit for a context string. */
     private int contextMaxLen;
-    /** the maximum length limit for a signature byte array*/
+    /** the maximum length limit for a signature byte array. */
     private int signatureMaxLen;
-    /** the filed separator for a context string */
+    /** the filed separator for a context string. */
     private String fieldSeparator;
 
     private static final String KEY_VALUE_SEPARATOR = ":";
@@ -193,7 +196,10 @@ public final class CallerContext {
     private final Configs configs;
     private final StringBuilder ctx = new StringBuilder();
 
+    private static final Logger LOG = LoggerFactory.getLogger(Builder.class);
+
     public Builder(String context) {
+      // set conf as null to avoid unnecessary configuration creation
       this(context, null);
     }
 
@@ -206,7 +212,7 @@ public final class CallerContext {
 
     @VisibleForTesting
     Builder(String context, Configuration conf, boolean refresh) {
-      this(context, null);
+      this(context, conf);
       if (refresh) {
         configs.init(conf); // refresh configs for testing
       }
@@ -230,13 +236,21 @@ public final class CallerContext {
 
     /**
      * Whether the signature is valid.
-     * @param signature target signature.
+     * @param sig target signature.
      * @return true if the signature is not null and the length of signature
      *         is greater than 0 and less than or equal to the length limit.
      */
-    private boolean isSignatureValid(byte[] signature) {
-      return signature != null && signature.length > 0
-          && signature.length <= configs.signatureMaxLen;
+    private boolean isSignatureValid(byte[] sig) {
+      if (sig == null || sig.length == 0) {
+        LOG.warn("The signature is invalid for it's null or empty");
+        return false;
+      }
+      if (sig.length > configs.signatureMaxLen) {
+        LOG.warn("The signature is invalid for it's length {} exceed limit {}",
+            sig.length, configs.signatureMaxLen);
+        return false;
+      }
+      return true;
     }
 
     /**
@@ -256,7 +270,12 @@ public final class CallerContext {
     }
 
     private boolean isContextLengthExceedLimit() {
-      return ctx.length() > configs.contextMaxLen;
+      if (ctx.length() > configs.contextMaxLen) {
+        LOG.warn("The context's length {} exceed limit {}", ctx.length(),
+            configs.signatureMaxLen);
+        return true;
+      }
+      return false;
     }
 
     /**
