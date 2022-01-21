@@ -1127,11 +1127,17 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
     // Always add any CNAMEs to the response first
     if (type != Type.CNAME) {
-      Record[] cnameAnswers = getRecords(name, Type.CNAME);
-      if (cnameAnswers != null) {
+      Name targetName = name;
+      // support for CNAME chaining
+      for (int i = iterations; i < 6; i++) {
+        Record[] cnameAnswers = getRecords(targetName, Type.CNAME);
+        if (cnameAnswers == null) {
+          break;
+        }
         for (Record cnameR : cnameAnswers) {
           if (!response.findRecord(cnameR)) {
             response.addRecord(cnameR, Section.ANSWER);
+            targetName = ((CNAMERecord) cnameR).getTarget();
           }
         }
       }
@@ -1139,6 +1145,10 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
     // Forward lookup to primary DNS servers
     Record[] answers = getRecords(name, type);
+    // no answer
+    if (answers == null) {
+      return Rcode.NOERROR;
+    }
     try {
       for (Record r : answers) {
         if (!response.findRecord(r)) {
@@ -1148,10 +1158,11 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
             response.addRecord(r, Section.ANSWER);
           }
         }
-        if (r.getType() == Type.CNAME) {
-          Name cname = r.getName();
+        // when desired type is CNAME, don't follow CNAME chain
+        if (type != Type.CNAME && r.getType() == Type.CNAME) {
           if (iterations < 6) {
-            remoteLookup(response, cname, type, iterations + 1);
+            Name cname = ((CNAMERecord) r).getTarget();
+            return remoteLookup(response, cname, type, iterations + 1);
           }
         }
       }
