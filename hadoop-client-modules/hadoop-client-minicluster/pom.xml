@@ -686,7 +686,6 @@
                       <exclude>commons-logging:commons-logging</exclude>
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
-                      <exclude>log4j:log4j</exclude>
                       <exclude>ch.qos.reload4j:reload4j</exclude>
                       <exclude>org.eclipse.jetty.websocket:websocket-common</exclude>
                       <exclude>org.eclipse.jetty.websocket:websocket-api</exclude>
