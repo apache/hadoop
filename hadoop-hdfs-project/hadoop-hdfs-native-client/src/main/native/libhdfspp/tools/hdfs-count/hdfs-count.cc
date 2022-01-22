@@ -94,7 +94,7 @@ bool Count::Do() {
     return HandlePath(show_quota, path);
   }
 
-  return true;
+  return false;
 }
 
 bool Count::HandleHelp() const {

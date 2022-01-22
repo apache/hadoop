@@ -25,6 +25,7 @@
 #include "hdfs-chmod-mock.h"
 #include "hdfs-chown-mock.h"
 #include "hdfs-copy-to-local-mock.h"
+#include "hdfs-count-mock.h"
 #include "hdfs-create-snapshot-mock.h"
 #include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-df-mock.h"
@@ -110,6 +111,12 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(CallHelp<hdfs::tools::test::MoveToLocalMock>,
                     Pass2Paths<hdfs::tools::test::MoveToLocalMock>));
 
+INSTANTIATE_TEST_SUITE_P(
+    HdfsCount, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::CountMock>,
+                    PassAPath<hdfs::tools::test::CountMock>,
+                    PassQOptAndPath<hdfs::tools::test::CountMock>));
+
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
@@ -152,6 +159,17 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsMoveToLocal, HdfsToolNegativeTestThrows,
     testing::Values(Pass3Paths<hdfs::tools::test::MoveToLocalMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsCount, HdfsToolNegativeTestThrows,
+    testing::Values(Pass2Paths<hdfs::tools::test::CountMock>,
+                    Pass3Paths<hdfs::tools::test::CountMock>,
+                    PassNOptAndAPath<hdfs::tools::test::CountMock>,
+                    PassRecursive<hdfs::tools::test::CountMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsCount, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassQOpt<hdfs::tools::test::CountMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsMoveToLocal, HdfsToolNegativeTestNoThrow,

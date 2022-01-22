@@ -51,5 +51,13 @@ void CountMock::SetExpectations(
         .Times(1)
         .WillOnce(testing::Return(true));
   }
+
+  if (*test_case_func == &PassQOptAndPath<CountMock>) {
+    const auto arg1 = args[0];
+    const auto arg2 = args[1];
+    EXPECT_CALL(*this, HandlePath(true, arg2))
+        .Times(1)
+        .WillOnce(testing::Return(true));
+  }
 }
 } // namespace hdfs::tools::test
