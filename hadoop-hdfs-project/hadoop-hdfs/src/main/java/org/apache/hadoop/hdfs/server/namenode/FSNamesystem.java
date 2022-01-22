@@ -1798,6 +1798,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.fsLock.readUnlock();
   }
 
+  @Override
   public void readUnlock(String opName) {
     this.fsLock.readUnlock(opName);
   }
@@ -1822,6 +1823,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.fsLock.writeUnlock();
   }
 
+  @Override
   public void writeUnlock(String opName) {
     this.fsLock.writeUnlock(opName);
   }
