@@ -340,7 +340,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /**
-   * Check whether this inode itself set storage policy.
+   * Check if this inode itself has a storage policy set.
    */
   public boolean isSetStoragePolicy() {
     if (isSymlink()) {
