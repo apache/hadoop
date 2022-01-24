@@ -449,7 +449,7 @@ public class AdminStatesBaseTest {
         refreshNodes(conf);
   }
 
-  static private DatanodeDescriptor getDatanodeDesriptor(
+  static DatanodeDescriptor getDatanodeDesriptor(
       final FSNamesystem ns, final String datanodeUuid) {
     return ns.getBlockManager().getDatanodeManager().getDatanode(datanodeUuid);
   }
