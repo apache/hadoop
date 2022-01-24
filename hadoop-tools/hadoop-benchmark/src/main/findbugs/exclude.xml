@@ -14,12 +14,9 @@
 -->
 <FindBugsFilter>
   <Match>
-    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,DLS_DEAD_LOCAL_STORE,URF_UNREAD_FIELD,URF_UNUSED_FIELD"/>
+    <Class name="~org\.apache\.hadoop\.benchmark\.generated.*"/>
   </Match>
   <Match>
     <Class name="~org\.openjdk\.jmh\.infra\.generated.*"/>
-  </Match>
-  <Match>
-    <Class name="~org\.apache\.hadoop\.benchmark\.generated.*"/>
   </Match>
 </FindBugsFilter>
