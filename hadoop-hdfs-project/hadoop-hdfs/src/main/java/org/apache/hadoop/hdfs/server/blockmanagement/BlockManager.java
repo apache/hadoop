@@ -4049,9 +4049,9 @@ public class BlockManager implements BlockStatsMXBean {
                 excessTypes, null, null);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Choose redundant EC replicas to delete, blockId: {}, targetIndex: {}, " +
-                  "nonExcess: {}, found: {}, duplicated: {}, storage2index: {}, " +
+                  "found: {}, duplicated: {}, storage2index: {}, " +
                   "candidates: {}, replicasToDelete: {}",
-              sblk.getBlockId(), targetIndex, new ArrayList<>(nonExcess), found, duplicated,
+              sblk.getBlockId(), targetIndex, found, duplicated,
               storage2index, candidates, replicasToDelete);
         }
         for (DatanodeStorageInfo chosen : replicasToDelete) {
