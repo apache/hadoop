@@ -3943,4 +3943,8 @@ public class DataNode extends ReconfigurableBase
   boolean isSlownode() {
     return blockPoolManager.isSlownode();
   }
+
+  BlockPoolManager getBlockPoolManager() {
+    return blockPoolManager;
+  }
 }
