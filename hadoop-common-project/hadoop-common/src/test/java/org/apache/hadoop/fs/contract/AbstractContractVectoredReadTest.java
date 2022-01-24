@@ -50,7 +50,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractContractVectoredReadTest.class);
 
-  public static final int DATASET_LEN = 64*1024;
+  public static final int DATASET_LEN = 64 * 1024;
   private static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   private static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
   private static final String VECTORED_READ_FILE_1MB_NAME = "vectored_file_1M.txt";
@@ -128,8 +128,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(new FileRangeImpl(0, 100));
-    fileRanges.add(new FileRangeImpl(4 *1024 + 101, 100));
-    fileRanges.add(new FileRangeImpl(16*1024 + 101, 100));
+    fileRanges.add(new FileRangeImpl(4 * 1024 + 101, 100));
+    fileRanges.add(new FileRangeImpl(16 * 1024 + 101, 100));
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges);
@@ -172,14 +172,16 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  @Test(timeout = 1800000)
   public void testSameRanges() throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(new FileRangeImpl(8*1024, 1000));
     fileRanges.add(new FileRangeImpl(8*1024, 1000));
     fileRanges.add(new FileRangeImpl(8*1024, 1000));
-    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+    CompletableFuture<FSDataInputStream> builder =
+            fs.openFile(path(VECTORED_READ_FILE_NAME))
+                    .build();
+    try (FSDataInputStream in = builder.get()) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges);
     }
