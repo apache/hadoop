@@ -368,6 +368,16 @@ public class BlockManagerTestUtil {
   }
 
   /**
+   * Have BlockManager check isNodeHealthyForDecommissionOrMaintenance for a given datanode.
+   * @param blockManager the BlockManager to check against
+   * @param dn the datanode to check
+   */
+  public static boolean isNodeHealthyForDecommissionOrMaintenance(BlockManager blockManager,
+      DatanodeDescriptor dn) {
+    return blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
+  }
+
+  /**
    * add block to the replicateBlocks queue of the Datanode
    */
   public static void addBlockToBeReplicated(DatanodeDescriptor node,
