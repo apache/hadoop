@@ -241,7 +241,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * decommission or maintenance mode process.
    *
    * This method must be executed under the namenode write lock to prevent
-   * the getPendingNodes() list from being modified externally.
+   * the pendingNodes list from being modified externally.
    */
   private void processPendingNodes() {
     while (!getPendingNodes().isEmpty() &&
