@@ -23,11 +23,16 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -94,6 +99,21 @@ public class TestAbsoluteResourceConfiguration {
 
   private static Set<String> resourceTypes = new HashSet<>(
       Arrays.asList("memory", "vcores"));
+
+  private CapacitySchedulerConfiguration setupNormalizationConfiguration() {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[]{QUEUEA, QUEUEB});
+    csConf.setQueues(QUEUEA_FULL.getFullPath(), new String[]{QUEUEA1, QUEUEA2});
+
+//    60, 28
+    csConf.setMinimumResourceRequirement("", QUEUEA_FULL, Resource.newInstance(50 * GB, 20));
+    csConf.setMinimumResourceRequirement("", QUEUEA1_FULL, Resource.newInstance(30 * GB, 15));
+    csConf.setMinimumResourceRequirement("", QUEUEA2_FULL, Resource.newInstance(20 * GB, 5));
+    csConf.setMinimumResourceRequirement("", QUEUEB_FULL, Resource.newInstance(10 * GB, 8));
+
+    return csConf;
+  }
 
   private CapacitySchedulerConfiguration setupSimpleQueueConfiguration(
       boolean isCapacityNeeded) {
@@ -265,6 +285,36 @@ public class TestAbsoluteResourceConfiguration {
         d1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     rm.close();
+  }
+
+  @Test
+  public void testNormalizationAfterNodeRemoval() throws Exception {
+    CapacitySchedulerConfiguration csConf = setupNormalizationConfiguration();
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    MockRM rm = new MockRM(csConf);
+
+    rm.start();
+    rm.registerNode("h1:1234", 8 * GB, 4);
+    rm.registerNode("h2:1234", 8 * GB, 4);
+    rm.registerNode("h3:1234", 8 * GB, 4);
+    MockNM nm = rm.registerNode("h4:1234", 8 * GB, 4);
+    rm.registerNode("h5:1234", 28 * GB, 12);
+
+    // Send a removal event to CS. MockRM#unregisterNode does not reflect the real world scenario,
+    // therefore we manually need to invoke this removal event.
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    cs.handle(new NodeRemovedSchedulerEvent(rm.getRMContext().getRMNodes().get(nm.getNodeId())));
+
+    Resource res = Resources.add(cs.getQueue(QUEUEA1_FULL.getFullPath()).getEffectiveCapacity(
+        ""), cs.getQueue(QUEUEA2_FULL.getFullPath()).getEffectiveCapacity(""));
+    Resource resParent = cs.getQueue(QUEUEA_FULL.getFullPath()).getEffectiveCapacity("");
+
+    // Check if there is no overcommitment on behalf of the child queues
+    Assert.assertTrue(String.format("Summarized resource %s of all children is greater than " +
+        "their parent's %s", res, resParent), Resources.lessThan(cs.getResourceCalculator(),
+        cs.getClusterResource(), res, resParent));
   }
 
   @Test
