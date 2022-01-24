@@ -30,7 +30,7 @@ This causes problems in long-lived processes which either do not re-use filesyst
 instances, or attempt to delete all instances belonging to specific users.
 See [HADOOP-18091](https://issues.apache.org/jira/browse/HADOOP-18091) _S3A auditing leaks memory through ThreadLocal references_.
 
-To avoid these memory leaks, auditing is disabled by default. 
+To avoid these memory leaks, auditing is disabled by default.
 
 To turn auditing on, set `fs.s3a.audit.enabled` to `true`.
 
