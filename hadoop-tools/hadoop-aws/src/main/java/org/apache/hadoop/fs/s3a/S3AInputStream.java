@@ -20,11 +20,11 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 
-import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -51,6 +51,7 @@ import java.net.SocketTimeoutException;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_416;
 
 /**
  * The input stream for an S3A object.
@@ -100,12 +101,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private S3Object object;
   private S3ObjectInputStream wrappedStream;
+  private long contentLength;
   private final S3AReadOpContext context;
   private final InputStreamCallbacks client;
   private final String bucket;
   private final String key;
   private final String pathStr;
-  private long contentLength;
   private final String uri;
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AInputStream.class);
@@ -181,6 +182,28 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     streamStatistics.inputPolicySet(inputPolicy.ordinal());
   }
 
+  /***
+   * Extract content length from Content-Range header.
+   * @param objectMetadata S3 Object metadata
+   * @return content length
+   */
+  public static long getContentLength(ObjectMetadata objectMetadata) {
+    String contentRange = (String)objectMetadata.getRawMetadataValue("Content-Range");
+    long length = -1;
+    if (contentRange != null) {
+      String[] tokens = contentRange.split("[ -/]+");
+
+      try {
+        length = Long.parseLong(tokens[tokens.length - 1]);
+      } catch (NumberFormatException e) {
+        LOG.warn("Unable to parse content range. Header 'Content-Range' has corrupted data"
+            + e.getMessage(), e);
+      }
+    }
+
+    return length;
+  }
+
   /**
    * Opens up the stream at specified target position and for given length.
    *
@@ -218,13 +241,25 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           () -> client.getObject(request));
 
       // Update content length from first read
-      // by getting information con Content-Range header
+      // by getting information from Content-Range header
       if (contentLength < 0) {
         contentLength = getContentLength(object.getObjectMetadata());
         LOG.debug("Updating contentLength to {}", contentLength);
       }
 
     } catch(IOException e) {
+      // when error out of range
+      // update content length to ActualObjectSize from additional details
+      if (e.getCause() instanceof AmazonS3Exception) {
+        AmazonS3Exception s3Exception = (AmazonS3Exception) e.getCause();
+        if (s3Exception.getStatusCode() == SC_416
+            && s3Exception.getAdditionalDetails() != null
+            && s3Exception.getAdditionalDetails().containsKey("ActualObjectSize")) {
+          String objectSize = s3Exception.getAdditionalDetails().get("ActualObjectSize");
+          contentLength = Long.parseLong(objectSize);
+          LOG.debug("Updating contentLength to {}", contentLength);
+        }
+      }
       // input function failed: note it
       tracker.failed();
       // and rethrow
@@ -405,13 +440,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Retries.RetryTranslated
   public synchronized int read() throws IOException {
     checkNotClosed();
-    if (this.contentLength == 0 || (contentLength > 0 && nextReadPos >= contentLength)) {
-      return -1;
-    }
 
     try {
       lazySeek(nextReadPos, 1);
     } catch (EOFException e) {
+      return -1;
+    }
+
+    // content length is updated after the first read from lazySeek
+    if (this.contentLength == 0 || (contentLength > 0 && nextReadPos >= contentLength)) {
       return -1;
     }
 
@@ -489,14 +526,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       return 0;
     }
 
-    if (this.contentLength == 0 || (contentLength > 0 && nextReadPos >= contentLength)) {
-      return -1;
-    }
-
     try {
       lazySeek(nextReadPos, len);
     } catch (EOFException e) {
       // the end of the file has moved
+      return -1;
+    }
+
+    // content length is updated after the first read from lazySeek
+    if (this.contentLength == 0 || (contentLength > 0 && nextReadPos >= contentLength)) {
       return -1;
     }
 
@@ -830,13 +868,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       long length,
       long contentLength,
       long readahead) {
-    // if content length is unknown
-    // set content length to be as far as possible
-    // SDK will handle it and response within content length limit
-    if (contentLength < 0) {
-      contentLength = targetPos + Math.max(readahead, length);
-    }
-
     long rangeLimit;
     switch (inputPolicy) {
     case Random:
@@ -848,8 +879,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     case Sequential:
       // sequential: plan for reading the entire object.
-      // if range limit exceed content length
-      // SDK will handle it and response within content length limit
       rangeLimit = contentLength;
       break;
 
@@ -862,6 +891,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
     // cannot read past the end of the object
     rangeLimit = Math.min(contentLength, rangeLimit);
+
+    // negative range limit means content length is unknown
+    // we should set it to a positive value that greater than targetPos
+    // this is possible because AWS SDK will response within content length limit
+    // even if request range exceed content length
+    if (rangeLimit < 0) {
+      rangeLimit = targetPos + Math.max(readahead, length);
+    }
+
     return rangeLimit;
   }
 
@@ -937,22 +975,5 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     S3Object getObject(GetObjectRequest request);
 
   }
-
-  private long getContentLength(ObjectMetadata objectMetadata) {
-    String contentRange = (String)objectMetadata.getRawMetadataValue("Content-Range");
-    long length = 0;
-    if (contentRange != null) {
-      String[] tokens = contentRange.split("[ -/]+");
-
-      try {
-        length = Long.parseLong(tokens[tokens.length - 1]);
-      } catch (NumberFormatException var5) {
-        throw new SdkClientException("Unable to parse content range. Header 'Content-Range' has corrupted data" + var5.getMessage(), var5);
-      }
-    }
-
-    return length;
-  }
-
 
 }

@@ -336,10 +336,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
         FILE_STATUS_DIR_PROBE);
     assertEmptyDirStatus(status, Tristate.TRUE);
 
-    // skip all probes and expect no operations to take place
-    interceptGetFileStatusFNFE(emptydir, false,
+    // skip all probes and return file status with no content length
+    status = verifyInnerGetFileStatus(emptydir, false,
         EnumSet.noneOf(StatusProbeEnum.class),
         NO_IO);
+    assertEmptyDirStatus(status, Tristate.FALSE);
 
     // now add a trailing slash to the key and use the
     // deep internal s3GetFileStatus method call.

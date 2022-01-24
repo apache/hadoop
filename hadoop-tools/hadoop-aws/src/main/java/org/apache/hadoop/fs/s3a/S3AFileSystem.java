@@ -1412,7 +1412,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // this span is passed into the stream.
     final AuditSpan auditSpan = entryPoint(INVOCATION_OPEN, path);
     S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
-        providedStatus, true);
+        providedStatus);
 
     S3AReadOpContext readContext;
     if (options.isPresent()) {
@@ -3350,17 +3350,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   @Retries.RetryTranslated
   S3AFileStatus innerGetFileStatus(final Path f,
-                                   final boolean needEmptyDirectoryFlag,
-                                   final Set<StatusProbeEnum> probes) throws IOException {
-    return innerGetFileStatus(f, needEmptyDirectoryFlag, probes, false);
-  }
-
-  @VisibleForTesting
-  @Retries.RetryTranslated
-  S3AFileStatus innerGetFileStatus(final Path f,
       final boolean needEmptyDirectoryFlag,
-      final Set<StatusProbeEnum> probes,
-      final boolean skipHead) throws IOException {
+      final Set<StatusProbeEnum> probes) throws IOException {
+
     final Path path = qualify(f);
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({}); needEmptyDirectory={}",
@@ -3368,8 +3360,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return s3GetFileStatus(path,
         key,
         probes,
-        needEmptyDirectoryFlag,
-        skipHead);
+        needEmptyDirectoryFlag);
 
   }
 
@@ -3420,19 +3411,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   @Retries.RetryTranslated
   S3AFileStatus s3GetFileStatus(final Path path,
-                                final String key,
-                                final Set<StatusProbeEnum> probes,
-                                final boolean needEmptyDirectoryFlag) throws IOException {
-    return s3GetFileStatus(path, key, probes, needEmptyDirectoryFlag, false);
-  }
-
-  @VisibleForTesting
-  @Retries.RetryTranslated
-  S3AFileStatus s3GetFileStatus(final Path path,
       final String key,
       final Set<StatusProbeEnum> probes,
-      final boolean needEmptyDirectoryFlag,
-      final boolean skipHead) throws IOException {
+      final boolean needEmptyDirectoryFlag) throws IOException {
     LOG.debug("S3GetFileStatus {}", path);
     // either you aren't looking for the directory flag, or you are,
     // and if you are, the probe list must contain list.
@@ -3444,23 +3425,34 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return new S3AFileStatus(Tristate.UNKNOWN, path, username);
     }
 
+    // get file status without a probe
+    if (!key.isEmpty() && !key.endsWith("/")
+            && probes.isEmpty()) {
+      // use negative value for length
+      // to tell that object length is unknown
+      // it will be updated on first read
+      // also no information about modification time, etag and version id
+      return new S3AFileStatus(-1,
+              0L,
+              path,
+              getDefaultBlockSize(path),
+              username,
+              null,
+              null);
+    }
+
     if (!key.isEmpty() && !key.endsWith("/")
         && probes.contains(StatusProbeEnum.Head)) {
       try {
         // look for the simple file
         ObjectMetadata meta = getObjectMetadata(key);
         LOG.debug("Found exact file: normal file {}", key);
-        long contentLength;
-        if (skipHead) {
-          contentLength = -1;
-        } else {
-          contentLength = meta.getContentLength();
-          // check if CSE is enabled, then strip padded length.
-          if (isCSEEnabled
-                  && meta.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
-                  && contentLength >= CSE_PADDING_LENGTH) {
-            contentLength -= CSE_PADDING_LENGTH;
-          }
+        long contentLength = meta.getContentLength();
+        // check if CSE is enabled, then strip padded length.
+        if (isCSEEnabled
+            && meta.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
+            && contentLength >= CSE_PADDING_LENGTH) {
+          contentLength -= CSE_PADDING_LENGTH;
         }
         return new S3AFileStatus(contentLength,
             dateToLong(meta.getLastModified()),
@@ -4916,13 +4908,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO failure
    */
   private S3AFileStatus extractOrFetchSimpleFileStatus(
-          final Path path, final Optional<S3AFileStatus> optStatus)
-          throws IOException {
-    return extractOrFetchSimpleFileStatus(path, optStatus, false);
-  }
-
-  private S3AFileStatus extractOrFetchSimpleFileStatus(
-      final Path path, final Optional<S3AFileStatus> optStatus, final boolean skipHead)
+      final Path path, final Optional<S3AFileStatus> optStatus)
       throws IOException {
     S3AFileStatus fileStatus;
     if (optStatus.isPresent()) {
@@ -4933,12 +4919,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         throw new FileNotFoundException(path.toString() + " is a directory");
       }
     } else {
-      // Executes a HEAD only.
-      // therefore: if there is is a dir marker, this
-      // will raise a FileNotFoundException
+      // Get simple file status without a probe
+      // therefore: no content length, modification time, etag or version id
       fileStatus = innerGetFileStatus(path, false,
-          StatusProbeEnum.HEAD_ONLY,
-          skipHead);
+          StatusProbeEnum.NONE);
     }
 
     return fileStatus;

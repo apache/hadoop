@@ -63,4 +63,9 @@ public class ITestS3AFileContextMainOperations
     //checksums ignored, so test removed
   }
 
+  @Test
+  @Ignore
+  public void testOpenFileLazyFail() throws Throwable {
+    // FileNotFoundException with be delayed until first read
+  }
 }
