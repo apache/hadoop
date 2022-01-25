@@ -44,6 +44,7 @@ message DataTransferEncryptorMessageProto {
   optional string message = 3;
   repeated CipherOptionProto cipherOption = 4;
   optional HandshakeSecretProto handshakeSecret = 5;
+  optional bool accessTokenError = 6;
 }
 
 message HandshakeSecretProto {

@@ -253,6 +253,8 @@ public class TestComputeInvalidateWork {
     }
     dfs.delete(path, false);
     dfs.delete(ecFile, false);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     namesystem.writeLock();
     InvalidateBlocks invalidateBlocks;
     int totalStripedDataBlocks = totalBlockGroups * (ecPolicy.getNumDataUnits()

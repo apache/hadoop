@@ -84,11 +84,10 @@ schemes.
 properties, the Hadoop key management store and IAM roles.
 * Supports per-bucket configuration.
 * Supports S3 "Server Side Encryption" for both reading and writing:
- SSE-S3, SSE-KMS and SSE-C
+ SSE-S3, SSE-KMS and SSE-C.
 * Instrumented with Hadoop metrics.
 * Before S3 was consistent, provided a consistent view of inconsistent storage
   through [S3Guard](./s3guard.html).
-
 * Actively maintained by the open source community.
 
 
@@ -148,32 +147,11 @@ Amazon S3 is an example of "an object store". In order to achieve scalability
 and especially high availability, S3 has —as many other cloud object stores have
 done— relaxed some of the constraints which classic "POSIX" filesystems promise.
 
-The [S3Guard](./s3guard.html) feature attempts to address some of these, but
-it cannot do so completely. Do read these warnings and consider how
-they apply.
-
 For further discussion on these topics, please consult
 [The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
 
-### Warning #1: S3 Consistency model
 
-Amazon S3 is an example of "an object store". In order to achieve scalability
-and especially high availability, S3 has —as many other cloud object stores have
-done— relaxed some of the constraints which classic "POSIX" filesystems promise.
-
-Specifically
-
-1. Files that are newly created from the Hadoop Filesystem APIs may not be
-immediately visible.
-2. File delete and update operations may not immediately propagate. Old
-copies of the file may exist for an indeterminate time period.
-3. Directory operations: `delete()` and `rename()` are implemented by
-recursive file-by-file operations. They take time at least proportional to
-the number of files, during which time partial updates may be visible. If
-the operations are interrupted, the filesystem is left in an intermediate state.
-
-
-### Warning #2: Directories are mimicked
+### Warning #1: Directories are mimicked
 
 The S3A clients mimics directories by:
 
@@ -213,7 +191,7 @@ to safely save the output of queries directly into S3 object stores
 through the S3A filesystem.
 
 
-### Warning #3: Object stores have different authorization models
+### Warning #2: Object stores have different authorization models
 
 The object authorization model of S3 is much different from the file
 authorization model of HDFS and traditional file systems.
@@ -551,7 +529,7 @@ This means that the default S3A authentication chain can be defined as
     com.amazonaws.auth.AWSCredentialsProvider.
 
     When S3A delegation tokens are not enabled, this list will be used
-    to directly authenticate with S3 and DynamoDB services.
+    to directly authenticate with S3 and other AWS services.
     When S3A Delegation tokens are enabled, depending upon the delegation
     token binding it may be used
     to communicate with the STS endpoint to request session/role
@@ -778,10 +756,9 @@ All S3A client options are configured with options with the prefix `fs.s3a.`.
 The client supports <a href="per_bucket_configuration">Per-bucket configuration</a>
 to allow different buckets to override the shared settings. This is commonly
 used to change the endpoint, encryption and authentication mechanisms of buckets.
-S3Guard options, various minor options.
+and various minor options.
 
-Here are the S3A properties for use in production. The S3Guard options are
-documented in the [S3Guard documents](./s3guard.html); some testing-related
+Here are the S3A properties for use in production; some testing-related
 options are covered in [Testing](./testing.md).
 
 ```xml
@@ -1176,10 +1153,10 @@ be the wrong decision: rebuild the `hadoop-aws` module with the constant
 
 
 
-### Throttled requests from S3 and Dynamo DB
+### Throttled requests from S3
 
 
-When S3A or Dynamo DB returns a response indicating that requests
+When AWS S3 returns a response indicating that requests
 from the caller are being throttled, an exponential back-off with
 an initial interval and a maximum number of requests.
 
@@ -1246,8 +1223,6 @@ performed by clients.
 !. Maybe: increase `fs.s3a.readahead.range` to increase the minimum amount
 of data asked for in every GET request, as well as how much data is
 skipped in the existing stream before aborting it and creating a new stream.
-1. If the DynamoDB tables used by S3Guard are being throttled, increase
-the capacity through `hadoop s3guard set-capacity` (and pay more, obviously).
 1. KMS: "consult AWS about increasing your capacity".
 
 
@@ -1322,13 +1297,6 @@ file are streamed from a single response.  An overwrite of the file after the
 that had already read the first byte.  Seeks backward on the other hand can
 result in new 'Get Object' requests that can trigger the
 `RemoteFileChangedException`.
-
-Additionally, due to the eventual consistency of S3 in a read-after-overwrite
-scenario, visibility of a new write may be delayed, avoiding the
-`RemoteFileChangedException` for some readers.  That said, if a reader does not
-see `RemoteFileChangedException`, they will have at least read a consistent view
-of a single version of the file (the version available when they started
-reading).
 
 ### Change detection with S3 Versions.
 
@@ -2092,7 +2060,7 @@ except also allows for a custom SignerInitializer
 (`org.apache.hadoop.fs.s3a.AwsSignerInitializer`) class to be specified.
 
 #### Usage of the Signers
-Signers can be set at a per service level(S3, dynamodb, etc) or a common
+Signers can be set at a per-service level (S3, etc) or a common
 signer for all services.
 
 ```xml
@@ -2100,12 +2068,6 @@ signer for all services.
   <name>fs.s3a.s3.signing-algorithm</name>
   <value>${S3SignerName}</value>
   <description>Specify the signer for S3</description>
-</property>
-
-<property>
-  <name>fs.s3a.ddb.signing-algorithm</name>
-  <value>${DdbSignerName}</value>
-  <description>Specify the signer for DDB</description>
 </property>
 
 <property>

@@ -402,7 +402,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     }
   }
 
-  public void removeRMContainer(ContainerId containerId) {
+  /**
+   * Removes an RM container from the map of live containers
+   * related to this application attempt.
+   * @param containerId The container ID of the RMContainer to remove
+   * @return true if the container is in the map
+   */
+  public boolean removeRMContainer(ContainerId containerId) {
     writeLock.lock();
     try {
       RMContainer rmContainer = liveContainers.remove(containerId);
@@ -415,7 +421,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           this.attemptResourceUsageAllocatedRemotely
               .decUsed(rmContainer.getAllocatedResource());
         }
+
+        return true;
       }
+
+      return false;
     } finally {
       writeLock.unlock();
     }
@@ -1226,7 +1236,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     }
   }
 
-  public void recoverContainer(SchedulerNode node,
+  public boolean recoverContainer(SchedulerNode node,
       RMContainer rmContainer) {
     writeLock.lock();
     try {
@@ -1234,7 +1244,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       appSchedulingInfo.recoverContainer(rmContainer, node.getPartition());
 
       if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
-        return;
+        return false;
       }
       LOG.info("SchedulerAttempt " + getApplicationAttemptId()
           + " is recovering container " + rmContainer.getContainerId());
@@ -1243,6 +1253,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         attemptResourceUsage.incUsed(node.getPartition(),
             rmContainer.getContainer().getResource());
       }
+
+      return true;
 
       // resourceLimit: updated when LeafQueue#recoverContainer#allocateResource
       // is called.

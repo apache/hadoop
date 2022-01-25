@@ -29,6 +29,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_ACCESS_CHECK_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_SPAN_CREATION;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.LOGGING_AUDIT_SERVICE;
@@ -68,6 +69,7 @@ public final class AuditTestSupport {
     final Configuration conf = new Configuration(false);
     conf.set(
         AUDIT_SERVICE_CLASSNAME, NOOP_AUDIT_SERVICE);
+    conf.setBoolean(AUDIT_ENABLED, true);
     return conf;
   }
 
@@ -88,6 +90,7 @@ public final class AuditTestSupport {
    */
   public static Configuration enableLoggingAuditor(final Configuration conf) {
     conf.set(AUDIT_SERVICE_CLASSNAME, LOGGING_AUDIT_SERVICE);
+    conf.setBoolean(AUDIT_ENABLED, true);
     conf.setBoolean(REJECT_OUT_OF_SPAN_OPERATIONS,  true);
     return conf;
   }
@@ -117,7 +120,8 @@ public final class AuditTestSupport {
         REFERRER_HEADER_ENABLED,
         REJECT_OUT_OF_SPAN_OPERATIONS,
         AUDIT_REQUEST_HANDLERS,
-        AUDIT_SERVICE_CLASSNAME);
+        AUDIT_SERVICE_CLASSNAME,
+        AUDIT_ENABLED);
     return conf;
   }
 }

@@ -2401,6 +2401,51 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
+   * Get the difference between two snapshots of a directory iteratively.
+   *
+   * @param snapshotDir full path of the directory where snapshots are taken.
+   * @param fromSnapshotName snapshot name of the from point. Null indicates the current tree.
+   * @param toSnapshotName snapshot name of the to point. Null indicates the current tree.
+   * @param snapshotDiffStartPath path relative to the snapshottable root directory from where
+   *     the snapshotdiff computation needs to start.
+   * @param snapshotDiffIndex index in the created or deleted list of the directory at which the
+   *     snapshotdiff computation stopped during the last rpc call. -1 indicates the diff
+   *     computation needs to start right from the start path.
+   * @return the difference report represented as a {@link SnapshotDiffReportListing}.
+   * @throws IOException if an I/O error occurred.
+   */
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(Path snapshotDir,
+      String fromSnapshotName, String toSnapshotName, String snapshotDiffStartPath,
+      int snapshotDiffIndex) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
+    Path absF = fixRelativePart(snapshotDir);
+    return new FileSystemLinkResolver<SnapshotDiffReportListing>() {
+
+      @Override
+      public SnapshotDiffReportListing doCall(final Path p) throws IOException {
+        return dfs.getSnapshotDiffReportListing(getPathName(p), fromSnapshotName, toSnapshotName,
+            DFSUtilClient.string2Bytes(snapshotDiffStartPath), snapshotDiffIndex);
+      }
+
+      @Override
+      public SnapshotDiffReportListing next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem distributedFileSystem = (DistributedFileSystem)fs;
+          distributedFileSystem.getSnapshotDiffReportListing(p, fromSnapshotName, toSnapshotName,
+              snapshotDiffStartPath, snapshotDiffIndex);
+        } else {
+          throw new UnsupportedOperationException("Cannot perform snapshot"
+              + " operations on a symlink to a non-DistributedFileSystem: "
+              + snapshotDir + " -> " + p);
+        }
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
    * Get the close status of a file
    * @param src The path to the file
    *

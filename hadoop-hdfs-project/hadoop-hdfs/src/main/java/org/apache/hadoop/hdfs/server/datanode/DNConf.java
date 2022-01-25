@@ -74,6 +74,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.security.SaslPropertiesResolver;
+import org.apache.hadoop.util.Preconditions;
 
 import java.util.concurrent.TimeUnit;
 
@@ -105,14 +106,14 @@ public class DNConf {
   final long readaheadLength;
   final long heartBeatInterval;
   private final long lifelineIntervalMs;
-  final long blockReportInterval;
+  volatile long blockReportInterval;
   final long blockReportSplitThreshold;
   final boolean peerStatsEnabled;
   final boolean diskStatsEnabled;
   final long outliersReportIntervalMs;
   final long ibrInterval;
   final long initialBlockReportDelayMs;
-  final long cacheReportInterval;
+  volatile long cacheReportInterval;
   final long datanodeSlowIoWarningThresholdMs;
 
   final String minimumNameNodeVersion;
@@ -475,7 +476,22 @@ public class DNConf {
     return processCommandsThresholdMs;
   }
 
+  void setBlockReportInterval(long intervalMs) {
+    Preconditions.checkArgument(intervalMs > 0);
+    blockReportInterval = intervalMs;
+  }
+
   public long getBlockReportInterval() {
     return blockReportInterval;
+  }
+
+  void setCacheReportInterval(long intervalMs) {
+    Preconditions.checkArgument(intervalMs > 0,
+        "dfs.cachereport.intervalMsec should be larger than 0");
+    cacheReportInterval = intervalMs;
+  }
+
+  public long getCacheReportInterval() {
+    return cacheReportInterval;
   }
 }
