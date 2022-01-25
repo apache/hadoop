@@ -267,7 +267,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
       ParentQueue parentQueue;
       if (isAutoCreateEnabled) {
-        validateParent(parent, queueName);
         parentQueue = new ManagedParentQueue(queueContext, queueName, parent, oldQueues.get(
             fullQueueName));
       } else {
