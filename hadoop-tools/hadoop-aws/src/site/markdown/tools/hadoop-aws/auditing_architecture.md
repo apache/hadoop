@@ -117,7 +117,18 @@ the auditor is bound to.
 
 The auditor then creates and returns a span for the specific operation.
 The AuditManagerS3A will automatically activate the span returned by the auditor
-(i.e. assign it the thread local variable tracking the active span in each thread)
+(i.e. assign it the thread local variable tracking the active span in each thread).
+
+### Memory Leakage through `ThreadLocal` use
+
+This architecture contains a critical defect,
+[HADOOP-18091](https://issues.apache.org/jira/browse/HADOOP-18091) _S3A auditing leaks memory through ThreadLocal references_.
+
+The code was written assuming that when the `ActiveAuditManagerS3A` service is
+stopped, it's `ThreadLocal` fields would be freed.
+In fact, they are retained until the threads with references are terminated.
+
+This is why auditing is now disabled by default until a fix is implemented.
 
 ### Class `org.apache.hadoop.fs.audit.CommonAuditContext`
 
@@ -141,8 +152,19 @@ thread.
 
 ### class `NoopAuditor`
 
-This auditor creates spans which perform no auditing.
-It is very efficient and reliable.
+This auditor creates spans which doesn't do anything with the events.
+
+```xml
+<property>
+  <name>fs.s3a.audit.service.classname</name>
+  <value>org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor</value>
+</property>
+```
+
+This is *not* the same as disabling auditing, as it still uses the `ActiveAuditManagerS3A` class
+which is the source of memory leaks.
+
+Avoid using it except in tests as there is no benefit -simply significant cost.
 
 ### class `LoggingAuditor`
 

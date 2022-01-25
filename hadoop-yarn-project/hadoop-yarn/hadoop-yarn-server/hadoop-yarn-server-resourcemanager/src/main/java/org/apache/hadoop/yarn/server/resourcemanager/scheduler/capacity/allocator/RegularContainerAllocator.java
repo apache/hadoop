@@ -80,7 +80,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // require
     Resource resourceCouldBeUnReserved =
         application.getAppAttemptResourceUsage().getReserved(nodePartition);
-    if (!application.getCSLeafQueue().getReservationContinueLooking()) {
+    if (!application.getCSLeafQueue().isReservationsContinueLooking()) {
       // If we don't allow reservation continuous looking,
       // we won't allow to unreserve before allocation.
       resourceCouldBeUnReserved = Resources.none();
@@ -154,7 +154,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       return ContainerAllocation.PRIORITY_SKIPPED;
     }
 
-    if (!application.getCSLeafQueue().getReservationContinueLooking()) {
+    if (!application.getCSLeafQueue().isReservationsContinueLooking()) {
       if (!shouldAllocOrReserveNewContainer(schedulerKey, required)) {
         LOG.debug("doesn't need containers based on reservation algo!");
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
@@ -551,7 +551,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     RMContainer unreservedContainer = null;
     boolean reservationsContinueLooking =
-        application.getCSLeafQueue().getReservationContinueLooking();
+        application.getCSLeafQueue().isReservationsContinueLooking();
 
     // Check if we need to kill some containers to allocate this one
     List<RMContainer> toKillContainers = null;

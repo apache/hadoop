@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -39,7 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -55,12 +53,10 @@ import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 
@@ -70,7 +66,6 @@ import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MATERIALIZE_FILE;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
-import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
 
@@ -171,13 +166,11 @@ public class CommitOperations extends AbstractStoreOperation
   /**
    * Commit the operation, throwing an exception on any failure.
    * @param commit commit to execute
-   * @param operationState S3Guard state of ongoing operation.
    * @throws IOException on a failure
    */
   private void commitOrFail(
-      final SinglePendingCommit commit,
-      final BulkOperationState operationState) throws IOException {
-    commit(commit, commit.getFilename(), operationState).maybeRethrow();
+      final SinglePendingCommit commit) throws IOException {
+    commit(commit, commit.getFilename()).maybeRethrow();
   }
 
   /**
@@ -185,13 +178,11 @@ public class CommitOperations extends AbstractStoreOperation
    * and converted to an outcome.
    * @param commit entry to commit
    * @param origin origin path/string for outcome text
-   * @param operationState S3Guard state of ongoing operation.
    * @return the outcome
    */
   private MaybeIOE commit(
       final SinglePendingCommit commit,
-      final String origin,
-      final BulkOperationState operationState) {
+      final String origin) {
     LOG.debug("Committing single commit {}", commit);
     MaybeIOE outcome;
     String destKey = "unknown destination";
@@ -203,7 +194,7 @@ public class CommitOperations extends AbstractStoreOperation
       commit.validate();
       destKey = commit.getDestinationKey();
       long l = trackDuration(statistics, COMMITTER_MATERIALIZE_FILE.getSymbol(),
-          () -> innerCommit(commit, operationState));
+          () -> innerCommit(commit));
       LOG.debug("Successful commit of file length {}", l);
       outcome = MaybeIOE.NONE;
       statistics.commitCompleted(commit.getLength());
@@ -226,20 +217,18 @@ public class CommitOperations extends AbstractStoreOperation
   /**
    * Inner commit operation.
    * @param commit entry to commit
-   * @param operationState S3Guard state of ongoing operation.
    * @return bytes committed.
    * @throws IOException failure
    */
   private long innerCommit(
-      final SinglePendingCommit commit,
-      final BulkOperationState operationState) throws IOException {
+      final SinglePendingCommit commit) throws IOException {
     // finalize the commit
     writeOperations.commitUpload(
         commit.getDestinationKey(),
               commit.getUploadId(),
               toPartEtags(commit.getEtags()),
-              commit.getLength(),
-              operationState);
+              commit.getLength()
+    );
     return commit.getLength();
   }
 
@@ -439,14 +428,6 @@ public class CommitOperations extends AbstractStoreOperation
     if (addMetrics) {
       addFileSystemStatistics(successData.getMetrics());
     }
-    // add any diagnostics
-    Configuration conf = fs.getConf();
-    successData.addDiagnostic(S3_METADATA_STORE_IMPL,
-        conf.getTrimmed(S3_METADATA_STORE_IMPL, ""));
-    successData.addDiagnostic(METADATASTORE_AUTHORITATIVE,
-        conf.getTrimmed(METADATASTORE_AUTHORITATIVE, "false"));
-    successData.addDiagnostic(AUTHORITATIVE_PATH,
-        conf.getTrimmed(AUTHORITATIVE_PATH, ""));
 
     // now write
     Path markerPath = new Path(outputPath, _SUCCESS);
@@ -461,14 +442,12 @@ public class CommitOperations extends AbstractStoreOperation
   /**
    * Revert a pending commit by deleting the destination.
    * @param commit pending commit
-   * @param operationState nullable operational state for a bulk update
    * @throws IOException failure
    */
-  public void revertCommit(SinglePendingCommit commit,
-      BulkOperationState operationState) throws IOException {
+  public void revertCommit(SinglePendingCommit commit) throws IOException {
     LOG.info("Revert {}", commit);
     try {
-      writeOperations.revertCommit(commit.getDestinationKey(), operationState);
+      writeOperations.revertCommit(commit.getDestinationKey());
     } finally {
       statistics.commitReverted();
     }
@@ -617,7 +596,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @throws IOException failure.
    */
   public CommitContext initiateCommitOperation(Path path) throws IOException {
-    return new CommitContext(writeOperations.initiateCommitOperation(path));
+    return new CommitContext();
   }
 
   /**
@@ -647,11 +626,7 @@ public class CommitOperations extends AbstractStoreOperation
    * Commit context.
    *
    * It is used to manage the final commit sequence where files become
-   * visible. It contains a {@link BulkOperationState} field, which, if
-   * there is a metastore, will be requested from the store so that it
-   * can track multiple creation operations within the same overall operation.
-   * This will be null if there is no metastore, or the store chooses not
-   * to provide one.
+   * visible.
    *
    * This can only be created through {@link #initiateCommitOperation(Path)}.
    *
@@ -660,40 +635,34 @@ public class CommitOperations extends AbstractStoreOperation
    */
   public final class CommitContext implements Closeable {
 
-    /**
-     * State of any metastore.
-     */
-    private final BulkOperationState operationState;
 
     /**
      * Create.
-     * @param operationState any S3Guard bulk state.
      */
-    private CommitContext(@Nullable final BulkOperationState operationState) {
-      this.operationState = operationState;
+    private CommitContext() {
     }
 
     /**
      * Commit the operation, throwing an exception on any failure.
-     * See {@link CommitOperations#commitOrFail(SinglePendingCommit, BulkOperationState)}.
+     * See {@link CommitOperations#commitOrFail(SinglePendingCommit)}.
      * @param commit commit to execute
      * @throws IOException on a failure
      */
     public void commitOrFail(SinglePendingCommit commit) throws IOException {
-      CommitOperations.this.commitOrFail(commit, operationState);
+      CommitOperations.this.commitOrFail(commit);
     }
 
     /**
      * Commit a single pending commit; exceptions are caught
      * and converted to an outcome.
-     * See {@link CommitOperations#commit(SinglePendingCommit, String, BulkOperationState)}.
+     * See {@link CommitOperations#commit(SinglePendingCommit, String)}.
      * @param commit entry to commit
      * @param origin origin path/string for outcome text
      * @return the outcome
      */
     public MaybeIOE commit(SinglePendingCommit commit,
         String origin) {
-      return CommitOperations.this.commit(commit, origin, operationState);
+      return CommitOperations.this.commit(commit, origin);
     }
 
     /**
@@ -708,13 +677,13 @@ public class CommitOperations extends AbstractStoreOperation
     }
 
     /**
-     * See {@link CommitOperations#revertCommit(SinglePendingCommit, BulkOperationState)}.
+     * See {@link CommitOperations#revertCommit(SinglePendingCommit)}.
      * @param commit pending commit
      * @throws IOException failure
      */
     public void revertCommit(final SinglePendingCommit commit)
         throws IOException {
-      CommitOperations.this.revertCommit(commit, operationState);
+      CommitOperations.this.revertCommit(commit);
     }
 
     /**
@@ -733,14 +702,12 @@ public class CommitOperations extends AbstractStoreOperation
 
     @Override
     public void close() throws IOException {
-      IOUtils.cleanupWithLogger(LOG, operationState);
     }
 
     @Override
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "CommitContext{");
-      sb.append("operationState=").append(operationState);
       sb.append('}');
       return sb.toString();
     }

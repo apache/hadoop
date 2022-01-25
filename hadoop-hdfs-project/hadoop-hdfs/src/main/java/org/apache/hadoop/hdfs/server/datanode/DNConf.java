@@ -113,7 +113,7 @@ public class DNConf {
   final long outliersReportIntervalMs;
   final long ibrInterval;
   final long initialBlockReportDelayMs;
-  final long cacheReportInterval;
+  volatile long cacheReportInterval;
   final long datanodeSlowIoWarningThresholdMs;
 
   final String minimumNameNodeVersion;
@@ -483,5 +483,15 @@ public class DNConf {
 
   public long getBlockReportInterval() {
     return blockReportInterval;
+  }
+
+  void setCacheReportInterval(long intervalMs) {
+    Preconditions.checkArgument(intervalMs > 0,
+        "dfs.cachereport.intervalMsec should be larger than 0");
+    cacheReportInterval = intervalMs;
+  }
+
+  public long getCacheReportInterval() {
+    return cacheReportInterval;
   }
 }

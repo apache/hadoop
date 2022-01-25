@@ -1205,7 +1205,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public Response removeFromCluserNodeLabels(Set<String> oldNodeLabels,
+  public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
     throw new NotImplementedException("Code is not implemented");
   }

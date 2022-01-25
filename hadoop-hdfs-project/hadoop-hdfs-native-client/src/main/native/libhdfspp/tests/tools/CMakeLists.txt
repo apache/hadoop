@@ -23,27 +23,45 @@ add_executable(hdfs_tool_tests
                 hdfs-delete-snapshot-mock.cc
                 hdfs-create-snapshot-mock.cc
                 hdfs-cat-mock.cc
+                hdfs-chown-mock.cc
+                hdfs-chmod-mock.cc
+                hdfs-chgrp-mock.cc
                 hdfs-tool-test-fixtures.cc
                 hdfs-tool-tests.cc
                 hdfs-df-mock.cc
+                hdfs-du-mock.cc
+                hdfs-copy-to-local-mock.cc
+                hdfs-move-to-local-mock.cc
                 main.cc)
 target_include_directories(hdfs_tool_tests PRIVATE
                             ../tools
                             ../../tools
                             ../../tools/hdfs-df
+                            ../../tools/hdfs-du
                             ../../tools/hdfs-allow-snapshot
                             ../../tools/hdfs-disallow-snapshot
                             ../../tools/hdfs-delete-snapshot
                             ../../tools/hdfs-create-snapshot
                             ../../tools/hdfs-rename-snapshot
+                            ../../tools/hdfs-chown
+                            ../../tools/hdfs-chgrp
+                            ../../tools/hdfs-chmod
+                            ../../tools/hdfs-copy-to-local
+                            ../../tools/hdfs-move-to-local
                             ../../tools/hdfs-cat)
 target_link_libraries(hdfs_tool_tests PRIVATE
                        gmock_main
                        hdfs_df_lib
+                       hdfs_du_lib
                        hdfs_allowSnapshot_lib
                        hdfs_disallowSnapshot_lib
                        hdfs_deleteSnapshot_lib
                        hdfs_createSnapshot_lib
                        hdfs_renameSnapshot_lib
+                       hdfs_chown_lib
+                       hdfs_chgrp_lib
+                       hdfs_chmod_lib
+                       hdfs_copyToLocal_lib
+                       hdfs_moveToLocal_lib
                        hdfs_cat_lib)
 add_test(hdfs_tool_tests hdfs_tool_tests)

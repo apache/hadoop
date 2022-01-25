@@ -2484,6 +2484,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.max.slowdisks.to.exclude</name>
+  <value>0</value>
+  <description>
+    The number of slow disks that needs to be excluded. By default, this parameter is set to 0,
+    which disables excluding slow disk when choosing volume.
+  </description>
+</property>
+
+<property>
   <name>hadoop.user.group.metrics.percentiles.intervals</name>
   <value></value>
   <description>
@@ -2983,6 +2992,16 @@
 </property>
 
 <property>
+  <name>dfs.datanode.fsdatasetasyncdisk.max.threads.per.volume</name>
+  <value>4</value>
+  <description>
+    The maximum number of threads per volume used to process async disk
+    operations on the datanode. These threads consume I/O and CPU at the
+    same time. This will affect normal data node operations.
+  </description>
+</property>
+
+<property>
   <name>dfs.cachereport.intervalMsec</name>
   <value>10000</value>
   <description>
@@ -3345,6 +3364,25 @@
     <value>0</value>
     <description>
       Refreshing LocatedBlocks period. A value of 0 disables the feature.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.refresh.read-block-locations.register-automatically</name>
+    <value>true</value>
+    <description>
+      Whether to auto-register all DFSInputStreams for background LocatedBlock refreshes.
+      If false, user must manually register using DFSClient#addLocatedBlocksRefresh(DFSInputStream)
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.refresh.read-block-locations.threads</name>
+    <value>5</value>
+    <description>
+      Number of threads to use for refreshing LocatedBlocks of registered
+      DFSInputStreams. If a DFSClient opens many DFSInputStreams, increasing
+      this may help refresh them all in a timely manner.
     </description>
   </property>
 
@@ -5512,6 +5550,14 @@
 </property>
 
 <property>
+  <name>dfs.pipeline.slownode</name>
+  <value>false</value>
+  <description>
+    If true, allows slownode information to be replied to Client via PipelineAck.
+  </description>
+</property>
+
+<property>
   <name>dfs.qjournal.accept-recovery.timeout.ms</name>
   <value>120000</value>
   <description>
@@ -6298,6 +6344,16 @@
     <description>
       Nameservice resolver implementation used by datanode.
       Effective with dfs.nameservices.resolution-enabled on.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.mark.slownode.as.badnode.threshold</name>
+    <value>10</value>
+    <description>
+      The threshold to mark a slownode as a badnode. If we get PipelineAck from
+      a slownode continuously for ${dfs.client.treat.slownode.as.badnode.threshold}
+      times, we should mark it as a badnode.
     </description>
   </property>
 </configuration>

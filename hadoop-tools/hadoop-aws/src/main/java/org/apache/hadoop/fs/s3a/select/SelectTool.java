@@ -264,7 +264,7 @@ public class SelectTool extends S3GuardTool {
       stream = FutureIOSupport.awaitFuture(builder.build());
     } catch (FileNotFoundException e) {
       // the source file is missing.
-      throw storeNotFound(e);
+      throw notFound(e);
     }
     try {
       if (toConsole) {

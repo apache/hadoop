@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.stream.Collectors;
 
 /**
  * This class implements the logic to track decommissioning and entering
@@ -149,7 +150,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    */
   @Override
   public void stopTrackingNode(DatanodeDescriptor dn) {
-    pendingNodes.remove(dn);
+    getPendingNodes().remove(dn);
     cancelledNodes.add(dn);
   }
 
@@ -189,6 +190,29 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
          * node will be removed from tracking by the pending cancel.
          */
         processCancelledNodes();
+
+        // Having more nodes decommissioning than can be tracked will impact decommissioning
+        // performance due to queueing delay
+        int numTrackedNodes = outOfServiceNodeBlocks.size();
+        int numQueuedNodes = getPendingNodes().size();
+        int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
+        if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+          LOG.warn(
+              "{} nodes are decommissioning but only {} nodes will be tracked at a time. "
+                  + "{} nodes are currently queued waiting to be decommissioned.",
+              numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
+
+          // Re-queue unhealthy nodes to make space for decommissioning healthy nodes
+          final List<DatanodeDescriptor> unhealthyDns = outOfServiceNodeBlocks.keySet().stream()
+              .filter(dn -> !blockManager.isNodeHealthyForDecommissionOrMaintenance(dn))
+              .collect(Collectors.toList());
+          getUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
+            getPendingNodes().add(dn);
+            outOfServiceNodeBlocks.remove(dn);
+            pendingRep.remove(dn);
+          });
+        }
+
         processPendingNodes();
       } finally {
         namesystem.writeUnlock();
@@ -207,7 +231,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       LOG.info("Checked {} blocks this tick. {} nodes are now " +
           "in maintenance or transitioning state. {} nodes pending. {} " +
           "nodes waiting to be cancelled.",
-          numBlocksChecked, outOfServiceNodeBlocks.size(), pendingNodes.size(),
+          numBlocksChecked, outOfServiceNodeBlocks.size(), getPendingNodes().size(),
           cancelledNodes.size());
     }
   }
@@ -220,10 +244,10 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * the pendingNodes list from being modified externally.
    */
   private void processPendingNodes() {
-    while (!pendingNodes.isEmpty() &&
+    while (!getPendingNodes().isEmpty() &&
         (maxConcurrentTrackedNodes == 0 ||
             outOfServiceNodeBlocks.size() < maxConcurrentTrackedNodes)) {
-      outOfServiceNodeBlocks.put(pendingNodes.poll(), null);
+      outOfServiceNodeBlocks.put(getPendingNodes().poll(), null);
     }
   }
 

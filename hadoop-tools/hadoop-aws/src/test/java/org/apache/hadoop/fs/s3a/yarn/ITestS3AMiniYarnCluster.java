@@ -119,7 +119,7 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
 
     Path success = new Path(output, _SUCCESS);
     FileStatus status = fs.getFileStatus(success);
-    assertTrue("0 byte success file - not a s3guard committer " + success,
+    assertTrue("0 byte success file - not an S3A committer " + success,
         status.getLen() > 0);
     SuccessData successData = SuccessData.load(fs, success);
     String commitDetails = successData.toString();

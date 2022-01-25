@@ -30,8 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.util.DistCpUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -234,7 +236,18 @@ public final class DistCpOptions {
 
   public List<Path> getSourcePaths() {
     return sourcePaths == null ?
-        null : Collections.unmodifiableList(sourcePaths);
+        null :
+        Collections.unmodifiableList(getUniquePaths(sourcePaths));
+  }
+
+  private List<Path> getUniquePaths(List<Path> srcPaths) {
+    Set<Path> uniquePaths = new LinkedHashSet<>();
+    for (Path path : srcPaths) {
+      if (!uniquePaths.add(path)) {
+        LOG.info("Path: {} added multiple times, ignoring the redundant entry.", path);
+      }
+    }
+    return new ArrayList<>(uniquePaths);
   }
 
   public Path getTargetPath() {

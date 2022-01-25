@@ -31,15 +31,16 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
-
-  private static final Logger LOG = LoggerFactory
-      .getLogger(ReservationQueue.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReservationQueue.class);
 
   private PlanQueue parent;
 
-  public ReservationQueue(CapacitySchedulerContext cs, String queueName,
+  public ReservationQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       PlanQueue parent) throws IOException {
-    super(cs, queueName, parent, null);
+    super(queueContext, queueName, parent, null);
+    super.setupQueueConfigs(queueContext.getClusterResource());
+
     // the following parameters are common to all reservation in the plan
     updateQuotas(parent.getUserLimitForReservation(),
         parent.getUserLimitFactor(),
@@ -82,8 +83,7 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
   }
 
   @Override
-  protected void setupConfigurableCapacities(CapacitySchedulerConfiguration
-      configuration) {
+  protected void setupConfigurableCapacities() {
     super.updateAbsoluteCapacities();
   }
 }

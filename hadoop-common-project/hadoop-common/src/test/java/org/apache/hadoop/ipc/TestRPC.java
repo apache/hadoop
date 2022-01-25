@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -1104,6 +1105,37 @@ public class TestRPC extends TestRpcBase {
         RPC.stopProxy(proxy2);
       }
       stop(server, proxy);
+    }
+  }
+
+  @Test
+  public void testNumInProcessHandlerMetrics() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.
+        createUserForTesting("user123", new String[0]);
+    // use 1 handler so the callq can be plugged
+    final Server server = setupTestServer(conf, 1);
+    try {
+      RpcMetrics rpcMetrics = server.getRpcMetrics();
+      assertEquals(0, rpcMetrics.getNumInProcessHandler());
+
+      ExternalCall<String> call1 = newExtCall(ugi, () -> {
+        assertEquals(1, rpcMetrics.getNumInProcessHandler());
+        return UserGroupInformation.getCurrentUser().getUserName();
+      });
+      ExternalCall<Void> call2 = newExtCall(ugi, () -> {
+        assertEquals(1, rpcMetrics.getNumInProcessHandler());
+        return null;
+      });
+
+      server.queueCall(call1);
+      server.queueCall(call2);
+
+      // Wait for call1 and call2 to enter the handler.
+      call1.get();
+      call2.get();
+      assertEquals(0, rpcMetrics.getNumInProcessHandler());
+    } finally {
+      server.stop();
     }
   }
 
