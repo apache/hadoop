@@ -32,7 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A map of keys type k to objects of type V which uses weak references,
+ * A map of keys type K to objects of type V which uses weak references,
  * so does lot leak memory through long-lived references
  * <i>at the expense of losing references when GC takes place.</i>.
  *
@@ -106,10 +106,12 @@ public class WeakReferenceMap<K, V> {
    */
   public V get(K key) {
     final WeakReference<V> current = lookup(key);
-    if (current != null && current.get() != null) {
+    V val = resolve(current);
+    if (val != null) {
       // all good.
-      return current.get();
+      return  val;
     }
+
     // here, either no ref, or the value is null
     if (current != null) {
       noteLost(key);
@@ -118,7 +120,7 @@ public class WeakReferenceMap<K, V> {
   }
 
   /**
-   * Create a new instance.
+   * Create a new instance under a key.
    * The instance is created, added to the map and then the
    * map value retrieved.
    * This ensures that the reference returned is that in the map,
