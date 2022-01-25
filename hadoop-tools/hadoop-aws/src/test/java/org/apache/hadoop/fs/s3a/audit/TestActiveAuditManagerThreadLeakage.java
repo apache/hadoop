@@ -65,7 +65,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestActiveAuditManagerThreadLeakage.class);
 
-  private static final int MANAGER_COUNT = 1000;
+  private static final int MANAGER_COUNT = 500;
   private static final int THREAD_COUNT = 20;
   private ExecutorService workers;
   private int pruneCount;
@@ -141,13 +141,21 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
 
   }
 
+  /**
+   * The operation in each worker thread.
+   * @param auditManager audit manager
+   * @return result of the call
+   * @throws IOException troluble
+   */
   private Result spanningOperation(final ActiveAuditManagerS3A auditManager)
-      throws IOException, InterruptedException {
-    final AuditSpanS3A auditSpan = auditManager.getActiveAuditSpan();
+      throws IOException {
+    auditManager.getActiveAuditSpan();
+    final AuditSpanS3A auditSpan =
+        auditManager.createSpan("span", null, null);
     Assertions.assertThat(auditSpan)
         .describedAs("audit span for current thread")
         .isNotNull();
-    Thread.sleep(200);
+    Thread.yield();
     return new Result(Thread.currentThread().getId(), auditSpan);
   }
 
