@@ -20,14 +20,16 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,34 +68,48 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   private static final int MANAGER_COUNT = 1000;
   private static final int THREAD_COUNT = 20;
   private ExecutorService workers;
+  private int pruneCount;
 
   @Test
   public void testMemoryLeak() throws Throwable {
     workers = Executors.newFixedThreadPool(THREAD_COUNT);
     for (int i = 0; i < MANAGER_COUNT; i++) {
-      final long oneAuditConsumption = createDestroyOneAuditor();
+      final long oneAuditConsumption = createDestroyOneAuditor(i);
       LOG.info("manager {} memory retained {}", i, oneAuditConsumption);
     }
+
+    // pruning must have taken place.
+    // that's somewhat implicit in the test not going OOM.
+    // but if memory allocation in test runs increase, it
+    // may cease to hold. in which case: create more
+    // audit managers
+    LOG.info("Totel prune count {}", pruneCount);
+
+    Assertions.assertThat(pruneCount)
+        .describedAs("Totel prune count")
+        .isGreaterThan(0);
+
+
   }
 
-  private long createDestroyOneAuditor() throws Exception {
+  private long createDestroyOneAuditor(final int instance) throws Exception {
     long original = Runtime.getRuntime().freeMemory();
     ExecutorService factory = Executors.newSingleThreadExecutor();
 
-    final Future<Long> action = factory.submit(this::createAuditorAndWorkers);
-    final long count = action.get();
-    LOG.info("Span count {}", count);
+    final Future<Integer> action = factory.submit(this::createAuditorAndWorkers);
+    final int pruned = action.get();
+    pruneCount += pruned;
 
     factory.shutdown();
     factory.awaitTermination(60, TimeUnit.SECONDS);
 
-    System.gc();
+
     final long current = Runtime.getRuntime().freeMemory();
     return current - original;
 
   }
 
-  private long createAuditorAndWorkers()
+  private int createAuditorAndWorkers()
       throws IOException, InterruptedException, ExecutionException {
     final Configuration conf = new Configuration(false);
     conf.set(AUDIT_SERVICE_CLASSNAME, MemoryHungryAuditor.NAME);
@@ -103,20 +119,53 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
       LOG.info("Using {}", auditManager);
       // no guarentee every thread gets used
 
-      List<Future<AuditSpanS3A>> futures = new ArrayList<>(THREAD_COUNT);
+      List<Future<Result>> futures = new ArrayList<>(THREAD_COUNT);
+      Set<Long> threadIds = new HashSet<>();
       for (int i = 0; i < THREAD_COUNT; i++) {
-        futures.add(workers.submit(() -> worker(auditManager)));
+        futures.add(workers.submit(() -> spanningOperation(auditManager)));
       }
 
-      for (Future<AuditSpanS3A> future : futures) {
-        future.get();
+      for (Future<Result> future : futures) {
+        final Result r = future.get();
+        threadIds.add(r.getThreadId());
       }
-      return ((MemoryHungryAuditor)auditManager.getAuditor()).getSpanCount();
+      // get rid of any references to spans other than in the weak ref map
+      futures = null;
+      // gc
+      System.gc();
+      final int pruned = auditManager.prune();
+      LOG.info("{} executed across {} threads and pruned {} entries",
+          auditManager, threadIds.size(), pruned);
+      return pruned;
     }
 
   }
 
-  private AuditSpanS3A worker(final ActiveAuditManagerS3A auditManager) throws IOException {
-    return auditManager.createSpan("span", null, null);
+  private Result spanningOperation(final ActiveAuditManagerS3A auditManager)
+      throws IOException, InterruptedException {
+    final AuditSpanS3A auditSpan = auditManager.getActiveAuditSpan();
+    Assertions.assertThat(auditSpan)
+        .describedAs("audit span for current thread")
+        .isNotNull();
+    Thread.sleep(200);
+    return new Result(Thread.currentThread().getId(), auditSpan);
+  }
+
+  private static final class Result {
+    private final long threadId;
+    private final AuditSpanS3A auditSpan;
+
+    public Result(final long threadId, final AuditSpanS3A auditSpan) {
+      this.threadId = threadId;
+      this.auditSpan = auditSpan;
+    }
+
+    public long getThreadId() {
+      return threadId;
+    }
+
+    public AuditSpanS3A getAuditSpan() {
+      return auditSpan;
+    }
   }
 }

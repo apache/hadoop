@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.s3a.audit.impl.AbstractAuditSpanImpl;
 import org.apache.hadoop.fs.s3a.audit.impl.AbstractOperationAuditor;
 
@@ -34,6 +37,8 @@ public class MemoryHungryAuditor extends AbstractOperationAuditor {
 
   public static final String NAME = "org.apache.hadoop.fs.s3a.audit.MemoryHungryAuditor";
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MemoryHungryAuditor.class);
   /**
    * How big is each manager?
    */
@@ -91,6 +96,11 @@ public class MemoryHungryAuditor extends AbstractOperationAuditor {
         super.toString(),
         getInstanceCount(),
         getSpanCount());
+  }
+
+  @Override
+  public void noteSpanReferenceLost(final long threadId) {
+    LOG.info("Span lost for thread {}", threadId);
   }
 
   public static long getInstanceCount() {

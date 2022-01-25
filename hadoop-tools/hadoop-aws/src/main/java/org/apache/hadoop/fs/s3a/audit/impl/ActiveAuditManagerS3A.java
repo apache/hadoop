@@ -43,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.audit.AWSAuditEventCallbacks;
@@ -88,6 +89,11 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HAN
  * then the IOStatistics counter for {@code AUDIT_FAILURE}
  * is incremented.
  *
+ * Uses the WeakReferenceThreadMap to store spans for threads.
+ * Provided a calling class retains a reference to the span,
+ * the active span will be retained.
+ *
+ *
  */
 @InterfaceAudience.Private
 public final class ActiveAuditManagerS3A
@@ -131,8 +137,11 @@ public final class ActiveAuditManagerS3A
    * Thread local span. This defaults to being
    * the unbonded span.
    */
-  private final ThreadLocal<WrappingAuditSpan> activeSpan =
-      ThreadLocal.withInitial(() -> getUnbondedSpan());
+
+  private final WeakReferenceThreadMap<WrappingAuditSpan> activeSpan =
+      new WeakReferenceThreadMap<>(
+          (k) -> getUnbondedSpan(),
+          this::noteSpanReferenceLost);
 
   /**
    * Destination for recording statistics, especially duration/count of
@@ -225,7 +234,7 @@ public final class ActiveAuditManagerS3A
    * @return the active WrappingAuditSpan
    */
   private WrappingAuditSpan activeSpan() {
-    return activeSpan.get();
+    return activeSpan.getForCurrentThread();
   }
 
   /**
@@ -247,11 +256,33 @@ public final class ActiveAuditManagerS3A
    */
   private WrappingAuditSpan switchToActiveSpan(WrappingAuditSpan span) {
     if (span != null && span.isValidSpan()) {
-      activeSpan.set(span);
+      activeSpan.setForCurrentThread(span);
     } else {
-      activeSpan.set(unbondedSpan);
+      activeSpan.removeForCurrentThread();
     }
     return activeSpan();
+  }
+
+  /**
+   * Span reference lost from GC operations.
+   * This is only called when an attempt is made to retrieve on
+   * the active thread or when a prune operation is cleaning up.
+   *
+   * @param threadId thread ID.
+   */
+  private void noteSpanReferenceLost(long threadId) {
+    auditor.noteSpanReferenceLost(threadId);
+  }
+
+  /**
+   * Prune all null weak references, calling the referenceLost
+   * callback for each one.
+   *
+   * non-atomic and non-blocking.
+   * @return the number of entries pruned.
+   */
+  public int prune() {
+    return activeSpan.prune();
   }
 
   /**
