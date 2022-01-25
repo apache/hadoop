@@ -1363,9 +1363,13 @@ public class FSDirectory implements Closeable {
     // always verify inode name
     verifyINodeName(inode.getLocalNameBytes());
 
+    final boolean isSrcSetSp = inode.isSetStoragePolicy();
+    final byte storagePolicyID = isSrcSetSp ?
+        inode.getLocalStoragePolicyID() :
+        parent.getStoragePolicyID();
     final QuotaCounts counts = inode
         .computeQuotaUsage(getBlockStoragePolicySuite(),
-            parent.getStoragePolicyID(), false, Snapshot.CURRENT_STATE_ID);
+            storagePolicyID, false, Snapshot.CURRENT_STATE_ID);
     updateCount(existing, pos, counts, checkQuota);
 
     boolean isRename = (inode.getParent() != null);
