@@ -1174,6 +1174,44 @@ public class TestOfflineImageViewer {
     }
   }
 
+  /**
+   * Tests that the ReverseXML processor doesn't accept XML files without the SnapshotDiffSection.
+   */
+  @Test
+  public void testReverseXmlWithoutSnapshotDiffSection() throws Throwable {
+    File imageWSDS = new File(tempDir, "imageWithoutSnapshotDiffSection.xml");
+    PrintWriter writer = new PrintWriter(imageWSDS, "UTF-8");
+    try {
+      writer.println("<?xml version=\"1.0\"?>");
+      writer.println("<fsimage>");
+      writer.println("<version>");
+      writer.println("<layoutVersion>-65</layoutVersion>");
+      writer.println("<onDiskVersion>1</onDiskVersion>");
+      writer.println("<oivRevision>" +
+              "545bbef596c06af1c3c8dca1ce29096a64608478</oivRevision>");
+      writer.println("</version>");
+      writer.println(
+              "<FileUnderConstructionSection></FileUnderConstructionSection>\n" +
+                      "<ErasureCodingSection></ErasureCodingSection>\n" +
+                      "<INodeSection><lastInodeId>91488</lastInodeId><numInodes>0</numInodes></INodeSection>\n" +
+                      "<SecretManagerSection><currentId>90</currentId><tokenSequenceNumber>35</tokenSequenceNumber></SecretManagerSection>\n" +
+                      "<INodeReferenceSection></INodeReferenceSection>\n" +
+                      "<SnapshotSection><snapshotCounter>0</snapshotCounter><numSnapshots>0</numSnapshots></SnapshotSection>\n" +
+                      "<NameSection><namespaceId>326384987</namespaceId></NameSection>\n" +
+                      "<CacheManagerSection><nextDirectiveId>1</nextDirectiveId><numDirectives>0</numDirectives><numPools>0</numPools></CacheManagerSection>\n" +
+                      "<INodeDirectorySection></INodeDirectorySection>");
+      writer.println("</fsimage>");
+    } finally {
+      writer.close();
+    }
+    try {
+      OfflineImageReconstructor.run(imageWSDS.getAbsolutePath(),
+              imageWSDS.getAbsolutePath() + ".out");
+    } catch (Throwable t) {
+      GenericTestUtils.assertExceptionContains("without SnapshotDiffSection.", t);
+    }
+  }
+
   @Test
   public void testFileDistributionCalculatorForException() throws Exception {
     File fsimageFile = null;
