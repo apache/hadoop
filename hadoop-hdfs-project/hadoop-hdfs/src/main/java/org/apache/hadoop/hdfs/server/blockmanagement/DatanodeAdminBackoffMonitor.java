@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.HashMap;
@@ -91,6 +92,11 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * The maximum number of blocks to hold in PendingRep at any time.
    */
   private int pendingRepLimit;
+
+  /**
+   * The lock holding time threshold for {@link #scanDatanodeStorage}.
+   */
+  private final long scanDatanodeStorageLockTimeMs = 300;
 
   /**
    * The list of blocks which have been placed onto the replication queue
@@ -618,7 +624,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    *
    * As this method does not schedule any blocks for reconstuction, this
    * scan can be performed under the namenode readlock, and the lock is
-   * dropped and reaquired for each storage on the DN.
+   * dropped and reaquired for a batch of blocks on each storage on the DN.
    *
    * @param dn - The datanode to process
    * @param initialScan - True is this is the first time scanning the node
@@ -650,6 +656,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           continue;
         }
         Iterator<BlockInfo> it = s.getBlockIterator();
+        long beginTime = Time.monotonicNow();
         while (it.hasNext()) {
           BlockInfo b = it.next();
           if (!initialScan || dn.isEnteringMaintenance()) {
@@ -665,6 +672,16 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
             blockList.put(b, null);
           }
           numBlocksChecked++;
+          if (Time.monotonicNow() - beginTime > scanDatanodeStorageLockTimeMs) {
+            namesystem.readUnlock();
+            try {
+              Thread.sleep(1);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+            namesystem.readLock();
+            beginTime = Time.monotonicNow();
+          }
         }
       } finally {
         namesystem.readUnlock();
