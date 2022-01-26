@@ -36,7 +36,13 @@ public interface Constants {
    * then the hadoop default value (/user) is used.
    */
   public static final String CONFIG_VIEWFS_HOMEDIR = "homedir";
-  
+
+  /**
+   * Config key to specify the name of the default mount table.
+   */
+  String CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY =
+      "fs.viewfs.mounttable.default.name.key";
+
   /**
    * Config variable name for the default mount table.
    */
@@ -52,7 +58,12 @@ public interface Constants {
    * Config variable for specifying a simple link
    */
   public static final String CONFIG_VIEWFS_LINK = "link";
-  
+
+  /**
+   * Config variable for specifying a fallback for link mount points.
+   */
+  String CONFIG_VIEWFS_LINK_FALLBACK = "linkFallback";
+
   /**
    * Config variable for specifying a merge link
    */
@@ -75,4 +86,10 @@ public interface Constants {
   String CONFIG_VIEWFS_ENABLE_INNER_CACHE = "fs.viewfs.enable.inner.cache";
 
   boolean CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT = true;
+
+  /**
+   * Enable ViewFileSystem to return a trashRoot which is local to mount point.
+   */
+  String CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH = "fs.viewfs.mount.point.local.trash";
+  boolean CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT = false;
 }

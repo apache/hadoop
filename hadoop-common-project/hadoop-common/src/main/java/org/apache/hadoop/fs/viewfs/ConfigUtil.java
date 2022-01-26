@@ -67,7 +67,28 @@ public class ConfigUtil {
     addLink( conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, 
         src, target);   
   }
-  
+
+  /**
+   * Add a LinkFallback to the config for the specified mount table.
+   * @param conf
+   * @param mountTableName
+   * @param target
+   */
+  public static void addLinkFallback(Configuration conf,
+      final String mountTableName, final URI target) {
+    conf.set(getConfigViewFsPrefix(mountTableName) + "." +
+        Constants.CONFIG_VIEWFS_LINK_FALLBACK, target.toString());
+  }
+
+  /**
+   * Add a LinkFallback to the config for the default mount table.
+   * @param conf
+   * @param target
+   */
+  public static void addLinkFallback(Configuration conf, final URI target) {
+    addLinkFallback(conf, getDefaultMountTableName(conf), target);
+  }
+
   /**
    * Add config variable for homedir for default mount table
    * @param conf - add to this conf
@@ -113,5 +134,19 @@ public class ConfigUtil {
       final String mountTableName) {
     return conf.get(getConfigViewFsPrefix(mountTableName) + "." +
         Constants.CONFIG_VIEWFS_HOMEDIR);
+  }
+
+  /**
+   * Get the name of the default mount table to use. If
+   * {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY} is specified,
+   * it's value is returned. Otherwise,
+   * {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE} is returned.
+   *
+   * @param conf Configuration to use.
+   * @return the name of the default mount table to use.
+   */
+  public static String getDefaultMountTableName(final Configuration conf) {
+    return conf.get(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE);
   }
 }
