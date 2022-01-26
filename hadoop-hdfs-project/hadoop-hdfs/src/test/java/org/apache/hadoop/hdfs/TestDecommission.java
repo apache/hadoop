@@ -1657,7 +1657,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     GenericTestUtils.waitFor(() -> decomManager.getNumTrackedNodes() == numDeadNodes
             && decomManager.getNumPendingNodes() == numLiveDecommNodes
             && liveDecommNodes.stream().allMatch(
-        node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)),
+                node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)),
         500, 30000);
     assertThat(liveDecommNodes)
         .as("Check all live decommissioning nodes queued in DatanodeAdminManager")
@@ -1722,7 +1722,7 @@ public class TestDecommission extends AdminStatesBaseTest {
       }
       return decomManager.getNumTrackedNodes() == 0 && decomManager.getNumPendingNodes() == 0
           && deadNodeProps.keySet().stream().allMatch(
-          node -> node.getAdminState().equals(AdminStates.DECOMMISSIONED));
+              node -> node.getAdminState().equals(AdminStates.DECOMMISSIONED));
     }, 500, 30000);
   }
 
