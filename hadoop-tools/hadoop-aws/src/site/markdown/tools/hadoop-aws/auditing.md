@@ -24,13 +24,16 @@ this document covers its use.
 
 ## Important: Auditing is disabled by default
 
-Due to a memory leak from the use of `ThreadLocal` fields, this auditing feature leaks memory as S3A filesystem
-instances are created and deleted.
-This causes problems in long-lived processes which either do not re-use filesystem
+Due to a memory leak from the use of `ThreadLocal` fields, this auditing feature
+leaked memory as S3A filesystem instances were created and deleted.
+This caused problems in long-lived processes which either do not re-use filesystem
 instances, or attempt to delete all instances belonging to specific users.
 See [HADOOP-18091](https://issues.apache.org/jira/browse/HADOOP-18091) _S3A auditing leaks memory through ThreadLocal references_.
 
-To avoid these memory leaks, auditing is disabled by default.
+To avoid these memory leaks, auditing was disabled by default in the hadoop 3.3.2 release.
+
+Although these memory leaks have been fixed, for safety and consistency,
+auditing is disabled by default.
 
 To turn auditing on, set `fs.s3a.audit.enabled` to `true`.
 

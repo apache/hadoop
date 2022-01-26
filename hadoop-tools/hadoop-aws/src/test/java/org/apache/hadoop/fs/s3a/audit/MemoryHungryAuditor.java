@@ -29,9 +29,7 @@ import org.apache.hadoop.fs.s3a.audit.impl.AbstractOperationAuditor;
 
 
 /**
- * An audit service which returns the {@link NoopSpan}.
- * Even though the spans are no-ops, each span is still
- * created with a unique span ID.
+ * An audit service which consumes lots of memory.
  */
 public class MemoryHungryAuditor extends AbstractOperationAuditor {
 
@@ -110,7 +108,7 @@ public class MemoryHungryAuditor extends AbstractOperationAuditor {
   /**
    * A span which consumes a lot of memory.
    */
-  private static class MemorySpan extends AbstractAuditSpanImpl {
+  private static final class MemorySpan extends AbstractAuditSpanImpl {
 
     private final byte[] data = new byte[SPAN_SIZE];
 
@@ -120,13 +118,11 @@ public class MemoryHungryAuditor extends AbstractOperationAuditor {
 
     @Override
     public AuditSpanS3A activate() {
-
       return this;
     }
 
     @Override
     public void deactivate() {
-
     }
 
   }

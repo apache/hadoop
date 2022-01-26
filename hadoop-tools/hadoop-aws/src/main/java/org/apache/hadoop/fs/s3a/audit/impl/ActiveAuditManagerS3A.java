@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -138,7 +139,7 @@ public final class ActiveAuditManagerS3A
    * the unbonded span.
    */
 
-  private final WeakReferenceThreadMap<WrappingAuditSpan> activeSpan =
+  private final WeakReferenceThreadMap<WrappingAuditSpan> activeSpanMap =
       new WeakReferenceThreadMap<>(
           (k) -> getUnbondedSpan(),
           this::noteSpanReferenceLost);
@@ -188,6 +189,13 @@ public final class ActiveAuditManagerS3A
   }
 
   @Override
+  protected void serviceStop() throws Exception {
+    // clear all references.
+    activeSpanMap.clear();
+    super.serviceStop();
+  }
+
+  @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(super.toString());
     sb.append(", auditor=").append(auditor);
@@ -234,7 +242,7 @@ public final class ActiveAuditManagerS3A
    * @return the active WrappingAuditSpan
    */
   private WrappingAuditSpan activeSpan() {
-    return activeSpan.getForCurrentThread();
+    return activeSpanMap.getForCurrentThread();
   }
 
   /**
@@ -256,9 +264,9 @@ public final class ActiveAuditManagerS3A
    */
   private WrappingAuditSpan switchToActiveSpan(WrappingAuditSpan span) {
     if (span != null && span.isValidSpan()) {
-      activeSpan.setForCurrentThread(span);
+      activeSpanMap.setForCurrentThread(span);
     } else {
-      activeSpan.removeForCurrentThread();
+      activeSpanMap.removeForCurrentThread();
     }
     return activeSpan();
   }
@@ -282,7 +290,17 @@ public final class ActiveAuditManagerS3A
    * @return the number of entries pruned.
    */
   public int prune() {
-    return activeSpan.prune();
+    return activeSpanMap.prune();
+  }
+
+  /**
+   * Get the map of threads to active spans; allows
+   * for testing of weak reference resolution after GC.
+   * @return the span map
+   */
+  @VisibleForTesting
+  public WeakReferenceThreadMap<WrappingAuditSpan> getActiveSpanMap() {
+    return activeSpanMap;
   }
 
   /**

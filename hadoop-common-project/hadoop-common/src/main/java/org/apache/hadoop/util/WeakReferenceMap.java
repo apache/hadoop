@@ -22,6 +22,7 @@ import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -70,6 +71,16 @@ public class WeakReferenceMap<K, V> {
   private final Consumer<? super K> referenceLost;
 
   /**
+   * Counter of references lost.
+   */
+  private final AtomicLong referenceLostCount = new AtomicLong();
+
+  /**
+   * Counter of entries created.
+   */
+  private final AtomicLong entriesCreatedCount = new AtomicLong();
+
+  /**
    * instantiate.
    * @param factory supplier of new instances
    * @param referenceLost optional callback on lost references.
@@ -80,6 +91,19 @@ public class WeakReferenceMap<K, V> {
 
     this.factory = requireNonNull(factory);
     this.referenceLost = referenceLost;
+  }
+
+  @Override
+  public String toString() {
+    return "WeakReferenceMap{" +
+        "size=" + size() +
+        ", referenceLostCount=" + referenceLostCount +
+        ", entriesCreatedCount=" + entriesCreatedCount +
+        '}';
+  }
+
+  public int size() {
+    return map.size();
   }
 
   /**
@@ -129,6 +153,7 @@ public class WeakReferenceMap<K, V> {
    * @return the value
    */
   public V create(K key) {
+    entriesCreatedCount.incrementAndGet();
     WeakReference<V> newRef = new WeakReference<>(
         requireNonNull(factory.apply(key)));
     map.put(key, newRef);
@@ -137,6 +162,9 @@ public class WeakReferenceMap<K, V> {
 
   /**
    * Put a value under the key.
+   * A null value can be put, though on a get() call
+   * a new entry is generated
+   *
    * @param key key
    * @param value value
    * @return any old non-null reference.
@@ -202,8 +230,29 @@ public class WeakReferenceMap<K, V> {
    * @param key key of lost reference
    */
   private void noteLost(final K key) {
+    // incrment local counter
+    referenceLostCount.incrementAndGet();
+
+    // and call any notification function supplied in the constructor
     if (referenceLost != null) {
       referenceLost.accept(key);
     }
+  }
+
+  /**
+   * Get count of references lost as detected
+   * during prune() or get() calls.
+   * @return count of references lost
+   */
+  public final long getReferenceLostCount() {
+    return referenceLostCount.get();
+  }
+
+  /**
+   * Get count of entries created on demand.
+   * @return count of entries created
+   */
+  public final long getEntriesCreatedCount() {
+    return entriesCreatedCount.get();
   }
 }

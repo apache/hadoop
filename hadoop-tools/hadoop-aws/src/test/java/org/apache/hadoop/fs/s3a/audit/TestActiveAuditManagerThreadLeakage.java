@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
 import org.apache.hadoop.fs.s3a.audit.impl.ActiveAuditManagerS3A;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
@@ -54,8 +56,8 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStat
  * memory demands will be high, and if the closed instances
  * don't get cleaned up, memory runs out.
  * GCs are forced.
- * It is critical no spans are created in the junit thread because they will last for
- * the duration of the test JVM.
+ * It is critical no spans are created in the junit thread because they will
+ * last for the duration of the test JVM.
  */
 @SuppressWarnings("ResultOfMethodCallIgnored")
 public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase {
@@ -70,11 +72,42 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   private ExecutorService workers;
   private int pruneCount;
 
+  /**
+   * As audit managers are created they are added to the list,
+   * so we can verify they get GC'd.`
+   */
+  private final List<WeakReference<ActiveAuditManagerS3A>> auditManagers =
+      new ArrayList<>();
+
+  /**
+   * When the service is stopped, the span map is
+   * cleared immediately.
+   */
+  @Test
+  public void testSpanMapClearedInServiceStop() throws IOException {
+    try (ActiveAuditManagerS3A auditManager =
+             new ActiveAuditManagerS3A(emptyStatisticsStore())) {
+      auditManager.init(createMemoryHungryConfiguration());
+      auditManager.start();
+      auditManager.getActiveAuditSpan();
+      // get the span map
+      final WeakReferenceThreadMap<?> spanMap
+          = auditManager.getActiveSpanMap();
+      Assertions.assertThat(spanMap.size())
+          .describedAs("map size")
+          .isEqualTo(1);
+      auditManager.stop();
+      Assertions.assertThat(spanMap.size())
+          .describedAs("map size")
+          .isEqualTo(0);
+    }
+  }
+
   @Test
   public void testMemoryLeak() throws Throwable {
     workers = Executors.newFixedThreadPool(THREAD_COUNT);
     for (int i = 0; i < MANAGER_COUNT; i++) {
-      final long oneAuditConsumption = createDestroyOneAuditor(i);
+      final long oneAuditConsumption = createAndTestOneAuditor();
       LOG.info("manager {} memory retained {}", i, oneAuditConsumption);
     }
 
@@ -87,18 +120,27 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
 
     Assertions.assertThat(pruneCount)
         .describedAs("Totel prune count")
-        .isGreaterThan(0);
+        .isNotZero();
 
-
+    // now count number of audit managers GC'd
+    // some must have been GC'd, showing that no other
+    // references are being retained internally.
+    Assertions.assertThat(auditManagers.stream()
+        .filter((r) -> r.get() == null)
+        .count())
+        .describedAs("number of audit managers garbage collected")
+        .isNotZero();
   }
 
-  private long createDestroyOneAuditor(final int instance) throws Exception {
+  /**
+   * Create, use and then shutdown one auditor in a unique thread.
+   * @return memory consumed/released
+f   */
+  private long createAndTestOneAuditor() throws Exception {
     long original = Runtime.getRuntime().freeMemory();
     ExecutorService factory = Executors.newSingleThreadExecutor();
 
-    final Future<Integer> action = factory.submit(this::createAuditorAndWorkers);
-    final int pruned = action.get();
-    pruneCount += pruned;
+    pruneCount += factory.submit(this::createAuditorAndWorkers).get();
 
     factory.shutdown();
     factory.awaitTermination(60, TimeUnit.SECONDS);
@@ -109,36 +151,107 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
 
   }
 
+  /**
+   * This is the core of the test.
+   * Create an audit manager and spans across multiple threads.
+   * The spans are created in the long-lived pool, so if there is
+   * any bonding of the life of managers/spans to that of threads,
+   * it will surface as OOM events.
+   * @return count of weak references whose reference values were
+   * nullified.
+   */
   private int createAuditorAndWorkers()
       throws IOException, InterruptedException, ExecutionException {
-    final Configuration conf = new Configuration(false);
-    conf.set(AUDIT_SERVICE_CLASSNAME, MemoryHungryAuditor.NAME);
-    try (ActiveAuditManagerS3A auditManager = new ActiveAuditManagerS3A(emptyStatisticsStore())){
-      auditManager.init(conf);
+    try (ActiveAuditManagerS3A auditManager =
+             new ActiveAuditManagerS3A(emptyStatisticsStore())) {
+      auditManager.init(createMemoryHungryConfiguration());
       auditManager.start();
       LOG.info("Using {}", auditManager);
-      // no guarentee every thread gets used
+      auditManagers.add(new WeakReference<>(auditManager));
+
+      // no guarantee every thread gets used, so track
+      // in a set. This will give us the thread ID of every
+      // entry in the map.
 
       List<Future<Result>> futures = new ArrayList<>(THREAD_COUNT);
       Set<Long> threadIds = new HashSet<>();
+
+      // perform the spanning operation in a long lived thread.
       for (int i = 0; i < THREAD_COUNT; i++) {
         futures.add(workers.submit(() -> spanningOperation(auditManager)));
       }
 
+      // get the results and so determine the thread IDs
       for (Future<Result> future : futures) {
         final Result r = future.get();
         threadIds.add(r.getThreadId());
       }
+      final int threadsUsed = threadIds.size();
+      final Long[] threadIdArray = threadIds.toArray(new Long[0]);
+
       // get rid of any references to spans other than in the weak ref map
       futures = null;
+
       // gc
       System.gc();
-      final int pruned = auditManager.prune();
-      LOG.info("{} executed across {} threads and pruned {} entries",
-          auditManager, threadIds.size(), pruned);
-      return pruned;
+      // get the span map
+      final WeakReferenceThreadMap<?> spanMap
+          = auditManager.getActiveSpanMap();
+
+      // count number of spans removed
+      final long derefenced = threadIds.stream()
+          .filter((id) -> !spanMap.containsKey(id))
+          .count();
+      if (derefenced > 0) {
+        LOG.info("{} executed across {} threads and dereferenced {} entries",
+            auditManager, threadsUsed, derefenced);
+      }
+
+      // resolve not quite all of the threads.
+      // why not all? leaves at least one for pruning
+      // but it does complicate some of the assertions...
+      int spansRecreated = 0;
+      int subset = threadIdArray.length - 1;
+      LOG.info("Resolving {} thread references", subset);
+      for (int i = 0; i < subset; i++) {
+        final long id = threadIdArray[i];
+        final boolean present = spanMap.containsKey(id);
+        Assertions.assertThat(spanMap.get(id))
+            .describedAs("Span map entry for thread %d", id)
+            .isNotNull();
+        if (!present) {
+          spansRecreated++;
+        }
+      }
+      LOG.info("Recreated {} spans", subset);
+
+      // if the number of spans lost is more than the number
+      // of entries not probed, then at least one span was
+      // recreated
+      if (derefenced > threadIdArray.length - subset) {
+        Assertions.assertThat(spansRecreated)
+            .describedAs("number of recreated spans")
+            .isGreaterThan(0);
+      }
+
+      // now prune.
+      int pruned = auditManager.prune();
+      if (pruned > 0) {
+        LOG.info("{} executed across {} threads and pruned {} entries",
+            auditManager, threadsUsed, pruned);
+      }
+      Assertions.assertThat(pruned)
+          .describedAs("Count of references pruned")
+          .isEqualTo(derefenced - spansRecreated);
+      return pruned + (int)derefenced;
     }
 
+  }
+
+  private Configuration createMemoryHungryConfiguration() {
+    final Configuration conf = new Configuration(false);
+    conf.set(AUDIT_SERVICE_CLASSNAME, MemoryHungryAuditor.NAME);
+    return conf;
   }
 
   /**
@@ -163,16 +276,16 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
     private final long threadId;
     private final AuditSpanS3A auditSpan;
 
-    public Result(final long threadId, final AuditSpanS3A auditSpan) {
+    private Result(final long threadId, final AuditSpanS3A auditSpan) {
       this.threadId = threadId;
       this.auditSpan = auditSpan;
     }
 
-    public long getThreadId() {
+    private long getThreadId() {
       return threadId;
     }
 
-    public AuditSpanS3A getAuditSpan() {
+    private AuditSpanS3A getAuditSpan() {
       return auditSpan;
     }
   }
