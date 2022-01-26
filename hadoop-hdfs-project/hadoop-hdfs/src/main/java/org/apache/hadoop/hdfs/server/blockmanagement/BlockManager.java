@@ -1642,9 +1642,16 @@ public class BlockManager implements BlockStatsMXBean {
     if(numBlocks == 0) {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
+
+    // skip stale storage
+    DatanodeStorageInfo[] storageInfos = Arrays
+        .stream(node.getStorageInfos())
+        .filter(s -> !s.areBlockContentsStale())
+        .toArray(DatanodeStorageInfo[]::new);
+
     // starting from a random block
     int startBlock = ThreadLocalRandom.current().nextInt(numBlocks);
-    Iterator<BlockInfo> iter = node.getBlockIterator(startBlock);
+    Iterator<BlockInfo> iter = node.getBlockIterator(startBlock, storageInfos);
     List<BlockWithLocations> results = new ArrayList<BlockWithLocations>();
     long totalSize = 0;
     BlockInfo curBlock;
@@ -1657,8 +1664,8 @@ public class BlockManager implements BlockStatsMXBean {
       totalSize += addBlock(curBlock, results);
     }
     if(totalSize<size) {
-      iter = node.getBlockIterator(); // start from the beginning
-      for(int i=0; i<startBlock&&totalSize<size; i++) {
+      iter = node.getBlockIterator(0, storageInfos); // start from the beginning
+      for(int i = 0; i < startBlock && totalSize < size && iter.hasNext(); i++) {
         curBlock = iter.next();
         if(!curBlock.isComplete())  continue;
         if (curBlock.getNumBytes() < minBlockSize) {
