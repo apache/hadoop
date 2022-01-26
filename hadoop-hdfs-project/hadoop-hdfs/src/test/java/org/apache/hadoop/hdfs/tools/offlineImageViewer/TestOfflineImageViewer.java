@@ -1185,21 +1185,19 @@ public class TestOfflineImageViewer {
       writer.println("<?xml version=\"1.0\"?>");
       writer.println("<fsimage>");
       writer.println("<version>");
-      writer.println("<layoutVersion>-65</layoutVersion>");
+      writer.println("<layoutVersion>-64</layoutVersion>");
       writer.println("<onDiskVersion>1</onDiskVersion>");
-      writer.println("<oivRevision>" +
-              "545bbef596c06af1c3c8dca1ce29096a64608478</oivRevision>");
+      writer.println("<oivRevision>545bbef596c06af1c3c8dca1ce29096a64608478</oivRevision>");
       writer.println("</version>");
-      writer.println(
-              "<FileUnderConstructionSection></FileUnderConstructionSection>\n" +
-                      "<ErasureCodingSection></ErasureCodingSection>\n" +
-                      "<INodeSection><lastInodeId>91488</lastInodeId><numInodes>0</numInodes></INodeSection>\n" +
-                      "<SecretManagerSection><currentId>90</currentId><tokenSequenceNumber>35</tokenSequenceNumber></SecretManagerSection>\n" +
-                      "<INodeReferenceSection></INodeReferenceSection>\n" +
-                      "<SnapshotSection><snapshotCounter>0</snapshotCounter><numSnapshots>0</numSnapshots></SnapshotSection>\n" +
-                      "<NameSection><namespaceId>326384987</namespaceId></NameSection>\n" +
-                      "<CacheManagerSection><nextDirectiveId>1</nextDirectiveId><numDirectives>0</numDirectives><numPools>0</numPools></CacheManagerSection>\n" +
-                      "<INodeDirectorySection></INodeDirectorySection>");
+      writer.println("<FileUnderConstructionSection></FileUnderConstructionSection>");
+      writer.println("<ErasureCodingSection></ErasureCodingSection>");
+      writer.println("<INodeSection><lastInodeId>91488</lastInodeId><numInodes>0</numInodes></INodeSection>");
+      writer.println("<SecretManagerSection><currentId>90</currentId><tokenSequenceNumber>35</tokenSequenceNumber><numDelegationKeys>0</numDelegationKeys><numTokens>0</numTokens></SecretManagerSection>");
+      writer.println("<INodeReferenceSection></INodeReferenceSection>");
+      writer.println("<SnapshotSection><snapshotCounter>0</snapshotCounter><numSnapshots>0</numSnapshots></SnapshotSection>");
+      writer.println("<NameSection><namespaceId>326384987</namespaceId></NameSection>");
+      writer.println("<CacheManagerSection><nextDirectiveId>1</nextDirectiveId><numPools>0</numPools><numDirectives>0</numDirectives></CacheManagerSection>");
+      writer.println("<INodeDirectorySection></INodeDirectorySection>");
       writer.println("</fsimage>");
     } finally {
       writer.close();
