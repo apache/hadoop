@@ -4054,7 +4054,7 @@ public class BlockManager implements BlockStatsMXBean {
           LOG.debug("Storages with blocks to be deleted: {}", replicasToDelete);
         }
         Preconditions.checkArgument(candidates.containsAll(replicasToDelete),
-            "The EC replicas to be deleted is not in the candidate list");
+            "The EC replicas to be deleted are not in the candidate list");
         for (DatanodeStorageInfo chosen : replicasToDelete) {
           processChosenExcessRedundancy(nonExcess, chosen, storedBlock);
           candidates.remove(chosen);
