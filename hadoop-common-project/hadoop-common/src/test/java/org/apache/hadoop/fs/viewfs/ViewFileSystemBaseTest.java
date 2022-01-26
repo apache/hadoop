@@ -69,6 +69,8 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH;
+import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -1100,6 +1102,107 @@ abstract public class ViewFileSystemBaseTest {
     // Verify ViewFileSystem trash roots shows the ones from
     // target mounted FileSystem.
     Assert.assertTrue("", fsView.getTrashRoots(true).size() > 0);
+  }
+
+  /**
+   * Test the localized trash root for getTrashRoot.
+   */
+  @Test
+  public void testTrashRootLocalizedTrash() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    Configuration newConf = new Configuration(conf);
+    newConf.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    ConfigUtil.addLinkFallback(newConf, targetTestRoot.toUri());
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, newConf);
+
+    // Case 1: path p not in the default FS.
+    // Return a trash root within the mount point.
+    Path dataTestPath = new Path("/data/dir/file");
+    Path dataTrashRoot = new Path(targetTestRoot,
+        "data/" + TRASH_PREFIX + "/" + ugi.getShortUserName());
+    Assert.assertEquals(dataTrashRoot, fsView2.getTrashRoot(dataTestPath));
+
+    // Case 2: path p not found in mount table, fall back to the default FS
+    // Return a trash root in user home dir
+    Path userTestPath = new Path("/nonExistingDir/nonExistingFile");
+    Path userTrashRoot = new Path(fsTarget.getHomeDirectory(), TRASH_PREFIX);
+    Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(userTestPath));
+
+    // Case 3: turn off the CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH flag.
+    // Return a trash root in user home dir.
+    newConf.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, false);
+    fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, newConf);
+    Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(dataTestPath));
+  }
+
+  /**
+   * Test localized trash roots in getTrashRoots() for all users.
+   */
+  @Test
+  public void testTrashRootsAllUsers() throws IOException {
+    Configuration conf2 = new Configuration(conf);
+    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+
+    // Case 1: verify correct trash roots from fsView and fsView2
+    int beforeTrashRootNum = fsView.getTrashRoots(true).size();
+    int beforeTrashRootNum2 = fsView2.getTrashRoots(true).size();
+    Assert.assertEquals(beforeTrashRootNum, beforeTrashRootNum2);
+
+    fsView.mkdirs(new Path("/data/" + TRASH_PREFIX + "/user1"));
+    fsView.mkdirs(new Path("/data/" + TRASH_PREFIX + "/user2"));
+    fsView.mkdirs(new Path("/user/" + TRASH_PREFIX + "/user3"));
+    fsView.mkdirs(new Path("/user/" + TRASH_PREFIX + "/user4"));
+    fsView.mkdirs(new Path("/user2/" + TRASH_PREFIX + "/user5"));
+    int afterTrashRootsNum = fsView.getTrashRoots(true).size();
+    int afterTrashRootsNum2 = fsView2.getTrashRoots(true).size();
+    Assert.assertEquals(beforeTrashRootNum, afterTrashRootsNum);
+    Assert.assertEquals(beforeTrashRootNum2 + 5, afterTrashRootsNum2);
+
+    // Case 2: per-user mount point
+    fsTarget.mkdirs(new Path(targetTestRoot, "Users/userA/.Trash/userA"));
+    Configuration conf3 = new Configuration(conf2);
+    ConfigUtil.addLink(conf3, "/Users/userA",
+        new Path(targetTestRoot, "Users/userA").toUri());
+    FileSystem fsView3 = FileSystem.get(FsConstants.VIEWFS_URI, conf3);
+    int trashRootsNum3 = fsView3.getTrashRoots(true).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 1, trashRootsNum3);
+
+    // Case 3: single /Users mount point for all users
+    fsTarget.mkdirs(new Path(targetTestRoot, "Users/.Trash/user1"));
+    fsTarget.mkdirs(new Path(targetTestRoot, "Users/.Trash/user2"));
+    Configuration conf4 = new Configuration(conf2);
+    ConfigUtil.addLink(conf4, "/Users",
+        new Path(targetTestRoot, "Users").toUri());
+    FileSystem fsView4 = FileSystem.get(FsConstants.VIEWFS_URI, conf4);
+    int trashRootsNum4 = fsView4.getTrashRoots(true).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 2, trashRootsNum4);
+  }
+
+  /**
+   * Test localized trash roots in getTrashRoots() for current user.
+   */
+  @Test
+  public void testTrashRootsCurrentUser() throws IOException {
+    String currentUser =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    Configuration conf2 = new Configuration(conf);
+    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+
+    int beforeTrashRootNum = fsView.getTrashRoots(false).size();
+    int beforeTrashRootNum2 = fsView2.getTrashRoots(false).size();
+    Assert.assertEquals(beforeTrashRootNum, beforeTrashRootNum2);
+
+    fsView.mkdirs(new Path("/data/" + TRASH_PREFIX + "/" + currentUser));
+    fsView.mkdirs(new Path("/data/" + TRASH_PREFIX + "/user2"));
+    fsView.mkdirs(new Path("/user/" + TRASH_PREFIX + "/" + currentUser));
+    fsView.mkdirs(new Path("/user/" + TRASH_PREFIX + "/user4"));
+    fsView.mkdirs(new Path("/user2/" + TRASH_PREFIX + "/user5"));
+    int afterTrashRootsNum = fsView.getTrashRoots(false).size();
+    int afterTrashRootsNum2 = fsView2.getTrashRoots(false).size();
+    Assert.assertEquals(beforeTrashRootNum, afterTrashRootsNum);
+    Assert.assertEquals(beforeTrashRootNum2 + 2, afterTrashRootsNum2);
   }
 
   @Test(expected = NotInMountpointException.class)
