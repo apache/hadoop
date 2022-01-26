@@ -75,4 +75,10 @@ public interface Constants {
   String CONFIG_VIEWFS_ENABLE_INNER_CACHE = "fs.viewfs.enable.inner.cache";
 
   boolean CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT = true;
+
+  /**
+   * Enable ViewFileSystem to return a trashRoot which is local to mount point.
+   */
+  String CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH = "fs.viewfs.mount.point.local.trash";
+  boolean CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT = false;
 }
