@@ -6356,4 +6356,14 @@
       times, we should mark it as a badnode.
     </description>
   </property>
+
+  <property>
+    <name>dfs.datanode.lockmanager.trace</name>
+    <value>false</value>
+    <description>
+      If this is true, after shut down datanode lock Manager will print all leak
+      thread that not release by lock Manager. Only used for test or trace dead lock
+      problem. In produce default set false, because it's have little performance loss.
+    </description>
+  </property>
 </configuration>
