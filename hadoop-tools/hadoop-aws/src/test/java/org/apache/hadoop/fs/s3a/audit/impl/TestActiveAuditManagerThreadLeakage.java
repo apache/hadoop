@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit;
+package org.apache.hadoop.fs.s3a.audit.impl;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -37,12 +38,13 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
-import org.apache.hadoop.fs.s3a.audit.impl.ActiveAuditManagerS3A;
+import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.s3a.audit.MemoryHungryAuditor;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
+import static org.apache.hadoop.fs.s3a.audit.impl.ActiveAuditManagerS3A.PRUNE_THRESHOLD;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatisticsStore;
-
 
 /**
  * This test attempts to recreate the OOM problems of
@@ -67,9 +69,17 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestActiveAuditManagerThreadLeakage.class);
 
+  /** how many managers to sequentially create. */
   private static final int MANAGER_COUNT = 500;
+
+  /** size of long lived hread pool. */
   private static final int THREAD_COUNT = 20;
   private ExecutorService workers;
+
+  /**
+   * count of prunings which have taken place in the manager lifecycle
+   * operations.
+   */
   private int pruneCount;
 
   /**
@@ -126,8 +136,8 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
     // some must have been GC'd, showing that no other
     // references are being retained internally.
     Assertions.assertThat(auditManagers.stream()
-        .filter((r) -> r.get() == null)
-        .count())
+            .filter((r) -> r.get() == null)
+            .count())
         .describedAs("number of audit managers garbage collected")
         .isNotZero();
   }
@@ -135,7 +145,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   /**
    * Create, use and then shutdown one auditor in a unique thread.
    * @return memory consumed/released
-f   */
+   */
   private long createAndTestOneAuditor() throws Exception {
     long original = Runtime.getRuntime().freeMemory();
     ExecutorService factory = Executors.newSingleThreadExecutor();
@@ -145,14 +155,13 @@ f   */
     factory.shutdown();
     factory.awaitTermination(60, TimeUnit.SECONDS);
 
-
     final long current = Runtime.getRuntime().freeMemory();
     return current - original;
 
   }
 
   /**
-   * This is the core of the test.
+   * This is the core of the leakage test.
    * Create an audit manager and spans across multiple threads.
    * The spans are created in the long-lived pool, so if there is
    * any bonding of the life of managers/spans to that of threads,
@@ -173,24 +182,28 @@ f   */
       // in a set. This will give us the thread ID of every
       // entry in the map.
 
-      List<Future<Result>> futures = new ArrayList<>(THREAD_COUNT);
       Set<Long> threadIds = new HashSet<>();
 
-      // perform the spanning operation in a long lived thread.
-      for (int i = 0; i < THREAD_COUNT; i++) {
-        futures.add(workers.submit(() -> spanningOperation(auditManager)));
-      }
+      // use a code block here so that futures becomes null after use
+      // without having to set it to null and then the IDE/spotbugs
+      // complaining about unused assignments
+      {
+        List<Future<Result>> futures;
+        futures = new ArrayList<>(THREAD_COUNT);
 
-      // get the results and so determine the thread IDs
-      for (Future<Result> future : futures) {
-        final Result r = future.get();
-        threadIds.add(r.getThreadId());
+        // perform the spanning operation in a long lived thread.
+        for (int i = 0; i < THREAD_COUNT; i++) {
+          futures.add(workers.submit(() -> spanningOperation(auditManager)));
+        }
+
+        // get the results and so determine the thread IDs
+        for (Future<Result> future : futures) {
+          final Result r = future.get();
+          threadIds.add(r.getThreadId());
+        }
       }
       final int threadsUsed = threadIds.size();
       final Long[] threadIdArray = threadIds.toArray(new Long[0]);
-
-      // get rid of any references to spans other than in the weak ref map
-      futures = null;
 
       // gc
       System.gc();
@@ -215,10 +228,18 @@ f   */
       LOG.info("Resolving {} thread references", subset);
       for (int i = 0; i < subset; i++) {
         final long id = threadIdArray[i];
+
+        // note whether or not the span is present
         final boolean present = spanMap.containsKey(id);
+
+        // get the the span for that ID. which must never be
+        // null
         Assertions.assertThat(spanMap.get(id))
             .describedAs("Span map entry for thread %d", id)
             .isNotNull();
+
+        // if it wasn't present, the unbounded span must therefore have been
+        // bounded to this map entry.
         if (!present) {
           spansRecreated++;
         }
@@ -243,7 +264,7 @@ f   */
       Assertions.assertThat(pruned)
           .describedAs("Count of references pruned")
           .isEqualTo(derefenced - spansRecreated);
-      return pruned + (int)derefenced;
+      return pruned + (int) derefenced;
     }
 
   }
@@ -268,12 +289,19 @@ f   */
     Assertions.assertThat(auditSpan)
         .describedAs("audit span for current thread")
         .isNotNull();
+    // this is needed to ensure that more of the thread pool is used up
     Thread.yield();
     return new Result(Thread.currentThread().getId(), auditSpan);
   }
 
+  /**
+   * Result of the spanning operation.
+   */
   private static final class Result {
+    /** thread operation took place in. */
     private final long threadId;
+
+    /** generated span. not currently used in tests. */
     private final AuditSpanS3A auditSpan;
 
     private Result(final long threadId, final AuditSpanS3A auditSpan) {
@@ -287,6 +315,90 @@ f   */
 
     private AuditSpanS3A getAuditSpan() {
       return auditSpan;
+    }
+  }
+
+  /**
+   * Verifu that pruning takes place intermittently.
+   */
+  @Test
+  public void testRegularPruning() throws Throwable {
+    try (ActiveAuditManagerS3A auditManager =
+             new ActiveAuditManagerS3A(emptyStatisticsStore())) {
+      auditManager.init(createMemoryHungryConfiguration());
+      auditManager.start();
+      // get the span map
+      final WeakReferenceThreadMap<?> spanMap
+          = auditManager.getActiveSpanMap();
+      // add a null entry at a thread ID other than this one
+      spanMap.put(Thread.currentThread().getId() + 1, null);
+
+      // remove this span enough times that pruning shall take
+      // place twice
+      // this verifies that pruning takes place and that the
+      // counter is reset
+      int pruningCount = 0;
+      for (int i = 0; i < PRUNE_THRESHOLD * 2 + 1; i++) {
+        boolean pruned = auditManager.removeActiveSpanFromMap();
+        if (pruned) {
+          pruningCount++;
+        }
+      }
+      // pruning must have taken place
+      Assertions.assertThat(pruningCount)
+          .describedAs("Intermittent pruning count")
+          .isEqualTo(2);
+    }
+  }
+
+  /**
+   * Verify span deactivation removes the entry from the map.
+   */
+  @Test
+  public void testSpanDeactivationRemovesEntryFromMap() throws Throwable {
+    try (ActiveAuditManagerS3A auditManager =
+             new ActiveAuditManagerS3A(emptyStatisticsStore())) {
+      auditManager.init(createMemoryHungryConfiguration());
+      auditManager.start();
+      // get the span map
+      final WeakReferenceThreadMap<?> spanMap
+          = auditManager.getActiveSpanMap();
+      final AuditSpanS3A auditSpan =
+          auditManager.createSpan("span", null, null);
+      Assertions.assertThat(auditManager.getActiveAuditSpan())
+          .describedAs("active span")
+          .isSameAs(auditSpan);
+      // this assert gets used repeatedly, so define a lambda-exp
+      // which can be envoked with different arguments
+      Consumer<Boolean> assertMapHasKey = expected ->
+          Assertions.assertThat(spanMap.containsKey(spanMap.curentThreadId()))
+              .describedAs("map entry for current thread")
+              .isEqualTo(expected);
+
+      // sets the span to null
+      auditSpan.deactivate();
+
+      // there's no entry
+      assertMapHasKey.accept(false);
+
+      // asking for the current span will return the unbonded one
+      final AuditSpanS3A newSpan = auditManager.getActiveAuditSpan();
+      Assertions.assertThat(newSpan)
+          .describedAs("active span")
+          .isNotNull()
+          .matches(s -> !s.isValidSpan());
+      // which is in the map
+      // there's an entry
+      assertMapHasKey.accept(true);
+
+      // deactivating the old span does nothing
+      auditSpan.deactivate();
+      assertMapHasKey.accept(true);
+
+      // deactivating the current unbounded span does
+      // remove the entry
+      newSpan.deactivate();
+      assertMapHasKey.accept(false);
     }
   }
 }

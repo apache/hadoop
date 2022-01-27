@@ -43,7 +43,7 @@ public class WeakReferenceThreadMap<V> extends WeakReferenceMap<Long, V> {
     return remove(curentThreadId());
   }
 
-  private long curentThreadId() {
+  public long curentThreadId() {
     return Thread.currentThread().getId();
   }
 

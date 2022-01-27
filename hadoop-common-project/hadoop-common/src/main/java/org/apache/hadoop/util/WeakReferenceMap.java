@@ -57,7 +57,6 @@ public class WeakReferenceMap<K, V> {
    */
   private final Map<K, WeakReference<V>> map = new ConcurrentHashMap<>();
 
-
   /**
    * Supplier of new instances.
    */
@@ -102,6 +101,10 @@ public class WeakReferenceMap<K, V> {
         '}';
   }
 
+  /**
+   * Map size.
+   * @return the current map size.
+   */
   public int size() {
     return map.size();
   }

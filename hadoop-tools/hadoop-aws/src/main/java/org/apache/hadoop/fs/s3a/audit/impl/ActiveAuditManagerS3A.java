@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.HandlerContextAware;
@@ -33,7 +34,6 @@ import com.amazonaws.handlers.HandlerAfterAttemptContext;
 import com.amazonaws.handlers.HandlerBeforeAttemptContext;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.http.HttpResponse;
-import com.amazonaws.services.s3.transfer.Transfer;
 import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -119,6 +119,13 @@ public final class ActiveAuditManagerS3A
       = "Span attached to request is not a wrapped span";
 
   /**
+   * Arbritary threshold for triggering pruning on deactivation.
+   * High enough it doesn't happen very often, low enough
+   * that it will happen regularly on a busy system.
+   */
+  static final int PRUNE_THRESHOLD = 10000;
+
+  /**
    * Audit service.
    */
   private OperationAuditor auditor;
@@ -133,6 +140,18 @@ public final class ActiveAuditManagerS3A
    * the span is reset to the unbonded span..
    */
   private WrappingAuditSpan unbondedSpan;
+
+  /**
+   * How many spans have to be deactivated before a prune is triggered?
+   * Fixed as a constant for now unless/until some pressing need
+   * for it to be made configurable ever surfaces.
+   */
+  private final int pruneThreshold = PRUNE_THRESHOLD;
+
+  /**
+   * Count down to next pruning.
+   */
+  private final AtomicInteger deactivationsBeforePrune = new AtomicInteger();
 
   /**
    * Thread local span. This defaults to being
@@ -157,6 +176,7 @@ public final class ActiveAuditManagerS3A
   public ActiveAuditManagerS3A(final IOStatisticsStore iostatistics) {
     super("ActiveAuditManagerS3A");
     this.ioStatisticsStore = iostatistics;
+    this.deactivationsBeforePrune.set(pruneThreshold);
   }
 
   @Override
@@ -289,8 +309,29 @@ public final class ActiveAuditManagerS3A
    * non-atomic and non-blocking.
    * @return the number of entries pruned.
    */
-  public int prune() {
+  @VisibleForTesting
+  int prune() {
     return activeSpanMap.prune();
+  }
+
+  /**
+   * remove the span from the reference map, shrinking the map in the process.
+   * if/when a new span is activated in the thread, a new entry will be created.
+   * and if queried for a span, the unbounded span will be automatically
+   * added to the map for this thread ID.
+   *
+   */
+  @VisibleForTesting
+  boolean removeActiveSpanFromMap() {
+    // remove from the map
+    activeSpanMap.removeForCurrentThread();
+    if (deactivationsBeforePrune.decrementAndGet() == 0) {
+      // trigger a prune
+      activeSpanMap.prune();
+      deactivationsBeforePrune.set(pruneThreshold);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -299,7 +340,7 @@ public final class ActiveAuditManagerS3A
    * @return the span map
    */
   @VisibleForTesting
-  public WeakReferenceThreadMap<WrappingAuditSpan> getActiveSpanMap() {
+  WeakReferenceThreadMap<WrappingAuditSpan> getActiveSpanMap() {
     return activeSpanMap;
   }
 
@@ -380,13 +421,7 @@ public final class ActiveAuditManagerS3A
   @Override
   public TransferStateChangeListener createStateChangeListener() {
     final WrappingAuditSpan span = activeSpan();
-    return new TransferStateChangeListener() {
-      @Override
-      public void transferStateChanged(final Transfer transfer,
-          final Transfer.TransferState state) {
-        switchToActiveSpan(span);
-      }
-    };
+    return (transfer, state) -> switchToActiveSpan(span);
   }
 
   @Override
@@ -690,16 +725,21 @@ public final class ActiveAuditManagerS3A
      */
     @Override
     public void deactivate() {
-      // no-op for invalid spans,
-      // so as to prevent the unbounded span from being closed
-      // and everything getting very confused.
-      if (!isValid || !isActive()) {
+
+      // span is inactive; ignore
+      if (!isActive()) {
         return;
       }
-      // deactivate the span
-      span.deactivate();
-      // and go to the unbounded one.
-      switchToActiveSpan(getUnbondedSpan());
+      // skipped for invalid spans,
+      // so as to prevent the unbounded span from being closed
+      // and everything getting very confused.
+      if (isValid) {
+        // deactivate the span
+        span.deactivate();
+      }
+      // remove the span from the reference map,
+      // sporadically triggering a prune operation.
+      removeActiveSpanFromMap();
     }
 
     /**
