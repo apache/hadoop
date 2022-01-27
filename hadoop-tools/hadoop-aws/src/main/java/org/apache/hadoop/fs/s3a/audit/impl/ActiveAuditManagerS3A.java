@@ -122,8 +122,9 @@ public final class ActiveAuditManagerS3A
    * Arbritary threshold for triggering pruning on deactivation.
    * High enough it doesn't happen very often, low enough
    * that it will happen regularly on a busy system.
+   * Value: {@value}.
    */
-  static final int PRUNE_THRESHOLD = 10000;
+  static final int PRUNE_THRESHOLD = 10_000;
 
   /**
    * Audit service.

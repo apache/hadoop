@@ -44,7 +44,7 @@ public final class S3AAuditConstants {
    * Default auditing flag.
    * Value: {@value}.
    */
-  public static final boolean AUDIT_ENABLED_DEFAULT = false;
+  public static final boolean AUDIT_ENABLED_DEFAULT = true;
 
 
   /**
@@ -57,7 +57,7 @@ public final class S3AAuditConstants {
    * Classname of the logging auditor: {@value}.
    */
   public static final String LOGGING_AUDIT_SERVICE =
-      "org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor";
+    "org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor";
 
   /**
    * Classname of the No-op auditor: {@value}.

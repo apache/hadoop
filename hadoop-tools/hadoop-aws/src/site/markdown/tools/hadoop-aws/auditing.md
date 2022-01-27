@@ -32,10 +32,9 @@ See [HADOOP-18091](https://issues.apache.org/jira/browse/HADOOP-18091) _S3A audi
 
 To avoid these memory leaks, auditing was disabled by default in the hadoop 3.3.2 release.
 
-Although these memory leaks have been fixed, for safety and consistency,
-auditing is disabled by default.
+As these memory leaks have now been fixed, auditing has been re-enabled.
 
-To turn auditing on, set `fs.s3a.audit.enabled` to `true`.
+To disable it, set `fs.s3a.audit.enabled` to `false`.
 
 ## Auditing workflow
 
@@ -87,7 +86,7 @@ Other auditor classes may be used instead.
 
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
-| `fs.s3a.audit.enabled` | Is auditing enabled | `false` |
+| `fs.s3a.audit.enabled` | Is auditing enabled? | `true` |
 | `fs.s3a.audit.service.classname` | Auditor classname | `org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor` |
 | `fs.s3a.audit.request.handlers` | List of extra subclasses of AWS SDK RequestHandler2 to include in handler chain | `""` |
 | `fs.s3a.audit.referrer.enabled` | Logging auditor to publish the audit information in the HTTP Referrer header | `true` |
@@ -140,7 +139,6 @@ The Logging Auditor is enabled by providing its classname in the option
   <value>org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor</value>
 </property>
 ```
-
 
 To print auditing events in the local client logs, set the associated Log4J log
 to log at debug:
