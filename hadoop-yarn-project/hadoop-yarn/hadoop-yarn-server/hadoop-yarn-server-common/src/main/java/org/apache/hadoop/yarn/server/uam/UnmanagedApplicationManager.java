@@ -136,7 +136,7 @@ public class UnmanagedApplicationManager {
     this.userUgi = null;
     // Relayer's rmClient will be set after the RM connection is created
     this.rmProxyRelayer =
-        new AMRMClientRelayer(null, this.applicationId, rmName);
+        new AMRMClientRelayer(null, this.conf, this.applicationId, rmName);
     this.heartbeatHandler = createAMHeartbeatRequestHandler(this.conf,
         this.applicationId, this.rmProxyRelayer);
 

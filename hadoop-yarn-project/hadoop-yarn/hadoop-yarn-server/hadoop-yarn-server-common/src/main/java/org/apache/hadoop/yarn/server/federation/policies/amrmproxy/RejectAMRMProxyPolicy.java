@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -54,4 +55,12 @@ public class RejectAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         + "rejects all routing requests by construction.");
   }
 
+  @Override
+  public void addAMRMClientRelayer(SubClusterId subClusterId,
+      AMRMClientRelayer relayer) throws YarnException {
+  }
+
+  @Override
+  public void shutdown() {
+  }
 }

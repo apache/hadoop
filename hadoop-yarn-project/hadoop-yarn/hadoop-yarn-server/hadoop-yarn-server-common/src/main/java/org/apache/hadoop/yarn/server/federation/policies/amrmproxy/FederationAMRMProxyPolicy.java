@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
@@ -64,4 +65,20 @@ public interface FederationAMRMProxyPolicy
   void notifyOfResponse(SubClusterId subClusterId, AllocateResponse response)
       throws YarnException;
 
+  /**
+   * Give to the policy the {@link AMRMClientRelayer} for a subcluster, which
+   * holds the information about pending/outstanding requests for the
+   * subcluster.
+   *
+   * @param subClusterId the subcluster id
+   * @param relayer the AMRMClientRelayer instance
+   * @throws YarnException if fails
+   */
+  void addAMRMClientRelayer(SubClusterId subClusterId,
+      AMRMClientRelayer relayer) throws YarnException;
+
+  /**
+   * Shutdown and cleanup.
+   */
+  void shutdown();
 }
