@@ -548,7 +548,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     private static final float CHKSUM_AS_FRACTION = 0.01f;
     private boolean isClosed = false;
 
-    public ChecksumFSOutputSummer(ChecksumFileSystem fs,
+    ChecksumFSOutputSummer(ChecksumFileSystem fs,
                           Path file,
                           boolean overwrite,
                           int bufferSize,

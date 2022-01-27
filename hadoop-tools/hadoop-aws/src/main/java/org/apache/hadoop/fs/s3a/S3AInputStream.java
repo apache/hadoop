@@ -847,7 +847,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         ByteBuffer buffer = allocate.apply(combinedFileRange.getLength());
         combinedFileRange.setData(result);
         unboundedThreadPool.submit(
-          () -> readCombinedRangeAndUpdateChildren(combinedFileRange, buffer));
+            () -> readCombinedRangeAndUpdateChildren(combinedFileRange, buffer));
       }
     }
     LOG.debug("Finished submitting vectored read to threadpool" +
@@ -862,6 +862,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
                                                   ByteBuffer buffer) {
+    // Not putting read single range call inside try block as
+    // exception if any occurred during this call will be raised
+    // during awaitFuture call while getting the combined buffer.
     readSingleRange(combinedFileRange, buffer);
     try {
       // In case of single range we return the original byte buffer else
@@ -1020,7 +1023,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     Invoker invoker = context.getReadInvoker();
     try {
       objectRange = invoker.retry(operationName, pathStr, true,
-         () -> client.getObject(request));
+          () -> client.getObject(request));
     } catch (IOException ex) {
       tracker.failed();
       throw ex;
