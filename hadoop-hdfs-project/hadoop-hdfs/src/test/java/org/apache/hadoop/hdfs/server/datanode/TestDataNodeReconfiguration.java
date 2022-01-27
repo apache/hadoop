@@ -51,6 +51,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -476,8 +478,7 @@ public class TestDataNodeReconfiguration {
   }
 
   @Test
-  public void testSlowPeerParameters()
-      throws ReconfigurationException {
+  public void testSlowPeerParameters() throws Exception {
     String[] slowPeersParameters = {
         DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY,
         DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY,
@@ -487,12 +488,9 @@ public class TestDataNodeReconfiguration {
       DataNode dn = cluster.getDataNodes().get(i);
 
       // Try invalid values.
-      try {
-        dn.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "text");
-      } catch (ReconfigurationException expected) {
-        assertEquals("Could not change property dfs.datanode.peer.stats.enabled " +
-            "from 'true' to 'text'", expected.getMessage());
-      }
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.peer.stats.enabled from 'true' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "text"));
 
       for (String parameter : slowPeersParameters) {
         try {
