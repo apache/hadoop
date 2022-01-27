@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +30,12 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.security.Permission;
+import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -85,6 +93,9 @@ import org.apache.hadoop.yarn.util.StringHelper;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForLegacyAutoCreatedLeafQueue;
 
 /**
  * This class manages the list of applications for the resource manager.
@@ -475,26 +486,61 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             submissionContext.getQueue() : placementContext.getFullQueuePath();
 
         String appName = submissionContext.getApplicationName();
-        CSQueue csqueue = ((CapacityScheduler) scheduler).getQueue(queueName);
+
+        CapacityScheduler cs = (CapacityScheduler) scheduler;
+        CapacitySchedulerConfiguration csConf = cs.getConfiguration();
+
+        CSQueue csqueue = cs.getQueue(queueName);
+        PrivilegedEntity privilegedEntity = getPrivilegedEntity(queueName);
 
         if (csqueue == null && placementContext != null) {
-          //could be an auto created queue through queue mapping. Validate
-          // parent queue exists and has valid acls
-          String parentQueueName = placementContext.getParentQueue();
-          csqueue = ((CapacityScheduler) scheduler).getQueue(parentQueueName);
+          List<Permission> permissions = new ArrayList<>();
+
+          final QueuePath parentCandidate = new QueuePath(placementContext.getParentQueue());
+          AutoCreatedQueueTemplate aqc = new AutoCreatedQueueTemplate(csConf, parentCandidate);
+
+          CSQueue parentQueue = cs.getQueue(parentCandidate.getFullPath());
+          if (parentQueue == null) {
+            final QueuePath parent = new QueuePath(parentCandidate.getParent());
+            parentQueue = cs.getQueue(parent.getFullPath());
+            if (parentQueue == null) {
+              throw RPCUtil.getRemoteException(new AccessControlException(
+                  "Access denied for invalid queue " + submissionContext.getQueue() +
+                      " parent is not found " + parent.getFullPath() +
+                      " user " + user + " applicationId " + applicationId));
+            }
+
+            permissions.add(new Permission(getPrivilegedEntity(parentCandidate.getFullPath()),
+                getACLsForFlexibleAutoCreatedParentQueue(aqc)));
+          }
+
+          if (parentQueue instanceof AbstractManagedParentQueue) {
+            permissions.add(new Permission(privilegedEntity,
+                getACLsForLegacyAutoCreatedLeafQueue(csConf, parentCandidate.getFullPath())));
+          } else {
+            permissions.add(new Permission(privilegedEntity,
+                getACLsForFlexibleAutoCreatedLeafQueue(aqc)));
+          }
+
+          try {
+            authorizer.setPermission(permissions, UserGroupInformation.getCurrentUser());
+          } catch (IOException e) {
+            throw RPCUtil.getRemoteException(new AccessControlException(
+                "Access denied, couldn't set permission to queue " + submissionContext.getQueue() +
+                    " user " + user + " applicationId " + applicationId));
+          }
         }
 
-        if (csqueue != null
-            && !authorizer.checkPermission(
-            new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
+        if (!authorizer.checkPermission(
+            new AccessRequest(privilegedEntity, userUgi,
                 SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
                 applicationId.toString(), appName, Server.getRemoteAddress(),
                 null))
             && !authorizer.checkPermission(
-            new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
-                SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
-                applicationId.toString(), appName, Server.getRemoteAddress(),
-                null))) {
+                new AccessRequest(privilegedEntity, userUgi,
+                    SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
+                    applicationId.toString(), appName, Server.getRemoteAddress(),
+                    null))) {
           throw RPCUtil.getRemoteException(new AccessControlException(
               "User " + user + " does not have permission to submit "
                   + applicationId + " to queue "
@@ -570,6 +616,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.applicationACLsManager.addApplication(applicationId,
         submissionContext.getAMContainerSpec().getApplicationACLs());
     return application;
+  }
+
+  private static PrivilegedEntity getPrivilegedEntity(String queuePath) {
+    return new PrivilegedEntity(PrivilegedEntity.EntityType.QUEUE, queuePath);
   }
 
   private List<ResourceRequest> validateAndCreateResourceRequest(
