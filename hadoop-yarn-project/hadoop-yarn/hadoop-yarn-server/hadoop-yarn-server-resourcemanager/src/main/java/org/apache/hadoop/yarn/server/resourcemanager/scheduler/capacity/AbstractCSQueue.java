@@ -76,6 +76,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForLegacyAutoCreatedLeafQueue;
 
 /**
  * Provides implementation of {@code CSQueue} methods common for every queue class in Capacity
@@ -341,6 +344,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock.lock();
     try {
       CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
+      this.acls = configuration.getAcls(getQueuePath());
+
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
         setDynamicQueueProperties();
       }
@@ -368,8 +373,6 @@ public abstract class AbstractCSQueue implements CSQueue {
       QueueStateHelper.setQueueState(this);
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
-
-      this.acls = configuration.getAcls(getQueuePath());
 
       this.userWeights = getUserWeightsFromHierarchy();
 
@@ -422,6 +425,23 @@ public abstract class AbstractCSQueue implements CSQueue {
         queueContext.getQueueManager()
             .getConfiguredNodeLabelsForAllQueues()
             .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
+      }
+
+      AutoCreatedQueueTemplate aqc = new AutoCreatedQueueTemplate(
+          queueContext.getConfiguration(),
+          parent.getQueuePathObject());
+
+      if (this instanceof ParentQueue) {
+        acls.putAll(getACLsForFlexibleAutoCreatedParentQueue(aqc));
+      }
+
+      if (this instanceof AbstractLeafQueue) {
+        if (parent instanceof AbstractManagedParentQueue) {
+          acls.putAll(getACLsForLegacyAutoCreatedLeafQueue(
+              queueContext.getConfiguration(), parent.getQueuePath()));
+        } else {
+          acls.putAll(getACLsForFlexibleAutoCreatedLeafQueue(aqc));
+        }
       }
     }
   }
