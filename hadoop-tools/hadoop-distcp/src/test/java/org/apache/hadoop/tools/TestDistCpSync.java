@@ -55,6 +55,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 public class TestDistCpSync {
   private MiniDFSCluster cluster;
   private final Configuration conf = new HdfsConfiguration();
@@ -1152,6 +1155,69 @@ public class TestDistCpSync {
     Path webHdfsTarget = new Path(webfs.getUri().toString(), target);
 
     snapshotDiffWithPaths(webHdfsSource, webHdfsTarget);
+  }
+
+  @Test
+  public void testRenameWithFilter() throws Exception {
+    java.nio.file.Path filterFile = null;
+    try {
+      Path sourcePath = new Path(dfs.getWorkingDirectory(), "source");
+
+      // Create some dir inside source
+      dfs.mkdirs(new Path(sourcePath, "dir1"));
+      dfs.mkdirs(new Path(sourcePath, "dir2"));
+
+      // Allow & Create snapshot at source.
+      dfs.allowSnapshot(sourcePath);
+      dfs.createSnapshot(sourcePath, "s1");
+
+      filterFile = Files.createTempFile("filters", "txt");
+      String str = ".*filterDir1.*";
+      try (BufferedWriter writer = new BufferedWriter(
+          new FileWriter(filterFile.toString()))) {
+        writer.write(str);
+      }
+      final DistCpOptions.Builder builder =
+          new DistCpOptions.Builder(new ArrayList<>(Arrays.asList(sourcePath)),
+              target).withFiltersFile(filterFile.toString())
+              .withSyncFolder(true);
+      new DistCp(conf, builder.build()).execute();
+
+      // Check the two directories get copied.
+      assertTrue(dfs.exists(new Path(target, "dir1")));
+      assertTrue(dfs.exists(new Path(target, "dir2")));
+
+      // Allow & create initial snapshots on target.
+      dfs.allowSnapshot(target);
+      dfs.createSnapshot(target, "s1");
+
+      // Now do a rename to a filtered name on source.
+      dfs.rename(new Path(sourcePath, "dir1"),
+          new Path(sourcePath, "filterDir1"));
+
+      // Create the incremental snapshot.
+      dfs.createSnapshot(sourcePath, "s2");
+
+      final DistCpOptions.Builder diffBuilder =
+          new DistCpOptions.Builder(new ArrayList<>(Arrays.asList(sourcePath)),
+              target).withUseDiff("s1", "s2")
+              .withFiltersFile(filterFile.toString()).withSyncFolder(true);
+      new DistCp(conf, diffBuilder.build()).execute();
+
+      // Check the only qualified directory dir2 is there in target
+      assertTrue(dfs.exists(new Path(target, "dir2")));
+
+      // Check the filtered directory is not there.
+      assertFalse(dfs.exists(new Path(target, "filterDir1")));
+
+      // Check the filtered directory gets deleted.
+      assertFalse(dfs.exists(new Path(target, "dir1")));
+
+      // Check the filtered directory isn't there in the home directory.
+      assertFalse(dfs.exists(new Path("filterDir1")));
+    } finally {
+      deleteFilterFile(filterFile);
+    }
   }
 
   private void snapshotDiffWithPaths(Path sourceFSPath,
