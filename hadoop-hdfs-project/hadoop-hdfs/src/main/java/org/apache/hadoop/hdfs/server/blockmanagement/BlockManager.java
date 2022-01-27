@@ -4020,6 +4020,14 @@ public class BlockManager implements BlockStatsMXBean {
         List<DatanodeStorageInfo> replicasToDelete = placementPolicy
             .chooseReplicasToDelete(nonExcess, candidates, (short) 1,
                 excessTypes, null, null);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Choose redundant EC replicas to delete from blk_{} which is located in {}",
+              sblk.getBlockId(), storage2index);
+          LOG.debug("Storages with candidate blocks to be deleted: {}", candidates);
+          LOG.debug("Storages with blocks to be deleted: {}", replicasToDelete);
+        }
+        Preconditions.checkArgument(candidates.containsAll(replicasToDelete),
+            "The EC replicas to be deleted are not in the candidate list");
         for (DatanodeStorageInfo chosen : replicasToDelete) {
           processChosenExcessRedundancy(nonExcess, chosen, storedBlock);
           candidates.remove(chosen);
