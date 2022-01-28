@@ -41,8 +41,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -51,7 +54,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -287,7 +290,7 @@ public final class Util {
         fos.getChannel().force(true);
         fos.close();
         double writeSec = Math.max(((float)
-            (flushStartTime - Time.monotonicNow())) / 1000.0, 0.001);
+            (Time.monotonicNow() - flushStartTime)) / 1000.0, 0.001);
         xferCombined += writeSec;
         xferStats.append(String
             .format(" Synchronous (fsync) write to disk of " +
@@ -361,7 +364,7 @@ public final class Util {
     return (header != null) ? new MD5Hash(header) : null;
   }
 
-  public static List<InetSocketAddress> getAddressesList(URI uri)
+  public static List<InetSocketAddress> getAddressesList(URI uri, Configuration conf)
       throws IOException{
     String authority = uri.getAuthority();
     Preconditions.checkArgument(authority != null && !authority.isEmpty(),
@@ -372,21 +375,49 @@ public final class Util {
       parts[i] = parts[i].trim();
     }
 
+    boolean resolveNeeded = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED,
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED_DEFAULT);
+    DomainNameResolver dnr = DomainNameResolverFactory.newInstance(
+        conf,
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_RESOLVER_IMPL);
+
     List<InetSocketAddress> addrs = Lists.newArrayList();
     for (String addr : parts) {
-      InetSocketAddress isa = NetUtils.createSocketAddr(
-          addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
-      if (isa.isUnresolved()) {
-        throw new UnknownHostException(addr);
+      if (resolveNeeded) {
+        LOG.info("Resolving journal address: " + addr);
+        InetSocketAddress isa = NetUtils.createSocketAddr(
+            addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
+        // Get multiple hostnames from domain name if needed,
+        // for example multiple hosts behind a DNS entry.
+        int port = isa.getPort();
+        // QJM should just use FQDN
+        String[] hostnames = dnr
+            .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
+        if (hostnames.length == 0) {
+          throw new UnknownHostException(addr);
+        }
+        for (String h : hostnames) {
+          addrs.add(NetUtils.createSocketAddr(
+              h + ":" + port,
+              DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT)
+          );
+        }
+      } else {
+        InetSocketAddress isa = NetUtils.createSocketAddr(
+            addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
+        if (isa.isUnresolved()) {
+          throw new UnknownHostException(addr);
+        }
+        addrs.add(isa);
       }
-      addrs.add(isa);
     }
     return addrs;
   }
 
   public static List<InetSocketAddress> getLoggerAddresses(URI uri,
-      Set<InetSocketAddress> addrsToExclude) throws IOException {
-    List<InetSocketAddress> addrsList = getAddressesList(uri);
+      Set<InetSocketAddress> addrsToExclude, Configuration conf) throws IOException {
+    List<InetSocketAddress> addrsList = getAddressesList(uri, conf);
     addrsList.removeAll(addrsToExclude);
     return addrsList;
   }
@@ -406,5 +437,31 @@ public final class Util {
     }
 
     return isEnabled;
+  }
+
+  /**
+   * Return the standard deviation of storage block pool usage.
+   */
+  public static float getBlockPoolUsedPercentStdDev(StorageReport[] storageReports) {
+    ArrayList<Float> usagePercentList = new ArrayList<>();
+    float totalUsagePercent = 0.0f;
+    float dev = 0.0f;
+
+    if (storageReports.length == 0) {
+      return dev;
+    }
+
+    for (StorageReport s : storageReports) {
+      usagePercentList.add(s.getBlockPoolUsagePercent());
+      totalUsagePercent += s.getBlockPoolUsagePercent();
+    }
+
+    totalUsagePercent /= storageReports.length;
+    for (Float usagePercent : usagePercentList) {
+      dev += (usagePercent - totalUsagePercent)
+          * (usagePercent - totalUsagePercent);
+    }
+    dev = (float) Math.sqrt(dev / usagePercentList.size());
+    return dev;
   }
 }

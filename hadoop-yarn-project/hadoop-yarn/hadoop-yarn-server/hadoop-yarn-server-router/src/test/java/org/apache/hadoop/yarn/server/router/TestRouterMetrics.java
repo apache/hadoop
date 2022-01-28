@@ -279,6 +279,37 @@ public class TestRouterMetrics {
         metrics.getMultipleAppsFailedRetrieved());
   }
 
+  /**
+   * This test validates the correctness of the metric: Retrieved getClusterMetrics
+   * multiple times successfully.
+   */
+  @Test
+  public void testSucceededGetClusterMetrics() {
+    long totalGoodBefore = metrics.getNumSucceededGetClusterMetricsRetrieved();
+    goodSubCluster.getClusterMetrics(100);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetClusterMetricsRetrieved());
+    Assert.assertEquals(100, metrics.getLatencySucceededGetClusterMetricsRetrieved(),
+        0);
+    goodSubCluster.getClusterMetrics(200);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetClusterMetricsRetrieved());
+    Assert.assertEquals(150, metrics.getLatencySucceededGetClusterMetricsRetrieved(),
+        0);
+  }
+
+  /**
+   * This test validates the correctness of the metric: Failed to
+   * retrieve getClusterMetrics.
+   */
+  @Test
+  public void testGetClusterMetricsFailed() {
+    long totalBadbefore = metrics.getClusterMetricsFailedRetrieved();
+    badSubCluster.getClusterMetrics();
+    Assert.assertEquals(totalBadbefore + 1,
+        metrics.getClusterMetricsFailedRetrieved());
+  }
+
   // Records failures for all calls
   private class MockBadSubCluster {
     public void getNewApplication() {
@@ -309,6 +340,11 @@ public class TestRouterMetrics {
     public void getApplicationsReport() {
       LOG.info("Mocked: failed getApplicationsReport call");
       metrics.incrMultipleAppsFailedRetrieved();
+    }
+
+    public void getClusterMetrics() {
+      LOG.info("Mocked: failed getClusterMetrics call");
+      metrics.incrGetClusterMetricsFailedRetrieved();
     }
   }
 
@@ -349,6 +385,12 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful getApplicationsReport call with duration {}",
           duration);
       metrics.succeededMultipleAppsRetrieved(duration);
+    }
+
+    public void getClusterMetrics(long duration){
+      LOG.info("Mocked: successful getClusterMetrics call with duration {}",
+              duration);
+      metrics.succeededGetClusterMetricsRetrieved(duration);
     }
   }
 }

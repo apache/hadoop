@@ -24,7 +24,7 @@ import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.BufferedInputStream;
 import java.io.DataInput;
@@ -107,7 +107,7 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -1100,6 +1100,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Provides a public wrapper over substituteVars in order to avoid compatibility issues.
+   * See HADOOP-18021 for further details.
+   *
+   * @param expr the literal value of a config key
+   * @return null if expr is null, otherwise the value resulting from expanding
+   * expr using the algorithm above.
+   * @throws IllegalArgumentException when more than
+   * {@link Configuration#MAX_SUBST} replacements are required
+   */
+  public String substituteCommonVariables(String expr) {
+    return substituteVars(expr);
+  }
+
+  /**
    * Attempts to repeatedly expand the value {@code expr} by replacing the
    * left-most substring of the form "${var}" in the following precedence order
    * <ol>
@@ -1119,6 +1133,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * </pre>
    * If a cycle is detected then the original expr is returned. Loops
    * involving multiple substitutions are not detected.
+   *
+   * In order not to introduce breaking changes (as Oozie for example contains a method with the
+   * same name and same signature) do not make this method public, use substituteCommonVariables
+   * in this case.
    *
    * @param expr the literal value of a config key
    * @return null if expr is null, otherwise the value resulting from expanding
@@ -2960,11 +2978,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     // methods that allow non-strings to be put into configurations are removed,
     // we could replace properties with a Map<String,String> and get rid of this
     // code.
-    Map<String,String> result = new HashMap<String,String>();
-    for(Map.Entry<Object,Object> item: getProps().entrySet()) {
-      if (item.getKey() instanceof String &&
-          item.getValue() instanceof String) {
+    Properties props = getProps();
+    Map<String, String> result = new HashMap<>();
+    synchronized (props) {
+      for (Map.Entry<Object, Object> item : props.entrySet()) {
+        if (item.getKey() instanceof String && item.getValue() instanceof String) {
           result.put((String) item.getKey(), (String) item.getValue());
+        }
       }
     }
     return result.entrySet().iterator();

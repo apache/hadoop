@@ -76,7 +76,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Timer;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A block pool slice represents a portion of a block pool stored on a volume.
@@ -102,7 +102,12 @@ class BlockPoolSlice {
   private final Runnable shutdownHook;
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  private final boolean deleteDuplicateReplicas;
+
+  /**
+   * Only tests are allowed to modify the value. For source code,
+   * this should be treated as final only.
+   */
+  private boolean deleteDuplicateReplicas;
   private static final String REPLICA_CACHE_FILE = "replicas";
   private final long replicaCacheExpiry;
   private final File replicaCacheDir;
@@ -293,9 +298,13 @@ class BlockPoolSlice {
     long mtime;
     Scanner sc;
 
+    File duCacheFile = new File(currentDir, DU_CACHE_FILE);
     try {
-      sc = new Scanner(new File(currentDir, DU_CACHE_FILE), "UTF-8");
+      sc = new Scanner(duCacheFile, "UTF-8");
     } catch (FileNotFoundException fnfe) {
+      FsDatasetImpl.LOG.warn("{} file missing in {}, will proceed with Du " +
+              "for space computation calculation, ",
+              DU_CACHE_FILE, currentDir);
       return -1;
     }
 
@@ -304,21 +313,31 @@ class BlockPoolSlice {
       if (sc.hasNextLong()) {
         cachedDfsUsed = sc.nextLong();
       } else {
+        FsDatasetImpl.LOG.warn("cachedDfsUsed not found in file:{}, will " +
+                "proceed with Du for space computation calculation, ",
+                duCacheFile);
         return -1;
       }
       // Get the recorded mtime from the file.
       if (sc.hasNextLong()) {
         mtime = sc.nextLong();
       } else {
+        FsDatasetImpl.LOG.warn("mtime not found in file:{}, will proceed" +
+                " with Du for space computation calculation, ", duCacheFile);
         return -1;
       }
 
+      long elapsedTime = timer.now() - mtime;
       // Return the cached value if mtime is okay.
-      if (mtime > 0 && (timer.now() - mtime < cachedDfsUsedCheckTime)) {
+      if (mtime > 0 && (elapsedTime < cachedDfsUsedCheckTime)) {
         FsDatasetImpl.LOG.info("Cached dfsUsed found for " + currentDir + ": " +
             cachedDfsUsed);
         return cachedDfsUsed;
       }
+      FsDatasetImpl.LOG.warn("elapsed time:{} is greater than threshold:{}," +
+                      " mtime:{} in file:{}, will proceed with Du for space" +
+                      " computation calculation",
+              elapsedTime, cachedDfsUsedCheckTime, mtime, duCacheFile);
       return -1;
     } finally {
       sc.close();
@@ -440,7 +459,7 @@ class BlockPoolSlice {
           "Recovered " + numRecovered + " replicas from " + lazypersistDir);
     }
 
-    boolean  success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
+    boolean success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
     if (!success) {
       List<IOException> exceptions = Collections
           .synchronizedList(new ArrayList<IOException>());
@@ -1081,4 +1100,11 @@ class BlockPoolSlice {
     addReplicaThreadPool.shutdown();
     addReplicaThreadPool = null;
   }
+
+  @VisibleForTesting
+  void setDeleteDuplicateReplicasForTests(
+      boolean deleteDuplicateReplicasForTests) {
+    this.deleteDuplicateReplicas = deleteDuplicateReplicasForTests;
+  }
+
 }

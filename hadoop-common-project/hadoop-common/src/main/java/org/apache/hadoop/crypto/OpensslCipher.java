@@ -28,8 +28,7 @@ import javax.crypto.ShortBufferException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.NativeCodeLoader;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.PerformanceAdvisory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,14 +84,14 @@ public final class OpensslCipher {
     String loadingFailure = null;
     try {
       if (!NativeCodeLoader.buildSupportsOpenssl()) {
-        PerformanceAdvisory.LOG.debug("Build does not support openssl");
+        PerformanceAdvisory.LOG.warn("Build does not support openssl");
         loadingFailure = "build does not support openssl.";
       } else {
         initIDs();
       }
     } catch (Throwable t) {
       loadingFailure = t.getMessage();
-      LOG.debug("Failed to load OpenSSL Cipher.", t);
+      LOG.warn("Failed to load OpenSSL Cipher.", t);
     } finally {
       loadingFailureReason = loadingFailure;
     }

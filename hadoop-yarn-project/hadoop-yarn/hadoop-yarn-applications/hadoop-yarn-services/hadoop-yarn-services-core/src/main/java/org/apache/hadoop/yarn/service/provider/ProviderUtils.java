@@ -48,6 +48,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -465,7 +466,7 @@ public class ProviderUtils implements YarnServiceConstants {
     content = substituteStrWithTokens(content, tokensForSubstitution);
 
     try (OutputStream output = fs.create(remoteFile)) {
-      org.apache.commons.io.IOUtils.write(content, output);
+      org.apache.commons.io.IOUtils.write(content, output, StandardCharsets.UTF_8);
     } catch (IOException e) {
       log.info("Failed to create " + remoteFile);
     }

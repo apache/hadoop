@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -32,7 +32,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,7 +133,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
 
     if (groups == null) {
-      groups = Groups.getUserToGroupsMappingService(conf);
+      groups = Groups.getUserToGroupsMappingService(csContext.getConf());
     }
 
     MappingRuleValidationContext validationContext = buildValidationContext();
@@ -257,7 +258,7 @@ public class CSMappingPlacementRule extends PlacementRule {
 
   private String validateAndNormalizeQueue(
       String queueName, boolean allowCreate) throws YarnException {
-    MappingQueuePath path = new MappingQueuePath(queueName);
+    QueuePath path = new QueuePath(queueName);
 
     if (path.hasEmptyPart()) {
       throw new YarnException("Invalid path returned by rule: '" +
@@ -276,7 +277,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     }
 
     CSQueue queue = queueManager.getQueueByFullName(normalizedName);
-    if (queue != null && !(queue instanceof LeafQueue)) {
+    if (queue != null && !(queue instanceof AbstractLeafQueue)) {
       throw new YarnException("Mapping rule returned a non-leaf queue '" +
           normalizedName + "', cannot place application in it.");
     }
@@ -533,5 +534,10 @@ public class CSMappingPlacementRule extends PlacementRule {
     } else {
       return name;
     }
+  }
+
+  @VisibleForTesting
+  public Groups getGroups() {
+    return groups;
   }
 }

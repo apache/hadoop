@@ -45,7 +45,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -917,13 +917,9 @@ public class ViewFileSystem extends FileSystem {
   }
 
   @Override
-  public void setVerifyChecksum(final boolean verifyChecksum) { 
-    List<InodeTree.MountPoint<FileSystem>> mountPoints = 
-        fsState.getMountPoints();
-    Map<String, FileSystem> fsMap = initializeMountedFileSystems(mountPoints);
-    for (InodeTree.MountPoint<FileSystem> mount : mountPoints) {
-      fsMap.get(mount.src).setVerifyChecksum(verifyChecksum);
-    }
+  public void setVerifyChecksum(final boolean verifyChecksum) {
+    // This is a file system level operations, however ViewFileSystem
+    // points to many file systems. Noop for ViewFileSystem.
   }
 
   /**
@@ -1019,13 +1015,9 @@ public class ViewFileSystem extends FileSystem {
   }
 
   @Override
-  public void setWriteChecksum(final boolean writeChecksum) { 
-    List<InodeTree.MountPoint<FileSystem>> mountPoints = 
-        fsState.getMountPoints();
-    Map<String, FileSystem> fsMap = initializeMountedFileSystems(mountPoints);
-    for (InodeTree.MountPoint<FileSystem> mount : mountPoints) {
-      fsMap.get(mount.src).setWriteChecksum(writeChecksum);
-    }
+  public void setWriteChecksum(final boolean writeChecksum) {
+    // This is a file system level operations, however ViewFileSystem
+    // points to many file systems. Noop for ViewFileSystem.
   }
 
   @Override

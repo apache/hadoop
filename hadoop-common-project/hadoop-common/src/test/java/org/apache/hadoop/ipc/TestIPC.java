@@ -34,6 +34,7 @@ import static org.mockito.Mockito.verify;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,6 +48,8 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -54,6 +57,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
@@ -88,6 +92,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
@@ -613,6 +618,51 @@ public class TestIPC {
       WRITABLE_FAULTS_SLEEP = 0;
     }
   }
+
+  /**
+   * Test for HADOOP-18024.
+   */
+  @Test(timeout=60000)
+  public void testIOEOnListenerAccept() throws Exception {
+    // start server
+    Server server = new TestServer(1, false,
+            LongWritable.class, LongWritable.class) {
+      @Override
+      protected void configureSocketChannel(SocketChannel channel) throws IOException {
+        maybeThrowIOE();
+        super.configureSocketChannel(channel);
+      }
+    };
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+
+    // start client
+    WRITABLE_FAULTS_ENABLED = true;
+    Client client = new Client(LongWritable.class, conf);
+    try {
+      LongWritable param = LongWritable.class.newInstance();
+
+      try {
+        call(client, param, addr, 0, conf);
+        fail("Expected an exception to have been thrown");
+      } catch (EOFException e) {
+        LOG.info("Got expected exception", e);
+      } catch (Throwable t) {
+        LOG.warn("Got unexpected error", t);
+        fail("Expected an EOFException to have been thrown");
+      }
+
+      // Doing a second call with faults disabled should return fine --
+      // ie the internal state of the client or server should not be broken
+      // by the failed call
+      WRITABLE_FAULTS_ENABLED = false;
+      call(client, param, addr, 0, conf);
+
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
   
   private static void assertExceptionContains(
       Throwable t, String substring) {
@@ -786,6 +836,55 @@ public class TestIPC {
         throw new IOException(e);
       }
       return param;
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testIpcHostResolutionTimeout() throws Exception {
+    final InetSocketAddress addr = new InetSocketAddress("host.invalid", 80);
+
+    // start client
+    Client.setConnectTimeout(conf, 100);
+    final Client client = new Client(LongWritable.class, conf);
+    // set the rpc timeout to twice the MIN_SLEEP_TIME
+    try {
+      LambdaTestUtils.intercept(UnknownHostException.class,
+          new Callable<Void>() {
+            @Override
+            public Void call() throws IOException {
+              TestIPC.this.call(client, new LongWritable(RANDOM.nextLong()),
+                  addr, MIN_SLEEP_TIME * 2, conf);
+              return null;
+            }
+          });
+    } finally {
+      client.stop();
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testIpcFlakyHostResolution() throws IOException {
+    // start server
+    Server server = new TestServer(5, false);
+    server.start();
+
+    // Leave host unresolved to start. Use "localhost" as opposed
+    // to local IP from NetUtils.getConnectAddress(server) to force
+    // resolution later
+    InetSocketAddress unresolvedAddr = InetSocketAddress.createUnresolved(
+        "localhost", NetUtils.getConnectAddress(server).getPort());
+
+    // start client
+    Client.setConnectTimeout(conf, 100);
+    Client client = new Client(LongWritable.class, conf);
+
+    try {
+      // Should re-resolve host and succeed
+      call(client, new LongWritable(RANDOM.nextLong()), unresolvedAddr,
+          MIN_SLEEP_TIME * 2, conf);
+    } finally {
+      client.stop();
+      server.stop();
     }
   }
 
@@ -1586,8 +1685,8 @@ public class TestIPC {
     } catch (IOException ioe) {
       Assert.assertNotNull(ioe);
       Assert.assertEquals(RpcException.class, ioe.getClass());
-      Assert.assertEquals("RPC response exceeds maximum data length",
-          ioe.getMessage());
+      Assert.assertTrue(ioe.getMessage().contains(
+          "exceeds maximum data length"));
       return;
     }
     Assert.fail("didn't get limit exceeded");

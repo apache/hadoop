@@ -53,15 +53,19 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -73,9 +77,13 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.AccessType;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -93,8 +101,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuot
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicyWithExclusivePartitions;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
@@ -133,6 +143,7 @@ public class TestLeafQueue {
   CapacityScheduler cs;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
+  CapacitySchedulerQueueContext queueContext;
   private RMApp rmApp;
   
   CSQueue root;
@@ -193,6 +204,7 @@ public class TestLeafQueue {
     csConf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     csConf.setBoolean(CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES,
         false);
+    csConf.setResourceComparator(rC.getClass());
     final String newRoot = "root" + System.currentTimeMillis();
     setupQueueConfiguration(csConf, newRoot, withNodeLabels);
     YarnConfiguration conf = new YarnConfiguration();
@@ -218,12 +230,20 @@ public class TestLeafQueue {
     containerTokenSecretManager.rollMasterKey();
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
+    CapacitySchedulerQueueManager queueManager =
+        new CapacitySchedulerQueueManager(csConf, null, null);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
+
+    queueManager.reinitConfiguredNodeLabels(csConf);
+
+    queueContext = new CapacitySchedulerQueueContext(csContext);
 
     root = 
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             ROOT,
             queues, queues, 
             TestUtils.spyHook);
+    queueManager.setRootQueue(root);
     root.updateClusterResource(Resources.createResource(100 * 16 * GB, 100 * 32),
         new ResourceLimits(Resources.createResource(100 * 16 * GB, 100 * 32)));
 
@@ -232,8 +252,8 @@ public class TestLeafQueue {
         .thenReturn(queueResUsage);
 
     cs.setRMContext(spyRMContext);
-    cs.init(csConf);
     cs.setResourceCalculator(rC);
+    cs.init(csConf);
 
     when(spyRMContext.getScheduler()).thenReturn(cs);
     when(spyRMContext.getYarnConfiguration())
@@ -800,6 +820,62 @@ public class TestLeafQueue {
     assertEquals((int)(a.getCapacity() * node_0.getTotalResource().getMemorySize()),
         a.getMetrics().getAvailableMB());
   }
+
+  @Test
+  public void testHeadroomCheckWithDRF() throws Exception {
+    CSAssignment assignment;
+    setUpWithDominantResourceCalculator();
+    // Mock the queue
+    LeafQueue b = stubLeafQueue((LeafQueue) queues.get(B));
+    // Users
+    final String user0 = "user_0";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app0 =
+        new FiCaSchedulerApp(appAttemptId0, user0, b,
+            b.getAbstractUsersManager(), spyRMContext);
+    b.submitApplicationAttempt(app0, user0);
+    // Setup some nodes
+    String host0 = "127.0.0.1";
+    FiCaSchedulerNode node0 =
+        TestUtils.getMockNode(host0, DEFAULT_RACK, 0, 100 * GB, 100);
+
+    int numNodes = 1;
+    Resource clusterResource =
+        Resources.createResource(numNodes * (100 * GB), numNodes * 100);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+
+    // Increase the user-limit-factor to make user_0 fully use max resources of the queue.
+    // The max resources can be used are 0.99 * [100 * GB, 100]
+    b.setUserLimitFactor(10.0f);
+
+    Map<ApplicationAttemptId, FiCaSchedulerApp> apps =
+        ImmutableMap.of(app0.getApplicationAttemptId(), app0);
+    Map<NodeId, FiCaSchedulerNode> nodes = ImmutableMap.of(node0.getNodeID(), node0);
+
+    Priority priority = TestUtils.createMockPriority(1);
+    app0.updateResourceRequests(Collections.singletonList(TestUtils
+        .createResourceRequest(ResourceRequest.ANY, 90 * GB, 10, 1, true,
+            priority, recordFactory, NO_LABEL)));
+    assignment = b.assignContainers(clusterResource, node0, new ResourceLimits(
+        clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    applyCSAssignment(clusterResource, assignment, b, nodes, apps);
+    verifyContainerAllocated(assignment, NodeType.OFF_SWITCH);
+
+    app0.updateResourceRequests(Collections.singletonList(TestUtils
+        .createResourceRequest(ResourceRequest.ANY, 10 * GB, 10, 1, true,
+            priority, recordFactory, NO_LABEL)));
+    assignment = b.assignContainers(clusterResource, node0, new ResourceLimits(
+        clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    // This assignment should have no containers assigned,
+    // because the used memory (90 + 10)GB will exceed the max 99GB
+    verifyNoContainerAllocated(assignment);
+  }
+
   @Test
   public void testDRFUsageRatioRounding() throws Exception {
     CSAssignment assign;
@@ -860,7 +936,7 @@ public class TestLeafQueue {
       LeafQueue q, final Map<NodeId, FiCaSchedulerNode> nodes,
       final Map<ApplicationAttemptId, FiCaSchedulerApp> apps)
       throws IOException {
-    TestUtils.applyResourceCommitRequest(clusterResource, assign, nodes, apps);
+    TestUtils.applyResourceCommitRequest(clusterResource, assign, nodes, apps, csConf);
   }
 
   @Test
@@ -1021,11 +1097,12 @@ public class TestLeafQueue {
     csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 100);
     csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + "." + A,
         100);
+    queueContext.reinitialize();
 
     // reinitialize queues
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -1239,11 +1316,12 @@ public class TestLeafQueue {
     csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 100);
     csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + "." + A,
         100);
+    queueContext.reinitialize();
 
     // reinitialize queues
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -1846,21 +1924,23 @@ public class TestLeafQueue {
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
         + ".user-settings.user_0." + CapacitySchedulerConfiguration.USER_WEIGHT,
         1.5f);
-    // Set weight for "firstname.lastname" to be 0.7f for the a queue
+    // Set weight for "firstname.lastname" to be 0.7f for the "a" queue
     // in the configs. Notice the user contains a dot. This is to test
     // that weights are accepted for a username that contains dots.
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
         + ".user-settings.firstname.lastname."
         + CapacitySchedulerConfiguration.USER_WEIGHT,
         0.7f);
+    csConf.reinitializeConfigurationProperties();
+    queueContext.reinitialize();
 
     when(csContext.getClusterResource())
         .thenReturn(Resources.createResource(16 * GB, 32));
     // Verify that configs were updated and parsed correctly.
-    Assert.assertNull(a.getUserWeights().get("user_0"));
+    Assert.assertEquals(UserWeights.DEFAULT_WEIGHT, a.getUserWeights().getByUser("user_0"), 0.0f);
     a.reinitialize(a, csContext.getClusterResource());
-    assertEquals(1.5f, a.getUserWeights().get("user_0"), 0.0f);
-    assertEquals(0.7f, a.getUserWeights().get("firstname.lastname"), 0.0f);
+    assertEquals(1.5f, a.getUserWeights().getByUser("user_0"), 0.0f);
+    assertEquals(0.7f, a.getUserWeights().getByUser("firstname.lastname"), 0.0f);
 
     // set maxCapacity
     a.setMaxCapacity(1.0f);
@@ -3149,10 +3229,12 @@ public class TestLeafQueue {
     csConf.setInt(CapacitySchedulerConfiguration.NODE_LOCALITY_DELAY, 2);
     csConf.setInt(
         CapacitySchedulerConfiguration.RACK_LOCALITY_ADDITIONAL_DELAY, 1);
+    queueContext.reinitialize();
     CSQueueStore newQueues = new CSQueueStore();
-    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, ROOT, newQueues, queues,
         TestUtils.spyHook);
+    csContext.getCapacitySchedulerQueueManager().setRootQueue(newRoot);
     root.reinitialize(newRoot, cs.getClusterResource());
 
     // Manipulate queue 'b'
@@ -3585,9 +3667,10 @@ public class TestLeafQueue {
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT
             * 2);
+    queueContext.reinitialize();
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -3616,12 +3699,14 @@ public class TestLeafQueue {
     csConf.setInt(CapacitySchedulerConfiguration.NODE_LOCALITY_DELAY, 60);
     csConf.setInt(
         CapacitySchedulerConfiguration.RACK_LOCALITY_ADDITIONAL_DELAY, 600);
+    queueContext.reinitialize();
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             ROOT,
             newQueues, queues,
             TestUtils.spyHook);
+    csContext.getCapacitySchedulerQueueManager().setRootQueue(newRoot);
     root.reinitialize(newRoot, cs.getClusterResource());
 
     // after reinitialization
@@ -3976,8 +4061,14 @@ public class TestLeafQueue {
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         0.1f);
 
+    CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(csConf,
+        rmContext.getNodeLabelManager(), null);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
+
+    CapacitySchedulerQueueContext newQueueContext = new CapacitySchedulerQueueContext(csContext);
+
     CSQueue root;
-    root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+    root = CapacitySchedulerQueueManager.parseQueue(newQueueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, TestUtils.spyHook);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
@@ -3993,9 +4084,10 @@ public class TestLeafQueue {
     csConf.setFloat(
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         0.2f);
+    newQueueContext.reinitialize();
     clusterResource = Resources.createResource(100 * 20 * GB, 100 * 32);
     CSQueueStore newQueues = new CSQueueStore();
-    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(newQueueContext,
         csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
         TestUtils.spyHook);
     root.reinitialize(newRoot, clusterResource);
@@ -5045,15 +5137,15 @@ public class TestLeafQueue {
 
       assertEquals(0, conf.size());
       conf.setNodeLocalityDelay(60);
-      conf.setCapacity(ROOT + DOT + leafQueueName, 10);
-      conf.setMaximumCapacity(ROOT + DOT + leafQueueName, 100);
-      conf.setUserLimitFactor(ROOT + DOT +leafQueueName, 0.1f);
+      csConf.setCapacity(ROOT + DOT + leafQueueName, 10);
+      csConf.setMaximumCapacity(ROOT + DOT + leafQueueName, 100);
+      csConf.setUserLimitFactor(ROOT + DOT +leafQueueName, 0.1f);
 
       csConf.setNodeLocalityDelay(30);
       csConf.setGlobalMaximumApplicationsPerQueue(20);
+      queueContext.reinitialize();
 
-      LeafQueue leafQueue = new LeafQueue(csContext, conf,
-          leafQueueName, cs.getRootQueue(),
+      LeafQueue leafQueue = new LeafQueue(queueContext, leafQueueName, cs.getRootQueue(),
           null);
 
       leafQueue.updateClusterResource(Resource.newInstance(0, 0),
@@ -5079,6 +5171,14 @@ public class TestLeafQueue {
       assertEquals(1.0, leafQueue.getAbsoluteMaximumCapacity(),
           EPSILON);
 
+      // limit maximum apps by max system apps
+      csConf.setMaximumSystemApplications(15);
+      queueContext.reinitialize();
+      leafQueue.updateClusterResource(Resource.newInstance(0, 0),
+          new ResourceLimits(Resource.newInstance(0, 0)));
+
+      assertEquals(15, leafQueue.getMaxApplications());
+
      } finally {
         //revert config changes
         csConf.setNodeLocalityDelay(
@@ -5101,7 +5201,7 @@ public class TestLeafQueue {
     CSQueueMetrics metrics = CSQueueMetrics.forQueue(name, parent, false, cs.getConf());
     QueueInfo queueInfo = QueueInfo.
         newInstance(name, path, capacity, 1.0f, 0, null,
-        null, QueueState.RUNNING, null, "", null, false, -1.0f, null, false);
+        null, QueueState.RUNNING, null, "", null, false, -1.0f, 10, null, false);
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     AbstractCSQueue queue = mock(AbstractCSQueue.class);
     when(queue.getMetrics()).thenReturn(metrics);
@@ -5159,10 +5259,176 @@ public class TestLeafQueue {
         e.getMaxApplications());
   }
 
+  @Test
+  public void testRootHasAllNodeLabelsOfItsDescendants() throws IOException {
+    CapacitySchedulerConfiguration conf = csConf;
+    String rootChild = root.getChildQueues().get(0).getQueuePath();
+
+    conf.setCapacityByLabel(rootChild, "test", 100);
+    conf.setCapacityByLabel(rootChild + "." + A, "test", 20);
+    conf.setCapacityByLabel(rootChild + "." + B, "test", 40);
+    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
+    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test", 100);
+    conf.setCapacityByLabel(rootChild + "." + D, "test", 30);
+    conf.setCapacityByLabel(rootChild + "." + E, "test", 0);
+
+    conf.setCapacityByLabel(rootChild, "test2", 100);
+    conf.setCapacityByLabel(rootChild + "." + A, "test2", 20);
+    conf.setCapacityByLabel(rootChild + "." + B, "test2", 40);
+    conf.setCapacityByLabel(rootChild + "." + C, "test2", 10);
+    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test2", 100);
+    conf.setCapacityByLabel(rootChild + "." + D, "test2", 30);
+    conf.setCapacityByLabel(rootChild + "." + E, "test2", 0);
+
+    cs.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(conf);
+    cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
+    cs.reinitialize(conf, cs.getRMContext());
+
+    ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
+
+    Assert.assertEquals(Sets.newHashSet("", "test", "test2"),
+        rootQueue.queueNodeLabelsSettings.getConfiguredNodeLabels());
+  }
+
   @After
   public void tearDown() throws Exception {
     if (cs != null) {
       cs.stop();
     }
+  }
+
+  private static class TestRMAppManager extends RMAppManager {
+    TestRMAppManager(RMContext context, YarnScheduler scheduler,
+        ApplicationMasterService masterService,
+        ApplicationACLsManager applicationACLsManager, Configuration conf) {
+      super(context, scheduler, masterService, applicationACLsManager, conf);
+    }
+
+    @Override
+    public void submitApplication(
+        ApplicationSubmissionContext submissionContext, long submitTime,
+        UserGroupInformation userUgi) throws YarnException {
+      super.submitApplication(submissionContext, submitTime, userUgi);
+    }
+  }
+
+  @Test
+  public void testSubmitUsingRealUserAcls() throws Exception {
+    final String realUser = "AdminUser";
+    final String user0 = "user0";
+    final String user1 = "user1";
+    final String queue = "default";
+
+    YarnConfiguration conf = new YarnConfiguration();
+    MockRM rm = new MockRM();
+    rm.init(conf);
+    rm.start();
+    rm.getConfig().setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+
+    UserGroupInformation realUserUgi =
+        UserGroupInformation.createRemoteUser(realUser);
+    UserGroupInformation ugi0 =
+        UserGroupInformation.createProxyUserForTesting("user0", realUserUgi,
+            new String[] {"group1"});
+    UserGroupInformation ugi1 =
+        UserGroupInformation.createProxyUserForTesting("user1", realUserUgi,
+            new String[] {"group1"});
+    ApplicationId applicationId0 = TestUtils.getMockApplicationId(0);
+    ApplicationId applicationId1 = TestUtils.getMockApplicationId(1);
+    CapacityScheduler cSched = (CapacityScheduler) rm.getResourceScheduler();
+
+    ParentQueue rootQueue = (ParentQueue) cSched.getRootQueue();
+    Map<AccessType, AccessControlList> rootAcls = rootQueue.acls;
+    rootAcls.put(AccessType.SUBMIT_APP, new AccessControlList(realUser));
+    rootAcls.put(AccessType.ADMINISTER_QUEUE, new AccessControlList(realUser));
+
+    LeafQueue defaultQueue = (LeafQueue)cSched.getQueue(queue);
+    Map<AccessType, AccessControlList> a = defaultQueue.acls;
+    a.put(AccessType.SUBMIT_APP, new AccessControlList(realUser));
+    a.put(AccessType.ADMINISTER_QUEUE, new AccessControlList(realUser));
+
+    TestRMAppManager testRmAppManager =
+        new TestRMAppManager(rmContext, cSched, rm.getApplicationMasterService(),
+            rm.getApplicationACLsManager(), rm.getConfig());
+    ContainerLaunchContext clc =
+        mock(ContainerLaunchContext.class);
+    ApplicationSubmissionContext asc =
+        ApplicationSubmissionContext.newInstance(
+            applicationId0, "myApp0", "default", Priority.newInstance(0),
+            clc, false, false, 1, Resource.newInstance(1024, 1));
+
+    // Each of the following test cases has a proxied user and a real user.
+    // The proxied users are user0 and user1, depending on the test. The real
+    // user is always AdminUser.
+
+    // Ensure that user0 is not allowed to submit to the default queue when only
+    // the admin user is in the submit ACL and the admin user does not have the
+    // USE_REAL_ACLS character prepended.
+    try {
+      testRmAppManager.submitApplication(asc, System.currentTimeMillis(), ugi0);
+      Assert.fail(user0 + " should not be allowed to submit to the "
+                  + queue + " queue when only admin user is in submit ACL.");
+    } catch (YarnException e) {
+      // This is the expected behavior.
+      assertTrue("Should have received an AccessControlException.",
+          e.getCause() instanceof AccessControlException);
+    }
+
+    // With only user0 in the list of users authorized to submit apps to the
+    // queue, ensure that user0 is allowed to submit to the default queue.
+    a.put(AccessType.SUBMIT_APP, new AccessControlList(user0));
+    a.put(AccessType.ADMINISTER_QUEUE, new AccessControlList(realUser));
+    try {
+      testRmAppManager.submitApplication(asc, System.currentTimeMillis(), ugi0);
+    } catch (YarnException e) {
+      Assert.fail(user0 + " should be allowed to submit to the "
+                  + queue + " queue.");
+    }
+
+    // With only user0 in the list of users authorized to submit apps to the
+    // queue, ensure that user1 is NOT allowed to submit to the default queue
+    try {
+      testRmAppManager.submitApplication(asc, System.currentTimeMillis(), ugi1);
+      Assert.fail(user1 + " should not be allowed to submit to the "
+          + queue + " queue.");
+    } catch (YarnException e) {
+      // This is the expected behavior.
+      assertTrue("Should have received an AccessControlException.",
+          e.getCause() instanceof AccessControlException);
+    }
+
+    // Even though the admin user is in the list of users allowed to submit to
+    // the default queue and user1's real user is the admin user, user1 should
+    // not be allowed to submit to queue because the ACL entry does not have the
+    // special character prepended in the list.
+    a.put(AccessType.SUBMIT_APP,
+        new AccessControlList(user0 + "," + realUser));
+    try {
+      testRmAppManager.submitApplication(asc, System.currentTimeMillis(), ugi1);
+      Assert.fail(user1 + " should not be allowed to submit to the "
+                  + queue + " queue.");
+    } catch (YarnException e) {
+      // This is the expected behavior.
+      assertTrue("Should have received an AccessControlException.",
+          e.getCause() instanceof AccessControlException);
+    }
+
+    // user1 should now be allowed to submit to the default queue because the
+    // admin user is in the ACL list and has the USE_REAL_ACLS character
+    // prepended.
+    a.put(AccessType.SUBMIT_APP,
+        new AccessControlList(user0 + ","
+            + AccessControlList.USE_REAL_ACLS + realUser));
+    asc.setApplicationId(applicationId1);
+    try {
+      testRmAppManager.submitApplication(asc, System.currentTimeMillis(), ugi1);
+    } catch (YarnException e) {
+      LOG.error("failed to submit", e);
+      Assert.fail(user1 + " should be allowed to submit to the "
+                  + queue + " queue when real user is" + realUser + ".");
+    }
+
+    rm.stop();
+    rm.close();
   }
 }

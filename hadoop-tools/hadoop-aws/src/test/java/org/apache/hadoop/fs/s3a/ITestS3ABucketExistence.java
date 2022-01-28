@@ -27,15 +27,16 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESSPOINT_REQUIRED;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -55,8 +56,6 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
   public void testNoBucketProbing() throws Exception {
     describe("Disable init-time probes and expect FS operations to fail");
     Configuration conf = createConfigurationWithProbe(0);
-    // metastores can bypass S3 checks, so disable S3Guard, always
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
 
     fs = FileSystem.get(uri, conf);
 
@@ -158,6 +157,35 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     intercept(IllegalArgumentException.class,
             "Value of " + S3A_BUCKET_PROBE + " should be >= 0",
             "Should throw IllegalArgumentException",
+        () -> FileSystem.get(uri, configuration));
+  }
+
+  @Test
+  public void testAccessPointProbingV2() throws Exception {
+    describe("Test V2 bucket probing using an AccessPoint ARN");
+    Configuration configuration = createConfigurationWithProbe(2);
+    String accessPointArn = "arn:aws:s3:eu-west-1:123456789012:accesspoint/" + randomBucket;
+    configuration.set(String.format(InternalConstants.ARN_BUCKET_OPTION, randomBucket),
+        accessPointArn);
+
+    expectUnknownStore(
+        () -> FileSystem.get(uri, configuration));
+  }
+
+  @Test
+  public void testAccessPointRequired() throws Exception {
+    describe("Test V2 bucket probing with 'fs.s3a.accesspoint.required' property.");
+    Configuration configuration = createConfigurationWithProbe(2);
+    configuration.set(AWS_S3_ACCESSPOINT_REQUIRED, "true");
+    intercept(PathIOException.class,
+        InternalConstants.AP_REQUIRED_EXCEPTION,
+        "Should throw IOException if Access Points are required but not configured.",
+        () -> FileSystem.get(uri, configuration));
+
+    String accessPointArn = "arn:aws:s3:eu-west-1:123456789012:accesspoint/" + randomBucket;
+    configuration.set(String.format(InternalConstants.ARN_BUCKET_OPTION, randomBucket),
+        accessPointArn);
+    expectUnknownStore(
         () -> FileSystem.get(uri, configuration));
   }
 

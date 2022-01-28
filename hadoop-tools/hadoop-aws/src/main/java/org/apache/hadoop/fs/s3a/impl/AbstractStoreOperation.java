@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Base class of operations in the store.

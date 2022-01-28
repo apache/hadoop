@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.fedbalance.procedure;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.Collection;

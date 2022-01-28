@@ -116,8 +116,7 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     // if we get here there is no directory at the destination.
     // so create one.
     String key = getStoreContext().pathToKey(dir);
-    // this will create the marker file, delete the parent entries
-    // and update S3Guard
+    // Create the marker file, maybe delete the parent entries
     callbacks.createFakeDirectory(key);
     return true;
   }

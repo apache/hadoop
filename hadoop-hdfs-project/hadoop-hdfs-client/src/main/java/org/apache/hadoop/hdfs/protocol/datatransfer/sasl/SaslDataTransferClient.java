@@ -21,7 +21,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DAT
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_NEW_QOP_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -588,11 +588,11 @@ public class SaslDataTransferClient {
               // the client accepts some cipher suites, but the server does not.
               LOG.debug("Client accepts cipher suites {}, "
                       + "but server {} does not accept any of them",
-                  cipherSuites, addr.toString());
+                  cipherSuites, addr);
             }
           } else {
             LOG.debug("Client using cipher suite {} with server {}",
-                cipherOption.getCipherSuite().getName(), addr.toString());
+                cipherOption.getCipherSuite().getName(), addr);
           }
         }
       }
@@ -603,7 +603,20 @@ public class SaslDataTransferClient {
           conf, cipherOption, underlyingOut, underlyingIn, false) :
           sasl.createStreamPair(out, in);
     } catch (IOException ioe) {
-      sendGenericSaslErrorMessage(out, ioe.getMessage());
+      String message = ioe.getMessage();
+      try {
+        sendGenericSaslErrorMessage(out, message);
+      } catch (Exception e) {
+        // If ioe is caused by error response from server, server will close peer connection.
+        // So sendGenericSaslErrorMessage might cause IOException due to "Broken pipe".
+        // We suppress IOException from sendGenericSaslErrorMessage
+        // and always throw `ioe` as top level.
+        // `ioe` can be InvalidEncryptionKeyException or InvalidBlockTokenException
+        // that indicates refresh key or token and are important for caller.
+        LOG.debug("Failed to send generic sasl error to server {} (message: {}), "
+                + "suppress exception", addr, message, e);
+        ioe.addSuppressed(e);
+      }
       throw ioe;
     }
   }

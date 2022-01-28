@@ -19,6 +19,9 @@
 #include "configuration_test.h"
 #include "common/configuration.h"
 #include "common/configuration_loader.h"
+#include "utils/temp-file.h"
+#include "utils/temp-dir.h"
+
 #include <gmock/gmock.h>
 #include <cstdio>
 #include <fstream>
@@ -298,7 +301,7 @@ TEST(ConfigurationTest, TestFileReads)
 {
   // Single stream
   {
-    TempFile tempFile;
+    TestUtils::TempFile tempFile;
     writeSimpleConfig(tempFile.GetFileName(), "key1", "value1");
 
     ConfigurationLoader config_loader;
@@ -311,7 +314,7 @@ TEST(ConfigurationTest, TestFileReads)
 
   // Multiple files
   {
-    TempFile tempFile;
+    TestUtils::TempFile tempFile;
     writeSimpleConfig(tempFile.GetFileName(), "key1", "value1");
 
     ConfigurationLoader loader;
@@ -320,7 +323,7 @@ TEST(ConfigurationTest, TestFileReads)
     ASSERT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
-    TempFile tempFile2;
+    TestUtils::TempFile tempFile2;
     writeSimpleConfig(tempFile2.GetFileName(), "key2", "value2");
     optional<Configuration> config2 =
         loader.OverlayResourceFile(*config, tempFile2.GetFileName());
@@ -331,11 +334,11 @@ TEST(ConfigurationTest, TestFileReads)
 
   // Try to add a directory
   {
-    TempDir tempDir;
+    TestUtils::TempDir tempDir;
 
     ConfigurationLoader config_loader;
     config_loader.ClearSearchPath();
-    optional<Configuration> config = config_loader.LoadFromFile<Configuration>(tempDir.path);
+    optional<Configuration> config = config_loader.LoadFromFile<Configuration>(tempDir.GetPath());
     EXPECT_FALSE(config && "Add directory as file resource");
   }
 
@@ -351,18 +354,19 @@ TEST(ConfigurationTest, TestFileReads)
 
   // Search path
   {
-    TempDir tempDir1;
-    TempFile tempFile1(tempDir1.path + "/file1.xml");
+    TestUtils::TempDir tempDir1;
+    TestUtils::TempFile tempFile1(tempDir1.GetPath() + "/file1.xml");
     writeSimpleConfig(tempFile1.GetFileName(), "key1", "value1");
-    TempDir tempDir2;
-    TempFile tempFile2(tempDir2.path + "/file2.xml");
+    TestUtils::TempDir tempDir2;
+    TestUtils::TempFile tempFile2(tempDir2.GetPath() + "/file2.xml");
     writeSimpleConfig(tempFile2.GetFileName(), "key2", "value2");
-    TempDir tempDir3;
-    TempFile tempFile3(tempDir3.path + "/file3.xml");
+    TestUtils::TempDir tempDir3;
+    TestUtils::TempFile tempFile3(tempDir3.GetPath() + "/file3.xml");
     writeSimpleConfig(tempFile3.GetFileName(), "key3", "value3");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir1.path + ":" + tempDir2.path + ":" + tempDir3.path);
+    loader.SetSearchPath(tempDir1.GetPath() + ":" + tempDir2.GetPath() + ":" +
+                         tempDir3.GetPath());
     optional<Configuration> config1 = loader.LoadFromFile<Configuration>("file1.xml");
     EXPECT_TRUE(config1 && "Parse first stream");
     optional<Configuration> config2 = loader.OverlayResourceFile(*config1, "file2.xml");
@@ -378,12 +382,12 @@ TEST(ConfigurationTest, TestFileReads)
 TEST(ConfigurationTest, TestDefaultConfigs) {
   // Search path
   {
-    TempDir tempDir;
-    TempFile coreSite(tempDir.path + "/core-site.xml");
+    TestUtils::TempDir tempDir;
+    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir.path);
+    loader.SetSearchPath(tempDir.GetPath());
 
     optional<Configuration> config = loader.LoadDefaultResources<Configuration>();
     EXPECT_TRUE(config && "Parse streams");

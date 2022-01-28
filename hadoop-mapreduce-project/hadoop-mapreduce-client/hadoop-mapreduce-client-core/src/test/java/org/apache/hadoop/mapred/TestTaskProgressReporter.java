@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.util.ExitUtil;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -177,6 +178,11 @@ public class TestTaskProgressReporter {
       taskLimitIsChecked = true;
       super.checkTaskLimits();
     }
+  }
+
+  @After
+  public void cleanup() {
+    FileSystem.clearStatistics();
   }
 
   @Test(timeout=60000)

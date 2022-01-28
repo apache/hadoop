@@ -35,7 +35,7 @@ import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.http.HttpResponse;
 import com.amazonaws.services.s3.transfer.Transfer;
 import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -39,6 +39,8 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
@@ -243,6 +245,14 @@ public class JsonUtilClient {
     final long generationStamp =
         ((Number) m.get("generationStamp")).longValue();
     return new ExtendedBlock(blockPoolId, blockId, numBytes, generationStamp);
+  }
+
+  static boolean getBoolean(Map<?, ?> m, String key, final boolean defaultValue) {
+    Object value = m.get(key);
+    if (value == null) {
+      return defaultValue;
+    }
+    return ((Boolean) value).booleanValue();
   }
 
   static int getInt(Map<?, ?> m, String key, final int defaultValue) {
@@ -832,6 +842,53 @@ public class JsonUtilClient {
     byte[] sourcePath = toByteArray((String) json.get("sourcePath"));
     byte[] targetPath = toByteArray((String) json.get("targetPath"));
     return new SnapshotDiffReport.DiffReportEntry(type, sourcePath, targetPath);
+  }
+
+  public static SnapshotDiffReportListing toSnapshotDiffReportListing(
+      final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+
+    Map<?, ?> m =
+        (Map<?, ?>) json.get(SnapshotDiffReportListing.class.getSimpleName());
+    byte[] lastPath = DFSUtilClient.string2Bytes(getString(m, "lastPath", ""));
+    int lastIndex = getInt(m, "lastIndex", -1);
+    boolean isFromEarlier = getBoolean(m, "isFromEarlier", false);
+    List<DiffReportListingEntry> modifyList =
+        toDiffListingList(getList(m, "modifyList"));
+    List<DiffReportListingEntry> createList =
+        toDiffListingList(getList(m, "createList"));
+    List<DiffReportListingEntry> deleteList =
+        toDiffListingList(getList(m, "deleteList"));
+
+    return new SnapshotDiffReportListing(
+        lastPath, modifyList, createList, deleteList, lastIndex, isFromEarlier);
+  }
+
+  public static List<DiffReportListingEntry> toDiffListingList(List<?> objs) {
+    if (objs == null) {
+      return null;
+    }
+    List<DiffReportListingEntry> diffList = new ChunkedArrayList<>();
+    for (int i = 0; i < objs.size(); i++) {
+      diffList.add(toDiffReportListingEntry((Map<?, ?>) objs.get(i)));
+    }
+    return diffList;
+  }
+
+  private static DiffReportListingEntry toDiffReportListingEntry(
+      Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    long dirId = getLong(json, "dirId", 0);
+    long fileId = getLong(json, "fileId", 0);
+    byte[] sourcePath = toByteArray(getString(json, "sourcePath", null));
+    byte[] targetPath = toByteArray(getString(json, "targetPath", null));
+    boolean isReference = getBoolean(json, "isReference", false);
+    return new DiffReportListingEntry(
+        dirId, fileId, sourcePath, isReference, targetPath);
   }
 
   private static byte[] toByteArray(String str) {

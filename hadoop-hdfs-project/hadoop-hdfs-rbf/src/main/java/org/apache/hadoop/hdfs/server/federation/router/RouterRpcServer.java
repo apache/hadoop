@@ -43,7 +43,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -181,7 +180,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
@@ -436,7 +435,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       URI journalUri;
       try {
         journalUri = new URI(sConf.get(SCHEDULER_JOURNAL_URI));
-      } catch (URISyntaxException e) {
+      } catch (URISyntaxException | NullPointerException e) {
         throw new IOException("Bad journal uri. Please check configuration for "
             + SCHEDULER_JOURNAL_URI);
       }
@@ -671,8 +670,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   /**
    * Invokes the method at default namespace, if default namespace is not
-   * available then at the first available namespace.
-   * If the namespace is unavailable, retry once with other namespace.
+   * available then at the other available namespaces.
+   * If the namespace is unavailable, retry with other namespaces.
    * @param <T> expected return type.
    * @param method the remote method.
    * @return the response received after invoking method.
@@ -681,28 +680,29 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   <T> T invokeAtAvailableNs(RemoteMethod method, Class<T> clazz)
       throws IOException {
     String nsId = subclusterResolver.getDefaultNamespace();
-    // If default Ns is not present return result from first namespace.
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    try {
-      if (!nsId.isEmpty()) {
+    // If no namespace is available, then throw this IOException.
+    IOException io = new IOException("No namespace available.");
+    // If default Ns is present return result from that namespace.
+    if (!nsId.isEmpty()) {
+      try {
         return rpcClient.invokeSingle(nsId, method, clazz);
+      } catch (IOException ioe) {
+        if (!clientProto.isUnavailableSubclusterException(ioe)) {
+          LOG.debug("{} exception cannot be retried",
+              ioe.getClass().getSimpleName());
+          throw ioe;
+        }
+        // Remove the already tried namespace.
+        nss.removeIf(n -> n.getNameserviceId().equals(nsId));
+        return invokeOnNs(method, clazz, io, nss);
       }
-      // If no namespace is available, throw IOException.
-      IOException io = new IOException("No namespace available.");
-      return invokeOnNs(method, clazz, io, nss);
-    } catch (IOException ioe) {
-      if (!clientProto.isUnavailableSubclusterException(ioe)) {
-        LOG.debug("{} exception cannot be retried",
-            ioe.getClass().getSimpleName());
-        throw ioe;
-      }
-      Set<FederationNamespaceInfo> nssWithoutFailed = getNameSpaceInfo(nsId);
-      return invokeOnNs(method, clazz, ioe, nssWithoutFailed);
     }
+    return invokeOnNs(method, clazz, io, nss);
   }
 
   /**
-   * Invoke the method on first available namespace,
+   * Invoke the method sequentially on available namespaces,
    * throw no namespace available exception, if no namespaces are available.
    * @param method the remote method.
    * @param clazz  Class for the return type.
@@ -716,24 +716,22 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (nss.isEmpty()) {
       throw ioe;
     }
-    String nsId = nss.iterator().next().getNameserviceId();
-    return rpcClient.invokeSingle(nsId, method, clazz);
-  }
-
-  /**
-   * Get set of namespace info's removing the already invoked namespaceinfo.
-   * @param nsId already invoked namespace id
-   * @return List of name spaces in the federation on
-   * removing the already invoked namespaceinfo.
-   */
-  private Set<FederationNamespaceInfo> getNameSpaceInfo(String nsId) {
-    Set<FederationNamespaceInfo> namespaceInfos = new HashSet<>();
-    for (FederationNamespaceInfo ns : namespaceInfos) {
-      if (!nsId.equals(ns.getNameserviceId())) {
-        namespaceInfos.add(ns);
+    for (FederationNamespaceInfo fnInfo : nss) {
+      String nsId = fnInfo.getNameserviceId();
+      LOG.debug("Invoking {} on namespace {}", method, nsId);
+      try {
+        return rpcClient.invokeSingle(nsId, method, clazz);
+      } catch (IOException e) {
+        LOG.debug("Failed to invoke {} on namespace {}", method, nsId, e);
+        // Ignore the exception and try on other namespace, if the tried
+        // namespace is unavailable, else throw the received exception.
+        if (!clientProto.isUnavailableSubclusterException(e)) {
+          throw e;
+        }
       }
     }
-    return namespaceInfos;
+    // Couldn't get a response from any of the namespace, throw ioe.
+    throw ioe;
   }
 
   @Override // ClientProtocol
@@ -1135,6 +1133,23 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    */
   public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
       DatanodeReportType type) throws IOException {
+    return getDatanodeStorageReportMap(type, true, -1);
+  }
+
+  /**
+   * Get the list of datanodes per subcluster.
+   *
+   * @param type Type of the datanodes to get.
+   * @param requireResponse If true an exception will be thrown if all calls do
+   *          not complete. If false exceptions are ignored and all data results
+   *          successfully received are returned.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return nsId to datanode list.
+   * @throws IOException If the method cannot be invoked remotely.
+   */
+  public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
+      DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
 
     Map<String, DatanodeStorageReport[]> ret = new LinkedHashMap<>();
     RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
@@ -1142,7 +1157,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, DatanodeStorageReport[]> results =
         rpcClient.invokeConcurrent(
-            nss, method, true, false, DatanodeStorageReport[].class);
+            nss, method, requireResponse, false, timeOutMs, DatanodeStorageReport[].class);
     for (Entry<FederationNamespaceInfo, DatanodeStorageReport[]> entry :
         results.entrySet()) {
       FederationNamespaceInfo ns = entry.getKey();

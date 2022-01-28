@@ -320,6 +320,7 @@
       <th style="width:180px; text-align:center">Capacity</th>
       <th>Blocks</th>
       <th>Block pool used</th>
+      <th>Block pool usage StdDev</th>
       <th>Version</th>
     </tr>
   </thead>
@@ -343,6 +344,7 @@
     </td>
     <td title="Blocks Scheduled : {blockScheduled}">{numBlocks}</td>
     <td ng-value="{blockPoolUsedPercent}">{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
+    <td ng-value="{blockPoolUsedPercentStdDev}">{blockPoolUsedPercentStdDev|fmt_percentage}</td>
     <td>{version}</td>
   </tr>
   {/LiveNodes}
@@ -477,7 +479,7 @@ There are no reported volume failures.
 </table>
 </script>
 
-<script type="text/javascript" src="/static/jquery-3.5.1.min.js">
+<script type="text/javascript" src="/static/jquery-3.6.0.min.js">
 </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
 </script><script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap.min.js">
 </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">

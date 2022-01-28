@@ -69,6 +69,7 @@
       <item name="Tracing" href="hadoop-project-dist/hadoop-common/Tracing.html"/>
       <item name="Unix Shell Guide" href="hadoop-project-dist/hadoop-common/UnixShellGuide.html"/>
       <item name="Registry" href="hadoop-project-dist/hadoop-common/registry/index.html"/>
+      <item name="Async Profiler" href="hadoop-project-dist/hadoop-common/AsyncProfilerServlet.html" />
     </menu>
     
     <menu name="HDFS" inherit="top">

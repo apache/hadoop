@@ -70,12 +70,13 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
@@ -112,6 +113,7 @@ class BPServiceActor implements Runnable {
   private String nnId = null;
   private volatile RunningState runningState = RunningState.CONNECTING;
   private volatile boolean shouldServiceRun = true;
+  private volatile boolean isSlownode = false;
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
@@ -205,6 +207,7 @@ class BPServiceActor implements Runnable {
         String.valueOf(getScheduler().getLastBlockReportTime()));
     info.put("maxBlockReportSize", String.valueOf(getMaxBlockReportSize()));
     info.put("maxDataLength", String.valueOf(maxDataLength));
+    info.put("isSlownode", String.valueOf(isSlownode));
     return info;
   }
 
@@ -452,8 +455,8 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().addBlockReport(brSendCost, getRpcMetricSuffix());
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
-          "uccessfully sent block report 0x" +
-          Long.toHexString(reportId) + " to namenode: " + nnAddr +
+          "uccessfully sent block report 0x" + Long.toHexString(reportId) +
+          " with lease ID 0x" + Long.toHexString(fullBrLeaseId) + " to namenode: " + nnAddr +
           ",  containing " + reports.length +
           " storage report(s), of which we sent " + numReportsSent + "." +
           " The reports had " + totalBlockCount +
@@ -729,6 +732,7 @@ class BPServiceActor implements Runnable {
               handleRollingUpgradeStatus(resp);
             }
             commandProcessingThread.enqueue(resp.getCommands());
+            isSlownode = resp.getIsSlownode();
           }
         }
 
@@ -1190,7 +1194,7 @@ class BPServiceActor implements Runnable {
 
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
-    private final long blockReportIntervalMs;
+    private volatile long blockReportIntervalMs;
     private final long outliersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
@@ -1267,6 +1271,7 @@ class BPServiceActor implements Runnable {
 
     void forceFullBlockReportNow() {
       forceFullBlockReport.set(true);
+      resetBlockReportTime = true;
     }
 
     /**
@@ -1344,6 +1349,15 @@ class BPServiceActor implements Runnable {
     @VisibleForTesting
     void setNextBlockReportTime(long nextBlockReportTime) {
       this.nextBlockReportTime.getAndSet(nextBlockReportTime);
+    }
+
+    long getBlockReportIntervalMs() {
+      return this.blockReportIntervalMs;
+    }
+
+    void setBlockReportIntervalMs(long intervalMs) {
+      Preconditions.checkArgument(intervalMs > 0);
+      this.blockReportIntervalMs = intervalMs;
     }
 
     /**
@@ -1473,5 +1487,9 @@ class BPServiceActor implements Runnable {
     if (commandProcessingThread != null) {
       commandProcessingThread.interrupt();
     }
+  }
+
+  boolean isSlownode() {
+    return isSlownode;
   }
 }

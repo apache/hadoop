@@ -51,7 +51,7 @@ import org.apache.hadoop.util.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ListMultimap;
 
@@ -141,7 +141,8 @@ public class DirectoryScanner implements Runnable {
           + ", missing metadata files: " + missingMetaFile
           + ", missing block files: " + missingBlockFile
           + ", missing blocks in memory: " + missingMemoryBlocks
-          + ", mismatched blocks: " + mismatchBlocks;
+          + ", mismatched blocks: " + mismatchBlocks
+          + ", duplicated blocks: " + duplicateBlocks;
     }
   }
 
@@ -391,7 +392,7 @@ public class DirectoryScanner implements Runnable {
   }
 
   /**
-   * Main program loop for DirectoryScanner. Runs {@link reconcile()} and
+   * Main program loop for DirectoryScanner. Runs {@link #reconcile()} and
    * handles any exceptions.
    */
   @Override

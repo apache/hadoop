@@ -22,6 +22,18 @@ and inside the AWS S3 SDK, immediately before the request is executed.
 The full architecture is covered in [Auditing Architecture](auditing_architecture.html);
 this document covers its use.
 
+## Important: Auditing is disabled by default
+
+Due to a memory leak from the use of `ThreadLocal` fields, this auditing feature leaks memory as S3A filesystem
+instances are created and deleted.
+This causes problems in long-lived processes which either do not re-use filesystem
+instances, or attempt to delete all instances belonging to specific users.
+See [HADOOP-18091](https://issues.apache.org/jira/browse/HADOOP-18091) _S3A auditing leaks memory through ThreadLocal references_.
+
+To avoid these memory leaks, auditing is disabled by default.
+
+To turn auditing on, set `fs.s3a.audit.enabled` to `true`.
+
 ## Auditing workflow
 
 1. An _Auditor Service_ can be instantiated for each S3A FileSystem instance,
@@ -63,12 +75,16 @@ ideally even identifying the process/job generating load.
 
 ## Using Auditing
 
-The Logging Auditor is enabled by default; it annotates the S3 logs.
+Auditing is disabled by default.
+When auditing enabled, a Logging Auditor will annotate the S3 logs through a custom
+HTTP Referrer header in requests made to S3.
+Other auditor classes may be used instead.
 
 ### Auditor Options
 
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
+| `fs.s3a.audit.enabled` | Is auditing enabled | `false` |
 | `fs.s3a.audit.service.classname` | Auditor classname | `org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor` |
 | `fs.s3a.audit.request.handlers` | List of extra subclasses of AWS SDK RequestHandler2 to include in handler chain | `""` |
 | `fs.s3a.audit.referrer.enabled` | Logging auditor to publish the audit information in the HTTP Referrer header | `true` |
@@ -76,14 +92,26 @@ The Logging Auditor is enabled by default; it annotates the S3 logs.
 | `fs.s3a.audit.reject.out.of.span.operations` | Auditor to reject operations "outside of a span" | `false` |
 
 
-### Disabling Auditing with the No-op Auditor
+### Disabling Auditing.
 
-The No-op auditor does not perform any logging of audit events.
+In this release of Hadoop, auditing is disabled.
+
+This can be explicitly set globally or for specific buckets
 
 ```xml
 <property>
-  <name>fs.s3a.audit.service.classname</name>
-  <value>org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor</value>
+  <name>fs.s3a.audit.enabled</name>
+  <value>false</value>
+</property>
+```
+
+Specific buckets can have auditing disabled, even when it is enabled globally.
+
+```xml
+<property>
+  <name>fs.s3a.bucket.landsat-pds.audit.enabled</name>
+  <value>false</value>
+  <description>Do not audit landsat bucket operations</description>
 </property>
 ```
 
@@ -92,13 +120,18 @@ The No-op auditor does not perform any logging of audit events.
 The "Logging Auditor" is the default auditor.
 It provides two forms of logging
 
-1. Logging of operations in the client via Log4J.
+1. Logging of operations in the client via the active SLF4J imolementation.
 1. Dynamic generation of the HTTP Referrer header for S3 requests.
 
 The Logging Auditor is enabled by providing its classname in the option
 `fs.s3a.audit.service.classname`.
 
 ```xml
+<property>
+  <name>fs.s3a.audit.enabled</name>
+  <value>true</value>
+</property>
+
 <property>
   <name>fs.s3a.audit.service.classname</name>
   <value>org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor</value>

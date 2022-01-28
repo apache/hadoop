@@ -20,22 +20,21 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import java.io.IOException;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.EncryptionTestUtils;
-import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 
 /**
  * Class to test SSE_KMS encryption settings for huge files.
- * Tests will only run if value of {@link Constants#SERVER_SIDE_ENCRYPTION_KEY}
+ * Tests will only run if value of {@link Constants#S3_ENCRYPTION_KEY}
  * is set in the configuration. The testing bucket must be configured with this
  * same key else test might fail.
  */
@@ -44,13 +43,7 @@ public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
   @Override
   public void setup() throws Exception {
     Configuration c = new Configuration();
-    String kmsKey = c.get(SERVER_SIDE_ENCRYPTION_KEY);
-    if (StringUtils.isBlank(kmsKey) || !c.get(SERVER_SIDE_ENCRYPTION_ALGORITHM)
-        .equals(S3AEncryptionMethods.CSE_KMS.name())) {
-      skip(SERVER_SIDE_ENCRYPTION_KEY + " is not set for " +
-          SSE_KMS.getMethod() + " or CSE-KMS algorithm is used instead of "
-          + "SSE-KMS");
-    }
+    skipIfEncryptionNotSet(c, SSE_KMS);
     super.setup();
   }
 
@@ -61,19 +54,19 @@ public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
 
   /**
    * @param fileSystem
-   * @return true if {@link Constants#SERVER_SIDE_ENCRYPTION_KEY} is set
+   * @return true if {@link Constants#S3_ENCRYPTION_KEY} is set
    * in the config.
    */
   @Override
   protected boolean isEncrypted(S3AFileSystem fileSystem) {
     Configuration c = new Configuration();
-    return c.get(SERVER_SIDE_ENCRYPTION_KEY) != null;
+    return StringUtils.isNotBlank(getS3EncryptionKey(getTestBucketName(c), c));
   }
 
   @Override
   protected void assertEncrypted(Path hugeFile) throws IOException {
     Configuration c = new Configuration();
-    String kmsKey = c.get(SERVER_SIDE_ENCRYPTION_KEY);
+    String kmsKey = getS3EncryptionKey(getTestBucketName(c), c);
     EncryptionTestUtils.assertEncrypted(getFileSystem(), hugeFile,
             SSE_KMS, kmsKey);
   }

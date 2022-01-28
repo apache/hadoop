@@ -747,6 +747,15 @@ public class TestErasureCodingPolicies {
     assertEquals(1, responses.length);
     assertFalse(responses[0].isSucceed());
 
+    // Test numDataUnits + numParityUnits > 16
+    toAddSchema = new ECSchema("rs", 14, 4);
+    newPolicy =
+        new ErasureCodingPolicy(toAddSchema, 128 * 1024 * 1024);
+    policyArray = new ErasureCodingPolicy[]{newPolicy};
+    responses = fs.addErasureCodingPolicies(policyArray);
+    assertEquals(1, responses.length);
+    assertFalse(responses[0].isSucceed());
+
     // Test too big cell size
     toAddSchema = new ECSchema("rs", 3, 2);
     newPolicy =
