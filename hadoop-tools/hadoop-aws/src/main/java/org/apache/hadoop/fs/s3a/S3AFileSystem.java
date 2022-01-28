@@ -4927,10 +4927,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             parameters,
             getDefaultBlockSize(),
             inputPolicy);
-    boolean isSelect = fileInformation.isSql();
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
-    Configuration options = parameters.getOptions();
-    if (!isSelect) {
+    if (!fileInformation.isSql()) {
       // normal path.
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result,
@@ -4942,7 +4940,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // submit the query
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result,
-              () -> select(path, options, fileInformation)));
+              () -> select(path, parameters.getOptions(), fileInformation)));
     }
     return result;
   }

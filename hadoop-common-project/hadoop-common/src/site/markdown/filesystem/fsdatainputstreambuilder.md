@@ -203,8 +203,8 @@ That is, the precondition  `exists(FS, path)` and `isFile(FS, path)` are
 only guaranteed to have been met after the `get()` called on returned future
 and an attempt has been made to read the stream.
 
-Thus, if even when file does not exist, the following call MUST succeed, returning
-a `CompletableFuture` to be evaluated.
+Thus, if even when file does not exist, or is a directory rather than a file,
+the following call MUST succeed, returning a `CompletableFuture` to be evaluated.
 
 ```java
 Path p = new Path("file://tmp/file-which-does-not-exist");
@@ -214,8 +214,10 @@ CompletableFuture<FSDataInputStream> future = p.getFileSystem(conf)
       .build();
 ```
 
-The nonexistence of the file MUST trigger a `FileNotFoundException` in
-the future's `get()` call, or when the returned stream is read.
+The inability to access/read a file MUST raise an `IOException`or subclass
+in either the future's `get()` call, or, for late binding operations,
+when an operation to read data is invoked.
+
 Therefore the following sequence SHALL fail when invoked on the
 `future` returned by the previous example.
 
@@ -226,11 +228,15 @@ Therefore the following sequence SHALL fail when invoked on the
 Access permission checks have the same visibility requirements: permission failures
 MUST be delayed until the `get()` call and MAY be delayed into subsequent operations.
 
-## <a name="options"></a> Standard `openFile()` options since Hadoop 3.3.2
+Note: some operations on the input stream, such as `seek()` may not attempt any IO
+at all. Such operations MAY NOT raise exceotions when interacting with 
+nonexistent/unreadable files.
 
-These are options which FileSystem implementations are expected to recognise
--and ideally, support by changing the behavior of the input streams as a
-appropriate.
+## <a name="options"></a> Standard `openFile()` options since Hadoop 3.3.3
+
+These are options which `FileSystem` and `FileContext` implementation
+MUST expected to recognise and MAY support by changing the behavior of
+their input streams as a appropriate.
 
 Hadoop 3.3.0 added the `openFile()` API; these standard options were defined in
 a later release. Therefore, although they are "well known", unless confident that
@@ -240,9 +246,6 @@ the options -applications SHOULD set the options via `opt()` calls rather than `
 When opening a file through the `openFile()` builder API, callers MAY use
 both `.opt(key, value)` and `.must(key, value)` calls to set standard and
 filesystem-specific options.
-
-
-// TODO: clarify
 
 If set as an `opt()` parameter, unsupported "standard" options MUST be ignored,
 as MUST unrecognized standard options.
@@ -269,7 +272,7 @@ something like that were ever standardized, then the use of the option, either
 in `opt()` or `must()` argument MUST be rejected for filesystems which don't
 support the feature.
 
-### Option: `fs.option.openfile.buffer.size`
+### <a name="buffer.size"></a>  Option: `fs.option.openfile.buffer.size`
 
 Read buffer size in bytes.
 
@@ -338,7 +341,7 @@ _Futher reading_
 * [Linux fadvise()](https://linux.die.net/man/2/fadvise).
 * [Windows `CreateFile()`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea#caching-behavior)
 
-#### Read Policy `adaptive`
+#### <a name="read.policy."></a> Read Policy `adaptive`
 
 Try to adapt the seek policy to the read pattern of the application.
 
@@ -358,23 +361,23 @@ sequential to random seek policies may be exensive.
 When applications explicitly set the `fs.option.openfile.read.policy` option, if
 they know their read plan, they SHOULD declare which policy is most appropriate.
 
-#### Read Policy `default`
+#### <a name="read.policy.default"></a> Read Policy ``
 
 The default policy for the filesystem instance.
 Implementation/installation-specific.
 
-#### Read Policy `sequential`
+#### <a name="read.policy.sequential"></a> Read Policy `sequential`
 
 Expect sequential reads from the first byte read to the end of the file/until
 the stream is closed.
 
-#### Read Policy `random`
+#### <a name="read.policy.random"></a> Read Policy `random`
 
 Expect `seek()/read()` sequences, or use of `PositionedReadable`
 or `ByteBufferPositionedReadable` APIs.
 
 
-#### Read Policy `vector`
+#### <a name="read.policy.vector"></a> Read Policy `vector`
 
 This declares that the caller intends to use the Vectored read API of
 [HADOOP-11867](https://issues.apache.org/jira/browse/HADOOP-11867)
@@ -390,7 +393,7 @@ classic `InputStream` and `PositionedRead` API calls.
 Implementations SHOULD use the `random` read policy
 with these operations.
 
-#### Read Policy `whole-file`
+#### <a name="read.policy.whole-file"></a> Read Policy `whole-file`
 
 
 This declares that the whole file is to be read end-to-end; the file system client is free to enable
@@ -400,13 +403,13 @@ enough for TCP flow control to determine the optimal download rate.
 
 Strategies can include:
 
-* Initiate GET of entire file in `openFile()` operation.
-* Prefech data in large blocks, possibly in parallel GET operations.
+* Initiate an HTTP GET of the entire file in `openFile()` operation.
+* Prefech data in large blocks, possibly in parallel read operations.
 
 Applications which know that the entire file is to be read from an opened stream SHOULD declare this
 read policy.
 
-### Option: `fs.option.openfile.length`
+### <a name="openfile.length"></a> Option: `fs.option.openfile.length`
 
 Declare the length of a file.
 
@@ -431,7 +434,7 @@ If this option is used by the FileSystem implementation
 * If a file status is supplied along with a value in `fs.opt.openfile.length`;
   the file status values take precedence.
 
-### Options: `fs.option.openfile.split.start` and `fs.option.openfile.split.end`
+### <a name="split.start"></a> Options: `fs.option.openfile.` and `fs.option.openfile.split.end`
 
 Declare the start and end of the split when a file has been split for processing
 in pieces.
@@ -459,7 +462,7 @@ Therefore clients MUST be allowed to `seek()`/`read()` past the length
 set in `fs.option.openfile.split.end` if the file is actually longer
 than that value.
 
-## S3A-specific options
+## <a name="s3a"></a> S3A-specific options
 
 The S3A Connector supports custom options for readahead and seek policy.
 
@@ -472,7 +475,7 @@ If the option set contains a SQL statement in the `fs.s3a.select.sql` statement,
 then the file is opened as an S3 Select query.
 Consult the S3A documentation for more details.
 
-## ABFS-specific options
+## <a name="abfs"></a> ABFS-specific options
 
 The ABFS Connector supports custom input stream options.
 
@@ -486,7 +489,7 @@ APIs.
 
 Consult the ABFS Documentation for more details.
 
-## Examples
+## <a name="examples"></a> Examples
 
 #### Declaring seek policy and split limits when opening a file.
 
@@ -551,10 +554,10 @@ FSDataInputStream is = f.get();
 ```
 
 The option set in `must()` MUST be understood, or at least recognized and
-ignored by all filesystems. In this example, S3A-specific option is likely
-to be ignored by all other filesystem clients.
+ignored by all filesystems. In this example, S3A-specific option MAY be
+ignored by all other filesystem clients.
 
-### Opening a file with a standard options which is known not to be supported by some hadoop releases
+### Opening a file with older releases
 
 Not all hadoop releases recognize the `fs.option.openfile.read.policy` option.
 
@@ -647,13 +650,12 @@ Because the file length has already been probed for, the length is passd down
 
 In this example, the length is passed down as a string (via `Long.toString()`)
 rather than directly as a long. This is to ensure that the input format will
-link against Hadoop 3.3.0 binaries, which do not have the
+link against versions of $Hadoop which do not have the
 `opt(String, long)` and `must(String, long)` builder parameters. Similarly, the
 values are passed as optional, so that if unrecognized the application will
 still succeed.
 
 ### Example: reading a whole file
-
 
 This is from `org.apache.hadoop.util.JsonSerialization`.
 
@@ -680,7 +682,7 @@ public T load(FileSystem fs,
 }
 ```
 
-*Note:* : in Hadoop 3.3.0 and 3.3.1, the `withFileStatus(status)` call
+*Note:* : in Hadoop 3.3.2 and earlier, the `withFileStatus(status)` call
 required a non-null parameter; this has since been relaxed.
 For maximum compatibility across versions, only invoke the method
 when the file status is known to be non-null.

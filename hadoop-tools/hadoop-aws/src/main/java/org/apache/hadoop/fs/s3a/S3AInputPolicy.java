@@ -29,6 +29,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 
 /**
@@ -94,6 +95,7 @@ public enum S3AInputPolicy {
 
     // all these options currently map to random IO.
     case FS_OPTION_OPENFILE_READ_POLICY_RANDOM:
+    case FS_OPTION_OPENFILE_READ_POLICY_VECTOR:
       return Random;
 
     case FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL:
