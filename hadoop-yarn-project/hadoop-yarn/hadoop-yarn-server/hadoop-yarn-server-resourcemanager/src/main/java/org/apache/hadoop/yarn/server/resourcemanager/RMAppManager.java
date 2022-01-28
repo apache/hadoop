@@ -491,7 +491,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         CapacitySchedulerConfiguration csConf = cs.getConfiguration();
 
         CSQueue csqueue = cs.getQueue(queueName);
-        PrivilegedEntity privilegedEntity = getPrivilegedEntity(queueName);
+        PrivilegedEntity privilegedEntity = getPrivilegedEntity(csqueue == null ? queueName : csqueue.getQueuePath());
 
         if (csqueue == null && placementContext != null) {
           List<Permission> permissions = new ArrayList<>();
