@@ -275,7 +275,6 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
             + "{}.", dn, e);
         getPendingNodes().add(dn);
         toRemove.add(dn);
-        unhealthyDns.remove(dn);
       } finally {
         iterkey = dn;
       }
