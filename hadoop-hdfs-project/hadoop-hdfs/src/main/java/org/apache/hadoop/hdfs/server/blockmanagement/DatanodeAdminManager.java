@@ -636,7 +636,6 @@ public class DatanodeAdminManager {
               + "{}.", dn, e);
           pendingNodes.add(dn);
           toRemove.add(dn);
-          unhealthyDns.remove(dn);
         } finally {
           iterkey = dn;
         }
