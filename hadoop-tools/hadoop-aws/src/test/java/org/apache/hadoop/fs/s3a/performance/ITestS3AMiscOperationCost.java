@@ -141,7 +141,7 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
     // look at path to see if it is a file
     // it is not: so LIST
     final ContentSummary summary = verifyMetrics(
-        () -> getContentSummary(childDir),
+        () -> getContentSummary(baseDir),
         with(INVOCATION_GET_CONTENT_SUMMARY, 1),
         withAuditCount(1),
         always(FILE_STATUS_FILE_PROBE    // look at path to see if it is a file
@@ -149,7 +149,7 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
 
     Assertions.assertThat(summary.getDirectoryCount())
         .as("Summary " + summary)
-        .isEqualTo(1);
+        .isEqualTo(2);
     Assertions.assertThat(summary.getFileCount())
         .as("Summary " + summary)
         .isEqualTo(1);

@@ -463,7 +463,7 @@ Given a path return it's content summary.
 
     exists(FS, path) else raise FileNotFoundException
 
-### Postconditions
+#### Postconditions
 
 Returns a `ContentSummary` object with information such as directory count
 and file count for a given path.
