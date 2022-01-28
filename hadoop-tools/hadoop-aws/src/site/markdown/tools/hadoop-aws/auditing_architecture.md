@@ -129,7 +129,7 @@ The original code was written with the assumption that when the `ActiveAuditMana
 garbage collected, references in its `ThreadLocal` field would be freed.
 In fact, they are retained until all threads with references are terminated.
 If any long-lived thread had performed an s3 operation which created a span,
-a reference back to the audit manager instance was created 
+a reference back to the audit manager instance was created
 *whose lifetime was that of the thread*
 
 In short-lived processes, and long-lived processes where a limited set of
@@ -163,7 +163,7 @@ There is therefore a theoretical risk that if a garbage collection takes place d
 execution of a spanned operation, the reference will be lost.
 
 This is not considered an issue as all bounded entry points into the S3A filesystem
-retain a strong reference to their audit span. 
+retain a strong reference to their audit span.
 
 All entry points which return an object which can invoke s3 operations (input and output
 streams, list iterators, etc.) also retain a strong reference to their span, a reference
@@ -174,7 +174,7 @@ Except in deployments where `fs.s3a.audit.reject.out.of.span.operations` is true
 invoking S3 operations within the unbounded span are permitted.
 That option is set to `true` within S3A test suites.
 Therefore it is unlikely that any operations are invoked in unbounded spans except
-for the special case of copy operations invoked by the transfer manager threads. 
+for the special case of copy operations invoked by the transfer manager threads.
 Those are already ignored in the logging auditor, whose unbounded span ignores
 requests which `AWSRequestAnalyzer.isRequestNotAlwaysInSpan()` indicates
 may happen outside of a span.

@@ -84,7 +84,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
 
   /**
    * As audit managers are created they are added to the list,
-   * so we can verify they get GC'd.`
+   * so we can verify they get GC'd.
    */
   private final List<WeakReference<ActiveAuditManagerS3A>> auditManagers =
       new ArrayList<>();
@@ -184,24 +184,19 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
 
       Set<Long> threadIds = new HashSet<>();
 
-      // use a code block here so that futures becomes null after use
-      // without having to set it to null and then the IDE/spotbugs
-      // complaining about unused assignments
-      {
-        List<Future<Result>> futures;
-        futures = new ArrayList<>(THREAD_COUNT);
+      List<Future<Result>> futures = new ArrayList<>(THREAD_COUNT);
 
-        // perform the spanning operation in a long lived thread.
-        for (int i = 0; i < THREAD_COUNT; i++) {
-          futures.add(workers.submit(() -> spanningOperation(auditManager)));
-        }
-
-        // get the results and so determine the thread IDs
-        for (Future<Result> future : futures) {
-          final Result r = future.get();
-          threadIds.add(r.getThreadId());
-        }
+      // perform the spanning operation in a long lived thread.
+      for (int i = 0; i < THREAD_COUNT; i++) {
+        futures.add(workers.submit(() -> spanningOperation(auditManager)));
       }
+
+      // get the results and so determine the thread IDs
+      for (Future<Result> future : futures) {
+        final Result r = future.get();
+        threadIds.add(r.getThreadId());
+      }
+
       final int threadsUsed = threadIds.size();
       final Long[] threadIdArray = threadIds.toArray(new Long[0]);
 
@@ -291,7 +286,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
         .isNotNull();
     // this is needed to ensure that more of the thread pool is used up
     Thread.yield();
-    return new Result(Thread.currentThread().getId(), auditSpan);
+    return new Result(Thread.currentThread().getId());
   }
 
   /**
@@ -301,21 +296,16 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
     /** thread operation took place in. */
     private final long threadId;
 
-    /** generated span. not currently used in tests. */
-    private final AuditSpanS3A auditSpan;
 
-    private Result(final long threadId, final AuditSpanS3A auditSpan) {
+    private Result(final long threadId) {
       this.threadId = threadId;
-      this.auditSpan = auditSpan;
     }
 
     private long getThreadId() {
       return threadId;
     }
 
-    private AuditSpanS3A getAuditSpan() {
-      return auditSpan;
-    }
+
   }
 
   /**
