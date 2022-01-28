@@ -81,7 +81,7 @@
     <httpcore.version>4.4.13</httpcore.version>
 
     <!-- SLF4J/LOG4J version -->
-    <slf4j.version>1.7.33</slf4j.version>
+    <slf4j.version>1.7.35</slf4j.version>
     <reload4j.version>1.2.18.3</reload4j.version>
 
     <!-- com.google.re2j version -->
@@ -1143,7 +1143,7 @@
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-reload4j</artifactId>
+        <artifactId>slf4j-log4j12</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -2230,7 +2230,6 @@
                     <exclude>com.sun.jersey.jersey-test-framework:*</exclude>
                     <exclude>com.google.inject:guice</exclude>
                     <exclude>org.ow2.asm:asm</exclude>
-                    <exclude>org.slf4j:slf4j-log4j12</exclude>
                     <exclude>log4j:log4j</exclude>
                   </excludes>
                   <includes>

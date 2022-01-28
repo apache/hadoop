@@ -474,11 +474,11 @@ org.codehaus.mojo:animal-sniffer-annotations:1.17
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
 org.ojalgo:ojalgo:43.0:compile
-org.slf4j:jcl-over-slf4j:1.7.33
-org.slf4j:jul-to-slf4j:1.7.33
-org.slf4j:slf4j-api:1.7.33
+org.slf4j:jcl-over-slf4j:1.7.35
+org.slf4j:jul-to-slf4j:1.7.35
+org.slf4j:slf4j-api:1.7.35
 org.slf4j:slf4j-ext:1.7.30
-org.slf4j:slf4j-reload4j:1.7.33
+org.slf4j:slf4j-reload4j:1.7.35
 
 
 CDDL 1.1 + GPLv2 with classpath exception
