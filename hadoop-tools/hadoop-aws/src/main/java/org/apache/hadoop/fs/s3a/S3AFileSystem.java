@@ -116,7 +116,6 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
-import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -190,7 +189,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -1572,7 +1570,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final S3AFileStatus fileStatus) {
     return createObjectAttributes(
         path,
-        fileStatus.getETag(),
+        fileStatus.getEtag(),
         fileStatus.getVersionId(),
         fileStatus.getLen());
   }
@@ -4829,7 +4827,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         auditSpan);
 
     if (changePolicy.getSource() != ChangeDetectionPolicy.Source.None
-        && fileStatus.getETag() != null) {
+        && fileStatus.getEtag() != null) {
       // if there is change detection, and the status includes at least an
       // etag,
       // check that the object metadata lines up with what is expected

@@ -61,7 +61,6 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatist
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromArray;
 import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromSingleton;
-import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.

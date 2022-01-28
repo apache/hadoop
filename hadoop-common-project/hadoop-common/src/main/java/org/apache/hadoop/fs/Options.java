@@ -594,13 +594,13 @@ public final class Options {
         "adaptive";
 
     /**
-     * Read policy 'normal' -up to implementation: {@value}.
+     * Read policy {@value} -whateve the implementation does by default.
      */
     public static final String FS_OPTION_OPENFILE_READ_POLICY_DEFAULT =
         "default";
 
     /**
-     * Read policy for random: {@value}.
+     * Read policy for random IO: {@value}.
      */
     public static final String FS_OPTION_OPENFILE_READ_POLICY_RANDOM =
         "random";
@@ -610,6 +610,12 @@ public final class Options {
      */
     public static final String FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL =
         "sequential";
+
+    /**
+     * Vectored IO API to be used: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_VECTOR =
+        "vector";
 
     /**
      * Whole file to be read, end-to-end: {@value}.
@@ -626,6 +632,7 @@ public final class Options {
                 FS_OPTION_OPENFILE_READ_POLICY_DEFAULT,
                 FS_OPTION_OPENFILE_READ_POLICY_RANDOM,
                 FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL,
+                FS_OPTION_OPENFILE_READ_POLICY_VECTOR,
                 FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
             .collect(Collectors.toSet()));
 

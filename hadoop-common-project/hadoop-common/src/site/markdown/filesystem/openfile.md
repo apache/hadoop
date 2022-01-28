@@ -15,7 +15,7 @@
 # `FileSystem.openFile()`/`FileContext.openFile()`
 
 This is a method provided by both FileSystem and FileContext for
-advanced file opening options and, where implemented, 
+advanced file opening options and, where implemented,
 an asynchrounous/lazy opening of a file.
 
 Creates a builder to open a file, supporting options
@@ -29,7 +29,7 @@ performed.
 This API call was added to `FileSystem` and `FileContext` in
 Hadoop 3.3.0; it was tuned in Hadoop 3.3.1 as follows.
 
-* Added `opt(key, long)` and `must(key, long)`. 
+* Added `opt(key, long)` and `must(key, long)`.
 * Declared that `withFileStatus(null)` is allowed.
 * Declared that `withFileStatus(status)` only checks
   the filename of the path, not the full path.
@@ -57,7 +57,7 @@ Thus the chain `FileSystem.openFile(path).build().get()` has the same preconditi
 and postconditions as `FileSystem.open(Path p, int bufferSize)`
 
 However, there is one difference which implementations are free to
-take advantage of: 
+take advantage of:
 
 The returned stream MAY implement a lazy open where file non-existence or
 access permission failures may not surface until the first `read()` of the

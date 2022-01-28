@@ -116,8 +116,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    * @param option option value.
    * @return the constructed FileInformation.
    */
-  public ObjectAssert<PrepareToOpenFile.FileInformation>
-  assertOpenFile(
+  public ObjectAssert<PrepareToOpenFile.FileInformation> assertOpenFile(
       final String key,
       final String option) throws IOException {
     return assertFileInfo(prepareToOpenFile(params(key, option)));
@@ -265,7 +264,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
                 .withStatus(status(p, 4096))));
     asst.extracting(f -> f.getStatus().getVersionId())
         .isEqualTo("version");
-    asst.extracting(f -> f.getStatus().getETag())
+    asst.extracting(f -> f.getStatus().getEtag())
         .isEqualTo("etag");
     asst.extracting(f -> f.getStatus().getLen())
         .isEqualTo(4096L);
@@ -286,7 +285,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
                             status(p, 4096), null))));
     asst.extracting(f -> f.getStatus().getVersionId())
         .isEqualTo("version");
-    asst.extracting(f -> f.getStatus().getETag())
+    asst.extracting(f -> f.getStatus().getEtag())
         .isEqualTo("etag");
     asst.extracting(f -> f.getStatus().getLen())
         .isEqualTo(4096L);

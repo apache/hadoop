@@ -172,7 +172,7 @@ public class PrepareToOpenFile {
         // is it an S3AFileSystem status?
         S3AFileStatus st = (S3AFileStatus) providedStatus;
         versionId = st.getVersionId();
-        eTag = st.getETag();
+        eTag = st.getEtag();
       } else if (providedStatus instanceof S3ALocatedFileStatus) {
 
         //  S3ALocatedFileStatus instance may supply etag and version.

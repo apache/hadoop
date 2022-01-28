@@ -193,7 +193,7 @@ completed, returns an input stream which can read data from the filesystem.
 
 The `build()` operation MAY perform the validation of the file's existence,
 its kind, so rejecting attempts to read from a directory or non-existent
-file. Alternatively 
+file. Alternatively
 * file existence/status checks MAY be performed asynchronously within the returned
     `CompletableFuture<>`.
 * file existence/status checks MAY be postponed until the first byte is read in
@@ -224,7 +224,7 @@ Therefore the following sequence SHALL fail when invoked on the
 ```
 
 Access permission checks have the same visibility requirements: permission failures
-MUST be delayed until the `get()` call and MAY be delayed into subsequent operations. 
+MUST be delayed until the `get()` call and MAY be delayed into subsequent operations.
 
 ## <a name="options"></a> Standard `openFile()` options since Hadoop 3.3.2
 
@@ -297,7 +297,8 @@ Random IO performance may be best if little/no prefetching takes place, along
 with other possible optimizations
 
 Queries over columnar formats such as Apache ORC and Apache Parquet perform such
-random IO; other data formats are best for sequential reads.
+random IO; other data formats may be best read with sequential or whole-file
+policies.
 
 What is key is that optimizing reads for seqential reads may impair random
 performance -and vice versa.
@@ -307,15 +308,16 @@ performance -and vice versa.
 1. The interpretation/implementation of a policy is a filesystem specific
    behavior -and it may change with Hadoop releases and/or specific storage
    subsystems.
-1. If a policy is not recognized, the FileSystem MUST ignore it.
+1. If a policy is not recognized, the filesystem client MUST ignore it.
 
 | Policy | Meaning |
 | -------|---------|
 | `adaptive` | Any adaptive policy implemented by the store. |
 | `default` | The default policy for this store. Generally "adaptive". |
-| `random` | Optimize for Random acdess. |
+| `random` | Optimize for random acdess. |
 | `sequential` | Optimize for sequential access. |
-| `whole-file` | The Whole file will be read |
+| `vector` | The Vectored IO API is intended to be used. |
+| `whole-file` | The whole file will be read. |
 
 Choosing the wrong read policy for an input source may be inefficient.
 
@@ -356,7 +358,7 @@ sequential to random seek policies may be exensive.
 When applications explicitly set the `fs.option.openfile.read.policy` option, if
 they know their read plan, they SHOULD declare which policy is most appropriate.
 
-#### Read Policy `normal`
+#### Read Policy `default`
 
 The default policy for the filesystem instance.
 Implementation/installation-specific.
@@ -371,33 +373,24 @@ the stream is closed.
 Expect `seek()/read()` sequences, or use of `PositionedReadable`
 or `ByteBufferPositionedReadable` APIs.
 
-#### Seek Policies `orc` and `parquet`
 
-The two file format options `orc` and `parquet` inform the filesystem that a
-specific file type is being read, and that stream options to optimize read
-access for these formats are appropriate.
+#### Read Policy `vector`
 
-It may seem a violation of layering to pass down the file format to the
-Filesystem APIs -but in practise all performance optimizations of FileSystem
-clients are based on profile traces of applications working on a limited set of
-files. There is more which can be done knowing the file format, including
+This declares that the caller intends to use the Vectored read API of
+[HADOOP-11867](https://issues.apache.org/jira/browse/HADOOP-11867)
+_Add a high-performance vectored read API_.
 
-* Likely buffer size for any initial read of a footer.
-* Whether stripes footers are likely to be read before deciding whether to read
-  entire stripes stored above these footers.
-* Preferred stripe buffer read/readahead.
+This is a hint: it is not a requirement when using the API.
+It does inform the implemenations that the stream should be
+configured for optimal vectored IO performance, if such a
+feature has been implemented.
 
-Where it is dangerous is that file formats evolve, and different applications
-may change their usage. We expect the specific libraries --which should be the
-only places explicitly requesting these formats-- to be updated as this happens.
-A numbering scheme for the formats is inevitable.
+It is *not* exclusive: the same stream may still be used for
+classic `InputStream` and `PositionedRead` API calls.
+Implementations SHOULD use the `random` read policy
+with these operations.
 
-#### Read Policy `vectored`
-
-This is a placeholder for vectored IO; if/when a vectored IO API is implemented in input streams,
-this declares that it is the expected use of the stream.
-
-#### Read Policy `who`
+#### Read Policy `whole-file`
 
 
 This declares that the whole file is to be read end-to-end; the file system client is free to enable
@@ -489,7 +482,7 @@ The ABFS Connector supports custom input stream options.
 
 
 Disables caching on data read through the [PositionedReadable](fsdatainputstream.html#PositionedReadable)
-APIs. 
+APIs.
 
 Consult the ABFS Documentation for more details.
 
@@ -508,15 +501,16 @@ end is used to declare the length of the file.
 protected SeekableInputStream newStream(Path path, FileStatus stat,
      long splitStart, long splitEnd)
      throws IOException {
-    FutureDataInputStreamBuilder builder = fs.openFile(path)
-      .opt("fs.option.openfile.read.policy", "parquet,random")
-      .withFileStatus(stat);
 
-    builder.opt("fs.option.openfile.split.start", splitStart);
-    builder.opt("fs.option.openfile.split.end", splitEnd);
-    CompletableFuture<FSDataInputStream> streamF = builder.build();
-    return HadoopStreams.wrap(FutureIO.awaitFuture(streamF));
-  }
+   FutureDataInputStreamBuilder builder = fs.openFile(path)
+   .opt("fs.option.openfile.read.policy", "vector, random")
+   .withFileStatus(stat);
+   
+   builder.opt("fs.option.openfile.split.start", splitStart);
+   builder.opt("fs.option.openfile.split.end", splitEnd);
+   CompletableFuture<FSDataInputStream> streamF = builder.build();
+   return HadoopStreams.wrap(FutureIO.awaitFuture(streamF));
+}
 ```
 
 As a result, whether driven directly by a file listing, or when opening a file
@@ -549,7 +543,7 @@ operation.
 
 ```java
 Future<FSDataInputStream> f = openFile(path)
-  .must("fs.option.openfile.read.policy", "random, adaptive") 
+  .must("fs.option.openfile.read.policy", "random, adaptive")
   .opt("fs.s3a.readahead.range", 1024 * 1024)
   .build();
 
@@ -570,7 +564,7 @@ then be discarded.
 
 ```java
 Future<FSDataInputStream> f = openFile(path)
-  .opt("fs.option.openfile.read.policy", "orc, random, adaptive") 
+  .opt("fs.option.openfile.read.policy", "vector, random, adaptive")
   .build();
 
 FSDataInputStream is = f.get();
@@ -584,7 +578,6 @@ linking against older releases -use a copy of the value.
 *Note 2* as option validation is performed in the FileSystem connector,
 a third-party connector designed to work with multiple hadoop versions
 MAY NOT support the option.
-Accordingly, even when 
 
 ### Passing options in to MapReduce
 
@@ -600,15 +593,12 @@ declare that a job should read its data using random IO:
 JobConf jobConf = (JobConf) job.getConfiguration()
 jobConf.set(
     "mapreduce.job.input.file.option.fs.option.openfile.read.policy",
-    "random"); 
+    "random");
 ```
 
 ### MapReduce input format propagating options
 
 An example of a record reader passing in options to the file it opens.
-
-1. The input split start and end are passed in as options
-1. All job conf options with the
 
 ```java
   public void initialize(InputSplit genericSplit,
@@ -618,7 +608,7 @@ An example of a record reader passing in options to the file it opens.
     start = split.getStart();
     end = start + split.getLength();
     Path file = split.getPath();
-    
+
     // open the file and seek to the start of the split
     FutureDataInputStreamBuilder builder =
       file.getFileSystem(job).openFile(file);
@@ -674,7 +664,7 @@ Its `load(FileSystem, Path, FileStatus)` method
 ```java
 public T load(FileSystem fs,
         Path path,
-        status) 
+        status)
         throws IOException {
 
  try (FSDataInputStream dataInputStream =

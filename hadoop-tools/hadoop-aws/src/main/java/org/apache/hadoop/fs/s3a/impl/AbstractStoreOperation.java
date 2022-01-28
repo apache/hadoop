@@ -48,7 +48,10 @@ public abstract class AbstractStoreOperation {
    * @param storeContext store context.
    */
   protected AbstractStoreOperation(final @Nullable StoreContext storeContext) {
-    this(storeContext, storeContext.getActiveAuditSpan());
+    this(storeContext,
+        storeContext != null
+        ? storeContext.getActiveAuditSpan()
+        : null);
   }
 
   /**
@@ -56,7 +59,8 @@ public abstract class AbstractStoreOperation {
    * @param storeContext store context.
    * @param auditSpan active span
    */
-  protected AbstractStoreOperation(final @Nullable StoreContext storeContext,
+  protected AbstractStoreOperation(
+      final @Nullable StoreContext storeContext,
       final AuditSpan auditSpan) {
     this.storeContext = storeContext;
     this.auditSpan = checkNotNull(auditSpan);
@@ -72,7 +76,7 @@ public abstract class AbstractStoreOperation {
 
   /**
    * Get the audit span this object was created with.
-   * @return the current span
+   * @return the current span or null
    */
   public AuditSpan getAuditSpan() {
     return auditSpan;
@@ -82,6 +86,8 @@ public abstract class AbstractStoreOperation {
    * Activate the audit span.
    */
   public void activateAuditSpan() {
-    if (auditSpan != null) auditSpan.activate();
+    if (auditSpan != null) {
+      auditSpan.activate();
+    }
   }
 }
