@@ -677,7 +677,7 @@ public class TestDataNodeMetrics {
       DFSTestUtil.createFile(fs, testFile, 10L, (short)1, 1L);
       DFSTestUtil.readFile(fs, testFile);
       List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 1);
+      assertEquals(1, datanodes.size());
 
       DataNode datanode = datanodes.get(0);
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
