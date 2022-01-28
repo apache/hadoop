@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -54,9 +55,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class TestDistCpSync {
   private MiniDFSCluster cluster;
@@ -1184,8 +1182,12 @@ public class TestDistCpSync {
       new DistCp(conf, builder.build()).execute();
 
       // Check the two directories get copied.
-      assertTrue(dfs.exists(new Path(target, "dir1")));
-      assertTrue(dfs.exists(new Path(target, "dir2")));
+      ContractTestUtils
+          .assertPathExists(dfs, "dir1 should get copied to target",
+              new Path(target, "dir1"));
+      ContractTestUtils
+          .assertPathExists(dfs, "dir2 should get copied to target",
+              new Path(target, "dir2"));
 
       // Allow & create initial snapshots on target.
       dfs.allowSnapshot(target);
@@ -1205,16 +1207,23 @@ public class TestDistCpSync {
       new DistCp(conf, diffBuilder.build()).execute();
 
       // Check the only qualified directory dir2 is there in target
-      assertTrue(dfs.exists(new Path(target, "dir2")));
+      ContractTestUtils.assertPathExists(dfs, "dir2 should be there on target",
+          new Path(target, "dir2"));
 
       // Check the filtered directory is not there.
-      assertFalse(dfs.exists(new Path(target, "filterDir1")));
+      ContractTestUtils.assertPathDoesNotExist(dfs,
+          "Filtered directory 'filterDir1' shouldn't get copied",
+          new Path(target, "filterDir1"));
 
-      // Check the filtered directory gets deleted.
-      assertFalse(dfs.exists(new Path(target, "dir1")));
+      // Check the renamed directory gets deleted.
+      ContractTestUtils.assertPathDoesNotExist(dfs,
+          "Renamed directory 'dir1' should get deleted",
+          new Path(target, "dir1"));
 
       // Check the filtered directory isn't there in the home directory.
-      assertFalse(dfs.exists(new Path("filterDir1")));
+      ContractTestUtils.assertPathDoesNotExist(dfs,
+          "Filtered directory 'filterDir1' shouldn't get copied to home directory",
+          new Path("filterDir1"));
     } finally {
       deleteFilterFile(filterFile);
     }
