@@ -104,6 +104,9 @@ public class TestJournalNodeMXBean {
     String[] clusterId = (String[]) mbs.getAttribute(mxbeanName, "ClusterIds");
     assertEquals(jn.getClusterIds().size(), clusterId.length);
     assertEquals("mycluster", clusterId[0]);
+    long startTime = (long) mbs.getAttribute(mxbeanName, "JNStartedTimeInMillis");
+    assertTrue("JournalNode start time should not be 0", startTime > 0);
+    assertEquals(jn.getJNStartedTimeInMillis(), startTime);
     String version = (String) mbs.getAttribute(mxbeanName, "Version");
     assertEquals(jn.getVersion(), version);
 
