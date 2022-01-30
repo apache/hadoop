@@ -202,4 +202,73 @@ template <class T> std::unique_ptr<T> PassQOptAndPath() {
   return hdfs_tool;
 }
 
+template <class T> std::unique_ptr<T> PassPOpt() {
+  constexpr auto argc = 2;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-p");
+
+  static char *argv[] = {exe.data(), arg1.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassPOpt<T>, {arg1});
+  return hdfs_tool;
+}
+
+template <class T> std::unique_ptr<T> PassMOpt() {
+  constexpr auto argc = 2;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-m");
+
+  static char *argv[] = {exe.data(), arg1.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassMOpt<T>, {arg1});
+  return hdfs_tool;
+}
+
+template <class T> std::unique_ptr<T> PassPOptAndPath() {
+  constexpr auto argc = 3;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-p");
+  static std::string arg2("a/b/c");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassPOptAndPath<T>, {arg1, arg2});
+  return hdfs_tool;
+}
+
+template <class T> std::unique_ptr<T> PassMOptPermissionsAndAPath() {
+  constexpr auto argc = 4;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-m");
+  static std::string arg2("757");
+  static std::string arg3("g/h/i");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data(), arg3.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassMOptPermissionsAndAPath<T>,
+                             {arg1, arg2, arg3});
+  return hdfs_tool;
+}
+
+template <class T> std::unique_ptr<T> PassMPOptsPermissionsAndAPath() {
+  constexpr auto argc = 5;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-m");
+  static std::string arg2("757");
+  static std::string arg3("-p");
+  static std::string arg4("g/h/i");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data(), arg3.data(),
+                         arg4.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassMPOptsPermissionsAndAPath<T>,
+                             {arg1, arg2, arg3, arg4});
+  return hdfs_tool;
+}
+
 #endif

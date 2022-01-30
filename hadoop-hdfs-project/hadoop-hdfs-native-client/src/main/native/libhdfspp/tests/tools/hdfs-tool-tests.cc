@@ -31,6 +31,7 @@
 #include "hdfs-df-mock.h"
 #include "hdfs-disallow-snapshot-mock.h"
 #include "hdfs-du-mock.h"
+#include "hdfs-mkdir-mock.h"
 #include "hdfs-move-to-local-mock.h"
 #include "hdfs-rename-snapshot-mock.h"
 #include "hdfs-tool-test-fixtures.h"
@@ -117,6 +118,15 @@ INSTANTIATE_TEST_SUITE_P(
                     PassAPath<hdfs::tools::test::CountMock>,
                     PassQOptAndPath<hdfs::tools::test::CountMock>));
 
+INSTANTIATE_TEST_SUITE_P(
+    HdfsMkdir, HdfsToolBasicTest,
+    testing::Values(
+        CallHelp<hdfs::tools::test::MkdirMock>,
+        PassAPath<hdfs::tools::test::MkdirMock>,
+        PassPOptAndPath<hdfs::tools::test::MkdirMock>,
+        PassMOptPermissionsAndAPath<hdfs::tools::test::MkdirMock>,
+        PassMPOptsPermissionsAndAPath<hdfs::tools::test::MkdirMock>));
+
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
@@ -166,6 +176,18 @@ INSTANTIATE_TEST_SUITE_P(
                     Pass3Paths<hdfs::tools::test::CountMock>,
                     PassNOptAndAPath<hdfs::tools::test::CountMock>,
                     PassRecursive<hdfs::tools::test::CountMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsMkdir, HdfsToolNegativeTestThrows,
+    testing::Values(Pass2Paths<hdfs::tools::test::MkdirMock>,
+                    Pass3Paths<hdfs::tools::test::MkdirMock>,
+                    PassNOptAndAPath<hdfs::tools::test::MkdirMock>,
+                    PassRecursive<hdfs::tools::test::MkdirMock>,
+                    PassMOpt<hdfs::tools::test::MkdirMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsMkdir, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassPOpt<hdfs::tools::test::MkdirMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsCount, HdfsToolNegativeTestNoThrow,
