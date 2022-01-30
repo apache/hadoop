@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef LIBHDFSPP_TOOLS_HDFS_COUNT
-#define LIBHDFSPP_TOOLS_HDFS_COUNT
+#ifndef LIBHDFSPP_TOOLS_HDFS_RM
+#define LIBHDFSPP_TOOLS_HDFS_RM
 
 #include <string>
 
