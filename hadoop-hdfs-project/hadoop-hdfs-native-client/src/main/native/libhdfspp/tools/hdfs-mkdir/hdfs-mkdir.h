@@ -82,11 +82,12 @@ protected:
    *
    * @return A boolean indicating the result of this operation.
    */
-  [[nodiscard]] virtual bool HandlePath(bool create_parents,
-                                        const std::optional<std::string>& permissions,
-                                        const std::string &path) const;
+  [[nodiscard]] virtual bool
+  HandlePath(bool create_parents, const std::optional<std::string> &permissions,
+             const std::string &path) const;
 
   /**
+   * @param permissions The permissions string to convert to octal value.
    * @return The octal representation of the permissions supplied as parameter
    * to this tool.
    */
