@@ -85,13 +85,13 @@ protected:
                                         uint16_t permissions,
                                         const std::string &path) const;
 
-private:
   /**
    * @return The octal representation of the permissions supplied as parameter
    * to this tool.
    */
   [[nodiscard]] uint16_t GetPermissions() const;
 
+private:
   /**
    * A boost data-structure containing the description of positional arguments
    * passed to the command-line.
