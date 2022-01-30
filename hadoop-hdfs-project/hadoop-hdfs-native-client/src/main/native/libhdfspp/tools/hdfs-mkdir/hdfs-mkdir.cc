@@ -130,6 +130,7 @@ bool Mkdir::HandlePath(const bool create_parents,
 
 uint16_t Mkdir::GetPermissions(const std::optional<std::string> &permissions) {
   if (permissions) {
+    // TODO : Handle the error returned by std::strtol.
     return static_cast<uint16_t>(
         std::strtol(permissions.value().c_str(), nullptr, 8));
   }
