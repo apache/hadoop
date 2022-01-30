@@ -46,8 +46,7 @@ target_link_libraries(hdfs_find tools_common hdfspp_static)
 
 add_subdirectory(hdfs-mkdir)
 
-add_executable(hdfs_rm hdfs_rm.cc)
-target_link_libraries(hdfs_rm tools_common hdfspp_static)
+add_subdirectory(hdfs-rm)
 
 add_executable(hdfs_ls hdfs_ls.cc)
 target_link_libraries(hdfs_ls tools_common hdfspp_static)
