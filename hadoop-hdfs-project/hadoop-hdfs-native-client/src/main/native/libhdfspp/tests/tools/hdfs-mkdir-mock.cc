@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -47,7 +48,7 @@ void MkdirMock::SetExpectations(
 
   if (*test_case_func == &PassAPath<MkdirMock>) {
     const auto arg1 = args[0];
-    const auto permissions = GetPermissions();
+    const std::optional<std::string> permissions = std::nullopt;
     EXPECT_CALL(*this, HandlePath(false, permissions, arg1))
         .Times(1)
         .WillOnce(testing::Return(true));
@@ -55,24 +56,26 @@ void MkdirMock::SetExpectations(
 
   if (*test_case_func == &PassPOptAndPath<MkdirMock>) {
     const auto arg1 = args[1];
-    const auto permissions = GetPermissions();
+    const std::optional<std::string> permissions = std::nullopt;
     EXPECT_CALL(*this, HandlePath(true, permissions, arg1))
         .Times(1)
         .WillOnce(testing::Return(true));
   }
 
   if (*test_case_func == &PassMOptPermissionsAndAPath<MkdirMock>) {
-    const auto arg1 = args[2];
-    const auto permissions = GetPermissions();
-    EXPECT_CALL(*this, HandlePath(false, permissions, arg1))
+    const auto arg1 = args[1];
+    const auto arg2 = args[2];
+    const auto permissions = std::optional(arg1);
+    EXPECT_CALL(*this, HandlePath(false, permissions, arg2))
         .Times(1)
         .WillOnce(testing::Return(true));
   }
 
   if (*test_case_func == &PassMPOptsPermissionsAndAPath<MkdirMock>) {
-    const auto arg1 = args[3];
-    const auto permissions = GetPermissions();
-    EXPECT_CALL(*this, HandlePath(true, permissions, arg1))
+    const auto arg1 = args[1];
+    const auto arg2 = args[3];
+    const auto permissions = std::optional(arg1);
+    EXPECT_CALL(*this, HandlePath(true, permissions, arg2))
         .Times(1)
         .WillOnce(testing::Return(true));
   }

@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -90,7 +91,10 @@ bool Mkdir::Do() {
   if (opt_val_.count("path") > 0) {
     const auto path = opt_val_["path"].as<std::string>();
     const auto create_parents = opt_val_.count("create-parents") > 0;
-    const auto permissions = GetPermissions();
+    const auto permissions =
+        opt_val_.count("mode") > 0
+            ? std::optional(opt_val_["mode"].as<std::string>())
+            : std::nullopt;
     return HandlePath(create_parents, permissions, path);
   }
 
@@ -102,7 +106,8 @@ bool Mkdir::HandleHelp() const {
   return true;
 }
 
-bool Mkdir::HandlePath(const bool create_parents, const uint16_t permissions,
+bool Mkdir::HandlePath(const bool create_parents,
+                       const std::optional<std::string> &permissions,
                        const std::string &path) const {
   // Building a URI object from the given uri_path
   auto uri = hdfs::parse_path_or_exit(path);
@@ -113,7 +118,8 @@ bool Mkdir::HandlePath(const bool create_parents, const uint16_t permissions,
     return false;
   }
 
-  const auto status = fs->Mkdirs(uri.get_path(), permissions, create_parents);
+  const auto status =
+      fs->Mkdirs(uri.get_path(), GetPermissions(permissions), create_parents);
   if (!status.ok()) {
     std::cerr << "Error: " << status.ToString() << std::endl;
     return false;
@@ -122,11 +128,10 @@ bool Mkdir::HandlePath(const bool create_parents, const uint16_t permissions,
   return true;
 }
 
-uint16_t Mkdir::GetPermissions() const {
-  if (opt_val_.count("mode") > 0) {
-    const auto permissions_str = opt_val_["mode"].as<std::string>();
+uint16_t Mkdir::GetPermissions(const std::optional<std::string> &permissions) {
+  if (permissions) {
     return static_cast<uint16_t>(
-        std::strtol(permissions_str.c_str(), nullptr, 8));
+        std::strtol(permissions.value().c_str(), nullptr, 8));
   }
 
   return hdfs::FileSystem::GetDefaultPermissionMask();

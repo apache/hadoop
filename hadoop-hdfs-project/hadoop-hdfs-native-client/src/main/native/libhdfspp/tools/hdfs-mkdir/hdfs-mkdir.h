@@ -19,6 +19,7 @@
 #ifndef LIBHDFSPP_TOOLS_HDFS_MKDIR
 #define LIBHDFSPP_TOOLS_HDFS_MKDIR
 
+#include <optional>
 #include <string>
 
 #include <boost/program_options.hpp>
@@ -82,14 +83,15 @@ protected:
    * @return A boolean indicating the result of this operation.
    */
   [[nodiscard]] virtual bool HandlePath(bool create_parents,
-                                        uint16_t permissions,
+                                        const std::optional<std::string>& permissions,
                                         const std::string &path) const;
 
   /**
    * @return The octal representation of the permissions supplied as parameter
    * to this tool.
    */
-  [[nodiscard]] uint16_t GetPermissions() const;
+  [[nodiscard]] static uint16_t
+  GetPermissions(const std::optional<std::string> &permissions);
 
 private:
   /**

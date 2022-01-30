@@ -21,6 +21,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -60,7 +61,8 @@ public:
 
   MOCK_METHOD(bool, HandleHelp, (), (const, override));
 
-  MOCK_METHOD(bool, HandlePath, (bool, uint16_t, const std::string &),
+  MOCK_METHOD(bool, HandlePath,
+              (bool, const std::optional<std::string> &, const std::string &),
               (const, override));
 };
 } // namespace hdfs::tools::test
