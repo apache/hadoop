@@ -647,6 +647,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return new BlockIterator(startBlock, getStorageInfos());
   }
 
+  /**
+   * Get iterator, which starts iterating from the specified block and storages.
+   *
+   * @param startBlock on which blocks are start iterating
+   * @param storageInfos specified storages
+   */
+  Iterator<BlockInfo> getBlockIterator(
+      final int startBlock, final DatanodeStorageInfo[] storageInfos) {
+    return new BlockIterator(startBlock, storageInfos);
+  }
+
   @VisibleForTesting
   public void incrementPendingReplicationWithoutTargets() {
     pendingReplicationWithoutTargets++;

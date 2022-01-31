@@ -51,7 +51,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -174,7 +173,7 @@ public class TestLocalDistributedCacheManager {
       }
     });
 
-    DistributedCache.addCacheFile(file, conf);
+    Job.addCacheFile(file, conf);
     Map<String, Boolean> policies = new HashMap<String, Boolean>();
     policies.put(file.toString(), true);
     Job.setFileSharedCacheUploadPolicies(conf, policies);
@@ -286,8 +285,8 @@ public class TestLocalDistributedCacheManager {
       }
     });
 
-    DistributedCache.addCacheFile(file, conf);
-    DistributedCache.addCacheFile(file, conf);
+    Job.addCacheFile(file, conf);
+    Job.addCacheFile(file, conf);
     Map<String, Boolean> policies = new HashMap<String, Boolean>();
     policies.put(file.toString(), true);
     Job.setFileSharedCacheUploadPolicies(conf, policies);

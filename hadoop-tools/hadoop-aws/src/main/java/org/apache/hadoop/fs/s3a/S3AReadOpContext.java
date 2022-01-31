@@ -72,9 +72,7 @@ public class S3AReadOpContext extends S3AOpContext {
   /**
    * Instantiate.
    * @param path path of read
-   * @param isS3GuardEnabled true iff S3Guard is enabled.
    * @param invoker invoker for normal retries.
-   * @param s3guardInvoker S3Guard-specific retry invoker.
    * @param stats Fileystem statistics (may be null)
    * @param instrumentation statistics context
    * @param dstFileStatus target file status
@@ -88,9 +86,7 @@ public class S3AReadOpContext extends S3AOpContext {
    */
   public S3AReadOpContext(
       final Path path,
-      boolean isS3GuardEnabled,
       Invoker invoker,
-      @Nullable Invoker s3guardInvoker,
       @Nullable FileSystem.Statistics stats,
       S3AStatisticsContext instrumentation,
       FileStatus dstFileStatus,
@@ -102,7 +98,7 @@ public class S3AReadOpContext extends S3AOpContext {
       int prefetchBlockSize,
       int prefetchBlockCount) {
 
-    super(isS3GuardEnabled, invoker, s3guardInvoker, stats, instrumentation,
+    super(invoker, stats, instrumentation,
         dstFileStatus);
     this.path = checkNotNull(path);
     this.auditSpan = auditSpan;
@@ -122,17 +118,10 @@ public class S3AReadOpContext extends S3AOpContext {
 
   /**
    * Get invoker to use for read operations.
-   * When S3Guard is enabled we use the S3Guard invoker,
-   * which deals with things like FileNotFoundException
-   * differently.
    * @return invoker to use for read codepaths
    */
   public Invoker getReadInvoker() {
-    if (isS3GuardEnabled) {
-      return s3guardInvoker;
-    } else {
-      return invoker;
-    }
+    return invoker;
   }
 
   /**

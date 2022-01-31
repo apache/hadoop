@@ -45,6 +45,7 @@ import org.apache.hadoop.util.DiskChecker;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTP_BIND_HOST_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.now;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -83,6 +84,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private String httpServerURI;
   private final ArrayList<File> localDir = Lists.newArrayList();
   Tracer tracer;
+  private long startTime = 0;
 
   static {
     HdfsConfiguration.init();
@@ -241,6 +243,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
       rpcServer = new JournalNodeRpcServer(conf, this);
       rpcServer.start();
+      startTime = now();
     } catch (IOException ioe) {
       //Shutdown JournalNode of JournalNodeRpcServer fails to start
       LOG.error("Failed to start JournalNode.", ioe);
@@ -413,6 +416,11 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   @Override // JournalNodeMXBean
   public String getVersion() {
     return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
+  }
+
+  @Override // JournalNodeMXBean
+  public long getJNStartedTimeInMillis() {
+    return this.startTime;
   }
 
   /**

@@ -25,11 +25,14 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
- * All the constants used with the {@link S3AFileSystem}.
+ * Constants used with the {@link S3AFileSystem}.
  *
  * Some of the strings are marked as {@code Unstable}. This means
- * that they may be unsupported in future; at which point they will be marked
+ * that they may be Unsupported in future; at which point they will be marked
  * as deprecated and simply ignored.
+ *
+ * All S3Guard related constants are marked as Deprecated and either ignored (ddb config)
+ * or rejected (setting the metastore to anything other than the null store)
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -130,7 +133,7 @@ public final class Constants {
   /**
    * JSON policy containing the policy to apply to the role: {@value}.
    * This is not used for delegation tokens, which generate the policy
-   * automatically, and restrict it to the S3, KMS and S3Guard services
+   * automatically, and restrict it to the S3 and KMS services
    * needed.
    */
   public static final String ASSUMED_ROLE_POLICY =
@@ -494,20 +497,17 @@ public final class Constants {
   public static final String CUSTOM_SIGNERS = "fs.s3a.custom.signers";
 
   /**
-   * There's 3 parameters that can be used to specify a non-default signing
+   * Multiple parameters can be used to specify a non-default signing
    * algorithm.<br>
    * fs.s3a.signing-algorithm - This property has existed for the longest time.
-   * If specified, without either of the other 2 properties being specified,
-   * this signing algorithm will be used for S3 and DDB (S3Guard). <br>
-   * The other 2 properties override this value for S3 or DDB. <br>
+   * If specified, without other properties being specified,
+   * this signing algorithm will be used for all services. <br>
+   * Another property overrides this value for S3. <br>
    * fs.s3a.s3.signing-algorithm - Allows overriding the S3 Signing algorithm.
-   * This does not affect DDB. Specifying this property without specifying
+   * Specifying this property without specifying
    * fs.s3a.signing-algorithm will only update the signing algorithm for S3
-   * requests, and the default will be used for DDB.<br>
-   * fs.s3a.ddb.signing-algorithm - Allows overriding the DDB Signing algorithm.
-   * This does not affect S3. Specifying this property without specifying
-   * fs.s3a.signing-algorithm will only update the signing algorithm for
-   * DDB requests, and the default will be used for S3.
+   * requests.
+   * {@code fs.s3a.sts.signing-algorithm}: algorithm to use for STS interaction.
    */
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
 
@@ -515,6 +515,7 @@ public final class Constants {
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
           + ".signing-algorithm";
 
+  @Deprecated
   public static final String SIGNING_ALGORITHM_DDB =
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_DDB.toLowerCase()
           + "signing-algorithm";
@@ -540,13 +541,23 @@ public final class Constants {
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 
-  /** Whether or not to allow MetadataStore to be source of truth for a path prefix */
+  /**
+   * Paths considered "authoritative".
+   * When S3guard was supported, this skipped checks to s3 on directory listings.
+   * It is also use to optionally disable marker retentation purely on these
+   * paths -a feature which is still retained/available.
+   * */
   public static final String AUTHORITATIVE_PATH = "fs.s3a.authoritative.path";
   public static final String[] DEFAULT_AUTHORITATIVE_PATH = {};
 
-  /** Whether or not to allow MetadataStore to be source of truth. */
+  /**
+   * Whether or not to allow MetadataStore to be source of truth.
+   * @deprecated no longer supported
+   */
+  @Deprecated
   public static final String METADATASTORE_AUTHORITATIVE =
       "fs.s3a.metadatastore.authoritative";
+  @Deprecated
   public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
 
   /**
@@ -565,13 +576,16 @@ public final class Constants {
 
   /**
    * How long a directory listing in the MS is considered as authoritative.
+   * @deprecated no longer supported
    */
+  @Deprecated
   public static final String METADATASTORE_METADATA_TTL =
       "fs.s3a.metadatastore.metadata.ttl";
 
   /**
    * Default TTL in milliseconds: 15 minutes.
    */
+  @Deprecated
   public static final long DEFAULT_METADATASTORE_METADATA_TTL =
       TimeUnit.MINUTES.toMillis(15);
 
@@ -635,202 +649,117 @@ public final class Constants {
   @InterfaceAudience.Private
   public static final int MAX_MULTIPART_COUNT = 10000;
 
-  /* Constants. */
+  /*
+   * Obsolete S3Guard-related options, retained purely because this file
+   * is @Public/@Evolving.
+   */
+  @Deprecated
   public static final String S3_METADATA_STORE_IMPL =
       "fs.s3a.metadatastore.impl";
-
-  /**
-   * Whether to fail when there is an error writing to the metadata store.
-   */
+  @Deprecated
   public static final String FAIL_ON_METADATA_WRITE_ERROR =
       "fs.s3a.metadatastore.fail.on.write.error";
-
-  /**
-   * Default value ({@value}) for FAIL_ON_METADATA_WRITE_ERROR.
-   */
+  @Deprecated
   public static final boolean FAIL_ON_METADATA_WRITE_ERROR_DEFAULT = true;
-
-  /** Minimum period of time (in milliseconds) to keep metadata (may only be
-   * applied when a prune command is manually run).
-   */
   @InterfaceStability.Unstable
+  @Deprecated
   public static final String S3GUARD_CLI_PRUNE_AGE =
       "fs.s3a.s3guard.cli.prune.age";
-
-  /**
-   * The region of the DynamoDB service.
-   *
-   * This config has no default value. If the user does not set this, the
-   * S3Guard will operate table in the associated S3 bucket region.
-   */
+  @Deprecated
   public static final String S3GUARD_DDB_REGION_KEY =
       "fs.s3a.s3guard.ddb.region";
-
-  /**
-   * The DynamoDB table name to use.
-   *
-   * This config has no default value. If the user does not set this, the
-   * S3Guard implementation will use the respective S3 bucket name.
-   */
+  @Deprecated
   public static final String S3GUARD_DDB_TABLE_NAME_KEY =
       "fs.s3a.s3guard.ddb.table";
-
-  /**
-   * A prefix for adding tags to the DDB Table upon creation.
-   *
-   * For example:
-   * fs.s3a.s3guard.ddb.table.tag.mytag
-   */
+  @Deprecated
   public static final String S3GUARD_DDB_TABLE_TAG =
       "fs.s3a.s3guard.ddb.table.tag.";
-
-  /**
-   * Whether to create the DynamoDB table if the table does not exist.
-   * Value: {@value}.
-   */
+  @Deprecated
   public static final String S3GUARD_DDB_TABLE_CREATE_KEY =
       "fs.s3a.s3guard.ddb.table.create";
-
-  /**
-   * Read capacity when creating a table.
-   * When it and the write capacity are both "0", a per-request table is
-   * created.
-   * Value: {@value}.
-   */
+  @Deprecated
   public static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
       "fs.s3a.s3guard.ddb.table.capacity.read";
-
-  /**
-   * Default read capacity when creating a table.
-   * Value: {@value}.
-   */
+  @Deprecated
   public static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 0;
-
-  /**
-   * Write capacity when creating a table.
-   * When it and the read capacity are both "0", a per-request table is
-   * created.
-   * Value: {@value}.
-   */
+  @Deprecated
   public static final String S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY =
       "fs.s3a.s3guard.ddb.table.capacity.write";
-
-  /**
-   * Default write capacity when creating a table.
-   * Value: {@value}.
-   */
+  @Deprecated
   public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 0;
-
-  /**
-   * Whether server-side encryption (SSE) is enabled or disabled on the table.
-   * By default it's disabled, meaning SSE is set to AWS owned CMK.
-   * @see com.amazonaws.services.dynamodbv2.model.SSESpecification#setEnabled
-   */
+  @Deprecated
   public static final String S3GUARD_DDB_TABLE_SSE_ENABLED =
       "fs.s3a.s3guard.ddb.table.sse.enabled";
-
-  /**
-   * The KMS Master Key (CMK) used for the KMS encryption on the table.
-   *
-   * To specify a CMK, this config value can be its key ID, Amazon Resource
-   * Name (ARN), alias name, or alias ARN. Users only provide this config
-   * if the key is different from the default DynamoDB KMS Master Key, which is
-   * alias/aws/dynamodb.
-   */
+  @Deprecated
   public static final String S3GUARD_DDB_TABLE_SSE_CMK =
       "fs.s3a.s3guard.ddb.table.sse.cmk";
-
-  /**
-   * The maximum put or delete requests per BatchWriteItem request.
-   *
-   * Refer to Amazon API reference for this limit.
-   */
+  @Deprecated
   public static final int S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT = 25;
-
+  @Deprecated
   public static final String S3GUARD_DDB_MAX_RETRIES =
       "fs.s3a.s3guard.ddb.max.retries";
-
-  /**
-   * Max retries on batched/throttled DynamoDB operations before giving up and
-   * throwing an IOException.  Default is {@value}. See core-default.xml for
-   * more detail.
-   */
+  @Deprecated
   public static final int S3GUARD_DDB_MAX_RETRIES_DEFAULT =
       DEFAULT_MAX_ERROR_RETRIES;
-
+  @Deprecated
   public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL =
       "fs.s3a.s3guard.ddb.throttle.retry.interval";
+  @Deprecated
   public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL_DEFAULT =
       "100ms";
-
-  /**
-   * Period of time (in milliseconds) to sleep between batches of writes.
-   * Currently only applies to prune operations, as they are naturally a
-   * lower priority than other operations.
-   */
+  @Deprecated
   @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY =
       "fs.s3a.s3guard.ddb.background.sleep";
+  @Deprecated
   public static final int S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT = 25;
 
   /**
    * The default "Null" metadata store: {@value}.
    */
+  @Deprecated
   public static final String S3GUARD_METASTORE_NULL
       = "org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore";
-
-  /**
-   * Use Local memory for the metadata: {@value}.
-   * This is not coherent across processes and must be used for testing only.
-   */
+  @Deprecated
   @InterfaceStability.Unstable
   public static final String S3GUARD_METASTORE_LOCAL
       = "org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore";
-
-  /**
-   * Maximum number of records in LocalMetadataStore.
-   */
   @InterfaceStability.Unstable
+  @Deprecated
   public static final String S3GUARD_METASTORE_LOCAL_MAX_RECORDS =
       "fs.s3a.s3guard.local.max_records";
+  @Deprecated
   public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_MAX_RECORDS = 256;
-
-  /**
-   * Time to live in milliseconds in LocalMetadataStore.
-   * If zero, time-based expiration is disabled.
-   */
   @InterfaceStability.Unstable
+  @Deprecated
   public static final String S3GUARD_METASTORE_LOCAL_ENTRY_TTL =
       "fs.s3a.s3guard.local.ttl";
+  @Deprecated
   public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL
       = 60 * 1000;
-
-  /**
-   * Use DynamoDB for the metadata: {@value}.
-   */
+  @Deprecated
   public static final String S3GUARD_METASTORE_DYNAMO
       = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
-
-  /**
-   * The warn level if S3Guard is disabled.
-   */
+  @Deprecated
   public static final String S3GUARD_DISABLED_WARN_LEVEL
       = "fs.s3a.s3guard.disabled.warn.level";
+  @Deprecated
   public static final String DEFAULT_S3GUARD_DISABLED_WARN_LEVEL =
       "SILENT";
 
   /**
    * Inconsistency (visibility delay) injection settings.
+   * No longer used.
    */
-  @InterfaceStability.Unstable
+  @Deprecated
   public static final String FAIL_INJECT_INCONSISTENCY_KEY =
       "fs.s3a.failinject.inconsistency.key.substring";
 
-  @InterfaceStability.Unstable
+  @Deprecated
   public static final String FAIL_INJECT_INCONSISTENCY_MSEC =
       "fs.s3a.failinject.inconsistency.msec";
 
-  @InterfaceStability.Unstable
+  @Deprecated
   public static final String FAIL_INJECT_INCONSISTENCY_PROBABILITY =
       "fs.s3a.failinject.inconsistency.probability";
 
@@ -990,17 +919,20 @@ public final class Constants {
    * Number of times to retry any repeatable S3 client request on failure,
    * excluding throttling requests: {@value}.
    */
+  @Deprecated
   public static final String S3GUARD_CONSISTENCY_RETRY_LIMIT =
       "fs.s3a.s3guard.consistency.retry.limit";
 
   /**
    * Default retry limit: {@value}.
    */
+  @Deprecated
   public static final int S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT = 7;
 
   /**
    * Initial retry interval: {@value}.
    */
+  @Deprecated
   public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL =
       "fs.s3a.s3guard.consistency.retry.interval";
 
@@ -1010,10 +942,12 @@ public final class Constants {
    * each probe can cause the S3 load balancers to retain any 404 in
    * its cache for longer. See HADOOP-16490.
    */
+  @Deprecated
   public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT =
       "2s";
 
   public static final String AWS_SERVICE_IDENTIFIER_S3 = "S3";
+  @Deprecated
   public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
   public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
 

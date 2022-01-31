@@ -701,6 +701,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.max.disks.to.report";
   public static final int DFS_DATANODE_MAX_DISKS_TO_REPORT_DEFAULT =
       5;
+  public static final String DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY =
+      "dfs.datanode.max.slowdisks.to.exclude";
+  public static final int DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT =
+      0;
   public static final String  DFS_DATANODE_HOST_NAME_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_HOST_NAME_KEY;
   public static final String  DFS_NAMENODE_CHECKPOINT_DIR_KEY =
@@ -1653,6 +1657,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String
       DFS_NAMESERVICES_RESOLVER_IMPL =
       "dfs.datanode.nameservices.resolver.impl";
+
+  public static final String
+      DFS_DATANODE_LOCKMANAGER_TRACE =
+      "dfs.datanode.lockmanager.trace";
+
+  public static final boolean
+      DFS_DATANODE_LOCKMANAGER_TRACE_DEFAULT = false;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated
