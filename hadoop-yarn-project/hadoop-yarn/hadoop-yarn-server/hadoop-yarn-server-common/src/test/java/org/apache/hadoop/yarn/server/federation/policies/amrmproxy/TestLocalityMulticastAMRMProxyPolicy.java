@@ -843,15 +843,12 @@ public class TestLocalityMulticastAMRMProxyPolicy
     policy.notifyOfResponse(sc4, getAllocateResponseWithEnhancedHeadroom(0, 0));
 
     // sc2, sc3 and sc4 should just return the original subcluster.
-    Assert.assertTrue(
-        policy.routeNodeRequestIfNeeded(sc2, pendingThreshold, scList)
-            .equals(sc2));
-    Assert.assertTrue(
-        policy.routeNodeRequestIfNeeded(sc3, pendingThreshold, scList)
-            .equals(sc3));
-    Assert.assertTrue(
-        policy.routeNodeRequestIfNeeded(sc4, pendingThreshold, scList)
-            .equals(sc4));
+    Assert.assertEquals(
+        policy.routeNodeRequestIfNeeded(sc2, pendingThreshold, scList), sc2);
+    Assert.assertEquals(
+        policy.routeNodeRequestIfNeeded(sc3, pendingThreshold, scList), sc3);
+    Assert.assertEquals(
+        policy.routeNodeRequestIfNeeded(sc4, pendingThreshold, scList), sc4);
 
     // sc0 and sc1 must select from sc0/sc1/sc2/sc3/sc4 according to weights
     // 1/4, 1/4, 1/2, 1, 2. Let's run tons of random of samples, and verify that
@@ -881,23 +878,14 @@ public class TestLocalityMulticastAMRMProxyPolicy
     }
 
     // The probability should be 1/16, 1/16, 1/8, 1/4, 1/2
-    Assert.assertTrue(
-        approximateEquals((double) counts.get(sc0) / n / 3, 0.0625));
-    Assert.assertTrue(
-        approximateEquals((double) counts.get(sc1) / n / 3, 0.0625));
-    Assert
-        .assertTrue(approximateEquals((double) counts.get(sc2) / n / 3, 0.125));
-    Assert
-        .assertTrue(approximateEquals((double) counts.get(sc3) / n / 3, 0.25));
-    Assert.assertTrue(approximateEquals((double) counts.get(sc4) / n / 3, 0.5));
+    Assert.assertEquals((double) counts.get(sc0) / n / 3, 0.0625, 0.01);
+    Assert.assertEquals((double) counts.get(sc1) / n / 3, 0.0625, 0.01);
+    Assert.assertEquals((double) counts.get(sc2) / n / 3, 0.125, 0.01);
+    Assert.assertEquals((double) counts.get(sc3) / n / 3, 0.25, 0.01);
+    Assert.assertEquals((double) counts.get(sc4) / n / 3, 0.5, 0.01);
 
     // Everything should be routed to these five active and enabled SCs
     Assert.assertEquals(5, counts.size());
-  }
-
-  protected boolean approximateEquals(double a, double b) {
-    LOG.info("Comparing " + a + " and " + b);
-    return Math.abs(a - b) < 0.01;
   }
 
   private AllocateResponse getAllocateResponseWithEnhancedHeadroom(int pending,

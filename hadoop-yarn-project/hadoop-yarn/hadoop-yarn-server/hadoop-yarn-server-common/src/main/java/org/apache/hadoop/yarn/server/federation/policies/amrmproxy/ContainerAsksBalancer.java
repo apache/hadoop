@@ -19,17 +19,14 @@
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
@@ -106,26 +103,10 @@ public class ContainerAsksBalancer implements Configurable {
   }
 
   /**
-   * Notify an allocate response from a sub-cluster.
-   *
-   * @param subClusterId sub-cluster id
-   * @param response     allocate response
-   * @throws YarnException if fails
-   */
-  public void notifyOfResponse(SubClusterId subClusterId,
-      AllocateResponse response) throws YarnException {
-  }
-
-  /**
    * Modify the output from split-merge (AMRMProxyPolicy). Adding and removing
    * asks to balance the pending asks in all sub-clusters.
-   *
-   * @param askMap             the new asks about to be sent out to all sub-clusters
-   * @param activeAndEnabledSC the list of sub-cluster we can use for new
    */
-  public void adjustAsks(Map<SubClusterId, List<ResourceRequest>> askMap,
-      Set<SubClusterId> activeAndEnabledSC) {
-
+  public void adjustAsks() {
     Map<ResourceRequestSetKey, ResourceRequestSet> pendingAsks =
         new HashMap<>();
     Map<ResourceRequestSetKey, Long> pendingTime = new HashMap<>();

@@ -57,12 +57,10 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_LOAD_BASED_SC_SELECTOR_ENABLED;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_LOAD_BASED_SC_SELECTOR_FAIL_ON_ERROR;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_LOAD_BASED_SC_SELECTOR_MULTIPLIER;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_LOAD_BASED_SC_SELECTOR_THRESHOLD;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_LOAD_BASED_SC_SELECTOR_USE_ACTIVE_CORE;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOAD_BASED_SC_SELECTOR_ENABLED;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOAD_BASED_SC_SELECTOR_FAIL_ON_ERROR;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOAD_BASED_SC_SELECTOR_MULTIPLIER;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOAD_BASED_SC_SELECTOR_THRESHOLD;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOAD_BASED_SC_SELECTOR_USE_ACTIVE_CORE;
@@ -157,7 +155,6 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   public static final String PRINT_RR_MAX =
       "yarn.nodemanager.amrmproxy.address.splitmerge.printmaxrrcount";
   public static final int DEFAULT_PRINT_RR_MAX = 1000;
-  private boolean failOnError = DEFAULT_LOAD_BASED_SC_SELECTOR_FAIL_ON_ERROR;
 
   /**
    * Print a list of Resource Requests into a one line string.
@@ -245,10 +242,6 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     this.conf = this.federationFacade.getConf();
     this.askBalancer.setConf(conf);
     this.printRRMax = this.conf.getInt(PRINT_RR_MAX, DEFAULT_PRINT_RR_MAX);
-
-    this.failOnError = this.conf
-        .getBoolean(LOAD_BASED_SC_SELECTOR_FAIL_ON_ERROR,
-            DEFAULT_LOAD_BASED_SC_SELECTOR_FAIL_ON_ERROR);
   }
 
   @Override
@@ -264,8 +257,6 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         "Subcluster {} updated with AvailableResource {}, EnhancedHeadRoom {}",
         subClusterId, response.getAvailableResources(),
         response.getEnhancedHeadroom());
-
-    this.askBalancer.notifyOfResponse(subClusterId, response);
   }
 
   @Override
@@ -315,7 +306,6 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         targetId = resolver.getSubClusterForNode(rr.getResourceName());
 
         // If needed, re-reroute node requests base on SC load
-        // Read from config every time so that it is SCDable
         if (conf.getBoolean(LOAD_BASED_SC_SELECTOR_ENABLED,
             DEFAULT_LOAD_BASED_SC_SELECTOR_ENABLED)) {
           int maxPendingThreshold =
@@ -325,6 +315,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
           targetId = routeNodeRequestIfNeeded(targetId, maxPendingThreshold,
               bookkeeper.getActiveAndEnabledSC());
         }
+        LOG.debug("Node request {}", rr.getResourceName());
       } catch (YarnException e) {
         // this might happen as we can't differentiate node from rack names
         // we log altogether later
@@ -372,7 +363,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
     // Take the split result, feed into the askBalancer
     Map<SubClusterId, List<ResourceRequest>> answer = bookkeeper.getAnswer();
-    this.askBalancer.adjustAsks(answer, bookkeeper.getActiveAndEnabledSC());
+    this.askBalancer.adjustAsks();
     LOG.info("Before split {} RRs: {}", resourceRequests.size(),
         prettyPrintRequests(resourceRequests, this.printRRMax));
 
@@ -604,7 +595,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         return targetId;
       }
     }
-    SubClusterId scId = pickSubClusterIdForMaxLoadSC(targetId, maxThreshold,
+    SubClusterId scId = chooseSubClusterIdForMaxLoadSC(targetId, maxThreshold,
         activeAndEnabledSCs);
     return scId;
   }
@@ -618,12 +609,12 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    * @param activeAndEnabledSCs the list of active and enabled subclusters
    * @return targetId if it is within maxThreshold, otherwise a new id
    */
-  private SubClusterId pickSubClusterIdForMaxLoadSC(SubClusterId targetId,
+  private SubClusterId chooseSubClusterIdForMaxLoadSC(SubClusterId targetId,
       int maxThreshold, Set<SubClusterId> activeAndEnabledSCs) {
     ArrayList<Float> weight = new ArrayList<>();
     ArrayList<SubClusterId> scIds = new ArrayList<>();
     int targetLoad = getSubClusterLoad(targetId);
-    if (targetLoad == -1) {
+    if (targetLoad == -1 || !activeAndEnabledSCs.contains(targetId)) {
       // Probably a SC that's not active and enabled. Forcing a reroute
       targetLoad = Integer.MAX_VALUE;
     }
@@ -741,19 +732,9 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       }
 
       if (activeAndEnabledSC.size() < 1) {
-        String errorMsg =
-            "None of the subclusters enabled in this policy (weight>0) are "
-                + "currently active we cannot forward the ResourceRequest(s)";
-        if (failOnError) {
-          throw new NoActiveSubclustersException(errorMsg);
-        } else {
-          LOG.error(
-              errorMsg + ", continuing by enabling all active subclusters.");
-          activeAndEnabledSC.addAll(activeSubclusters.keySet());
-          for (SubClusterId sc : activeSubclusters.keySet()) {
-            policyWeights.put(sc, 1.0f);
-          }
-        }
+          throw new NoActiveSubclustersException(
+              "None of the subclusters enabled in this policy (weight>0) are "
+                  + "currently active we cannot forward the ResourceRequest(s)");
       }
 
       Set<SubClusterId> tmpSCSet = new HashSet<>(activeAndEnabledSC);
