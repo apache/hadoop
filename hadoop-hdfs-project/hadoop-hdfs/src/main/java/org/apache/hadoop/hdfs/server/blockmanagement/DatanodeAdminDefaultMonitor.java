@@ -123,7 +123,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
 
   @Override
   public void stopTrackingNode(DatanodeDescriptor dn) {
-    pendingNodes.remove(dn);
+    getPendingNodes().remove(dn);
     outOfServiceNodeBlocks.remove(dn);
   }
 
@@ -164,19 +164,19 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
               "in maintenance or transitioning state. {} nodes pending.",
           numBlocksChecked, numNodesChecked, outOfServiceNodeBlocks.size(),
-          pendingNodes.size());
+          getPendingNodes().size());
     }
   }
 
   /**
-   * Pop datanodes off the pending list and into decomNodeBlocks,
+   * Pop datanodes off the pending priority queue and into decomNodeBlocks,
    * subject to the maxConcurrentTrackedNodes limit.
    */
   private void processPendingNodes() {
-    while (!pendingNodes.isEmpty() &&
+    while (!getPendingNodes().isEmpty() &&
         (maxConcurrentTrackedNodes == 0 ||
             outOfServiceNodeBlocks.size() < maxConcurrentTrackedNodes)) {
-      outOfServiceNodeBlocks.put(pendingNodes.poll(), null);
+      outOfServiceNodeBlocks.put(getPendingNodes().poll(), null);
     }
   }
 
@@ -185,6 +185,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         it = new CyclicIteration<>(outOfServiceNodeBlocks,
         iterkey).iterator();
     final List<DatanodeDescriptor> toRemove = new ArrayList<>();
+    final List<DatanodeDescriptor> unhealthyDns = new ArrayList<>();
 
     while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
         .isRunning()) {
@@ -221,6 +222,10 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           LOG.debug("Processing {} node {}", dn.getAdminState(), dn);
           pruneReliableBlocks(dn, blocks);
         }
+        final boolean isHealthy = blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
+        if (!isHealthy) {
+          unhealthyDns.add(dn);
+        }
         if (blocks.size() == 0) {
           if (!fullScan) {
             // If we didn't just do a full scan, need to re-check with the
@@ -236,8 +241,6 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           }
           // If the full scan is clean AND the node liveness is okay,
           // we can finally mark as DECOMMISSIONED or IN_MAINTENANCE.
-          final boolean isHealthy =
-              blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
           if (blocks.size() == 0 && isHealthy) {
             if (dn.isDecommissionInProgress()) {
               dnAdmin.setDecommissioned(dn);
@@ -270,12 +273,31 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // an invalid state.
         LOG.warn("DatanodeAdminMonitor caught exception when processing node "
             + "{}.", dn, e);
-        pendingNodes.add(dn);
+        getPendingNodes().add(dn);
         toRemove.add(dn);
       } finally {
         iterkey = dn;
       }
     }
+
+    // Having more nodes decommissioning than can be tracked will impact decommissioning
+    // performance due to queueing delay
+    int numTrackedNodes = outOfServiceNodeBlocks.size() - toRemove.size();
+    int numQueuedNodes = getPendingNodes().size();
+    int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
+    if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+      LOG.warn(
+          "{} nodes are decommissioning but only {} nodes will be tracked at a time. "
+              + "{} nodes are currently queued waiting to be decommissioned.",
+          numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
+
+      // Re-queue unhealthy nodes to make space for decommissioning healthy nodes
+      getUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
+        getPendingNodes().add(dn);
+        outOfServiceNodeBlocks.remove(dn);
+      });
+    }
+
     // Remove the datanodes that are DECOMMISSIONED or in service after
     // maintenance expiration.
     for (DatanodeDescriptor dn : toRemove) {
