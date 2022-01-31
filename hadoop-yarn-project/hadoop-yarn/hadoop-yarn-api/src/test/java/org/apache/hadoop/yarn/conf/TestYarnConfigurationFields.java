@@ -128,6 +128,14 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(YarnConfiguration.FEDERATION_STATESTORE_SQL_MAXCONNECTIONS);
 
+    // Federation StateStore HTTP implementation configs to be ignored
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.FEDERATION_STATESTORE_HTTP_PROXY_URL);
+    configurationPrefixToSkipCompare.add(
+        YarnConfiguration.FEDERATION_STATESTORE_HTTP_PROXY_CONNECT_TIMEOUT_MS);
+    configurationPrefixToSkipCompare.add(
+        YarnConfiguration.FEDERATION_STATESTORE_HTTP_PROXY_READ_TIMEOUT_MS);
+
     // Ignore blacklisting nodes for AM failures feature since it is still a
     // "work in progress"
     configurationPropsToSkipCompare.add(YarnConfiguration.

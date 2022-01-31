@@ -49,29 +49,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
-import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -224,6 +202,17 @@ public final class FederationStateStoreFacade {
    */
   public static FederationStateStoreFacade getInstance() {
     return FACADE;
+  }
+
+  /**
+   * Register a <em>subcluster</em> identified by {@code SubClusterId} to
+   * indicate participation in federation
+   *
+   * @param info the SubClusterInfo for the SubCluster that is participating
+   *             in federation
+   */
+  public void registerSubCluster(SubClusterInfo info) throws YarnException {
+    stateStore.registerSubCluster(SubClusterRegisterRequest.newInstance(info));
   }
 
   /**
@@ -481,6 +470,20 @@ public final class FederationStateStoreFacade {
    */
   public Configuration getConf() {
     return this.conf;
+  }
+
+  /**
+   * Periodic heartbeat from a <code>ResourceManager</code> to indicate
+   * liveliness.
+   *
+   * @param subClusterId the id of the sub cluster heart beating
+   * @param state the state of the sub cluster
+   * @param capability the capability of the sub cluster
+   */
+  public void subClusterHeartBeat(SubClusterId subClusterId,
+      SubClusterState state, String capability) throws YarnException {
+    stateStore.subClusterHeartbeat(SubClusterHeartbeatRequest
+        .newInstance(subClusterId, state, capability));
   }
 
   /**

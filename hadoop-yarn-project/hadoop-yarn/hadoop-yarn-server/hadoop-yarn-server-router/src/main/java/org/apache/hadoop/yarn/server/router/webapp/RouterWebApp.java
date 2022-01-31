@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.server.router.ssproxy.RouterStateStoreProxyWebServices;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
@@ -38,6 +39,7 @@ public class RouterWebApp extends WebApp implements YarnWebParams {
   public void setup() {
     bind(JAXBContextResolver.class);
     bind(RouterWebServices.class);
+    bind(RouterStateStoreProxyWebServices.class);
     bind(GenericExceptionHandler.class);
     bind(RouterWebApp.class).toInstance(this);
 
