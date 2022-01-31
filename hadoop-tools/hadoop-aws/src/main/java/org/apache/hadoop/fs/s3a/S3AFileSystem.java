@@ -4928,7 +4928,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             getDefaultBlockSize(),
             inputPolicy);
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
-    if (!fileInformation.isSql()) {
+    if (!fileInformation.isS3Select()) {
       // normal path.
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result,

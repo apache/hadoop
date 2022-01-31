@@ -229,7 +229,7 @@ Access permission checks have the same visibility requirements: permission failu
 MUST be delayed until the `get()` call and MAY be delayed into subsequent operations.
 
 Note: some operations on the input stream, such as `seek()` may not attempt any IO
-at all. Such operations MAY NOT raise exceotions when interacting with 
+at all. Such operations MAY NOT raise exceotions when interacting with
 nonexistent/unreadable files.
 
 ## <a name="options"></a> Standard `openFile()` options since Hadoop 3.3.3
@@ -508,7 +508,7 @@ protected SeekableInputStream newStream(Path path, FileStatus stat,
    FutureDataInputStreamBuilder builder = fs.openFile(path)
    .opt("fs.option.openfile.read.policy", "vector, random")
    .withFileStatus(stat);
-   
+
    builder.opt("fs.option.openfile.split.start", splitStart);
    builder.opt("fs.option.openfile.split.end", splitEnd);
    CompletableFuture<FSDataInputStream> streamF = builder.build();

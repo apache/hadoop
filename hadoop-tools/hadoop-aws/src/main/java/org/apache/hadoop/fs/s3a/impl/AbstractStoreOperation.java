@@ -22,8 +22,6 @@ import javax.annotation.Nullable;
 
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
-
 /**
  * Base class of operations in the store.
  * An operation is something which executes against the context to
@@ -39,7 +37,7 @@ public abstract class AbstractStoreOperation {
   /**
    * Audit Span.
    */
-  private AuditSpan auditSpan;
+  private final AuditSpan auditSpan;
 
   /**
    * Constructor.
@@ -63,7 +61,7 @@ public abstract class AbstractStoreOperation {
       final @Nullable StoreContext storeContext,
       final AuditSpan auditSpan) {
     this.storeContext = storeContext;
-    this.auditSpan = checkNotNull(auditSpan);
+    this.auditSpan = auditSpan;
   }
 
   /**

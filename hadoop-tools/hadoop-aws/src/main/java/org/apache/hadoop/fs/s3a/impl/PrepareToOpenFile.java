@@ -236,8 +236,19 @@ public class PrepareToOpenFile {
     // buffer size
     int bufferSize = options.getInt(FS_OPTION_OPENFILE_BUFFER_SIZE,
         defaultBufferSize);
-    return new FileInformation(isSelect, fileStatus, sql, seekPolicy,
-        changePolicy, readAhead, bufferSize, splitStart, splitEnd, fileLength);
+    return new FileInformation()
+        .withS3Select(isSelect)
+        .withSql(sql)
+        .withBufferSize(bufferSize)
+        .withChangePolicy(changePolicy)
+        .withReadAheadRange(readAhead)
+        .withFileLength(fileLength)
+        .withInputPolicy(seekPolicy)
+        .withSplitStart(splitStart)
+        .withSplitEnd(splitEnd)
+        .withStatus(fileStatus)
+        .build();
+
   }
 
   /**
@@ -258,7 +269,6 @@ public class PrepareToOpenFile {
         null);
   }
 
-
     /**
      * Open a simple file.
      * @return the parameters needed to open a file through
@@ -268,9 +278,16 @@ public class PrepareToOpenFile {
      */
   public FileInformation openSimpleFile(final int bufferSize,
       final S3AInputPolicy inputPolicy) {
-    return new FileInformation(false, null, null,
-        inputPolicy, changePolicy, defaultReadAhead, bufferSize,
-        0, LENGTH_UNKNOWN, LENGTH_UNKNOWN);
+    return new FileInformation()
+        .withS3Select(false)
+        .withBufferSize(bufferSize)
+        .withChangePolicy(changePolicy)
+        .withReadAheadRange(defaultReadAhead)
+        .withFileLength(LENGTH_UNKNOWN)
+        .withInputPolicy(inputPolicy)
+        .withSplitStart(0)
+        .withSplitEnd(LENGTH_UNKNOWN)
+        .build();
   }
 
   /**
@@ -279,71 +296,59 @@ public class PrepareToOpenFile {
   public static final class FileInformation {
 
     /** Is this SQL? */
-    private final boolean isSql;
+    private boolean isS3Select;
 
     /** File status; may be null. */
-    private final S3AFileStatus status;
+    private S3AFileStatus status;
 
     /** SQL string if this is a SQL select file. */
-    private final String sql;
+    private String sql;
 
     /** Active input policy. */
-    private final S3AInputPolicy inputPolicy;
+    private S3AInputPolicy inputPolicy;
 
     /** Change detection policy. */
-    private final ChangeDetectionPolicy changePolicy;
+    private ChangeDetectionPolicy changePolicy;
 
     /** Read ahead range. */
-    private final long readAheadRange;
+    private long readAheadRange;
 
     /** Buffer size. Currently ignored. */
-    private final int bufferSize;
+    private int bufferSize;
 
     /**
      * Where does the read start from. 0 unless known.
      */
-    private final long splitStart;
+    private long splitStart;
 
     /**
      * What is the split end?
      * Negative if not known.
      */
-    private final long splitEnd;
+    private long splitEnd;
 
     /**
      * What is the file length?
      * Negative if not known.
      */
-    private final long fileLength;
+    private long fileLength;
 
     /**
      * Constructor.
      */
-    private FileInformation(
-        final boolean isSql,
-        final S3AFileStatus status,
-        final String sql,
-        final S3AInputPolicy inputPolicy,
-        final ChangeDetectionPolicy changePolicy,
-        final long readAheadRange,
-        final int bufferSize,
-        final long splitStart,
-        final long splitEnd,
-        final long fileLength) {
-      this.isSql = isSql;
-      this.status = status;
-      this.sql = sql;
-      this.inputPolicy = inputPolicy;
-      this.changePolicy = changePolicy;
-      this.readAheadRange = readAheadRange;
-      this.bufferSize = bufferSize;
-      this.splitStart = splitStart;
-      this.splitEnd = splitEnd;
-      this.fileLength = fileLength;
+    public FileInformation() {
     }
 
-    public boolean isSql() {
-      return isSql;
+    /**
+     * Build.
+     * @return this object
+     */
+    public FileInformation build() {
+      return this;
+    }
+
+    public boolean isS3Select() {
+      return isS3Select;
     }
 
     public S3AFileStatus getStatus() {
@@ -381,7 +386,7 @@ public class PrepareToOpenFile {
     @Override
     public String toString() {
       return "FileInformation{" +
-          "isSql=" + isSql +
+          "isSql=" + isS3Select +
           ", status=" + status +
           ", sql='" + sql + '\'' +
           ", inputPolicy=" + inputPolicy +
@@ -395,6 +400,106 @@ public class PrepareToOpenFile {
 
     public long getFileLength() {
       return fileLength;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withS3Select(final boolean value) {
+      isS3Select = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withStatus(final S3AFileStatus value) {
+      status = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withSql(final String value) {
+      sql = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withInputPolicy(final S3AInputPolicy value) {
+      inputPolicy = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withChangePolicy(final ChangeDetectionPolicy value) {
+      changePolicy = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withReadAheadRange(final long value) {
+      readAheadRange = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withBufferSize(final int value) {
+      bufferSize = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withSplitStart(final long value) {
+      splitStart = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withSplitEnd(final long value) {
+      splitEnd = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public FileInformation withFileLength(final long value) {
+      fileLength = value;
+      return this;
     }
   }
 
