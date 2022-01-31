@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -105,7 +106,7 @@ public class ParentQueue extends AbstractCSQueue {
   // leaf queue can use this to calculate effective resources.
   // This field will not be edited, reference will point to a new immutable map
   // after every time recalculation
-  private volatile Map<String, Float> effectiveMinRatioPerResource;
+  private Map<String, Map<String, Float>> effectiveMinRatioPerResource = new ConcurrentHashMap<>();
 
   public ParentQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -1328,8 +1329,8 @@ public class ParentQueue extends AbstractCSQueue {
       }
     }
 
-    effectiveMinRatioPerResource = getEffectiveMinRatioPerResource(
-        configuredMinResources, numeratorForMinRatio);
+    effectiveMinRatioPerResource.put(label, getEffectiveMinRatioPerResource(
+        configuredMinResources, numeratorForMinRatio));
 
     // Update effective resources for my self;
     if (rootQueue) {
@@ -1637,9 +1638,8 @@ public class ParentQueue extends AbstractCSQueue {
     }
   }
 
-  // This is a locking free method
-  Map<String, Float> getEffectiveMinRatioPerResource() {
-    return effectiveMinRatioPerResource;
+  Map<String, Float> getEffectiveMinRatioPerResource(String label) {
+    return effectiveMinRatioPerResource.get(label);
   }
 
   @Override
