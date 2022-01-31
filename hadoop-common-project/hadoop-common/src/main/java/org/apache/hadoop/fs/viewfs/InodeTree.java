@@ -81,9 +81,9 @@ abstract class InodeTree<T> {
   private List<RegexMountPoint<T>> regexMountPointList =
       new ArrayList<RegexMountPoint<T>>();
 
-  static class MountPoint<T> {
-    String src;
-    INodeLink<T> target;
+  public static class MountPoint<T> {
+    public String src;
+    public INodeLink<T> target;
 
     MountPoint(String srcPath, INodeLink<T> mountLink) {
       src = srcPath;
@@ -256,8 +256,8 @@ abstract class InodeTree<T> {
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)
    */
-  static class INodeLink<T> extends INode<T> {
-    final URI[] targetDirLinkList;
+  public static class INodeLink<T> extends INode<T> {
+    public final URI[] targetDirLinkList;
     private T targetFileSystem;   // file system object created from the link.
     // Function to initialize file system. Only applicable for simple links
     private Function<URI, T> fileSystemInitMethod;
@@ -932,7 +932,7 @@ abstract class InodeTree<T> {
     }
   }
 
-  List<MountPoint<T>> getMountPoints() {
+  public List<MountPoint<T>> getMountPoints() {
     return mountPoints;
   }
 

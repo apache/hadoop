@@ -20,15 +20,15 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 /**
  * File system instance getter.
  */
-@Private
-class FsGetter {
+@InterfaceAudience.Public
+public class FsGetter {
 
   /**
    * Gets new file system instance of given uri.

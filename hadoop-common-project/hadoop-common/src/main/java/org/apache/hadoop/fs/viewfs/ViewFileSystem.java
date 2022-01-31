@@ -113,7 +113,7 @@ public class ViewFileSystem extends FileSystem {
   /**
    * Caching children filesystems. HADOOP-15565.
    */
-  static class InnerCache {
+  public static class InnerCache {
     private Map<Key, FileSystem> map = new HashMap<>();
     private FsGetter fsCreator;
     private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
@@ -122,7 +122,7 @@ public class ViewFileSystem extends FileSystem {
       this.fsCreator = fsCreator;
     }
 
-    FileSystem get(URI uri, Configuration config) throws IOException {
+    public FileSystem get(URI uri, Configuration config) throws IOException {
       Key key = new Key(uri);
       FileSystem fs = null;
       try {
@@ -1055,6 +1055,15 @@ public class ViewFileSystem extends FileSystem {
           mountPoints.get(i).target.targetDirLinkList);
     }
     return result;
+  }
+
+  /*
+  ViewFileSystem will always have child filesystems.
+  So getCanonicalServiceName should return null.
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    return null;
   }
 
   @Override
