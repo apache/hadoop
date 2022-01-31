@@ -123,9 +123,7 @@ public final class Fakes {
 
     return new S3AReadOpContext(
         path,
-        false, // hasMetadataStore()
         new Invoker(retryPolicy, Invoker.LOG_EVENT),
-        null,                   // s3guardInvoker
         statistics,
         statisticsContext,
         fileStatus,
