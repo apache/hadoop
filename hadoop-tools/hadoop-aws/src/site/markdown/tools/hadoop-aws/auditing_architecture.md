@@ -145,7 +145,7 @@ Where it did have problems was when the following conditions were met
    from the cache of active instances.
 4. Or, after a query for a specific user was completed,
    `FileSystem.closeAllForUGI(UserGroupInformation)` was invoked to remove all
-   cached FS instances of that user. 
+   cached FS instances of that user.
 
 Conditions 1, 2 and 4 are exactly those which long-lived Hive services can
 encounter.
