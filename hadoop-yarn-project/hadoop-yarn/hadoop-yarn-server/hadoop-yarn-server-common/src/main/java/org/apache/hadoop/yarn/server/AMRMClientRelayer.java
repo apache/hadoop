@@ -590,7 +590,7 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
   private void addAllocationHistoryEntry(Container container,
       long fulfillTimeStamp, long fulfillLatency) {
     ResourceRequestSetKey key = ResourceRequestSetKey
-        .extractMatchingKey(container, this.remotePendingAsks.keySet(), true);
+        .extractMatchingKey(container, this.remotePendingAsks.keySet());
     if (key == null) {
       LOG.info("allocation history ignoring {}, no matching request key found",
           container);

@@ -34,6 +34,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -795,32 +797,24 @@ public class TestLocalityMulticastAMRMProxyPolicy
     checkTotalContainerAllocation(response, 100);
   }
 
+  @After
+  public void cleanup() {
+    ((FederationAMRMProxyPolicy) getPolicy()).shutdown();
+  }
+
   @Test
-  public void testPickSubClusterIdForMaxLoadSC() throws YarnException {
+  public void testLoadbasedSubClusterReroute() throws YarnException {
     int pendingThreshold = 1000;
 
     LocalityMulticastAMRMProxyPolicy policy =
         (LocalityMulticastAMRMProxyPolicy) getPolicy();
     initializePolicy();
 
-    // This cluster is the most overloaded - 4 times the threshold.
     SubClusterId sc0 = SubClusterId.newInstance("0");
-    Resource r0 =
-        Resource.newInstance(Integer.MAX_VALUE - 4 * pendingThreshold, 0);
-    // This cluster is the most overloaded - 4 times the threshold.
     SubClusterId sc1 = SubClusterId.newInstance("1");
-    Resource r1 =
-        Resource.newInstance(Integer.MAX_VALUE - 4 * pendingThreshold, 0);
-    // This cluster is 2 times the threshold, but not the most loaded.
     SubClusterId sc2 = SubClusterId.newInstance("2");
-    Resource r2 =
-        Resource.newInstance(Integer.MAX_VALUE - 2 * pendingThreshold, 0);
-    // This cluster is at the threshold, but not the most loaded.
     SubClusterId sc3 = SubClusterId.newInstance("3");
-    Resource r3 = Resource.newInstance(Integer.MAX_VALUE - pendingThreshold, 0);
-    // This cluster has zero pending.
     SubClusterId sc4 = SubClusterId.newInstance("4");
-    Resource r4 = Resource.newInstance(Integer.MAX_VALUE - 0, 0);
 
     Set<SubClusterId> scList = new HashSet<>();
     scList.add(sc0);
@@ -829,19 +823,35 @@ public class TestLocalityMulticastAMRMProxyPolicy
     scList.add(sc3);
     scList.add(sc4);
 
-    policy.notifyOfResponse(sc0, getAllocateResponseWithTargetHeadroom(r0));
-    policy.notifyOfResponse(sc1, getAllocateResponseWithTargetHeadroom(r1));
-    policy.notifyOfResponse(sc2, getAllocateResponseWithTargetHeadroom(r2));
-    policy.notifyOfResponse(sc3, getAllocateResponseWithTargetHeadroom(r3));
-    policy.notifyOfResponse(sc4, getAllocateResponseWithTargetHeadroom(r4));
+    // This cluster is the most overloaded - 4 times the threshold.
+    policy.notifyOfResponse(sc0,
+        getAllocateResponseWithEnhancedHeadroom(4 * pendingThreshold, 0));
+
+    // This cluster is the most overloaded - 4 times the threshold.
+    policy.notifyOfResponse(sc1,
+        getAllocateResponseWithEnhancedHeadroom(4 * pendingThreshold, 0));
+
+    // This cluster is 2 times the threshold, but not the most loaded.
+    policy.notifyOfResponse(sc2,
+        getAllocateResponseWithEnhancedHeadroom(2 * pendingThreshold, 0));
+
+    // This cluster is at the threshold, but not the most loaded.
+    policy.notifyOfResponse(sc3,
+        getAllocateResponseWithEnhancedHeadroom(pendingThreshold, 0));
+
+    // This cluster has zero pending.
+    policy.notifyOfResponse(sc4, getAllocateResponseWithEnhancedHeadroom(0, 0));
 
     // sc2, sc3 and sc4 should just return the original subcluster.
-    Assert.assertTrue(policy
-        .routeNodeRequestIfNeeded(sc2, pendingThreshold, scList).equals(sc2));
-    Assert.assertTrue(policy
-        .routeNodeRequestIfNeeded(sc3, pendingThreshold, scList).equals(sc3));
-    Assert.assertTrue(policy
-        .routeNodeRequestIfNeeded(sc4, pendingThreshold, scList).equals(sc4));
+    Assert.assertTrue(
+        policy.routeNodeRequestIfNeeded(sc2, pendingThreshold, scList)
+            .equals(sc2));
+    Assert.assertTrue(
+        policy.routeNodeRequestIfNeeded(sc3, pendingThreshold, scList)
+            .equals(sc3));
+    Assert.assertTrue(
+        policy.routeNodeRequestIfNeeded(sc4, pendingThreshold, scList)
+            .equals(sc4));
 
     // sc0 and sc1 must select from sc0/sc1/sc2/sc3/sc4 according to weights
     // 1/4, 1/4, 1/2, 1, 2. Let's run tons of random of samples, and verify that
@@ -864,8 +874,9 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
       // Also try a new SCId that's not active and enabled. Should be rerouted
       // to sc0-4 with the same distribution as above
-      selectedId = policy.routeNodeRequestIfNeeded(
-          SubClusterId.newInstance("10"), pendingThreshold, scList);
+      selectedId = policy
+          .routeNodeRequestIfNeeded(SubClusterId.newInstance("10"),
+              pendingThreshold, scList);
       counts.put(selectedId, counts.get(selectedId) + 1);
     }
 
@@ -887,6 +898,15 @@ public class TestLocalityMulticastAMRMProxyPolicy
   protected boolean approximateEquals(double a, double b) {
     LOG.info("Comparing " + a + " and " + b);
     return Math.abs(a - b) < 0.01;
+  }
+
+  private AllocateResponse getAllocateResponseWithEnhancedHeadroom(int pending,
+      int activeCores) {
+    return AllocateResponse
+        .newInstance(0, null, null, Collections.<NodeReport>emptyList(),
+            Resource.newInstance(0, 0), null, 10, null,
+            Collections.<NMToken>emptyList(), null, null, null,
+            EnhancedHeadroom.newInstance(pending, activeCores));
   }
 
   /**
@@ -912,11 +932,5 @@ public class TestLocalityMulticastAMRMProxyPolicy
       // Alwasy use home sub-cluster so that unit test is deterministic
       return getHomeSubCluster();
     }
-  }
-
-  private AllocateResponse getAllocateResponseWithTargetHeadroom(Resource r) {
-    return AllocateResponse.newInstance(0, null, null,
-        Collections.<NodeReport> emptyList(), r, null, 10, null,
-        Collections.<NMToken> emptyList());
   }
 }

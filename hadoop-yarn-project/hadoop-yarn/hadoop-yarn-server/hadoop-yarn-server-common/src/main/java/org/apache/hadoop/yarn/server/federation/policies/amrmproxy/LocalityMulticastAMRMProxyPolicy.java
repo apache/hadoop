@@ -162,7 +162,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   /**
    * Print a list of Resource Requests into a one line string.
    *
-   * @param response
+   * @param response list of ResourceRequest
+   * @param max number of resourcerequest to print
    * @return the printed one line string
    */
   public static String prettyPrintRequests(List<ResourceRequest> response,
@@ -589,6 +590,10 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
   /**
    * When certain subcluster is too loaded, reroute Node requests going there.
+   * @param targetId current subclusterId where request is sent
+   * @param maxThreshold threshold for Pending count
+   * @param activeAndEnabledSCs list of active sc
+   * @return subclusterId target sc id
    */
   protected SubClusterId routeNodeRequestIfNeeded(SubClusterId targetId,
       int maxThreshold, Set<SubClusterId> activeAndEnabledSCs) {
@@ -615,7 +620,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    */
   private SubClusterId pickSubClusterIdForMaxLoadSC(SubClusterId targetId,
       int maxThreshold, Set<SubClusterId> activeAndEnabledSCs) {
-    ArrayList<Float> weights = new ArrayList<>();
+    ArrayList<Float> weight = new ArrayList<>();
     ArrayList<SubClusterId> scIds = new ArrayList<>();
     int targetLoad = getSubClusterLoad(targetId);
     if (targetLoad == -1) {
@@ -631,10 +636,10 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       }
 
       /*
-       * Prepare the weights for a random draw among all known SCs.
+       * Prepare the weight for a random draw among all known SCs.
        *
        * For SC with pending bigger than maxThreshold / 2, use maxThreshold /
-       * pending as weight. We multiplied by maxThreshold so that the weights
+       * pending as weight. We multiplied by maxThreshold so that the weight
        * won't be too small in value.
        *
        * For SC with pending less than maxThreshold / 2, we cap the weight at 2
@@ -642,16 +647,16 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
        * will not get a huge weight and thus get swamped.
        */
       if (scLoad <= maxThreshold / 2) {
-        weights.add(2f);
+        weight.add(2f);
       } else {
-        weights.add((float) maxThreshold / scLoad);
+        weight.add((float) maxThreshold / scLoad);
       }
       scIds.add(sc);
     }
     if (weights.size() == 0) {
       return targetId;
     }
-    return scIds.get(FederationPolicyUtils.getWeightedRandom(weights));
+    return scIds.get(FederationPolicyUtils.getWeightedRandom(weight));
   }
 
   private int getSubClusterLoad(SubClusterId subClusterId) {
@@ -752,6 +757,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       }
 
       Set<SubClusterId> tmpSCSet = new HashSet<>(activeAndEnabledSC);
+      tmpSCSet.removeAll(timedOutSubClusters);
       if (tmpSCSet.size() < 1) {
         LOG.warn("All active and enabled subclusters have expired last "
             + "heartbeat time. Ignore the expiry check for this request");

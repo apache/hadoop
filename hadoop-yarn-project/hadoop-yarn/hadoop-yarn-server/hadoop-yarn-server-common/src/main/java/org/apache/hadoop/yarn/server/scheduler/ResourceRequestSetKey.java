@@ -144,11 +144,10 @@ public class ResourceRequestSetKey extends SchedulerRequestKey {
    *
    * @param container the allocated container
    * @param keys the set of keys to look from
-   * @return
+   * @return ResourceRequestSetKey
    */
   public static ResourceRequestSetKey extractMatchingKey(Container container,
-      Set<ResourceRequestSetKey> keys, boolean verbose) {
-
+      Set<ResourceRequestSetKey> keys) {
     ResourceRequestSetKey key = new ResourceRequestSetKey(
         container.getAllocationRequestId(), container.getPriority(),
         container.getResource(), container.getExecutionType());
@@ -161,17 +160,17 @@ public class ResourceRequestSetKey extends SchedulerRequestKey {
       for (ResourceRequestSetKey candidate : keys) {
         if (candidate.getAllocationRequestId() == container
             .getAllocationRequestId()) {
-          if (verbose) {
-            LOG.warn("Using possible match for " + key + ": " + candidate);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Using possible match for " + key + ": " + candidate);
           }
           return candidate;
         }
       }
     }
-    if (verbose) {
-      LOG.error("not match found for container " + container);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("not match found for container " + container);
       for (ResourceRequestSetKey candidate : keys) {
-        LOG.warn("candidate set keys: " + candidate);
+        LOG.debug("candidate set keys: " + candidate);
       }
     }
     return null;
