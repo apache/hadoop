@@ -89,6 +89,12 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   public String getQueuePath();
 
+  /**
+   * Gets the queue path object.
+   * @return the object of the queue
+   */
+  QueuePath getQueuePathObject();
+
   public PrivilegedEntity getPrivilegedEntity();
 
   Resource getMaximumAllocation();

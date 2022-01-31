@@ -177,7 +177,7 @@ Returns 0 on success and -1 on error.
 cp
 ----
 
-Usage: `hadoop fs -cp [-f] [-p | -p[topax]] URI [URI ...] <dest> `
+Usage: `hadoop fs -cp [-f] [-p | -p[topax]] [-t <thread count>] [-q <thread pool queue size>] URI [URI ...] <dest>`
 
 Copy files from source to destination. This command allows multiple sources as well in which case the destination must be a directory.
 
@@ -185,13 +185,18 @@ Copy files from source to destination. This command allows multiple sources as w
 
 Options:
 
-* The -f option will overwrite the destination if it already exists.
-* The -p option will preserve file attributes [topx] (timestamps, ownership, permission, ACL, XAttr). If -p is specified with no *arg*, then preserves timestamps, ownership, permission. If -pa is specified, then preserves permission also because ACL is a super-set of permission. Determination of whether raw namespace extended attributes are preserved is independent of the -p flag.
+* `-f` : Overwrite the destination if it already exists.
+* `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
+* `-p` : Preserve file attributes [topx] (timestamps, ownership, permission, ACL, XAttr). If -p is specified with no *arg*, then preserves timestamps, ownership, permission. If -pa is specified, then preserves permission also because ACL is a super-set of permission. Determination of whether raw namespace extended attributes are preserved is independent of the -p flag.
+* `-t <thread count>` : Number of threads to be used, default is 1. Useful when copying directories containing more than 1 file.
+* `-q <thread pool queue size>` : Thread pool queue size to be used, default is 1024. It takes effect only when thread count greater than 1.
 
 Example:
 
 * `hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2`
 * `hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir`
+* `hadoop fs -cp -t 5 /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir`
+* `hadoop fs -cp -t 10 -q 2048 /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir`
 
 Exit Code:
 

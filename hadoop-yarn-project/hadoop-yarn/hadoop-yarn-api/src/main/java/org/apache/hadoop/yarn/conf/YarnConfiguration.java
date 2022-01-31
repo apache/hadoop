@@ -762,6 +762,20 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE = 10;
 
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.batch-size";
+  public static final int
+      DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE =
+      1000;
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.interval-seconds";
+  public static final int DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL =
+      60;
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.enable-batch";
+  public static final boolean DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED =
+      false;
+
   //RM delegation token related keys
   public static final String RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY =
     RM_PREFIX + "delegation.key.update-interval";
@@ -1241,7 +1255,21 @@ public class YarnConfiguration extends Configuration {
   /** Prefix for all node manager configs.*/
   public static final String NM_PREFIX = "yarn.nodemanager.";
 
-  /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM. */
+  /**
+   * At the NM, the policy to determine whether to queue an
+   * <code>OPPORTUNISTIC</code> container or not.
+   * If set to <code>BY_QUEUE_LEN</code>, uses the queue capacity, as set by
+   * {@link YarnConfiguration#NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH},
+   * to limit how many containers to accept/queue.
+   * If set to <code>BY_RESOURCES</code>, limits the number of containers
+   * accepted based on the resource capacity of the node.
+   */
+  public static final String NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY =
+      NM_PREFIX + "opportunistic-containers-queue-policy";
+
+  /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM.
+   *  If set to 0, NM does not accept any <code>OPPORTUNISTIC</code> containers.
+   *  If set to {@literal > 0}, enforces the queue capacity. */
   public static final String NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
       NM_PREFIX + "opportunistic-containers-max-queue-length";
   public static final int DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
@@ -3188,6 +3216,12 @@ public class YarnConfiguration extends Configuration {
   public static final int
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETAIN_SECONDS_DEFAULT =
         7 * 24 * 60 * 60;
+
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RECOVERY_ENABLED =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "recovery-enabled";
+  public static final boolean
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RECOVERY_ENABLED_DEFAULT = true;
 
   // how old the most recent log of an UNKNOWN app needs to be in the active
   // directory before we treat it as COMPLETED

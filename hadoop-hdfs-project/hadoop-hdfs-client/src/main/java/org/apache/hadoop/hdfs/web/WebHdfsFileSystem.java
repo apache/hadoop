@@ -1458,7 +1458,9 @@ public class WebHdfsFileSystem extends FileSystem
         }.run();
   }
 
-  private SnapshotDiffReportListing getSnapshotDiffReportListing(
+  // This API should be treated as private to WebHdfsFileSystem. Only tests can use it directly.
+  @VisibleForTesting
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(
         String snapshotDir, final String fromSnapshot, final String toSnapshot,
         byte[] startPath, int index) throws IOException {
     return new FsPathResponseRunner<SnapshotDiffReportListing>(

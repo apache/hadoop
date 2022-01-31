@@ -18,9 +18,18 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -292,5 +301,170 @@ public class TestDataNodeReconfiguration {
 
     assertEquals("should not be able to get thread quota", false,
         dataNode.xserver.balanceThrottler.acquire());
+  }
+
+  @Test
+  public void testBlockReportIntervalReconfiguration()
+      throws ReconfigurationException {
+    int blockReportInterval = 300 * 1000;
+    String[] blockReportParameters = {
+        DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+        DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY,
+        DFS_BLOCKREPORT_INITIAL_DELAY_KEY};
+
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+      BlockPoolManager blockPoolManager = dn.getBlockPoolManager();
+
+      // Try invalid values.
+      for (String blockReportParameter : blockReportParameters) {
+        try {
+          dn.reconfigureProperty(blockReportParameter, "text");
+          fail("ReconfigurationException expected");
+        } catch (ReconfigurationException expected) {
+          assertTrue("expecting NumberFormatException",
+              expected.getCause() instanceof NumberFormatException);
+        }
+      }
+
+      try {
+        dn.reconfigureProperty(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, String.valueOf(-1));
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting IllegalArgumentException",
+            expected.getCause() instanceof IllegalArgumentException);
+      }
+      try {
+        dn.reconfigureProperty(DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY, String.valueOf(-1));
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting IllegalArgumentException",
+            expected.getCause() instanceof IllegalArgumentException);
+      }
+      dn.reconfigureProperty(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, String.valueOf(-1));
+      assertEquals(0, dn.getDnConf().initialBlockReportDelayMs);
+
+      // Change properties and verify the change.
+      dn.reconfigureProperty(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+          String.valueOf(blockReportInterval));
+      for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+        if (bpos != null) {
+          for (BPServiceActor actor : bpos.getBPServiceActors()) {
+            assertEquals(String.format("%s has wrong value",
+                DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+                blockReportInterval,
+                actor.getScheduler().getBlockReportIntervalMs());
+          }
+        }
+      }
+
+      dn.reconfigureProperty(DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY, String.valueOf(123));
+      assertEquals(123, dn.getDnConf().blockReportSplitThreshold);
+
+      dn.reconfigureProperty(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "123");
+      assertEquals(123000, dn.getDnConf().initialBlockReportDelayMs);
+
+      // Revert to default and verify default.
+      dn.reconfigureProperty(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, null);
+      for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+        if (bpos != null) {
+          for (BPServiceActor actor : bpos.getBPServiceActors()) {
+            assertEquals(String.format("%s has wrong value",
+                DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+                DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT,
+                actor.getScheduler().getBlockReportIntervalMs());
+          }
+        }
+      }
+      assertNull(String.format("expect %s is not configured", DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+          dn.getConf().get(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY));
+
+      dn.reconfigureProperty(DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY, null);
+      assertNull(String.format("expect %s is not configured", DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY),
+          dn.getConf().get(DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY));
+
+      dn.reconfigureProperty(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, null);
+      assertNull(String.format("expect %s is not configured", DFS_BLOCKREPORT_INITIAL_DELAY_KEY),
+          dn.getConf().get(DFS_BLOCKREPORT_INITIAL_DELAY_KEY));
+    }
+  }
+
+  @Test
+  public void testDataXceiverReconfiguration()
+      throws ReconfigurationException {
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Try invalid values.
+      try {
+        dn.reconfigureProperty(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, "text");
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting NumberFormatException",
+            expected.getCause() instanceof NumberFormatException);
+      }
+      try {
+        dn.reconfigureProperty(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, String.valueOf(-1));
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting IllegalArgumentException",
+            expected.getCause() instanceof IllegalArgumentException);
+      }
+
+      // Change properties and verify change.
+      dn.reconfigureProperty(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, String.valueOf(123));
+      assertEquals(String.format("%s has wrong value", DFS_DATANODE_MAX_RECEIVER_THREADS_KEY),
+          123, dn.getXferServer().getMaxXceiverCount());
+
+      // Revert to default.
+      dn.reconfigureProperty(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, null);
+      assertEquals(String.format("%s has wrong value", DFS_DATANODE_MAX_RECEIVER_THREADS_KEY),
+          DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT, dn.getXferServer().getMaxXceiverCount());
+
+      assertNull(String.format("expect %s is not configured",
+          DFS_DATANODE_MAX_RECEIVER_THREADS_KEY),
+          dn.getConf().get(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY));
+    }
+  }
+
+  @Test
+  public void testCacheReportReconfiguration()
+      throws ReconfigurationException {
+    int cacheReportInterval = 300 * 1000;
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Try invalid values.
+      try {
+        dn.reconfigureProperty(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, "text");
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting NumberFormatException",
+            expected.getCause() instanceof NumberFormatException);
+      }
+      try {
+        dn.reconfigureProperty(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, String.valueOf(-1));
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting IllegalArgumentException",
+            expected.getCause() instanceof IllegalArgumentException);
+      }
+
+      // Change properties.
+      dn.reconfigureProperty(DFS_CACHEREPORT_INTERVAL_MSEC_KEY,
+          String.valueOf(cacheReportInterval));
+
+      // Verify change.
+      assertEquals(String.format("%s has wrong value", DFS_CACHEREPORT_INTERVAL_MSEC_KEY),
+          cacheReportInterval, dn.getDnConf().getCacheReportInterval());
+
+      // Revert to default.
+      dn.reconfigureProperty(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, null);
+      assertEquals(String.format("%s has wrong value", DFS_CACHEREPORT_INTERVAL_MSEC_KEY),
+          DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT, dn.getDnConf().getCacheReportInterval());
+
+      assertNull(String.format("expect %s is not configured", DFS_CACHEREPORT_INTERVAL_MSEC_KEY),
+          dn.getConf().get(DFS_CACHEREPORT_INTERVAL_MSEC_KEY));
+    }
   }
 }

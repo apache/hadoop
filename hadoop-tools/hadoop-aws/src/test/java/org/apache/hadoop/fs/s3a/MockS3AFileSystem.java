@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
 
@@ -212,8 +211,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void finishedWrite(String key, long length, String eTag, String versionId,
-          BulkOperationState operationState) {
+  void finishedWrite(String key, long length, String eTag, String versionId) {
 
   }
 
@@ -339,8 +337,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
   @Override
   void deleteObjectAtPath(Path f,
       String key,
-      boolean isFile,
-      final BulkOperationState operationState)
+      boolean isFile)
       throws AmazonClientException, IOException {
     deleteObject(key);
   }

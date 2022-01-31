@@ -31,8 +31,8 @@ import org.apache.hadoop.fs.s3a.auth.RoleModel;
  * The permissions requested are from the perspective of
  * S3A filesystem operations on the data, <i>not</i> the simpler
  * model of "permissions on the the remote service".
- * As an example, to use S3Guard effectively, the client needs full CRUD
- * access to the table, even for {@link AccessLevel#READ}.
+ * As an example, AWS-KMS encryption permissions must
+ * also be requested.
  */
 public interface AWSPolicyProvider {
 

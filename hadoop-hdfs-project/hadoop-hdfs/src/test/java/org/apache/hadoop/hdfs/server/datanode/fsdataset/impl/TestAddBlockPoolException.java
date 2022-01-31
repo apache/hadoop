@@ -34,7 +34,7 @@ import org.junit.Test;
 public class TestAddBlockPoolException {
 
   @Test
-  public void testHasExeceptionsReturnsCorrectValue() {
+  public void testHasExceptionsReturnsCorrectValue() {
     AddBlockPoolException e = new AddBlockPoolException();
     assertFalse(e.hasExceptions());
 

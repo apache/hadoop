@@ -20,9 +20,14 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -30,6 +35,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class TestNameNodeRpcServerMethods {
   private static NamenodeProtocols nnRpc;
@@ -83,4 +90,27 @@ public class TestNameNodeRpcServerMethods {
 
   }
 
+  @Test
+  public void testGetDatanodeStorageReportWithNumBLocksNotZero() throws Exception {
+    int buffSize = 1024;
+    long blockSize = 1024 * 1024;
+    String file = "/testFile";
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    FSDataOutputStream outputStream = dfs.create(
+        new Path(file), true, buffSize, (short)1, blockSize);
+    byte[] outBuffer = new byte[buffSize];
+    for (int i = 0; i < buffSize; i++) {
+      outBuffer[i] = (byte) (i & 0x00ff);
+    }
+    outputStream.write(outBuffer);
+    outputStream.close();
+
+    int numBlocks = 0;
+    DatanodeStorageReport[] reports
+        = nnRpc.getDatanodeStorageReport(HdfsConstants.DatanodeReportType.ALL);
+    for (DatanodeStorageReport r : reports) {
+      numBlocks += r.getDatanodeInfo().getNumBlocks();
+    }
+    assertEquals(1, numBlocks);
+  }
 }

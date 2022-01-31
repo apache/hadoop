@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.time.Duration;
 
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
-import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentationImpl;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -49,9 +47,6 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTr
  */
 public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
-  public static final MetastoreInstrumentation
-      METASTORE_INSTRUMENTATION = new MetastoreInstrumentationImpl();
-
   public static final S3AInputStreamStatistics
       EMPTY_INPUT_STREAM_STATISTICS = new EmptyInputStreamStatistics();
 
@@ -68,11 +63,6 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
   public static final StatisticsFromAwsSdk
       EMPTY_STATISTICS_FROM_AWS_SDK = new EmptyStatisticsFromAwsSdk();
-
-  @Override
-  public MetastoreInstrumentation getS3GuardInstrumentation() {
-    return METASTORE_INSTRUMENTATION;
-  }
 
   @Override
   public S3AInputStreamStatistics newInputStreamStatistics() {

@@ -40,7 +40,7 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -111,7 +111,7 @@ public class TestMRAppWithCombiner {
     conf.setCombinerClass(MyCombinerToCheckReporter.class);
     //conf.setJarByClass(MyCombinerToCheckReporter.class);
     conf.setReducerClass(IdentityReducer.class);
-    DistributedCache.addFileToClassPath(TestMRJobs.APP_JAR, conf);
+    Job.addFileToClassPath(TestMRJobs.APP_JAR, conf, TestMRJobs.APP_JAR.getFileSystem(conf));
     conf.setOutputCommitter(CustomOutputCommitter.class);
     conf.setInputFormat(TextInputFormat.class);
     conf.setOutputKeyClass(LongWritable.class);

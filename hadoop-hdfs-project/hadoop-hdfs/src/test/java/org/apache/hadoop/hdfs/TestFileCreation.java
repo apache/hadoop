@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
@@ -1356,6 +1357,8 @@ public class TestFileCreation {
       assertBlocks(bm, oldBlocks, true);
       
       out = dfs.create(filePath, true);
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+          cluster.getNamesystem(0).getBlockManager());
       byte[] newData = AppendTestUtil.randomBytes(seed, fileSize);
       try {
         out.write(newData);
@@ -1363,6 +1366,8 @@ public class TestFileCreation {
         out.close();
       }
       dfs.deleteOnExit(filePath);
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+          cluster.getNamesystem(0).getBlockManager());
       
       LocatedBlocks newBlocks = NameNodeAdapter.getBlockLocations(
           nn, file, 0, fileSize);

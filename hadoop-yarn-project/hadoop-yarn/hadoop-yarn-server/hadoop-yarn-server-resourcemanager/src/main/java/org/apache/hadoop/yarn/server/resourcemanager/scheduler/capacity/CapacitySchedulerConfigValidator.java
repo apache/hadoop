@@ -42,6 +42,7 @@ public final class CapacitySchedulerConfigValidator {
   public static boolean validateCSConfiguration(
           final Configuration oldConf, final Configuration newConf,
           final RMContext rmContext) throws IOException {
+    CapacityScheduler liveScheduler = (CapacityScheduler) rmContext.getScheduler();
     CapacityScheduler newCs = new CapacityScheduler();
     try {
       //TODO: extract all the validation steps and replace reinitialize with
@@ -49,6 +50,7 @@ public final class CapacitySchedulerConfigValidator {
       newCs.setConf(oldConf);
       newCs.setRMContext(rmContext);
       newCs.init(oldConf);
+      newCs.addNodes(liveScheduler.getAllNodes());
       newCs.reinitialize(newConf, rmContext, true);
       return true;
     } finally {
@@ -184,7 +186,7 @@ public final class CapacitySchedulerConfigValidator {
                 + " is set to true");
       }
 
-      if (newQueue instanceof LeafQueue) {
+      if (newQueue instanceof AbstractLeafQueue) {
         LOG.info("Converting the parent queue: {} to leaf queue.", oldQueue.getQueuePath());
       }
     }
@@ -192,7 +194,7 @@ public final class CapacitySchedulerConfigValidator {
 
   private static void validateLeafQueueConversion(CSQueue oldQueue,
                                                   CSQueue newQueue) throws IOException {
-    if (oldQueue instanceof LeafQueue && newQueue instanceof ParentQueue) {
+    if (oldQueue instanceof AbstractLeafQueue && newQueue instanceof ParentQueue) {
       if (isEitherQueueStopped(oldQueue.getState(), newQueue.getState())) {
         LOG.info("Converting the leaf queue: {} to parent queue.", oldQueue.getQueuePath());
       } else {
