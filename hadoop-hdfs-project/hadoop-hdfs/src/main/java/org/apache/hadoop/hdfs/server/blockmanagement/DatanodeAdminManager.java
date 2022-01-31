@@ -21,17 +21,19 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.AbstractList;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -95,6 +97,14 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class DatanodeAdminManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(DatanodeAdminManager.class);
+
+  /**
+   * Sort by lastUpdate time descending order, such that unhealthy
+   * nodes are de-prioritized given they cannot be decommissioned.
+   */
+  static final Comparator<DatanodeDescriptor> PENDING_NODES_QUEUE_COMPARATOR =
+      (dn1, dn2) -> Long.compare(dn2.getLastUpdate(), dn1.getLastUpdate());
+
   private final Namesystem namesystem;
   private final BlockManager blockManager;
   private final HeartbeatManager hbManager;
@@ -127,7 +137,7 @@ public class DatanodeAdminManager {
    * limit the impact on NN memory consumption, we limit the number of nodes in
    * outOfServiceNodeBlocks. Additional nodes wait in pendingNodes.
    */
-  private final Queue<DatanodeDescriptor> pendingNodes;
+  private final PriorityQueue<DatanodeDescriptor> pendingNodes;
   private Monitor monitor = null;
 
   DatanodeAdminManager(final Namesystem namesystem,
@@ -140,7 +150,7 @@ public class DatanodeAdminManager {
         new ThreadFactoryBuilder().setNameFormat("DatanodeAdminMonitor-%d")
             .setDaemon(true).build());
     outOfServiceNodeBlocks = new TreeMap<>();
-    pendingNodes = new ArrayDeque<>();
+    pendingNodes = new PriorityQueue<>(PENDING_NODES_QUEUE_COMPARATOR);
   }
 
   /**
@@ -520,7 +530,7 @@ public class DatanodeAdminManager {
     }
 
     /**
-     * Pop datanodes off the pending list and into decomNodeBlocks,
+     * Pop datanodes off the pending priority queue and into decomNodeBlocks,
      * subject to the maxConcurrentTrackedNodes limit.
      */
     private void processPendingNodes() {
@@ -536,6 +546,7 @@ public class DatanodeAdminManager {
           it = new CyclicIteration<>(outOfServiceNodeBlocks,
               iterkey).iterator();
       final List<DatanodeDescriptor> toRemove = new ArrayList<>();
+      final List<DatanodeDescriptor> unhealthyDns = new ArrayList<>();
 
       while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
           .isRunning()) {
@@ -572,6 +583,10 @@ public class DatanodeAdminManager {
             LOG.debug("Processing {} node {}", dn.getAdminState(), dn);
             pruneReliableBlocks(dn, blocks);
           }
+          final boolean isHealthy = blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
+          if (!isHealthy) {
+            unhealthyDns.add(dn);
+          }
           if (blocks.size() == 0) {
             if (!fullScan) {
               // If we didn't just do a full scan, need to re-check with the
@@ -587,8 +602,6 @@ public class DatanodeAdminManager {
             }
             // If the full scan is clean AND the node liveness is okay,
             // we can finally mark as DECOMMISSIONED or IN_MAINTENANCE.
-            final boolean isHealthy =
-                blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
             if (blocks.size() == 0 && isHealthy) {
               if (dn.isDecommissionInProgress()) {
                 setDecommissioned(dn);
@@ -627,6 +640,25 @@ public class DatanodeAdminManager {
           iterkey = dn;
         }
       }
+
+      // Having more nodes decommissioning than can be tracked will impact decommissioning
+      // performance due to queueing delay
+      int numTrackedNodes = outOfServiceNodeBlocks.size() - toRemove.size();
+      int numQueuedNodes = getPendingNodes().size();
+      int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
+      if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+        LOG.warn(
+            "{} nodes are decommissioning but only {} nodes will be tracked at a time. "
+                + "{} nodes are currently queued waiting to be decommissioned.",
+            numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
+
+        // Re-queue unhealthy nodes to make space for decommissioning healthy nodes
+        getUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dNode -> {
+          pendingNodes.add(dNode);
+          outOfServiceNodeBlocks.remove(dNode);
+        });
+      }
+
       // Remove the datanodes that are DECOMMISSIONED or in service after
       // maintenance expiration.
       for (DatanodeDescriptor dn : toRemove) {
@@ -793,6 +825,36 @@ public class DatanodeAdminManager {
       datanode.getLeavingServiceStatus().set(lowRedundancyBlocksInOpenFiles,
           lowRedundancyOpenFiles, lowRedundancyBlocks,
           outOfServiceOnlyReplicas);
+    }
+
+    /**
+     * If node "is dead while in Decommission In Progress", it cannot be decommissioned
+     * until it becomes healthy again. If there are more pendingNodes than can be tracked
+     * & some unhealthy tracked nodes, then re-queue the unhealthy tracked nodes
+     * to avoid blocking decommissioning of healthy nodes.
+     *
+     * @param unhealthyDns The unhealthy datanodes which may be re-queued
+     * @param numDecommissioningNodes The total number of nodes being decommissioned
+     * @return Stream of unhealthy nodes to be re-queued
+     */
+    private Stream<DatanodeDescriptor> getUnhealthyNodesToRequeue(
+        final List<DatanodeDescriptor> unhealthyDns, int numDecommissioningNodes) {
+      if (!unhealthyDns.isEmpty()) {
+        // Compute the number of unhealthy nodes to re-queue
+        final int numUnhealthyNodesToRequeue =
+            Math.min(numDecommissioningNodes - maxConcurrentTrackedNodes, unhealthyDns.size());
+
+        LOG.warn("{} limit has been reached, re-queueing {} "
+                + "nodes which are dead while in Decommission In Progress.",
+            DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,
+            numUnhealthyNodesToRequeue);
+
+        // Order unhealthy nodes by lastUpdate descending such that nodes
+        // which have been unhealthy the longest are preferred to be re-queued
+        return unhealthyDns.stream().sorted(PENDING_NODES_QUEUE_COMPARATOR.reversed())
+            .limit(numUnhealthyNodesToRequeue);
+      }
+      return Stream.empty();
     }
   }
 
