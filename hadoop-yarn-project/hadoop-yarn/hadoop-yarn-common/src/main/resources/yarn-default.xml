@@ -3607,6 +3607,19 @@
 
   <property>
     <description>
+      The comma separated list of class names that implement the
+      RequestInterceptor interface. This is used by the
+      RouterStateStoreProxyWebServices
+      to create the request processing pipeline for users.
+    </description>
+    <name>yarn.router.ssproxy.interceptor-class.pipeline</name>
+    <value>
+      org.apache.hadoop.yarn.server.router.ssproxy.StateStoreProxyDefaultInterceptor
+    </value>
+  </property>
+
+  <property>
+    <description>
       Comma-separated list of PlacementRules to determine how applications
       submitted by certain users get mapped to certain queues. Default is
       user-group, which corresponds to UserGroupMappingPlacementRule.
