@@ -80,7 +80,7 @@ and for background refreshes, a different credential provider must be
 created, one which uses long-lived credentials (secret keys, environment variables).
 Short lived credentials (e.g other session tokens, EC2 instance credentials) cannot be used.
 
-A list of providers can be set in `s.s3a.assumed.role.credentials.provider`;
+A list of providers can be set in `fs.s3a.assumed.role.credentials.provider`;
 if unset the standard `BasicAWSCredentialsProvider` credential provider is used,
 which uses `fs.s3a.access.key` and `fs.s3a.secret.key`.
 
