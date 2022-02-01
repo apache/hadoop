@@ -625,30 +625,23 @@ public class TestIPC {
   @Test(timeout=60000)
   public void testIOEOnListenerAccept() throws Exception {
     // start server
-    Server server = new TestServer(1, false,
-            LongWritable.class, LongWritable.class) {
+    Server server = new TestServer(1, true) {
       @Override
       protected void configureSocketChannel(SocketChannel channel) throws IOException {
         maybeThrowIOE();
         super.configureSocketChannel(channel);
       }
     };
-    InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();
 
     // start client
     WRITABLE_FAULTS_ENABLED = true;
     Client client = new Client(LongWritable.class, conf);
     try {
-      LongWritable param = LongWritable.class.newInstance();
-
       try {
-        call(client, param, addr, 0, conf);
+        call(client, RANDOM.nextLong(), NetUtils.getConnectAddress(server), conf);
         fail("Expected an exception to have been thrown");
       } catch (EOFException e) {
-        LOG.info("Got expected exception", e);
-      } catch (IOException e) {
-        Assert.assertTrue(e.getMessage().contains("java.io.IOException: Connection reset by peer"));
         LOG.info("Got expected exception", e);
       } catch (Throwable t) {
         LOG.warn("Got unexpected error", t);
@@ -659,7 +652,7 @@ public class TestIPC {
       // ie the internal state of the client or server should not be broken
       // by the failed call
       WRITABLE_FAULTS_ENABLED = false;
-      call(client, param, addr, 0, conf);
+      call(client, RANDOM.nextLong(), NetUtils.getConnectAddress(server), conf);
 
     } finally {
       client.stop();
