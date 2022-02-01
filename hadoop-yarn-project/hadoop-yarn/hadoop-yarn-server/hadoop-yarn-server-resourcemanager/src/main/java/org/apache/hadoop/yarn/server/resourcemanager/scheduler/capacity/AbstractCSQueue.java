@@ -76,9 +76,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForLegacyAutoCreatedLeafQueue;
 
 /**
  * Provides implementation of {@code CSQueue} methods common for every queue class in Capacity
@@ -348,6 +345,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
         setDynamicQueueProperties();
+        setDynamicQueueACLProperties();
       }
 
       // Collect and set the Node label configuration
@@ -426,24 +424,10 @@ public abstract class AbstractCSQueue implements CSQueue {
             .getConfiguredNodeLabelsForAllQueues()
             .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
       }
-
-      AutoCreatedQueueTemplate aqc = new AutoCreatedQueueTemplate(
-          queueContext.getConfiguration(),
-          parent.getQueuePathObject());
-
-      if (this instanceof ParentQueue) {
-        acls.putAll(getACLsForFlexibleAutoCreatedParentQueue(aqc));
-      }
-
-      if (this instanceof AbstractLeafQueue) {
-        if (parent instanceof AbstractManagedParentQueue) {
-          acls.putAll(getACLsForLegacyAutoCreatedLeafQueue(
-              queueContext.getConfiguration(), parent.getQueuePath()));
-        } else {
-          acls.putAll(getACLsForFlexibleAutoCreatedLeafQueue(aqc));
-        }
-      }
     }
+  }
+
+  protected void setDynamicQueueACLProperties() {
   }
 
   private UserWeights getUserWeightsFromHierarchy() {
