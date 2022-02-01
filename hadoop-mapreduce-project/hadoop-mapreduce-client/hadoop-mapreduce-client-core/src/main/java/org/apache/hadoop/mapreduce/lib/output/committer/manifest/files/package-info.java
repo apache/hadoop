@@ -33,7 +33,9 @@
  * the _SUCCESS file is one which tests may use.
  *
  */
+@InterfaceAudience.Public
 @InterfaceStability.Unstable
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.files;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

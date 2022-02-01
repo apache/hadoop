@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
-import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConfig;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_JOB_ID;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CONTEXT_ATTR_STAGE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CONTEXT_ATTR_TASK_ATTEMPT_ID;
@@ -43,7 +43,7 @@ public final class AuditingIntegration {
   public static void updateCommonContextOnCommitterEntry(
       ManifestCommitterConfig committerConfig) {
     CommonAuditContext context = currentAuditContext();
-    context.put(AuditConstants.PARAM_JOB_ID,
+    context.put(PARAM_JOB_ID,
         committerConfig.getJobUniqueId());
     // maybe the task attempt ID.
     if (!committerConfig.getTaskAttemptId().isEmpty()) {
@@ -69,6 +69,17 @@ public final class AuditingIntegration {
     currentAuditContext().remove(CONTEXT_ATTR_STAGE);
   }
 
+
+  /**
+   * Remove commit info at the end of the task or job.
+   */
+  public static void updateCommonContextOnCommitterExit() {
+    currentAuditContext().remove(PARAM_JOB_ID);
+    currentAuditContext().remove(CONTEXT_ATTR_TASK_ATTEMPT_ID);
+  }
+
+
+
   /**
    * Update the thread context with the stage name and
    * job ID.
@@ -79,7 +90,7 @@ public final class AuditingIntegration {
    */
   public static void enterStageWorker(String jobId, String stage) {
     CommonAuditContext context = currentAuditContext();
-    context.put(AuditConstants.PARAM_JOB_ID, jobId);
+    context.put(PARAM_JOB_ID, jobId);
     context.put(CONTEXT_ATTR_STAGE, stage);
   }
 }

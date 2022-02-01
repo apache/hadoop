@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
@@ -280,9 +279,9 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
   }
 
   @Override
-  public IOStatisticsSource save(FileSystem fs, Path path, boolean overwrite)
+  public void save(FileSystem fs, Path path, boolean overwrite)
       throws IOException {
-    return serializer().saveWithStatistics(fs, path, this, overwrite);
+    serializer().save(fs, path, this, overwrite);
   }
 
   /**
@@ -331,11 +330,10 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * @return the loaded instance
    * @throws IOException IO failure/the data is invalid
    */
-  public static JsonSerialization.JsonWithIOStatistics<TaskManifest> load(
-      FileSystem fs, Path path)
+  public static TaskManifest load(FileSystem fs, Path path)
       throws IOException {
     LOG.debug("Reading Manifest in file {}", path);
-    return load(serializer(), fs, path, null);
+    return serializer().load(fs, path).validate();
   }
 
   /**
@@ -349,17 +347,15 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * @return the loaded instance
    * @throws IOException IO failure/the data is invalid
    */
-  public static JsonSerialization.JsonWithIOStatistics<TaskManifest> load(
+  public static TaskManifest load(
       JsonSerialization<TaskManifest> serializer,
       FileSystem fs,
       Path path,
       FileStatus status)
       throws IOException {
     LOG.debug("Reading Manifest in file {}", path);
-    final JsonSerialization.JsonWithIOStatistics<TaskManifest> loaded =
-        serializer.loadWithStatistics(fs, path, status);
-    loaded.getJson().validate();
-    return loaded;
+    return serializer.load(fs, path, status)
+        .validate();
   }
 
 }

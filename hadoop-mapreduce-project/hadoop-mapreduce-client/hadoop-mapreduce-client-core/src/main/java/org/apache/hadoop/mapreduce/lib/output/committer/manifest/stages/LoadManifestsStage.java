@@ -89,7 +89,8 @@ public class LoadManifestsStage extends
         getName(),
         manifestDir);
     pruneManifests = prune;
-    // build a list of all manifests in the JA directory.
+    // build a list of all task manifests successfully committed
+    //
     msync(manifestDir);
     final RemoteIterator<FileStatus> manifestFiles = listManifests();
 
@@ -163,7 +164,7 @@ public class LoadManifestsStage extends
           "Not a valid manifest file; file status = " + status);
     }
     // load the manifest, which includes validation.
-    final TaskManifest manifest = loadManifest(status).getJson();
+    final TaskManifest manifest = loadManifest(status);
     final String id = manifest.getTaskAttemptID();
     final int filecount = manifest.getFilesToCommit().size();
     final long size = manifest.getTotalFileSize();

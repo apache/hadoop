@@ -473,9 +473,19 @@ public class AzureBlobFileSystem extends FileSystem
   /**
    * Private method to create resilient commit support.
    * @return a new instance
+   * @param path destination path
+   * @throws IOException problem probing store capabilities
+   * @throws UnsupportedOperationException if the store lacks this support
    */
   @InterfaceAudience.Private
-  public ResilientCommitByRename createResilientCommitSupport() {
+  public ResilientCommitByRename createResilientCommitSupport(final Path path)
+      throws IOException {
+
+    if (!hasPathCapability(path,
+        CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME)) {
+      throw new UnsupportedOperationException(
+          "Resilient commit support not available for " + path);
+    }
     return new ResilientCommitByRenameImpl();
   }
 
@@ -501,12 +511,6 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
           listener);
-
-      // reject non-HNS operations for simplicity
-      if (!abfsStore.getIsNamespaceEnabled(tracingContext)) {
-        throw new UnsupportedOperationException("renameFileWithEtag() "
-            + "not available for " + qualifiedSrcPath.toString());
-      }
 
       if (qualifiedSrcPath.equals(qualifiedDstPath)) {
         // rename to itself is forbidden
@@ -1603,9 +1607,9 @@ public class AzureBlobFileSystem extends FileSystem
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.ETAGS_AVAILABLE:
-    case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:
       return true;
 
+    case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:
     case CommonPathCapabilities.FS_ACLS:
       return getIsNamespaceEnabled(
           new TracingContext(clientCorrelationId, fileSystemId,

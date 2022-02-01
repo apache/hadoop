@@ -20,6 +20,9 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -37,6 +40,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 
 public class CommitTaskStage extends
     AbstractJobCommitStage<Void, CommitTaskStage.Result> {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      CommitTaskStage.class);
 
   public CommitTaskStage(final StageConfig stageConfig) {
     super(true, stageConfig, OP_STAGE_TASK_COMMIT, false);
@@ -53,6 +58,7 @@ public class CommitTaskStage extends
   @Override
   protected CommitTaskStage.Result executeStage(final Void arguments)
       throws IOException {
+    LOG.info("{}: Committing task \"{}\"", getName(), getTaskAttemptId());
 
     // execute the scan
     final TaskAttemptScanDirectoryStage scanStage =

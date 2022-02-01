@@ -24,7 +24,6 @@ import java.util.NoSuchElementException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
@@ -37,9 +36,6 @@ import org.apache.hadoop.util.JsonSerialization;
  * name, the etag is preserved.
  */
 public class StubStoreOperations extends StoreOperations {
-
-  private static final StubIOStatisticsSource
-      STUB_IO_STATISTICS_SOURCE = new StubIOStatisticsSource();
 
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {
@@ -70,23 +66,17 @@ public class StubStoreOperations extends StoreOperations {
   }
 
   @Override
-  public JsonSerialization.JsonWithIOStatistics<TaskManifest> loadTaskManifest(JsonSerialization<TaskManifest> serializer,
+  public TaskManifest loadTaskManifest(JsonSerialization<TaskManifest> serializer,
       final FileStatus st) throws IOException {
-    return new JsonSerialization.JsonWithIOStatistics<>(new TaskManifest(),
-        STUB_IO_STATISTICS_SOURCE);
+    return new TaskManifest();
   }
 
   @Override
-  public <T extends AbstractManifestData<T>> IOStatisticsSource save(T manifestData,
+  public <T extends AbstractManifestData<T>> void save(T manifestData,
       final Path path,
       final boolean overwrite) throws IOException {
 
-    return STUB_IO_STATISTICS_SOURCE;
   }
-
-  private static class StubIOStatisticsSource implements IOStatisticsSource {
-  }
-
 
   @Override
   public boolean isTrashEnabled(Path path) {

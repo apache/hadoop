@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.RemoteIterator;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromIterable;
 
 /**
@@ -48,14 +51,26 @@ import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFr
  * at some point in its history.
  * A key difference with this class is that the itertor is always,
  * internally, an {@link RemoteIterator}.
- * This is to allow tasks to be scheduled while directory listngs are still
- * paging in results.
+ * This is to allow tasks to be scheduled while incremental operations
+ * such as paged directory listngs are still collecting in results.
+ *
+ * While awiting completion, this thread spins and sleeps a time of
+ * {@link #SLEEP_INTERVAL_AWAITING_COMPLETION}, which, being a
+ * busy-wait, is inefficient.
+ * There's an implicit assumption that remote IO is being performed, and
+ * so this is not impacting throughput/performance.
+ *
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class TaskPool {
   private static final Logger LOG =
       LoggerFactory.getLogger(TaskPool.class);
+
+  /**
+   * Interval in milliseconds to await completion.
+   */
+  private static final int SLEEP_INTERVAL_AWAITING_COMPLETION = 10;
 
   private TaskPool() {
   }
@@ -101,14 +116,16 @@ public final class TaskPool {
     private boolean stopRevertsOnFailure = false;
     private Task<I, ?> abortTask = null;
     private boolean stopAbortsOnFailure = false;
+    private int sleepInterval = SLEEP_INTERVAL_AWAITING_COMPLETION;
 
     /**
      * Create the builder.
      * @param items items to process
      */
     Builder(RemoteIterator<I> items) {
-      this.items = items;
+      this.items = requireNonNull(items, "items");
     }
+
     /**
      * Create the builder.
      * @param items items to process
@@ -123,11 +140,17 @@ public final class TaskPool {
      * @param submitter service to schedule tasks with.
      * @return this builder.
      */
-    public Builder<I> executeWith(Submitter submitter) {
+    public Builder<I> executeWith(@Nullable Submitter submitter) {
+
       this.service = submitter;
       return this;
     }
 
+    /**
+     * Task to invoke on failure.
+     * @param task task
+     * @return the builder
+     */
     public Builder<I> onFailure(FailureTask<I, ?> task) {
       this.onFailure = task;
       return this;
@@ -147,34 +170,86 @@ public final class TaskPool {
       return this;
     }
 
+    /**
+     * Task to revert with after another task failed.
+     * @param task task to execute
+     * @return the builder
+     */
     public Builder<I> revertWith(Task<I, ?> task) {
       this.revertTask = task;
       return this;
     }
 
+    /**
+     * Stop trying to revert if one operation fails.
+     * @return the builder
+     */
     public Builder<I> stopRevertsOnFailure() {
       this.stopRevertsOnFailure = true;
       return this;
     }
 
+    /**
+     * Task to abort with after another task failed.
+     * @param task task to execute
+     * @return the builder
+     */
     public Builder<I> abortWith(Task<I, ?> task) {
       this.abortTask = task;
       return this;
     }
 
+    /**
+     * Stop trying to abort if one operation fails.
+     * @return the builder
+     */
     public Builder<I> stopAbortsOnFailure() {
       this.stopAbortsOnFailure = true;
       return this;
     }
 
+    /**
+     * Set the sleep interval.
+     * @param value new value
+     * @return the builder
+     */
+    public Builder sleepInterval(final int value) {
+      sleepInterval = value;
+      return this;
+    }
+
+    /**
+     * Execute the task across the data.
+     * @param task task to execute
+     * @param <E> exception which may be raised in execution.
+     * @return true if the operation executed successfully
+     * @throws E any exception raised.
+     * @throws IOException IOExceptions raised by remote iterator or in execution.
+     */
     public <E extends Exception> boolean run(Task<I, E> task) throws E, IOException {
+      requireNonNull(items, "items");
+      if (!items.hasNext()) {
+        // if there are no items, return without worrying about
+        // execution pools, errors etc.
+        return true;
+      }
       if (service != null) {
+        // thread pool, so run in parallel
         return runParallel(task);
       } else {
+        // single threaded execution.
         return runSingleThreaded(task);
       }
     }
 
+    /**
+     * Single threaded execution.
+     * @param task task to execute
+     * @param <E> exception which may be raised in execution.
+     * @return true if the operation executed successfully
+     * @throws E any exception raised.
+     * @throws IOException IOExceptions raised by remote iterator or in execution.
+     */
     private <E extends Exception> boolean runSingleThreaded(Task<I, E> task)
         throws E, IOException {
       List<I> succeeded = new ArrayList<>();
@@ -255,9 +330,17 @@ public final class TaskPool {
         TaskPool.<E>throwOne(exceptions);
       }
 
-      return !threw && exceptions.isEmpty();
+      return exceptions.isEmpty();
     }
 
+    /**
+     * Parallel execution.
+     * @param task task to execute
+     * @param <E> exception which may be raised in execution.
+     * @return true if the operation executed successfully
+     * @throws E any exception raised.
+     * @throws IOException IOExceptions raised by remote iterator or in execution.
+     */
     private <E extends Exception> boolean runParallel(final Task<I, E> task)
         throws E, IOException {
       final Queue<I> succeeded = new ConcurrentLinkedQueue<>();
@@ -337,7 +420,7 @@ public final class TaskPool {
       }
 
       // let the above tasks complete (or abort)
-      waitFor(futures);
+      waitFor(futures, sleepInterval);
       int futureCount = futures.size();
       futures.clear();
 
@@ -367,7 +450,7 @@ public final class TaskPool {
         }
 
         // let the revert tasks complete
-        waitFor(futures);
+        waitFor(futures, sleepInterval);
       }
 
       if (!suppressExceptions) {
@@ -391,8 +474,9 @@ public final class TaskPool {
    * Wait for all the futures to complete; there's a small sleep between
    * each iteration; enough to yield the CPU.
    * @param futures futures.
+   * @param sleepInterval Interval in milliseconds to await completion.
    */
-  private static void waitFor(Collection<Future<?>> futures) {
+  private static void waitFor(Collection<Future<?>> futures, int sleepInterval) {
     int size = futures.size();
     LOG.debug("Waiting for {} tasks to complete", size);
     int oldNumFinished = 0;
@@ -409,7 +493,7 @@ public final class TaskPool {
         break;
       } else {
         try {
-          Thread.sleep(10);
+          Thread.sleep(sleepInterval);
         } catch (InterruptedException e) {
           futures.forEach(future -> future.cancel(true));
           Thread.currentThread().interrupt();
@@ -426,7 +510,7 @@ public final class TaskPool {
    * @return builder.
    */
   public static <I> Builder<I> foreach(Iterable<I> items) {
-    return new Builder<>(items);
+    return new Builder<>(requireNonNull(items, "items"));
   }
 
   /**
@@ -440,10 +524,17 @@ public final class TaskPool {
   }
 
   public static <I> Builder<I> foreach(I[] items) {
-    return new Builder<>(Arrays.asList(items));
+    return new Builder<>(Arrays.asList(requireNonNull(items, "items")));
   }
 
-  @SuppressWarnings("unchecked")
+  /**
+   * Throw one exception, adding the others as suppressed
+   * exceptions attached to the one thrown.
+   * This method never completes normally.
+   * @param exceptions collection of exceptions
+   * @param <E> class of exceptions
+   * @throws E an extracted exception.
+   */
   private static <E extends Exception> void throwOne(
       Collection<Exception> exceptions)
       throws E {
@@ -461,6 +552,13 @@ public final class TaskPool {
     TaskPool.<E>castAndThrow(e);
   }
 
+  /**
+   * Raise an exception of the declared type.
+   * This method never completes normally.
+   * @param e exception
+   * @param <E> class of exceptions
+   * @throws E a recast exception.
+   */
   @SuppressWarnings("unchecked")
   private static <E extends Exception> void castAndThrow(Exception e) throws E {
     if (e instanceof RuntimeException) {

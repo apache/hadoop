@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 import org.apache.hadoop.util.JsonSerialization;
 
@@ -49,8 +48,17 @@ import org.apache.hadoop.util.JsonSerialization;
  * This makes it easier for tests in downstream modules to
  * be able to parse the success files from any of the committers.
  *
- * All the Java serialization data is different -compatibility
- * at the JSON level is all that matters.
+ * This should be considered public; it is based on the S3A
+ * format, which has proven stable over time.
+ *
+ * The JSON format SHOULD be considered public and evolving
+ * with compatibility across versions.
+ *
+ * All the Java serialization data is different and may change
+ * across versions with no stability guarantees other than
+ * "manifest summaries MAY be serialized between processes with
+ * the exact same version of this binary on their classpaths."
+ * That is sufficient for testing in Spark.
  *
  * To aid with Java serialization, the maps and lists are
  * exclusively those which serialize well.
@@ -58,8 +66,6 @@ import org.apache.hadoop.util.JsonSerialization;
  * there; this class doesn't worry about concurrent access
  * so is simpler.
  *
- * Versioning:
- *  t
  */
 @SuppressWarnings({"unused", "CollectionDeclaredAsConcreteClass"})
 @InterfaceAudience.Public
@@ -192,11 +198,11 @@ public class ManifestSuccessData
   }
 
   @Override
-  public IOStatisticsSource save(FileSystem fs, Path path, boolean overwrite)
+  public void save(FileSystem fs, Path path, boolean overwrite)
       throws IOException {
     // always set the name field before being saved.
     name = NAME;
-    return serializer().saveWithStatistics(fs, path, this, overwrite);
+    serializer().save(fs, path, this, overwrite);
   }
 
   @Override

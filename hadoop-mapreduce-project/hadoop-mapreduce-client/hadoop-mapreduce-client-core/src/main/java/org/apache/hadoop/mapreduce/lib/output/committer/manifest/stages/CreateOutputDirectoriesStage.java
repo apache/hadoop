@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -37,19 +38,21 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManif
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.measureDurationOfInvocation;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_DIRECTORIES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MKDIRS_RETURNED_FALSE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_PREPARE_DIR_ANCESTORS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CREATE_TARGET_DIRS;
+import static org.apache.hadoop.util.OperationDuration.humanTime;
 
 /**
  * Prepare the destination directory tree, by making as few IO calls as
  * possible -and doing those IO operations in the thread pool.
  *
- * This is fairly complex as tries to emulate the classic FileOutputCommitter's
- * handling of files and dirs during its recursive treewalks.
+ * The classic FileOutputCommitter does a recursive treewalk and
+ * deletes any files found at paths where directories are to be created.
+ *
  *
  * Each task manifest's directories are combined with those of the other tasks
  * to build a set of all directories which are needed, without duplicates.
@@ -64,9 +67,10 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * After ancestor dirs are created, the final dir set is created
  * though mkdirs() calls, with some handling for race conditions.
  * It is not an error if mkdirs() fails because the dest dir is there;
- * if it fails because a file was found -that file will be deleted.0
+ * if it fails because a file was found -that file will be deleted.
  *
- * The stage returns the list of directories created.
+ * The stage returns the list of directories created, and for testing,
+ * the map of paths to outcomes.
  */
 public class CreateOutputDirectoriesStage extends
     AbstractJobCommitStage<List<TaskManifest>, CreateOutputDirectoriesStage.Result> {
@@ -145,21 +149,31 @@ public class CreateOutputDirectoriesStage extends
         getStageConfig().getDestinationDir(),
         directoriesToCreate);
 
-    // clean up parent dirs. No attempt is made to create them, because
-    // we know mkdirs() will do that.
-    trackDurationOfInvocation(getIOStatistics(), OP_PREPARE_DIR_ANCESTORS, () ->
-        TaskPool.foreach(ancestors)
-            .executeWith(getIOProcessors())
-            .stopOnFailure()
-            .run(dir -> {
-              updateAuditContext(OP_PREPARE_DIR_ANCESTORS);
-              prepareParentDir(dir);
-            }));
 
+
+    // clean up parent dirs. No attempt is made to create them, because
+    // we know mkdirs() will do that (assuming it has the permissions,
+    // of course.
+    final int ancestorCount = ancestors.size();
+    LOG.info("Preparing {} ancestor directory/directories", ancestorCount);
+    // if there is a single ancestor, don't bother with parallisation.
+    Duration d = measureDurationOfInvocation(getIOStatistics(),
+        OP_PREPARE_DIR_ANCESTORS, () ->
+            TaskPool.foreach(ancestors)
+                .executeWith(getIOProcessors(ancestorCount))
+                .stopOnFailure()
+                .run(dir -> {
+                  updateAuditContext(OP_PREPARE_DIR_ANCESTORS);
+                  prepareParentDir(dir);
+                }));
+    LOG.info("Time to prepare ancestor directories {}", humanTime(d.toMillis()));
+
+    final int createCount = directoriesToCreate.size();
+    LOG.info("Preparing {} directory/directories", createCount);
     // now probe for and create the parent dirs of all renames
-    trackDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
+    d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
         TaskPool.foreach(directoriesToCreate)
-            .executeWith(getIOProcessors())
+            .executeWith(getIOProcessors(createCount))
             .stopOnFailure()
             .run(dir -> {
               updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
@@ -167,9 +181,15 @@ public class CreateOutputDirectoriesStage extends
                 addCreatedDirectory(dir);
               }
             }));
+    LOG.info("Time to prepare directories {}", humanTime(d.toMillis()));
     return createdDirectories;
   }
 
+  /**
+   * Prepare a parent directory.
+   * @param dir directory to probe
+   * @throws IOException failure in probe other than FNFE
+   */
   private void prepareParentDir(Path dir) throws IOException {
     // report progress back
     progress();
@@ -234,7 +254,6 @@ public class CreateOutputDirectoriesStage extends
   }
 
 
-
   /**
    * Try to efficiently create a directory in a method which is
    * expected to be executed in parallel with operations creating
@@ -255,13 +274,14 @@ public class CreateOutputDirectoriesStage extends
     }
     // report progress back
     progress();
-    DirMapState outcome = DirMapState.dirWasCreated;
+    DirMapState outcome;
 
     // create the dir
     try {
       if (mkdirs(path, false)) {
         // add the dir to the map, along with all parents.
         addToDirectoryMap(path, DirMapState.dirWasCreated);
+        // success -return immediately.
         return true;
       }
       getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
@@ -296,7 +316,8 @@ public class CreateOutputDirectoriesStage extends
       // nothing found. This should never happen as the first mkdirs should have created it.
       // so the getFileStatus call never reached.
       LOG.warn("{}: Although mkdirs({}) returned false, there's nothing at that path to prevent it",
-          path);
+          getName(), path);
+
       create = true;
     }
 

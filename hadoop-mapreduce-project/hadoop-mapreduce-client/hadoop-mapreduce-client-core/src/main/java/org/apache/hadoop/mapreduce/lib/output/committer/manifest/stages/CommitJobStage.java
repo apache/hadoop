@@ -21,6 +21,8 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.IOException;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,13 +31,13 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.commons.io.FileUtils.byteCountToDisplaySize;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_BYTES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_FILES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.MANIFESTS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage.DISABLED;
 
 /**
  * Commit the Job.
@@ -59,7 +61,12 @@ public class CommitJobStage extends
   protected CommitJobStage.Result executeStage(
       final CommitJobStage.Arguments arguments) throws IOException {
 
-    boolean createMarker = arguments.createMarker;
+    LOG.info("{}: Committing job \"{}\". resilient commit supported = {}",
+        getName(),
+        getJobId(),
+        storeSupportsResilientCommit());
+
+    boolean createMarker = arguments.isCreateMarker();
 
     // load the manifests
     final StageConfig stageConfig = getStageConfig();
@@ -68,10 +75,12 @@ public class CommitJobStage extends
     List<TaskManifest> manifests = result.getManifests();
     LoadManifestsStage.SummaryInfo summary = result.getSummary();
 
-    LOG.debug("Job Summary {}", summary);
-    LOG.info("Committing job with file count: {}; total size {} bytes",
+    LOG.debug("{}: Job Summary {}", getName(), summary);
+    LOG.info("{}: Committing job with file count: {}; total size {} bytes",
+        getName(),
         summary.getFileCount(),
         byteCountToDisplaySize(summary.getTotalFileSize()));
+
 
     // add in the manifest statistics to our local IOStatistics for
     // reporting.
@@ -106,7 +115,7 @@ public class CommitJobStage extends
       Path manifestRenamePath = new Path(
           new Path(manifestRenameDir),
           getJobId());
-      LOG.info("Renaming manifests to {}", manifestRenamePath);
+      LOG.info("{}: Renaming manifests to {}", getName(), manifestRenamePath);
       try {
         renameDir(getTaskManifestDir(), manifestRenamePath);
 
@@ -114,7 +123,7 @@ public class CommitJobStage extends
         successData.getDiagnostics().put(MANIFESTS, manifestRenamePath.toUri().toString());
       } catch (IOException | IllegalArgumentException e) {
         // rename failure, including path for wrong filesystem
-        LOG.warn("Failed to rename manifests to {}", manifestRenamePath, e);
+        LOG.warn("{}: Failed to rename manifests to {}", getName(), manifestRenamePath, e);
       }
     }
 
@@ -131,7 +140,7 @@ public class CommitJobStage extends
     new CleanupJobStage(stageConfig).apply(arguments.getCleanupArguments());
 
     // and then, after everything else: optionally validate.
-    if (arguments.validateOutput) {
+    if (arguments.isValidateOutput()) {
       // cache and restore the active stage field
       LOG.info("{}: Validating output.", getName());
       new ValidateRenamedFilesStage(stageConfig)
@@ -143,30 +152,43 @@ public class CommitJobStage extends
     stageConfig.enterStage(getStageName(arguments));
 
     // the result
-    return new CommitJobStage.Result(successData, manifests);
+    return new CommitJobStage.Result(successData);
   }
 
   /**
    * Arguments for job commit.
    */
   public static final class Arguments {
+
+    /** create the _SUCCESS marker? */
     private final boolean createMarker;
+
+    /** perform validation checks on the files? */
     private final boolean validateOutput;
+
+    /** optional directory to rename the task manifests to. */
     private final String manifestRenameDir;
+
+    /** cleanup arguments.. */
     private final CleanupJobStage.Arguments cleanupArguments;
 
-    public Arguments(boolean createMarker,
+    /**
+     *
+     * @param createMarker create the _SUCCESS marker?
+     * @param validateOutput perform validation checks on the files?
+     * @param manifestRenameDir optional directory to rename the task manifests to
+     * @param cleanupArguments cleanup arguments.
+     */
+    public Arguments(
+        boolean createMarker,
         boolean validateOutput,
-        String manifestRenameDir,
+        @Nullable String manifestRenameDir,
         CleanupJobStage.Arguments cleanupArguments) {
+
       this.createMarker = createMarker;
       this.validateOutput = validateOutput;
       this.manifestRenameDir = manifestRenameDir;
-      this.cleanupArguments = cleanupArguments;
-    }
-
-    public Arguments(boolean createMarker, boolean validateOutput) {
-      this(createMarker, validateOutput, null, DISABLED);
+      this.cleanupArguments = requireNonNull(cleanupArguments);
     }
 
     public boolean isCreateMarker() {
@@ -190,21 +212,18 @@ public class CommitJobStage extends
    * Result of the stage.
    */
   public static final class Result {
+    /**
+     * Manifest success data.
+     */
     private final ManifestSuccessData jobSuccessData;
-    private final List<TaskManifest> manifests;
 
-    public Result(ManifestSuccessData jobSuccessData,
-        List<TaskManifest> manifests) {
+    public Result(ManifestSuccessData jobSuccessData) {
       this.jobSuccessData = jobSuccessData;
-      this.manifests = manifests;
     }
 
     public ManifestSuccessData getJobSuccessData() {
       return jobSuccessData;
     }
 
-    public List<TaskManifest> getManifests() {
-      return manifests;
-    }
   }
 }

@@ -22,16 +22,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestTaskManifestFile;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestTaskManifestFileIO;
 
 /**
  * Test Reading/writing manifest file through ABFS.
  */
-public class ITestAbfsTaskManifestFile extends TestTaskManifestFile {
+public class ITestAbfsTaskManifestFileIO extends TestTaskManifestFileIO {
 
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsTaskManifestFile() throws Exception {
+  public ITestAbfsTaskManifestFileIO() throws Exception {
     binding = new ABFSContractTestBinding();
   }
 

@@ -43,13 +43,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -263,26 +261,6 @@ public class JsonSerialization<T> {
    */
   public T load(FileSystem fs, Path path, @Nullable FileStatus status)
       throws IOException {
-    return loadWithStatistics(fs, path, status).getJson();
-  }
-
-  /**
-   * Load from a Hadoop filesystem, returning the data and
-   * the IOStatistics.
-   * If a file status is supplied, it's passed in to the openFile()
-   * call so that FS implementations can optimize their opening.
-   * @param fs filesystem
-   * @param path path
-   * @param status status of the file to open.
-   * @return the loaded data and the input stream as an IOStatisticsSource
-   * @throws PathIOException JSON parse problem
-   * @throws EOFException file status references an empty file
-   * @throws IOException IO problems
-   */
-  public JsonWithIOStatistics<T> loadWithStatistics(
-      final FileSystem fs,
-      final Path path,
-      @Nullable final FileStatus status) throws IOException {
 
     if (status != null && status.getLen() == 0) {
       throw new EOFException("No data in " + path);
@@ -293,47 +271,12 @@ public class JsonSerialization<T> {
     }
     try (FSDataInputStream dataInputStream =
              awaitFuture(builder.build())) {
-      return new JsonWithIOStatistics<T>(
-          fromJsonStream(dataInputStream),
-          dataInputStream);
+      return fromJsonStream(dataInputStream);
     } catch (JsonProcessingException e) {
       throw new PathIOException(path.toString(),
           "Failed to read JSON file " + e, e);
     }
   }
-
-  /**
-   * The loaded data with the input stream as a
-   * statistics source.
-   * @param <T> data type
-   */
-  public static final class JsonWithIOStatistics<T> {
-    private final T json;
-    private final IOStatisticsSource statisticsSource;
-
-    public JsonWithIOStatistics(final T data,
-        final IOStatisticsSource statisticsSource) {
-      this.json = data;
-      this.statisticsSource = statisticsSource;
-    }
-
-    /**
-     * Get the data.
-     * @return the loaded data.
-     */
-    public T getJson() {
-      return json;
-    }
-
-    /**
-     * Get the input stream as an IOStatisticsSource.
-     * @return the IOStatisticsSource. never null.
-     */
-    public IOStatisticsSource getStatisticsSource() {
-      return statisticsSource;
-    }
-  }
-
 
   /**
    * Save to a Hadoop filesystem.
@@ -345,27 +288,7 @@ public class JsonSerialization<T> {
   public void save(FileSystem fs, Path path, T instance,
       boolean overwrite) throws
       IOException {
-    saveWithStatistics(fs, path, instance, overwrite);
-  }
-
-  /**
-   * Save to a Hadoop filesystem, returning the closed
-   * output stream as an IOStatisticsSource.
-   *
-   * @param fs filesystem
-   * @param path path
-   * @param overwrite should any existing file be overwritten
-   * @throws IOException IO exception
-   * @return the IOStatisticsSource of the closed output stream
-   */
-  public IOStatisticsSource saveWithStatistics(FileSystem fs,
-      Path path,
-      T instance,
-      boolean overwrite) throws
-      IOException {
-    final FSDataOutputStream out = fs.create(path, overwrite);
-    writeJsonAsBytes(instance, out);
-    return out;
+    writeJsonAsBytes(instance, fs.create(path, overwrite));
   }
 
   /**

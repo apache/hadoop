@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.azurebfs.commit;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,11 +34,18 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOpera
 
 /**
  * Extension of StoreOperationsThroughFileSystem with ABFS awareness.
- * Declared public as job configurations can create it.
+ * Purely for use by jobs committing work through the manifest committer.
+ * its classname MUST NOT be changed otherwise these jobs will fail.
+ *
+ * ADLS Gen2 stores support etag-recovery on renames, but not WASB
+ * stores.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate("mapreduce")
 @InterfaceStability.Unstable
 public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSystem {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AbfsManifestStoreOperations.class);
 
   /**
    * Classname, which can be declared in jpb configurations.
@@ -43,6 +53,10 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
   public static final String NAME
       = "org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations";
 
+  /**
+   * Resilient rename calls; only available on an ADLS Gen2 store.
+   * Will be null after binding if the FS isn't compatible.
+   */
   private ResilientCommitByRename resilientCommitByRename;
 
   @Override
@@ -50,6 +64,13 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
     return (AzureBlobFileSystem) super.getFileSystem();
   }
 
+  /**
+   * Bind to the store.
+   *
+   * @param filesystem FS.
+   * @param path path to work under
+   * @throws IOException binding problems.
+   */
   @Override
   public void bindToFileSystem(FileSystem filesystem, Path path) throws IOException {
     if (!(filesystem instanceof AzureBlobFileSystem)) {
@@ -57,7 +78,12 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
           "Not an abfs filesystem: " + filesystem.getClass());
     }
     super.bindToFileSystem(filesystem, path);
-    resilientCommitByRename = getFileSystem().createResilientCommitSupport();
+    try {
+      resilientCommitByRename = getFileSystem().createResilientCommitSupport(path);
+      LOG.debug("Bonded to filesystem with resilient commits under path {}", path);
+    } catch (UnsupportedOperationException e) {
+      LOG.debug("No resilient commit support under path {}", path);
+    }
   }
 
   @Override
@@ -65,25 +91,35 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
     return true;
   }
 
+  /**
+   * Resilient commits available on hierarchical stores.
+   * @return true if the FS can use etags on renames.
+   */
   @Override
-  public boolean storeSupportsResilientCommitThroughEtags() {
-    return true;
+  public boolean storeSupportsResilientCommit() {
+    return resilientCommitByRename != null;
   }
 
   /**
-   * Commit a file.
-   * This uses an internal ABFS operation.
+   * Commit a file through an internal ABFS operation.
+   * If resilient commit is unavailable, invokes the superclass, which
+   * will raise an UnsupportedOperationException
    * @param entry entry to commit
    * @return the outcome
-   * @throws IOException any failure in resilient commit, some failures in classic rename.
+   * @throws IOException any failure in resilient commit.
+   * @throws UnsupportedOperationException if not available.
    */
   @Override
   public CommitFileResult commitFile(final FileOrDirEntry entry) throws IOException {
-    final AzureBlobFileSystem fileSystem = getFileSystem();
-    final boolean recovered = resilientCommitByRename.commitSingleFileByRename(
-        entry.getSourcePath(),
-        entry.getDestPath(),
-        entry.getEtag());
-    return CommitFileResult.fromResilientCommit(recovered);
+
+    if (resilientCommitByRename != null) {
+      final boolean recovered = resilientCommitByRename.commitSingleFileByRename(
+          entry.getSourcePath(),
+          entry.getDestPath(),
+          entry.getEtag());
+      return CommitFileResult.fromResilientCommit(recovered);
+    } else {
+      return super.commitFile(entry);
+    }
   }
 }

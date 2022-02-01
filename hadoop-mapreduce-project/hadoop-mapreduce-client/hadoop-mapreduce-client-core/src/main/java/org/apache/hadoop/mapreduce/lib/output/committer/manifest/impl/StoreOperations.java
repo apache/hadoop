@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -37,6 +36,13 @@ import static java.util.Objects.requireNonNull;
 /**
  * FileSystem operations which are needed to generate the task manifest.
  * The specific choice of which implementation to use is configurable.
+ *
+ * If a store provides a custom file commit operation then it must
+ * offer a subclass of this which returns true in
+ * {@link #storeSupportsResilientCommit()}
+ * and then implement
+ * {@link #commitFile(FileOrDirEntry)}.
+ *
  */
 public abstract class StoreOperations implements Closeable {
 
@@ -104,7 +110,7 @@ public abstract class StoreOperations implements Closeable {
    * Usual "what does 'false' mean" ambiguity.
    * @param source source file
    * @param dest destination path -which must not exist.
-   * @return true if the directory was created.
+   * @return the return value of the rename
    * @throws IOException failure.
    */
   public abstract boolean renameFile(Path source, Path dest)
@@ -113,7 +119,7 @@ public abstract class StoreOperations implements Closeable {
   /**
    * Rename a dir; defaults to invoking
    * Forward to {@link #renameFile(Path, Path)}.
-   * Usual "what does 'false' mean" ambiguity.
+   * Usual "what does 'false' mean?" ambiguity.
    * @param source source file
    * @param dest destination path -which must not exist.
    * @return true if the directory was created.
@@ -143,7 +149,7 @@ public abstract class StoreOperations implements Closeable {
    * @return the manifest
    * @throws IOException failure to load/parse
    */
-  public abstract JsonSerialization.JsonWithIOStatistics<TaskManifest> loadTaskManifest(
+  public abstract TaskManifest loadTaskManifest(
       JsonSerialization<TaskManifest> serializer,
       FileStatus st) throws IOException;
 
@@ -154,9 +160,8 @@ public abstract class StoreOperations implements Closeable {
    * @param path temp path for the initial save
    * @param overwrite should create(overwrite=true) be used?
    * @throws IOException failure to load/parse
-   * @return the IOStatisticsSource of the closed output stream
    */
-  public abstract <T extends AbstractManifestData<T>> IOStatisticsSource save(
+  public abstract <T extends AbstractManifestData<T>> void save(
       T manifestData,
       Path path,
       boolean overwrite) throws IOException;
@@ -204,85 +209,70 @@ public abstract class StoreOperations implements Closeable {
   }
 
   /**
-   * Does the store provide rename resilience through etags?
-   * If true then {@link #commitFile(FileOrDirEntry)} will
-   * have any supplied etags used to recover from rename
-   * failures.
-   * @return true if etag comparison is used for recovery.
+   * Does the store provide rename resilience through an
+   * implementation of {@link #commitFile(FileOrDirEntry)}?
+   * If true then that method will be invoked to commit work
+   * @return true if resilient commit support is available.
    */
-  public boolean storeSupportsResilientCommitThroughEtags() {
+  public boolean storeSupportsResilientCommit() {
     return false;
   }
 
   /**
-   * Commit one file.
-   * The uses {@link #renameFile(Path, Path)}.
+   * Commit one file through any resilient API.
+   * This operation MUST rename source to destination,
+   * else raise an exception.
+   * The result indicates whether or not some
+   * form of recovery took place.
+   *
    * If etags were collected during task commit, these will be
    * in the entries passed in here.
    * @param entry entry to commit
-   * @return the result of rename()
+   * @return the result of the commit
    * @throws IOException failure.
+   * @throws UnsupportedOperationException if not available.
+   *
    */
   public CommitFileResult commitFile(FileOrDirEntry entry) throws IOException {
-    return CommitFileResult.fromRename(renameFile(entry.getSourcePath(), entry.getDestPath()));
+    throw new UnsupportedOperationException("Resilient commit not supported");
   }
 
   /**
-   * Outcome from the commit.
+   * Outcome from the operation {@link #commitFile(FileOrDirEntry)}.
+   * As a rename failure MUST raise an exception, this result
+   * only declares whether or not some form of recovery took place.
    */
   public static final class CommitFileResult {
 
-    /** result of any rename() call. */
-    private final boolean renameOutcome;
-
     /** Did recovery take place? */
     private final boolean recovered;
-
-    /**
-     * Create from a classic rename.
-     * @param renameOutcome the outcome
-     */
-    public static CommitFileResult fromRename(final boolean renameOutcome) {
-        return new CommitFileResult(false, renameOutcome);
-    }
 
     /**
      * Full commit result.
      * @param recovered Did recovery take place?
      */
     public static CommitFileResult fromResilientCommit(final boolean recovered) {
-        return new CommitFileResult(recovered, true);
+        return new CommitFileResult(recovered);
     }
 
     /**
      * Full commit result.
      * @param recovered Did recovery take place?
-     * @param renameOutcome result of any rename() call.
+     *
      */
     private CommitFileResult(
-        final boolean recovered,
-        final boolean renameOutcome) {
-      this.renameOutcome = renameOutcome;
+        final boolean recovered) {
       this.recovered = recovered;
     }
 
-    public boolean isRenameOutcome() {
-      return renameOutcome;
-    }
-
-    public boolean isRecovered() {
+    /**
+     * Did some form of recovery take place?
+     * @return true if the commit succeeded through some form of (etag-based) recovery
+     */
+    public boolean recovered() {
       return recovered;
     }
 
-    /**
-     * Successful?
-     * Implicit in a commit via the resilient API; for classic rename it's
-     * the boolean return value.
-     * @return true if the operation successfully moved the file.
-     */
-    public boolean success() {
-      return recovered || renameOutcome;
-    }
   }
 
   /**
@@ -317,12 +307,20 @@ public abstract class StoreOperations implements Closeable {
   }
 
   /**
-   * Result.
-   * if renamed == false then failureIOE must be non-null.
+   * Result of moving to trash.
+   * if outcome != RENAMED_TO_TRASH then exception must be non-null.
    */
   public static final class MoveToTrashResult {
 
+    /**
+     * Outcome of the move.
+     */
     private final MoveToTrashOutcome outcome;
+
+    /**
+     * The exception raised when after a failure to
+     * rename to trash.
+     */
     private final IOException exception;
 
     public MoveToTrashResult(MoveToTrashOutcome outcome,
@@ -336,10 +334,6 @@ public abstract class StoreOperations implements Closeable {
 
     public MoveToTrashOutcome getOutcome() {
       return outcome;
-    }
-
-    public boolean wasRenamed() {
-      return outcome == MoveToTrashOutcome.RENAMED_TO_TRASH;
     }
 
     public IOException getException() {

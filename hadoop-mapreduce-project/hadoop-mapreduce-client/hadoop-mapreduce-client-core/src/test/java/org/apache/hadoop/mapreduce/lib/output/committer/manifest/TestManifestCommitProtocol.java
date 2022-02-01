@@ -699,13 +699,13 @@ public class TestManifestCommitProtocol
   }
 
   /**
-   * Load a manifest from the test fs.
+   * Load a manifest from the test FS.
    * @param path path
    * @return the manifest
    * @throws IOException failure to load
    */
   TaskManifest loadManifest(Path path) throws IOException {
-    return TaskManifest.load(getFileSystem(), path).getJson();
+    return TaskManifest.load(getFileSystem(), path);
   }
 
   /**

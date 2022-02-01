@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.Trash;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
@@ -62,7 +61,7 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
   private boolean msyncUnsupported = false;
 
   /**
-   * Constructor.
+   * Direct Constructor.
    * @param fileSystem filesystem to write through.
    */
   public StoreOperationsThroughFileSystem(final FileSystem fileSystem) {
@@ -77,6 +76,7 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
 
   @Override
   public void close() throws IOException {
+    /* no-op; FS is assumed to be shared. */
 
   }
 
@@ -135,18 +135,18 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
   }
 
   @Override
-  public JsonSerialization.JsonWithIOStatistics<TaskManifest> loadTaskManifest(
+  public TaskManifest loadTaskManifest(
       JsonSerialization<TaskManifest> serializer,
       FileStatus st) throws IOException {
     return TaskManifest.load(serializer, fileSystem, st.getPath(), st);
   }
 
   @Override
-  public <T extends AbstractManifestData<T>> IOStatisticsSource save(
+  public <T extends AbstractManifestData<T>> void save(
       final T manifestData,
       final Path path,
       final boolean overwrite) throws IOException {
-    return manifestData.save(fileSystem, path, overwrite);
+    manifestData.save(fileSystem, path, overwrite);
   }
 
   @Override

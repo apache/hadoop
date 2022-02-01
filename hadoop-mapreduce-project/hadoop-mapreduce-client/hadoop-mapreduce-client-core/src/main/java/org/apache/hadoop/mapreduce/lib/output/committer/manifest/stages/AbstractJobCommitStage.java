@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +36,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractM
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
-import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.OperationDuration;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
@@ -61,7 +59,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
@@ -433,10 +430,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     LOG.trace("{}: getFileStatus('{}')", getName(), path);
     requireNonNull(path,
         () -> String.format("%s: Null path for getFileStatus() call", getName()));
-    return trackDuration(getIOStatistics(), OP_GET_FILE_STATUS, () -> {
-      acquireReadPermits(PERMIT_READ_GET_FILE_STATUS);
-      return operations.getFileStatus(path);
-    });
+    acquireReadPermits(PERMIT_READ_GET_FILE_STATUS);
+    return trackDuration(getIOStatistics(), OP_GET_FILE_STATUS, () ->
+        operations.getFileStatus(path));
   }
 
   /**
@@ -524,10 +520,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final Path path)
       throws IOException {
     LOG.trace("{}: listStatusIterator('{}')", getName(), path);
-    return trackDuration(getIOStatistics(), OP_LIST_STATUS, () -> {
-      acquireReadPermits(PERMIT_READ_LIST);
-      return operations.listStatusIterator(path);
-    });
+    acquireReadPermits(PERMIT_READ_LIST);
+    return trackDuration(getIOStatistics(), OP_LIST_STATUS, () ->
+        operations.listStatusIterator(path));
   }
 
   /**
@@ -536,16 +531,15 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return the manifest.
    * @throws IOException IO Failure.
    */
-  protected final JsonSerialization.JsonWithIOStatistics<TaskManifest> loadManifest(
+  protected final TaskManifest loadManifest(
       final FileStatus status)
       throws IOException {
     LOG.trace("{}: loadManifest('{}')", getName(), status);
-    return trackDuration(getIOStatistics(), OP_LOAD_MANIFEST, () -> {
-      acquireReadPermits(PERMIT_READ_OPEN_FILE);
-      return operations.loadTaskManifest(
-          stageConfig.currentManifestSerializer(),
-          status);
-    });
+    acquireReadPermits(PERMIT_READ_OPEN_FILE);
+    return trackDuration(getIOStatistics(), OP_LOAD_MANIFEST, () ->
+        operations.loadTaskManifest(
+            stageConfig.currentManifestSerializer(),
+            status));
   }
 
   /**
@@ -636,10 +630,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final Path tempPath,
       final Path finalPath) throws IOException {
     LOG.trace("{}: save('{}, {}, {}')", getName(), manifestData, tempPath, finalPath);
-    trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () -> {
-      acquireWritePermits(PERMIT_WRITE_CREATE_FILE);
-      operations.save(manifestData, tempPath, true);
-    });
+    acquireWritePermits(PERMIT_WRITE_CREATE_FILE);
+    trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
+        operations.save(manifestData, tempPath, true));
     renameFile(tempPath, finalPath);
   }
 
@@ -667,8 +660,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     maybeDeleteDest(true, dest);
     executeRenamingOperation("renameFile", source, dest,
         OP_RENAME_FILE, PERMIT_WRITE_RENAME, () ->
-            operations.renameFile(source, dest),
-        p -> p);
+            operations.renameFile(source, dest));
   }
 
   /**
@@ -682,16 +674,15 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   protected final void renameDir(final Path source, final Path dest)
       throws IOException {
 
-
     maybeDeleteDest(true, dest);
     executeRenamingOperation("renameDir", source, dest,
         OP_RENAME_FILE, PERMIT_WRITE_RENAME, () ->
-        operations.renameDir(source, dest),
-        p -> p);
+        operations.renameDir(source, dest)
+    );
   }
 
   /**
-   * Commit a file from the manifest.
+   * Commit a file from the manifest using rename or, if available, resilient renaming.
    * @param entry entry from manifest
    * @throws PathIOException if the rename() call returned false and was uprated.
    * @throws IOException failure
@@ -704,17 +695,31 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     final Path dest = entry.getDestPath();
 
     maybeDeleteDest(deleteDest, dest);
-    final StoreOperations.CommitFileResult result = executeRenamingOperation(
-        "commitFile",
-        source, dest,
-        OP_COMMIT_FILE_RENAME, PERMIT_WRITE_COMMIT_FILE, () ->
-            operations.commitFile(entry),
-        StoreOperations.CommitFileResult::success);
-    if (result.isRecovered()) {
-      // recovery took place.
-      getIOStatistics().incrementCounter(OP_COMMIT_FILE_RENAME_RECOVERED);
+    if (storeSupportsResilientCommit()) {
+      // get the commit permits
+      acquireWritePermits(PERMIT_WRITE_COMMIT_FILE);
+      final StoreOperations.CommitFileResult result = trackDuration(getIOStatistics(),
+          OP_COMMIT_FILE_RENAME, () ->
+              operations.commitFile(entry));
+      if (result.recovered()) {
+        // recovery took place.
+        getIOStatistics().incrementCounter(OP_COMMIT_FILE_RENAME_RECOVERED);
+      }
+    } else {
+      // commit with a simple rename; failures will be escalated.
+      executeRenamingOperation("renameFile", source, dest,
+          OP_COMMIT_FILE_RENAME, PERMIT_WRITE_RENAME, () ->
+              operations.renameFile(source, dest));
     }
     return new CommitOutcome();
+  }
+
+  /**
+   * Does this store support resilient commit.
+   * @return true if resilient commit operations are available.
+   */
+  protected boolean storeSupportsResilientCommit() {
+    return operations.storeSupportsResilientCommit();
   }
 
   private void maybeDeleteDest(final boolean deleteDest, final Path dest) throws IOException {
@@ -739,15 +744,12 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @param statistic statistic to track
    * @param cost cost for write permits
    * @param action callable of the operation
-   * @param validate validator predicate
-   * @param <R> result
    * @return the result
    * @throws IOException on any failure
    */
-  private <R> R executeRenamingOperation(String operation, Path source, Path dest,
+  private void executeRenamingOperation(String operation, Path source, Path dest,
       String statistic, int cost,
-      CallableRaisingIOE<R> action,
-      Function<R, Boolean> validate)
+      CallableRaisingIOE<Boolean> action)
     throws IOException {
     LOG.debug("{}: {} '{}' to '{}')", getName(), operation, source, dest);
     requireNonNull(source, "Null source");
@@ -761,14 +763,12 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     DurationTracker tracker = createTracker(getIOStatistics(), statistic);
     boolean success;
     try {
-      R result = action.apply();
-      success = validate.apply(result);
+
+      success = action.apply();
 
       if (!success) {
         // record failure in the tracker before closing it
         tracker.failed();
-      } else {
-        return result;
       }
     } catch (IOException | RuntimeException e) {
       LOG.info("{}: {} raised an exception: {}", getName(), operation, e.toString());
@@ -782,7 +782,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     }
     // escalate the failure; this is done out of the duration tracker
     // so its file status probes aren't included.
-    throw escalateRenameFailure(operation, source, dest);
+    if (!success) {
+      throw escalateRenameFailure(operation, source, dest);
+    }
   }
 
   /**
@@ -926,6 +928,22 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   protected final TaskPool.Submitter getIOProcessors() {
     return ioProcessors;
+  }
+
+  /**
+   * Submitter for doing IO against the store other than
+   * manifest processing.
+   * The size parameter is used to select between sequential
+   * and parallel runners.
+   * no data, or one entry: serial.
+   * everything else, parallel.
+   * @param size number of items.
+   * @return a submitter or null
+   */
+  protected final TaskPool.Submitter getIOProcessors(int size) {
+    return size > 1
+        ? getIOProcessors()
+        : null;
   }
 
   /**

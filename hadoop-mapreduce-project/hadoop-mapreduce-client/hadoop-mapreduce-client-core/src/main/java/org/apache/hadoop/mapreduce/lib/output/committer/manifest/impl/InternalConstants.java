@@ -122,9 +122,14 @@ public final class InternalConstants {
   public static final int PERMIT_WRITE_CREATE_FILE = 1;
 
   /**
-   * Write permit cost for commit(): {@value}.
+   * Write permit cost for commit() when using the resilient
+   * commit algorithm: {@value}.
+   * This is set to two as when throttling does start on
+   * ABFS, and this triggers failures, extra HEAD requests
+   * are made...and this is the exact time rate limiting
+   * is most needed.
    */
-  public static final int PERMIT_WRITE_COMMIT_FILE = 1;
+  public static final int PERMIT_WRITE_COMMIT_FILE = 2;
 
   /**
    * Write permit cost for delete(): {@value}.

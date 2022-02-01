@@ -25,7 +25,8 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestRenameStageFailure;
 
 /**
- * Rename failures logic on ABFS.
+ * Rename failure logic on ABFS.
+ * This will go through the resilient rename operation.
  */
 public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
 

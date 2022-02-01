@@ -37,7 +37,9 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractManifes
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test {@link AbfsManifestStoreOperations}.
@@ -60,6 +62,12 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
   public void setup() throws Exception {
     binding.setup();
     super.setup();
+
+    // skip tests on non-HNS stores
+    assumeTrue("Resilient rename not available",
+        getFileSystem().hasPathCapability(getContract().getTestPath(),
+            ETAGS_PRESERVED_IN_RENAME));
+
   }
 
   @Override
@@ -115,7 +123,7 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
     Path src = new Path(path, "src");
 
     ContractTestUtils.createFile(fs, src, true,
-      "data1234".getBytes(StandardCharsets.UTF_8));
+        "data1234".getBytes(StandardCharsets.UTF_8));
     final StoreOperations operations = createStoreOperations();
     final FileStatus srcStatus = operations.getFileStatus(src);
     final String srcTag = operations.getEtag(srcStatus);

@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.files;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Diagnostic keys in the manifests.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public final class DiagnosticKeys {
   /**
    * Attribute added to diagnostics in _SUCCESS file.

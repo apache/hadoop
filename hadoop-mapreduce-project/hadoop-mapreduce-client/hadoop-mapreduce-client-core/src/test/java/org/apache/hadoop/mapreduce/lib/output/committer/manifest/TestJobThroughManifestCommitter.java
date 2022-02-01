@@ -62,6 +62,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadAndPrintManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.PRINCIPAL;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage.DISABLED;
 import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -381,7 +382,7 @@ public class TestJobThroughManifestCommitter
 
     // load the manifest from the FS, not the return value,
     // so we can verify that last task to commit wins.
-    TaskManifest manifest = TaskManifest.load(getFileSystem(), manifestPath).getJson();
+    TaskManifest manifest = TaskManifest.load(getFileSystem(), manifestPath);
     manifest.validate();
     // clear the IOStats to reduce the size of the printed JSON.
     manifest.setIOStatistics(null);
@@ -429,7 +430,7 @@ public class TestJobThroughManifestCommitter
     Path manifestPathForTask1 = manifestPathForTask(dirs.getTaskManifestDir(),
         TASK_IDS.getTaskId(TASK1));
     verifyManifestTaskAttemptID(
-        TaskManifest.load(getFileSystem(), manifestPathForTask1).getJson(),
+        TaskManifest.load(getFileSystem(), manifestPathForTask1),
         taskAttempt10);
 
   }
@@ -460,7 +461,7 @@ public class TestJobThroughManifestCommitter
   public void test_0410_commitJob() throws Throwable {
     describe("Commit the job");
     CommitJobStage stage = new CommitJobStage(jobStageConfig);
-    stage.apply(new CommitJobStage.Arguments(true, false));
+    stage.apply(new CommitJobStage.Arguments(true, false, null, DISABLED));
   }
 
   /**

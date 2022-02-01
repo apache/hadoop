@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,7 +55,6 @@ import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtDebug;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_COMPLETED_COUNT;
@@ -63,10 +63,12 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_ABORT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.updateCommonContextOnCommitterExit;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.updateCommonContextOnCommitterEntry;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createIOStatisticsStore;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createJobSummaryFilename;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createManifestOutcome;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage.cleanupStageOptionsFromConfig;
 
 /**
@@ -169,13 +171,13 @@ public class ManifestCommitter extends PathOutputCommitter implements
    */
   private ManifestCommitterConfig enterCommitter(boolean isTask,
       JobContext context) {
-    ManifestCommitterConfig committerConfig
-        = new ManifestCommitterConfig(
-        getOutputPath(),
-        isTask ? TASK_COMMITTER : JOB_COMMITTER,
-        context,
-        iostatistics,
-        this);
+    ManifestCommitterConfig committerConfig =
+        new ManifestCommitterConfig(
+            getOutputPath(),
+            isTask ? TASK_COMMITTER : JOB_COMMITTER,
+            context,
+            iostatistics,
+            this);
     updateCommonContextOnCommitterEntry(committerConfig);
     return committerConfig;
   }
@@ -292,18 +294,21 @@ public class ManifestCommitter extends PathOutputCommitter implements
       throws IOException {
     ManifestCommitterConfig committerConfig = enterCommitter(true,
         context);
-    StageConfig stageConfig = committerConfig.createJobStageConfig()
-        .withOperations(createStoreOperations())
-        .build();
     try {
+      StageConfig stageConfig = committerConfig.createJobStageConfig()
+          .withOperations(createStoreOperations())
+          .build();
       taskAttemptCommittedManifest = new CommitTaskStage(stageConfig)
           .apply(null).getTaskManifest();
       iostatistics.incrementCounter(COMMITTER_TASKS_COMPLETED_COUNT, 1);
     } catch (IOException e) {
       iostatistics.incrementCounter(COMMITTER_TASKS_FAILED_COUNT, 1);
       throw e;
+    } finally {
+      logCommitterStatisticsAtDebug();
+      updateCommonContextOnCommitterExit();
     }
-    logCommitterStatisticsAtDebug();
+
   }
 
   /**
@@ -315,12 +320,16 @@ public class ManifestCommitter extends PathOutputCommitter implements
       throws IOException {
     ManifestCommitterConfig committerConfig = enterCommitter(true,
         context);
-    new AbortTaskStage(
-        committerConfig.createJobStageConfig()
-            .withOperations(createStoreOperations())
-            .build())
-        .apply(false);
-    logCommitterStatisticsAtDebug();
+    try {
+      new AbortTaskStage(
+          committerConfig.createJobStageConfig()
+              .withOperations(createStoreOperations())
+              .build())
+          .apply(false);
+    } finally {
+      logCommitterStatisticsAtDebug();
+      updateCommonContextOnCommitterExit();
+    }
   }
 
   /**
@@ -401,6 +410,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
         LOG.warn("{}: rename failures were recovered from. Number of recoveries: {}",
             committerConfig.getName(), recoveries);
       }
+      updateCommonContextOnCommitterExit();
     }
   }
 
@@ -429,16 +439,16 @@ public class ManifestCommitter extends PathOutputCommitter implements
     } catch (IOException e) {
       // failure.
       failure = e;
-    } finally {
-      report.setSuccess(false);
-      // job abort does not overwrite any existing report, so a job commit
-      // failure cause will be preserved.
-      maybeSaveSummary(activeStage, committerConfig, report, failure,
-          true, false);
     }
+    report.setSuccess(false);
+    // job abort does not overwrite any existing report, so a job commit
+    // failure cause will be preserved.
+    maybeSaveSummary(activeStage, committerConfig, report, failure,
+        true, false);
     // print job stats
     LOG.info("Job Abort statistics {}",
         ioStatisticsToPrettyString(iostatistics));
+    updateCommonContextOnCommitterExit();
   }
 
   /**
@@ -452,8 +462,12 @@ public class ManifestCommitter extends PathOutputCommitter implements
   public void cleanupJob(final JobContext jobContext) throws IOException {
     ManifestCommitterConfig committerConfig = enterCommitter(false,
         jobContext);
-    executeCleanup(OP_STAGE_JOB_CLEANUP, jobContext, committerConfig);
-    logCommitterStatisticsAtDebug();
+    try {
+      executeCleanup(OP_STAGE_JOB_CLEANUP, jobContext, committerConfig);
+    } finally {
+      logCommitterStatisticsAtDebug();
+      updateCommonContextOnCommitterExit();
+    }
   }
 
   /**
@@ -570,6 +584,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * Get the manifest of the last committed task.
    * @return a task manifest or null.
    */
+  @VisibleForTesting
   TaskManifest getTaskAttemptCommittedManifest() {
     return taskAttemptCommittedManifest;
   }
@@ -580,6 +595,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @param context the context of the task attempt.
    * @return the path where a task attempt should be stored.
    */
+  @VisibleForTesting
   public Path getTaskAttemptPath(TaskAttemptContext context) {
     return enterCommitter(false, context).getTaskAttemptDir();
   }
@@ -591,12 +607,12 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @param context the context of the task attempt.
    * @return the path where a task attempt should be stored.
    */
+  @VisibleForTesting
   public Path getTaskManifestPath(TaskAttemptContext context) {
     final Path dir = enterCommitter(false, context).getTaskManifestDir();
-    Path manifestFile = new Path(dir,
-        context.getTaskAttemptID().getTaskID().toString() + MANIFEST_SUFFIX);
 
-    return manifestFile;
+    return manifestPathForTask(dir,
+        context.getTaskAttemptID().getTaskID().toString());
   }
 
   /**
@@ -605,6 +621,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @param context the context of the task attempt.
    * @return the path where a task attempt should be stored.
    */
+  @VisibleForTesting
   public Path getJobAttemptPath(JobContext context) {
 
     return enterCommitter(false, context).getJobAttemptDir();

@@ -99,7 +99,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     failures
         = new UnreliableStoreOperations(wrappedOperations);
     setStoreOperations(failures);
-    resilientCommit = wrappedOperations.storeSupportsResilientCommitThroughEtags();
+    resilientCommit = wrappedOperations.storeSupportsResilientCommit();
   }
 
   /**

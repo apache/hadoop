@@ -271,7 +271,6 @@ public final class ManifestCommitterSupport {
           "Failed to create Store Operations from configuration option "
               + OPT_STORE_OPERATIONS_CLASS
               + ":" + e, e);
-
     }
   }
 
