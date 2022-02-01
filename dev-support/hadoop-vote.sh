@@ -33,7 +33,7 @@ hadoop-vote. A script for standard vote which verifies the following items
 4. Built from source
 5. Built tar from source
 
-Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-D property[=value]]
+Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-D property[=value]] [-P profiles]
        ${SCRIPT} -h | --help
 
   -h | --help                   Show this screen.
@@ -43,11 +43,13 @@ Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-
   -f | --keys-file-url '<url>'   the URL of the key file, default is
                                 https://downloads.apache.org/hadoop/common/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
-  -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hbase.profile=2.0 -D skipTests> Defaults to unset
+  -D |                          list of maven properties to set for the mvn invocations, e.g. <-D hbase.profile=2.0 -D skipTests> Defaults to unset
+  -P |                          list of maven profiles to set for the build from source, e.g. <-P native -P yarn-ui>
 __EOF
 }
 
 MVN_PROPERTIES=()
+MVN_PROFILES=()
 
 while ((${#})); do
   case "${1}" in
@@ -63,6 +65,8 @@ while ((${#})); do
       OUTPUT_DIR="${2}"; shift 2 ;;
     -D )
       MVN_PROPERTIES+=("-D ${2}"); shift 2 ;;
+    -P )
+      MVN_PROFILES+=("-P ${2}"); shift 2 ;;
     * )
       usage >&2; exit 1             ;;
   esac
@@ -150,7 +154,7 @@ function rat_test() {
 function build_from_source() {
     rm -f "${OUTPUT_PATH_PREFIX}"_build_from_source
     # No unit test run.
-    mvn clean install "${MVN_PROPERTIES[@]}" -DskipTests 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
+    mvn clean install "${MVN_PROPERTIES[@]}" -DskipTests "${MVN_PROFILES[@]}" 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
 }
 
 function build_tar_from_source() {
@@ -170,7 +174,7 @@ function print_when_exit() {
         * Rat check (${JAVA_VERSION}): $( ((RAT_CHECK_PASSED)) && echo "ok" || echo "failed" )
          - mvn clean apache-rat:check ${MVN_PROPERTIES[@]}
         * Built from source (${JAVA_VERSION}): $( ((BUILD_FROM_SOURCE_PASSED)) && echo "ok" || echo "failed" )
-         - mvn clean install ${MVN_PROPERTIES[@]} -DskipTests
+         - mvn clean install ${MVN_PROPERTIES[@]} -DskipTests ${MVN_PROFILES[@]}
         * Built tar from source (${JAVA_VERSION}): $( ((BUILD_TAR_FROM_SOURCE_PASSED)) && echo "ok" || echo "failed" )
          - mvn clean package ${MVN_PROPERTIES[@]} -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true
 __EOF
