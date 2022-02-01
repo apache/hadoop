@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.impl.VectoredReadUtils;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
@@ -33,8 +34,11 @@ import java.io.OutputStream;
 import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.CompletionHandler;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
@@ -44,6 +48,9 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -125,7 +132,9 @@ public class RawLocalFileSystem extends FileSystem {
   class LocalFSFileInputStream extends FSInputStream implements
       HasFileDescriptor, IOStatisticsSource, StreamCapabilities {
     private FileInputStream fis;
+    private final File name;
     private long position;
+    private AsynchronousFileChannel asyncChannel = null;
 
     /**
      * Minimal set of counters.
@@ -143,7 +152,8 @@ public class RawLocalFileSystem extends FileSystem {
     private final AtomicLong bytesRead;
 
     public LocalFSFileInputStream(Path f) throws IOException {
-      fis = new FileInputStream(pathToFile(f));
+      name = pathToFile(f);
+      fis = new FileInputStream(name);
       bytesRead = ioStatistics.getCounterReference(
           STREAM_READ_BYTES);
     }
@@ -174,10 +184,16 @@ public class RawLocalFileSystem extends FileSystem {
     @Override
     public int available() throws IOException { return fis.available(); }
     @Override
-    public void close() throws IOException { fis.close(); }
-    @Override
     public boolean markSupported() { return false; }
-    
+
+    @Override
+    public void close() throws IOException {
+      fis.close();
+      if (asyncChannel != null) {
+        asyncChannel.close();
+      }
+    }
+
     @Override
     public int read() throws IOException {
       try {
@@ -267,8 +283,88 @@ public class RawLocalFileSystem extends FileSystem {
     public IOStatistics getIOStatistics() {
       return ioStatistics;
     }
+
+    AsynchronousFileChannel getAsyncChannel() throws IOException {
+      if (asyncChannel == null) {
+        synchronized (this) {
+          asyncChannel = AsynchronousFileChannel.open(name.toPath(),
+                  StandardOpenOption.READ);
+        }
+      }
+      return asyncChannel;
+    }
+
+    @Override
+    public void readVectored(List<? extends FileRange> ranges,
+                             IntFunction<ByteBuffer> allocate) throws IOException {
+
+      // Set up all of the futures, so that we can use them if things fail
+      for(FileRange range: ranges) {
+        VectoredReadUtils.validateRangeRequest(range);
+        range.setData(new CompletableFuture<>());
+      }
+      try {
+        AsynchronousFileChannel channel = getAsyncChannel();
+        ByteBuffer[] buffers = new ByteBuffer[ranges.size()];
+        AsyncHandler asyncHandler = new AsyncHandler(channel, ranges, buffers);
+        for(int i = 0; i < ranges.size(); ++i) {
+          FileRange range = ranges.get(i);
+          buffers[i] = allocate.apply(range.getLength());
+          channel.read(buffers[i], range.getOffset(), i, asyncHandler);
+        }
+      } catch (IOException ioe) {
+        LOG.debug("Exception occurred during vectored read ", ioe);
+        for(FileRange range: ranges) {
+          range.getData().completeExceptionally(ioe);
+        }
+      }
+    }
   }
-  
+
+  /**
+   * A CompletionHandler that implements readFully and translates back
+   * into the form of CompletionHandler that our users expect.
+   */
+  static class AsyncHandler implements CompletionHandler<Integer, Integer> {
+    private final AsynchronousFileChannel channel;
+    private final List<? extends FileRange> ranges;
+    private final ByteBuffer[] buffers;
+
+    AsyncHandler(AsynchronousFileChannel channel,
+                 List<? extends FileRange> ranges,
+                 ByteBuffer[] buffers) {
+      this.channel = channel;
+      this.ranges = ranges;
+      this.buffers = buffers;
+    }
+
+    @Override
+    public void completed(Integer result, Integer r) {
+      FileRange range = ranges.get(r);
+      ByteBuffer buffer = buffers[r];
+      if (result == -1) {
+        failed(new EOFException("Read past End of File"), r);
+      } else {
+        if (buffer.remaining() > 0) {
+          // issue a read for the rest of the buffer
+          // QQ: What if this fails? It has the same handler.
+          channel.read(buffer, range.getOffset() + buffer.position(), r, this);
+        } else {
+          // QQ: Why  is this required? I think because we don't want the
+          // user to read data beyond limit.
+          buffer.flip();
+          range.getData().complete(buffer);
+        }
+      }
+    }
+
+    @Override
+    public void failed(Throwable exc, Integer r) {
+      LOG.debug("Failed while reading range {} ", r, exc);
+      ranges.get(r).getData().completeExceptionally(exc);
+    }
+  }
+
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     getFileStatus(f);

@@ -19,6 +19,9 @@
 package org.apache.hadoop.test;
 
 import java.util.Iterator;
+import java.util.concurrent.CompletableFuture;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 
 /**
@@ -28,17 +31,18 @@ public class MoreAsserts {
 
   /**
    * Assert equivalence for array and iterable
-   * @param <T> the type of the elements
-   * @param s the name/message for the collection
-   * @param expected  the expected array of elements
-   * @param actual    the actual iterable of elements
+   *
+   * @param <T>      the type of the elements
+   * @param s        the name/message for the collection
+   * @param expected the expected array of elements
+   * @param actual   the actual iterable of elements
    */
   public static <T> void assertEquals(String s, T[] expected,
                                       Iterable<T> actual) {
     Iterator<T> it = actual.iterator();
     int i = 0;
     for (; i < expected.length && it.hasNext(); ++i) {
-      Assert.assertEquals("Element "+ i +" for "+ s, expected[i], it.next());
+      Assert.assertEquals("Element " + i + " for " + s, expected[i], it.next());
     }
     Assert.assertTrue("Expected more elements", i == expected.length);
     Assert.assertTrue("Expected less elements", !it.hasNext());
@@ -46,7 +50,8 @@ public class MoreAsserts {
 
   /**
    * Assert equality for two iterables
-   * @param <T> the type of the elements
+   *
+   * @param <T>      the type of the elements
    * @param s
    * @param expected
    * @param actual
@@ -57,10 +62,28 @@ public class MoreAsserts {
     Iterator<T> ita = actual.iterator();
     int i = 0;
     while (ite.hasNext() && ita.hasNext()) {
-      Assert.assertEquals("Element "+ i +" for "+s, ite.next(), ita.next());
+      Assert.assertEquals("Element " + i + " for " + s, ite.next(), ita.next());
     }
     Assert.assertTrue("Expected more elements", !ite.hasNext());
     Assert.assertTrue("Expected less elements", !ita.hasNext());
   }
 
+
+  public static <T> void assertFutureCompletedSuccessfully(CompletableFuture<T> future) {
+    Assertions.assertThat(future.isDone())
+            .describedAs("This future is supposed to be " +
+                    "completed successfully")
+            .isTrue();
+    Assertions.assertThat(future.isCompletedExceptionally())
+            .describedAs("This future is supposed to be " +
+                    "completed successfully")
+            .isFalse();
+  }
+
+  public static <T> void assertFutureFailedExceptionally(CompletableFuture<T> future) {
+    Assertions.assertThat(future.isCompletedExceptionally())
+            .describedAs("This future is supposed to be " +
+                    "completed exceptionally")
+            .isTrue();
+  }
 }

@@ -24,7 +24,12 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.impl.CombinedFileRange;
+import org.apache.hadoop.fs.impl.FutureIOSupport;
+import org.apache.hadoop.fs.impl.VectoredReadUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -46,8 +51,16 @@ import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.function.IntFunction;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.impl.VectoredReadUtils.isOrderedDisjoint;
+import static org.apache.hadoop.fs.impl.VectoredReadUtils.sliceTo;
+import static org.apache.hadoop.fs.impl.VectoredReadUtils.sortAndMergeRanges;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -79,6 +92,14 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public static final String OPERATION_REOPEN = "re-open";
 
   /**
+   * This is the maximum temporary buffer size we use while
+   * populating the data in direct byte buffers during a vectored IO
+   * operation. This is to ensure that when a big range of data is
+   * requested in direct byte buffer doesn't leads to OOM errors.
+   */
+  private static final int TMP_BUFFER_MAX_SIZE = 64 * 1024;
+
+  /**
    * This is the public position; the one set in {@link #seek(long)}
    * and returned in {@link #getPos()}.
    */
@@ -100,6 +121,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private S3ObjectInputStream wrappedStream;
   private final S3AReadOpContext context;
   private final InputStreamCallbacks client;
+
+  /**
+   * Thread pool used for vectored IO operation.
+   */
+  private final ThreadPoolExecutor unboundedThreadPool;
   private final String bucket;
   private final String key;
   private final String pathStr;
@@ -143,10 +169,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param ctx operation context
    * @param s3Attributes object attributes
    * @param client S3 client to use
+   * @param unboundedThreadPool thread pool to use.
    */
   public S3AInputStream(S3AReadOpContext ctx,
-      S3ObjectAttributes s3Attributes,
-      InputStreamCallbacks client) {
+                        S3ObjectAttributes s3Attributes,
+                        InputStreamCallbacks client,
+                        ThreadPoolExecutor unboundedThreadPool) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
@@ -168,6 +196,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         s3Attributes);
     setInputPolicy(ctx.getInputPolicy());
     setReadahead(ctx.getReadahead());
+    this.unboundedThreadPool = unboundedThreadPool;
   }
 
   /**
@@ -779,6 +808,231 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         seekQuietly(oldPos);
       }
     }
+  }
+
+  /**
+   * {@inheritDoc}
+   * Vectored read implementation for S3AInputStream.
+   * @param ranges the byte ranges to read.
+   * @param allocate the function to allocate ByteBuffer.
+   * @throws IOException IOE if any.
+   */
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+                           IntFunction<ByteBuffer> allocate) throws IOException {
+
+    LOG.debug("Starting vectored read on path {} for ranges {} ", pathStr, ranges);
+    checkNotClosed();
+    for (FileRange range : ranges) {
+      validateRangeRequest(range);
+      CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+      range.setData(result);
+    }
+
+    if (isOrderedDisjoint(ranges, 1, minSeekForVectorReads())) {
+      LOG.debug("Not merging the ranges as they are disjoint");
+      for(FileRange range: ranges) {
+        ByteBuffer buffer = allocate.apply(range.getLength());
+        unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
+      }
+    } else {
+      LOG.debug("Trying to merge the ranges as they are not disjoint");
+      List<CombinedFileRange> combinedFileRanges = sortAndMergeRanges(ranges,
+              1, minSeekForVectorReads(),
+              maxReadSizeForVectorReads());
+      LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
+              ranges.size(), combinedFileRanges.size());
+      for(CombinedFileRange combinedFileRange: combinedFileRanges) {
+        CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+        ByteBuffer buffer = allocate.apply(combinedFileRange.getLength());
+        combinedFileRange.setData(result);
+        unboundedThreadPool.submit(
+            () -> readCombinedRangeAndUpdateChildren(combinedFileRange, buffer));
+      }
+    }
+    LOG.debug("Finished submitting vectored read to threadpool" +
+            " on path {} for ranges {} ", pathStr, ranges);
+  }
+
+  /**
+   * Read data in the combinedFileRange and update data in buffers
+   * of all underlying ranges.
+   * @param combinedFileRange combined range.
+   * @param buffer combined buffer.
+   */
+  private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
+                                                  ByteBuffer buffer) {
+    // Not putting read single range call inside try block as
+    // exception if any occurred during this call will be raised
+    // during awaitFuture call while getting the combined buffer.
+    readSingleRange(combinedFileRange, buffer);
+    try {
+      // In case of single range we return the original byte buffer else
+      // we return slice byte buffers for each child ranges.
+      ByteBuffer combinedBuffer = FutureIOSupport.awaitFuture(combinedFileRange.getData());
+      if (combinedFileRange.getUnderlying().size() == 1) {
+        combinedFileRange.getUnderlying().get(0).getData().complete(combinedBuffer);
+      } else {
+        for (FileRange child : combinedFileRange.getUnderlying()) {
+          updateOriginalRange(child, combinedBuffer, combinedFileRange);
+        }
+      }
+    } catch (Exception ex) {
+      LOG.warn("Exception occurred while reading combined range from file {}", pathStr, ex);
+      for(FileRange child : combinedFileRange.getUnderlying()) {
+        child.getData().completeExceptionally(ex);
+      }
+    }
+  }
+
+  /**
+   * Update data in child range from combined range.
+   * @param child child range.
+   * @param combinedBuffer combined buffer.
+   * @param combinedFileRange combined range.
+   */
+  private void updateOriginalRange(FileRange child,
+                                   ByteBuffer combinedBuffer,
+                                   CombinedFileRange combinedFileRange) {
+    LOG.trace("Start Filling original range [{}, {}) from combined range [{}, {}) ",
+            child.getOffset(), child.getLength(),
+            combinedFileRange.getOffset(), combinedFileRange.getLength());
+    ByteBuffer childBuffer = sliceTo(combinedBuffer, combinedFileRange.getOffset(), child);
+    child.getData().complete(childBuffer);
+    LOG.trace("End Filling original range [{}, {}) from combined range [{}, {}) ",
+            child.getOffset(), child.getLength(),
+            combinedFileRange.getOffset(), combinedFileRange.getLength());
+  }
+
+  /**
+   *  // Check if we can use contentLength returned by http GET request.
+   * Validates range parameters.
+   * @param range requested range.
+   * @throws EOFException end of file exception.
+   */
+  private void validateRangeRequest(FileRange range) throws EOFException {
+    VectoredReadUtils.validateRangeRequest(range);
+    if(range.getOffset() + range.getLength() > contentLength) {
+      LOG.warn("Requested range [{}, {}) is beyond EOF for path {}",
+              range.getOffset(), range.getLength(), pathStr);
+      throw new EOFException("Requested range [" + range.getOffset() +", "
+              + range.getLength() + ") is beyond EOF for path " + pathStr);
+    }
+  }
+
+  /**
+   * TODO: Add retry in client.getObject(). not present in older reads why here??
+   * Okay retry is being done in the top layer during read.
+   * But if we do here in the top layer, one issue I am thinking is
+   * what if there is some error which happened during filling the buffer
+   * If we retry that old offsets of heap buffers can be overwritten ?
+   * I think retry should be only added in {@link S3AInputStream#getS3Object}
+   * Read data from S3 for this range and populate the bufffer.
+   * @param range range of data to read.
+   * @param buffer buffer to fill.
+   */
+  private void readSingleRange(FileRange range, ByteBuffer buffer) {
+    LOG.debug("Start reading range {} from path {} ", range, pathStr);
+    S3Object objectRange = null;
+    S3ObjectInputStream objectContent = null;
+    try {
+      long position = range.getOffset();
+      int length = range.getLength();
+      final String operationName = "readRange";
+      objectRange = getS3Object(operationName, position, length);
+      objectContent = objectRange.getObjectContent();
+      if (objectContent == null) {
+        throw new PathIOException(uri,
+                "Null IO stream received during " + operationName);
+      }
+      populateBuffer(length, buffer, objectContent);
+      range.getData().complete(buffer);
+    } catch (Exception ex) {
+      LOG.warn("Exception while reading a range {} from path {} ", range, pathStr, ex);
+      range.getData().completeExceptionally(ex);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, objectRange, objectContent);
+    }
+    LOG.debug("Finished reading range {} from path {} ", range, pathStr);
+  }
+
+  /**
+   * Populates the buffer with data from objectContent
+   * till length. Handles both direct and heap byte buffers.
+   * @param length length of data to populate.
+   * @param buffer buffer to fill.
+   * @param objectContent result retrieved from S3 store.
+   * @throws IOException any IOE.
+   */
+  private void populateBuffer(int length,
+                              ByteBuffer buffer,
+                              S3ObjectInputStream objectContent) throws IOException {
+    if (buffer.isDirect()) {
+      int readBytes = 0;
+      int offset = 0;
+      byte[] tmp = new byte[TMP_BUFFER_MAX_SIZE];
+      while (readBytes < length) {
+        int currentLength = readBytes + TMP_BUFFER_MAX_SIZE < length ?
+                TMP_BUFFER_MAX_SIZE
+                : length - readBytes;
+        readByteArray(objectContent, tmp, 0, currentLength);
+        buffer.put(tmp, 0, currentLength);
+        offset = offset + currentLength;
+        readBytes = readBytes + currentLength;
+      }
+      buffer.flip();
+    } else {
+      readByteArray(objectContent, buffer.array(), 0, length);
+    }
+  }
+
+  public void readByteArray(S3ObjectInputStream objectContent,
+                            byte[] dest,
+                            int offset,
+                            int length) throws IOException {
+    int readBytes = 0;
+    while (readBytes < length) {
+      int readBytesCurr = objectContent.read(dest,
+              offset + readBytes,
+              length - readBytes);
+      readBytes +=readBytesCurr;
+      if (readBytesCurr < 0) {
+        throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
+      }
+    }
+  }
+
+  /**
+   * Read data from S3 using a http request.
+   * This also handles if file has been changed while http call
+   * is getting executed. If file has been changed RemoteFileChangedException
+   * is thrown.
+   * @param operationName name of the operation for which get object on S3 is called.
+   * @param position position of the object to be read from S3.
+   * @param length length from position of the object to be read from S3.
+   * @return S3Object
+   * @throws IOException exception if any.
+   */
+  private S3Object getS3Object(String operationName, long position,
+                               int length) throws IOException {
+    final GetObjectRequest request = client.newGetRequest(key)
+            .withRange(position, position + length - 1);
+    changeTracker.maybeApplyConstraint(request);
+    DurationTracker tracker = streamStatistics.initiateGetRequest();
+    S3Object objectRange;
+    Invoker invoker = context.getReadInvoker();
+    try {
+      objectRange = invoker.retry(operationName, pathStr, true,
+          () -> client.getObject(request));
+    } catch (IOException ex) {
+      tracker.failed();
+      throw ex;
+    } finally {
+      tracker.close();
+    }
+    changeTracker.processResponse(objectRange, operationName,
+            position);
+    return objectRange;
   }
 
   /**
