@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.util.Collection;
 import java.util.Collections;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
+
 /**
  * A special case that contains the resource calculation of the root queue.
  */
@@ -38,20 +40,21 @@ public final class RootCalculationDriver extends ResourceCalculationDriver {
   public void calculateResources() {
     for (String label : parent.getConfiguredNodeLabels()) {
       for (QueueCapacityVector.QueueCapacityVectorEntry capacityVectorEntry : parent.getConfiguredCapacityVector(label)) {
-        currentResourceName = capacityVectorEntry.getResourceName();
-        parent.getOrCreateAbsoluteMinCapacityVector(label).setValue(currentResourceName, 1);
-        parent.getOrCreateAbsoluteMaxCapacityVector(label).setValue(currentResourceName, 1);
+        String resourceName = capacityVectorEntry.getResourceName();
+        parent.getOrCreateAbsoluteMinCapacityVector(label).setValue(resourceName, 1);
+        parent.getOrCreateAbsoluteMaxCapacityVector(label).setValue(resourceName, 1);
 
-        float minimumResource = rootCalculator.calculateMinimumResource(this, label);
-        float maximumResource = rootCalculator.calculateMaximumResource(this, label);
-        long roundedMinResource = (long) Math.floor(minimumResource);
-        long roundedMaxResource = (long) Math.floor(maximumResource);
+        CalculationContext context = new CalculationContext(resourceName, PERCENTAGE, parent);
+        float minimumResource = rootCalculator.calculateMinimumResource(this, context, label);
+        float maximumResource = rootCalculator.calculateMaximumResource(this, context, label);
+        long roundedMinResource = (long) roundingStrategy.getRoundedResource(minimumResource, capacityVectorEntry);
+        long roundedMaxResource = (long) roundingStrategy.getRoundedResource(maximumResource, parent.getConfiguredMaxCapacityVector(label).getResource(resourceName));
         parent.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
-            currentResourceName, roundedMinResource);
+            resourceName, roundedMinResource);
         parent.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
-            currentResourceName, roundedMaxResource);
+            resourceName, roundedMaxResource);
       }
-      rootCalculator.updateCapacitiesAfterCalculation(this, label);
+      rootCalculator.updateCapacitiesAfterCalculation(this, parent, label);
     }
 
     rootCalculator.calculateResourcePrerequisites(this);

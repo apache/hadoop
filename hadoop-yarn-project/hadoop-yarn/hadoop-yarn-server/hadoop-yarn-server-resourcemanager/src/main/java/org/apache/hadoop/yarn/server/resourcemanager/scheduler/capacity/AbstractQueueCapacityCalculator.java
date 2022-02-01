@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpdateWarning.QueueUpdateWarningType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ResourceCalculationDriver.CalculationContext;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
-import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 import java.util.Map;
 import java.util.Set;
@@ -35,7 +34,6 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
  * logic.
  */
 public abstract class AbstractQueueCapacityCalculator {
-  private static final String MB_UNIT = "Mi";
 
   /**
    * Sets the metrics and statistics after effective resource values calculation.
@@ -45,7 +43,7 @@ public abstract class AbstractQueueCapacityCalculator {
    * @param label         node label
    */
   public abstract void updateCapacitiesAfterCalculation(
-      ResourceCalculationDriver resourceCalculationDriver, String label);
+      ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label);
 
 
   /**
@@ -64,6 +62,7 @@ public abstract class AbstractQueueCapacityCalculator {
    * @return minimum effective resource
    */
   public abstract float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                                 CalculationContext context,
                                                  String label);
 
   /**
@@ -75,6 +74,7 @@ public abstract class AbstractQueueCapacityCalculator {
    * @return minimum effective resource
    */
   public abstract float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                                 CalculationContext context,
                                                  String label);
 
   /**
@@ -116,47 +116,6 @@ public abstract class AbstractQueueCapacityCalculator {
                                          ResourceUnitCapacityType capacityType) {
     return queue.getConfiguredCapacityVector(label)
         .getResourceNamesByCapacityType(capacityType);
-  }
-
-  /**
-   * Sets capacity and absolute capacity values based on minimum and maximum effective resources.
-   *
-   * @param clusterResource cluster resource for the corresponding label
-   * @param queue child queue for which the capacities are set
-   * @param label node label
-   */
-  public static void setQueueCapacities(
-      Resource clusterResource, CSQueue queue, String label) {
-    if (!(queue instanceof AbstractCSQueue)) {
-      return;
-    }
-
-    AbstractCSQueue csQueue = (AbstractCSQueue) queue;
-    ResourceCalculator resourceCalculator = csQueue.resourceCalculator;
-
-    CSQueue parent = queue.getParent();
-    if (parent == null) {
-      return;
-    }
-    // Update capacity with a float calculated from the parent's minResources
-    // and the recently changed queue minResources.
-    // capacity = effectiveMinResource / {parent's effectiveMinResource}
-    float result = resourceCalculator.divide(clusterResource,
-        queue.getQueueResourceQuotas().getEffectiveMinResource(label),
-        parent.getQueueResourceQuotas().getEffectiveMinResource(label));
-    queue.getQueueCapacities().setCapacity(label,
-        Float.isInfinite(result) ? 0 : result);
-
-    // Update maxCapacity with a float calculated from the parent's maxResources
-    // and the recently changed queue maxResources.
-    // maxCapacity = effectiveMaxResource / parent's effectiveMaxResource
-    result = resourceCalculator.divide(clusterResource,
-        queue.getQueueResourceQuotas().getEffectiveMaxResource(label),
-        parent.getQueueResourceQuotas().getEffectiveMaxResource(label));
-    queue.getQueueCapacities().setMaximumCapacity(label,
-        Float.isInfinite(result) ? 0 : result);
-
-    csQueue.updateAbsoluteCapacities();
   }
 
   /**
@@ -211,7 +170,7 @@ public abstract class AbstractQueueCapacityCalculator {
             parentQueue.getQueuePath()));
       }
 
-      String unit = resourceName.equals(MEMORY_URI) ? MB_UNIT : "";
+      String unit = resourceName.equals(MEMORY_URI) ? ResourceCalculationDriver.MB_UNIT : "";
       long convertedValue = UnitsConversionUtil.convert(unit,
           updateContext.getUpdatedClusterResource(label).getResourceInformation(resourceName)
               .getUnits(), childrenConfiguredResource);

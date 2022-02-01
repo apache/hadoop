@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ResourceCalculationDriver.CalculationContext;
 
 import java.util.Collection;
 
@@ -43,10 +44,11 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
   @Override
   public float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                        CalculationContext context,
                                         String label) {
     CSQueue parentQueue = resourceCalculationDriver.getParent();
-    String resourceName = resourceCalculationDriver.getCurrentResourceName();
-    float normalizedWeight = resourceCalculationDriver.getCurrentMinimumCapacityEntry(label)
+    String resourceName = context.getResourceName();
+    float normalizedWeight = context.getCurrentMinimumCapacityEntry(label)
         .getResourceValue() / resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
 
     float remainingResource = resourceCalculationDriver.getBatchRemainingResource(label).getValue(
@@ -76,8 +78,9 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
   @Override
   public float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                        CalculationContext context,
                                         String label) {
-    throw new IllegalStateException("Resource " + resourceCalculationDriver.getCurrentMinimumCapacityEntry(
+    throw new IllegalStateException("Resource " + context.getCurrentMinimumCapacityEntry(
         label).getResourceName() + " has " + "WEIGHT maximum capacity type, which is not supported");
   }
 
@@ -88,19 +91,18 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
   @Override
   public void updateCapacitiesAfterCalculation(
-      ResourceCalculationDriver resourceCalculationDriver, String label) {
+      ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label) {
     float sumCapacityPerResource = 0f;
 
-    Collection<String> resourceNames = getResourceNames(resourceCalculationDriver.getCurrentChild(), label);
+    Collection<String> resourceNames = getResourceNames(queue, label);
     for (String resourceName : resourceNames) {
       float sumBranchWeight = resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
-      float capacity =  resourceCalculationDriver.getCurrentChild().getConfiguredCapacityVector(
+      float capacity =  queue.getConfiguredCapacityVector(
           label).getResource(resourceName).getResourceValue() / sumBranchWeight;
       sumCapacityPerResource += capacity;
     }
 
-    resourceCalculationDriver.getCurrentChild().getQueueCapacities().setNormalizedWeight(label,
-        sumCapacityPerResource / resourceNames.size());
-    ((AbstractCSQueue) resourceCalculationDriver.getCurrentChild()).updateAbsoluteCapacities();
+    queue.getQueueCapacities().setNormalizedWeight(label, sumCapacityPerResource / resourceNames.size());
+    ((AbstractCSQueue) queue).updateAbsoluteCapacities();
   }
 }
