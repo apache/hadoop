@@ -944,23 +944,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   /**
    * Creates a mapping of queue ACLs for a Legacy Auto Created Leaf Queue.
    *
-   * @param csConf the CapacitySchedulerConfiguration
    * @param parentQueuePath the parent's queue path
    * @return A mapping of the queue ACLs.
    */
-  public static Map<AccessType, AccessControlList> getACLsForLegacyAutoCreatedLeafQueue(
-      CapacitySchedulerConfiguration csConf,
+  public Map<AccessType, AccessControlList> getACLsForLegacyAutoCreatedLeafQueue(
       String parentQueuePath) {
     final String prefix =
-        getQueuePrefix(csConf.getAutoCreatedQueueTemplateConfPrefix(
+        getQueuePrefix(getAutoCreatedQueueTemplateConfPrefix(
             parentQueuePath));
 
     Map<String, String> properties = new HashMap<>();
     for (QueueACL acl : QueueACL.values()) {
       final String key = getAclKey(acl);
-      final String value = csConf.get(prefix + key);
+      final String value = get(prefix + key);
       if (value != null) {
-        properties.put(key, csConf.get(prefix + key));
+        properties.put(key, get(prefix + key));
       }
     }
     return getACLsFromProperties(properties);

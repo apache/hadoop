@@ -95,7 +95,6 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForLegacyAutoCreatedLeafQueue;
 
 /**
  * This class manages the list of applications for the resource manager.
@@ -519,7 +518,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
             if (parentQueue instanceof AbstractManagedParentQueue) {
               permissions.add(new Permission(privilegedEntity,
-                  getACLsForLegacyAutoCreatedLeafQueue(csConf, parentCandidate.getFullPath())));
+                  csConf.getACLsForLegacyAutoCreatedLeafQueue(parentCandidate.getFullPath())));
             } else {
               permissions.add(new Permission(privilegedEntity,
                   getACLsForFlexibleAutoCreatedLeafQueue(aqc)));

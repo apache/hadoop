@@ -87,7 +87,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForLegacyAutoCreatedLeafQueue;
 
 public class AbstractLeafQueue extends AbstractCSQueue {
   private static final Logger LOG =
@@ -1705,8 +1704,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     super.setDynamicQueueACLProperties();
 
     if (parent instanceof AbstractManagedParentQueue) {
-      acls.putAll(getACLsForLegacyAutoCreatedLeafQueue(
-          queueContext.getConfiguration(), parent.getQueuePath()));
+      acls.putAll(queueContext.getConfiguration().getACLsForLegacyAutoCreatedLeafQueue(
+          parent.getQueuePath()));
     } else if (parent instanceof ParentQueue) {
       acls.putAll(getACLsForFlexibleAutoCreatedLeafQueue(
           ((ParentQueue) parent).getAutoCreatedQueueTemplate()));
