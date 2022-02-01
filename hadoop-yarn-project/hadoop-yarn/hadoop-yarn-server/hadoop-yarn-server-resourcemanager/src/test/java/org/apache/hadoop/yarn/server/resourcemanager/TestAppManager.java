@@ -660,7 +660,8 @@ public class TestAppManager extends AppManagerTestBase{
         "user2",
         "root.parent.user2");
 
-    // user3 has permission on root.parent.user2.user3 a dynamic parent and leaf queue would be created
+    // user3 has permission on root.parent.user2.user3 a dynamic parent and leaf queue
+    // would be created
     newMockRMContext.setQueuePlacementManager(createMockPlacementManager(
         "user3", "user3", "root.parent.user2"));
     verifyAppSubmission(createAppSubmissionContext(MockApps.newAppID(3)),
@@ -742,7 +743,9 @@ public class TestAppManager extends AppManagerTestBase{
     testFlexibleAQCLeafOnly(conf, csConf);
   }
 
-  private void testFlexibleAQCLeafOnly(YarnConfiguration conf, CapacitySchedulerConfiguration csConf)
+  private void testFlexibleAQCLeafOnly(
+      YarnConfiguration conf,
+      CapacitySchedulerConfiguration csConf)
       throws YarnException, IOException {
     MockRM newMockRM = new MockRM(csConf);
     RMContext newMockRMContext = newMockRM.getRMContext();
@@ -804,7 +807,7 @@ public class TestAppManager extends AppManagerTestBase{
   }
 
   @Test
-  public void testFlexibleAutoCreatedQueuesWithSpecializedACLTemplatesAndDynamicParentQueue2()
+  public void testFlexibleAutoCreatedQueuesWithSpecializedACLTemplatesAndDynamicRootParentQueue()
       throws IOException, YarnException {
     YarnConfiguration conf = createYarnACLEnabledConfiguration();
 
