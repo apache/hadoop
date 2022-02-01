@@ -491,47 +491,57 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         CapacitySchedulerConfiguration csConf = cs.getConfiguration();
 
         CSQueue csqueue = cs.getQueue(queueName);
-        PrivilegedEntity privilegedEntity = getPrivilegedEntity(csqueue == null ? queueName : csqueue.getQueuePath());
+        PrivilegedEntity privilegedEntity = getPrivilegedEntity(
+            csqueue == null ? queueName : csqueue.getQueuePath());
 
-        if (csqueue == null && placementContext != null) {
-          List<Permission> permissions = new ArrayList<>();
+        boolean ambiguous = false;
+        if (csqueue == null) {
+          if (placementContext != null) {
+            List<Permission> permissions = new ArrayList<>();
 
-          final QueuePath parentCandidate = new QueuePath(placementContext.getParentQueue());
-          AutoCreatedQueueTemplate aqc = new AutoCreatedQueueTemplate(csConf, parentCandidate);
+            final QueuePath parentCandidate = new QueuePath(placementContext.getParentQueue());
+            AutoCreatedQueueTemplate aqc = new AutoCreatedQueueTemplate(csConf, parentCandidate);
 
-          CSQueue parentQueue = cs.getQueue(parentCandidate.getFullPath());
-          if (parentQueue == null) {
-            final QueuePath parent = new QueuePath(parentCandidate.getParent());
-            parentQueue = cs.getQueue(parent.getFullPath());
+            CSQueue parentQueue = cs.getQueue(parentCandidate.getFullPath());
             if (parentQueue == null) {
-              throw RPCUtil.getRemoteException(new AccessControlException(
-                  "Access denied for invalid queue " + submissionContext.getQueue() +
-                      " parent is not found " + parent.getFullPath() +
-                      " user " + user + " applicationId " + applicationId));
+              final QueuePath parent = new QueuePath(parentCandidate.getParent());
+              parentQueue = cs.getQueue(parent.getFullPath());
+              if (parentQueue == null) {
+                throw RPCUtil.getRemoteException(new AccessControlException(
+                    "Access denied for invalid queue " + submissionContext.getQueue() +
+                        " parent is not found " + parent.getFullPath() +
+                        " user " + user + " applicationId " + applicationId));
+              }
+
+              permissions.add(new Permission(getPrivilegedEntity(parentCandidate.getFullPath()),
+                  getACLsForFlexibleAutoCreatedParentQueue(aqc)));
             }
 
-            permissions.add(new Permission(getPrivilegedEntity(parentCandidate.getFullPath()),
-                getACLsForFlexibleAutoCreatedParentQueue(aqc)));
-          }
+            if (parentQueue instanceof AbstractManagedParentQueue) {
+              permissions.add(new Permission(privilegedEntity,
+                  getACLsForLegacyAutoCreatedLeafQueue(csConf, parentCandidate.getFullPath())));
+            } else {
+              permissions.add(new Permission(privilegedEntity,
+                  getACLsForFlexibleAutoCreatedLeafQueue(aqc)));
+            }
 
-          if (parentQueue instanceof AbstractManagedParentQueue) {
-            permissions.add(new Permission(privilegedEntity,
-                getACLsForLegacyAutoCreatedLeafQueue(csConf, parentCandidate.getFullPath())));
+            try {
+              authorizer.setPermission(permissions, UserGroupInformation.getCurrentUser());
+            } catch (IOException e) {
+              throw RPCUtil.getRemoteException(new AccessControlException(
+                  "Access denied, couldn't set permission to queue "
+                      + submissionContext.getQueue() + " user " + user
+                      + " applicationId " + applicationId));
+            }
           } else {
-            permissions.add(new Permission(privilegedEntity,
-                getACLsForFlexibleAutoCreatedLeafQueue(aqc)));
-          }
-
-          try {
-            authorizer.setPermission(permissions, UserGroupInformation.getCurrentUser());
-          } catch (IOException e) {
-            throw RPCUtil.getRemoteException(new AccessControlException(
-                "Access denied, couldn't set permission to queue " + submissionContext.getQueue() +
-                    " user " + user + " applicationId " + applicationId));
+            // TODO: what to do with ambiguous queues?
+            // IMHO: skipping ACL checks is never a good idea. testAmbiguousSubmissionWithACL
+            // related Jira: https://issues.apache.org/jira/browse/YARN-10787
+            ambiguous = true;
           }
         }
 
-        if (!authorizer.checkPermission(
+        if (!ambiguous && !authorizer.checkPermission(
             new AccessRequest(privilegedEntity, userUgi,
                 SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
                 applicationId.toString(), appName, Server.getRemoteAddress(),
