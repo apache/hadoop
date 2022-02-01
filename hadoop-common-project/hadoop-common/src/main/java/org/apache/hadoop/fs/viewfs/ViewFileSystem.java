@@ -113,7 +113,7 @@ public class ViewFileSystem extends FileSystem {
   /**
    * Caching children filesystems. HADOOP-15565.
    */
-  public static class InnerCache {
+  static class InnerCache {
     private Map<Key, FileSystem> map = new HashMap<>();
     private FsGetter fsCreator;
     private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
@@ -122,7 +122,7 @@ public class ViewFileSystem extends FileSystem {
       this.fsCreator = fsCreator;
     }
 
-    public FileSystem get(URI uri, Configuration config) throws IOException {
+    FileSystem get(URI uri, Configuration config) throws IOException {
       Key key = new Key(uri);
       FileSystem fs = null;
       try {

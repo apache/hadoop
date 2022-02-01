@@ -102,7 +102,7 @@ class ChRootedFileSystem extends FilterFileSystem {
    * @param uri base uri
    * @throws IOException 
    */
-  public ChRootedFileSystem(final FileSystem fs, URI uri) throws IOException {
+  ChRootedFileSystem(final FileSystem fs, URI uri) throws IOException {
     super(fs);
     String pathString = uri.getPath();
     if (pathString.isEmpty()) {
