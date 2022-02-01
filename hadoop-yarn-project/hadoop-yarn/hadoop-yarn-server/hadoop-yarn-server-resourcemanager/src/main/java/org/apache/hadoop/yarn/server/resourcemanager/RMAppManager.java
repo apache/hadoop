@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -95,6 +96,7 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager.getPrivilegedEntity;
 
 /**
  * This class manages the list of applications for the resource manager.
@@ -487,56 +489,24 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         String appName = submissionContext.getApplicationName();
 
         CapacityScheduler cs = (CapacityScheduler) scheduler;
-        CapacitySchedulerConfiguration csConf = cs.getConfiguration();
-
         CSQueue csqueue = cs.getQueue(queueName);
         PrivilegedEntity privilegedEntity = getPrivilegedEntity(
             csqueue == null ? queueName : csqueue.getQueuePath());
 
         boolean ambiguous = false;
         if (csqueue == null) {
-          if (placementContext != null) {
-            List<Permission> permissions = new ArrayList<>();
-
-            final QueuePath parentCandidate = new QueuePath(placementContext.getParentQueue());
-            AutoCreatedQueueTemplate aqc = new AutoCreatedQueueTemplate(csConf, parentCandidate);
-
-            CSQueue parentQueue = cs.getQueue(parentCandidate.getFullPath());
-            if (parentQueue == null) {
-              final QueuePath parent = new QueuePath(parentCandidate.getParent());
-              parentQueue = cs.getQueue(parent.getFullPath());
-              if (parentQueue == null) {
-                throw RPCUtil.getRemoteException(new AccessControlException(
-                    "Access denied for invalid queue " + submissionContext.getQueue() +
-                        " parent is not found " + parent.getFullPath() +
-                        " user " + user + " applicationId " + applicationId));
-              }
-
-              permissions.add(new Permission(getPrivilegedEntity(parentCandidate.getFullPath()),
-                  getACLsForFlexibleAutoCreatedParentQueue(aqc)));
-            }
-
-            if (parentQueue instanceof AbstractManagedParentQueue) {
-              permissions.add(new Permission(privilegedEntity,
-                  csConf.getACLsForLegacyAutoCreatedLeafQueue(parentCandidate.getFullPath())));
-            } else {
-              permissions.add(new Permission(privilegedEntity,
-                  getACLsForFlexibleAutoCreatedLeafQueue(aqc)));
-            }
-
-            try {
-              authorizer.setPermission(permissions, UserGroupInformation.getCurrentUser());
-            } catch (IOException e) {
-              throw RPCUtil.getRemoteException(new AccessControlException(
-                  "Access denied, couldn't set permission to queue "
-                      + submissionContext.getQueue() + " user " + user
-                      + " applicationId " + applicationId));
-            }
-          } else {
-            // TODO: what to do with ambiguous queues?
-            // IMHO: skipping ACL checks is never a good idea. testAmbiguousSubmissionWithACL
-            // related Jira: https://issues.apache.org/jira/browse/YARN-10787
+          try {
+            List<Permission> permissions =
+                cs.getCapacitySchedulerQueueManager().getPermissionsForDynamicQueue(
+                    new QueuePath(queueName), cs.getConfiguration());
+            authorizer.setPermission(permissions, UserGroupInformation.getCurrentUser());
+          } catch (SchedulerDynamicEditException e) {
             ambiguous = true;
+          } catch (IOException e) {
+            throw RPCUtil.getRemoteException(new AccessControlException(
+                "Access denied, couldn't set permission to queue "
+                    + submissionContext.getQueue() + " user " + user
+                    + " applicationId " + applicationId));
           }
         }
 
@@ -627,8 +597,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     return application;
   }
 
-  private static PrivilegedEntity getPrivilegedEntity(String queuePath) {
-    return new PrivilegedEntity(PrivilegedEntity.EntityType.QUEUE, queuePath);
+  private static void populateDynamicQueueACLProperties(String queuePath) {
+
   }
 
   private List<ResourceRequest> validateAndCreateResourceRequest(
