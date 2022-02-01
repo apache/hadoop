@@ -1458,11 +1458,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
     return new FSDataInputStream(
-        new S3AInputStream(
-            readContext.build(),
-            createObjectAttributes(path, fileStatus),
-            createInputStreamCallbacks(auditSpan),
-            inputStreamStats));
+            new S3AInputStream(
+                  readContext.build(),
+                  createObjectAttributes(path, fileStatus),
+                  createInputStreamCallbacks(auditSpan),
+                  inputStreamStats,
+                  unboundedThreadPool));
   }
 
   /**
@@ -4810,9 +4811,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * This is a proof of concept of a select API.
    * @param source path to source data
-   * @param expression select expression
    * @param options request configuration from the builder.
-   * @param providedStatus any passed in status
+   * @param fileInformation any passed in information.
    * @return the stream of the results
    * @throws IOException IO failure
    */
