@@ -443,6 +443,37 @@ The semantics of this are exactly equivalent to
 That is, the buffer is filled entirely with the contents of the input source
 from position `position`
 
+### `default void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)`
+
+Read fully data for a list of ranges asynchronously. The default implementation
+iterates through the ranges, tries to coalesce the ranges based on values of
+`minSeekForVectorReads` and `maxReadSizeForVectorReads` and then read each merged
+ranges synchronously, but the intent is sub classes can implement efficient
+implementation.
+
+#### Preconditions
+
+For each requested range:
+
+    range.getOffset >= 0 else raise IllegalArgumentException
+    range.getLength >= 0 else raise EOFException
+
+#### Postconditions
+
+For each requested range:
+
+    range.getData() returns CompletableFuture<ByteBuffer> which will have data
+    from range.getOffset to range.getLength.
+
+### `minSeekForVectorReads()`
+
+Smallest reasonable seek. Two ranges won't be merged together if the difference between
+end of first and start of next range is more than this value.
+
+### `maxReadSizeForVectorReads()`
+
+Maximum number of bytes which can be read in one go after merging the ranges.
+Two ranges won't be merged if the combined data to be read is more than this value.
 
 ## Consistency
 
