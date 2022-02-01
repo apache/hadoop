@@ -463,27 +463,21 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
     context.setQueue("InvalidQueue");
     context.setAMContainerSpec(amContainer);
     submitRequest.setApplicationSubmissionContext(context);
-
+    rmClient.submitApplication(submitRequest);
+    resourceManager.waitForState(applicationId, RMAppState.FAILED);
+    final GetApplicationReportRequest appReportRequest =
+        recordFactory.newRecordInstance(GetApplicationReportRequest.class);
+    appReportRequest.setApplicationId(applicationId);
+    GetApplicationReportResponse applicationReport =
+        rmClient.getApplicationReport(appReportRequest);
+    ApplicationReport appReport = applicationReport.getApplicationReport();
     if (conf.get(YarnConfiguration.RM_SCHEDULER)
-        .equals(CapacityScheduler.class.getName())) {
-      try {
-        rmClient.submitApplication(submitRequest);
-        Assert.fail("Should not be able to submit app to InvalidQueue");
-      } catch (YarnException e) {
-        Assert.assertTrue(e.getMessage()
-            .contains("InvalidQueue"));
-      }
-    } else {
-      rmClient.submitApplication(submitRequest);
-      resourceManager.waitForState(applicationId, RMAppState.FAILED);
-      final GetApplicationReportRequest appReportRequest =
-          recordFactory.newRecordInstance(GetApplicationReportRequest.class);
-      appReportRequest.setApplicationId(applicationId);
-      GetApplicationReportResponse applicationReport =
-          rmClient.getApplicationReport(appReportRequest);
-      ApplicationReport appReport = applicationReport.getApplicationReport();
+        .equals(FairScheduler.class.getName())) {
       Assert.assertTrue(appReport.getDiagnostics()
           .contains("user owner application rejected by placement rules."));
+    } else {
+      Assert.assertTrue(appReport.getDiagnostics()
+          .contains("submitted by user owner to unknown queue: InvalidQueue"));
     }
   }
 
