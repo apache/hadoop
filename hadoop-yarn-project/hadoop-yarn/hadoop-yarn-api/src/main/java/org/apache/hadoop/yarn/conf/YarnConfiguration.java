@@ -284,6 +284,10 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
       false;
 
+  /** Configure default application placement allocator. */
+  public static final String APPLICATION_PLACEMENT_TYPE_CLASS =
+      YARN_PREFIX + "scheduler.app-placement-allocator.class";
+
   /** Configured scheduler queue placement rules. */
   public static final String QUEUE_PLACEMENT_RULES = YARN_PREFIX
       + "scheduler.queue-placement-rules";
