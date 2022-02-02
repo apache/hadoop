@@ -455,8 +455,8 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().addBlockReport(brSendCost, getRpcMetricSuffix());
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
-          "uccessfully sent block report 0x" +
-          Long.toHexString(reportId) + " to namenode: " + nnAddr +
+          "uccessfully sent block report 0x" + Long.toHexString(reportId) +
+          " with lease ID 0x" + Long.toHexString(fullBrLeaseId) + " to namenode: " + nnAddr +
           ",  containing " + reports.length +
           " storage report(s), of which we sent " + numReportsSent + "." +
           " The reports had " + totalBlockCount +

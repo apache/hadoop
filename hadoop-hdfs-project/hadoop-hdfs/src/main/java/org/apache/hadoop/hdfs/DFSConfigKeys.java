@@ -143,6 +143,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_DATANODE_MAX_LOCKED_MEMORY_DEFAULT = 0;
   public static final String  DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY = "dfs.datanode.fsdatasetcache.max.threads.per.volume";
   public static final int     DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_DEFAULT = 4;
+  public static final String  DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY =
+      "dfs.datanode.fsdatasetasyncdisk.max.threads.per.volume";
+  public static final int     DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_DEFAULT = 4;
   public static final String  DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC = "dfs.datanode.lazywriter.interval.sec";
   public static final int     DFS_DATANODE_LAZY_WRITER_INTERVAL_DEFAULT_SEC = 60;
   public static final String  DFS_DATANODE_RAM_DISK_REPLICA_TRACKER_KEY = "dfs.datanode.ram.disk.replica.tracker";
@@ -1523,6 +1526,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String[] NNTOP_WINDOWS_MINUTES_DEFAULT = {"1", "5", "25"};
   public static final String DFS_PIPELINE_ECN_ENABLED = "dfs.pipeline.ecn";
   public static final boolean DFS_PIPELINE_ECN_ENABLED_DEFAULT = false;
+  public static final String DFS_PIPELINE_SLOWNODE_ENABLED = "dfs.pipeline.slownode";
+  public static final boolean DFS_PIPELINE_SLOWNODE_ENABLED_DEFAULT = false;
 
   // Key Provider Cache Expiry
   public static final String DFS_DATANODE_BLOCK_PINNING_ENABLED =

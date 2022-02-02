@@ -330,7 +330,7 @@ public class DefaultRequestInterceptorREST
   }
 
   @Override
-  public Response removeFromCluserNodeLabels(Set<String> oldNodeLabels,
+  public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
     // oldNodeLabels is specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,

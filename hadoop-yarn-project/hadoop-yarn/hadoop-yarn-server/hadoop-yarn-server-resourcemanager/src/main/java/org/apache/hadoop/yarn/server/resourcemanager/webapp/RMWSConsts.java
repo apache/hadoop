@@ -126,7 +126,7 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#addToClusterNodeLabels}. */
   public static final String ADD_NODE_LABELS = "/add-node-labels";
 
-  /** Path for {@code RMWebServiceProtocol#removeFromCluserNodeLabels}. */
+  /** Path for {@code RMWebServiceProtocol#removeFromClusterNodeLabels}. */
   public static final String REMOVE_NODE_LABELS = "/remove-node-labels";
 
   /** Path for {@code RMWebServiceProtocol#getLabelsOnNode}. */
