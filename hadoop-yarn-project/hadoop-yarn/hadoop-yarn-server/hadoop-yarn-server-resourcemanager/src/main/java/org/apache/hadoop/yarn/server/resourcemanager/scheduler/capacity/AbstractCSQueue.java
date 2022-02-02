@@ -201,20 +201,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public ResourceVector getOrCreateAbsoluteMinCapacityVector(String label) {
-    usageTracker.getAbsoluteMinCapacityVector().putIfAbsent(label, ResourceVector.newInstance());
-
-    return usageTracker.getAbsoluteMinCapacityVector().get(label);
-  }
-
-  @Override
-  public ResourceVector getOrCreateAbsoluteMaxCapacityVector(String label) {
-    usageTracker.getAbsoluteMaxCapacityVector().putIfAbsent(label, ResourceVector.newInstance());
-
-    return usageTracker.getAbsoluteMaxCapacityVector().get(label);
-  }
-
-  @Override
   public float getAbsoluteMaximumCapacity() {
     return queueCapacities.getAbsoluteMaximumCapacity();
   }

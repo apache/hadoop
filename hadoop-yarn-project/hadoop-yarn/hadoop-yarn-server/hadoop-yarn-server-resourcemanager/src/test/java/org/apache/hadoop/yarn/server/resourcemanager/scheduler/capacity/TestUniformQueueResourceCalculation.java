@@ -43,12 +43,12 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
   private static final Resource UPDATE_RES = Resource.newInstance(250 * GB, 40);
   private static final Resource PERCENTAGE_ALL_RES = Resource.newInstance(10 * GB, 20);
 
-  public static final float A_CAPACITY = 0.3f;
-  public static final float B_CAPACITY = 0.7f;
-  public static final float A1_CAPACITY = 0.17f;
-  public static final float A11_CAPACITY = 0.25f;
-  public static final float A12_CAPACITY = 0.75f;
-  public static final float A2_CAPACITY = 0.83f;
+  public static final double A_CAPACITY = 0.3;
+  public static final double B_CAPACITY = 0.7;
+  public static final double A1_CAPACITY = 0.17;
+  public static final double A11_CAPACITY = 0.25;
+  public static final double A12_CAPACITY = 0.75;
+  public static final double A2_CAPACITY = 0.83;
 
   public static final float A_WEIGHT = 3;
   public static final float B_WEIGHT = 6;
@@ -57,12 +57,12 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
   public static final float A12_WEIGHT = 8;
   public static final float A2_WEIGHT = 3;
 
-  public static final float A_NORMALIZED_WEIGHT = A_WEIGHT / (A_WEIGHT + B_WEIGHT);
-  public static final float B_NORMALIZED_WEIGHT = B_WEIGHT / (A_WEIGHT + B_WEIGHT);
-  public static final float A1_NORMALIZED_WEIGHT = A1_WEIGHT / (A1_WEIGHT + A2_WEIGHT);
-  public static final float A2_NORMALIZED_WEIGHT = A2_WEIGHT / (A1_WEIGHT + A2_WEIGHT);
-  public static final float A11_NORMALIZED_WEIGHT = A11_WEIGHT / (A11_WEIGHT + A12_WEIGHT);
-  public static final float A12_NORMALIZED_WEIGHT = A12_WEIGHT / (A11_WEIGHT + A12_WEIGHT);
+  public static final double A_NORMALIZED_WEIGHT = A_WEIGHT / (A_WEIGHT + B_WEIGHT);
+  public static final double B_NORMALIZED_WEIGHT = B_WEIGHT / (A_WEIGHT + B_WEIGHT);
+  public static final double A1_NORMALIZED_WEIGHT = A1_WEIGHT / (A1_WEIGHT + A2_WEIGHT);
+  public static final double A2_NORMALIZED_WEIGHT = A2_WEIGHT / (A1_WEIGHT + A2_WEIGHT);
+  public static final double A11_NORMALIZED_WEIGHT = A11_WEIGHT / (A11_WEIGHT + A12_WEIGHT);
+  public static final double A12_NORMALIZED_WEIGHT = A12_WEIGHT / (A11_WEIGHT + A12_WEIGHT);
 
   @Test
   public void testWeightResourceCalculation() throws IOException {
@@ -103,39 +103,39 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
 
   @Test
   public void testPercentageResourceCalculation() throws IOException {
-    csConf.setCapacity(A, A_CAPACITY * 100);
-    csConf.setCapacity(B, B_CAPACITY * 100);
-    csConf.setCapacity(A1, A1_CAPACITY * 100);
-    csConf.setCapacity(A11, A11_CAPACITY * 100);
-    csConf.setCapacity(A12, A12_CAPACITY * 100);
-    csConf.setCapacity(A2, A2_CAPACITY * 100);
+    csConf.setCapacity(A, (float) (A_CAPACITY * 100));
+    csConf.setCapacity(B, (float) (B_CAPACITY * 100));
+    csConf.setCapacity(A1, (float) (A1_CAPACITY * 100));
+    csConf.setCapacity(A11, (float) (A11_CAPACITY * 100));
+    csConf.setCapacity(A12, (float) (A12_CAPACITY * 100));
+    csConf.setCapacity(A2, (float) (A2_CAPACITY * 100));
 
     QueueAssertionBuilder queueAssertionBuilder = createAssertionBuilder()
         .withQueue(A)
-        .assertEffectiveMinResource(ResourceUtils.multiply(PERCENTAGE_ALL_RES, A_CAPACITY))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES, A_CAPACITY))
         .assertCapacity(A_CAPACITY)
         .assertAbsoluteCapacity(A_CAPACITY)
         .withQueue(B)
-        .assertEffectiveMinResource(ResourceUtils.multiply(PERCENTAGE_ALL_RES, B_CAPACITY))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES, B_CAPACITY))
         .assertCapacity(B_CAPACITY)
         .assertAbsoluteCapacity(B_CAPACITY)
         .withQueue(A1)
-        .assertEffectiveMinResource(ResourceUtils.multiply(PERCENTAGE_ALL_RES,
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES,
             A_CAPACITY * A1_CAPACITY))
         .assertCapacity(A1_CAPACITY)
         .assertAbsoluteCapacity(A_CAPACITY * A1_CAPACITY)
         .withQueue(A2)
-        .assertEffectiveMinResource(ResourceUtils.multiply(PERCENTAGE_ALL_RES,
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES,
             A_CAPACITY * A2_CAPACITY))
         .assertCapacity(A2_CAPACITY)
         .assertAbsoluteCapacity(A_CAPACITY * A2_CAPACITY)
         .withQueue(A11)
-        .assertEffectiveMinResource(ResourceUtils.multiply(PERCENTAGE_ALL_RES,
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES,
             A11_CAPACITY * A_CAPACITY * A1_CAPACITY))
         .assertCapacity(A11_CAPACITY)
         .assertAbsoluteCapacity(A11_CAPACITY * A_CAPACITY * A1_CAPACITY)
         .withQueue(A12)
-        .assertEffectiveMinResource(ResourceUtils.multiply(PERCENTAGE_ALL_RES,
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES,
             A12_CAPACITY * A_CAPACITY * A1_CAPACITY))
         .assertCapacity(A12_CAPACITY)
         .assertAbsoluteCapacity(A12_CAPACITY * A_CAPACITY * A1_CAPACITY)
@@ -172,20 +172,20 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
 
     QueueAssertionBuilder queueAssertionHalfClusterResource = createAssertionBuilder()
         .withQueue(A)
-        .assertEffectiveMinResource(ResourceUtils.multiply(QUEUE_A_RES, 0.5f))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A_RES, 0.5f))
         .withQueue(B)
-        .assertEffectiveMinResource(ResourceUtils.multiply(QUEUE_B_RES, 0.5f))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_B_RES, 0.5f))
         .withQueue(A1)
-        .assertEffectiveMinResource(ResourceUtils.multiply(QUEUE_A1_RES, 0.5f))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A1_RES, 0.5f))
         .withQueue(A2)
-        .assertEffectiveMinResource(ResourceUtils.multiply(QUEUE_A2_RES, 0.5f))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A2_RES, 0.5f))
         .withQueue(A11)
-        .assertEffectiveMinResource(ResourceUtils.multiply(QUEUE_A11_RES, 0.5f))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A11_RES, 0.5f))
         .withQueue(A12)
-        .assertEffectiveMinResource(ResourceUtils.multiply(QUEUE_A12_RES, 0.5f))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A12_RES, 0.5f))
         .build();
 
-    update(queueAssertionHalfClusterResource, ResourceUtils.multiply(UPDATE_RES, 0.5f));
+    update(queueAssertionHalfClusterResource, ResourceUtils.multiplyFloor(UPDATE_RES, 0.5f));
   }
 
 }

@@ -818,7 +818,7 @@ public class ResourceUtils {
     return res;
   }
 
-  public static Resource multiply(Resource resource, float multiplier) {
+  public static Resource multiplyFloor(Resource resource, double multiplier) {
     Resource newResource = Resource.newInstance(0, 0);
 
     for (ResourceInformation resourceInformation : resource.getResources()) {
@@ -829,7 +829,7 @@ public class ResourceUtils {
     return newResource;
   }
 
-  public static Resource multiplyRound(Resource resource, float multiplier) {
+  public static Resource multiplyRound(Resource resource, double multiplier) {
     Resource newResource = Resource.newInstance(0, 0);
 
     for (ResourceInformation resourceInformation : resource.getResources()) {

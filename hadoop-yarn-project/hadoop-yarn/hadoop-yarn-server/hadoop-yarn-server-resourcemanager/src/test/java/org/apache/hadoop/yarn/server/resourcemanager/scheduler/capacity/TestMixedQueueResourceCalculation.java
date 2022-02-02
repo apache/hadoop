@@ -359,10 +359,10 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
 
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
         .withQueue(A)
-        .assertEffectiveMinResource(ResourceUtils.multiply(UPDATE_RESOURCE, 0.5f))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(UPDATE_RESOURCE, 0.5d))
         .assertEffectiveMaxResource(A_EXPECTED_MAX_RESOURCE_DIFFERENT_MIN_MAX)
         .withQueue(B)
-        .assertEffectiveMinResource(ResourceUtils.multiply(UPDATE_RESOURCE, 0.5f))
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(UPDATE_RESOURCE, 0.5d))
         .assertEffectiveMaxResource(B_EXPECTED_MAX_RESOURCE_DIFFERENT_MIN_MAX)
         .build();
 

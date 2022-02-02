@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ResourceCalculationDriver.CalculationContext;
 
 import java.util.Collection;
 
@@ -31,7 +30,8 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
   public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
     super.calculateResourcePrerequisites(resourceCalculationDriver);
 
-    for (CSQueue childQueue : resourceCalculationDriver.getParent().getChildQueues()) {
+    // Precalculate the summary of children's weight
+    for (CSQueue childQueue : resourceCalculationDriver.getQueue().getChildQueues()) {
       for (String label : childQueue.getConfiguredNodeLabels()) {
         for (String resourceName : childQueue.getConfiguredCapacityVector(label)
             .getResourceNamesByCapacityType(getCapacityType())) {
@@ -43,15 +43,14 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
   }
 
   @Override
-  public float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
+  public double calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
                                         CalculationContext context,
                                         String label) {
-    CSQueue parentQueue = resourceCalculationDriver.getParent();
     String resourceName = context.getResourceName();
-    float normalizedWeight = context.getCurrentMinimumCapacityEntry(label)
+    double normalizedWeight = context.getCurrentMinimumCapacityEntry(label)
         .getResourceValue() / resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
 
-    float remainingResource = resourceCalculationDriver.getBatchRemainingResource(label).getValue(
+    double remainingResource = resourceCalculationDriver.getBatchRemainingResource(label).getValue(
         resourceName);
 
     // Due to rounding loss it is better to use all remaining resources if no other resource uses
@@ -60,24 +59,19 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
       return remainingResource;
     }
 
-    float remainingResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
+    double remainingResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
         label, resourceName);
-
-    float parentAbsoluteCapacity = parentQueue.getOrCreateAbsoluteMinCapacityVector(label)
-        .getValue(resourceName);
-    float queueAbsoluteCapacity = parentAbsoluteCapacity * remainingResourceRatio
+    double parentAbsoluteCapacity = resourceCalculationDriver.getParentAbsoluteMinCapacity(
+        label, resourceName);
+    double queueAbsoluteCapacity = parentAbsoluteCapacity * remainingResourceRatio
         * normalizedWeight;
-
-    // Weight capacity types are the last to consider, therefore it is safe to assign all remaining
-    // effective resources between queues. The strategy is to round values to the closest whole
-    // number.
 
     return resourceCalculationDriver.getUpdateContext()
         .getUpdatedClusterResource(label).getResourceValue(resourceName) * queueAbsoluteCapacity;
   }
 
   @Override
-  public float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
+  public double calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
                                         CalculationContext context,
                                         String label) {
     throw new IllegalStateException("Resource " + context.getCurrentMinimumCapacityEntry(
@@ -92,17 +86,17 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
   @Override
   public void updateCapacitiesAfterCalculation(
       ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label) {
-    float sumCapacityPerResource = 0f;
+    double sumCapacityPerResource = 0f;
 
     Collection<String> resourceNames = getResourceNames(queue, label);
     for (String resourceName : resourceNames) {
-      float sumBranchWeight = resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
-      float capacity =  queue.getConfiguredCapacityVector(
+      double sumBranchWeight = resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
+      double capacity =  queue.getConfiguredCapacityVector(
           label).getResource(resourceName).getResourceValue() / sumBranchWeight;
       sumCapacityPerResource += capacity;
     }
 
-    queue.getQueueCapacities().setNormalizedWeight(label, sumCapacityPerResource / resourceNames.size());
+    queue.getQueueCapacities().setNormalizedWeight(label, (float) (sumCapacityPerResource / resourceNames.size()));
     ((AbstractCSQueue) queue).updateAbsoluteCapacities();
   }
 }

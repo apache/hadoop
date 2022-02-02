@@ -96,8 +96,9 @@ public class CapacitySchedulerQueueCalculationTestBase {
         new CapacitySchedulerQueueCapacityHandler(mgr);
     mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, emptyLabelResource);
 
+    queueController.updateRoot(cs.getQueue("root"), clusterResource);
     QueueCapacityUpdateContext updateContext =
-        queueController.update(clusterResource, cs.getQueue("root"));
+        queueController.updateChildren(clusterResource, cs.getQueue("root"));
 
     assertions.finishAssertion();
 

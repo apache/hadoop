@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,6 @@ import java.util.Set;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 
 /**
  * Controls how capacity and resource values are set and calculated for a queue.
@@ -70,45 +70,48 @@ public class CapacitySchedulerQueueCapacityHandler {
   }
 
   /**
-   * Updates the resource and metrics values for a queue, its siblings and descendants.
+   * Updates the resource and metrics values of all children under a specific queue.
    * These values are calculated at runtime.
    *
    * @param clusterResource resource of the cluster
-   * @param queue           queue to update
+   * @param queue           parent queue whose children will be updated
    * @return update context that contains information about the update phase
    */
-  public QueueCapacityUpdateContext update(Resource clusterResource, CSQueue queue) {
+  public QueueCapacityUpdateContext updateChildren(Resource clusterResource, CSQueue queue) {
     ResourceLimits resourceLimits = new ResourceLimits(clusterResource);
     QueueCapacityUpdateContext updateContext =
         new QueueCapacityUpdateContext(clusterResource, labelsManager);
 
-    if (queue.getQueuePath().equals(ROOT)) {
-      updateRoot(queue, updateContext, resourceLimits);
-      updateChildren(queue, updateContext, resourceLimits);
-    } else {
-      updateChildren(queue.getParent(), updateContext, resourceLimits);
-    }
-
+    update(queue, updateContext, resourceLimits);
     return updateContext;
   }
 
-  private void updateRoot(
-      CSQueue queue, QueueCapacityUpdateContext updateContext, ResourceLimits resourceLimits) {
-    RootCalculationDriver rootCalculationDriver = new RootCalculationDriver(queue, updateContext,
+  /**
+   * Updates the resource and metrics value of the root queue. Root queue always has percentage
+   * capacity type and is assigned the cluster resource as its minimum and maximum effective
+   * resource.
+   * @param rootQueue root queue
+   * @param clusterResource cluster resource
+   */
+  public void updateRoot(CSQueue rootQueue, Resource clusterResource) {
+    ResourceLimits resourceLimits = new ResourceLimits(clusterResource);
+    QueueCapacityUpdateContext updateContext =
+        new QueueCapacityUpdateContext(clusterResource, labelsManager);
+
+    RootCalculationDriver rootCalculationDriver = new RootCalculationDriver(rootQueue, updateContext,
         rootCalculator, definedResources);
     rootCalculationDriver.calculateResources();
-    queue.refreshAfterResourceCalculation(updateContext.getUpdatedClusterResource(), resourceLimits);
+    rootQueue.refreshAfterResourceCalculation(updateContext.getUpdatedClusterResource(), resourceLimits);
   }
 
-  private void updateChildren(
-      CSQueue parent, QueueCapacityUpdateContext updateContext,
-      ResourceLimits resourceLimits) {
-    if (parent == null || CollectionUtils.isEmpty(parent.getChildQueues())) {
+  private void update(
+      CSQueue queue, QueueCapacityUpdateContext updateContext, ResourceLimits resourceLimits) {
+    if (queue == null || CollectionUtils.isEmpty(queue.getChildQueues())) {
       return;
     }
 
     ResourceCalculationDriver resourceCalculationDriver = new ResourceCalculationDriver(
-        parent, updateContext, calculators, definedResources);
+        queue, updateContext, calculators, definedResources);
     resourceCalculationDriver.calculateResources();
 
     updateChildrenAfterCalculation(resourceCalculationDriver, resourceLimits);
@@ -116,14 +119,84 @@ public class CapacitySchedulerQueueCapacityHandler {
 
   private void updateChildrenAfterCalculation(
       ResourceCalculationDriver resourceCalculationDriver, ResourceLimits resourceLimits) {
-    for (CSQueue childQueue : resourceCalculationDriver.getParent().getChildQueues()) {
-      resourceCalculationDriver.updateChildCapacities(childQueue);
-      ResourceLimits childLimit = ((ParentQueue) resourceCalculationDriver.getParent()).getResourceLimitsOfChild(
-          childQueue, resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(), resourceLimits, NO_LABEL, false);
+    ParentQueue parentQueue = (ParentQueue) resourceCalculationDriver.getQueue();
+    for (CSQueue childQueue : parentQueue.getChildQueues()) {
+      updateChildCapacities(resourceCalculationDriver, childQueue);
+
+      ResourceLimits childLimit = parentQueue.getResourceLimitsOfChild(childQueue,
+          resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(),
+          resourceLimits, NO_LABEL, false);
       childQueue.refreshAfterResourceCalculation(resourceCalculationDriver.getUpdateContext()
               .getUpdatedClusterResource(), childLimit);
-      updateChildren(childQueue, resourceCalculationDriver.getUpdateContext(), childLimit);
+
+      update(childQueue, resourceCalculationDriver.getUpdateContext(), childLimit);
     }
+  }
+
+  /**
+   * Updates the capacity values of the currently evaluated child.
+   * @param childQueue child queue on which the capacities are set
+   */
+  private void updateChildCapacities(ResourceCalculationDriver resourceCalculationDriver, CSQueue childQueue) {
+    childQueue.getWriteLock().lock();
+    try {
+      for (String label : childQueue.getConfiguredNodeLabels()) {
+        QueueCapacityVector capacityVector = childQueue.getConfiguredCapacityVector(label);
+        if (capacityVector.isMixedCapacityVector()) {
+          // Post update capacities based on the calculated effective resource values
+          setQueueCapacities(resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label), childQueue, label);
+        } else {
+          // Update capacities according to the legacy logic
+          for (ResourceUnitCapacityType capacityType :
+              childQueue.getConfiguredCapacityVector(label).getDefinedCapacityTypes()) {
+            AbstractQueueCapacityCalculator calculator = calculators.get(capacityType);
+            calculator.updateCapacitiesAfterCalculation(resourceCalculationDriver, childQueue, label);
+          }
+        }
+      }
+    } finally {
+      childQueue.getWriteLock().unlock();
+    }
+  }
+
+  /**
+   * Sets capacity and absolute capacity values of a queue based on minimum and
+   * maximum effective resources.
+   *
+   * @param queue child queue for which the capacities are set
+   * @param label node label
+   */
+  public static void setQueueCapacities(Resource clusterResource, CSQueue queue, String label) {
+    if (!(queue instanceof AbstractCSQueue)) {
+      return;
+    }
+
+    AbstractCSQueue csQueue = (AbstractCSQueue) queue;
+    ResourceCalculator resourceCalculator = csQueue.resourceCalculator;
+
+    CSQueue parent = queue.getParent();
+    if (parent == null) {
+      return;
+    }
+    // Update capacity with a double calculated from the parent's minResources
+    // and the recently changed queue minResources.
+    // capacity = effectiveMinResource / {parent's effectiveMinResource}
+    float result = resourceCalculator.divide(clusterResource,
+        queue.getQueueResourceQuotas().getEffectiveMinResource(label),
+        parent.getQueueResourceQuotas().getEffectiveMinResource(label));
+    queue.getQueueCapacities().setCapacity(label,
+        Float.isInfinite(result) ? 0 : result);
+
+    // Update maxCapacity with a double calculated from the parent's maxResources
+    // and the recently changed queue maxResources.
+    // maxCapacity = effectiveMaxResource / parent's effectiveMaxResource
+    result = resourceCalculator.divide(clusterResource,
+        queue.getQueueResourceQuotas().getEffectiveMaxResource(label),
+        parent.getQueueResourceQuotas().getEffectiveMaxResource(label));
+    queue.getQueueCapacities().setMaximumCapacity(label,
+        Float.isInfinite(result) ? 0 : result);
+
+    csQueue.updateAbsoluteCapacities();
   }
 
   private void loadResourceNames() {

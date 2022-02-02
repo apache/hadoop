@@ -38,23 +38,21 @@ public final class RootCalculationDriver extends ResourceCalculationDriver {
 
   @Override
   public void calculateResources() {
-    for (String label : parent.getConfiguredNodeLabels()) {
-      for (QueueCapacityVector.QueueCapacityVectorEntry capacityVectorEntry : parent.getConfiguredCapacityVector(label)) {
+    for (String label : queue.getConfiguredNodeLabels()) {
+      for (QueueCapacityVector.QueueCapacityVectorEntry capacityVectorEntry : queue.getConfiguredCapacityVector(label)) {
         String resourceName = capacityVectorEntry.getResourceName();
-        parent.getOrCreateAbsoluteMinCapacityVector(label).setValue(resourceName, 1);
-        parent.getOrCreateAbsoluteMaxCapacityVector(label).setValue(resourceName, 1);
 
-        CalculationContext context = new CalculationContext(resourceName, PERCENTAGE, parent);
-        float minimumResource = rootCalculator.calculateMinimumResource(this, context, label);
-        float maximumResource = rootCalculator.calculateMaximumResource(this, context, label);
+        CalculationContext context = new CalculationContext(resourceName, PERCENTAGE, queue);
+        double minimumResource = rootCalculator.calculateMinimumResource(this, context, label);
+        double maximumResource = rootCalculator.calculateMaximumResource(this, context, label);
         long roundedMinResource = (long) roundingStrategy.getRoundedResource(minimumResource, capacityVectorEntry);
-        long roundedMaxResource = (long) roundingStrategy.getRoundedResource(maximumResource, parent.getConfiguredMaxCapacityVector(label).getResource(resourceName));
-        parent.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
+        long roundedMaxResource = (long) roundingStrategy.getRoundedResource(maximumResource, queue.getConfiguredMaxCapacityVector(label).getResource(resourceName));
+        queue.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
             resourceName, roundedMinResource);
-        parent.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
+        queue.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
             resourceName, roundedMaxResource);
       }
-      rootCalculator.updateCapacitiesAfterCalculation(this, parent, label);
+      rootCalculator.updateCapacitiesAfterCalculation(this, queue, label);
     }
 
     rootCalculator.calculateResourcePrerequisites(this);

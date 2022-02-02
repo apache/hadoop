@@ -37,17 +37,20 @@ public class DefaultQueueResourceRoundingStrategy implements QueueResourceRoundi
   private final ResourceUnitCapacityType lastCapacityType;
 
   public DefaultQueueResourceRoundingStrategy(
-      Set<ResourceUnitCapacityType> capacityTypePrecedence) {
-    lastCapacityType = capacityTypePrecedence.stream().reduce((c1, c2) -> c2).orElseThrow(()
-        -> new IllegalArgumentException("Capacity type precedence collection is empty"));
+      ResourceUnitCapacityType[] capacityTypePrecedence) {
+    if (capacityTypePrecedence.length == 0) {
+     throw new IllegalArgumentException("Capacity type precedence collection is empty");
+    }
+
+    lastCapacityType = capacityTypePrecedence[capacityTypePrecedence.length - 1];
   }
 
   @Override
-  public float getRoundedResource(float resourceValue, QueueCapacityVectorEntry capacityVectorEntry) {
+  public double getRoundedResource(double resourceValue, QueueCapacityVectorEntry capacityVectorEntry) {
     if (capacityVectorEntry.getVectorResourceType().equals(lastCapacityType)) {
       return Math.round(resourceValue);
     } else {
-      return (float) Math.floor(resourceValue);
+      return Math.floor(resourceValue);
     }
   }
 }

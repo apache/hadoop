@@ -19,21 +19,18 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ResourceCalculationDriver.CalculationContext;
 
 public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
-  public float calculateMinimumResource(
+  public double calculateMinimumResource(
       ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
-    CSQueue parentQueue = resourceCalculationDriver.getParent();
     String resourceName = context.getResourceName();
 
-    float parentAbsoluteCapacity = parentQueue.getOrCreateAbsoluteMinCapacityVector(label).getValue(
-        resourceName);
-    float remainingPerEffectiveResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
+    double parentAbsoluteCapacity = resourceCalculationDriver.getParentAbsoluteMinCapacity(label, resourceName);
+    double remainingPerEffectiveResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
         label, resourceName);
-    float absoluteCapacity = parentAbsoluteCapacity * remainingPerEffectiveResourceRatio
+    double absoluteCapacity = parentAbsoluteCapacity * remainingPerEffectiveResourceRatio
         * context.getCurrentMinimumCapacityEntry(label).getResourceValue() / 100;
 
     return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
@@ -41,14 +38,12 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
 }
 
   @Override
-  public float calculateMaximumResource(
+  public double calculateMaximumResource(
       ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
-    CSQueue parentQueue = resourceCalculationDriver.getParent();
     String resourceName = context.getResourceName();
 
-    float parentAbsoluteMaxCapacity = parentQueue.getOrCreateAbsoluteMaxCapacityVector(label)
-        .getValue(resourceName);
-    float absoluteMaxCapacity = parentAbsoluteMaxCapacity
+    double parentAbsoluteMaxCapacity = resourceCalculationDriver.getParentAbsoluteMaxCapacity(label, resourceName);
+    double absoluteMaxCapacity = parentAbsoluteMaxCapacity
         * context.getCurrentMaximumCapacityEntry(label).getResourceValue() / 100;
 
     return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)

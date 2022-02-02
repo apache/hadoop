@@ -18,20 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ResourceCalculationDriver.CalculationContext;
-
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 public class RootQueueCapacityCalculator extends
     AbstractQueueCapacityCalculator {
 
   @Override
-  public float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
+  public double calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
     return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label).getResourceValue(context.getResourceName());
   }
 
   @Override
-  public float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
+  public double calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
     return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label).getResourceValue(context.getResourceName());
   }
 

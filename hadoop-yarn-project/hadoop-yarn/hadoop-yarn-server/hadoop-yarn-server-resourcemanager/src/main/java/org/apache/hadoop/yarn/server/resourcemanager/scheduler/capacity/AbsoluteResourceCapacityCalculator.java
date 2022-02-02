@@ -19,17 +19,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ResourceCalculationDriver.CalculationContext;
 
 public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
-  public float calculateMinimumResource(
+  public double calculateMinimumResource(
       ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
     String resourceName = context.getResourceName();
-    float normalizedRatio = resourceCalculationDriver.getNormalizedResourceRatios().getOrDefault(
+    double normalizedRatio = resourceCalculationDriver.getNormalizedResourceRatios().getOrDefault(
         label, ResourceVector.of(1)).getValue(resourceName);
-    float remainingResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
+    double remainingResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
         label, resourceName);
 
     return normalizedRatio * remainingResourceRatio * context.getCurrentMinimumCapacityEntry(
@@ -37,7 +36,7 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
   }
 
   @Override
-  public float calculateMaximumResource(
+  public double calculateMaximumResource(
        ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
     return context.getCurrentMaximumCapacityEntry(label).getResourceValue();
   }
@@ -45,7 +44,8 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
   @Override
   public void updateCapacitiesAfterCalculation(
       ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label) {
-    resourceCalculationDriver.setQueueCapacities(queue, label);
+    CapacitySchedulerQueueCapacityHandler.setQueueCapacities(
+        resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label), queue, label);
   }
 
   @Override

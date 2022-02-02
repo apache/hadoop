@@ -115,10 +115,6 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   public float getAbsoluteCapacity();
 
-  public ResourceVector getOrCreateAbsoluteMinCapacityVector(String label);
-
-  public ResourceVector getOrCreateAbsoluteMaxCapacityVector(String label);
-
   /**
    * Get the configured maximum-capacity of the queue. 
    * @return the configured maximum-capacity of the queue

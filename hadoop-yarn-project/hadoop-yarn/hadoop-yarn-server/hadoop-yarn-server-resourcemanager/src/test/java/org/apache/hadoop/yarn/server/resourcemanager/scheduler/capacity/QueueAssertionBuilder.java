@@ -101,7 +101,7 @@ class QueueAssertionBuilder {
       return assertEffectiveMinResource(expected, NO_LABEL);
     }
 
-    public QueueAssertion assertCapacity(float expected) {
+    public QueueAssertion assertCapacity(double expected) {
       ValueAssertion valueAssertion = new ValueAssertion(expected);
       valueAssertion.withCapacitySupplier(CAPACITY, CAPACITY_INFO);
       assertions.add(valueAssertion);
@@ -109,7 +109,7 @@ class QueueAssertionBuilder {
       return this;
     }
 
-    public QueueAssertion assertAbsoluteCapacity(float expected) {
+    public QueueAssertion assertAbsoluteCapacity(double expected) {
       ValueAssertion valueAssertion = new ValueAssertion(expected);
       valueAssertion.withCapacitySupplier(ABS_CAPACITY, ABS_CAPACITY_INFO);
       assertions.add(valueAssertion);
@@ -118,14 +118,14 @@ class QueueAssertionBuilder {
     }
 
     private class ValueAssertion {
-      private float expectedValue = 0;
+      private double expectedValue = 0;
       private Resource expectedResource = null;
       private String assertionType;
       private Supplier<Float> valueSupplier;
       private Supplier<Resource> resourceSupplier;
       private String label = "";
 
-      ValueAssertion(float expectedValue) {
+      ValueAssertion(double expectedValue) {
         this.expectedValue = expectedValue;
       }
 
