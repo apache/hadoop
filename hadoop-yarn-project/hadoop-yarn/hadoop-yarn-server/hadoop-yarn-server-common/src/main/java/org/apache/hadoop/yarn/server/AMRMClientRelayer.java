@@ -611,7 +611,8 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
       for (ResourceRequestSetKey key : pendingAsks.keySet()) {
         Long startTime = this.askTimeStamp.get(key.getAllocationRequestId());
         if (startTime != null) {
-          pendingTime.put(key, System.currentTimeMillis() - startTime);
+          Long elapsedMs = System.currentTimeMillis() - startTime;
+          pendingTime.put(key, elapsedMs);
         }
       }
     }

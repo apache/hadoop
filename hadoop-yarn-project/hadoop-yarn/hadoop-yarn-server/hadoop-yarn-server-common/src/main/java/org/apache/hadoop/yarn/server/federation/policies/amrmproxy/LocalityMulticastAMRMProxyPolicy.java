@@ -308,9 +308,9 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         // If needed, re-reroute node requests base on SC load
         if (conf.getBoolean(LOAD_BASED_SC_SELECTOR_ENABLED,
             DEFAULT_LOAD_BASED_SC_SELECTOR_ENABLED)) {
-          int maxPendingThreshold =
-              conf.getInt(LOAD_BASED_SC_SELECTOR_THRESHOLD,
-                  DEFAULT_LOAD_BASED_SC_SELECTOR_THRESHOLD);
+          int maxPendingThreshold = conf.getInt(
+              LOAD_BASED_SC_SELECTOR_THRESHOLD,
+              DEFAULT_LOAD_BASED_SC_SELECTOR_THRESHOLD);
 
           targetId = routeNodeRequestIfNeeded(targetId, maxPendingThreshold,
               bookkeeper.getActiveAndEnabledSC());
@@ -739,6 +739,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
       Set<SubClusterId> tmpSCSet = new HashSet<>(activeAndEnabledSC);
       tmpSCSet.removeAll(timedOutSubClusters);
+
       if (tmpSCSet.size() < 1) {
         LOG.warn("All active and enabled subclusters have expired last "
             + "heartbeat time. Ignore the expiry check for this request");

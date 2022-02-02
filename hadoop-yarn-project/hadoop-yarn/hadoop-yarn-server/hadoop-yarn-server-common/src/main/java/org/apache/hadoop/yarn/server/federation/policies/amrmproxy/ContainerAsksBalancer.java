@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -44,12 +45,6 @@ public class ContainerAsksBalancer implements Configurable {
   public static final Logger LOG =
       LoggerFactory.getLogger(ContainerAsksBalancer.class);
 
-  public static final String DOWNGRADE_TO_OTHER_SUBCLUSTER_INTERVAL =
-      YarnConfiguration.FEDERATION_PREFIX
-          + "downgrade-to-other-subcluster-interval-ms";
-  private static final long DEFAULT_DOWNGRADE_TO_OTHER_SUBCLUSTER_INTERVAL =
-      10000;
-
   private Configuration conf;
 
   // Holds the pending requests and allocation history of all sub-clusters
@@ -66,9 +61,10 @@ public class ContainerAsksBalancer implements Configurable {
   @Override
   public void setConf(Configuration config) {
     this.conf = config;
-    this.subclusterAskTimeOut = this.conf
-        .getLong(DOWNGRADE_TO_OTHER_SUBCLUSTER_INTERVAL,
-            DEFAULT_DOWNGRADE_TO_OTHER_SUBCLUSTER_INTERVAL);
+    this.subclusterAskTimeOut = this.conf.getTimeDuration(
+        YarnConfiguration.DOWNGRADE_TO_OTHER_SUBCLUSTER_INTERVAL,
+        YarnConfiguration.DEFAULT_DOWNGRADE_TO_OTHER_SUBCLUSTER_INTERVAL,
+        TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -91,7 +87,7 @@ public class ContainerAsksBalancer implements Configurable {
   public void addAMRMClientRelayer(SubClusterId subClusterId,
       AMRMClientRelayer relayer) throws YarnException {
     if (this.clientRelayers.containsKey(subClusterId)) {
-      LOG.warn("AMRMClientRelayer already exists for " + subClusterId);
+      LOG.warn("AMRMClientRelayer already exists for {} ", subClusterId);
     }
     this.clientRelayers.put(subClusterId, relayer);
 
@@ -116,8 +112,8 @@ public class ContainerAsksBalancer implements Configurable {
 
       pendingAsks.clear();
       pendingTime.clear();
-      relayerEntry.getValue()
-          .gatherReadOnlyPendingAsksInfo(pendingAsks, pendingTime);
+      AMRMClientRelayer relayer = relayerEntry.getValue();
+      relayer.gatherReadOnlyPendingAsksInfo(pendingAsks, pendingTime);
 
       Map<ExecutionType, Long> currentCandidateCount = new HashMap<>();
       for (Entry<ResourceRequestSetKey, Long> pendingTimeEntry : pendingTime
@@ -153,8 +149,8 @@ public class ContainerAsksBalancer implements Configurable {
       }
       long lastValue = lastValueMap.get(type);
       lastValueMap.put(type, newValue);
-      LOG.debug("updating SCRelaxable " + type + " asks in " + scId + " from "
-          + lastValue + " to " + newValue);
+      LOG.debug("updating SCRelaxable {} asks in {} from {} to {}", type, scId,
+          lastValue, newValue);
     }
   }
 }

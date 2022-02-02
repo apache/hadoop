@@ -877,12 +877,12 @@ public class TestLocalityMulticastAMRMProxyPolicy
       counts.put(selectedId, counts.get(selectedId) + 1);
     }
 
-    // The probability should be 1/16, 1/16, 1/8, 1/4, 1/2
-    Assert.assertEquals((double) counts.get(sc0) / n / 3, 0.0625, 0.01);
-    Assert.assertEquals((double) counts.get(sc1) / n / 3, 0.0625, 0.01);
-    Assert.assertEquals((double) counts.get(sc2) / n / 3, 0.125, 0.01);
-    Assert.assertEquals((double) counts.get(sc3) / n / 3, 0.25, 0.01);
-    Assert.assertEquals((double) counts.get(sc4) / n / 3, 0.5, 0.01);
+    // The probability should be 1/16, 1/16, 1/8, 1/4, 1/2R
+    Assert.assertEquals((double) counts.get(sc0) / n / 3, 1 / 16.0, 0.01);
+    Assert.assertEquals((double) counts.get(sc1) / n / 3, 1 / 16.0, 0.01);
+    Assert.assertEquals((double) counts.get(sc2) / n / 3, 1 / 8.0, 0.01);
+    Assert.assertEquals((double) counts.get(sc3) / n / 3, 1 / 4.0, 0.01);
+    Assert.assertEquals((double) counts.get(sc4) / n / 3, 1 / 2.0, 0.01);
 
     // Everything should be routed to these five active and enabled SCs
     Assert.assertEquals(5, counts.size());

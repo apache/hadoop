@@ -43,11 +43,19 @@ public class ContainerAllocationHistory {
   private Queue<Entry<Long, Long>> relaxableG = new LinkedList<>();
 
   public ContainerAllocationHistory(Configuration conf) {
-    this.maxEntryCount =
-        conf.getInt(YarnConfiguration.FEDERATION_ALLOCATION_HISTORY_MAX_ENTRY,
-            YarnConfiguration.DEFAULT_FEDERATION_ALLOCATION_HISTORY_MAX_ENTRY);
+    this.maxEntryCount = conf.getInt(
+        YarnConfiguration.FEDERATION_ALLOCATION_HISTORY_MAX_ENTRY,
+        YarnConfiguration.DEFAULT_FEDERATION_ALLOCATION_HISTORY_MAX_ENTRY);
   }
 
+  /**
+   * Record the allocation history for the container
+   *
+   * @param container to add record for
+   * @param requestSet resource request ask set
+   * @param fulfillTimeStamp time at which allocation happened
+   * @param fulfillLatency time elapsed in allocating since asked
+   */
   public synchronized void addAllocationEntry(Container container,
       ResourceRequestSet requestSet, long fulfillTimeStamp,
       long fulfillLatency) {

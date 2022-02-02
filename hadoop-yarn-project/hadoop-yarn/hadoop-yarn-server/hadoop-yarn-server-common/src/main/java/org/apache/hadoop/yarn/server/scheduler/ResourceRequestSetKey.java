@@ -161,16 +161,16 @@ public class ResourceRequestSetKey extends SchedulerRequestKey {
         if (candidate.getAllocationRequestId() == container
             .getAllocationRequestId()) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Using possible match for " + key + ": " + candidate);
+            LOG.debug("Using possible match for {} : {}", key, candidate);
           }
           return candidate;
         }
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("not match found for container " + container);
+      LOG.debug("not match found for container {}", container.getId());
       for (ResourceRequestSetKey candidate : keys) {
-        LOG.debug("candidate set keys: " + candidate);
+        LOG.debug("candidate set keys: {}", candidate.toString());
       }
     }
     return null;

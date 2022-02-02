@@ -3975,6 +3975,13 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_PREFIX + "amrmproxy.allocation.history.max.entry";
   public static final int DEFAULT_FEDERATION_ALLOCATION_HISTORY_MAX_ENTRY = 100;
 
+  // timeout after which to re-balance request across sub cluster
+  public static final String DOWNGRADE_TO_OTHER_SUBCLUSTER_INTERVAL =
+      YarnConfiguration.FEDERATION_PREFIX
+          + "downgrade-to-other-subcluster-interval-ms";
+  public static final long DEFAULT_DOWNGRADE_TO_OTHER_SUBCLUSTER_INTERVAL =
+      10000;
+
   public static final String DEFAULT_FEDERATION_POLICY_KEY = "*";
   public static final String FEDERATION_POLICY_MANAGER = FEDERATION_PREFIX
       + "policy-manager";
