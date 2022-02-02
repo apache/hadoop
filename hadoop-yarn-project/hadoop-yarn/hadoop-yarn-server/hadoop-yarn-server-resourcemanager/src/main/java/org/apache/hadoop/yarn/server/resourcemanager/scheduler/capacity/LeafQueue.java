@@ -25,7 +25,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 @Private
 @Unstable
 public class LeafQueue extends AbstractLeafQueue {
