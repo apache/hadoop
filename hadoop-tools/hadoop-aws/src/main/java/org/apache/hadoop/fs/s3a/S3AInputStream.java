@@ -1161,7 +1161,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * {@inheritDoc}
    *
    * This implements a more efficient method for skip. It calls lazy seek
-   * which will then either make a new get request or do a default skip.
+   * which will either make a new get request or do a default skip.
    * If lazy seek fails, try doing a default skip.
    *
    * @param n Number of bytes to be skipped
