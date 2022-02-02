@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,9 +32,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractManagedParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -485,9 +481,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       if (scheduler instanceof CapacityScheduler) {
         String queueName = placementContext == null ?
             submissionContext.getQueue() : placementContext.getFullQueuePath();
-
-        String appName = submissionContext.getApplicationName();
-
         CapacityScheduler cs = (CapacityScheduler) scheduler;
         CSQueue csqueue = cs.getQueue(queueName);
         PrivilegedEntity privilegedEntity = getPrivilegedEntity(
@@ -510,6 +503,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           }
         }
 
+        String appName = submissionContext.getApplicationName();
         if (!ambiguous && !authorizer.checkPermission(
             new AccessRequest(privilegedEntity, userUgi,
                 SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
