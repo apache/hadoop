@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
  * File system instance getter.
  */
 @InterfaceAudience.LimitedPrivate({"Common"})
-@InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
+@InterfaceStability.Unstable
 public class FsGetter {
 
   /**
