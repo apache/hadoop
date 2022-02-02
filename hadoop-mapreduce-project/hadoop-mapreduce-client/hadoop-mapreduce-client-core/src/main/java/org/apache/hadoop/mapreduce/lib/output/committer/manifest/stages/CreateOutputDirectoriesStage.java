@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.measureDurationOfInvocation;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_PREPARE_PARENT_DIRECTORIES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_DIRECTORIES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MKDIRS_RETURNED_FALSE;
@@ -57,14 +59,16 @@ import static org.apache.hadoop.util.OperationDuration.humanTime;
  * Each task manifest's directories are combined with those of the other tasks
  * to build a set of all directories which are needed, without duplicates.
  *
- * A ancestor directories is then also built up, all of which MUST NOT
+ * If the option to prepare parent directories was set,
+ * these are also prepared for the commit.
+ * A set of ancestor directories is built up, all of which MUST NOT
  * be files and SHALL be in one of two states
  * - directory
  * - nonexistent
  * Across a thread pool, An isFile() probe is made for all parents;
  * if there is a file there then it is deleted.
  *
- * After ancestor dirs are created, the final dir set is created
+ * After any ancestor dir preparation, the final dir set is created
  * though mkdirs() calls, with some handling for race conditions.
  * It is not an error if mkdirs() fails because the dest dir is there;
  * if it fails because a file was found -that file will be deleted.
@@ -135,25 +139,60 @@ public class CreateOutputDirectoriesStage extends
       }
     }
 
-    // Go through dir map and insert an entry for all
-    // ancestor dirs of the rename destination path
-    // rename wants to rename a file to a/b/c/d.orc
-    // is list of dirs to create is [a/b, a/b/c]
-    // but a/b == exists at the dest and is a file
+    // Prepare parent directories.
+    if (getStageConfig().getPrepareParentDirectories()) {
+      prepareParentDirectories(directoriesToCreate);
+    }
 
-    // there are no duplicates: creating the set is sufficient
-    // to filter all these out.
+    // Now the real work.
+
+    final int createCount = directoriesToCreate.size();
+    LOG.info("Preparing {} directory/directories", createCount);
+    // now probe for and create the parent dirs of all renames
+    Duration d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
+        TaskPool.foreach(directoriesToCreate)
+            .executeWith(getIOProcessors(createCount))
+            .onFailure(this::reportMkDirFailure)
+            .stopOnFailure()
+            .run(dir -> {
+              updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
+              if (maybeCreateOneDirectory(dir)) {
+                addCreatedDirectory(dir);
+              }
+            }));
+    LOG.info("Time to prepare directories {}", humanTime(d.toMillis()));
+    return createdDirectories;
+  }
+
+  private final AtomicInteger failureCount = new AtomicInteger();
+
+  private void reportMkDirFailure(Path path, Exception e) {
+    LOG.warn("{}: Failed to create directory \"{}\": {}",
+        getName(), path, e.toString());
+    LOG.debug("{}: Full exception details",
+        getName(), e);
+    if (failureCount.getAndIncrement() == 0
+        && !getStageConfig().getPrepareParentDirectories()) {
+      // first failure and no parent dir setup.
+      LOG.warn("Consider enabling the option " + OPT_PREPARE_PARENT_DIRECTORIES);
+    }
+  }
+
+  /**
+   * Clean up parent dirs. No attempt is made to create them, because
+   * we know mkdirs() will do that (assuming it has the permissions,
+   * of course)
+   * @param directoriesToCreate set of dirs to create
+   * @throws IOException IO problem
+   */
+  private void prepareParentDirectories(final Set<Path> directoriesToCreate)
+      throws IOException {
 
     // include parents in the paths
     final Set<Path> ancestors = extractAncestors(
         getStageConfig().getDestinationDir(),
         directoriesToCreate);
 
-
-
-    // clean up parent dirs. No attempt is made to create them, because
-    // we know mkdirs() will do that (assuming it has the permissions,
-    // of course.
     final int ancestorCount = ancestors.size();
     LOG.info("Preparing {} ancestor directory/directories", ancestorCount);
     // if there is a single ancestor, don't bother with parallisation.
@@ -167,22 +206,6 @@ public class CreateOutputDirectoriesStage extends
                   prepareParentDir(dir);
                 }));
     LOG.info("Time to prepare ancestor directories {}", humanTime(d.toMillis()));
-
-    final int createCount = directoriesToCreate.size();
-    LOG.info("Preparing {} directory/directories", createCount);
-    // now probe for and create the parent dirs of all renames
-    d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
-        TaskPool.foreach(directoriesToCreate)
-            .executeWith(getIOProcessors(createCount))
-            .stopOnFailure()
-            .run(dir -> {
-              updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
-              if (maybeCreateOneDirectory(dir)) {
-                addCreatedDirectory(dir);
-              }
-            }));
-    LOG.info("Time to prepare directories {}", humanTime(d.toMillis()));
-    return createdDirectories;
   }
 
   /**

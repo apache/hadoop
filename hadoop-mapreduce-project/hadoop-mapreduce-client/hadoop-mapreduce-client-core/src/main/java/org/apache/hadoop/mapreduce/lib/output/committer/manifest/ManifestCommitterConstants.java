@@ -207,6 +207,44 @@ public final class ManifestCommitterConstants {
   public static final boolean OPT_VALIDATE_OUTPUT_DEFAULT = false;
 
   /**
+   * Should parent directories/partitions be prepared by scanning
+   * for files at those locations, and, if found, deleting them?
+   *
+   * This is part of the effective behavior of the FileOutputCommitter,
+   * however it adds an extra phase in job commit.f
+   *
+   * Value: {@value}.
+   */
+  public static final String OPT_PREPARE_PARENT_DIRECTORIES =
+      OPT_PREFIX + "prepare.parent.directories";
+
+  /**
+   * Default value: {@value}.
+   */
+  public static final boolean OPT_PREPARE_PARENT_DIRECTORIES_DEFAULT = false;
+
+  /**
+   * Should job commit probe for files/directories at the targets
+   * of renames, and, if found, deleting them?
+   *
+   * This is part of the effective behavior of the FileOutputCommitter,
+   * however it adds an extra delete call per file being committed.
+   *
+   * If a job is writing to a directory tree which has only just been created
+   * or were unique filenames are being used, there is no need to perform
+   * this preparation.
+   *
+   * Value: {@value}.
+   */
+  public static final String OPT_PREPARE_TARGET_FILES =
+      OPT_PREFIX + "prepare.target.files";
+
+  /**
+   * Default value: {@value}.
+   */
+  public static final boolean OPT_PREPARE_TARGET_FILES_DEFAULT = true;
+
+  /**
    * Name of the factory: {@value}.
    */
   public static final String MANIFEST_COMMITTER_FACTORY =

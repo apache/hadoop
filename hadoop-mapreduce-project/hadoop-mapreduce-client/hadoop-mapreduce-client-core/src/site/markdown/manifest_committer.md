@@ -160,16 +160,59 @@ or in the case of S3A filesystems, one of the S3A committers. They all use the s
 
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
+| `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for store operations. | `10000` |
 | `mapreduce.manifest.committer.io.thread.count` | Thread count for parallel operations | `64` |
-| `mapreduce.manifest.committer.validate.output` | Perform output validation | `false` |
+| `mapreduce.manifest.committer.store.operations.classname` | Classname for Store Operations | `""` |
+| `mapreduce.manifest.committer.prepare.parent.directories` | Prepare parent directories? | `false` |
+| `mapreduce.manifest.committer.prepare.target.files` | Delete target files? | `false` |
+| `mapreduce.manifest.committer.validate.output` | Perform output validation? | `false` |
+| `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` | Delete task attempt directories in parallel | `true` |
-| `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
-| `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for store operations. | `10000` |
-| `mapreduce.manifest.committer.store.operations.classname` | Classname for Store Operations |  |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Create a `_SUCCESS` marker file on successful completion. (and delete any existing one in job setup) | `true` |
+
+## Job Commit Preparation options `mapreduce.manifest.committer.prepare`
+
+Two committer options enable behaviors found in the classic FileOutputCommitter.
+
+Setting these options to `false` increases performance with a risk of job failures in
+jobs which update directories without any initial cleanup, and either of two situations
+arise
+
+1. A previous job has created a file at a path which is now a parent/ancestor directory
+   of a file being committed.
+2. A previous job has created a file *or directory* at a path which the current job
+   generated a file.
+
+Problem 1 is rare and unusual. If it does arise, set
+`mapreduce.manifest.committer.prepare.parent.directories` to `true`
+This adds the overhead of probing every parent directory in the table,
+which is done across multiple threads.
+
+```
+spark.hadoop.mapreduce.manifest.committer.prepare.parent.directories true
+```
+
+Problem 2, "existing files" may happen in jobs which appends data to existing
+tables _and do not generate unique names_.
+
+Apache Spark does generate unique filenames for ORC and Parquet
+since 
+[SPARK-8406](https://issues.apache.org/jira/browse/SPARK-8406)
+_Adding UUID to output file name to avoid accidental overwriting_
+
+Avoiding checks for/deleting target files saves one delete call per file being committed,
+so can save a significant amount of store IO.
+
+When appending to existing tables, using formats other than ORC and parquet,
+unless confident that unique identifiers
+are added to each filename, enable deletion of the target files.
+
+```
+spark.hadoop.mapreduce.manifest.committer.prepare.target.files true
+```
 
 ## Collecting Job Summaries into a report directory
 

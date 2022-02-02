@@ -41,13 +41,7 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.SUCCESSFUL_JOB_OUTPUT_DIR_MARKER;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_RATE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_RATE_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.*;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.buildJobUUID;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.getAppAttemptId;
 
@@ -130,6 +124,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
    */
   private final IOStatisticsStore iostatistics;
 
+
   /** Should the output be validated after the commit? */
   private final boolean validateOutput;
 
@@ -154,6 +149,17 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   private final String name;
 
   /**
+   * Delete target paths on commit? Stricter, but
+   * higher IO cost.
+   */
+  private final boolean deleteTargetPaths;
+
+  /**
+   * Prepare parent dirs by scanning them for files?
+   */
+  private final boolean prepareParentDirectories;
+
+  /**
    * Constructor.
    * @param outputPath destination path of the job.
    * @param role role for log messages.
@@ -161,6 +167,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
    * @param iostatistics IO Statistics
    * @param stageEventCallbacks stage event callbacks.
    */
+
   ManifestCommitterConfig(
       final Path outputPath,
       final String role,
@@ -173,12 +180,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
     this.destinationDir = outputPath;
     this.iostatistics = iostatistics;
     this.stageEventCallbacks = stageEventCallbacks;
-    this.createJobMarker = conf.getBoolean(
-        SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
-        DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
-    this.validateOutput = conf.getBoolean(
-        OPT_VALIDATE_OUTPUT,
-        OPT_VALIDATE_OUTPUT_DEFAULT);
+
     Pair<String, String> pair = buildJobUUID(conf, context.getJobID());
     this.jobUniqueId = pair.getLeft();
     this.jobUniqueIdSource = pair.getRight();
@@ -188,6 +190,21 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
     // build directories
     this.dirs = new ManifestCommitterSupport.AttemptDirectories(outputPath,
         this.jobUniqueId, jobAttemptNumber);
+
+    // read in configuration options
+    this.createJobMarker = conf.getBoolean(
+        SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
+        DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
+    this.validateOutput = conf.getBoolean(
+        OPT_VALIDATE_OUTPUT,
+        OPT_VALIDATE_OUTPUT_DEFAULT);
+    this.deleteTargetPaths = conf.getBoolean(
+        OPT_PREPARE_TARGET_FILES,
+        OPT_VALIDATE_OUTPUT_DEFAULT);
+    this.prepareParentDirectories = conf.getBoolean(
+        OPT_PREPARE_PARENT_DIRECTORIES,
+        OPT_PREPARE_PARENT_DIRECTORIES_DEFAULT);
+
 
     this.iopsRate = conf.getInt(OPT_IO_RATE, OPT_IO_RATE_DEFAULT);
 
@@ -263,7 +280,8 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
         .withTaskAttemptId(taskAttemptId)
         .withTaskId(taskId)
         .withIOLimiter(RateLimitingFactory.create(iopsRate))
-        .withDeleteTargetPaths(false);
+        .withDeleteTargetPaths(deleteTargetPaths)
+        .withPrepareParentDirectories(prepareParentDirectories);
 
     return stageConfig;
   }

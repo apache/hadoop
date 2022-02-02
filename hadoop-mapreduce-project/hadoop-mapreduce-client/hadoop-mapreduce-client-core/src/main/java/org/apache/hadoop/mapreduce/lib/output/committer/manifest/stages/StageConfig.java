@@ -154,7 +154,12 @@ public class StageConfig {
    * Delete target paths on commit? Stricter, but
    * higher IO cost.
    */
-  private boolean deleteTargetPaths = false;
+  private boolean deleteTargetPaths;
+
+  /**
+   * Prepare parent dirs by scanning them for files?
+   */
+  private boolean prepareParentDirectories;
 
   /**
    * Name for logging.
@@ -550,6 +555,21 @@ public class StageConfig {
 
   public boolean getDeleteTargetPaths() {
     return deleteTargetPaths;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withPrepareParentDirectories(final boolean value) {
+    checkOpen();
+    prepareParentDirectories = value;
+    return this;
+  }
+
+  public boolean getPrepareParentDirectories() {
+    return prepareParentDirectories;
   }
 
   /**
