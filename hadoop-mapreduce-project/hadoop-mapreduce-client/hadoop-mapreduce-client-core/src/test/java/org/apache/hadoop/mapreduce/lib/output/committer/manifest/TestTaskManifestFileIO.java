@@ -35,7 +35,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.Fi
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test Reading/writing manifest file.
+ * Test Reading/writing manifest files.
  */
 public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
 

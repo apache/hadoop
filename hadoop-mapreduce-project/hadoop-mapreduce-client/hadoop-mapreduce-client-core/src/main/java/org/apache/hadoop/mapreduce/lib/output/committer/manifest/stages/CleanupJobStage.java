@@ -108,7 +108,7 @@ public class CleanupJobStage extends
     stageName = getStageName(args);
     // this is $dest/_temporary
     final Path baseDir = requireNonNull(getStageConfig().getOutputTempSubDir());
-    LOG.info("{}: Cleaup of directory {} with {}", getName(), baseDir, args);
+    LOG.debug("{}: Cleaup of directory {} with {}", getName(), baseDir, args);
     if (!args.enabled) {
       LOG.info("{}: Cleanup of {} disabled", getName(), baseDir);
       return new Result(Outcome.DISABLED, baseDir,

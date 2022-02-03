@@ -83,6 +83,13 @@ public class CreateOutputDirectoriesStage extends
       CreateOutputDirectoriesStage.class);
 
   /**
+   * Message to print on first mkdir failure if the parent dirs aren;
+   */
+  private static final String HINT_PREPARE_PARENT_DIR = "Setting "
+      + OPT_PREPARE_PARENT_DIRECTORIES + " to \"true\" performs more parent directory"
+      + " preparation and so may fix this problem";
+
+  /**
    * Directories as a map of (path, path).
    * Using a map rather than any set for efficient concurrency; the
    * concurrent sets don't do lookups so fast.
@@ -105,7 +112,6 @@ public class CreateOutputDirectoriesStage extends
       final List<TaskManifest> taskManifests)
       throws IOException {
 
-    LOG.info("{}: Creating output directories", getName());
     final List<Path> directories = createAllDirectories(taskManifests);
     LOG.debug("{}: Created {} directories", getName(), directories.size());
     return new Result(directories, dirMap);
@@ -164,17 +170,26 @@ public class CreateOutputDirectoriesStage extends
     return createdDirectories;
   }
 
+  /**
+   * How many failures have been reported.
+   */
   private final AtomicInteger failureCount = new AtomicInteger();
 
+  /**
+   * report a single directory failure.
+   * @param path path which could not be deleted
+   * @param e exception raised.
+   */
   private void reportMkDirFailure(Path path, Exception e) {
-    LOG.warn("{}: Failed to create directory \"{}\": {}",
-        getName(), path, e.toString());
+    final int count = failureCount.incrementAndGet();
+    LOG.warn("{}: mkdir failure #{} Failed to create directory \"{}\": {}",
+        getName(), count, path, e.toString());
     LOG.debug("{}: Full exception details",
         getName(), e);
-    if (failureCount.getAndIncrement() == 0
-        && !getStageConfig().getPrepareParentDirectories()) {
-      // first failure and no parent dir setup.
-      LOG.warn("Consider enabling the option " + OPT_PREPARE_PARENT_DIRECTORIES);
+    if (count == 1  && !getStageConfig().getPrepareParentDirectories()) {
+      // first failure and no parent dir setup, so recommend
+      // preparing the parent dir
+      LOG.warn(HINT_PREPARE_PARENT_DIR);
     }
   }
 
@@ -286,11 +301,11 @@ public class CreateOutputDirectoriesStage extends
    * @throws IOException IO Failure.
    */
   private boolean maybeCreateOneDirectory(final Path path) throws IOException {
-    LOG.info("Creating directory {}", path);
+    LOG.debug("Creating directory {}", path);
     // if a directory is in the map: return.
     final DirMapState dirMapState = dirMap.get(path);
     if (dirMapState != null) {
-      LOG.info("{}: Directory {} found in state {}; no need to create",
+      LOG.debug("{}: Directory {} found in state {}; no need to create",
           getName(), path, dirMapState);
       // already exists in this job
       return false;

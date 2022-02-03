@@ -252,7 +252,7 @@ public abstract class StoreOperations implements Closeable {
      * @param recovered Did recovery take place?
      */
     public static CommitFileResult fromResilientCommit(final boolean recovered) {
-        return new CommitFileResult(recovered);
+      return new CommitFileResult(recovered);
     }
 
     /**

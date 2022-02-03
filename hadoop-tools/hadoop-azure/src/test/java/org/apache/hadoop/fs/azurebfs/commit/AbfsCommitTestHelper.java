@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_STORE_OPERATIONS_CLASS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 
 /**
  * Helper methods for committer tests on ABFS.

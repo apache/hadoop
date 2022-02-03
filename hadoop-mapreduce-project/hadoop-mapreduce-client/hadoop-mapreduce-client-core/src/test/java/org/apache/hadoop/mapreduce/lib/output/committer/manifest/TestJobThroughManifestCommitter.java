@@ -77,7 +77,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * The test is ordered and the output dir is not cleaned up
  * after each test case.
  * The last test case MUST perform the cleanup.
- * The
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestJobThroughManifestCommitter
@@ -415,12 +414,12 @@ public class TestJobThroughManifestCommitter
   public void test_0340_setupThenAbortTask11() throws Throwable {
     describe("Setup then abort task attempt 11");
     Path ta11Path = new SetupTaskStage(ta11Config).apply("11");
-    List<Path> files = createFilesOrDirs(
+    createFilesOrDirs(
         ta11Path,
         "part-01", getExecutorService(),
         2, 1, 1, false);
 
-    Path deletedDir = new AbortTaskStage(ta11Config).apply(false);
+    new AbortTaskStage(ta11Config).apply(false);
     assertPathDoesNotExist("aborted directory", ta11Path);
     // execute will fail as there's no dir to list.
     intercept(FileNotFoundException.class, () ->
@@ -451,9 +450,9 @@ public class TestJobThroughManifestCommitter
         .describedAs("Loaded manifests in %s", summary)
         .hasSize(2);
     Map<String, TaskManifest> manifestMap = toMap(manifests);
-    TaskManifest manifest01 = verifyManifestTaskAttemptID(
+    verifyManifestTaskAttemptID(
         manifestMap.get(taskAttempt01), taskAttempt01);
-    TaskManifest manifest10 = verifyManifestTaskAttemptID(
+    verifyManifestTaskAttemptID(
         manifestMap.get(taskAttempt10), taskAttempt10);
   }
 

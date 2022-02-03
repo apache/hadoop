@@ -32,6 +32,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.C
 /**
  * Test the {@code CreateOutputDirectoriesStage.extractAncestors()} operation
  * to verify that it builds a set of ancestors paths of the inputs.
+ * This is used when building the list of parent directories to
+ * probe for being files if the job is set to prepare parent directories.
  */
 public class TestExtractAncestors extends HadoopTestBase {
 

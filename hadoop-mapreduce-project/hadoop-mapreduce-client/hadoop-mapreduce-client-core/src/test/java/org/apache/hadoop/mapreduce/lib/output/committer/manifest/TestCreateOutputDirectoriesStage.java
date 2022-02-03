@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -44,6 +45,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry.dirEntry;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test directory creation.
@@ -183,6 +185,16 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
 
   /**
    * Prepare a deep tree {@code c ^ 3} of entries.
+   * Make one of the parent dirs a file and so expect
+   * the first attempt to intially fail as the stage configuration
+   * does not parent dir preparation.
+   * The second attempt will, so succeeds.
+   *
+   * From a test-purity perspective, this should
+   * be two separate tests. But attempting both
+   * operations in the same test cases spreads the
+   * directory setup costs across both, rather than
+   * duplicating it.
    */
   @Test
   public void testPrepareDeepTree() throws Throwable {
@@ -217,12 +229,29 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
 
     final ArrayList<TaskManifest> manifests = Lists.newArrayList(
         manifestWithDirsToCreate(dirEntries));
-    final CreateOutputDirectoriesStage.Result result = mkdirStage.apply(manifests);
+
+    // first attempt will fail because of the parent dir & this job is set
+    // to not try and delete
+    LOG.info("Executing failing attempt to create the directories");
+    intercept(IOException.class, () -> mkdirStage.apply(manifests));
+
+    // mkdirs failed for the file
+    final String failuresKey = OP_MKDIRS + SUFFIX_FAILURES;
+    final long initialFailureCount = iostats.counters().get(failuresKey);
+    Assertions.assertThat(initialFailureCount)
+        .describedAs("value of %s", failuresKey)
+        .isGreaterThanOrEqualTo(0);
+
+    // create a job configured to clean up first
+    CreateOutputDirectoriesStage secondAttempt = new CreateOutputDirectoriesStage(
+        createStageConfigForJob(JOB1, destDir)
+            .withPrepareParentDirectories(true));
+    LOG.info("Executing failing attempt to create the directories");
+
+    final CreateOutputDirectoriesStage.Result result = secondAttempt.apply(manifests);
     LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
 
 
-    // mkdirs failed for the file
-    verifyStatisticCounterValue(iostats, OP_MKDIRS + SUFFIX_FAILURES, 1);
     assertDirMapStatus(result, destIsFile,
         CreateOutputDirectoriesStage.DirMapState.mkdirRaisedException);
     // for the parent dir, all is good
@@ -231,7 +260,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     Assertions.assertThat(result.getCreatedDirectories())
         .describedAs("output of %s", mkdirStage)
         .containsExactlyInAnyOrderElementsOf(level2);
-
+    verifyStatisticCounterValue(iostats, failuresKey, 1 + initialFailureCount);
   }
 
   /**

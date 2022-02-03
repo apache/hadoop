@@ -489,6 +489,7 @@ public class AbfsClient implements Closeable {
    * existence and comparing etags.
    * @param source path to source file
    * @param destination destination of rename.
+   * @param continuation continuation.
    * @param tracingContext trace context
    * @param sourceEtag etag of source file. may be null or empty
    * @param recovered atomic boolean set to true if recovery was needed and succeeded.
@@ -560,10 +561,12 @@ public class AbfsClient implements Closeable {
    * a success.
    * Exceptions raised in the probe of the destination are swallowed,
    * so that thet do not interfere with the original rename failures.
+   * @param source source path
    * @param op Rename request REST operation response with non-null HTTP response
    * @param destination rename destination path
+   * @param sourceEtag etag of source file. may be null or empty
    * @param tracingContext Tracks identifiers for request header
-   * @return flag to indicate whether the recovery probes succeeded.
+   * @return true if the file was successfully copied
    */
   public boolean renameIdempotencyCheckOp(
       final String source,
@@ -595,7 +598,6 @@ public class AbfsClient implements Closeable {
       }
     }
     return false;
-
   }
 
   public AbfsRestOperation append(final String path, final byte[] buffer,

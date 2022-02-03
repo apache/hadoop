@@ -129,7 +129,7 @@ public class ManifestPrinter extends Configured implements Tool {
   }
 
   /**
-   * Entry point
+   * Entry point.
    */
   public static void main(String[] argv) throws Exception {
 

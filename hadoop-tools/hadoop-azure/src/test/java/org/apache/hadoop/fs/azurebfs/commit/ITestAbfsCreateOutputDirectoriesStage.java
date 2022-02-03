@@ -25,8 +25,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestCreateOutputDirectoriesStage;
 
 /**
- * ABFS storage test of saving and loading a large number
- * of manifests.
+ * ABFS storage test of directory creation.
  */
 public class ITestAbfsCreateOutputDirectoriesStage extends TestCreateOutputDirectoriesStage {
 

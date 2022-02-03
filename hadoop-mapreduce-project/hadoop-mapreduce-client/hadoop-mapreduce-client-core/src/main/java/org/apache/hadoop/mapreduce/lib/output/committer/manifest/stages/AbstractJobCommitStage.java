@@ -749,8 +749,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   private void executeRenamingOperation(String operation, Path source, Path dest,
       String statistic, int cost,
-      CallableRaisingIOE<Boolean> action)
-    throws IOException {
+      CallableRaisingIOE<Boolean> action) throws IOException {
+
     LOG.debug("{}: {} '{}' to '{}')", getName(), operation, source, dest);
     requireNonNull(source, "Null source");
     requireNonNull(dest, "Null dest");

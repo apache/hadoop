@@ -49,7 +49,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test rename files with fault injection.
- * Dest FS needs to support etags & ideally resilient renaming.
  */
 public class TestRenameStageFailure extends AbstractManifestCommitterTest {
 
@@ -140,7 +139,8 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
         new RenameFilesStage(stageConfig),
         manifest,
         filesToCommit.size(),
-        SIMULATED_FAILURE, PathIOException.class);
+        SIMULATED_FAILURE,
+        PathIOException.class);
   }
 
   /**

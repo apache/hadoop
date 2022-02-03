@@ -22,6 +22,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import javax.annotation.Nullable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -29,6 +31,8 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 /**
  * API exclusively for committing files.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public interface ResilientCommitByRename extends IOStatisticsSource {
   /**
    * Rename source file to dest path *Exactly*; no subdirectory games here.
@@ -79,7 +83,7 @@ public interface ResilientCommitByRename extends IOStatisticsSource {
    * @throws IOException any other exception
    */
   boolean commitSingleFileByRename(
-      final Path source,
-      final Path dest,
-      @Nullable final String sourceEtag) throws IOException;
+      Path source,
+      Path dest,
+      @Nullable String sourceEtag) throws IOException;
 }

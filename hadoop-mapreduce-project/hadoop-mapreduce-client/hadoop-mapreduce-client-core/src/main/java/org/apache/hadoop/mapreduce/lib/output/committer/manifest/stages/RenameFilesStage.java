@@ -94,10 +94,9 @@ public class RenameFilesStage extends
         OP_STAGE_JOB_COMMIT);
     final int manifestCount = taskManifests.size();
 
-    LOG.info("{}: Executing Manifest Job Commit with manifests in {}",
-        getName(), getTaskManifestDir());
+    LOG.info("{}: Executing Manifest Job Commit with {} manifests in {}",
+        getName(), manifestCount, getTaskManifestDir());
 
-    LOG.info("{}: Number of successful tasks to commit: {}", getName(), manifestCount);
     // first step is to aggregate the output of all manifests into a single
     // list of files to commit.
     // Which Guava can do in a zero-copy concatenated iterator

@@ -30,6 +30,11 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestRenameStage
  */
 public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
 
+  /**
+   * How many files to create
+   */
+  private static final int FILES_TO_CREATE = 20;
+
   private final ABFSContractTestBinding binding;
 
   public ITestAbfsRenameStageFailure() throws Exception {
@@ -59,6 +64,6 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
 
   @Override
   protected int filesToCreate() {
-    return 20;
+    return FILES_TO_CREATE;
   }
 }

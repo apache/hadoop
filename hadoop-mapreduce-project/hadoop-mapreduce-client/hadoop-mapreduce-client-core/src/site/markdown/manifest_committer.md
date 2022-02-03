@@ -199,7 +199,7 @@ Problem 2, "existing files" may happen in jobs which appends data to existing
 tables _and do not generate unique names_.
 
 Apache Spark does generate unique filenames for ORC and Parquet
-since 
+since
 [SPARK-8406](https://issues.apache.org/jira/browse/SPARK-8406)
 _Adding UUID to output file name to avoid accidental overwriting_
 
