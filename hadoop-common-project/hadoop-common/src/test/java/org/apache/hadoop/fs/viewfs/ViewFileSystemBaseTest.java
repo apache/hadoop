@@ -1124,15 +1124,23 @@ abstract public class ViewFileSystemBaseTest {
 
     // Case 2: path p not found in mount table, fall back to the default FS
     // Return a trash root in user home dir
-    Path userTestPath = new Path("/nonExistingDir/nonExistingFile");
+    Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
     Path userTrashRoot = new Path(fsTarget.getHomeDirectory(), TRASH_PREFIX);
-    Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(userTestPath));
+    Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(nonExistentPath));
 
     // Case 3: turn off the CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH flag.
     // Return a trash root in user home dir.
     newConf.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, false);
     fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, newConf);
     Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(dataTestPath));
+
+    // Case 4: viewFS without fallback. Expect exception for a nonExistent path
+    newConf = new Configuration(conf);
+    fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, newConf);
+    try {
+      fsView2.getTrashRoot(nonExistentPath);
+    } catch (NotInMountpointException ignored) {
+    }
   }
 
   /**

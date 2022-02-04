@@ -1174,14 +1174,13 @@ public class ViewFileSystem extends FileSystem {
           trashRoot)) {
         return trashRoot;
       } else {
-        // If Path p is in the default volume, return a trash in home dir in
-        // default volume.
-        // When Path p is in the default volume, we don't have any match in
-        // mount points and thus couldn't resolve any component for Path p.
-        if (res.remainingPath.equals(path)) {
+        // Path p is either in a mount point or in the fallback FS
+        if (ROOT_PATH.equals(new Path(res.resolvedPath))) {
+          // Path p is in the fallback FS
           return new Path(res.targetFileSystem.getHomeDirectory(),
               TRASH_PREFIX);
         } else {
+          // Path p is in a mount point
           Path mountPointRoot =
               res.targetFileSystem.getFileStatus(new Path("/")).getPath();
           return new Path(mountPointRoot,
