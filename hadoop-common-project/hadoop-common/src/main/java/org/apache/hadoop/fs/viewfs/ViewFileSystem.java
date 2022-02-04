@@ -1187,7 +1187,7 @@ public class ViewFileSystem extends FileSystem {
               TRASH_PREFIX + "/" + ugi.getShortUserName());
         }
       }
-    } catch (IOException|IllegalArgumentException e) {
+    } catch (IOException | IllegalArgumentException e) {
       throw new NotInMountpointException(path, "getTrashRoot");
     }
   }
