@@ -155,41 +155,6 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
   }
 
   @Test
-  public void testGetContentSummaryNestedDirs() throws Throwable {
-    describe("getContentSummary on test dir with children");
-    S3AFileSystem fs = getFileSystem();
-    Path baseDir = methodPath();
-
-    // Nested folders created separately will return as separate objects in listFiles()
-    fs.mkdirs(new Path(baseDir + "/a"));
-    fs.mkdirs(new Path(baseDir + "/a/b"));
-    fs.mkdirs(new Path(baseDir + "/a/b/a"));
-
-    // Will return as one object
-    fs.mkdirs(new Path(baseDir + "/d/e/f"));
-
-    Path filePath = new Path(baseDir, "a/b/file");
-    touch(fs, filePath);
-
-    // look at path to see if it is a file
-    // it is not: so LIST
-    final ContentSummary summary = verifyMetrics(
-            () -> getContentSummary(baseDir),
-            with(INVOCATION_GET_CONTENT_SUMMARY, 1),
-            withAuditCount(1),
-            always(FILE_STATUS_FILE_PROBE    // look at path to see if it is a file
-                    .plus(LIST_OPERATION))); // it is not: so LIST
-
-    Assertions.assertThat(summary.getDirectoryCount())
-            .as("Summary " + summary)
-            .isEqualTo(7);
-    Assertions.assertThat(summary.getFileCount())
-            .as("Summary " + summary)
-            .isEqualTo(1);
-  }
-
-
-  @Test
   public void testGetContentMissingPath() throws Throwable {
     describe("getContentSummary on a missing path");
     Path baseDir = methodPath();
