@@ -837,6 +837,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withMetrics(statisticsContext.newStatisticsFromAwsSdk())
         .withPathStyleAccess(conf.getBoolean(PATH_STYLE_ACCESS, false))
         .withUserAgentSuffix(uaSuffix)
+        .withRequesterPays(conf.getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
         .withRequestHandlers(auditManager.createRequestHandlers());
 
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)

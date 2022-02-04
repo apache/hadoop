@@ -32,6 +32,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3EncryptionClientV2Builder;
 import com.amazonaws.services.s3.AmazonS3EncryptionV2;
+import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.internal.ServiceUtils;
 import com.amazonaws.services.s3.model.CryptoConfigurationV2;
@@ -117,6 +118,11 @@ public class DefaultS3ClientFactory extends Configured
     // add any headers
     parameters.getHeaders().forEach((h, v) ->
         awsConf.addHeader(h, v));
+
+    if (parameters.isRequesterPays()) {
+      // All calls must acknowledge requester will pay via header.
+      awsConf.addHeader(Headers.REQUESTER_PAYS_HEADER, "requester");
+    }
 
     // When EXPERIMENTAL_AWS_INTERNAL_THROTTLING is false
     // throttling is explicitly disabled on the S3 client so that

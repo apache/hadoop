@@ -1,0 +1,100 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.fs.s3a;
+
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.junit.Test;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+
+import java.nio.file.AccessDeniedException;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+
+/**
+ * Tests for Requester Pays feature.
+ */
+public class ITestS3ARequesterPays extends AbstractS3ATestBase {
+
+    @Override
+    protected Configuration createConfiguration() {
+        Configuration conf = super.createConfiguration();
+        S3ATestUtils.disableFilesystemCaching(conf);
+        return conf;
+    }
+
+    @Test
+    public void testRequesterPaysOptionSuccess() throws Throwable {
+        describe("Test requester pays enabled case by reading last then first byte");
+
+        Configuration conf = this.createConfiguration();
+        conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, true);
+        S3AContract contract = (S3AContract) createContract(conf);
+        contract.init();
+
+        Path requesterPaysPath = getRequesterPaysPath(conf);
+        FileSystem fs = contract.getFileSystem(requesterPaysPath.toUri());
+
+        long fileLength = fs.getFileStatus(requesterPaysPath).getLen();
+        FSDataInputStream inputStream = fs.open(requesterPaysPath);
+
+        inputStream.seek(fileLength - 1);
+        inputStream.readByte();
+
+        // Jump back to the start, triggering a new GetObject request.
+        inputStream.seek(0);
+        inputStream.readByte();
+
+        assertEquals(
+            "Expected two GetObject requests", // We want to test header is applied to all requests made
+            2,
+            inputStream.getIOStatistics().counters().get(StreamStatisticNames.STREAM_READ_OPENED).intValue()
+        );
+    }
+
+    @Test
+    public void testRequesterPaysDisabledFails() throws Throwable {
+        describe("Verify expected negative behavior for requester pays buckets when client has it disabled");
+
+        Configuration conf = this.createConfiguration();
+        conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, false);
+        S3AContract contract = (S3AContract) createContract(conf);
+        contract.init();
+
+        Path requesterPaysPath = getRequesterPaysPath(conf);
+        FileSystem fs = contract.getFileSystem(requesterPaysPath.toUri());
+
+        intercept(
+            AccessDeniedException.class,
+            "403 Forbidden",
+            "Expected requester pays bucket to fail without header set",
+            () -> fs.open(requesterPaysPath)
+        );
+    }
+
+    private Path getRequesterPaysPath(Configuration conf) {
+        String requesterPaysFile = conf.getTrimmed(KEY_REQUESTER_PAYS_FILE, DEFAULT_REQUESTER_PAYS_FILE);
+        S3ATestUtils.assume("Empty test property: " + KEY_REQUESTER_PAYS_FILE, !requesterPaysFile.isEmpty());
+        return new Path(requesterPaysFile);
+    }
+
+}
