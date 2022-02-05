@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.Map;
+import java.util.HashMap;
 
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 
@@ -31,20 +32,27 @@ import org.junit.Test;
 import static org.mockito.Mockito.*;
 
 public class TestHeaderBlock {
-  private String envkey = "APPLICATION_WEB_PROXY_BASE";
-  private String envvalue = "/hadoop";
-
+  @SuppressWarnings("unchecked")
   public void setEnv(Map<String, String> newenv) throws Exception {
     try {
       Class<?> processEnvironmentClass = Class.forName("java.lang.ProcessEnvironment");
-      Field theEnvironmentField = processEnvironmentClass.getDeclaredField("theEnvironment");
+      String fieldname = "theEnvironment";
+      Field theEnvironmentField = processEnvironmentClass.getDeclaredField(fieldname);
+      // reset environment accessibility
       theEnvironmentField.setAccessible(true);
-      Map<String, String> env = (Map<String, String>) theEnvironmentField.get(null);
-      env.putAll(newenv);
-      Field theCaseInsensitiveEnvironmentField = processEnvironmentClass.getDeclaredField("theCaseInsensitiveEnvironment");
-      theCaseInsensitiveEnvironmentField.setAccessible(true);
-      Map<String, String> cienv = (Map<String, String>) theCaseInsensitiveEnvironmentField.get(null);
-      cienv.putAll(newenv);
+      if(theEnvironmentField.getType().equals(Map.class)) {
+        Map<String, String> env = (Map<String, String>) theEnvironmentField.get(null);
+        env.putAll(newenv);
+      }
+      fieldname = "theCaseInsensitiveEnvironment";
+      Field theCaseInsensitiveEnvField = processEnvironmentClass.getDeclaredField(fieldname);
+      // reset environment accessibility
+      theCaseInsensitiveEnvField.setAccessible(true);
+      if(theCaseInsensitiveEnvField.getType().equals(Map.class)) {
+        Map<String, String> cienv = (Map<String, String>) theCaseInsensitiveEnvField.get(null);
+        cienv.putAll(newenv);
+      }
+
     } catch (NoSuchFieldException e) {
       Class[] classes = Collections.class.getDeclaredClasses();
       Map<String, String> env = System.getenv();
@@ -52,16 +60,26 @@ public class TestHeaderBlock {
         if("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
           Field field = cl.getDeclaredField("m");
           field.setAccessible(true);
-          Object obj = field.get(env);
-          Map<String, String> map = (Map<String, String>) obj;
-          map.clear();
-          map.putAll(newenv);
+          if(field.getType().equals(Map.class)) {
+            Map<String, String> map = (Map<String, String>) field.get(env);
+            map.clear();
+            map.putAll(newenv);
+          }
         }
       }
     }
   }
 
-  @Test public void testImgPath() throws Exception {
+  @Test public void testDefaultImgPath() throws Exception {
+    Injector injector = WebAppTests.testBlock(HeaderBlock.class);
+    PrintWriter out = injector.getInstance(PrintWriter.class);
+    String expectation = " src=\"/static/hadoop-st.png\"";
+    verify(out).print(expectation);
+  }
+
+  @Test public void testProxyBaseImgPath() throws Exception {
+    String envkey = "APPLICATION_WEB_PROXY_BASE";
+    String envvalue = "/hadoop";
     setEnv(Collections.singletonMap(envkey, envvalue));
     Injector injector = WebAppTests.testBlock(HeaderBlock.class);
     PrintWriter out = injector.getInstance(PrintWriter.class);
