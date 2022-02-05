@@ -1204,12 +1204,8 @@ public class TestOfflineImageViewer {
       writer.println("<INodeDirectorySection></INodeDirectorySection>");
       writer.println("</fsimage>");
     }
-    try {
       OfflineImageReconstructor.run(imageWSDS.getAbsolutePath(),
               imageWSDS.getAbsolutePath() + ".out");
-    } catch (Throwable t) {
-      GenericTestUtils.assertExceptionContains("without SnapshotDiffSection.", t);
-    }
   }
 
   @Test
