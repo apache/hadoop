@@ -24,7 +24,6 @@ import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.Map;
-import java.util.HashMap;
 
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 
