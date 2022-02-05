@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.webapp.view;
 import com.google.inject.Injector;
 
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
@@ -28,21 +31,47 @@ import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
-import static com.github.stefanbirkner.systemlambda.SystemLambda.*;
 
-public class TestHeaderBlock {
-  private String envkey = "APPLICATION_WEB_PROXY_BASE";
-  private String envvalue = "/hadoop";
+  public class TestHeaderBlock {
+    private String envkey = "APPLICATION_WEB_PROXY_BASE";
+    private String envvalue = "/hadoop";
 
-  public void checkImgPath() {
-    Injector injector = WebAppTests.testBlock(HeaderBlock.class);
-    PrintWriter out = injector.getInstance(PrintWriter.class);
-    String expectation = " src=\""+envvalue+"/static/hadoop-st.png\"";
-    verify(out).print(expectation);
+    public void setEnv(Map<String, String> newenv) throws Exception {
+    try {
+      Class<?> processEnvironmentClass = Class.forName("java.lang.ProcessEnvironment");
+
+      Field theEnvironmentField = processEnvironmentClass.getDeclaredField("theEnvironment");
+      theEnvironmentField.setAccessible(true);
+      Map<String, String> env = (Map<String, String>) theEnvironmentField.get(null);
+      env.putAll(newenv);
+
+      Field theCaseInsensitiveEnvironmentField = processEnvironmentClass.getDeclaredField("theCaseInsensitiveEnvironment");
+      theCaseInsensitiveEnvironmentField.setAccessible(true);
+      Map<String, String> cienv = (Map<String, String>) theCaseInsensitiveEnvironmentField.get(null);
+      cienv.putAll(newenv);
+    } catch (NoSuchFieldException e) {
+      Class[] classes = Collections.class.getDeclaredClasses();
+      Map<String, String> env = System.getenv();
+
+      for(Class cl : classes) {
+        if("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
+          Field field = cl.getDeclaredField("m");
+          field.setAccessible(true);
+          Object obj = field.get(env);
+          Map<String, String> map = (Map<String, String>) obj;
+          map.clear();
+          map.putAll(newenv);
+        }
+      }
+    }
   }
 
   @Test 
   public void testImgPath() throws Exception {
-    withEnvironmentVariable(envkey, envvalue).execute(() -> checkImgPath());
+    setEnv(Collections.singletonMap(envkey, envvalue));
+    Injector injector = WebAppTests.testBlock(HeaderBlock.class);
+    PrintWriter out = injector.getInstance(PrintWriter.class);
+    String expectation = " src=\""+envvalue+"/static/hadoop-st.png\"";
+    verify(out).print(expectation);
   }
 }
