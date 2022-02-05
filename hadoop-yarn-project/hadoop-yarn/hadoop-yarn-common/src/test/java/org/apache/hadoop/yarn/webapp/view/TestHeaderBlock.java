@@ -29,22 +29,19 @@ import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 
 import org.junit.Test;
-
 import static org.mockito.Mockito.*;
 
-  public class TestHeaderBlock {
-    private String envkey = "APPLICATION_WEB_PROXY_BASE";
-    private String envvalue = "/hadoop";
+public class TestHeaderBlock {
+  private String envkey = "APPLICATION_WEB_PROXY_BASE";
+  private String envvalue = "/hadoop";
 
-    public void setEnv(Map<String, String> newenv) throws Exception {
+  public void setEnv(Map<String, String> newenv) throws Exception {
     try {
       Class<?> processEnvironmentClass = Class.forName("java.lang.ProcessEnvironment");
-
       Field theEnvironmentField = processEnvironmentClass.getDeclaredField("theEnvironment");
       theEnvironmentField.setAccessible(true);
       Map<String, String> env = (Map<String, String>) theEnvironmentField.get(null);
       env.putAll(newenv);
-
       Field theCaseInsensitiveEnvironmentField = processEnvironmentClass.getDeclaredField("theCaseInsensitiveEnvironment");
       theCaseInsensitiveEnvironmentField.setAccessible(true);
       Map<String, String> cienv = (Map<String, String>) theCaseInsensitiveEnvironmentField.get(null);
@@ -52,7 +49,6 @@ import static org.mockito.Mockito.*;
     } catch (NoSuchFieldException e) {
       Class[] classes = Collections.class.getDeclaredClasses();
       Map<String, String> env = System.getenv();
-
       for(Class cl : classes) {
         if("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
           Field field = cl.getDeclaredField("m");
@@ -66,8 +62,7 @@ import static org.mockito.Mockito.*;
     }
   }
 
-  @Test 
-  public void testImgPath() throws Exception {
+  @Test public void testImgPath() throws Exception {
     setEnv(Collections.singletonMap(envkey, envvalue));
     Injector injector = WebAppTests.testBlock(HeaderBlock.class);
     PrintWriter out = injector.getInstance(PrintWriter.class);
