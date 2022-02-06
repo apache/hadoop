@@ -1761,6 +1761,10 @@ class OfflineImageReconstructor {
       XMLEvent ev = expectTag("[section header]", true);
       if (ev.getEventType() == XMLStreamConstants.END_ELEMENT) {
         if (ev.asEndElement().getName().getLocalPart().equals("fsimage")) {
+          if(unprocessedSections.size() == 1 && unprocessedSections.contains
+                  (SnapshotDiffSectionProcessor.NAME)){
+            break;
+          }
           throw new IOException("FSImage XML ended prematurely, without " +
               "including section(s) " + StringUtils.join(", ",
               unprocessedSections));
