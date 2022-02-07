@@ -35,66 +35,71 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestS3ARequesterPays extends AbstractS3ATestBase {
 
-    @Override
-    protected Configuration createConfiguration() {
-        Configuration conf = super.createConfiguration();
-        S3ATestUtils.disableFilesystemCaching(conf);
-        return conf;
-    }
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    S3ATestUtils.disableFilesystemCaching(conf);
+    return conf;
+  }
 
-    @Test
-    public void testRequesterPaysOptionSuccess() throws Throwable {
-        describe("Test requester pays enabled case by reading last then first byte");
+  @Test
+  public void testRequesterPaysOptionSuccess() throws Throwable {
+    describe("Test requester pays enabled case by reading last then first byte");
 
-        Configuration conf = this.createConfiguration();
-        conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, true);
-        S3AContract contract = (S3AContract) createContract(conf);
-        contract.init();
+    Configuration conf = this.createConfiguration();
+    conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, true);
+    S3AContract contract = (S3AContract) createContract(conf);
+    contract.init();
 
-        Path requesterPaysPath = getRequesterPaysPath(conf);
-        FileSystem fs = contract.getFileSystem(requesterPaysPath.toUri());
+    Path requesterPaysPath = getRequesterPaysPath(conf);
+    FileSystem fs = contract.getFileSystem(requesterPaysPath.toUri());
 
-        long fileLength = fs.getFileStatus(requesterPaysPath).getLen();
-        FSDataInputStream inputStream = fs.open(requesterPaysPath);
+    long fileLength = fs.getFileStatus(requesterPaysPath).getLen();
+    FSDataInputStream inputStream = fs.open(requesterPaysPath);
 
-        inputStream.seek(fileLength - 1);
-        inputStream.readByte();
+    inputStream.seek(fileLength - 1);
+    inputStream.readByte();
 
-        // Jump back to the start, triggering a new GetObject request.
-        inputStream.seek(0);
-        inputStream.readByte();
+    // Jump back to the start, triggering a new GetObject request.
+    inputStream.seek(0);
+    inputStream.readByte();
 
-        assertEquals(
-            "Expected two GetObject requests", // We want to test header is applied to all requests made
-            2,
-            inputStream.getIOStatistics().counters().get(StreamStatisticNames.STREAM_READ_OPENED).intValue()
-        );
-    }
+    assertEquals(
+        "Expected two GetObject requests", // We want to test header is applied to all requests made
+        2,
+        inputStream.getIOStatistics().counters()
+            .get(StreamStatisticNames.STREAM_READ_OPENED).intValue()
+    );
+  }
 
-    @Test
-    public void testRequesterPaysDisabledFails() throws Throwable {
-        describe("Verify expected negative behavior for requester pays buckets when client has it disabled");
+  @Test
+  public void testRequesterPaysDisabledFails() throws Throwable {
+    describe("Verify expected failure for requester pays buckets when client has it disabled");
 
-        Configuration conf = this.createConfiguration();
-        conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, false);
-        S3AContract contract = (S3AContract) createContract(conf);
-        contract.init();
+    Configuration conf = this.createConfiguration();
+    conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, false);
+    S3AContract contract = (S3AContract) createContract(conf);
+    contract.init();
 
-        Path requesterPaysPath = getRequesterPaysPath(conf);
-        FileSystem fs = contract.getFileSystem(requesterPaysPath.toUri());
+    Path requesterPaysPath = getRequesterPaysPath(conf);
+    FileSystem fs = contract.getFileSystem(requesterPaysPath.toUri());
 
-        intercept(
-            AccessDeniedException.class,
-            "403 Forbidden",
-            "Expected requester pays bucket to fail without header set",
-            () -> fs.open(requesterPaysPath)
-        );
-    }
+    intercept(
+        AccessDeniedException.class,
+        "403 Forbidden",
+        "Expected requester pays bucket to fail without header set",
+        () -> fs.open(requesterPaysPath)
+    );
+  }
 
-    private Path getRequesterPaysPath(Configuration conf) {
-        String requesterPaysFile = conf.getTrimmed(KEY_REQUESTER_PAYS_FILE, DEFAULT_REQUESTER_PAYS_FILE);
-        S3ATestUtils.assume("Empty test property: " + KEY_REQUESTER_PAYS_FILE, !requesterPaysFile.isEmpty());
-        return new Path(requesterPaysFile);
-    }
+  private Path getRequesterPaysPath(Configuration conf) {
+    String requesterPaysFile =
+        conf.getTrimmed(KEY_REQUESTER_PAYS_FILE, DEFAULT_REQUESTER_PAYS_FILE);
+    S3ATestUtils.assume(
+        "Empty test property: " + KEY_REQUESTER_PAYS_FILE,
+        !requesterPaysFile.isEmpty()
+    );
+    return new Path(requesterPaysFile);
+  }
 
 }
