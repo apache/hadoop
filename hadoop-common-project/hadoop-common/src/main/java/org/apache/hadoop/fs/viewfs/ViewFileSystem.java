@@ -1129,14 +1129,13 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Check whether a path is inside a snapshot or EZ.
-   * @return true if a path is either in a snapshot or in an EZ
+   * Check whether a path is inside a encryption zone.
+   * @return true if a path is either in an encryption zone
    */
-  private boolean snapshotOrEZPath(FileSystem fs, Path path)
-      throws IOException {
+  private boolean isEZPath(FileSystem fs, Path path) throws IOException {
     try {
       FileStatus fileStatus = fs.getFileStatus(path);
-      return fileStatus.isEncrypted() || fileStatus.isSnapshotEnabled();
+      return fileStatus.isEncrypted();
     } catch (FileNotFoundException e) {
       // Return true if path does not exist
       return false;
@@ -1170,7 +1169,7 @@ public class ViewFileSystem extends FileSystem {
           fsState.resolve(getUriPath(path), true);
 
       Path trashRoot = res.targetFileSystem.getTrashRoot(res.remainingPath);
-      if (!useMountPointLocalTrash || snapshotOrEZPath(res.targetFileSystem,
+      if (!useMountPointLocalTrash || isEZPath(res.targetFileSystem,
           trashRoot)) {
         return trashRoot;
       } else {
