@@ -296,6 +296,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /** Storage Statistics Bonded to the instrumentation. */
   private S3AStorageStatistics storageStatistics;
 
+  /** Vectored IO context. */
+  private VectoredIOContext vectoredIOContext;
+
   private long readAhead;
   private S3AInputPolicy inputPolicy;
   private ChangeDetectionPolicy changeDetectionPolicy;
@@ -551,6 +554,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       listing = new Listing(listingOperationCallbacks, createStoreContext());
+      vectoredIOContext = populateVectoredIOContext(conf);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -562,6 +566,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       stopAllServices();
       throw e;
     }
+  }
+
+  /**
+   * Populates the configurations related to vectored IO operation
+   * in the context which has to passed down to input streams.
+   * @param conf configuration object.
+   * @return VectoredIOContext.
+   */
+  private VectoredIOContext populateVectoredIOContext(Configuration conf) {
+    final int minSeekVectored = conf.getInt(AWS_S3_MIN_SEEK_VECTOR_READS,
+            DEFAULT_AWS_S3_MIN_SEEK_VECTOR_READS);
+    final int maxReadSizeVectored = conf.getInt(AWS_S3_MAX_READSIZE_VECTOR_READS,
+            DEFAULT_AWS_S3_MAX_READSIZE_VECTOR_READS);
+    return new VectoredIOContext()
+            .setMinSeekForVectoredReads(minSeekVectored)
+            .setMaxReadSizeForVectoredReads(maxReadSizeVectored)
+            .build();
   }
 
   /**
@@ -1526,7 +1547,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         seekPolicy,
         changePolicy,
         readAheadRange,
-        auditSpan);
+        auditSpan,
+        vectoredIOContext);
   }
 
   /**

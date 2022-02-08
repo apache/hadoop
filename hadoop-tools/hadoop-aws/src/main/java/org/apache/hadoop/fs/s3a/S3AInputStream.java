@@ -137,6 +137,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
 
+  /** Vectored IO context. */
+  private VectoredIOContext vectoredIOContext;
+
   /**
    * This is the actual position within the object, used by
    * lazy seek to decide whether to seek on the next read or not.
@@ -197,6 +200,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     setInputPolicy(ctx.getInputPolicy());
     setReadahead(ctx.getReadahead());
     this.unboundedThreadPool = unboundedThreadPool;
+    this.vectoredIOContext = context.getVectoredIOContext();
   }
 
   /**
@@ -808,6 +812,28 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         seekQuietly(oldPos);
       }
     }
+  }
+
+  /**
+   * To override this value set property defined by
+   * {@link Constants#AWS_S3_MIN_SEEK_VECTOR_READS} in configuration.
+   *
+   * {@inheritDoc}.
+   */
+  @Override
+  public int minSeekForVectorReads() {
+    return vectoredIOContext.getMinSeekForVectorReads();
+  }
+
+  /**
+   * To override this value set property defined by
+   * {@link Constants#AWS_S3_MAX_READSIZE_VECTOR_READS} in configuration.
+   *
+   * {@inheritDoc}.
+   */
+  @Override
+  public int maxReadSizeForVectorReads() {
+    return vectoredIOContext.getMaxReadSizeForVectorReads();
   }
 
   /**

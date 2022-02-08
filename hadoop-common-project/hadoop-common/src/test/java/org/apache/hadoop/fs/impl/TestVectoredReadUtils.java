@@ -207,6 +207,32 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
 
   }
+
+  @Test
+  public void testMaxSizeZeroDisablesMering() throws Exception {
+    List<FileRange> randomRanges = Arrays.asList(
+            new FileRangeImpl(3000, 110),
+            new FileRangeImpl(3000, 100),
+            new FileRangeImpl(2100, 100)
+    );
+
+    List<CombinedFileRange> combinedFileRanges = VectoredReadUtils
+            .sortAndMergeRanges(randomRanges, 1, 1, 0);
+    assertEquals("Mismatch in number of ranges post merging",
+            randomRanges.size(), combinedFileRanges.size());
+
+    List<CombinedFileRange> combinedFileRanges1 = VectoredReadUtils
+            .sortAndMergeRanges(randomRanges, 1, 0, 0);
+    assertEquals("Mismatch in number of ranges post merging",
+            randomRanges.size(), combinedFileRanges1.size());
+
+    List<CombinedFileRange> combinedFileRanges2 = VectoredReadUtils
+            .sortAndMergeRanges(randomRanges, 1, 100, 0);
+    assertEquals("Mismatch in number of ranges post merging",
+            randomRanges.size(), combinedFileRanges2.size());
+
+  }
+
   interface Stream extends PositionedReadable, ByteBufferPositionedReadable {
     // nothing
   }

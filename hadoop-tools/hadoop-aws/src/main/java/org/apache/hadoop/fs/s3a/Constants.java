@@ -1066,4 +1066,29 @@ public final class Constants {
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
+
+  /**
+   * What is the smallest reasonable seek that we should group ranges
+   * together during vectored read operation.
+   * Value : {@value}.
+   */
+  public static final String AWS_S3_MIN_SEEK_VECTOR_READS = "fs.s3a.min.seek.vectored.read";
+
+  /**
+   * What is the largest size that we should group ranges
+   * together during vectored read?
+   * Setting this value 0 will disable merging of ranges.
+   * Value : {@value}.
+   */
+  public static final String AWS_S3_MAX_READSIZE_VECTOR_READS = "fs.s3a.max.readsize.vectored.read";
+
+  /**
+   * Default minimum seek during vectored reads : {@value}.
+   */
+  public static final int DEFAULT_AWS_S3_MIN_SEEK_VECTOR_READS = 4 * 1024;
+
+  /**
+   * Default maximum read size during vectored reads : {@value}.
+   */
+  public static final int DEFAULT_AWS_S3_MAX_READSIZE_VECTOR_READS = 1024 * 1024;
 }
