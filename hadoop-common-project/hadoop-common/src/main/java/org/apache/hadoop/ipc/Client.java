@@ -22,13 +22,19 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ResourceLeakDetector;
 
+import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -71,6 +77,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.SocketFactory;
+import javax.net.ssl.SSLException;
 import javax.security.sasl.Sasl;
 import java.io.*;
 import java.net.*;
@@ -1989,12 +1996,50 @@ public class Client implements AutoCloseable {
       }
       channel = new NioSocketChannel(socket.getChannel());
       channel.config().setAutoRead(false);
+
+      SslContext sslCtx = null;
+
+      try {
+        sslCtx = SslContextBuilder.forClient()
+            .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+      } catch (SSLException e) {
+        throw new IOException("Exception while building SSL Context", e);
+      }
+
+      SslHandler sslHandler = sslCtx.newHandler(channel.alloc());
+
+      if (sslHandler != null) {
+        sslHandler.handshakeFuture().addListener(new GenericFutureListener<io.netty.util.concurrent.Future<Channel>>() {
+          @Override
+          public void operationComplete(final io.netty.util.concurrent.Future<Channel> handshakeFuture) throws Exception {
+            if (handshakeFuture.isSuccess()) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("TLS handshake success");
+              }
+            } else {
+              throw new IOException("TLS handshake failed." + handshakeFuture.cause());
+            }
+          }
+        });
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding the SSLHandler to the pipeline");
+      }
+      channel.pipeline().addLast("SSL", sslHandler);
+
       RpcChannelHandler handler = new RpcChannelHandler();
       setInputStream(new BufferedInputStream(handler.getInputStream()));
       setOutputStream(new BufferedOutputStream(handler.getOutputStream()));
       channel.pipeline().addLast(handler);
       group = new NioEventLoopGroup(1);
       group.register(channel);
+
+      try {
+        channel.pipeline().get(SslHandler.class).handshakeFuture().sync();
+      } catch (InterruptedException e) {
+        throw new IOException("Interrupted while waiting for SSL Handshake", e);
+      }
     }
 
     @Override
@@ -2088,7 +2133,7 @@ public class Client implements AutoCloseable {
       @Override
       public void write(byte b[], int off, int len) throws IOException {
         ByteBuf buf = Unpooled.wrappedBuffer(b, off, len);
-        channel.write(buf, channel.voidPromise());
+        channel.writeAndFlush(buf, channel.voidPromise());
       }
       @Override
       public void flush() throws IOException {

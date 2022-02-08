@@ -51,6 +51,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -73,6 +74,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import javax.net.ssl.SSLException;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
@@ -107,7 +109,13 @@ import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -4381,7 +4389,8 @@ public abstract class Server {
           .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
           .childHandler(new ChannelInitializer<Channel>() {
               @Override
-              protected void initChannel(io.netty.channel.Channel channel) {
+              protected void initChannel(io.netty.channel.Channel channel)
+                  throws IOException {
                 connectionManager.register(new NettyConnection(channel));
               }});
 
@@ -4496,7 +4505,8 @@ public abstract class Server {
   }
 
   private class NettyConnection extends Connection<io.netty.channel.Channel> {
-    public NettyConnection(io.netty.channel.Channel channel) {
+    public NettyConnection(io.netty.channel.Channel channel)
+        throws IOException {
       super(channel, (InetSocketAddress)channel.localAddress(),
                      (InetSocketAddress)channel.remoteAddress());
       ChannelInboundHandler decoder = new ByteToMessageDecoder(){
@@ -4511,6 +4521,46 @@ public abstract class Server {
           connectionManager.close(NettyConnection.this);
         }
       };
+
+      SelfSignedCertificate ssc = null;
+
+      try {
+        ssc = new SelfSignedCertificate();
+      } catch (CertificateException e) {
+        throw new IOException(
+            "Exception while creating a SelfSignedCertificate object.", e);
+      }
+
+      SslContext sslCtx = null;
+
+      try {
+        sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+            .build();
+      } catch (SSLException e) {
+        throw new IOException("Exception while building a SSLContext", e);
+      }
+
+      SslHandler sslHandler = sslCtx.newHandler(channel.alloc());
+
+      if (sslHandler != null) {
+        sslHandler.handshakeFuture().addListener(new GenericFutureListener<Future<Channel>>() {
+          @Override
+          public void operationComplete(final io.netty.util.concurrent.Future<Channel> handshakeFuture) throws Exception {
+            if (handshakeFuture.isSuccess()) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("TLS handshake success");
+              }
+            } else {
+              throw new IOException("TLS handshake failed." + handshakeFuture.cause());
+            }
+          }
+        });
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding the SSLHandler to the pipeline");
+      }
+      channel.pipeline().addLast(sslHandler);
       // decoder maintains state, responder doesn't so it can be reused.
       channel.pipeline().addLast(new CombinedChannelDuplexHandler(
           decoder, (NettyResponder)responder));
