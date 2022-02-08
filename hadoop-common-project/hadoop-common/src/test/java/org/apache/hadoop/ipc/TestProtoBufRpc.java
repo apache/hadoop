@@ -77,21 +77,14 @@ public class TestProtoBufRpc extends TestRpcBase {
    */
   private boolean testWithLegacyFirst;
 
-  public TestProtoBufRpc(Boolean testWithLegacy, Boolean testWithLegacyFirst) {
+  /**
+   * Test with a Netty enabled server.
+   */
+  private boolean useNetty;
+
+  public TestProtoBufRpc(Boolean testWithLegacy, Boolean testWithLegacyFirst, Boolean useNetty) {
     this.testWithLegacy = testWithLegacy;
     this.testWithLegacyFirst = testWithLegacyFirst;
-  }
-
-  @Parameterized.Parameters(name="{index}: useNetty={0}")
-  public static Collection<Object[]> data() {
-    Collection<Object[]> params = new ArrayList<Object[]>();
-    params.add(new Object[]{Boolean.FALSE});
-    params.add(new Object[]{Boolean.TRUE});
-    return params;
-  }
-
-  private static boolean useNetty;
-  public TestProtoBufRpc(Boolean useNetty) {
     this.useNetty = useNetty;
   }
 
@@ -167,9 +160,12 @@ public class TestProtoBufRpc extends TestRpcBase {
   @Parameters
   public static Collection<Object[]> params() {
     Collection<Object[]> params = new ArrayList<Object[]>();
-    params.add(new Object[] {Boolean.TRUE, Boolean.TRUE });
-    params.add(new Object[] {Boolean.TRUE, Boolean.FALSE });
-    params.add(new Object[] {Boolean.FALSE, Boolean.FALSE });
+    params.add(new Object[] {Boolean.TRUE, Boolean.TRUE, Boolean.TRUE });
+    params.add(new Object[] {Boolean.TRUE, Boolean.FALSE, Boolean.TRUE });
+    params.add(new Object[] {Boolean.FALSE, Boolean.FALSE, Boolean.TRUE });
+    params.add(new Object[] {Boolean.TRUE, Boolean.TRUE, Boolean.FALSE });
+    params.add(new Object[] {Boolean.TRUE, Boolean.FALSE, Boolean.FALSE });
+    params.add(new Object[] {Boolean.FALSE, Boolean.FALSE, Boolean.FALSE });
     return params;
   }
 
