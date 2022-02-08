@@ -92,6 +92,8 @@ public class TestIPCServerResponder {
     conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
         useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
   }
 
   static Writable call(Client client, Writable param,

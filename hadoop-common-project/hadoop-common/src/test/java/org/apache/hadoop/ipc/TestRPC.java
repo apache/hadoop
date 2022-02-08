@@ -135,6 +135,8 @@ public class TestRPC extends TestRpcBase {
     setupConf();
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
                     useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
     int threadsBefore = countThreads("Socket Reader");
     assertEquals("Expect no Reader threads running before test",
         0, threadsBefore);

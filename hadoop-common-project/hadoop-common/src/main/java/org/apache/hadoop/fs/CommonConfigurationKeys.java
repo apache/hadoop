@@ -63,7 +63,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_SERVER_NETTY_ENABLE_KEY =
       "ipc.server.netty.enable";
   /** Default value for IPC_SERVER_NETTY_ENABLE_KEY */
-  public static final boolean IPC_SERVER_NETTY_ENABLE_DEFAULT = false;1
+  public static final boolean IPC_SERVER_NETTY_ENABLE_DEFAULT = false;
   /** Enable the experimental use of netty instead of nio. */
   public static final String IPC_CLIENT_NETTY_ENABLE_KEY =
       "ipc.client.netty.enable";

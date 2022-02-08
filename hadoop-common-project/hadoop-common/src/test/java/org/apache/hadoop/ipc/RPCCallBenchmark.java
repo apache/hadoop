@@ -68,7 +68,8 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     public Class<? extends RpcEngine> rpcEngine =
         ProtobufRpcEngine2.class;
     private boolean useNetty =
-        CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_DEFAULT;
+        CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_DEFAULT &&
+            CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_DEFAULT;
     
     private MyOptions(String args[]) {
       try {
@@ -238,6 +239,8 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
       return null;
     }
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+        opts.useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
         opts.useNetty);
     conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
         opts.serverReaderThreads);

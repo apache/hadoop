@@ -34,8 +34,6 @@ public class TestRPCCallBenchmark {
     Collection<Object[]> params = new ArrayList<Object[]>();
     params.add(new Object[]{Boolean.FALSE});
     params.add(new Object[]{Boolean.TRUE});
-    params.add(new Object[]{Boolean.FALSE});
-    params.add(new Object[]{Boolean.TRUE});
     return params;
   }
 

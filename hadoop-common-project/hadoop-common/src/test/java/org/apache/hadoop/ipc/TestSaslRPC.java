@@ -165,6 +165,8 @@ public class TestSaslRPC extends TestRpcBase {
     conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
                     useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
     // the specific tests for kerberos will enable kerberos.  forcing it
     // for all tests will cause tests to fail if the user has a TGT
     conf.set(HADOOP_SECURITY_AUTHENTICATION, SIMPLE.toString());

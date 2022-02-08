@@ -67,6 +67,8 @@ public class TestRPCServerShutdown extends TestRpcBase {
     setupConf();
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
                     useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
   }
 
   /**

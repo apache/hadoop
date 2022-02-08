@@ -177,6 +177,8 @@ public class TestProtoBufRpc extends TestRpcBase {
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_LOG_SLOW_RPC, true);
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
         useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
     // Set RPC engine to protobuf RPC engine
     if (testWithLegacy) {
       RPC.setProtocolEngine(conf, TestRpcService2Legacy.class,
