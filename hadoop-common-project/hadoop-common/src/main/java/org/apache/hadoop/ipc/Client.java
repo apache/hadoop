@@ -155,13 +155,7 @@ public class Client implements AutoCloseable {
   private final int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
 
-  /**
-   * Executor on which IPC calls' parameters are sent.
-   * Deferring the sending of parameters to a separate
-   * thread isolates them from thread interruptions in the
-   * calling code.
-   */
-  private final ExecutorService sendParamsExecutor;
+
   private final static ClientExecutorServiceFactory clientExcecutorFactory =
       new ClientExecutorServiceFactory();
 
@@ -1167,11 +1161,8 @@ public class Client implements AutoCloseable {
         return;
       }
 
-      // Serialize the call to be sent. This is done from the actual
-      // caller thread, rather than the sendParamsExecutor thread,
-      
-      // so that if the serialization throws an error, it is reported
-      // properly. This also parallelizes the serialization.
+      // Serialize the call to be sent so that if the serialization throws an
+      // error, it is reported properly. This also parallelizes the serialization.
       //
       // Format of a call on the wire:
       // 0) Length of rest below (1 + 2)
@@ -1373,7 +1364,7 @@ public class Client implements AutoCloseable {
             CommonConfigurationKeys.IPC_CLIENT_BIND_WILDCARD_ADDR_DEFAULT);
 
     this.clientId = ClientId.getClientId();
-    this.sendParamsExecutor = clientExcecutorFactory.refAndGetInstance();
+    clientExcecutorFactory.refAndGetInstance();
     this.maxAsyncCalls = conf.getInt(
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY,
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_DEFAULT);
@@ -2018,6 +2009,104 @@ public class Client implements AutoCloseable {
       }
     }
 
+    private class NettyInputStream extends InputStream {
+      private CompositeByteBuf cbuf = null;
+
+      NettyInputStream(CompositeByteBuf cbuf) {
+        this.cbuf = cbuf;
+      }
+
+      @Override
+      public int read() throws IOException {
+        // buffered stream ensures this isn't called.
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public int read(byte b[], int off, int len) throws IOException {
+        synchronized (cbuf) {
+          // trigger a read if the channel isn't at EOF but has less
+          // buffered bytes than requested.  the method may still return
+          // less bytes than requested.
+          int readable = readableBytes();
+          if (readable != -1 && readable < len) {
+            long until = Time.monotonicNow() + soTimeout;
+            long timeout = soTimeout;
+            channel.read();
+            do {
+              try {
+                cbuf.wait(timeout);
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new InterruptedIOException(e.getMessage());
+              }
+              readable = readableBytes();
+              timeout = until - Time.monotonicNow();
+            } while (readable == 0 && timeout > 0);
+          }
+          switch(readable) {
+            case -1:
+              return -1;
+            case 0:
+              throw new SocketTimeoutException(
+                  soTimeout + " millis timeout while " +
+                      "waiting for channel to be ready for read. ch : "
+                      + channel + " peer address : " + channel.remoteAddress());
+            default:
+              // return as many bytes as possible.
+              len = Math.min(len, readable);
+              cbuf.readBytes(b, off, len).discardReadComponents();
+              return len;
+          }
+        }
+      }
+
+      // if the buffer is empty and an error has occurred, throw it.
+      // else return the number of buffered bytes, 0 if empty and the
+      // connection is open, -1 upon EOF.
+      int readableBytes() throws IOException {
+        int readable = cbuf.readableBytes();
+        if (readable == 0 && channelIOE != null) {
+          throw channelIOE;
+        }
+        return (readable > 0) ? readable : channel.isActive() ? 0 : -1;
+      }
+    }
+
+    private class NettyOutputStream extends OutputStream {
+      private CompositeByteBuf cbuf = null;
+
+      NettyOutputStream(CompositeByteBuf cbuf) {
+        this.cbuf = cbuf;
+      }
+
+      @Override
+      public void write(int b) throws IOException {
+        // buffered stream ensures this isn't called.
+        throw new UnsupportedOperationException();
+      }
+      @Override
+      public void write(byte b[], int off, int len) throws IOException {
+        ByteBuf buf = Unpooled.wrappedBuffer(b, off, len);
+        channel.write(buf, channel.voidPromise());
+      }
+      @Override
+      public void flush() throws IOException {
+        try {
+          if (!channel.writeAndFlush(Unpooled.EMPTY_BUFFER)
+              .await(soTimeout)) {
+            throw new SocketTimeoutException(
+                soTimeout + " millis timeout while " +
+                    "waiting for channel to be ready for write. ch : "
+                    + channel + " peer address : " + channel.remoteAddress());
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new InterruptedIOException(e.getMessage());
+        }
+      }
+    }
+
     private class RpcChannelHandler extends ChannelInboundHandlerAdapter {
       // aggregates unread buffers.  should be no more than 2 at a time.
       private final CompositeByteBuf cbuf =
@@ -2047,11 +2136,6 @@ public class Client implements AutoCloseable {
         }
       }
 
-      /*public void channelInactive(ChannelHandlerContext ctx) {
-        // peer closed the connection.
-        exceptionCaught(ctx, new EOFException());
-      }*/
-
       @Override
       public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         // probably connection reset by peer.
@@ -2062,87 +2146,11 @@ public class Client implements AutoCloseable {
       }
 
       InputStream getInputStream() {
-        return new InputStream() {
-          @Override
-          public int read() throws IOException {
-            // buffered stream ensures this isn't called.
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public int read(byte b[], int off, int len) throws IOException {
-            synchronized (cbuf) {
-              // trigger a read if the channel isn't at EOF but has less
-              // buffered bytes than requested.  the method may still return
-              // less bytes than requested.
-              int readable = readableBytes();
-              if (readable != -1 && readable < len) {
-                long until = Time.monotonicNow() + soTimeout;
-                long timeout = soTimeout;
-                channel.read();
-                do {
-                  try {
-                    cbuf.wait(timeout);
-                  } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new InterruptedIOException(e.getMessage());
-                  }
-                  readable = readableBytes();
-                  timeout = until - Time.monotonicNow();
-                } while (readable == 0 && timeout > 0);
-              }
-              switch(readable) {
-                case -1:
-                  return -1;
-                case 0:
-                  throw timeout("read");
-                default:
-                  // return as many bytes as possible.
-                  len = Math.min(len, readable);
-                  cbuf.readBytes(b, off, len).discardReadComponents();
-                  return len;
-              }
-            }
-          }
-
-          // if the buffer is empty and an error has occurred, throw it.
-          // else return the number of buffered bytes, 0 if empty and the
-          // connection is open, -1 upon EOF.
-          int readableBytes() throws IOException {
-            int readable = cbuf.readableBytes();
-            if (readable == 0 && channelIOE != null) {
-              throw channelIOE;
-            }
-            return (readable > 0) ? readable : channel.isActive() ? 0 : -1;
-          }
-        };
+        return new NettyInputStream(cbuf);
       }
 
       OutputStream getOutputStream() {
-        return new OutputStream(){
-          @Override
-          public void write(int b) throws IOException {
-            // buffered stream ensures this isn't called.
-            throw new UnsupportedOperationException();
-          }
-          @Override
-          public void write(byte b[], int off, int len) throws IOException {
-            ByteBuf buf = Unpooled.wrappedBuffer(b, off, len);
-            channel.write(buf, channel.voidPromise());
-          }
-          @Override
-          public void flush() throws IOException {
-            try {
-              if (!channel.writeAndFlush(Unpooled.EMPTY_BUFFER)
-                          .await(soTimeout)) {
-                throw timeout("write");
-              }
-            } catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-              throw new InterruptedIOException(e.getMessage());
-            }
-          }
-        };
+        return new NettyOutputStream(cbuf);
       }
 
       IOException timeout(String op) {
