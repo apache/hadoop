@@ -861,6 +861,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                 <exclude>**/tools/proto/*.java</exclude>
                 <exclude>**/hs/proto/*.java</exclude>
                 <exclude>**/EntityGroupPlugInForTest.java</exclude>
+                <exclude>**/mapreduce/v2/CustomOutputFormat.java</exclude>
+                <exclude>**/mapreduce/v2/CustomSpeculator.java</exclude>
               </excludes>
             </configuration>
             <executions>
