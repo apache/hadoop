@@ -689,7 +689,7 @@
                     <configuration>
                         <artifactSet>
                             <includes>
-                                <include>io.netty:*</include>
+                                <include>io.netty:netty-all:jar:*</include>
                             </includes>
                             <excludes>
                                 <!-- this is netty 3 -->
