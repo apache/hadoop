@@ -82,6 +82,19 @@ public class TestProtoBufRpc extends TestRpcBase {
     this.testWithLegacyFirst = testWithLegacyFirst;
   }
 
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestProtoBufRpc(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
+
   @ProtocolInfo(protocolName = "testProto2", protocolVersion = 1)
   public interface TestRpcService2 extends
       TestProtobufRpc2Proto.BlockingInterface {
@@ -166,6 +179,8 @@ public class TestProtoBufRpc extends TestRpcBase {
     conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH, 1024);
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_LOG_SLOW_RPC, true);
+    conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+        useNetty);
     // Set RPC engine to protobuf RPC engine
     if (testWithLegacy) {
       RPC.setProtocolEngine(conf, TestRpcService2Legacy.class,

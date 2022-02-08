@@ -62,8 +62,10 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.security.Security;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -92,31 +94,36 @@ import static org.junit.Assert.fail;
 /** Unit tests for using Sasl over RPC. */
 @RunWith(Parameterized.class)
 public class TestSaslRPC extends TestRpcBase {
-  @Parameters
+  @Parameterized.Parameters(
+      name="{index}: useNetty={0} qop={1} expectQop={2} resolver={3}")
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<>();
-    for (QualityOfProtection qop : QualityOfProtection.values()) {
-      params.add(new Object[]{ new QualityOfProtection[]{qop},qop, null });
+    for (int i = 0; i < 2; i++) {
+      boolean useNetty = i != 0;
+      for (QualityOfProtection qop : QualityOfProtection.values()) {
+        params.add(new Object[]{useNetty, Arrays.asList(qop), qop, null});
+      }
+      params.add(new Object[]{useNetty, Arrays.asList(
+          QualityOfProtection.PRIVACY, QualityOfProtection.AUTHENTICATION),
+          QualityOfProtection.PRIVACY, null});
+      params.add(new Object[]{useNetty, Arrays.asList(
+          QualityOfProtection.PRIVACY, QualityOfProtection.AUTHENTICATION),
+          QualityOfProtection.AUTHENTICATION,
+          "org.apache.hadoop.ipc.TestSaslRPC$AuthSaslPropertiesResolver"});
     }
-    params.add(new Object[]{ new QualityOfProtection[]{
-        QualityOfProtection.PRIVACY,QualityOfProtection.AUTHENTICATION },
-        QualityOfProtection.PRIVACY, null});
-    params.add(new Object[]{ new QualityOfProtection[]{
-        QualityOfProtection.PRIVACY,QualityOfProtection.AUTHENTICATION },
-        QualityOfProtection.AUTHENTICATION ,
-        "org.apache.hadoop.ipc.TestSaslRPC$AuthSaslPropertiesResolver" });
 
     return params;
   }
 
+  boolean useNetty;
   QualityOfProtection[] qop;
   QualityOfProtection expectedQop;
   String saslPropertiesResolver ;
   
-  public TestSaslRPC(QualityOfProtection[] qop,
-      QualityOfProtection expectedQop,
-      String saslPropertiesResolver) {
-    this.qop=qop;
+  public TestSaslRPC(boolean useNetty, List<QualityOfProtection> qopList,
+      QualityOfProtection expectedQop,  String saslPropertiesResolver) {
+    this.useNetty = useNetty;
+    this.qop = qopList.toArray(new QualityOfProtection[0]);
     this.expectedQop = expectedQop;
     this.saslPropertiesResolver = saslPropertiesResolver;
   }
@@ -152,10 +159,12 @@ public class TestSaslRPC extends TestRpcBase {
   @Before
   public void setup() {
     LOG.info("---------------------------------");
-    LOG.info("Testing QOP:"+ getQOPNames(qop));
+    LOG.info("Testing QOP:" + getQOPNames(qop) + " netty=" + useNetty);
     LOG.info("---------------------------------");
 
     conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+                    useNetty);
     // the specific tests for kerberos will enable kerberos.  forcing it
     // for all tests will cause tests to fail if the user has a TGT
     conf.set(HADOOP_SECURITY_AUTHENTICATION, SIMPLE.toString());

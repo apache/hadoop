@@ -128,7 +128,7 @@ public class TestRPCWaitForProxy extends TestRpcBase {
             invalidPort);
         TestRpcBase.TestRpcService proxy = RPC.getProxy(
             TestRpcBase.TestRpcService.class,
-            1L, invalidAddress, conf);
+            1L, invalidAddress, config);
         // Test echo method
         proxy.echo(null, newEchoRequest("hello"));
 

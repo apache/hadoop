@@ -27,6 +27,7 @@ import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -65,6 +66,8 @@ import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -74,6 +77,38 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.bootstrap.ServerBootstrapConfig;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueEventLoopGroup;
+import io.netty.channel.kqueue.KQueueServerSocketChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -492,10 +527,9 @@ public abstract class Server {
   // maintains the set of client connections and handles idle timeouts
   private ConnectionManager connectionManager;
   private Listener listener = null;
-  // Auxiliary listeners maintained as in a map, to allow
-  // arbitrary number of of auxiliary listeners. A map from
-  // the port to the listener binding to it.
-  private Map<Integer, Listener> auxiliaryListenerMap;
+  // Auxiliary listeners addresses maintained as in a list to allow
+  // arbitrary number of of auxiliary listeners.
+  private LinkedList<InetSocketAddress> listenAddresses = new LinkedList<>();
   private Responder responder = null;
   private Handler[] handlers = null;
   private final AtomicInteger numInProcessHandler = new AtomicInteger();
@@ -619,6 +653,40 @@ public abstract class Server {
     rpcDetailedMetrics.addDeferredProcessingTime(name, processingTime);
   }
 
+  interface Binder<T,O> {
+    T bind(O obj, InetSocketAddress addr, int backlog)
+        throws IOException;
+    Binder<ServerSocket, ServerSocket> NIO =
+      new Binder<ServerSocket, ServerSocket>() {
+        @Override
+        public ServerSocket bind(ServerSocket socket,
+                                 InetSocketAddress addr,
+                                 int backlog) throws IOException {
+          socket.bind(addr, backlog);
+          return socket;
+        }
+      };
+    Binder<io.netty.channel.Channel, ServerBootstrap> NETTY =
+      new Binder<io.netty.channel.Channel, ServerBootstrap>() {
+        @Override
+        public io.netty.channel.Channel bind(ServerBootstrap bootstrap,
+                                             InetSocketAddress addr,
+                                             int backlog) throws IOException {
+          bootstrap.option(ChannelOption.SO_BACKLOG, backlog);
+          // netty throws private undeclared checked exceptions from the
+          // future.  it's ugly, but mincing the message is necessary.
+          ChannelFuture future = bootstrap.bind(addr).awaitUninterruptibly();
+          if (!future.isSuccess()) {
+            Throwable t = future.cause();
+            if (t.getMessage().contains("Address already in use")) {
+              throw new BindException(t.getMessage());
+            }
+          }
+          return future.channel(); // will throw any other exceptions.
+        }
+      };
+  }
+
   /**
    * A convenience method to bind to a given address and report 
    * better exceptions if the address is not a valid host.
@@ -636,27 +704,29 @@ public abstract class Server {
 
   public static void bind(ServerSocket socket, InetSocketAddress address, 
       int backlog, Configuration conf, String rangeConf) throws IOException {
+    bind(Binder.NIO, socket, address, backlog, conf, rangeConf);
+  }
+
+  static <T,O> T bind(Binder<T,O> binder, O obj, InetSocketAddress address,
+      int backlog, Configuration conf, String rangeConf) throws IOException {
     try {
       IntegerRanges range = null;
       if (rangeConf != null) {
         range = conf.getRange(rangeConf, "");
       }
       if (range == null || range.isEmpty() || (address.getPort() != 0)) {
-        socket.bind(address, backlog);
+        return binder.bind(obj, address, backlog);
       } else {
         for (Integer port : range) {
-          if (socket.isBound()) break;
           try {
             InetSocketAddress temp = new InetSocketAddress(address.getAddress(),
                 port);
-            socket.bind(temp, backlog);
+            return binder.bind(obj, temp, backlog);
           } catch(BindException e) {
             //Ignored
           }
         }
-        if (!socket.isBound()) {
-          throw new BindException("Could not find a free port in "+range);
-        }
+        throw new BindException("Could not find a free port in "+range);
       }
     } catch (SocketException e) {
       throw NetUtils.wrapException(null,
@@ -1123,7 +1193,7 @@ public abstract class Server {
 
     @Override
     boolean isOpen() {
-      return connection.channel.isOpen();
+      return connection.isOpen();
     }
 
     void setResponseFields(Writable returnValue,
@@ -1152,9 +1222,13 @@ public abstract class Server {
       return connection.getRemotePort();
     }
 
+    private <T> T connection() {
+      return (T)connection;
+    }
+
     @Override
     public Void run() throws Exception {
-      if (!connection.channel.isOpen()) {
+      if (!connection.isOpen()) {
         Server.LOG.info(Thread.currentThread().getName() + ": skipped " + this);
         return null;
       }
@@ -1329,9 +1403,44 @@ public abstract class Server {
     }
   }
 
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  protected void configureSocketChannel(SocketChannel channel) throws IOException {
+    channel.configureBlocking(false);
+    channel.socket().setTcpNoDelay(tcpNoDelay);
+    channel.socket().setKeepAlive(true);
+  }
+
+  private interface Listener<T> {
+    static Listener newInstance(Server server, int port) throws IOException {
+      return server.useNetty()
+         ? server.new NettyListener(port)
+         : server.new NioListener(port);
+    }
+
+    void listen(InetSocketAddress addr) throws IOException;
+    void registerAcceptChannel(T channel) throws IOException;
+    void closeAcceptChannels() throws IOException;
+    InetSocketAddress getAddress();
+    void start();
+    void interrupt();
+    void doStop();
+  }
+
+  private interface Responder {
+    static Responder newInstance(Server server) throws IOException {
+      return server.useNetty()
+        ? server.new NettyResponder()
+        : server.new NioResponder();
+    }
+    void start();
+    void interrupt();
+    void doRespond(RpcCall call) throws IOException;
+  }
+
   /** Listens on the socket. Creates jobs for the handler threads*/
-  private class Listener extends Thread {
-    
+  private class NioListener extends Thread
+      implements Listener<ServerSocketChannel> {
     private ServerSocketChannel acceptChannel = null; //the accept channel
     private Selector selector = null; //the selector that we use for the server
     private Reader[] readers = null;
@@ -1346,7 +1455,7 @@ public abstract class Server {
         CommonConfigurationKeysPublic.IPC_SERVER_REUSEADDR_DEFAULT);
     private boolean isOnAuxiliaryPort;
 
-    Listener(int port) throws IOException {
+    NioListener(int port) throws IOException {
       address = new InetSocketAddress(bindAddress, port);
       // Create a new server socket and set to non blocking mode
       acceptChannel = ServerSocketChannel.open();
@@ -1370,10 +1479,38 @@ public abstract class Server {
       }
 
       // Register accepts on the server socket with the selector.
-      acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
+      registerAcceptChannel(acceptChannel);
       this.setName("IPC Server listener on " + port);
       this.setDaemon(true);
       this.isOnAuxiliaryPort = false;
+    }
+
+
+    @Override
+    public void listen(InetSocketAddress addr) throws IOException {
+      // Bind the server socket to the local host and port
+      ServerSocketChannel acceptChannel = ServerSocketChannel.open();
+      acceptChannel.configureBlocking(false);
+      Server.bind(acceptChannel.socket(), addr, backlogLength);
+      registerAcceptChannel(acceptChannel);
+    }
+
+    @Override
+    public void registerAcceptChannel(ServerSocketChannel channel)
+        throws IOException {
+      channel.register(selector, SelectionKey.OP_ACCEPT);
+      addListenerAddress((InetSocketAddress)channel.getLocalAddress());
+    }
+
+    @Override
+    public void closeAcceptChannels() throws IOException {
+      if (selector.isOpen()) {
+        for (SelectionKey key : selector.keys()) {
+          if (key.isValid()) {
+            key.channel().close();
+          }
+        }
+      }
     }
 
     void setIsAuxiliary() {
@@ -1381,14 +1518,14 @@ public abstract class Server {
     }
     
     private class Reader extends Thread {
-      final private BlockingQueue<Connection> pendingConnections;
+      final private BlockingQueue<NioConnection> pendingConnections;
       private final Selector readSelector;
 
       Reader(String name) throws IOException {
         super(name);
 
         this.pendingConnections =
-            new LinkedBlockingQueue<Connection>(readerPendingConnectionQueue);
+            new LinkedBlockingQueue<>(readerPendingConnectionQueue);
         this.readSelector = Selector.open();
       }
       
@@ -1414,7 +1551,7 @@ public abstract class Server {
             // unbridled acceptance of connections that starves the select
             int size = pendingConnections.size();
             for (int i=size; i>0; i--) {
-              Connection conn = pendingConnections.take();
+              NioConnection conn = pendingConnections.take();
               conn.channel.register(readSelector, SelectionKey.OP_READ, conn);
             }
             readSelector.select();
@@ -1454,7 +1591,7 @@ public abstract class Server {
        * so the connection must be queued.  The reader will drain the queue
        * and update its readSelector before performing the next select
        */
-      public void addConnection(Connection conn) throws InterruptedException {
+      public void addConnection(NioConnection conn) throws InterruptedException {
         pendingConnections.put(conn);
         readSelector.wakeup();
       }
@@ -1509,7 +1646,7 @@ public abstract class Server {
 
       synchronized (this) {
         try {
-          acceptChannel.close();
+          closeAcceptChannels();
           selector.close();
         } catch (IOException e) { }
 
@@ -1532,7 +1669,8 @@ public abstract class Server {
       }
     }
 
-    InetSocketAddress getAddress() {
+    @Override
+    public InetSocketAddress getAddress() {
       return (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
     }
     
@@ -1546,14 +1684,9 @@ public abstract class Server {
         channel.socket().setKeepAlive(true);
         
         Reader reader = getReader();
-        Connection c = connectionManager.register(channel,
-            this.listenPort, this.isOnAuxiliaryPort);
-        // If the connectionManager can't take it, close the connection.
-        if (c == null) {
-          if (channel.isOpen()) {
-            IOUtils.cleanupWithLogger(LOG, channel);
-          }
-          connectionManager.droppedConnections.getAndIncrement();
+        // If the connectionManager can't take it, it closes the connection.
+        NioConnection c = new NioConnection(channel);
+        if (!connectionManager.register(c)) {
           continue;
         }
         key.attach(c);  // so closeCurrentConnection can get the object
@@ -1562,45 +1695,21 @@ public abstract class Server {
     }
 
     void doRead(SelectionKey key) throws InterruptedException {
-      int count;
       Connection c = (Connection)key.attachment();
-      if (c == null) {
-        return;  
-      }
-      c.setLastContact(Time.now());
-      
-      try {
-        count = c.readAndProcess();
-      } catch (InterruptedException ieo) {
-        LOG.info(Thread.currentThread().getName() + ": readAndProcess caught InterruptedException", ieo);
-        throw ieo;
-      } catch (Exception e) {
-        // Any exceptions that reach here are fatal unexpected internal errors
-        // that could not be sent to the client.
-        LOG.info(Thread.currentThread().getName() +
-            ": readAndProcess from client " + c +
-            " threw exception [" + e + "]", e);
-        count = -1; //so that the (count < 0) block is executed
-      }
-      // setupResponse will signal the connection should be closed when a
-      // fatal response is sent.
-      if (count < 0 || c.shouldClose()) {
-        closeConnection(c);
-        c = null;
-      }
-      else {
-        c.setLastContact(Time.now());
+      if (c != null) {
+        c.doRead(key.channel());
       }
     }   
 
-    synchronized void doStop() {
+    @Override
+    public synchronized void doStop() {
       if (selector != null) {
         selector.wakeup();
         Thread.yield();
       }
       if (acceptChannel != null) {
         try {
-          acceptChannel.socket().close();
+          closeAcceptChannels();
         } catch (IOException e) {
           LOG.info(Thread.currentThread().getName() + ":Exception in closing listener socket. " + e);
         }
@@ -1620,11 +1729,11 @@ public abstract class Server {
   }
 
   // Sends responses of RPC back to clients.
-  private class Responder extends Thread {
+  private class NioResponder extends Thread implements Responder {
     private final Selector writeSelector;
     private int pending;         // connections waiting to register
 
-    Responder() throws IOException {
+    NioResponder() throws IOException {
       this.setName("IPC Server Responder");
       this.setDaemon(true);
       writeSelector = Selector.open(); // create a selector
@@ -1720,6 +1829,10 @@ public abstract class Server {
       }
     }
 
+    private LinkedList<RpcCall> getResponseQueue(RpcCall call) {
+      return ((NioConnection)call.connection).responseQueue;
+    }
+
     private void doAsyncWrite(SelectionKey key) throws IOException {
       RpcCall call = (RpcCall)key.attachment();
       if (call == null) {
@@ -1729,8 +1842,9 @@ public abstract class Server {
         throw new IOException("doAsyncWrite: bad channel");
       }
 
-      synchronized(call.connection.responseQueue) {
-        if (processResponse(call.connection.responseQueue, false)) {
+      LinkedList<RpcCall> responseQueue = getResponseQueue(call);
+      synchronized(responseQueue) {
+        if (processResponse(responseQueue, false)) {
           try {
             key.interestOps(0);
           } catch (CancelledKeyException e) {
@@ -1750,7 +1864,7 @@ public abstract class Server {
     // for a long time.
     //
     private void doPurge(RpcCall call, long now) {
-      LinkedList<RpcCall> responseQueue = call.connection.responseQueue;
+      LinkedList<RpcCall> responseQueue = getResponseQueue(call);
       synchronized (responseQueue) {
         Iterator<RpcCall> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
@@ -1786,7 +1900,8 @@ public abstract class Server {
           // Extract the first call
           //
           call = responseQueue.removeFirst();
-          SocketChannel channel = call.connection.channel;
+          NioConnection connection = call.connection();
+          SocketChannel channel = connection.channel;
           if (LOG.isDebugEnabled()) {
             LOG.debug(Thread.currentThread().getName() + ": responding to " + call);
           }
@@ -1815,7 +1930,7 @@ public abstract class Server {
             // If we were unable to write the entire response out, then 
             // insert in Selector queue. 
             //
-            call.connection.responseQueue.addFirst(call);
+            connection.responseQueue.addFirst(call);
             
             if (inHandler) {
               // set the serve time when the response has to be sent later
@@ -1854,16 +1969,18 @@ public abstract class Server {
     //
     // Enqueue a response from the application.
     //
-    void doRespond(RpcCall call) throws IOException {
-      synchronized (call.connection.responseQueue) {
+    @Override
+    public void doRespond(RpcCall call) throws IOException {
+      LinkedList<RpcCall> responseQueue = getResponseQueue(call);
+      synchronized (responseQueue) {
         // must only wrap before adding to the responseQueue to prevent
         // postponed responses from being encrypted and sent out of order.
         if (call.connection.useWrap) {
           wrapWithSasl(call);
         }
-        call.connection.responseQueue.addLast(call);
-        if (call.connection.responseQueue.size() == 1) {
-          processResponse(call.connection.responseQueue, true);
+        responseQueue.addLast(call);
+        if (responseQueue.size() == 1) {
+          processResponse(responseQueue, true);
         }
       }
     }
@@ -1935,20 +2052,18 @@ public abstract class Server {
   }
 
   /** Reads calls from a connection and queues them for handling. */
-  public class Connection {
+  public abstract class Connection<T> {
     private boolean connectionHeaderRead = false; // connection  header is read?
     private boolean connectionContextRead = false; //if connection context that
                                             //follows connection header is read
 
-    private SocketChannel channel;
+    final T channel;
     private ByteBuffer data;
     private final ByteBuffer dataLengthBuffer;
-    private LinkedList<RpcCall> responseQueue;
     // number of outstanding rpcs
     private AtomicInteger rpcCount = new AtomicInteger();
     private long lastContact;
     private int dataLength;
-    private Socket socket;
     // Cache the remote host & port info so that even if the socket is 
     // disconnected, we can say where it used to connect to.
     private String hostAddress;
@@ -1979,11 +2094,15 @@ public abstract class Server {
 
     private boolean sentNegotiate = false;
     private boolean useWrap = false;
+
+    abstract boolean isOpen();
+    abstract void setSendBufferSize(T channel, int size) throws IOException;
+    abstract int bufferRead(Object in, ByteBuffer buf) throws IOException;
     
-    public Connection(SocketChannel channel, long lastContact,
-        int ingressPort, boolean isOnAuxiliaryPort) {
+    public Connection(T channel, InetSocketAddress localAddr,
+                      InetSocketAddress remoteAddr) {
       this.channel = channel;
-      this.lastContact = lastContact;
+      this.lastContact = Time.now();
       this.data = null;
       
       // the buffer is initialized to read the "hrpc" and after that to read
@@ -1991,20 +2110,18 @@ public abstract class Server {
       this.dataLengthBuffer = ByteBuffer.allocate(4);
       this.unwrappedData = null;
       this.unwrappedDataLengthBuffer = ByteBuffer.allocate(4);
-      this.socket = channel.socket();
-      this.addr = socket.getInetAddress();
-      this.ingressPort = ingressPort;
+      this.addr = remoteAddr.getAddress();
+      this.ingressPort = localAddr.getPort();
       this.isOnAuxiliaryPort = isOnAuxiliaryPort;
       if (addr == null) {
         this.hostAddress = "*Unknown*";
       } else {
         this.hostAddress = addr.getHostAddress();
       }
-      this.remotePort = socket.getPort();
-      this.responseQueue = new LinkedList<RpcCall>();
+      this.remotePort = remoteAddr.getPort();
       if (socketSendBufferSize != 0) {
         try {
-          socket.setSendBufferSize(socketSendBufferSize);
+          setSendBufferSize(channel, socketSendBufferSize);
         } catch (IOException e) {
           LOG.warn("Connection: unable to set socket send buffer size to " +
                    socketSendBufferSize);
@@ -2067,7 +2184,7 @@ public abstract class Server {
     }
     
     /* Decrement the outstanding RPC count */
-    private void decRpcCount() {
+    void decRpcCount() {
       rpcCount.decrementAndGet();
     }
     
@@ -2382,12 +2499,41 @@ public abstract class Server {
      *         client, typically failure to respond to client
      * @throws InterruptedException
      */
-    public int readAndProcess() throws IOException, InterruptedException {
-      while (!shouldClose()) { // stop if a fatal response has been sent.
+    public int doRead(Object in) throws InterruptedException {
+      setLastContact(Time.now());
+
+      int count;
+      try {
+        count = readAndProcess(in);
+      } catch (InterruptedException ie) {
+        LOG.info(Thread.currentThread().getName() +
+            ": readAndProcess caught InterruptedException", ie);
+        throw ie;
+      } catch (Exception e) {
+        // Any exceptions that reach here are fatal unexpected internal errors
+        // that could not be sent to the client.
+        LOG.info(Thread.currentThread().getName() +
+            ": readAndProcess from client " + this +
+            " threw exception [" + e + "]", e);
+        count = -1; //so that the (count < 0) block is executed
+      }
+      // setupResponse will signal the connection should be closed when a
+      // fatal response is sent.
+      if (count < 0 || shouldClose()) {
+        closeConnection(this);
+      } else {
+        setLastContact(Time.now());
+      }
+      return count;
+    }
+
+    private int readAndProcess(Object in)
+        throws IOException, InterruptedException {
+      while (running && !shouldClose()) { // stop if a fatal response has been sent.
         // dataLengthBuffer is used to read "hrpc" or the rpc-packet length
         int count = -1;
         if (dataLengthBuffer.remaining() > 0) {
-          count = channelRead(channel, dataLengthBuffer);       
+          count = bufferRead(in, dataLengthBuffer);
           if (count < 0 || dataLengthBuffer.remaining() > 0) 
             return count;
         }
@@ -2399,7 +2545,7 @@ public abstract class Server {
             // for the bytes that follow "hrpc", in the connection header
             connectionHeaderBuf = ByteBuffer.allocate(HEADER_LEN_AFTER_HRPC_PART);
           }
-          count = channelRead(channel, connectionHeaderBuf);
+          count = bufferRead(in, connectionHeaderBuf);
           if (count < 0 || connectionHeaderBuf.remaining() > 0) {
             return count;
           }
@@ -2450,7 +2596,7 @@ public abstract class Server {
           data = ByteBuffer.allocate(dataLength);
         }
         // Now read the RPC packet
-        count = channelRead(channel, data);
+        count = bufferRead(in, data);
         
         if (data.remaining() == 0) {
           dataLengthBuffer.clear(); // to read length of future rpc packets
@@ -2991,12 +3137,48 @@ public abstract class Server {
       this.serviceClass = serviceClass;
     }
 
-    private synchronized void close() {
+    synchronized void close() {
+      setShouldClose(); // avoid race with reader reading after close.
       disposeSasl();
       data = null;
+    }
+  }
+
+  private class NioConnection extends Connection<SocketChannel> {
+    private final Socket socket;
+    private final LinkedList<RpcCall> responseQueue = new LinkedList<>();
+
+    NioConnection(SocketChannel channel) throws IOException {
+      super(channel, (InetSocketAddress)channel.getLocalAddress(),
+          (InetSocketAddress)channel.getRemoteAddress());
+      socket = channel.socket();
+    }
+
+    @Override
+    boolean isOpen() {
+      return channel.isOpen();
+    }
+
+    @Override
+    void setSendBufferSize(SocketChannel channel, int size)
+        throws SocketException {
+      channel.socket().setSendBufferSize(size);
+    }
+
+    @Override
+    int bufferRead(Object channel, ByteBuffer buf) throws IOException {
+      return channelRead((ReadableByteChannel)channel, buf);
+    }
+
+    @Override
+    synchronized void close() {
+      super.close();
       if (!channel.isOpen())
         return;
-      try {socket.shutdownOutput();} catch(Exception e) {
+      try {
+        socket.shutdownInput(); // prevent connection reset on client.
+        socket.shutdownOutput();
+      } catch (Exception e) {
         LOG.debug("Ignoring socket shutdown exception", e);
       }
       if (channel.isOpen()) {
@@ -3214,7 +3396,6 @@ public abstract class Server {
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
     this.serverName = serverName;
-    this.auxiliaryListenerMap = null;
     this.maxDataLength = conf.getInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     if (queueSizePerHandler != -1) {
@@ -3256,7 +3437,7 @@ public abstract class Server {
     this.negotiateResponse = buildNegotiateResponse(enabledAuthMethods);
     
     // Start the listener here and let it bind to the port
-    listener = new Listener(port);
+    listener = Listener.newInstance(this, port);
     // set the server port to the default listener port.
     this.port = listener.getAddress().getPort();
     connectionManager = new ConnectionManager();
@@ -3275,8 +3456,8 @@ public abstract class Server {
         CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT));
 
     // Create the responder here
-    responder = new Responder();
-    
+    responder = Responder.newInstance(this);
+
     if (secretManager != null || UserGroupInformation.isSecurityEnabled()) {
       SaslRpcServer.init(conf);
       saslPropsResolver = SaslPropertiesResolver.getInstance(conf);
@@ -3289,20 +3470,7 @@ public abstract class Server {
 
   public synchronized void addAuxiliaryListener(int auxiliaryPort)
       throws IOException {
-    if (auxiliaryListenerMap == null) {
-      auxiliaryListenerMap = new HashMap<>();
-    }
-    if (auxiliaryListenerMap.containsKey(auxiliaryPort) && auxiliaryPort != 0) {
-      throw new IOException(
-          "There is already a listener binding to: " + auxiliaryPort);
-    }
-    Listener newListener = new Listener(auxiliaryPort);
-    newListener.setIsAuxiliary();
-
-    // in the case of port = 0, the listener would be on a != 0 port.
-    LOG.info("Adding a server listener on port " +
-        newListener.getAddress().getPort());
-    auxiliaryListenerMap.put(newListener.getAddress().getPort(), newListener);
+    listener.listen(new InetSocketAddress(bindAddress, auxiliaryPort));
   }
 
   private RpcSaslProto buildNegotiateResponse(List<AuthMethod> authMethods)
@@ -3327,6 +3495,12 @@ public abstract class Server {
       }
     }
     return negotiateBuilder.build();
+  }
+
+  boolean useNetty() {
+    return conf.getBoolean(
+        CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+        CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_DEFAULT);
   }
 
   // get the security type from the conf. implicitly include token support
@@ -3541,11 +3715,6 @@ public abstract class Server {
   public synchronized void start() {
     responder.start();
     listener.start();
-    if (auxiliaryListenerMap != null && auxiliaryListenerMap.size() > 0) {
-      for (Listener newListener : auxiliaryListenerMap.values()) {
-        newListener.start();
-      }
-    }
 
     handlers = new Handler[handlerCount];
     
@@ -3567,13 +3736,10 @@ public abstract class Server {
       }
     }
     listener.interrupt();
+    // the handlers are stopped so empty the queue in case readers are
+    // blocked on a full queue.
+    callQueue.clear();
     listener.doStop();
-    if (auxiliaryListenerMap != null && auxiliaryListenerMap.size() > 0) {
-      for (Listener newListener : auxiliaryListenerMap.values()) {
-        newListener.interrupt();
-        newListener.doStop();
-      }
-    }
     responder.interrupt();
     notifyAll();
     this.rpcMetrics.shutdown();
@@ -3590,12 +3756,17 @@ public abstract class Server {
     }
   }
 
+  private synchronized void addListenerAddress(InetSocketAddress addr) {
+    LOG.info("Adding a server listener on " + addr);
+    listenAddresses.add(addr);
+  }
+
   /**
    * Return the socket (ip+port) on which the RPC server is listening to.
    * @return the socket (ip+port) on which the RPC server is listening to.
    */
   public synchronized InetSocketAddress getListenerAddress() {
-    return listener.getAddress();
+    return listenAddresses.peek();
   }
 
   /**
@@ -3606,13 +3777,11 @@ public abstract class Server {
    *         RPC server is listening on.
    */
   public synchronized Set<InetSocketAddress> getAuxiliaryListenerAddresses() {
-    Set<InetSocketAddress> allAddrs = new HashSet<>();
-    if (auxiliaryListenerMap != null && auxiliaryListenerMap.size() > 0) {
-      for (Listener auxListener : auxiliaryListenerMap.values()) {
-        allAddrs.add(auxListener.getAddress());
-      }
+    if (listenAddresses.size() > 1) {
+      return new HashSet<>(listenAddresses.subList(1, listenAddresses.size()));
+    } else {
+      return Collections.emptySet();
     }
-    return allAddrs;
   }
   
   /** 
@@ -3918,20 +4087,19 @@ public abstract class Server {
       return connections.toArray(new Connection[0]);
     }
 
-    Connection register(SocketChannel channel, int ingressPort,
-        boolean isOnAuxiliaryPort) {
+    boolean register(Connection connection) {
       if (isFull()) {
-        return null;
+        connectionManager.droppedConnections.getAndIncrement();
+        connection.close();
+        return false;
       }
-      Connection connection = new Connection(channel, Time.now(),
-          ingressPort, isOnAuxiliaryPort);
       add(connection);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Server connection from " + connection +
             "; # active connections: " + size() +
             "; # queued calls: " + callQueue.size());
       }      
-      return connection;
+      return true;
     }
     
     boolean close(Connection connection) {
@@ -4024,5 +4192,274 @@ public abstract class Server {
 
   public String getServerName() {
     return serverName;
+  }
+
+  // avoid netty trying to "guess" an appropriate buffer size.
+  private static final RecvByteBufAllocator IPC_RECVBUF_ALLOCATOR =
+      new FixedRecvByteBufAllocator(NIO_BUFFER_LIMIT);
+
+  private class NettyListener implements Listener<io.netty.channel.Channel> {
+    private ServerBootstrap bootstrap;
+    private NettyThreadFactory listenerFactory;
+    private NettyThreadFactory readerFactory;
+    private ChannelGroup acceptChannels =
+        new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    private int backlogLength = conf.getInt(
+        CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_DEFAULT);
+
+    public NettyListener(int port) throws IOException {
+      if (!LOG.isDebugEnabled()) {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
+      }
+      Class<? extends io.netty.channel.socket.ServerSocketChannel> channelClass;
+      listenerFactory = new NettyThreadFactory("Netty Socket Acceptor", port);
+      readerFactory = new NettyThreadFactory("Netty Socket Reader", port);
+
+      // netty's readers double as responders so double the readers to
+      // compensate.
+      int numReaders = 2 * getNumReaders();
+      EventLoopGroup acceptors;
+      EventLoopGroup readers;
+      // Attempt to use native transport if available.
+      if (Epoll.isAvailable()) { // Linux.
+        channelClass = EpollServerSocketChannel.class;
+        acceptors = new EpollEventLoopGroup(1, listenerFactory);
+        readers = new EpollEventLoopGroup(numReaders, readerFactory);
+      } else if (KQueue.isAvailable()) { // OS X/BSD.
+        channelClass = KQueueServerSocketChannel.class;
+        acceptors = new KQueueEventLoopGroup(1, listenerFactory);
+        readers = new KQueueEventLoopGroup(numReaders, readerFactory);
+      } else {
+        channelClass = NioServerSocketChannel.class;
+        acceptors = new NioEventLoopGroup(1, listenerFactory);
+        readers = new NioEventLoopGroup(numReaders, readerFactory);
+      }
+      bootstrap = new ServerBootstrap()
+          .group(acceptors, readers)
+          .channel(channelClass)
+          .option(ChannelOption.SO_BACKLOG, backlogLength)
+          .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+          .childOption(ChannelOption.RCVBUF_ALLOCATOR, IPC_RECVBUF_ALLOCATOR)
+          .childOption(ChannelOption.SO_KEEPALIVE, true)
+          .childOption(ChannelOption.SO_REUSEADDR, true)
+          .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
+          .childHandler(new ChannelInitializer<Channel>() {
+              @Override
+              protected void initChannel(io.netty.channel.Channel channel) {
+                connectionManager.register(new NettyConnection(channel));
+              }});
+
+      InetSocketAddress address = new InetSocketAddress(bindAddress, port);
+      io.netty.channel.Channel channel = Server.bind(Binder.NETTY, bootstrap,
+          address, backlogLength, conf, portRangeConfig);
+      registerAcceptChannel(channel);
+      // If may have been an ephemeral port or port range bind, so update
+      // the thread factories to rename any already created threads.
+      port = ((InetSocketAddress)channel.localAddress()).getPort();
+      listenerFactory.updatePort(port);
+      readerFactory.updatePort(port);
+    }
+
+    @Override
+    public InetSocketAddress getAddress() {
+      return Server.this.getListenerAddress();
+    }
+
+    @Override
+    public void listen(InetSocketAddress addr) throws IOException {
+      registerAcceptChannel(Binder.NETTY.bind(bootstrap, addr, backlogLength));
+    }
+
+    @Override
+    public void registerAcceptChannel(io.netty.channel.Channel channel) {
+      acceptChannels.add(channel);
+      addListenerAddress((InetSocketAddress)channel.localAddress());
+    }
+
+    @Override
+    public void closeAcceptChannels() {
+      acceptChannels.close();
+    }
+
+    @Override
+    public void start() {
+      connectionManager.startIdleScan();
+    }
+
+    @Override
+    public void interrupt() {}
+
+    @Override
+    public void doStop() {
+      try {
+        // closing will send events to the bootstrap's event loop groups.
+        closeAcceptChannels();
+        connectionManager.stopIdleScan();
+        connectionManager.closeAll();
+        // shutdown the event loops to reject all further events.
+        ServerBootstrapConfig config = bootstrap.config();
+        config.group().shutdownGracefully(0, 1, TimeUnit.SECONDS);
+        config.childGroup().shutdownGracefully(0, 1, TimeUnit.SECONDS);
+        // wait for outstanding close events to be processed.
+        config.group().terminationFuture().awaitUninterruptibly();
+        config.childGroup().terminationFuture().awaitUninterruptibly();
+      } finally {
+        IOUtils.cleanupWithLogger(LOG, listenerFactory, readerFactory);
+      }
+    }
+  }
+
+  @ChannelHandler.Sharable
+  private class NettyResponder extends ChannelOutboundHandlerAdapter
+      implements Responder {
+    @Override
+    public void start() {}
+    @Override
+    public void interrupt() {}
+    // called by handlers.
+    @Override
+    public void doRespond(RpcCall call) throws IOException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(Thread.currentThread().getName() +
+            ": responding to " + call);
+      }
+      NettyConnection connection = call.connection();
+      io.netty.channel.Channel channel = connection.channel;
+      channel.writeAndFlush(call, channel.voidPromise());
+    }
+    // called by the netty context.  do not call externally.
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg,
+                      ChannelPromise promise) {
+      if (msg instanceof RpcCall) {
+        RpcCall call = (RpcCall)msg;
+        try {
+          if (call.connection.useWrap) {
+            wrapWithSasl(call);
+          }
+          byte[] response = call.rpcResponse.array();
+          msg = Unpooled.wrappedBuffer(response);
+          rpcMetrics.incrSentBytes(response.length);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(Thread.currentThread().getName() +
+                ": responding to " + call +
+                " Wrote " + response.length + " bytes.");
+          }
+        } catch (Throwable e) {
+          LOG.warn(Thread.currentThread().getName() +
+              ", call " + call + ": output error");
+          ctx.close();
+          return;
+        } finally {
+          call.connection.decRpcCount();
+        }
+      }
+      ctx.write(msg, promise);
+    }
+  }
+
+  private class NettyConnection extends Connection<io.netty.channel.Channel> {
+    public NettyConnection(io.netty.channel.Channel channel) {
+      super(channel, (InetSocketAddress)channel.localAddress(),
+                     (InetSocketAddress)channel.remoteAddress());
+      ChannelInboundHandler decoder = new ByteToMessageDecoder(){
+        @Override
+        public void decode(ChannelHandlerContext ctx, ByteBuf in,
+                           List<Object> out) throws Exception {
+          doRead(in);
+        }
+        // client closed the connection.
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) {
+          connectionManager.close(NettyConnection.this);
+        }
+      };
+      // decoder maintains state, responder doesn't so it can be reused.
+      channel.pipeline().addLast(new CombinedChannelDuplexHandler(
+          decoder, (NettyResponder)responder));
+    }
+
+    @Override
+    void setSendBufferSize(io.netty.channel.Channel channel, int size) {
+      channel.config().setOption(ChannelOption.SO_SNDBUF, size);
+    }
+
+    @Override
+    protected boolean isOpen() {
+      return channel.isOpen();
+    }
+
+    @Override
+    boolean setShouldClose() {
+      channel.config().setAutoRead(false); // stop reading more requests.
+      return super.setShouldClose();
+    }
+
+    @Override
+    synchronized void close() {
+      channel.writeAndFlush(Unpooled.EMPTY_BUFFER)
+             .addListener(ChannelFutureListener.CLOSE);
+    }
+
+    @Override
+    int bufferRead(Object in, ByteBuffer buf) {
+      ByteBuf inBuf = (ByteBuf)in;
+      int length = buf.remaining();
+      if (inBuf.readableBytes() < length) {
+        return 0;
+      }
+      inBuf.readBytes(buf);
+      rpcMetrics.incrReceivedBytes(length);
+      return length;
+    }
+  }
+
+  // netty event loops must be created for the bootstrap before binding.
+  // this custom thread factory provides a way to (re)name the threads and
+  // include the bound port including after-the-fact for ephemeral port or
+  // port ranged binds.
+  private class NettyThreadFactory extends ThreadGroup
+      implements ThreadFactory, Closeable {
+    private final AtomicInteger count = new AtomicInteger();
+    private final String format;
+    private int port;
+    NettyThreadFactory(String prefix, int port) {
+      super(Server.this.getClass().getSimpleName() + " " + prefix + "s");
+      this.format = prefix + " #%d for port %s";
+      this.port = port;
+      setDaemon(true);
+    }
+
+    @Override
+    public synchronized Thread newThread(Runnable r) {
+      return new Thread(r){
+        @Override
+        public void run() {
+          SERVER.set(Server.this);
+          setName(String.format(format, count.incrementAndGet(),
+              (port != 0 ? port : "%s")));
+          super.run();
+        }
+      };
+    }
+
+    synchronized void updatePort(int listenPort) {
+      if (port == 0) {
+        port = listenPort;
+        Thread[] threads = new Thread[count.get()];
+        int actual = enumerate(threads);
+        for (int i = 0; i < actual; i++) {
+          threads[i].setName(String.format(threads[i].getName(), port));
+        }
+      }
+    }
+
+    @Override
+    public void close() throws IOException {
+      if (!isDestroyed()) {
+        destroy();
+      }
+    }
   }
 }

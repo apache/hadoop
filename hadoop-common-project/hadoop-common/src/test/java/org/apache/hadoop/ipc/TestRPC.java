@@ -49,9 +49,12 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.MockitoUtil;
 import org.apache.hadoop.test.Whitebox;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -72,6 +75,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -106,14 +110,42 @@ import static org.mockito.Mockito.verify;
 
 /** Unit tests for RPC. */
 @SuppressWarnings("deprecation")
+@RunWith(Parameterized.class)
 public class TestRPC extends TestRpcBase {
 
   public static final Logger LOG = LoggerFactory.getLogger(TestRPC.class);
 
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestRPC(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
+
   @Before
   public void setup() {
+    GenericTestUtils.setLogLevel(Client.LOG, Level.DEBUG);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
     setupConf();
+    conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+                    useNetty);
+    int threadsBefore = countThreads("Socket Reader");
+    assertEquals("Expect no Reader threads running before test",
+        0, threadsBefore);
   }
+
+ @After
+ public void cleanup() {
+   int threadsBefore = countThreads("Socket Reader");
+   assertEquals("Expect no Reader threads running after test",
+     0, threadsBefore);
+ }
 
   int datasize = 1024*100;
   int numThreads = 50;
@@ -348,28 +380,39 @@ public class TestRPC extends TestRpcBase {
   public void testConfRpc() throws IOException {
     Server server = newServerBuilder(conf)
         .setNumHandlers(1).setVerbose(false).build();
+    try {
+      // Just one handler
+      int confQ = conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+      assertEquals(confQ, server.getMaxQueueSize());
 
-    // Just one handler
-    int confQ = conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
-        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
-    assertEquals(confQ, server.getMaxQueueSize());
-
-    int confReaders = conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
-    assertEquals(confReaders, server.getNumReaders());
+      int confReaders = conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
+      assertEquals(confReaders, server.getNumReaders());
+    } finally {
+      stop(server, null);
+    }
 
     server = newServerBuilder(conf)
         .setNumHandlers(1).setnumReaders(3).setQueueSizePerHandler(200)
         .setVerbose(false).build();
 
-    assertEquals(3, server.getNumReaders());
-    assertEquals(200, server.getMaxQueueSize());
+    try {
+      assertEquals(3, server.getNumReaders());
+      assertEquals(200, server.getMaxQueueSize());
+    } finally {
+      stop(server, null);
+    }
 
     server = newServerBuilder(conf).setQueueSizePerHandler(10)
         .setNumHandlers(2).setVerbose(false).build();
-    assertEquals(2 * 10, server.getMaxQueueSize());
+    try {
+      assertEquals(2 * 10, server.getMaxQueueSize());
+    } finally {
+      stop(server, null);
+    }
   }
 
   @Test
@@ -389,6 +432,8 @@ public class TestRPC extends TestRpcBase {
 
   @Test
   public void testSlowRpc() throws IOException, ServiceException {
+    GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
     Server server;
     TestRpcService proxy = null;
 
@@ -618,7 +663,7 @@ public class TestRPC extends TestRpcBase {
     server = setupTestServer(conf, 5);
     try {
       InetSocketAddress bindAddr = NetUtils.getConnectAddress(server);
-      assertEquals(InetAddress.getLocalHost(), bindAddr.getAddress());
+      assertEquals(InetAddress.getLoopbackAddress(), bindAddr.getAddress());
     } finally {
       stop(server, null);
     }
@@ -626,7 +671,7 @@ public class TestRPC extends TestRpcBase {
 
   @Test
   public void testAuthorization() throws Exception {
-    Configuration myConf = new Configuration();
+    Configuration myConf = new Configuration(conf);
     myConf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         true);
 
@@ -653,13 +698,11 @@ public class TestRPC extends TestRpcBase {
    * Verify that RPC calls still work ok.
    */
   public void testNoPings() throws Exception {
-    Configuration conf = new Configuration();
-
     conf.setBoolean("ipc.client.ping", false);
-    new TestRPC().testCallsInternal(conf);
+    new TestRPC(useNetty).testCallsInternal(conf);
 
     conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY, 2);
-    new TestRPC().testCallsInternal(conf);
+    new TestRPC(useNetty).testCallsInternal(conf);
   }
 
   /**
@@ -767,33 +810,38 @@ public class TestRPC extends TestRpcBase {
    * Test that server.stop() properly stops all threads
    */
   @Test
-  public void testStopsAllThreads() throws IOException, InterruptedException {
+  public void testStopsAllThreads() throws Exception {
     Server server;
 
-    int threadsBefore = countThreads("Server$Listener$Reader");
+    int threadsBefore = countThreads("Socket Reader");
     assertEquals("Expect no Reader threads running before test",
         0, threadsBefore);
 
     server = setupTestServer(conf, 5);
 
     try {
+      // send requests to spin up the netty threads.
+      int numReaders = server.getNumReaders();
+      for (int i=0; i < numReaders; i++) {
+        getClient(addr, conf).ping(null, newEmptyRequest());
+      }
       // Wait for at least one reader thread to start
       int threadsRunning = 0;
       long totalSleepTime = 0;
       do {
         totalSleepTime += 10;
         Thread.sleep(10);
-        threadsRunning = countThreads("Server$Listener$Reader");
+        threadsRunning = countThreads("Socket Reader");
       } while (threadsRunning == 0 && totalSleepTime < 5000);
 
       // Validate that at least one thread started (we didn't timeout)
-      threadsRunning = countThreads("Server$Listener$Reader");
+      threadsRunning = countThreads("Socket Reader");
       assertTrue(threadsRunning > 0);
     } finally {
       server.stop();
     }
 
-    int threadsAfter = countThreads("Server$Listener$Reader");
+    int threadsAfter = countThreads("Socket Reader");
     assertEquals("Expect no Reader threads left running after test",
         0, threadsAfter);
   }
@@ -1699,6 +1747,6 @@ public class TestRPC extends TestRpcBase {
 
 
   public static void main(String[] args) throws Exception {
-    new TestRPC().testCallsInternal(conf);
+    new TestRPC(useNetty).testCallsInternal(conf);
   }
 }
