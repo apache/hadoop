@@ -653,11 +653,42 @@ public abstract class Server {
     rpcDetailedMetrics.addDeferredProcessingTime(name, processingTime);
   }
 
+  /**
+   * The interface encapsulates the functionality required to bind to an endpoint.
+   * The underlying abstractions are different for native java sockets and
+   * for NETTY. Hence, we present two different objects of anonymous classes, each
+   * for one type of endpoint.
+   *
+   * @param <T> Input endpoint abstraction.
+   * @param <O> Output endpoint abstraction after the bind succeeded.
+   */
   interface Binder<T,O> {
+    /**
+     * Bind the socket channel to a local host and port. The bind method
+     * implementation that varies according to whether it operates on a native
+     * java socket or a netty channel.
+     *
+     * @param obj A ServerSocket or a ServerBootstrap object.
+     * @param addr The InetSocketAddress class that encapsulates the IP
+     *             socket address to bind to.
+     * @param backlog Pending connections on the socket.
+     * @return Bootstrap object.
+     * @throws IOException If a problem happens during the bind.
+     */
     T bind(O obj, InetSocketAddress addr, int backlog)
         throws IOException;
     Binder<ServerSocket, ServerSocket> NIO =
       new Binder<ServerSocket, ServerSocket>() {
+        /**
+         * Bind the input socket to the input address.
+         *
+         * @param socket  Input ServerSocket.
+         * @param addr    The InetSocketAddress class that encapsulates the IP
+         *                socket address to bind to.
+         * @param backlog Pending connections on the socket.
+         * @return A ServerSocket object that is bound to the input address.
+         * @throws IOException If a problem happens during the bind.
+         */
         @Override
         public ServerSocket bind(ServerSocket socket,
                                  InetSocketAddress addr,
@@ -666,8 +697,20 @@ public abstract class Server {
           return socket;
         }
       };
+    // Bootstrap a Netty Channel to the input port.
     Binder<io.netty.channel.Channel, ServerBootstrap> NETTY =
       new Binder<io.netty.channel.Channel, ServerBootstrap>() {
+        /**
+         * Bind the ServerBootstrap object to the input address.
+         *
+         * @param bootstrap Input ServerBootstrap class that encapsulates the
+         *                  Netty abstractions that bootstrap a server channel.
+         * @param addr      The InetSocketAddress class that encapsulates the IP
+         *                  socket address to bind to.
+         * @param backlog   Pending connections on the socket.
+         * @return A Channel that is bootstrapped to the input address.
+         * @throws IOException If a problem happens during the bind.
+         */
         @Override
         public io.netty.channel.Channel bind(ServerBootstrap bootstrap,
                                              InetSocketAddress addr,
@@ -1411,30 +1454,122 @@ public abstract class Server {
     channel.socket().setKeepAlive(true);
   }
 
+  /*
+   * Common interface for the listener, implemented for both the NIO and the
+   * NETTY listener classes.
+   */
   private interface Listener<T> {
+    /**
+     * Create a new instance of the Listener implementation depending on
+     * whether the listener is being created for native Java NIO sockets
+     * or for Netty Channels.
+     *
+     * @param server The server object for which the socket abstraction are
+     *               being created.
+     * @param port The port on which the server will listen for connections.
+     * @return An instance of the Listener interface implementation.
+     * @throws IOException If an exception occurs while creating the listener
+     *                     object.
+     */
     static Listener newInstance(Server server, int port) throws IOException {
       return server.useNetty()
          ? server.new NettyListener(port)
          : server.new NioListener(port);
     }
 
+    /**
+     * Bind the server socket channel to the local host and port.
+     *
+     * @param addr The InetSocketAddress class that encapsulates the IP socket
+     *             address to bind to.
+     *
+     * @throws IOException Throws an exception if there is a problem while
+     *                     listening.
+     */
     void listen(InetSocketAddress addr) throws IOException;
+
+    /**
+     * Register the channel to the list of channels we are listening on.
+     *
+     * @param channel The channel that needs to be registered.
+     *
+     * @throws IOException Throws an exception if there is a problem while
+     *                     registering the channel.
+     */
     void registerAcceptChannel(T channel) throws IOException;
+
+    /**
+     * Close all the accepted channels.
+     *
+     * @throws IOException Throws an exception if there is a problem closing any
+     *                     of the channels.
+     */
     void closeAcceptChannels() throws IOException;
+
+    /**
+     * Return the local socket address associated with the socket.
+     *
+     * @return The InetSocketAddress class that encapsulates the IP socket
+     *         address to bind to.
+     */
     InetSocketAddress getAddress();
+
+    /**
+     * Start the idle scanner that checks for connections that have been
+     * inactive beyond a configured threshold.
+     */
     void start();
     void interrupt();
+
+    /**
+     * Close all Channels and Readers.
+     */
     void doStop();
   }
 
+  /**
+   * Common interface for native Java NIO and Java Netty classes that respond
+   * to incoming RPC calls.
+   */
   private interface Responder {
+    /**
+     * Create a new instance of the Responder implementation depending on
+     * whether the listener is being created for native Java NIO sockets
+     * or for Netty Channels.
+     *
+     * @param server The server object for which the socket abstraction are
+     *               being created.
+     * @return An instance of the Responder interface implementation.
+     * @throws IOException If an Exception occurs while creating a Responder
+     *                     instance.
+     */
     static Responder newInstance(Server server) throws IOException {
       return server.useNetty()
         ? server.new NettyResponder()
         : server.new NioResponder();
     }
+
+    /**
+     * Start the Responder instance.
+     *
+     * NOTE: The responder is invoked in response to a RPC request. So the start
+     *       is more of a placeholder for now.
+     */
     void start();
+
+    /**
+     * Interrupt active sockets and channels.
+     */
     void interrupt();
+
+    /**
+     * Send a response to the RpcCall.
+     *
+     * @param call The RpcCall instance we are sending a response to.
+     *
+     * @throws IOException If an exception occurs while responding to the
+     *                     RpcCall.
+     */
     void doRespond(RpcCall call) throws IOException;
   }
 
@@ -4318,6 +4453,7 @@ public abstract class Server {
     @Override
     public void interrupt() {}
     // called by handlers.
+    // TODO: Is queuing required similar to the NioResponder implementation ?
     @Override
     public void doRespond(RpcCall call) throws IOException {
       if (LOG.isDebugEnabled()) {
