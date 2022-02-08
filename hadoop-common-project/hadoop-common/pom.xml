@@ -1051,6 +1051,36 @@
               </filesets>
             </configuration>
           </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>${maven-shade-plugin.version}</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <artifactSet>
+                    <includes>
+                      <include>io.netty:*</include>
+                    </includes>
+                    <excludes>
+                      <!-- this is netty 3 -->
+                      <exclude>*:netty</exclude>
+                    </excludes>
+                  </artifactSet>
+                  <relocations>
+                    <relocation>
+                      <pattern>io.netty</pattern>
+                      <shadedPattern>hrpc.io.netty</shadedPattern>
+                    </relocation>
+                  </relocations>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
         </plugins>
       </build>
     </profile>

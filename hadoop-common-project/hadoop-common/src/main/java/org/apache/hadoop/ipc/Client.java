@@ -18,6 +18,17 @@
 
 package org.apache.hadoop.ipc;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.ResourceLeakDetector;
+
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -831,7 +842,7 @@ public class Client implements AutoCloseable {
         Random rand = null;
         while (true) {
           setupConnection(ticket);
-          ipcStreams = new IpcStreams(socket, maxResponseLength);
+          ipcStreams = IpcStreams.newInstance(socket, maxResponseLength, conf);
           writeConnectionHeader(ipcStreams);
           if (authProtocol == AuthProtocol.SASL) {
             try {
@@ -938,14 +949,11 @@ public class Client implements AutoCloseable {
         return;
       }
       // close the current connection
-      try {
-        socket.close();
-      } catch (IOException e) {
-        LOG.warn("Not able to close a socket", e);
-      }
+      IOUtils.cleanupWithLogger(LOG, ipcStreams, socket);
       // set socket to null so that the next call to setupIOstreams
       // can start the process of connect all over again.
       socket = null;
+      ipcStreams = null;
     }
 
     /* Handle connection failures due to timeout on connect
@@ -1180,7 +1188,7 @@ public class Client implements AutoCloseable {
       RpcWritable.wrap(call.rpcRequest).writeTo(buf);
 
       synchronized (sendRpcRequestLock) {
-        Future<?> senderFuture = sendParamsExecutor.submit(new Runnable() {
+        Future<?> senderFuture = ipcStreams.submit(new Runnable() {
           @Override
           public void run() {
             try {
@@ -1887,19 +1895,25 @@ public class Client implements AutoCloseable {
    *  Only exposed for use by SaslRpcClient.
    */
   @InterfaceAudience.Private
-  public static class IpcStreams implements Closeable, Flushable {
+  public static abstract class IpcStreams implements Closeable, Flushable {
     private DataInputStream in;
     public DataOutputStream out;
     private int maxResponseLength;
     private boolean firstResponse = true;
 
-    IpcStreams(Socket socket, int maxResponseLength) throws IOException {
-      this.maxResponseLength = maxResponseLength;
-      setInputStream(
-          new BufferedInputStream(NetUtils.getInputStream(socket)));
-      setOutputStream(
-          new BufferedOutputStream(NetUtils.getOutputStream(socket)));
+    static IpcStreams newInstance(Socket socket, int maxResponseLength,
+                                  Configuration conf) throws IOException {
+      boolean useNetty = conf.getBoolean(
+          CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+          CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_DEFAULT);
+      // use netty only if a channel is available.
+      IpcStreams streams = (useNetty && socket.getChannel() != null)
+          ? new NettyIpcStreams(socket) : new NioIpcStreams(socket);
+      streams.maxResponseLength = maxResponseLength;
+      return streams;
     }
+
+    abstract Future<?> submit(Runnable call);
 
     void setSaslClient(SaslRpcClient client) throws IOException {
       // Wrap the input stream in a BufferedInputStream to fill the buffer
@@ -1908,12 +1922,12 @@ public class Client implements AutoCloseable {
       setOutputStream(client.getOutputStream(out));
     }
 
-    private void setInputStream(InputStream is) {
+    void setInputStream(InputStream is) {
       this.in = (is instanceof DataInputStream)
           ? (DataInputStream)is : new DataInputStream(is);
     }
 
-    private void setOutputStream(OutputStream os) {
+    void setOutputStream(OutputStream os) {
       this.out = (os instanceof DataOutputStream)
           ? (DataOutputStream)os : new DataOutputStream(os);
     }
@@ -1955,6 +1969,205 @@ public class Client implements AutoCloseable {
     public void close() {
       IOUtils.closeStream(out);
       IOUtils.closeStream(in);
+    }
+  }
+
+  static class NioIpcStreams extends IpcStreams {
+    NioIpcStreams(Socket socket) throws IOException {
+      setInputStream(
+          new BufferedInputStream(NetUtils.getInputStream(socket)));
+      setOutputStream(
+          new BufferedOutputStream(NetUtils.getOutputStream(socket)));
+    }
+    @Override
+    Future<?> submit(Runnable call) {
+      return Client.getClientExecutor().submit(call);
+    }
+  }
+
+  static class NettyIpcStreams extends IpcStreams {
+    private final EventLoopGroup group;
+    private io.netty.channel.Channel channel;
+    private int soTimeout;
+    private IOException channelIOE;
+
+    public NettyIpcStreams(Socket socket) throws IOException {
+      soTimeout = socket.getSoTimeout();
+      if (!LOG.isDebugEnabled()) {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
+      }
+      channel = new NioSocketChannel(socket.getChannel());
+      channel.config().setAutoRead(false);
+      RpcChannelHandler handler = new RpcChannelHandler();
+      setInputStream(new BufferedInputStream(handler.getInputStream()));
+      setOutputStream(new BufferedOutputStream(handler.getOutputStream()));
+      channel.pipeline().addLast(handler);
+      group = new NioEventLoopGroup(1);
+      group.register(channel);
+    }
+
+    @Override
+    Future<?> submit(Runnable runnable) {
+      return group.submit(runnable);
+    }
+
+    @Override
+    public void close() {
+      if (channel.isRegistered()) {
+        channel.close();
+      }
+    }
+
+    private class RpcChannelHandler extends ChannelInboundHandlerAdapter {
+      // aggregates unread buffers.  should be no more than 2 at a time.
+      private final CompositeByteBuf cbuf =
+          ByteBufAllocator.DEFAULT.compositeBuffer();
+
+      @Override
+      public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof ByteBuf) {
+          synchronized(cbuf) {
+            cbuf.addComponent(true, (ByteBuf)msg);
+            cbuf.notifyAll();
+          }
+        } else {
+          super.channelRead(ctx, msg);
+        }
+      }
+
+      @Override
+      public void channelUnregistered(ChannelHandlerContext ctx) {
+        // channel is unregistered when completely closed.  each channel
+        // has a dedicated event loop so schedule it for shutdown and
+        // release its buffer.
+        group.shutdownGracefully(0, 1, TimeUnit.SECONDS);
+        synchronized(cbuf) {
+          cbuf.release();
+          cbuf.notifyAll();
+        }
+      }
+
+      /*public void channelInactive(ChannelHandlerContext ctx) {
+        // peer closed the connection.
+        exceptionCaught(ctx, new EOFException());
+      }*/
+
+      @Override
+      public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        // probably connection reset by peer.
+        synchronized(cbuf) {
+          channelIOE = toException(cause);
+          cbuf.notifyAll();
+        }
+      }
+
+      InputStream getInputStream() {
+        return new InputStream() {
+          @Override
+          public int read() throws IOException {
+            // buffered stream ensures this isn't called.
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public int read(byte b[], int off, int len) throws IOException {
+            synchronized (cbuf) {
+              // trigger a read if the channel isn't at EOF but has less
+              // buffered bytes than requested.  the method may still return
+              // less bytes than requested.
+              int readable = readableBytes();
+              if (readable != -1 && readable < len) {
+                long until = Time.monotonicNow() + soTimeout;
+                long timeout = soTimeout;
+                channel.read();
+                do {
+                  try {
+                    cbuf.wait(timeout);
+                  } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new InterruptedIOException(e.getMessage());
+                  }
+                  readable = readableBytes();
+                  timeout = until - Time.monotonicNow();
+                } while (readable == 0 && timeout > 0);
+              }
+              switch(readable) {
+                case -1:
+                  return -1;
+                case 0:
+                  throw timeout("read");
+                default:
+                  // return as many bytes as possible.
+                  len = Math.min(len, readable);
+                  cbuf.readBytes(b, off, len).discardReadComponents();
+                  return len;
+              }
+            }
+          }
+
+          // if the buffer is empty and an error has occurred, throw it.
+          // else return the number of buffered bytes, 0 if empty and the
+          // connection is open, -1 upon EOF.
+          int readableBytes() throws IOException {
+            int readable = cbuf.readableBytes();
+            if (readable == 0 && channelIOE != null) {
+              throw channelIOE;
+            }
+            return (readable > 0) ? readable : channel.isActive() ? 0 : -1;
+          }
+        };
+      }
+
+      OutputStream getOutputStream() {
+        return new OutputStream(){
+          @Override
+          public void write(int b) throws IOException {
+            // buffered stream ensures this isn't called.
+            throw new UnsupportedOperationException();
+          }
+          @Override
+          public void write(byte b[], int off, int len) throws IOException {
+            ByteBuf buf = Unpooled.wrappedBuffer(b, off, len);
+            channel.write(buf, channel.voidPromise());
+          }
+          @Override
+          public void flush() throws IOException {
+            try {
+              if (!channel.writeAndFlush(Unpooled.EMPTY_BUFFER)
+                          .await(soTimeout)) {
+                throw timeout("write");
+              }
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new InterruptedIOException(e.getMessage());
+            }
+          }
+        };
+      }
+
+      IOException timeout(String op) {
+        return new SocketTimeoutException(
+            soTimeout + " millis timeout while " +
+            "waiting for channel to be ready for " +
+            op + ". ch : " + channel);
+      }
+    }
+
+    private static IOException toException(Throwable t) {
+      if (t.getClass().getPackage().getName().startsWith("io.netty")) {
+        String[] parts = t.getMessage().split(" failed: ");
+        String shortMessage = parts[parts.length - 1];
+        if (t instanceof io.netty.channel.ConnectTimeoutException) {
+          return new ConnectTimeoutException(shortMessage);
+        }
+        if (t instanceof ConnectException) {
+          return new ConnectException(shortMessage);
+        }
+        return new SocketException(shortMessage);
+      } else if (t instanceof IOException) {
+        return (IOException)t;
+      }
+      return new IOException(t);
     }
   }
 }
