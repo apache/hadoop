@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,6 +28,7 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
@@ -486,34 +486,28 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         PrivilegedEntity privilegedEntity = getPrivilegedEntity(
             csqueue == null ? queueName : csqueue.getQueuePath());
 
+        YarnAuthorizationProvider dynamicAuthorizer = null;
         boolean ambiguous = false;
         if (csqueue == null) {
           try {
             List<Permission> permissions =
                 cs.getCapacitySchedulerQueueManager().getPermissionsForDynamicQueue(
                     new QueuePath(queueName), cs.getConfiguration());
-            authorizer.setPermission(permissions, UserGroupInformation.getCurrentUser());
+            if (!permissions.isEmpty()) {
+              dynamicAuthorizer = new ConfiguredYarnAuthorizer();
+              dynamicAuthorizer.setPermission(permissions, userUgi);
+            }
           } catch (SchedulerDynamicEditException e) {
             ambiguous = true;
-          } catch (IOException e) {
-            throw RPCUtil.getRemoteException(new AccessControlException(
-                "Access denied, couldn't set permission to queue "
-                    + submissionContext.getQueue() + " user " + user
-                    + " applicationId " + applicationId));
           }
         }
 
         String appName = submissionContext.getApplicationName();
-        if (!ambiguous && !authorizer.checkPermission(
-            new AccessRequest(privilegedEntity, userUgi,
-                SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
-                applicationId.toString(), appName, Server.getRemoteAddress(),
-                null))
-            && !authorizer.checkPermission(
-                new AccessRequest(privilegedEntity, userUgi,
-                    SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
-                    applicationId.toString(), appName, Server.getRemoteAddress(),
-                    null))) {
+        if (!ambiguous && !checkSubmitACLPermission(
+            getAccessRequest(privilegedEntity, userUgi, applicationId,
+                appName, QueueACL.SUBMIT_APPLICATIONS), dynamicAuthorizer)
+            && !checkAdminACLPermission(getAccessRequest(privilegedEntity, userUgi, applicationId,
+            appName, QueueACL.ADMINISTER_QUEUE), dynamicAuthorizer)) {
           throw RPCUtil.getRemoteException(new AccessControlException(
               "User " + user + " does not have permission to submit "
                   + applicationId + " to queue "
@@ -591,8 +585,27 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     return application;
   }
 
-  private static void populateDynamicQueueACLProperties(String queuePath) {
+  private boolean checkSubmitACLPermission(AccessRequest accessRequest,
+                                           YarnAuthorizationProvider dynamicAuthorizer) {
+    return authorizer.checkPermission(accessRequest) ||
+        (dynamicAuthorizer != null && dynamicAuthorizer.checkPermission(accessRequest));
+  }
 
+  private boolean checkAdminACLPermission(AccessRequest accessRequest,
+                                          YarnAuthorizationProvider dynamicAuthorizer) {
+    return authorizer.checkPermission(accessRequest) ||
+        (dynamicAuthorizer != null && dynamicAuthorizer.checkPermission(accessRequest));
+  }
+
+  private AccessRequest getAccessRequest(PrivilegedEntity privilegedEntity,
+                                         UserGroupInformation userUgi,
+                                         ApplicationId applicationId,
+                                         String appName,
+                                         QueueACL submitApplications) {
+    return new AccessRequest(privilegedEntity, userUgi,
+        SchedulerUtils.toAccessType(submitApplications),
+        applicationId.toString(), appName, Server.getRemoteAddress(),
+        null);
   }
 
   private List<ResourceRequest> validateAndCreateResourceRequest(
