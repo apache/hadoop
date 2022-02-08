@@ -93,6 +93,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This is a contract test for the commit protocol on a target filesystem.
@@ -237,6 +238,7 @@ public class TestManifestCommitProtocol
   @Override
   public void teardown() throws Exception {
     describe("teardown");
+    Thread.currentThread().setName("teardown");
     for (JobData jobData : abortInTeardown) {
       // stop the job
       abortJobQuietly(jobData);
@@ -643,13 +645,13 @@ public class TestManifestCommitProtocol
   }
 
   /**
-   * Commit up the task and then the job.
+   * Commit the task and then the job.
    * @param committer committer
    * @param jContext job context
    * @param tContext task context
    * @throws IOException problems
    */
-  protected void commit(ManifestCommitter committer,
+  protected void commitTaskAndJob(ManifestCommitter committer,
       JobContext jContext,
       TaskAttemptContext tContext) throws IOException {
     try (DurationInfo d = new DurationInfo(LOG,
@@ -659,7 +661,6 @@ public class TestManifestCommitProtocol
       describe("\ncommitting job");
       committer.commitJob(jContext);
       describe("commit complete\n");
-
     }
   }
 
@@ -719,10 +720,12 @@ public class TestManifestCommitProtocol
     TaskAttemptContext tContext = jobData.tContext;
     ManifestCommitter committer = jobData.committer;
 
-    assertNotNull("null workPath in committer " + committer,
-        committer.getWorkPath());
-    assertNotNull("null outputPath in committer " + committer,
-        committer.getOutputPath());
+    Assertions.assertThat(committer.getWorkPath())
+        .as("null workPath in committer " + committer)
+        .isNotNull();
+    Assertions.assertThat(committer.getOutputPath())
+        .as("null outputPath in committer " + committer)
+        .isNotNull();
 
     // Commit the task.
     commitTask(committer, tContext);
@@ -741,8 +744,9 @@ public class TestManifestCommitProtocol
     ManifestCommitter committer2 = createCommitter(tContext2);
     committer2.setupJob(tContext2);
 
-    assertFalse("recoverySupported in " + committer2,
-        committer2.isRecoverySupported());
+    Assertions.assertThat(committer2.isRecoverySupported())
+        .as("recoverySupported in " + committer2)
+        .isFalse();
     intercept(IOException.class, "recover",
         () -> committer2.recoverTask(tContext2));
 
@@ -804,7 +808,7 @@ public class TestManifestCommitProtocol
     }
     Path expectedFile = getPart0000(dir);
     log().debug("Validating content in {}", expectedFile);
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append(KEY_1).append('\t').append(VAL_1).append("\n");
     expectedOutput.append(VAL_1).append("\n");
     expectedOutput.append(VAL_2).append("\n");
@@ -854,7 +858,9 @@ public class TestManifestCommitProtocol
     assertPathExists("Map output", expectedMapDir);
     assertIsDirectory(expectedMapDir);
     FileStatus[] files = fs.listStatus(expectedMapDir);
-    assertTrue("No files found in " + expectedMapDir, files.length > 0);
+    Assertions.assertThat(files)
+        .as("No files found in " + expectedMapDir)
+        .isNotEmpty();
     assertPathExists("index file in " + expectedMapDir,
         new Path(expectedMapDir, MapFile.INDEX_FILE_NAME));
     assertPathExists("data file in " + expectedMapDir,
@@ -887,8 +893,9 @@ public class TestManifestCommitProtocol
     describe("Output written to %s", textOutputPath);
 
     describe("2. Committing task");
-    assertTrue("No files to commit were found by " + committer,
-        committer.needsTaskCommit(tContext));
+    Assertions.assertThat(committer.needsTaskCommit(tContext))
+        .as("No files to commit were found by " + committer)
+        .isTrue();
     commitTask(committer, tContext);
     final TaskManifest taskManifest = requireNonNull(
         committer.getTaskAttemptCommittedManifest(), "committerTaskManifest");
@@ -901,14 +908,15 @@ public class TestManifestCommitProtocol
     Assertions.assertThat(taskManifest.getDirectoriesToCreate())
         .describedAs("Directories to create in task manifest %s",
             manifestJSON)
-        .hasSize(0);
+        .isEmpty();
 
     // this is only task commit; there MUST be no part- files in the dest dir
     try {
       RemoteIterators.foreach(getFileSystem().listFiles(outputDir, false),
           (status) ->
-              assertFalse("task committed file to dest :" + status,
-                  status.getPath().toString().contains("part")));
+              Assertions.assertThat(status.getPath().toString())
+                  .as("task committed file to dest :" + status)
+                  .contains("part"));
     } catch (FileNotFoundException ignored) {
       log().info("Outdir {} is not created by task commit phase ",
           outputDir);
@@ -925,9 +933,9 @@ public class TestManifestCommitProtocol
         true,
         jobUniqueId);
     // look in the SUMMARY
-    Assertions.assertThat(successData.getDiagnostics().get(STAGE))
+    Assertions.assertThat(successData.getDiagnostics())
         .describedAs("Stage entry in SUCCESS")
-        .isEqualTo(OP_STAGE_JOB_COMMIT);
+        .containsEntry(STAGE, OP_STAGE_JOB_COMMIT);
     IOStatisticsSnapshot jobStats = successData.getIOStatistics();
     // manifest
     verifyStatisticCounterValue(jobStats,
@@ -944,9 +952,9 @@ public class TestManifestCommitProtocol
 
     ManifestSuccessData report = loadReport(jobUniqueId, true);
     Map<String, String> diag = report.getDiagnostics();
-    Assertions.assertThat(diag.get(STAGE))
+    Assertions.assertThat(diag)
         .describedAs("Stage entry in report")
-        .isEqualTo(OP_STAGE_JOB_COMMIT);
+        .containsEntry(STAGE, OP_STAGE_JOB_COMMIT);
     IOStatisticsSnapshot reportStats = report.getIOStatistics();
     verifyStatisticCounterValue(reportStats,
         OP_LOAD_MANIFEST, 1);
@@ -990,14 +998,17 @@ public class TestManifestCommitProtocol
     ManifestCommitter committer = jobData.committer;
 
     // do commit
-    commit(committer, jContext, tContext);
-
+    commitTaskAndJob(committer, jContext, tContext);
+    describe("cleanup");
+    committer.cleanupJob(jContext);
     // validate output
     validateContent(outputDir, shouldExpectSuccessMarker(),
         committer.getJobUniqueId());
 
     // commit task to fail on retry as task attempt dir doesn't exist
     describe("Attempting second commit of the same task -expecting failure");
+    Thread.currentThread().setName("commit#2");
+    // commitTaskAndJob(committer, jContext, tContext);
     expectFNFEonTaskCommit(committer, tContext);
   }
 
@@ -1151,7 +1162,7 @@ public class TestManifestCommitProtocol
   }
 
   /**
-   * Commit a taslk with no output.
+   * Commit a task with no output.
    * Dest dir should exist.
    */
   @Test
@@ -1186,7 +1197,7 @@ public class TestManifestCommitProtocol
             .getRecordWriter(tContext), tContext);
 
     // do commit
-    commit(committer, jContext, tContext);
+    commitTaskAndJob(committer, jContext, tContext);
     FileSystem fs = getFileSystem();
 
     lsR(fs, outputDir, true);
@@ -1207,8 +1218,9 @@ public class TestManifestCommitProtocol
         .describedAs("listed children under %s", ls)
         .hasSize(1);
     FileStatus fileStatus = filtered[0];
-    assertTrue("Not the part file: " + fileStatus,
-        fileStatus.getPath().getName().startsWith(PART_00000));
+    Assertions.assertThat(fileStatus.getPath().getName())
+        .as("Not the part file: " + fileStatus)
+        .startsWith(PART_00000);
 
     describe("getReaders()");
     Assertions.assertThat(getReaders(fs, outputDir, conf))
@@ -1283,9 +1295,6 @@ public class TestManifestCommitProtocol
           createCommitter(tContext).commitJob(tContext);
           // verify that no output can be observed
           assertPart0000DoesNotExist(outputDir);
-          // that includes, no pending MPUs; commitJob is expected to
-          // cancel any.
-
         }
     );
   }
@@ -1322,8 +1331,9 @@ public class TestManifestCommitProtocol
       if (children.length != 0) {
         lsR(fs, outputDir, true);
       }
-      assertArrayEquals("Output directory not empty " + ls(outputDir),
-          new FileStatus[0], children);
+      Assertions.assertThat(children)
+          .as("Output directory not empty " + ls(outputDir))
+          .containsExactly(new FileStatus[0]);
     } catch (FileNotFoundException e) {
       // this is a valid state; it means the dest dir doesn't exist yet.
     }
@@ -1355,9 +1365,9 @@ public class TestManifestCommitProtocol
     // verify a failure report
     ManifestSuccessData report = loadReport(jobData.jobId(), false);
     Map<String, String> diag = report.getDiagnostics();
-    Assertions.assertThat(diag.get(STAGE))
+    Assertions.assertThat(diag)
         .describedAs("Stage entry in report")
-        .isEqualTo(OP_STAGE_JOB_ABORT);
+        .containsEntry(STAGE, OP_STAGE_JOB_ABORT);
     IOStatisticsSnapshot reportStats = report.getIOStatistics();
     verifyStatisticCounterValue(reportStats,
         OP_STAGE_JOB_ABORT, 1);
@@ -1536,8 +1546,9 @@ public class TestManifestCommitProtocol
     recordWriter.close(tContext);
     // at this point
     validateTaskAttemptPathAfterWrite(dest, expectedLength);
-    assertTrue("Committer does not have data to commit " + committer,
-        committer.needsTaskCommit(tContext));
+    Assertions.assertThat(committer.needsTaskCommit(tContext))
+        .as("Committer does not have data to commit " + committer)
+        .isTrue();
     commitTask(committer, tContext);
     // at this point the committer tasks stats should be current.
     IOStatisticsSnapshot snapshot = new IOStatisticsSnapshot(
@@ -1588,7 +1599,9 @@ public class TestManifestCommitProtocol
     OutputFormat<?, ?> outputFormat
         = ReflectionUtils.newInstance(newAttempt.getOutputFormatClass(), conf);
     Path outputPath = FileOutputFormat.getOutputPath(newAttempt);
-    assertNotNull("null output path in new task attempt", outputPath);
+    Assertions.assertThat(outputPath)
+        .as("null output path in new task attempt")
+        .isNotNull();
 
     ManifestCommitter committer2 = (ManifestCommitter)
         outputFormat.getOutputCommitter(newAttempt);

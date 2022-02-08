@@ -42,12 +42,12 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJob
  */
 public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
 
-  private final int taskAttemptCount = numberOfTaskAttempts();
+  private int taskAttemptCount;
 
   /**
-   * How many task attempts to make.
+   * How many task attempts to make?
    * Override point.
-   * @return a number > 0.
+   * @return a number greater than 0.
    */
   protected int numberOfTaskAttempts() {
     return ManifestCommitterTestSupport.NUMBER_OF_TASK_ATTEMPTS;
@@ -56,6 +56,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
   @Override
   public void setup() throws Exception {
     super.setup();
+    taskAttemptCount = numberOfTaskAttempts();
     Assertions.assertThat(taskAttemptCount)
         .describedAs("Task attempt count")
         .isGreaterThan(0);

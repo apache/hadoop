@@ -75,12 +75,6 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
   protected static final int ROOT_DELETE_COUNT = 1;
 
   /**
-   * Tocal invocation count for a successful parallel delete job.
-   */
-  protected static final int PARALLEL_DELETE_COUNT =
-      TASK_ATTEMPT_COUNT + ROOT_DELETE_COUNT;
-
-  /**
    * Fault Injection.
    */
   private UnreliableStoreOperations failures;
@@ -116,7 +110,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     final List<FileOrDirEntry> dirEntries = dirEntries(dirs);
 
     // two manifests with duplicate entries
-    final ArrayList<TaskManifest> manifests = Lists.newArrayList(
+    final List<TaskManifest> manifests = Lists.newArrayList(
         manifestWithDirsToCreate(dirEntries),
         manifestWithDirsToCreate(dirEntries));
     final CreateOutputDirectoriesStage.Result result = mkdirStage.apply(manifests);
@@ -177,10 +171,10 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
       CreateOutputDirectoriesStage.Result result,
       Path path,
       CreateOutputDirectoriesStage.DirMapState expected) {
-    Assertions.assertThat(result.getDirMap().get(path))
+    Assertions.assertThat(result.getDirMap())
         .describedAs("Directory Map entry for %s", path)
         .isNotNull()
-        .isEqualTo(expected);
+        .containsEntry(path, expected);
   }
 
   /**

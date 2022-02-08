@@ -83,7 +83,8 @@ public class CreateOutputDirectoriesStage extends
       CreateOutputDirectoriesStage.class);
 
   /**
-   * Message to print on first mkdir failure if the parent dirs aren;
+   * Message to print on first mkdir failure if the parent dirs were not
+   * prepared.
    */
   private static final String HINT_PREPARE_PARENT_DIR = "Setting "
       + OPT_PREPARE_PARENT_DIRECTORIES + " to \"true\" performs more parent directory"

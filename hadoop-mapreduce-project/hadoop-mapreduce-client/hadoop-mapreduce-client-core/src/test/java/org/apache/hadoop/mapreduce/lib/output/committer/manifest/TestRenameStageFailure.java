@@ -241,7 +241,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
    * Execute rename, expecting a failure.
    * The number of files renamed MUST be less than the value of {@code files}
    * @param stage stage
-   * @param manifests list of manifests
+   * @param manifest task manifests
    * @param files number of files being renamed.
    * @param errorText text which must be in the exception string
    * @param exceptionClass class of the exception
@@ -274,10 +274,11 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     // count of files committed MUST be less than expected.
     if (files > 0) {
 
-      Assertions.assertThat(stage.getFilesCommitted().size())
+      Assertions.assertThat(stage.getFilesCommitted())
           .describedAs("Files Committed by stage")
-          .isGreaterThan(0)
-          .isLessThan(files);
+          .isNotEmpty()
+          .hasSizeLessThan(files);
+
     }
 
     // the progress counter will show that the rename did invoke it.

@@ -888,11 +888,7 @@ public abstract class AbstractManifestCommitterTest
       taskAttemptIds.add(taskAttemptId);
     }
     // for each task, a job config is created then patched with the task info
-    Path jobAttemptTaskSubDir = getJobStageConfig().getJobAttemptTaskSubDir();
-    StageConfig taskStageConfig = createStageConfigForJob(JOB1, getDestDir())
-        .withTaskId(tid)
-        .withTaskAttemptId(taskAttemptId)
-        .withTaskAttemptDir(new Path(jobAttemptTaskSubDir, taskAttemptId));
+    StageConfig taskStageConfig = createTaskStageConfig(JOB1, tid, taskAttemptId);
 
     LOG.info("Generating manifest for {}", taskAttemptId);
 
@@ -908,8 +904,8 @@ public abstract class AbstractManifestCommitterTest
 
     // for each task, 10 dirs, one file per dir.
     for (int i = 0; i < filesPerTaskAttempt; i++) {
-      Path in = new Path(taDir, "dir" + i);
-      Path out = new Path(getDestDir(), "dir" + i);
+      Path in = new Path(taDir, "dir-" + i);
+      Path out = new Path(getDestDir(), "dir-" + i);
       manifest.addDirectory(new FileOrDirEntry(in, out, 0, null));
       String name = taskStageConfig.getTaskAttemptId() + ".csv";
       Path src = new Path(in, name);
@@ -925,9 +921,18 @@ public abstract class AbstractManifestCommitterTest
     return manifest;
   }
 
+  public StageConfig createTaskStageConfig(final int jobId, final String tid,
+      final String taskAttemptId) {
+    Path jobAttemptTaskSubDir = getJobStageConfig().getJobAttemptTaskSubDir();
+    StageConfig taskStageConfig = createStageConfigForJob(jobId, getDestDir())
+        .withTaskId(tid)
+        .withTaskAttemptId(taskAttemptId)
+        .withTaskAttemptDir(new Path(jobAttemptTaskSubDir, taskAttemptId));
+    return taskStageConfig;
+  }
+
   /**
    * Verify that the job directories have been cleaned up.
-   * @param stageConfig stage config
    * @throws IOException IO failure
    */
   protected void verifyJobDirsCleanedUp() throws IOException {

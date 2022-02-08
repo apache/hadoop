@@ -167,11 +167,6 @@ public class TestJobThroughManifestCommitter
     ta11Config = createStageConfig(JOB1, TASK1, TA1, destDir).build();
   }
 
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
-  }
-
   /**
    * Test dir deletion is removed from test case teardown so the
    * subsequent tests see the output.
