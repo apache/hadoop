@@ -36,19 +36,19 @@ public class WeakReferenceThreadMap<V> extends WeakReferenceMap<Long, V> {
   }
 
   public V getForCurrentThread() {
-    return get(curentThreadId());
+    return get(currentThreadId());
   }
 
   public V removeForCurrentThread() {
-    return remove(curentThreadId());
+    return remove(currentThreadId());
   }
 
-  public long curentThreadId() {
+  public long currentThreadId() {
     return Thread.currentThread().getId();
   }
 
   public V setForCurrentThread(V newVal) {
-    return put(curentThreadId(), newVal);
+    return put(currentThreadId(), newVal);
   }
 
 }

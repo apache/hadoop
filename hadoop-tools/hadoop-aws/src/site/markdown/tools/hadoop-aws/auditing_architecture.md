@@ -153,7 +153,7 @@ encounter.
 _Auditing was disabled by default until a fix was implemented._
 
 The memory leak has been fixed using a new class `org.apache.hadoop.util.WeakReferenceMap`
-to store a map of thread IDs to active spans. When the S3A fileystem is closed,
+to store a map of thread IDs to active spans. When the S3A filesystem is closed,
 its audit manager service is stopped and all references to spans removed from the
 map of thread ID to span.
 
@@ -179,7 +179,7 @@ Those are already ignored in the logging auditor, whose unbounded span ignores
 requests which `AWSRequestAnalyzer.isRequestNotAlwaysInSpan()` indicates
 may happen outside of a span.
 This is restricted to bucket location probes possibly performed by the SDK
-on instantiatio, and copy part/complete calls.
+on instantiation, and copy part/complete calls.
 
 
 ```java
@@ -190,9 +190,6 @@ on instantiatio, and copy part/complete calls.
         || request instanceof GetBucketLocationRequest;
   }
 ```
-
-Auditing is still disabled by default for consistency with previous releases.
-
 
 
 ### Class `org.apache.hadoop.fs.audit.CommonAuditContext`
@@ -232,7 +229,7 @@ If memory leakage is suspected here, set the log
 `org.apache.hadoop.fs.audit.CommonAuditContext` to `TRACE`
 to log the origin of operations which add log entries.
 
-This will produce a log entry whose strack trace will show the caller chain.f
+This will produce a log entry whose stack trace will show the caller chain.
 ```
 2022-01-26 16:10:28,384 TRACE audit.CommonAuditContext (CommonAuditContext.java:put(149)) - Adding context entry t1
 java.lang.Exception: t1

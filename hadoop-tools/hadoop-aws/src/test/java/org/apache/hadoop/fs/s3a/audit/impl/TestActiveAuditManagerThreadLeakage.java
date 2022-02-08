@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
+import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +73,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   /** how many managers to sequentially create. */
   private static final int MANAGER_COUNT = 500;
 
-  /** size of long lived hread pool. */
+  /** size of long lived thread pool. */
   private static final int THREAD_COUNT = 20;
   private ExecutorService workers;
 
@@ -88,6 +89,14 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
    */
   private final List<WeakReference<ActiveAuditManagerS3A>> auditManagers =
       new ArrayList<>();
+
+  @After
+  public void teardown() {
+    if (workers != null) {
+      workers.shutdown();
+    }
+  }
+
 
   /**
    * When the service is stopped, the span map is
@@ -126,7 +135,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
     // but if memory allocation in test runs increase, it
     // may cease to hold. in which case: create more
     // audit managers
-    LOG.info("Totel prune count {}", pruneCount);
+    LOG.info("Total prune count {}", pruneCount);
 
     Assertions.assertThat(pruneCount)
         .describedAs("Totel prune count")
@@ -150,10 +159,13 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
     long original = Runtime.getRuntime().freeMemory();
     ExecutorService factory = Executors.newSingleThreadExecutor();
 
-    pruneCount += factory.submit(this::createAuditorAndWorkers).get();
+    try {
+      pruneCount += factory.submit(this::createAuditorAndWorkers).get();
+    } finally {
+      factory.shutdown();
+      factory.awaitTermination(60, TimeUnit.SECONDS);
+    }
 
-    factory.shutdown();
-    factory.awaitTermination(60, TimeUnit.SECONDS);
 
     final long current = Runtime.getRuntime().freeMemory();
     return current - original;
@@ -309,7 +321,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   }
 
   /**
-   * Verifu that pruning takes place intermittently.
+   * Verify that pruning takes place intermittently.
    */
   @Test
   public void testRegularPruning() throws Throwable {
@@ -361,7 +373,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
       // this assert gets used repeatedly, so define a lambda-exp
       // which can be envoked with different arguments
       Consumer<Boolean> assertMapHasKey = expected ->
-          Assertions.assertThat(spanMap.containsKey(spanMap.curentThreadId()))
+          Assertions.assertThat(spanMap.containsKey(spanMap.currentThreadId()))
               .describedAs("map entry for current thread")
               .isEqualTo(expected);
 
