@@ -747,6 +747,17 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @Test
+  public void testBacklogSize2() throws Exception
+  {
+    Configuration conf = new Configuration();
+    HttpServer2 srv = createServer("test", conf);
+    List<?> listeners = (List<?>) Whitebox.getInternalState(srv,
+            "listeners");
+    ServerConnector listener = (ServerConnector)listeners.get(0);
+    assertEquals(HttpServer2.HTTP_SOCKET_BACKLOG_SIZE_DEFAULT, listener.getAcceptQueueSize());
+  }
+  
+  @Test
   public void testIdleTimeout() throws Exception {
     final int idleTimeout = 1000;
     Configuration conf = new Configuration();
