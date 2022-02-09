@@ -69,6 +69,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     conf.setInt(Constants.AWS_S3_MAX_READSIZE_VECTOR_READS, configuredMaxSize);
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
       try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
+        System.out.println(fis.toString());
         int newMinSeek = fis.minSeekForVectorReads();
         int newMaxSize = fis.maxReadSizeForVectorReads();
         assertEqual(newMinSeek, configuredMinSeek,

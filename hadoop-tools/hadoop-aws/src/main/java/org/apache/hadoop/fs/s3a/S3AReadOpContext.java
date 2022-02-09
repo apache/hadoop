@@ -27,9 +27,6 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import javax.annotation.Nullable;
 
-import java.util.List;
-import java.util.function.IntFunction;
-
 import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.util.Preconditions.checkNotNull;

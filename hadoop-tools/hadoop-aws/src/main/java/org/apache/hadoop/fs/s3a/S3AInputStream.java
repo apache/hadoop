@@ -768,6 +768,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       sb.append(" remainingInCurrentRequest=")
           .append(remainingInCurrentRequest());
       sb.append(" ").append(changeTracker);
+      sb.append(" ").append(vectoredIOContext);
       sb.append('\n').append(s);
       sb.append('}');
       return sb.toString();

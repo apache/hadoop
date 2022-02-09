@@ -67,4 +67,12 @@ public class VectoredIOContext {
   public int getMaxReadSizeForVectorReads() {
     return maxReadSizeForVectorReads;
   }
+
+  @Override
+  public String toString() {
+    return "VectoredIOContext{" +
+            "minSeekForVectorReads=" + minSeekForVectorReads +
+            ", maxReadSizeForVectorReads=" + maxReadSizeForVectorReads +
+            '}';
+  }
 }
