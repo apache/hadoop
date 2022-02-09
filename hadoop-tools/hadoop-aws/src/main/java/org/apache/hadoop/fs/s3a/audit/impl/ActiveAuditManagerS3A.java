@@ -119,7 +119,7 @@ public final class ActiveAuditManagerS3A
       = "Span attached to request is not a wrapped span";
 
   /**
-   * Arbritary threshold for triggering pruning on deactivation.
+   * Arbitrary threshold for triggering pruning on deactivation.
    * High enough it doesn't happen very often, low enough
    * that it will happen regularly on a busy system.
    * Value: {@value}.

@@ -138,7 +138,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
     LOG.info("Total prune count {}", pruneCount);
 
     Assertions.assertThat(pruneCount)
-        .describedAs("Totel prune count")
+        .describedAs("Total prune count")
         .isNotZero();
 
     // now count number of audit managers GC'd
