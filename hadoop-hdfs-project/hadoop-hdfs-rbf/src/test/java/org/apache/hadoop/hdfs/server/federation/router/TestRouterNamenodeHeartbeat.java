@@ -50,12 +50,17 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the service that heartbeats the state of the namenodes to the State
  * Store.
  */
 public class TestRouterNamenodeHeartbeat {
+
+  private static final Logger LOG =
+          LoggerFactory.getLogger(TestRouterNamenodeHeartbeat.class);
 
   private static MiniRouterDFSCluster cluster;
   private static ActiveNamenodeResolver namenodeResolver;
@@ -212,6 +217,54 @@ public class TestRouterNamenodeHeartbeat {
   }
 
   @Test
+  public void testNamenodeHeartbeatServiceHAServiceProtocolProxy(){
+    testNamenodeHeartbeatServiceHAServiceProtocol(
+            "test-ns", "nn", 1000, -1, -1, 1003,
+            "host01.test:1000", "host02.test:1000");
+    testNamenodeHeartbeatServiceHAServiceProtocol(
+            "test-ns", "nn", 1000, 1001, -1, 1003,
+            "host01.test:1001", "host02.test:1001");
+    testNamenodeHeartbeatServiceHAServiceProtocol(
+            "test-ns", "nn", 1000, -1, 1002, 1003,
+            "host01.test:1002", "host02.test:1002");
+    testNamenodeHeartbeatServiceHAServiceProtocol(
+            "test-ns", "nn", 1000, 1001, 1002, 1003,
+            "host01.test:1002", "host02.test:1002");
+  }
+
+  private void testNamenodeHeartbeatServiceHAServiceProtocol(
+          String nsId, String nnId,
+          int rpcPort, int servicePort,
+          int lifelinePort, int webAddressPort,
+          String expected1, String expected2) {
+    Configuration conf = generateNamenodeConfiguration(nsId, nnId,
+            rpcPort, servicePort, lifelinePort, webAddressPort);
+
+    Router testRouter = new Router();
+    testRouter.setConf(conf);
+
+    Collection<NamenodeHeartbeatService> heartbeatServices =
+            testRouter.createNamenodeHeartbeatServices();
+
+    assertEquals(2, heartbeatServices.size());
+
+    Iterator<NamenodeHeartbeatService> iterator = heartbeatServices.iterator();
+    NamenodeHeartbeatService service = iterator.next();
+    service.init(conf);
+    assertNotNull(service.getLocalTarget());
+    LOG.info("NamenodeHeartbeatService HealthMonitorAddress {}",
+            service.getLocalTarget().getHealthMonitorAddress().toString());
+    assertEquals(expected1, service.getLocalTarget().getHealthMonitorAddress().toString());
+
+    service = iterator.next();
+    service.init(conf);
+    assertNotNull(service.getLocalTarget());
+    LOG.info("NamenodeHeartbeatService HealthMonitorAddress {}",
+            service.getLocalTarget().getHealthMonitorAddress().toString());
+    assertEquals(expected2, service.getLocalTarget().getHealthMonitorAddress().toString());
+  }
+
+  @Test
   public void testNamenodeHeartbeatServiceNNResolution() {
     String nsId = "test-ns";
     String nnId = "nn";
@@ -261,10 +314,14 @@ public class TestRouterNamenodeHeartbeat {
 
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY + "." + suffix,
         MockDomainNameResolver.DOMAIN + ":" + rpcPort);
-    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + "." + suffix,
-        MockDomainNameResolver.DOMAIN + ":" + servicePort);
-    conf.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY + "." + suffix,
-        MockDomainNameResolver.DOMAIN + ":" + lifelinePort);
+    if (servicePort >= 0){
+      conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + "." + suffix,
+          MockDomainNameResolver.DOMAIN + ":" + servicePort);
+    }
+    if (lifelinePort >= 0){
+      conf.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY + "." + suffix,
+          MockDomainNameResolver.DOMAIN + ":" + lifelinePort);
+    }
     conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY + "." + suffix,
         MockDomainNameResolver.DOMAIN + ":" + webAddressPort);
 
