@@ -832,6 +832,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         <cloverGenHtml>true</cloverGenHtml>
         <cloverGenXml>true</cloverGenXml>
         <cloverGenHistorical>false</cloverGenHistorical>
+        <clover.enabled>true</clover.enabled>
       </properties>
       <build>
         <plugins>

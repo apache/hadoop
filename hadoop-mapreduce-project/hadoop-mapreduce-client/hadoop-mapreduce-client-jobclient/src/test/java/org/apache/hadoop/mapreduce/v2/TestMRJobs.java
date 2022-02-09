@@ -302,8 +302,14 @@ public class TestMRJobs {
   public void testSleepJobWithLocalIndividualResourceUnderLimit()
       throws Exception {
     Configuration sleepConf = new Configuration(mrCluster.getConfig());
+
+    // hadoop-mapreduce-client-jobclient-*-tests.jar's size is doubled when clover is enabled
+    final String instrumentedJar = System.getProperty("clover.enabled");
+    final int mrClientTestsJarSizeInMB =
+        (instrumentedJar != null && instrumentedJar.equals("true")) ? 4 : 2;
+
     // set limits to well below what is expected
-    sleepConf.setInt(MRJobConfig.MAX_SINGLE_RESOURCE_MB, 2);
+    sleepConf.setInt(MRJobConfig.MAX_SINGLE_RESOURCE_MB, mrClientTestsJarSizeInMB);
     setupJobResourceDirs();
     sleepConf.set("tmpfiles", TEST_RESOURCES_DIR.toString());
     testSleepJobInternal(sleepConf, false, true, null);
