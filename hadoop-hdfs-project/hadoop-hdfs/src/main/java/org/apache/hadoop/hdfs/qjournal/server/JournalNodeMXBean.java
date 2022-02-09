@@ -57,4 +57,11 @@ public interface JournalNodeMXBean {
    * @return the version of Hadoop.
    */
   String getVersion();
+
+  /**
+   * Get the start time of the JournalNode.
+   *
+   * @return the start time of the JournalNode.
+   */
+  long getJNStartedTimeInMillis();
 }

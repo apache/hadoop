@@ -107,12 +107,12 @@ public class DNConf {
   final long heartBeatInterval;
   private final long lifelineIntervalMs;
   volatile long blockReportInterval;
-  final long blockReportSplitThreshold;
+  volatile long blockReportSplitThreshold;
   final boolean peerStatsEnabled;
   final boolean diskStatsEnabled;
   final long outliersReportIntervalMs;
   final long ibrInterval;
-  final long initialBlockReportDelayMs;
+  volatile long initialBlockReportDelayMs;
   volatile long cacheReportInterval;
   final long datanodeSlowIoWarningThresholdMs;
 
@@ -215,19 +215,7 @@ public class DNConf {
     this.datanodeSlowIoWarningThresholdMs = getConf().getLong(
         DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
         DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
-
-    long initBRDelay = getConf().getTimeDuration(
-        DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
-        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT,
-        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
-    if (initBRDelay >= blockReportInterval) {
-      initBRDelay = 0;
-      DataNode.LOG.info(DFS_BLOCKREPORT_INITIAL_DELAY_KEY + " is "
-          + "greater than or equal to" + DFS_BLOCKREPORT_INTERVAL_MSEC_KEY
-          + ".  Setting initial delay to 0 msec:");
-    }
-    initialBlockReportDelayMs = initBRDelay;
-    
+    initBlockReportDelay();
     heartBeatInterval = getConf().getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
         DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS,
         TimeUnit.MILLISECONDS);
@@ -309,6 +297,19 @@ public class DNConf {
         DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT,
         TimeUnit.MILLISECONDS
     );
+  }
+
+  private void initBlockReportDelay() {
+    long initBRDelay = getConf().getTimeDuration(
+        DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
+        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    if (initBRDelay >= blockReportInterval || initBRDelay < 0) {
+      initBRDelay = 0;
+      DataNode.LOG.info(DFS_BLOCKREPORT_INITIAL_DELAY_KEY +
+          " is greater than or equal to " + DFS_BLOCKREPORT_INTERVAL_MSEC_KEY +
+          ". Setting initial delay to 0 msec.");
+    }
+    initialBlockReportDelayMs = initBRDelay;
   }
 
   // We get minimumNameNodeVersion via a method so it can be mocked out in tests.
@@ -477,7 +478,8 @@ public class DNConf {
   }
 
   void setBlockReportInterval(long intervalMs) {
-    Preconditions.checkArgument(intervalMs > 0);
+    Preconditions.checkArgument(intervalMs > 0,
+        DFS_BLOCKREPORT_INTERVAL_MSEC_KEY + " should be larger than 0");
     blockReportInterval = intervalMs;
   }
 
@@ -487,11 +489,22 @@ public class DNConf {
 
   void setCacheReportInterval(long intervalMs) {
     Preconditions.checkArgument(intervalMs > 0,
-        "dfs.cachereport.intervalMsec should be larger than 0");
+        DFS_CACHEREPORT_INTERVAL_MSEC_KEY + " should be larger than 0");
     cacheReportInterval = intervalMs;
   }
 
   public long getCacheReportInterval() {
     return cacheReportInterval;
+  }
+
+  void setBlockReportSplitThreshold(long threshold) {
+    Preconditions.checkArgument(threshold >= 0,
+        DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY + " should be larger than or equal to 0");
+    blockReportSplitThreshold = threshold;
+  }
+
+  void setInitBRDelayMs(String delayMs) {
+    dn.getConf().set(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, delayMs);
+    initBlockReportDelay();
   }
 }
