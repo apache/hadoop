@@ -1132,14 +1132,14 @@ public class ViewFileSystem extends FileSystem {
    * Get the trash root directory for current user when the path
    * specified is deleted.
    *
-   * If CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is not set to true, or
-   * when the path p is in a snapshot or an encryption zone, return
-   * the default trash root in user home dir.
+   * If CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is not set, return
+   * the default trash root from targetFS.
    *
-   * when CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is set to true,
-   * 1) if path p is mounted from the same targetFS as user home dir,
-   *    return a trash root in user home dir.
+   * When CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is set to true,
+   * 1) If path p is in fallback FS or from the same mount point as the default
+   *    trash root for targetFS, return the default trash root for targetFS.
    * 2) else, return a trash root in the mounted targetFS
+   *    (/mntpoint/.Trash/<user>)
    *
    * @param path the trash root of the path to be determined.
    * @return the trash root path.
@@ -1159,23 +1159,20 @@ public class ViewFileSystem extends FileSystem {
         return trashRoot;
       } else {
         // Path p is either in a mount point or in the fallback FS
-        if (ROOT_PATH.equals(new Path(res.resolvedPath))) {
-          // Path p is in the fallback FS
-          return new Path(res.targetFileSystem.getHomeDirectory(),
-              TRASH_PREFIX);
-        } else {
-          // Path p is in a mount point
 
-          if (trashRoot.toUri().getPath().startsWith(res.resolvedPath)) {
-            // targetFileSystem.trashRoot is in the same mount point as Path p
-            return trashRoot;
-          } else {
-            // targetFileSystem.trashRoot is in a different mount point from
-            // Path p. Return the trash root for the mount point.
-            Path mountPointRoot =
-                res.targetFileSystem.getFileStatus(new Path("/")).getPath();
-            return new Path(mountPointRoot, TRASH_PREFIX + "/" + ugi.getShortUserName());
-          }
+        if (ROOT_PATH.equals(new Path(res.resolvedPath)) || trashRoot.toUri()
+            .getPath()
+            .startsWith(res.resolvedPath)) {
+          // Path p is in the fallback FS or targetFileSystem.trashRoot is in
+          // the same mount point as Path p
+          return trashRoot;
+        } else {
+          // targetFileSystem.trashRoot is in a different mount point from
+          // Path p. Return the trash root for the mount point.
+          Path mountPointRoot =
+              res.targetFileSystem.getFileStatus(new Path("/")).getPath();
+          return new Path(mountPointRoot,
+              TRASH_PREFIX + "/" + ugi.getShortUserName());
         }
       }
     } catch (IOException | IllegalArgumentException e) {
