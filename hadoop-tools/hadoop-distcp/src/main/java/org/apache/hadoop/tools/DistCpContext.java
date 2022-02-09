@@ -175,6 +175,10 @@ public class DistCpContext {
     return options.shouldUseIterator();
   }
 
+  public boolean shouldUpdateRootDirectoryAttributes() {
+    return options.shouldUpdateRootDirectoryAttributes();
+  }
+
   public final boolean splitLargeFile() {
     return options.getBlocksPerChunk() > 0;
   }
