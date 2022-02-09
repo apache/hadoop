@@ -1110,10 +1110,10 @@ abstract public class ViewFileSystemBaseTest {
   @Test
   public void testTrashRootLocalizedTrash() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    Configuration newConf = new Configuration(conf);
-    newConf.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
-    ConfigUtil.addLinkFallback(newConf, targetTestRoot.toUri());
-    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, newConf);
+    Configuration conf2 = new Configuration(conf);
+    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    ConfigUtil.addLinkFallback(conf2, targetTestRoot.toUri());
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
 
     // Case 1: path p not in the default FS.
     // Return a trash root within the mount point.
@@ -1130,17 +1130,33 @@ abstract public class ViewFileSystemBaseTest {
 
     // Case 3: turn off the CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH flag.
     // Return a trash root in user home dir.
-    newConf.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, false);
-    fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, newConf);
+    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, false);
+    fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
     Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(dataTestPath));
 
     // Case 4: viewFS without fallback. Expect exception for a nonExistent path
-    newConf = new Configuration(conf);
-    fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, newConf);
+    conf2 = new Configuration(conf);
+    fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
     try {
       fsView2.getTrashRoot(nonExistentPath);
     } catch (NotInMountpointException ignored) {
     }
+
+    // Case 5: path p is in the same mount point as targetFS.getTrashRoot().
+    // Return targetFS.getTrashRoot()
+    // Use a new Configuration object, so that we can start with an empty
+    // mount table. This would avoid a conflict between the /user link in
+    // setupMountPoints() and homeDir we will need to setup for this test.
+    // default homeDir for hdfs is /user/.
+    Configuration conf3 = ViewFileSystemTestSetup.createConfig();
+    Path homeDir = fsTarget.getHomeDirectory();
+    String homeParentDir = homeDir.getParent().toUri().getPath();
+    conf3.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    ConfigUtil.addLink(conf3, homeParentDir,
+        new Path(targetTestRoot, homeParentDir).toUri());
+    Path homeTestPath = new Path(homeDir.toUri().getPath(), "testuser/file");
+    FileSystem fsView3 = FileSystem.get(FsConstants.VIEWFS_URI, conf3);
+    Assert.assertEquals(userTrashRoot, fsView3.getTrashRoot(homeTestPath));
   }
 
   /**

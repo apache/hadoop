@@ -1169,8 +1169,7 @@ public class ViewFileSystem extends FileSystem {
           fsState.resolve(getUriPath(path), true);
 
       Path trashRoot = res.targetFileSystem.getTrashRoot(res.remainingPath);
-      if (!useMountPointLocalTrash || isEZPath(res.targetFileSystem,
-          trashRoot)) {
+      if (!useMountPointLocalTrash) {
         return trashRoot;
       } else {
         // Path p is either in a mount point or in the fallback FS
@@ -1180,10 +1179,17 @@ public class ViewFileSystem extends FileSystem {
               TRASH_PREFIX);
         } else {
           // Path p is in a mount point
-          Path mountPointRoot =
-              res.targetFileSystem.getFileStatus(new Path("/")).getPath();
-          return new Path(mountPointRoot,
-              TRASH_PREFIX + "/" + ugi.getShortUserName());
+
+          if (trashRoot.toUri().getPath().startsWith(res.resolvedPath)) {
+            // targetFileSystem.trashRoot is in the same mount point as Path p
+            return trashRoot;
+          } else {
+            // targetFileSystem.trashRoot is in a different mount point from
+            // Path p. Return the trash root for the mount point.
+            Path mountPointRoot =
+                res.targetFileSystem.getFileStatus(new Path("/")).getPath();
+            return new Path(mountPointRoot, TRASH_PREFIX + "/" + ugi.getShortUserName());
+          }
         }
       }
     } catch (IOException | IllegalArgumentException e) {
