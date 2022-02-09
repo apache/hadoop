@@ -415,6 +415,9 @@ class DataXceiver extends Receiver implements Runnable {
                     "Not verifying {}", slotId);
         }
         success = true;
+        // update metrics
+        datanode.metrics.addReadBlockOp(elapsed());
+        datanode.metrics.incrReadsFromClient(true, blk.getNumBytes());
       }
     } finally {
       if ((!success) && (registeredSlotId != null)) {
