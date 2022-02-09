@@ -933,10 +933,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
 
     final DatanodeStorageInfo storage;
-    if (oldestHeartbeatStorage != null) {
-      storage = oldestHeartbeatStorage;
-    } else if (minSpaceStorage != null) {
+    if (minSpaceStorage != null) {
       storage = minSpaceStorage;
+    } else if (oldestHeartbeatStorage != null) {
+      storage = oldestHeartbeatStorage;
     } else {
       return null;
     }
