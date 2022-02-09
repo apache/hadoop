@@ -1160,9 +1160,8 @@ public class ViewFileSystem extends FileSystem {
       } else {
         // Path p is either in a mount point or in the fallback FS
 
-        if (ROOT_PATH.equals(new Path(res.resolvedPath)) || trashRoot.toUri()
-            .getPath()
-            .startsWith(res.resolvedPath)) {
+        if (ROOT_PATH.equals(new Path(res.resolvedPath))
+            || trashRoot.toUri().getPath().startsWith(res.resolvedPath)) {
           // Path p is in the fallback FS or targetFileSystem.trashRoot is in
           // the same mount point as Path p
           return trashRoot;
