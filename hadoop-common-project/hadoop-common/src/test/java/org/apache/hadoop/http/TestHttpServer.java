@@ -754,7 +754,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     List<?> listeners = (List<?>) Whitebox.getInternalState(srv,
             "listeners");
     ServerConnector listener = (ServerConnector)listeners.get(0);
-    assertEquals(HttpServer2.HTTP_SOCKET_BACKLOG_SIZE_DEFAULT, listener.getAcceptQueueSize());
+    assertEquals(500, listener.getAcceptQueueSize());
   }
   
   @Test
