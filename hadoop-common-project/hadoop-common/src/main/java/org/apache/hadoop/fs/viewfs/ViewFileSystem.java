@@ -1129,20 +1129,6 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Check whether a path is inside a encryption zone.
-   * @return true if a path is either in an encryption zone
-   */
-  private boolean isEZPath(FileSystem fs, Path path) throws IOException {
-    try {
-      FileStatus fileStatus = fs.getFileStatus(path);
-      return fileStatus.isEncrypted();
-    } catch (FileNotFoundException e) {
-      // Return true if path does not exist
-      return false;
-    }
-  }
-
-  /**
    * Get the trash root directory for current user when the path
    * specified is deleted.
    *
