@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -65,6 +67,7 @@ import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.readDataset;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
@@ -161,6 +164,8 @@ public abstract class AbstractManifestCommitterTest
    * The thread leak tracker.
    */
   private static final ThreadLeakTracker THREAD_LEAK_TRACKER = new ThreadLeakTracker();
+
+  private static final int MAX_LEN = 64_000;
 
   /**
    * Submitter for tasks; may be null.
@@ -1011,6 +1016,25 @@ public abstract class AbstractManifestCommitterTest
             enabled, deleteTaskAttemptDirsInParallel, suppressExceptions, moveToTrash));
     assertCleanupResult(result, outcome, expectedDirsDeleted);
     return result;
+  }
+
+  /**
+   * Read the UTF_8 text in the file.
+   * @param path path to read
+   * @return the string
+   * @throws IOException failure
+   */
+  protected String readText(final Path path) throws IOException {
+
+    final FileSystem fs = getFileSystem();
+    final FileStatus st = fs.getFileStatus(path);
+    Assertions.assertThat(st.getLen())
+        .describedAs("length of file %s", st)
+        .isLessThanOrEqualTo(MAX_LEN);
+
+    return new String(
+        readDataset(fs, path, (int) st.getLen()),
+        StandardCharsets.UTF_8);
   }
 
   /**

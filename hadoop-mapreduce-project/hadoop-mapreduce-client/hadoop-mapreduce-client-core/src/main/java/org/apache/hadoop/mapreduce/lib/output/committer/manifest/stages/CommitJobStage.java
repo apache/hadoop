@@ -128,12 +128,13 @@ public class CommitJobStage extends
     }
 
     // save the _SUCCESS if the option is enabled.
+    Path successPath = null;
     if (createMarker) {
       // save a snapshot of the IO Statistics
 
-      Path succesPath = new SaveSuccessFileStage(stageConfig)
+      successPath = new SaveSuccessFileStage(stageConfig)
           .apply(successData);
-      LOG.debug("{}: Saving _SUCCESS file to {}", getName(), succesPath);
+      LOG.debug("{}: Saving _SUCCESS file to {}", getName(), successPath);
     }
 
     // optional cleanup
@@ -152,7 +153,7 @@ public class CommitJobStage extends
     stageConfig.enterStage(getStageName(arguments));
 
     // the result
-    return new CommitJobStage.Result(successData);
+    return new CommitJobStage.Result(successPath, successData);
   }
 
   /**
@@ -217,7 +218,14 @@ public class CommitJobStage extends
      */
     private final ManifestSuccessData jobSuccessData;
 
-    public Result(ManifestSuccessData jobSuccessData) {
+    /**
+     * Success file path. null if not saved.
+     */
+    private final Path successPath;
+
+    public Result(final Path successPath,
+        ManifestSuccessData jobSuccessData) {
+      this.successPath = successPath;
       this.jobSuccessData = jobSuccessData;
     }
 
@@ -225,5 +233,8 @@ public class CommitJobStage extends
       return jobSuccessData;
     }
 
+    public Path getSuccessPath() {
+      return successPath;
+    }
   }
 }

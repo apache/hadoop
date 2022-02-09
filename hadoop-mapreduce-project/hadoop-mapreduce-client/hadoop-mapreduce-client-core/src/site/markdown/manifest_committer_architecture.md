@@ -367,9 +367,9 @@ This also means that it is unsafe.
 If the task attempt has partitioned and the spark driver schedules/commits another TA, then,
 the task dir may contain 1+ file from the first attempt.
 
-# The manifest Committer: A high performance committer for Spark on ABFS and GCS
+# The Manifest Committer: A high performance committer for Spark on ABFS and GCS
 
-Here then is a proposal for a higher performance committer for abfs and gcs storage
+Here then is a proposal for a higher performance committer for ABFS and GCS storage
 Note: it will also work well on `hdfs://` and indeed, `file://` URLs.
 
 Although it will work with MapReduce
@@ -387,32 +387,30 @@ other things)
 
 Task attempts are committed by:
 
-1. Recursively listing the task attempt working dir to build lists of
-   directories to create and files to rename.
-1. Saving this information in a manifest file in the job attempt directory with
+1. Recursively listing the task attempt working dir to build
+   1. A list of directories to create.
+   2. A list of files to rename: source, destination, size and optionally, etag.
+2. Saving this information in a manifest file in the job attempt directory with
    a filename derived from the Task ID. The task attempt ID is not used in the
-   filename -only one task attempt may successfully write a manifest.
+   filename -only one task attempt may successfully write a manifest. 
+   Note: writing to a temp file and then renaming to the final path will be used
+   to ensure the manifest creation is atomic.
+
 
 No renaming takes place —the files are left in their original location.
 
-Performance: time to treewalk a task attempt's output directories, then save the manifest.
-
-If treewalking is single-threaded, then it is `O(directories)`, with each directory listing using one or more
+The directory treewalk is single-threaded, then it is `O(directories)`, 
+`ith each directory listing using one or more
 paged LIST calls.
 
-If treewalking is done in a thread pool, then lists can be parallelized; there's the startup
-delays of listing parent directories and so queue the next scans; use of `listStatusIncremental`
-will help here.
+This is simple, and for most tasks, the scan is off the critical path of of the job.
 
-Alternatively: use `listStatus(Path, recursive=true)`. This is very, very fast on S3, but doesn't
-deliver speedups on ABFS. GCS performance is unknown.
-
-*Proposed*: simple treewalk for now; statistics analysis will give us better answers.
+Statistics analysis may justify moving to parallel scans in future.
 
 
 ### Job Commit
 
-Job Commit becomes:
+Job Commit consists of:
 
 1. List all manifest files in the job attempt directory.
 1. Load each manifest file, create directories which do not yet exist, then
@@ -425,22 +423,20 @@ per task, specifically:
 
 1. Manifest tasks are loaded and processed in a pool of "manifest processor"
    threads.
-1. Directory creation and file rename operations are processed in a pool of "
+2. Directory creation and file rename operations are each processed in a pool of "
    executor" threads: many renames can execute in parallel as they use minimal
    network IO.
-1. Each manifest processor thread reads in its manifest file, submits all
-   directory creation operations to the "executor thread" pool; once those have
-   completed the final renames themselves are submitted. Finally, a TA dir
-   deletion operation can be submitted to the executors. Without even waiting
-   for completion, the manifest processor thread can start to process the next
-   manifest
+3. job cleanup can parallelize deletion of task attempt directories. This
+   is relevant as directory deletion is `O(files)` on Google cloud storage,
+   and also on ABFS when OAuth authentication is used.
 
-Directory creation can be optimised by building a map of directories which have
-already been created and their parents —there is no need to replicate work.
 
-TODO: Update
+### Ancestor directory preparation
 
-For each directory then:
+Optional scan of all ancestors ...if any are files, delete.
+
+
+### Parent directory creation
 
 1. Probe shared directory map for directory existing. If found: operation is
    complete.
@@ -453,7 +449,22 @@ Efficiently handling concurrent creation of directories (or delete+create) is go
 troublespot; some effort is invested there to build the set of directories to
 create.
 
-### Benefits
+### File Rename
+
+Files are renamed in parallel. 
+
+A pre-rename check for anything being at that path (and deleting it) will be optional.
+With spark creating new UUIDs for each file, this isn't going to happen, and
+saves HTTP requests.
+
+
+
+### Validation
+
+Optional scan of all committed files and verify length and, if known,
+etag. For testing and diagnostics.
+
+## Benefits
 
 * Pushes the source tree list operations into the task commit phase, which is
   generally off the critical path of execution

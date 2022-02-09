@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -39,6 +40,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.Ab
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public final class FileOrDirEntry implements Serializable {
 
   private static final long serialVersionUID = -550288489009777867L;

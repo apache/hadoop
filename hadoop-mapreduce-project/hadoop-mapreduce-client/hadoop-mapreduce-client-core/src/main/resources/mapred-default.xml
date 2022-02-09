@@ -2231,6 +2231,9 @@
   </description>
 </property>
 
+<!-- these committers are not yet enabled by default -->
+<!--
+
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
   <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
@@ -2238,5 +2241,14 @@
     The default committer factory for ABFS is for the manifest committer.
   </description>
 </property>
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.gs</name>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+  <description>
+    The default committer factory for google cloud storage is for the manifest committer.
+  </description>
+</property>
+-->
+
 
 </configuration>

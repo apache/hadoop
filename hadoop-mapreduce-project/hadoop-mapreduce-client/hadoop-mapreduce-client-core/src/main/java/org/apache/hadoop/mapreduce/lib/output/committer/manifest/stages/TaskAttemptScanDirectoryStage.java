@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -130,9 +129,8 @@ public final class TaskAttemptScanDirectoryStage
     // generate some task progress in case directory scanning is very slow.
     progress();
 
-
+    int maxDepth = 0;
     int files = 0;
-    int scanDepth = 1;
     List<FileStatus> subdirs = new ArrayList<>();
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "Task Attempt %s source dir %s, dest dir %s",
@@ -156,42 +154,23 @@ public final class TaskAttemptScanDirectoryStage
             subdirs.add(st);
           } else {
             // some other object. ignoring
-            LOG.info("{}: Ignoring non file/non-directory object {}",
-                getName(), st);
+            LOG.info("Ignoring FS object {}", st);
           }
         }
       }
       // add any statistics provided by the listing.
       maybeAddIOStatistics(getIOStatistics(), listing);
-
-      // if this is not the base directory.
-      // it must exist
-      if (depth > 0) {
-        manifest.addDirectory(dirEntry(srcDir, destDir));
-      }
-
-      // now scan the subdirectories
-      LOG.debug(
-          "{}: Number of subdirectories under {} found: {}; file count {}",
-          getName(), srcDir, subdirs.size(), files);
-
-    } catch (FileNotFoundException fnfe) {
-      // no directory at the task attempt
-      if (depth == 0) {
-        LOG.info("{}: Task attempt directory {} not found"
-                + " -no output files were creasted by the task.",
-            getName(), srcDir);
-        // reset scan depth
-        scanDepth = 0;
-      } else {
-        // something went away during the scan.
-        // rethrow as a sign of problems
-        throw fnfe;
-      }
+    }
+    // if this is not the base directory.
+    // it must exist
+    if (depth > 0) {
+      manifest.addDirectory(dirEntry(srcDir, destDir));
     }
 
-    // now scan each subdirectory.
-    int maxDepth = 0;
+    // now scan the subdirectories
+    LOG.debug("{}: Number of subdirectories under {} found: {}; file count {}",
+        getName(), srcDir, subdirs.size(), files);
+
     for (FileStatus st : subdirs) {
       Path destSubDir = new Path(destDir, st.getPath().getName());
       final int d = scanDirectoryTree(manifest, st.getPath(), destSubDir,
@@ -199,7 +178,7 @@ public final class TaskAttemptScanDirectoryStage
       maxDepth = Math.max(maxDepth, d);
     }
 
-    return scanDepth + maxDepth;
+    return 1 + maxDepth;
   }
 
 }

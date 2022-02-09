@@ -24,6 +24,8 @@ import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,6 +41,7 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public abstract class AbstractManifestData<T extends AbstractManifestData>
     implements Serializable, IOStatisticsSource {
 

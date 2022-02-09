@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -92,7 +91,9 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     failures
         = new UnreliableStoreOperations(createStoreOperations());
     setStoreOperations(failures);
-    stageConfig = createStageConfigForJob(JOB1, destDir);
+    stageConfig = createStageConfigForJob(JOB1, destDir)
+        .withPrepareParentDirectories(false)
+        .withDeleteTargetPaths(true);
     setJobStageConfig(stageConfig);
     new SetupJobStage(stageConfig).apply(true);
     mkdirStage = new CreateOutputDirectoriesStage(stageConfig);
@@ -221,7 +222,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     final List<FileOrDirEntry> dirEntries = dirEntries(level2);
 
 
-    final ArrayList<TaskManifest> manifests = Lists.newArrayList(
+    final List<TaskManifest> manifests = Lists.newArrayList(
         manifestWithDirsToCreate(dirEntries));
 
     // first attempt will fail because of the parent dir & this job is set
@@ -237,9 +238,11 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
         .isGreaterThanOrEqualTo(0);
 
     // create a job configured to clean up first
-    CreateOutputDirectoriesStage secondAttempt = new CreateOutputDirectoriesStage(
+    CreateOutputDirectoriesStage secondAttempt
+        = new CreateOutputDirectoriesStage(
         createStageConfigForJob(JOB1, destDir)
-            .withPrepareParentDirectories(true));
+            .withPrepareParentDirectories(true)
+            .withDeleteTargetPaths(true));
     LOG.info("Executing failing attempt to create the directories");
 
     final CreateOutputDirectoriesStage.Result result = secondAttempt.apply(manifests);

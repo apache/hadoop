@@ -68,6 +68,11 @@ public class ITestAbfsJobThroughManifestCommitter
     return new AbfsFileSystemContract(conf, binding.isSecureMode());
   }
 
+  @Override
+  protected boolean shouldDeleteTestRootAtEndOfTestRun() {
+    return true;
+  }
+
   /**
    * Add read of manifest and validate of output's etags.
    * @param attemptId attempt ID

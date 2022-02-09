@@ -178,6 +178,15 @@ public class TestJobThroughManifestCommitter
   }
 
   /**
+   * Override point and something to turn on/off when exploring what manifests look like.
+   * Stores where storage is billed MUST enable this.
+   * @return true if, at the end of the run, the test dir should be deleted.
+   */
+  protected boolean shouldDeleteTestRootAtEndOfTestRun() {
+    return false;
+  }
+
+  /**
    * Invoke this to clean up the test directories.
    */
   private void deleteSharedTestRoot() throws IOException {
@@ -550,10 +559,9 @@ public class TestJobThroughManifestCommitter
     Long totalFiles = iostats.counters().get(COMMITTER_FILES_COMMITTED_COUNT);
     verifyStatisticCounterValue(iostats,
         COMMITTER_BYTES_COMMITTED_COUNT, totalFiles * 2);
-
   }
 
-  @Test
+  //@Test
   public void test_0900_cleanupJob() throws Throwable {
     describe("Cleanup job");
     CleanupJobStage.Arguments arguments = new CleanupJobStage.Arguments(
@@ -574,9 +582,11 @@ public class TestJobThroughManifestCommitter
    * Needed to clean up the shared test root, as test case teardown
    * does not do it.
    */
-  @Test
+  //@Test
   public void test_9999_cleanupTestDir() throws Throwable {
-    deleteSharedTestRoot();
+    if (shouldDeleteTestRootAtEndOfTestRun()) {
+      deleteSharedTestRoot();
+    }
   }
 
 }

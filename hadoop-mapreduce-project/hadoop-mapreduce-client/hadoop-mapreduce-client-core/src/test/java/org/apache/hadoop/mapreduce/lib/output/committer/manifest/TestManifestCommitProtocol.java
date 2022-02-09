@@ -93,7 +93,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This is a contract test for the commit protocol on a target filesystem.
@@ -988,6 +987,9 @@ public class TestManifestCommitProtocol
     return report;
   }
 
+  /**
+   * Repeated commit call after job commit.
+   */
   @Test
   public void testCommitterWithDuplicatedCommit() throws Exception {
     describe("Call a task then job commit twice;" +
@@ -998,7 +1000,16 @@ public class TestManifestCommitProtocol
     ManifestCommitter committer = jobData.committer;
 
     // do commit
-    commitTaskAndJob(committer, jContext, tContext);
+    describe("committing task");
+    committer.commitTask(tContext);
+
+    // repeated commit while TA dir exists fine/idempotent
+    committer.commitTask(tContext);
+
+    describe("committing job");
+    committer.commitJob(jContext);
+    describe("commit complete\n");
+
     describe("cleanup");
     committer.cleanupJob(jContext);
     // validate output
@@ -1006,9 +1017,7 @@ public class TestManifestCommitProtocol
         committer.getJobUniqueId());
 
     // commit task to fail on retry as task attempt dir doesn't exist
-    describe("Attempting second commit of the same task -expecting failure");
-    Thread.currentThread().setName("commit#2");
-    // commitTaskAndJob(committer, jContext, tContext);
+    describe("Attempting commit of the same task after job commit -expecting failure");
     expectFNFEonTaskCommit(committer, tContext);
   }
 

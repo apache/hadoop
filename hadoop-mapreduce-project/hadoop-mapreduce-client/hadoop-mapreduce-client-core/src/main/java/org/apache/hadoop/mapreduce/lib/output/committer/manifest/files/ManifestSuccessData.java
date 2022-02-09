@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +71,7 @@ import org.apache.hadoop.util.JsonSerialization;
 @SuppressWarnings({"unused", "CollectionDeclaredAsConcreteClass"})
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ManifestSuccessData
     extends AbstractManifestData<ManifestSuccessData> {
 
