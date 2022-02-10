@@ -569,7 +569,7 @@ public class TestDistCpSystem {
 
     // Create a source dir
     fs.mkdirs(source);
-    fs.setOwner(source,"userA", "groupA");
+    fs.setOwner(source, "userA", "groupA");
     fs.setTimes(source, new Random().nextLong(), new Random().nextLong());
 
     GenericTestUtils.createFiles(fs, source, 3, 5, 5);

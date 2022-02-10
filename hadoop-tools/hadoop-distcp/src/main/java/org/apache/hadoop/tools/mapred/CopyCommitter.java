@@ -343,7 +343,9 @@ public class CopyCommitter extends FileOutputCommitter {
         //
         boolean skipRootDirectoryAttributes =
             syncOrOverwrite && !updateRootDirectoryAttributes;
-        if (targetRoot.equals(targetFile) && skipRootDirectoryAttributes) continue;
+        if (targetRoot.equals(targetFile) && skipRootDirectoryAttributes) {
+          continue;
+        }
 
         FileSystem targetFS = targetFile.getFileSystem(conf);
         DistCpUtils.preserve(targetFS, targetFile, srcFileStatus, attributes,

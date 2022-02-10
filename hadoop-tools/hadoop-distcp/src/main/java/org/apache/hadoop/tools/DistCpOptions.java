@@ -795,8 +795,8 @@ public final class DistCpOptions {
       return this;
     }
 
-    public Builder withUpdateRootDirectoryAttributes(boolean updateRootDirectoryAttributes) {
-      this.updateRootDirectoryAttributes = updateRootDirectoryAttributes;
+    public Builder withUpdateRootDirectoryAttributes(boolean updateRootDirectoryAttrs) {
+      this.updateRootDirectoryAttributes = updateRootDirectoryAttrs;
       return this;
     }
   }
