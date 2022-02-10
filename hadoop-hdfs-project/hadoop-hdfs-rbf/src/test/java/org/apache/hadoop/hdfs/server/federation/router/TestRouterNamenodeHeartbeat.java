@@ -60,7 +60,7 @@ import org.slf4j.LoggerFactory;
 public class TestRouterNamenodeHeartbeat {
 
   private static final Logger LOG =
-          LoggerFactory.getLogger(TestRouterNamenodeHeartbeat.class);
+      LoggerFactory.getLogger(TestRouterNamenodeHeartbeat.class);
 
   private static MiniRouterDFSCluster cluster;
   private static ActiveNamenodeResolver namenodeResolver;
@@ -219,32 +219,32 @@ public class TestRouterNamenodeHeartbeat {
   @Test
   public void testNamenodeHeartbeatServiceHAServiceProtocolProxy(){
     testNamenodeHeartbeatServiceHAServiceProtocol(
-            "test-ns", "nn", 1000, -1, -1, 1003,
-            "host01.test:1000", "host02.test:1000");
+        "test-ns", "nn", 1000, -1, -1, 1003,
+        "host01.test:1000", "host02.test:1000");
     testNamenodeHeartbeatServiceHAServiceProtocol(
-            "test-ns", "nn", 1000, 1001, -1, 1003,
-            "host01.test:1001", "host02.test:1001");
+        "test-ns", "nn", 1000, 1001, -1, 1003,
+        "host01.test:1001", "host02.test:1001");
     testNamenodeHeartbeatServiceHAServiceProtocol(
-            "test-ns", "nn", 1000, -1, 1002, 1003,
-            "host01.test:1002", "host02.test:1002");
+        "test-ns", "nn", 1000, -1, 1002, 1003,
+        "host01.test:1002", "host02.test:1002");
     testNamenodeHeartbeatServiceHAServiceProtocol(
-            "test-ns", "nn", 1000, 1001, 1002, 1003,
-            "host01.test:1002", "host02.test:1002");
+        "test-ns", "nn", 1000, 1001, 1002, 1003,
+        "host01.test:1002", "host02.test:1002");
   }
 
   private void testNamenodeHeartbeatServiceHAServiceProtocol(
-          String nsId, String nnId,
-          int rpcPort, int servicePort,
-          int lifelinePort, int webAddressPort,
-          String expected1, String expected2) {
+      String nsId, String nnId,
+      int rpcPort, int servicePort,
+      int lifelinePort, int webAddressPort,
+      String expected1, String expected2) {
     Configuration conf = generateNamenodeConfiguration(nsId, nnId,
-            rpcPort, servicePort, lifelinePort, webAddressPort);
+        rpcPort, servicePort, lifelinePort, webAddressPort);
 
     Router testRouter = new Router();
     testRouter.setConf(conf);
 
     Collection<NamenodeHeartbeatService> heartbeatServices =
-            testRouter.createNamenodeHeartbeatServices();
+        testRouter.createNamenodeHeartbeatServices();
 
     assertEquals(2, heartbeatServices.size());
 
@@ -253,14 +253,14 @@ public class TestRouterNamenodeHeartbeat {
     service.init(conf);
     assertNotNull(service.getLocalTarget());
     LOG.info("NamenodeHeartbeatService HealthMonitorAddress {}",
-            service.getLocalTarget().getHealthMonitorAddress().toString());
+        service.getLocalTarget().getHealthMonitorAddress().toString());
     assertEquals(expected1, service.getLocalTarget().getHealthMonitorAddress().toString());
 
     service = iterator.next();
     service.init(conf);
     assertNotNull(service.getLocalTarget());
     LOG.info("NamenodeHeartbeatService HealthMonitorAddress {}",
-            service.getLocalTarget().getHealthMonitorAddress().toString());
+        service.getLocalTarget().getHealthMonitorAddress().toString());
     assertEquals(expected2, service.getLocalTarget().getHealthMonitorAddress().toString());
   }
 
