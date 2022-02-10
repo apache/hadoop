@@ -1139,7 +1139,7 @@ public class ViewFileSystem extends FileSystem {
    * 1) If path p is in fallback FS or from the same mount point as the default
    *    trash root for targetFS, return the default trash root for targetFS.
    * 2) else, return a trash root in the mounted targetFS
-   *    (/mntpoint/.Trash/<user>)
+   *    (/mntpoint/.Trash/{user})
    *
    * @param path the trash root of the path to be determined.
    * @return the trash root path.
