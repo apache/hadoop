@@ -1197,6 +1197,10 @@ public class TestDistCpSync {
       dfs.rename(new Path(sourcePath, "dir1"),
           new Path(sourcePath, "filterDir1"));
 
+      ContractTestUtils
+          .assertPathExists(dfs, "'filterDir1' should be there on source",
+              new Path(sourcePath, "filterDir1"));
+
       // Create the incremental snapshot.
       dfs.createSnapshot(sourcePath, "s2");
 
