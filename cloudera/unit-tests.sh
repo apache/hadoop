@@ -22,7 +22,7 @@ export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 export PATH=$JAVA_HOME/bin:$PATH
 
 mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "${SCRIPT_DIR}/../pom.xml" clean install -DskipTests -DskipShade \
-    --projects '!hadoop-client-modules/hadoop-client-check-invariants,!hadoop-client-modules/hadoop-client-check-test-invariants'
+    --projects '!hadoop-client-modules/hadoop-client-check-invariants,!hadoop-client-modules/hadoop-client-check-test-invariants,!hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-hbase-tests'
 
 mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" test -Dparallel-tests -DtestsThreadCount=8 -Dscale -Dtest.exclude.pattern="$TEST_EXCLUDE_PATTERN" -Dmaven.test.failure.ignore=true -DbatsFailOnError=false "$@"
 
