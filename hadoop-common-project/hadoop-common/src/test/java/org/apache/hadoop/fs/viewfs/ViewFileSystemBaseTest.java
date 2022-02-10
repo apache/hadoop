@@ -1160,6 +1160,35 @@ abstract public class ViewFileSystemBaseTest {
   }
 
   /**
+   * A mocked FileSystem which returns a deep trash dir.
+   */
+  static class MockTrashRootFS extends MockFileSystem {
+    public static final Path TRASH =
+        new Path("/mnt/very/deep/deep/trash/dir/.Trash");
+
+    @Override
+    public Path getTrashRoot(Path path) {
+      return TRASH;
+    }
+  }
+
+  /**
+   * Test a trash root that is inside a mount point for getTrashRoot
+   */
+  @Test
+  public void testTrashRootDeepTrashDir() throws IOException {
+
+    Configuration conf2 = ViewFileSystemTestSetup.createConfig();
+    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    conf2.setClass("fs.mocktrashfs.impl", MockTrashRootFS.class,
+        FileSystem.class);
+    ConfigUtil.addLink(conf2, "/mnt", URI.create("mocktrashfs://mnt/path"));
+    Path testPath = new Path(MockTrashRootFS.TRASH, "projs/proj");
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+    Assert.assertEquals(MockTrashRootFS.TRASH, fsView2.getTrashRoot(testPath));
+  }
+
+  /**
    * Test localized trash roots in getTrashRoots() for all users.
    */
   @Test
