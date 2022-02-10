@@ -600,6 +600,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       throw e;
     } finally {
       destroyThreadPool();
+      resetCommonContext();
     }
     getCommitOperations().taskCompleted(true);
   }
@@ -739,6 +740,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       throw e;
     } finally {
       destroyThreadPool();
+      resetCommonContext();
     }
   }
 

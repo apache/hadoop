@@ -24,15 +24,17 @@ this document covers its use.
 
 ## Important: Auditing is disabled by default
 
-Due to a memory leak from the use of `ThreadLocal` fields, this auditing feature leaks memory as S3A filesystem
-instances are created and deleted.
-This causes problems in long-lived processes which either do not re-use filesystem
+Due to a memory leak from the use of `ThreadLocal` fields, this auditing feature
+leaked memory as S3A filesystem instances were created and deleted.
+This caused problems in long-lived processes which either do not re-use filesystem
 instances, or attempt to delete all instances belonging to specific users.
 See [HADOOP-18091](https://issues.apache.org/jira/browse/HADOOP-18091) _S3A auditing leaks memory through ThreadLocal references_.
 
-To avoid these memory leaks, auditing is disabled by default.
+To avoid these memory leaks, auditing was disabled by default in the hadoop 3.3.2 release.
 
-To turn auditing on, set `fs.s3a.audit.enabled` to `true`.
+As these memory leaks have now been fixed, auditing has been re-enabled.
+
+To disable it, set `fs.s3a.audit.enabled` to `false`.
 
 ## Auditing workflow
 
@@ -84,7 +86,7 @@ Other auditor classes may be used instead.
 
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
-| `fs.s3a.audit.enabled` | Is auditing enabled | `false` |
+| `fs.s3a.audit.enabled` | Is auditing enabled? | `true` |
 | `fs.s3a.audit.service.classname` | Auditor classname | `org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor` |
 | `fs.s3a.audit.request.handlers` | List of extra subclasses of AWS SDK RequestHandler2 to include in handler chain | `""` |
 | `fs.s3a.audit.referrer.enabled` | Logging auditor to publish the audit information in the HTTP Referrer header | `true` |
@@ -137,7 +139,6 @@ The Logging Auditor is enabled by providing its classname in the option
   <value>org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor</value>
 </property>
 ```
-
 
 To print auditing events in the local client logs, set the associated Log4J log
 to log at debug:
