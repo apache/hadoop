@@ -2227,14 +2227,14 @@ public class DataNode extends ReconfigurableBase
     // wait reconfiguration thread, if any, to exit
     shutdownReconfigurationTask();
 
-    LOG.info("Waiting up to 30 seconds for transfer threads to complete");
+    LOG.info("Waiting up to 15 seconds for transfer threads to complete");
     HadoopExecutors.shutdown(this.xferService, LOG, 15L, TimeUnit.SECONDS);
 
     // wait for all data receiver threads to exit
     if (this.threadGroup != null) {
       int sleepMs = 2;
       while (true) {
-        // When shutting down for restart, wait 2.5 seconds before forcing
+        // When shutting down for restart, wait 1.0 seconds before forcing
         // termination of receiver threads.
         if (!this.shutdownForUpgrade ||
             (this.shutdownForUpgrade && (Time.monotonicNow() - timeNotified
