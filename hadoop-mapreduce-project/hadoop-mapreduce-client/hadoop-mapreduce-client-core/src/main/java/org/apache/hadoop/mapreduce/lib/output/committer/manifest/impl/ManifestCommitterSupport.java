@@ -162,7 +162,7 @@ public final class ManifestCommitterSupport {
   }
 
   /**
-   * Get the path in the job attempt dir for the temp path to save a
+   * Get the path in the  manifest subdir for the temp path to save a
    * task attempt's manifest before renaming it to the
    * path defined by {@link #manifestPathForTask(Path, String)}.
    * @param manifestDir manifest directory

@@ -44,8 +44,6 @@ import org.apache.hadoop.util.JsonSerialization;
 /**
  * This is the manifest of files which were created by
  * this task attempt.
- * Although based on the same design as the S3A PendingSet manifest,
- * there is no expectation that they should be compatible.
  *
  * Versioning:
  * In a rolling cluster update, MR or Spark workers deployed on a newer

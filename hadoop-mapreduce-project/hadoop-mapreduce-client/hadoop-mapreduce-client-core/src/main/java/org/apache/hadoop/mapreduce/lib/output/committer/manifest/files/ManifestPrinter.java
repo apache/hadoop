@@ -78,7 +78,8 @@ public class ManifestPrinter extends Configured implements Tool {
    * @throws IOException failure to load
    * @return the manifest
    */
-  public ManifestSuccessData loadAndPrintManifest(FileSystem fs, Path path) throws IOException {
+  public ManifestSuccessData loadAndPrintManifest(FileSystem fs, Path path)
+      throws IOException {
     // load the manifest
     println("Manifest file: %s", path);
     final ManifestSuccessData success = ManifestSuccessData.load(fs, path);

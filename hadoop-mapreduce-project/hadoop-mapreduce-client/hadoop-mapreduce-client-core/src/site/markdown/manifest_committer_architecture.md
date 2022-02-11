@@ -18,7 +18,7 @@
 This document describes the architecture and other implementation/correctness
 aspects of the [Manifest Committer](manifest_committer.html)
 
-The _Intermediate Manifest_ committer is a new committer for
+The _Manifest_ committer is a new committer for
 work which should deliver performance on ABFS
 for "real world" queries, and performance and correctness on GCS.
 
@@ -46,11 +46,7 @@ A suitably configured spark deployment will pick up the new committer.
 | Task Commit | Taking the output of a Task Attempt and making it the final/exclusive result of that "successful" Task.|
 | Job Commit | aggregating all the outputs of all committed tasks and producing the final results of the job. |
 
-For Hive's classic hierarchical-directory-structured tables, job committing requires
-the output of all committed tasks to be put into the correct location in the
-directory tree.
 
-### Correctness
 
 The purpose of a committer is to ensure that the complete output of
 a job ends up in the destination, even in the presence of failures of tasks.
@@ -63,318 +59,32 @@ a job ends up in the destination, even in the presence of failures of tasks.
 - _Continuity of correctness:_ once a job is committed, the output of any failed,
   aborted, or unsuccessful task MUST NO appear at some point in the future.
 
-The v1 committer meets these requirements, relying on the task commit operation
-being a single atomic directory rename of the task attempt's attempt dir into the job attempt dir.
+For Hive's classic hierarchical-directory-structured tables, job committing
+requires the output of all committed tasks to be put into the correct location
+in the directory tree.
 
+The committer built into `hadoop-mapreduce-client-core` module is the `FileOutputCommitter`.
 
-It has two algorithms, v1 and v2. The v2 algorithm is not considered safe because it is
-not _exclusive_.
 
-The v1 algorithm is resilient to all forms of task failure, but slow
-when committing the final aggregate output as it renames each newly created file
-to the correct place in the table one by one.
 
-## File Output Committer V1 and V2
+## The Manifest Committer: A high performance committer for Spark on Azure and Google storage.
 
-### File Output Committer V1 and V2 Commit algorithms
+The Manifest Committera higher performance committer for ABFS and GCS storage
+for jobs which create file across deep directory trees through many tasks.
 
-#### Task attempt execution (V1 and V2)
+It will also work on `hdfs://` and indeed, `file://` URLs, but
+it is optimized to address listing and renaming performance and throttling
+issues in cloud storage.
 
-job attempt directory in `$dest/__temporary/$jobAttemptId/` contains all output
-of the job in progress every task attempt is allocated its own task attempt dir
-`$dest/__temporary/$jobAttemptId/__temporary/$taskAttemptId`
-
-All work for a task is written under the task attempt directory. If the output
-is a deep tree with files at the root, the task attempt dir will end up with a
-similar structure, with the files it has generated and the directories above
-them.
-
-### MapReduce V1 algorithm:
-
-#### v1 Task commit
-
-The task attempt dir is renamed directly underneath the job attempt dir
-
-```
-rename(
-  $dest/__temporary/$jobAttemptId/__temporary/$taskAttemptId
-  $dest/__temporary/$jobAttemptId/$taskId)
-```
-
-#### V1 Job Commit
-
-For each committed task, all files underneath are renamed into the destination
-directory, with a filename relative from the base directory of the task remapped
-to that of the dest dir.
-
-That is, everything under `$dest/__temporary/$jobAttemptId/$taskId` is converted
-to a path under `$dest`.
-
-A recursive treewalk identifies the paths to rename in each TA directory.
-There's some optimisation if the task directory tree contains a subdirectory
-directory which does not exist under the destination: in this case the whole
-directory can be renamed. If the directory already exists, a file-by-file merge
-takes place for that dir, with the action for subdirectories again depending on
-the presence of the destination.
-
-As a result, if the output of each task goes a separate final directory (e.g the
-final partition is unique to a single task), the rename is O(1) for the dir,
-irrespective of children. If the output is to be in the same dir as other
-tasks (or updating existing directories), then the rename performance becomes O(
-files).
-
-Finally, a 0-byte `_SUCCESS` file is written.
-
-### MapReduce V2 algorithm:
-
-#### V2 Task commit
-
-The files under the task attempt dir are renamed one by one into the destination
-directory. There's no attempt at optimising directory renaming, because other
-tasks may be committing their work at the same time. It is therefore `O(files)` +
-the cost of listing the directory tree. Again: done with a recursive treewalk,
-not a deep `listFiles(path, recursive=true)` API, which would be faster on HDFS
-and (though not relevant here) S3.
-
-#### V2 Job Commit
-
-A 0-byte `_SUCCESS` file is written.
-
-
-### V1 versus V2
-
-V2's job commit algorithm is clearly a lot faster —all the rename has already
-taken place.
-
-There is one small flaw with the v2 algorithm: it cannot cope with failures
-during task commit.
-
-### Why the V2 committer is incorrect/unsafe
-
-If, for a Task T1, Task Attempt 1 (T1A1) fails before committing, the driver
-will schedule a new attempt "T1A2", and commit it. All is good.
-
-But: if T1A1 was given permission to commit and it failed during the commit
-process, some of its output may have been written to the destination directory.
-
-If attempt T1A2 was then told to commit, then if and only if its output had the
-exact set of file names would any already-renamed files be overwritten. If
-different filenames were generated, then the output would contain files of T1A1
-and T1A2.
-
-If T1A1 became partitioned during the commit process, then the job committer
-would schedule another attempt and commit its work. However, if T1A1 still had
-connectivity to the filesystem, it could still be renaming files. The output of
-the two tasks could be intermingled even if the same filenames were used.
-
-## The S3A Committers
-
-The paper, [_A Zero-Rename Committer_](https://github.com/steveloughran/zero-rename-committer/releases/),
-Loughran et. al., covers these committers
-
-It also describes the commit problem, defines correctness, and describes the
-algorithms of the v1 and v2 committers, as well as those of the S3A committers,
-IBM Stocator committer and what we know of EMR's Spark committer.
-
-The `hadoop-aws` JAR contains a pair of committers, "Staging" and "Magic". Both
-of these are implementations of the same problem: safely and rapidly committing
-work to an S3 object store.
-
-The committers take advantage of the fact that S3 offers an atomic way to create
-a file: the PUT request.
-
-Files either exist or they don't. A file can be uploaded direct to its
-destination, and it is only when the upload completes that the file is manifest
--overwriting any existing copy.
-
-For large files, a multipart upload allows this upload operation to be split
-into a series of POST requests
-
-1 `initiate-upload (path -> upload ID)`
-1. `upload part(path, upload ID, data[]) -> checksum.`
-   This can be parallelised. Up to 10,000 parts can be uploaded to a single
-   object. All but the final part must be >= 5MB.
-1. `complete-upload (path, upload ID, List<checksum>)`
-   this manifests the file, building it from the parts in the sequence of blocks
-   defined by the ordering of the checksums.
-
-The secret for the S3A committers is that the final POST request can be delayed
-until the job commit phase, even though the files are uploaded during task
-attempt execution/commit. The task attempts need to determine the final
-destination of each file, upload the data as part of a multipart operation, then
-save the information needed to complete the upload in a file which is later read
-by the job committer and used in a POST request.
-
-### Staging Committer
-
-The _Staging Committer_ is based on the contribution by Ryan Blue of Netflix.
-it  relies on HDFS to be the consistent store to propagate the `.pendingset` files.
-
-The working directory of each task attempt is in the local filesystem, "the
-staging directory". The information needed to complete the uploads is passed
-from Task Attempts to the Job Committer by using a v1 FileOutputCommitter
-working with the cluster HDFS filesystem. This ensures that the committer has
-the same correctness guarantees as the v1 algorithm.
-
-1. Task commit consists of uploading all files under the local filesystem's task
-   attempt working directory to their final destination path, holding back on
-   the final manifestation POST.
-1. A JSON file containing all information needed to complete the upload of all
-   files in the task attempt is written to the Job Attempt directory of of the
-   wrapped committer working with HDFS.
-1. Job commit: load in all the manifest files in the HDFS job attempt directory,
-   then issued the POST request to complete the uploads. These are parallelised.
-
-
-### The Magic Committer
-
-The _Magic Committer_ is purely-S3A and takes advantage and of
-the fact the authorts could make changes within the file system client itself.
-
-"Magic" paths are defined which, when opened for writing under, initiate a
-multi-party upload to the final destination directory. When the output stream is
-`close()`d, a zero byte marker file is written to the magic path, and a JSON
-.pending file containing all the information needed to complete the upload is
-saved.
-
-Task commit:
-1. List all `.pending` files under each task attempt's magic directory;
-1. Aggregate to a `.pendingset` file
-1. Save to the job attempt directory with the task ID.
-
-Job commit:
-
-1. List `.pendingset` files in the job attempt directory
-1. Complete the uploads with POST requests.
-
-The Magic committer absolutely requires a consistent S3 Store -originally with
-S3Guard. Now that S3 is consistent, raw S3 can be used. It does not need HDFS
-or any other filesystem with `rename()`.
-
-## Performance, Scalability and Correctness of the S3A committers
-
-## Performance and Scalability.
-
-The two S3A committers are different in task commit performance; job commit is
-nearly identical.
-
-_Staging_: files created in a task attempt are uploaded from the staging
-directory to S3 in task commit. Although parallelized, this is limited to the
-bandwidth of the VM., so its time is data-generated/bandwidth. Until task
-commit, however, all IO is to the local FS, which is significantly faster.
-
-_Magic_: files created in a task attempt are written directly and incrementally
-to the object store. Task commit is a deep list of the magic directory `O(files)`,
-a read of each `.pending` file (again, `O(files)`), and a write of the pendingset
-file. For small files, this is ~ `O(1)`.
-
-Job commit for both is the act of listing the job attempt directory (faster on
-HDFS), then, in parallel, loading each .pendingset file and completing all
-uploads. This is `O(files/threads)`.
-
-In terasort benchmarks with third party S3-compatible object stores, the magic
-committer is a clear winner. For real-world applications it is less clear cut
--task commit is generally not the bottleneck. Where the magic committer does
-have an advantage is that it doesn't need much local storage (only enough for
-buffering blocks being uploaded), so individual tasks can generate large amounts
-of data.
-
-Both committers use the same JSON `.pendingset` files containing the manifest of
-work to complete: the list of files and the checksums of the parts. We are not
-aware of the time to load these files being a bottleneck, nor has any task
-generated so many files that the use of a non-streamable format has created
-scale problems.
-
-Terasort benchmarks at hundred of TB did trigger scale problems when the job
-committer loaded all task's manifests into data structures for validation prior
-to completing any upload. Incremental loading of manifest files in different
-threads and immediate completion of uploads addressed this.
-Terasorting, however, is not a real world use case. The scale problems encountered
-there have never surfaced in the wild.
-
-### Correctness
-
-The S3A committer is considered correct because
-
-1. Nothing is materialized until job commit.
-1. Only one task attempt's manifest can be saved to the job attempt directory.
-   Hence: only of the TA's files of the same task ID are exclusively committed.
-1. The staging committer's use of HDFS to pass manifests from TAs to the Job
-   committer ensures that S3's eventual consistency would not cause manifests to
-   be missed.
-1. Until S3 was consistent, the magic committer relied on S3Guard to provide the
-   list consistency needed during both task- and job- commit.
-1. The authors and wider community fixed all the issues related to the committers
-   which have surfaced in production.
-
-Significant issues which were fixed include:
-
-* [HADOOP-15961](https://issues.apache.org/jira/browse/HADOOP-15961).
-  S3A committers: make sure there's regular progress() calls.
-* [HADOOP-16570](https://issues.apache.org/jira/browse/HADOOP-16570).
-  S3A committers encounter scale issues.
-* [HADOOP-16798](https://issues.apache.org/jira/browse/HADOOP-16798).
-  S3A Committer thread pool shutdown problems.
-* [HADOOP-17112](https://issues.apache.org/jira/browse/HADOOP-17112).
-  S3A committers can't handle whitespace in paths.
-* [HADOOP-17318](https://issues.apache.org/jira/browse/HADOOP-17318).
-  Support concurrent S3A commit jobs with same app attempt ID.
-* [HADOOP-17258](https://issues.apache.org/jira/browse/HADOOP-17258).
-  MagicS3GuardCommitter fails with `pendingset` already exists
-* [HADOOP-17414](https://issues.apache.org/jira/browse/HADOOP-17414]).
-  Magic committer files don't have the count of bytes written collected by spark
-* [SPARK-33230](https://issues.apache.org/jira/browse/SPARK-33230)
-  Hadoop committers to get unique job ID in `spark.sql.sources.writeJobUUID`
-* [SPARK-33402](https://issues.apache.org/jira/browse/SPARK-33402)
-  Jobs launched in same second have duplicate MapReduce JobIDs
-* [SPARK-33739](https://issues.apache.org/jira/browse/SPARK-33739]).
-  Jobs committed through the S3A Magic committer don't report
-  the bytes written (depends on HADOOP-17414)
-
-Of those which affected the correctness rather than scale/performance/UX:
-HADOOP-17258 involved the recovery from a failure after TA1 task commit had
-completed —but had failed to report in. SPARK-33402, SPARK-33230 and
-HADOOP-17318 are all related: if two spark jobs/stages started in the
-same second, they had the same job ID. This caused the HDFS directories used by
-the staging committers to be intermingled.
-
-What is notable is this: these are all problems which the minimal integration
-test suites did not or discover.
-
-The good news: we now know of these issues and are better placed to avoid
-replicating them again. And know what to write tests for.
-
-## The V1 committer: slow in Azure and slow and unsafe on GCS.
-
-The V1 committer underperforms on ABFS because:
-
-1. Directory listing and file renaming is somewhat slower with ABFS than it is
-   with HDFS.
-1. The v1 committer sequentially commits the output of each task through a
-   listing of each committed task's output, moving directories when none exist
-   in the destination, merging files into extant directories.
-
-The V2 committer is much faster in the job commit because it performs the list
-and rename process in the task commit. Which, because it is non-atomic, is why
-it is considered dangerous to use. What the V2 task commit algorithm does show is
-that it is possible to parallelise committing the output of different tasks by
-using file-by-file rename exclusively.
-
-The V1 committer underperforms on GCS because even the task commit operation,
-—directory rename—, is a non-atomic `O(files)` operation.
-This also means that it is unsafe.
-
-If the task attempt has partitioned and the spark driver schedules/commits another TA, then,
-the task dir may contain 1+ file from the first attempt.
-
-# The Manifest Committer: A high performance committer for Spark on ABFS and GCS
-
-Here then is a proposal for a higher performance committer for ABFS and GCS storage
-Note: it will also work well on `hdfs://` and indeed, `file://` URLs.
+It *will not* work correctly with S3, because it relies on an atomic rename-no-overwrite
+operation to commit the manifest file. It will also have the performance
+problems of copying rather than moving all the generated data.
 
 Although it will work with MapReduce
 there is no handling of multiple job attempts with recovery from previous failed
 attempts. (Plan: fail on MR AM restart)
+
+### 
 
 A Manifest file is designed which contains (along with IOStatistics and some
 other things)
@@ -458,7 +168,6 @@ With spark creating new UUIDs for each file, this isn't going to happen, and
 saves HTTP requests.
 
 
-
 ### Validation
 
 Optional scan of all committed files and verify length and, if known,
@@ -488,7 +197,7 @@ etag. For testing and diagnostics.
 This solution is necessary for GCS and should be beneficial on ABFS as listing
 overheads are paid for in the task committers.
 
-## Implementation Details
+# Implementation Details
 
 ### Constraints
 
@@ -553,56 +262,21 @@ renaming.
 
 #### Thread pool lifetimes
 
-The lifespan of thread pools is constrained to that of the stage configuration.
+The lifespan of thread pools is constrained to that of the stage configuration,
+which will be limited to within each of the `PathOutputCommitter` methods
+to setup, commit, abort and cleanup.
+
 This avoids the thread pool lifecycle problems of the S3A Committers.
 
 #### Scale issues similar to S3A HADOOP-16570.
 
 This was a failure in terasorting where many tasks each generated many files;
-the full list of files to commit (and the etag info) was built up in memory and
-validated prior to execution. The fix: be more incremental, even if stopped a
-preflight check of the entire job before committing any single file.
+the full list of files to commit (and the etag of every block) was built up in memory and
+validated prior to execution.
 
-#### Concurrent jobs to same destination path
-
-* [SPARK-33402](https://issues.apache.org/jira/browse/SPARK-33402) _Jobs
-  launched in same second have duplicate MapReduce JobIDs_
-* [HADOOP-17318](https://issues.apache.org/jira/browse/HADOOP-17318) _S3A committer to support concurrent jobs with same app attempt ID and dest
-  dir_
-* [SPARK-24552](https://issues.apache.org/jira/browse/SPARK-24552) _Task attempt
-  numbers are reused when stages are retried_
-* [SPARK-24589](https://issues.apache.org/jira/browse/SPARK-24589)
-  _OutputCommitCoordinator may allow duplicate commits_
-* [SPARK-33230](https://issues.apache.org/jira/browse/SPARK-33230)
-  _FileOutputWriter jobs have duplicate JobIDs if launched in
-  same second_
-
-
-Unless the spark build has SPARK-33402 in, there's a risk of problems if >1 job
-is launched targeting the same dest dir in the same second. We believe we have
-also seen this surfacing in the original FileOutputCommitter against HDFS.
-
-HADOOP-17318 was an emergency fix in the s3a committers to support spark builds
-without the SPARK- fixes: job setup to create an ID, set it in the job conf and
-rely on that updated conf being passed to the task attempts. Done to allow
-existing Spark releases to work properly.
-
-
-* Use `spark.sql.sources.writeJobUUID` if set as the ID of the job (not the
-generated MR job attempt ID). Fallback to the YARN job attempt ID if
-writeJobUUID unset
-* Declare that job IDs passed down by spark MUST be unique and so each job attempt
-dir being unique. (i.e. SPARK-33402 MUST be in, SPARK-33230 SHOULD be in)
-* Job setup and task setup MUST fail if the job attempt temp paths exist (and are
-non-empty?). This will at least ensure that problems surface early.
-
-Spark releases also need SPARK-24552/SPARK-24589. This is a prerequisite out of scope
-of this committer.
-
-* [SPARK-24552](https://issues.apache.org/jira/browse/SPARK-24552) _Task attempt
-  numbers are reused when stages are retried_
-* [SPARK-24589](https://issues.apache.org/jira/browse/SPARK-24589) _
-  OutputCommitCoordinator may allow duplicate commits_
+The manifest committer assumes that the amount of data being stored in memory is less,
+because there is no longer the need to store an etag for every block of every
+file being committed.
 
 
 #### Duplicate creation of directories in the dest dir
@@ -621,30 +295,35 @@ The implementation architecture reflects lessons from the S3A Connector.
 * Also pass in a callback for store operations, for ease of implementing a fake store.
 * For each stage: define preconditions and postconditions, failure modes. Test in isolation.
 
-#### Instrumentation/Statistics
+#### Statistics
 
-1. Instrument using IOStatistics, tracking performance of every FS call made
-   ( list, mkdir, rename...)
-1. Execution of every stage to be collected in a statistic too.
-1. Collect and aggregate IOStatistics published by FS class instances unique to
-   individual threads (listing iterators in particular)
-1. include counts of files per task, number of tasks, number of directories
-   created
-1. Save these statistics to the `_SUCCESS` file, as the S3A committers already do.
-1. And log to the console
-1. Use in assertions where there's perceived value.
+The committer collects duration statistics on all the operations it performs/invokes
+against filesystems.
+* Those collected during task commit are saved to the manifest (excluding the time to
+save and rename that file)
+* When these manifests are loaded during job commit, these statistics are merged to
+form aggregate statistics of the whole job.
+* Which are saved to the `_SUCCESS` file
+* and to any copy of that file in the directory specified by
+  `mapreduce.manifest.committer.summary.report.directory`, if set.
+  to be saved.
+* The class `org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter`
+  can load and print these.
+
+IO statistics from filsystems and input and output streams used in a query are not
+collected.
+
 
 ## Auditing
-
 
 When invoking the `ManifestCommitter` via the `PathOutputCommitter` API, the following
 attributes are added to the active (thread) context
 
-| Key | Value |
-|-----|-------|
-| `ji` | Job ID |
+| Key   | Value           |
+|-------|-----------------|
+| `ji`  | Job ID          |
 | `tai` | Task Attempt ID |
-| `st` |  Stage |
+| `st`  | Stage           |
 
 These are also all set in all the helper threads performing work
 as part of a stage's execution.

@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class ManifestCommitterConstants {
 
   /**
-   * Suffix to use in manifest files in the job attempt dir.
+   * Suffix to use in manifest files in the manifest subdir.
    * Value: {@value}.
    */
   public static final String MANIFEST_SUFFIX = "-manifest.json";
@@ -63,7 +63,7 @@ public final class ManifestCommitterConstants {
    * Format string for building a job dir.
    * Value: {@value}.
    */
-  public static final String JOB_DIR_FORMAT_STR = "manifest_%s";
+  public static final String JOB_DIR_FORMAT_STR = "%s";
 
   /**
    * Format string for building a job attempt dir.
@@ -71,7 +71,7 @@ public final class ManifestCommitterConstants {
    * can be found trivially.
    * Value: {@value}.
    */
-  public static final String JOB_ATTEMPT_DIR_FORMAT_STR = "%d";
+  public static final String JOB_ATTEMPT_DIR_FORMAT_STR = "%02d";
 
   /**
    * Name of directory under job attempt dir for manifests.
