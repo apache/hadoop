@@ -112,6 +112,9 @@ public class ProfileServlet extends HttpServlet {
 
   static final String OUTPUT_DIR = System.getProperty("java.io.tmpdir") + "/prof-output-hadoop";
 
+  // This flag is only allowed to be reset by tests.
+  private static boolean isTestRun = false;
+
   private enum Event {
 
     CPU("cpu"),
@@ -175,6 +178,10 @@ public class ProfileServlet extends HttpServlet {
     this.asyncProfilerHome = getAsyncProfilerHome();
     this.pid = ProcessUtils.getPid();
     LOG.info("Servlet process PID: {} asyncProfilerHome: {}", pid, asyncProfilerHome);
+  }
+
+  static void setIsTestRun(boolean isTestRun) {
+    ProfileServlet.isTestRun = isTestRun;
   }
 
   @Override
@@ -274,7 +281,9 @@ public class ProfileServlet extends HttpServlet {
               cmd.add("--reverse");
             }
             cmd.add(pid.toString());
-            process = ProcessUtils.runCmdAsync(cmd);
+            if (!isTestRun) {
+              process = ProcessUtils.runCmdAsync(cmd);
+            }
 
             // set response and set refresh header to output location
             setResponseHeader(resp);

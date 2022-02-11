@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditManagerS3A;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.audit.impl.S3AInternalAuditConstants.AUDIT_SPAN_HANDLER_CONTEXT;
 
 /**
@@ -58,8 +60,14 @@ public final class AuditIntegration {
   public static AuditManagerS3A createAndStartAuditManager(
       Configuration conf,
       IOStatisticsStore iostatistics) {
-    ActiveAuditManagerS3A auditManager = new ActiveAuditManagerS3A(
-        requireNonNull(iostatistics));
+    AuditManagerS3A auditManager;
+    if (conf.getBoolean(AUDIT_ENABLED, AUDIT_ENABLED_DEFAULT)) {
+      auditManager = new ActiveAuditManagerS3A(
+          requireNonNull(iostatistics));
+    } else {
+      LOG.debug("auditing is disabled");
+      auditManager = stubAuditManager();
+    }
     auditManager.init(conf);
     auditManager.start();
     LOG.debug("Started Audit Manager {}", auditManager);

@@ -34,7 +34,6 @@ import static org.mockito.Mockito.verify;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,7 +48,6 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -616,51 +614,6 @@ public class TestIPC {
           LongWritable.class);
     } finally {
       WRITABLE_FAULTS_SLEEP = 0;
-    }
-  }
-
-  /**
-   * Test for HADOOP-18024.
-   */
-  @Test(timeout=60000)
-  public void testIOEOnListenerAccept() throws Exception {
-    // start server
-    Server server = new TestServer(1, false,
-            LongWritable.class, LongWritable.class) {
-      @Override
-      protected void configureSocketChannel(SocketChannel channel) throws IOException {
-        maybeThrowIOE();
-        super.configureSocketChannel(channel);
-      }
-    };
-    InetSocketAddress addr = NetUtils.getConnectAddress(server);
-    server.start();
-
-    // start client
-    WRITABLE_FAULTS_ENABLED = true;
-    Client client = new Client(LongWritable.class, conf);
-    try {
-      LongWritable param = LongWritable.class.newInstance();
-
-      try {
-        call(client, param, addr, 0, conf);
-        fail("Expected an exception to have been thrown");
-      } catch (EOFException e) {
-        LOG.info("Got expected exception", e);
-      } catch (Throwable t) {
-        LOG.warn("Got unexpected error", t);
-        fail("Expected an EOFException to have been thrown");
-      }
-
-      // Doing a second call with faults disabled should return fine --
-      // ie the internal state of the client or server should not be broken
-      // by the failed call
-      WRITABLE_FAULTS_ENABLED = false;
-      call(client, param, addr, 0, conf);
-
-    } finally {
-      client.stop();
-      server.stop();
     }
   }
   

@@ -148,6 +148,7 @@ public class DfsClientConf {
 
   /** wait time window before refreshing blocklocation for inputstream. */
   private final long refreshReadBlockLocationsMS;
+  private final boolean refreshReadBlockLocationsAutomatically;
 
   private final ShortCircuitConf shortCircuitConf;
   private final int clientShortCircuitNum;
@@ -272,6 +273,10 @@ public class DfsClientConf {
         HdfsClientConfigKeys.DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_KEY,
         HdfsClientConfigKeys.
             DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_DEFAULT);
+
+    refreshReadBlockLocationsAutomatically = conf.getBoolean(
+        HdfsClientConfigKeys.DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_KEY,
+        HdfsClientConfigKeys.DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_DEFAULT);
 
     hedgedReadThresholdMillis = conf.getLong(
         HedgedRead.THRESHOLD_MILLIS_KEY,
@@ -714,11 +719,16 @@ public class DfsClientConf {
     return replicaAccessorBuilderClasses;
   }
 
-  /**
-   * @return the replicaAccessorBuilderClasses
-   */
-  public long getRefreshReadBlockLocationsMS() {
+  public boolean isLocatedBlocksRefresherEnabled() {
+    return refreshReadBlockLocationsMS > 0;
+  }
+
+  public long getLocatedBlocksRefresherInterval() {
     return refreshReadBlockLocationsMS;
+  }
+
+  public boolean isRefreshReadBlockLocationsAutomatically() {
+    return refreshReadBlockLocationsAutomatically;
   }
 
   /**

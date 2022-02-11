@@ -37,11 +37,13 @@ void print_options() {
 	 "\tentry_timeout=%d\n"
 	 "\tattribute_timeout=%d\n"
 	 "\tprivate=%d\n"
-	 "\trdbuffer_size=%d (KBs)\n", 
-	 options.protected, options.nn_uri, options.nn_port, options.debug,
+         "\trdbuffer_size=%d (KBs)\n"
+         "\tmax_background=%d\n",
+         options.protected, options.nn_uri, options.nn_port, options.debug,
 	 options.read_only, options.usetrash, options.entry_timeout, 
 	 options.attribute_timeout, options.private, 
-	 (int)options.rdbuffer_size / 1024);
+         (int)options.rdbuffer_size / 1024,
+         options.max_background);
 }
 
 const char *program;
@@ -56,7 +58,7 @@ void print_usage(const char *pname)
 	 "[-ousetrash] [-obig_writes] [-oprivate (single user)] [ro] "
 	 "[-oserver=<hadoop_servername>] [-oport=<hadoop_port>] "
 	 "[-oentry_timeout=<secs>] [-oattribute_timeout=<secs>] "
-	 "[-odirect_io] [-onopoermissions] [-o<other fuse option>] "
+         "[-odirect_io] [-onopoermissions] [-omax_background=<size>] [-o<other fuse option>] "
 	 "<mntpoint> [fuse options]\n", pname);
   printf("NOTE: debugging option for fuse is -debug\n");
 }
@@ -87,6 +89,7 @@ struct fuse_opt dfs_opts[] =
     DFSFS_OPT_KEY("protected=%s", protected, 0),
     DFSFS_OPT_KEY("port=%d", nn_port, 0),
     DFSFS_OPT_KEY("rdbuffer=%d", rdbuffer_size,0),
+    DFSFS_OPT_KEY("max_background=%d", max_background, 0),
 
     FUSE_OPT_KEY("private", KEY_PRIVATE),
     FUSE_OPT_KEY("ro", KEY_RO),
