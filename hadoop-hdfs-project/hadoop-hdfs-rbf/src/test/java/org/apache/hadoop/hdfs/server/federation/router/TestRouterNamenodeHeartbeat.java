@@ -50,17 +50,12 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test the service that heartbeats the state of the namenodes to the State
  * Store.
  */
 public class TestRouterNamenodeHeartbeat {
-
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestRouterNamenodeHeartbeat.class);
 
   private static MiniRouterDFSCluster cluster;
   private static ActiveNamenodeResolver namenodeResolver;
@@ -236,7 +231,7 @@ public class TestRouterNamenodeHeartbeat {
       String nsId, String nnId,
       int rpcPort, int servicePort,
       int lifelinePort, int webAddressPort,
-      String expected1, String expected2) {
+      String expected0, String expected1) {
     Configuration conf = generateNamenodeConfiguration(nsId, nnId,
         rpcPort, servicePort, lifelinePort, webAddressPort);
 
@@ -249,19 +244,15 @@ public class TestRouterNamenodeHeartbeat {
     assertEquals(2, heartbeatServices.size());
 
     Iterator<NamenodeHeartbeatService> iterator = heartbeatServices.iterator();
-    NamenodeHeartbeatService service = iterator.next();
-    service.init(conf);
-    assertNotNull(service.getLocalTarget());
-    LOG.info("NamenodeHeartbeatService HealthMonitorAddress {}",
-        service.getLocalTarget().getHealthMonitorAddress().toString());
-    assertEquals(expected1, service.getLocalTarget().getHealthMonitorAddress().toString());
+    NamenodeHeartbeatService service0 = iterator.next();
+    service0.init(conf);
+    assertNotNull(service0.getLocalTarget());
+    assertEquals(expected0, service0.getLocalTarget().getHealthMonitorAddress().toString());
 
-    service = iterator.next();
-    service.init(conf);
-    assertNotNull(service.getLocalTarget());
-    LOG.info("NamenodeHeartbeatService HealthMonitorAddress {}",
-        service.getLocalTarget().getHealthMonitorAddress().toString());
-    assertEquals(expected2, service.getLocalTarget().getHealthMonitorAddress().toString());
+    NamenodeHeartbeatService service1 = iterator.next();
+    service1.init(conf);
+    assertNotNull(service1.getLocalTarget());
+    assertEquals(expected1, service1.getLocalTarget().getHealthMonitorAddress().toString());
   }
 
   @Test
