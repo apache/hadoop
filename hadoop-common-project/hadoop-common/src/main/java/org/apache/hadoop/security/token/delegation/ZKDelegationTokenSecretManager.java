@@ -98,6 +98,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       + "kerberos.keytab";
   public static final String ZK_DTSM_ZK_KERBEROS_PRINCIPAL = ZK_CONF_PREFIX
       + "kerberos.principal";
+  public static final String ZK_DTSM_ZK_JUTE_MAXBUFFER = ZK_CONF_PREFIX
+          + "jute.maxbuffer";
   public static final String ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE = ZK_CONF_PREFIX
       + "token.seqnum.batch.size";
   public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
@@ -108,6 +110,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final int ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT = 10000;
   public static final int ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT = 10000;
   public static final int ZK_DTSM_ZK_SHUTDOWN_TIMEOUT_DEFAULT = 10000;
+  public static final String ZK_DTSM_ZK_JUTE_MAXBUFFER_DEFAULT = "20000000";
   public static final String ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT = "zkdtsm";
   // by default it is still incrementing seq number by 1 each time
   public static final int ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT = 1;
@@ -199,6 +202,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
                 ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT);
         int numRetries =
             conf.getInt(ZK_DTSM_ZK_NUM_RETRIES, ZK_DTSM_ZK_NUM_RETRIES_DEFAULT);
+        String juteMaxBuffer =
+                conf.get(ZK_DTSM_ZK_JUTE_MAXBUFFER, ZK_DTSM_ZK_JUTE_MAXBUFFER_DEFAULT);
+        System.setProperty(ZKClientConfig.JUTE_MAXBUFFER,
+                 juteMaxBuffer);
         builder =
             CuratorFrameworkFactory
                 .builder()
