@@ -25,16 +25,16 @@ package org.apache.hadoop.fs.common;
 public class BlockData {
   // State of each block of data.
   enum State {
-    // Data is not yet ready to be read.
+    // Data is not yet ready to be read from this block (still being prefetched).
     NOT_READY,
 
-    // A read of this block has been queued.
+    // A read of this block has been enqueued in the prefetch queue.
     QUEUED,
 
-    // This block is ready to be read.
+    // This block is ready to be read. That is, it has been fully read.
     READY,
 
-    // This block has been cached.
+    // This block has been cached in the local disk cache.
     CACHED
   }
 

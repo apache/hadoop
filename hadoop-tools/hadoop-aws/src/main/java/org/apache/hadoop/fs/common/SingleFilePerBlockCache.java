@@ -260,6 +260,13 @@ public class SingleFilePerBlockCache implements BlockCache {
     }
   }
 
+  /**
+   * Produces a human readable list of blocks for the purpose of logging.
+   * This method minimizes the length of returned list by converting
+   * a contiguous list of blocks into a range.
+   * for example,
+   * 1, 3, 4, 5, 6, 8 becomes 1, 3~6, 8
+   */
   private String getIntList(Iterable<Integer> nums) {
     List<String> numList = new ArrayList<>();
     List<Integer> numbers = new ArrayList<Integer>();

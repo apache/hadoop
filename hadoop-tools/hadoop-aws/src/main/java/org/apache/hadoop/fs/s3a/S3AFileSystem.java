@@ -165,7 +165,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.MagicCommitIntegration;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
-import org.apache.hadoop.fs.s3a.read.S3EInputStream;
+import org.apache.hadoop.fs.s3a.read.S3PrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
@@ -1478,7 +1478,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3AInputStream.InputStreamCallbacks client = createInputStreamCallbacks(auditSpan);
 
     if (this.prefetchEnabled) {
-      return new FSDataInputStream(new S3EInputStream(readContext, attrs, client));
+      return new FSDataInputStream(new S3PrefetchingInputStream(readContext, attrs, client));
     } else {
       return new FSDataInputStream(new S3AInputStream(readContext, attrs, client));
     }

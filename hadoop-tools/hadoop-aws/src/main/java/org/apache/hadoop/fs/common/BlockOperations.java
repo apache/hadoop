@@ -35,6 +35,9 @@ import java.util.regex.Pattern;
  * Block level operations performed on a file.
  * This class is meant to be used by {@code BlockManager}.
  * It is separated out in its own file due to its size.
+ *
+ * This class is used for debugging/logging. Calls to this class
+ * can be safely removed without affecting the overall operation.
  */
 public class BlockOperations {
   private static final Logger LOG = LoggerFactory.getLogger(BlockOperations.class);

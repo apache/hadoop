@@ -43,16 +43,16 @@ import java.io.IOException;
  * This implementation provides improved read throughput by asynchronously prefetching
  * blocks of configurable size from the underlying S3 file.
  */
-public class S3EInputStream
+public class S3PrefetchingInputStream
     extends FSInputStream
     implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
-  private static final Logger LOG = LoggerFactory.getLogger(S3EInputStream.class);
+  private static final Logger LOG = LoggerFactory.getLogger(S3PrefetchingInputStream.class);
 
   // Underlying input stream used for reading S3 file.
   private S3InputStream inputStream;
 
   /**
-   * Initializes a new instance of the {@code S3EInputStream} class.
+   * Initializes a new instance of the {@code S3PrefetchingInputStream} class.
    *
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
@@ -62,7 +62,7 @@ public class S3EInputStream
    * @throws IllegalArgumentException if s3Attributes is null.
    * @throws IllegalArgumentException if client is null.
    */
-  public S3EInputStream(
+  public S3PrefetchingInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client) {
