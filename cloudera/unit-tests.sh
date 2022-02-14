@@ -21,7 +21,7 @@ SONAR_PROJECT_NAME="${SONAR_PROJECT_NAME:-}"
 mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "${SCRIPT_DIR}/../pom.xml" clean install -DskipTests -DskipShade \
     --projects '!hadoop-client-modules/hadoop-client-check-invariants,!hadoop-client-modules/hadoop-client-check-test-invariants'
 
-mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" test -Dparallel-tests -DtestsThreadCount=8 -Dscale -Dtest.exclude.pattern="$TEST_EXCLUDE_PATTERN"
+mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" test -Dparallel-tests -DtestsThreadCount=8 -Dscale -Dtest.exclude.pattern="$TEST_EXCLUDE_PATTERN" "$@"
 
 mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" clover:aggregate clover:clover
 
