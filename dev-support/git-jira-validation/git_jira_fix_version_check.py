@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ############################################################################
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -18,6 +18,10 @@
 # limitations under the License.
 #
 ############################################################################
+"""An application to assist Release Managers with ensuring that histories in
+Git and fixVersions in JIRA are in agreement. See README.md for a detailed
+explanation.
+"""
 
 
 import os
@@ -48,9 +52,9 @@ jira = JIRA(server=jira_server_url)
 local_project_dir = input("Path of project's working dir with release branch checked-in: ")
 os.chdir(local_project_dir)
 
-git_status_msg = subprocess.check_output(['git', 'status']).decode("utf-8")
+GIT_STATUS_MSG = subprocess.check_output(['git', 'status']).decode("utf-8")
 print('\nCheck git status output and verify expected branch\n')
-print(git_status_msg)
+print(GIT_STATUS_MSG)
 
 print('\nJira/Git commit message diff starting: ##############################################')
 
@@ -66,27 +70,27 @@ for commit in subprocess.check_output(['git', 'log', '--pretty=oneline']).decode
     if re.search('revert', commit, re.IGNORECASE):
         print("Commit seems reverted. \t\t\t Commit: " + commit)
         continue
-    actual_project_jira = None
+    ACTUAL_PROJECT_JIRA = None
     for project_jira in project_jira_keys:
         if project_jira in commit:
-            actual_project_jira = project_jira
+            ACTUAL_PROJECT_JIRA = project_jira
             break
-    if not actual_project_jira:
+    if not ACTUAL_PROJECT_JIRA:
         print("WARN: Jira not found. \t\t\t Commit: " + commit)
         continue
-    jira_num = ''
-    for c in commit.split(actual_project_jira)[1]:
+    JIRA_NUM = ''
+    for c in commit.split(ACTUAL_PROJECT_JIRA)[1]:
         if c.isdigit():
-            jira_num = jira_num + c
+            JIRA_NUM = JIRA_NUM + c
         else:
             break
-    issue = jira.issue(actual_project_jira + jira_num)
-    expected_fix_version = False
+    issue = jira.issue(ACTUAL_PROJECT_JIRA + JIRA_NUM)
+    EXPECTED_FIX_VERSION = False
     for version in issue.fields.fixVersions:
         if version.name == fix_version:
-            expected_fix_version = True
+            EXPECTED_FIX_VERSION = True
             break
-    if not expected_fix_version:
+    if not EXPECTED_FIX_VERSION:
         print("Jira not present with version: " + fix_version + ". \t Commit: " + commit)
         continue
     if issue.fields.status is None or issue.fields.status.name not in ('Resolved', 'Closed'):
@@ -95,7 +99,7 @@ for commit in subprocess.check_output(['git', 'log', '--pretty=oneline']).decode
         # This means Jira corresponding to current commit message is resolved with expected
         # fixVersion.
         # This is no-op by default, if needed, convert to print statement.
-        issue_set_from_commit_msg.add(actual_project_jira + jira_num)
+        issue_set_from_commit_msg.add(ACTUAL_PROJECT_JIRA + JIRA_NUM)
 
 print('Jira/Git commit message diff completed: ##############################################')
 
