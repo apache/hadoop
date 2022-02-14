@@ -580,15 +580,18 @@ public class TestDistCpSystem {
 
     FileStatus srcStatus = fs.getFileStatus(source);
     FileStatus destStatus1 = fs.getFileStatus(dest1);
-    assertNotEquals(destStatus1.getOwner(), srcStatus.getOwner());
-    assertNotEquals(destStatus1.getModificationTime(), srcStatus.getModificationTime());
+    assertNotEquals(srcStatus.getOwner(), destStatus1.getOwner());
+    assertNotEquals(srcStatus.getModificationTime(),
+        destStatus1.getModificationTime());
 
     // should preserve attrs
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
-        dest2.toString(), "-p -update -updateRootDirectoryAttributes", conf);
+        dest2.toString(), "-p -update -updateRootDirectoryAttributes",
+        conf);
 
     FileStatus destStatus2 = fs.getFileStatus(dest2);
-    assertEquals(destStatus2.getOwner(), srcStatus.getOwner());
-    assertEquals(destStatus2.getModificationTime(), srcStatus.getModificationTime());
+    assertEquals(srcStatus.getOwner(), destStatus2.getOwner());
+    assertEquals(srcStatus.getModificationTime(),
+        destStatus2.getModificationTime());
   }
 }
