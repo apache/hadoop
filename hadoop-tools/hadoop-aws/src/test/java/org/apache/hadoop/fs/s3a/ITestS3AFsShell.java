@@ -22,7 +22,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
@@ -59,6 +58,7 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
         fsShell.run(new String[] {"-mkdir", "-p", testDir + "/subdir1/subdir2"}));
 
     // create a new bucket with hadoop fs will return error file exists
+    // because innerGetFileStatus return root directory status without a probe
     String newBucketName =
         "hadoop-fs-shell-test-" + ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
     assertNotEquals("Should not be able to create new bucket", 0,
@@ -67,6 +67,15 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     err.reset();
 
     assertEquals("Should list directory success", 0, fsShell.run(new String[] {"-ls", testDir}));
+
+    assertEquals("Should list directory as a plain file success", 0,
+        fsShell.run(new String[] {"-ls", "-d", testDir}));
+
+    assertNotEquals("Should fail when list with display erasure coding policy flag", 0,
+        fsShell.run(new String[] {"-ls", "-e", testDir}));
+    assertTrue(err.toString()
+        .contains("FileSystem " + fs.getUri().toString() + " does not support Erasure Coding"));
+    err.reset();
 
     assertEquals("Should recursively list directory success", 0,
         fsShell.run(new String[] {"-ls", "-R", testDir}));
@@ -109,11 +118,23 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     assertEquals("Should touch file success", 0,
         fsShell.run(new String[] {"-touch", testDir + "/touchFile"}));
 
+    assertEquals("Should touch only access time success", 0,
+        fsShell.run(new String[] {"-touch", "-a", testDir + "/touchFile"}));
+
+    assertEquals("Should touch only modification time success", 0,
+        fsShell.run(new String[] {"-touch", "-m", testDir + "/touchFile"}));
+
+    assertEquals("Should touch with specific timestamp success", 0,
+        fsShell.run(new String[] {"-touch", "-t", "20180809:230000", testDir + "/touchFile"}));
+
     assertEquals("Should create zero length file success", 0,
         fsShell.run(new String[] {"-touchz", testDir + "/touchzFile"}));
 
     assertEquals("Should copy a file success", 0,
         fsShell.run(new String[] {"-cp", testDir + "/touchFile", testDir + "/copiedFile"}));
+
+    assertEquals("Should copy a file with preserve flag success", 0,
+        fsShell.run(new String[] {"-cp", "-p", testDir + "/touchFile", testDir + "/copiedFile2"}));
 
     assertEquals("Should copy and overwrite a file success", 0,
         fsShell.run(new String[] {"-cp", "-f", testDir + "/touchFile", testDir + "/copiedFile"}));
@@ -186,32 +207,77 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
         fsShell.run(new String[] {"-appendToFile", "-", testDir + "/testFile"}));
     assertTrue(err.toString().contains("Append is not supported by S3AFileSystem"));
     err.reset();
+  }
 
-    // test working with local files
+  @Test
+  public void testFsShellFileTransferOperations() throws IOException {
+    Configuration conf = getConfiguration();
+    FileSystem fs = getFileSystem();
+    FsShell fsShell = new FsShell(conf);
+    Path path = methodPath();
+    String testDir = path.toString();
+
+    fs.mkdirs(path);
+    byte[] block = ContractTestUtils.dataset(1024, 0, 255);
+    ContractTestUtils.createFile(fs, new Path(path, "testFile"), true, block);
+
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(err));
+
     File localTestDir = getTestDir("tmp-" + getMethodName());
     localTestDir.mkdirs();
     File localFile = File.createTempFile("localFile", ".txt", localTestDir);
-    FileUtils.writeStringToFile(localFile, "File content\n", StandardCharsets.UTF_8);
-    File testGetFile = new File(localTestDir, "testGet");
-    File testMergeFile = new File(localTestDir, "testGetMerge");
-    File testMoveFile = new File(localTestDir, "testMoveToLocal");
 
     try {
       assertEquals("Should put file to S3 success", 0, fsShell.run(
           new String[] {"-put", localFile.getAbsolutePath(), testDir + "/copiedLocalFile"}));
 
+      assertEquals("Should put and overwrite file to S3 success", 0, fsShell.run(
+          new String[] {"-put", "-f", localFile.getAbsolutePath(), testDir + "/copiedLocalFile"}));
+
+      assertEquals("Should put file to S3 success with preserve flag", 0, fsShell.run(
+          new String[] {"-put", "-p", localFile.getAbsolutePath(),
+              testDir + "/copiedLocalFile-p"}));
+
+      assertEquals("Should put file to S3 success with specific thread count", 0, fsShell.run(
+          new String[] {"-put", "-t", "2", localFile.getAbsolutePath(),
+              testDir + "/copiedLocalFile-t"}));
+
+      assertEquals("Should put file to S3 success with lazily persist option", 0, fsShell.run(
+          new String[] {"-put", "-l", localFile.getAbsolutePath(),
+              testDir + "/copiedLocalFile-l"}));
+
+      assertEquals("Should put file to S3 success with skip temporary file creation option", 0,
+          fsShell.run(new String[] {"-put", "-d", localFile.getAbsolutePath(),
+              testDir + "/copiedLocalFile-d"}));
+
       assertEquals("Should move file to S3 success", 0, fsShell.run(
           new String[] {"-moveFromLocal", localFile.getAbsolutePath(),
               testDir + "/movedLocalFile"}));
 
-      assertEquals("Should copy file from S3 to local", 0,
-          fsShell.run(new String[] {"-get", testDir + "/testFile", testGetFile.getAbsolutePath()}));
+      assertEquals("Should copy file from S3 to local", 0, fsShell.run(
+          new String[] {"-get", testDir + "/testFile",
+              localTestDir.getAbsolutePath() + "/testGet"}));
 
-      assertEquals("Should merge files under the path and save to local", 0,
-          fsShell.run(new String[] {"-getmerge", "-nl", testDir, testMergeFile.getAbsolutePath()}));
+      assertEquals("Should copy file from S3 and overwrite to local", 0, fsShell.run(
+          new String[] {"-get", "-f", testDir + "/testFile",
+              localTestDir.getAbsolutePath() + "/testGet"}));
+
+      assertEquals("Should copy file from S3 to local with ignore crc option", 0, fsShell.run(
+          new String[] {"-get", "-ignoreCrc", testDir + "/testFile",
+              localTestDir.getAbsolutePath() + "/testGet-ignoreCrc"}));
+
+      assertEquals("Should copy file from S3 to local with crc option", 0, fsShell.run(
+          new String[] {"-get", "-crc", testDir + "/testFile",
+              localTestDir.getAbsolutePath() + "/testGet-crc"}));
+
+      assertEquals("Should merge files under the path and save to local", 0, fsShell.run(
+          new String[] {"-getmerge", "-nl", testDir,
+              localTestDir.getAbsolutePath() + "/testGetMerge"}));
 
       assertNotEquals("Should error not implemented", 0, fsShell.run(
-          new String[] {"-moveToLocal", testDir + "/testFile", testMoveFile.getAbsolutePath()}));
+          new String[] {"-moveToLocal", testDir + "/testFile",
+              localTestDir.getAbsolutePath() + "/testMoveToLocal"}));
       assertTrue(err.toString().contains("Option '-moveToLocal' is not implemented yet."));
       err.reset();
     } finally {
