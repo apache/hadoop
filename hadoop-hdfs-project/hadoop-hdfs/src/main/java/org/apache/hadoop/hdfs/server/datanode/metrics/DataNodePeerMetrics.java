@@ -21,8 +21,8 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.metrics2.MetricsJsonBuilder;
 import org.apache.hadoop.metrics2.lib.MutableRollingAverages;
 import org.apache.hadoop.util.Preconditions;
@@ -32,9 +32,11 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY;
 
 /**
@@ -77,10 +79,10 @@ public class DataNodePeerMetrics {
         DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT);
     lowThresholdMs =
         conf.getLong(DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY,
-            DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT);
+            DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT);
     minOutlierDetectionNodes =
         conf.getLong(DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY,
-            DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
+            DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
     this.slowNodeDetector =
         new OutlierDetector(minOutlierDetectionNodes, lowThresholdMs);
     sendPacketDownstreamRollingAverages = new MutableRollingAverages("Time");
@@ -158,6 +160,7 @@ public class DataNodePeerMetrics {
     Preconditions.checkArgument(minNodes > 0,
         DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY + " should be larger than 0");
     minOutlierDetectionNodes = minNodes;
+    this.slowNodeDetector.setMinNumResources(minNodes);
   }
 
   public long getMinOutlierDetectionNodes() {
@@ -168,6 +171,7 @@ public class DataNodePeerMetrics {
     Preconditions.checkArgument(thresholdMs > 0,
         DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY + " should be larger than 0");
     lowThresholdMs = thresholdMs;
+    this.slowNodeDetector.setLowThresholdMs(thresholdMs);
   }
 
   public long getLowThresholdMs() {
@@ -179,5 +183,10 @@ public class DataNodePeerMetrics {
         DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY +
             " should be larger than 0");
     minOutlierDetectionSamples = minSamples;
+  }
+
+  @VisibleForTesting
+  public OutlierDetector getSlowNodeDetector() {
+    return this.slowNodeDetector;
   }
 }

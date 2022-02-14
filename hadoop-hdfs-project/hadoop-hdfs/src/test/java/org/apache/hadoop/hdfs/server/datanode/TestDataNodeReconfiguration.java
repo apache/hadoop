@@ -28,9 +28,11 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -520,6 +522,10 @@ public class TestDataNodeReconfiguration {
       assertEquals(123, dn.getPeerMetrics().getMinOutlierDetectionNodes());
       assertEquals(123, dn.getPeerMetrics().getLowThresholdMs());
       assertEquals(123, dn.getPeerMetrics().getMinOutlierDetectionSamples());
+      assertEquals(123,
+          dn.getPeerMetrics().getSlowNodeDetector().getMinOutlierDetectionNodes());
+      assertEquals(123,
+          dn.getPeerMetrics().getSlowNodeDetector().getLowThresholdMs());
 
       // Revert to default and verify.
       dn.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, null);
@@ -542,6 +548,10 @@ public class TestDataNodeReconfiguration {
       assertEquals(String.format("expect %s is not configured",
           DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY), null,
           dn.getConf().get(DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY));
+      assertEquals(dn.getPeerMetrics().getSlowNodeDetector().getMinOutlierDetectionNodes(),
+          DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
+      assertEquals(dn.getPeerMetrics().getSlowNodeDetector().getLowThresholdMs(),
+          DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT);
     }
   }
 }
