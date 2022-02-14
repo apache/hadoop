@@ -20,13 +20,14 @@ package org.apache.hadoop.yarn.csi.client;
 
 import csi.v0.Csi;
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,19 +37,21 @@ import java.nio.file.Files;
  * Test class for CSI client.
  */
 public class TestCsiClient {
-
+  private static final Logger LOG = LoggerFactory.getLogger(TestCsiClient.class);
   private static File testRoot = null;
   private static String domainSocket = null;
   private static FakeCsiDriver driver = null;
 
   @BeforeClass
   public static void setUp() throws IOException {
-    File testDir = GenericTestUtils.getTestDir();
+    // Use /tmp to fix bind failure caused by the long file name
+    File tmpDir = new File(System.getProperty("java.io.tmpdir"));
     testRoot = Files
-        .createTempDirectory(testDir.toPath(), "test").toFile();
+        .createTempDirectory(tmpDir.toPath(), "test").toFile();
     File socketPath = new File(testRoot, "csi.sock");
     FileUtils.forceMkdirParent(socketPath);
     domainSocket = "unix://" + socketPath.getAbsolutePath();
+    LOG.info("Create unix domain socket: {}", domainSocket);
     driver = new FakeCsiDriver(domainSocket);
   }
 
