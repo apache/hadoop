@@ -84,7 +84,7 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
 
     assertNotEquals("Should not be able to delete root directory", 0,
         fsShell.run(new String[] {"-rm", "-r", "-f", fs.getUri().toString() + "/"}));
-    assertTrue(err.toString().contains("Input/output error"));
+    assertTrue(err.toString().contains("S3A: Cannot delete the root directory"));
     err.reset();
   }
 
