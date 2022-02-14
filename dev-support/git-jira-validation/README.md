@@ -25,7 +25,7 @@ and this changelist can be identified based on Fixed/Closed Jiras
 with the correct fix versions. However, sometimes we face few
 inconsistencies between fixed Jira and Git commit message.
 
-git_jira_fix_version_check.py script takes care of 
+git_jira_fix_version_check.py script takes care of
 identifying all git commits with commit
 messages with any of these issues:
 
@@ -48,7 +48,7 @@ Python 3.9.7
 
 $ python3 -m venv ./venv
 
-$ ./venv/bin/pip install -r dev-support/git-jira-validation/requirements.txt 
+$ ./venv/bin/pip install -r dev-support/git-jira-validation/requirements.txt
 
 $ ./venv/bin/python dev-support/git-jira-validation/git_jira_fix_version_check.py
 
@@ -87,7 +87,7 @@ Example of script execution:
 JIRA Project Name (e.g HADOOP / OZONE etc): HADOOP
 First commit hash to start excluding commits from history: fa4915fdbbbec434ab41786cb17b82938a613f16
 Fix Version: 3.3.2
-Jira server url (default: https://issues.apache.org/jira): 
+Jira server url (default: https://issues.apache.org/jira):
 Path of project's working dir with release branch checked-in: /Users/vjasani/Documents/src/hadoop-3.3/hadoop
 
 Check git status output and verify expected branch
