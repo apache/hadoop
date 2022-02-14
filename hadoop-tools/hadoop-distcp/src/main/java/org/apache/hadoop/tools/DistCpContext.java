@@ -175,8 +175,8 @@ public class DistCpContext {
     return options.shouldUseIterator();
   }
 
-  public boolean shouldUpdateRootDirectoryAttributes() {
-    return options.shouldUpdateRootDirectoryAttributes();
+  public boolean shouldUpdateRoot() {
+    return options.shouldUpdateRoot();
   }
 
   public final boolean splitLargeFile() {

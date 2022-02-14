@@ -806,16 +806,16 @@ public class TestOptionsParser {
   }
 
   @Test
-  public void testParseUpdateRootDirectoryAttributes() {
+  public void testParseUpdateRoot() {
     DistCpOptions options = OptionsParser.parse(new String[] {
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
-    Assert.assertFalse(options.shouldUpdateRootDirectoryAttributes());
+    Assert.assertFalse(options.shouldUpdateRoot());
 
     options = OptionsParser.parse(new String[] {
-        "-updateRootDirectoryAttributes",
+        "-updateRoot",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
-    Assert.assertTrue(options.shouldUpdateRootDirectoryAttributes());
+    Assert.assertTrue(options.shouldUpdateRoot());
   }
 }

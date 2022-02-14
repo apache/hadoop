@@ -162,7 +162,7 @@ public final class DistCpOptions {
 
   private final boolean useIterator;
 
-  private final boolean updateRootDirectoryAttributes;
+  private final boolean updateRoot;
 
   /**
    * File attributes for preserve.
@@ -231,7 +231,7 @@ public final class DistCpOptions {
 
     this.useIterator = builder.useIterator;
 
-    this.updateRootDirectoryAttributes = builder.updateRootDirectoryAttributes;
+    this.updateRoot = builder.updateRoot;
   }
 
   public Path getSourceFileListing() {
@@ -378,8 +378,8 @@ public final class DistCpOptions {
     return useIterator;
   }
 
-  public boolean shouldUpdateRootDirectoryAttributes() {
-    return updateRootDirectoryAttributes;
+  public boolean shouldUpdateRoot() {
+    return updateRoot;
   }
 
   /**
@@ -436,8 +436,8 @@ public final class DistCpOptions {
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.USE_ITERATOR,
         String.valueOf(useIterator));
 
-    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.UPDATE_ROOT_DIRECTORY_ATTRIBUTES,
-        String.valueOf(updateRootDirectoryAttributes));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.UPDATE_ROOT,
+        String.valueOf(updateRoot));
   }
 
   /**
@@ -476,7 +476,7 @@ public final class DistCpOptions {
         ", verboseLog=" + verboseLog +
         ", directWrite=" + directWrite +
         ", useiterator=" + useIterator +
-        ", updateRootDirectoryAttributes=" + updateRootDirectoryAttributes +
+        ", updateRoot=" + updateRoot +
         '}';
   }
 
@@ -530,7 +530,7 @@ public final class DistCpOptions {
 
     private boolean useIterator = false;
 
-    private boolean updateRootDirectoryAttributes = false;
+    private boolean updateRoot = false;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -795,8 +795,8 @@ public final class DistCpOptions {
       return this;
     }
 
-    public Builder withUpdateRootDirectoryAttributes(boolean updateRootDirectoryAttrs) {
-      this.updateRootDirectoryAttributes = updateRootDirectoryAttrs;
+    public Builder withUpdateRoot(boolean updateRootAttrs) {
+      this.updateRoot = updateRootAttrs;
       return this;
     }
   }

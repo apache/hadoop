@@ -556,7 +556,7 @@ public class TestDistCpSystem {
   }
 
   @Test
-  public void testUpdateRootDirectoryAttributes() throws Exception {
+  public void testUpdateRoot() throws Exception {
     FileSystem fs = cluster.getFileSystem();
 
     Path source = new Path("/src");
@@ -586,7 +586,7 @@ public class TestDistCpSystem {
 
     // should preserve attrs
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
-        dest2.toString(), "-p -update -updateRootDirectoryAttributes",
+        dest2.toString(), "-p -update -updateRoot",
         conf);
 
     FileStatus destStatus2 = fs.getFileStatus(dest2);

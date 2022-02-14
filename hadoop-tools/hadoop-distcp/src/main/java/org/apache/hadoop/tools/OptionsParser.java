@@ -118,8 +118,8 @@ public class OptionsParser {
             command.hasOption(DistCpOptionSwitch.DIRECT_WRITE.getSwitch()))
         .withUseIterator(
             command.hasOption(DistCpOptionSwitch.USE_ITERATOR.getSwitch()))
-        .withUpdateRootDirectoryAttributes(
-            command.hasOption(DistCpOptionSwitch.UPDATE_ROOT_DIRECTORY_ATTRIBUTES.getSwitch()));
+        .withUpdateRoot(
+            command.hasOption(DistCpOptionSwitch.UPDATE_ROOT.getSwitch()));
 
     if (command.hasOption(DistCpOptionSwitch.DIFF.getSwitch())) {
       String[] snapshots = getVals(command,
