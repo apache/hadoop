@@ -203,9 +203,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         int numRetries =
             conf.getInt(ZK_DTSM_ZK_NUM_RETRIES, ZK_DTSM_ZK_NUM_RETRIES_DEFAULT);
         String juteMaxBuffer =
-                conf.get(ZK_DTSM_ZK_JUTE_MAXBUFFER, ZK_DTSM_ZK_JUTE_MAXBUFFER_DEFAULT);
-        System.setProperty(ZKClientConfig.JUTE_MAXBUFFER,
-                 juteMaxBuffer);
+            conf.get(ZK_DTSM_ZK_JUTE_MAXBUFFER, ZK_DTSM_ZK_JUTE_MAXBUFFER_DEFAULT);
+        System.setProperty(ZKClientConfig.JUTE_MAXBUFFER, juteMaxBuffer);
         builder =
             CuratorFrameworkFactory
                 .builder()
