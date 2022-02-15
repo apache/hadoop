@@ -28,7 +28,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -45,6 +52,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -84,6 +92,7 @@ public class TestDataNodeReconfiguration {
   private void startDFSCluster(int numNameNodes, int numDataNodes)
       throws IOException {
     Configuration conf = new Configuration();
+    conf.setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
 
     MiniDFSNNTopology nnTopology = MiniDFSNNTopology
         .simpleFederatedTopology(numNameNodes);
@@ -465,6 +474,84 @@ public class TestDataNodeReconfiguration {
 
       assertNull(String.format("expect %s is not configured", DFS_CACHEREPORT_INTERVAL_MSEC_KEY),
           dn.getConf().get(DFS_CACHEREPORT_INTERVAL_MSEC_KEY));
+    }
+  }
+
+  @Test
+  public void testSlowPeerParameters() throws Exception {
+    String[] slowPeersParameters = {
+        DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY,
+        DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY,
+        DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY};
+
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Try invalid values.
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.peer.stats.enabled from 'true' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "text"));
+
+      for (String parameter : slowPeersParameters) {
+        try {
+          dn.reconfigureProperty(parameter, "text");
+          fail("ReconfigurationException expected");
+        } catch (ReconfigurationException expected) {
+          assertTrue("expecting NumberFormatException",
+              expected.getCause() instanceof NumberFormatException);
+        }
+
+        try {
+          dn.reconfigureProperty(parameter, String.valueOf(-1));
+          fail("ReconfigurationException expected");
+        } catch (ReconfigurationException expected) {
+          assertTrue("expecting IllegalArgumentException",
+              expected.getCause() instanceof IllegalArgumentException);
+        }
+      }
+
+      // Change and verify properties.
+      dn.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "false");
+      assertFalse(dn.getDnConf().peerStatsEnabled);
+
+      // Reset DFS_DATANODE_PEER_STATS_ENABLED_KEY to true.
+      dn.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "true");
+      for (String parameter : slowPeersParameters) {
+        dn.reconfigureProperty(parameter, "123");
+      }
+      assertEquals(123, dn.getPeerMetrics().getMinOutlierDetectionNodes());
+      assertEquals(123, dn.getPeerMetrics().getLowThresholdMs());
+      assertEquals(123, dn.getPeerMetrics().getMinOutlierDetectionSamples());
+      assertEquals(123,
+          dn.getPeerMetrics().getSlowNodeDetector().getMinOutlierDetectionNodes());
+      assertEquals(123,
+          dn.getPeerMetrics().getSlowNodeDetector().getLowThresholdMs());
+
+      // Revert to default and verify.
+      dn.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, null);
+      assertEquals(String.format("expect %s is not configured",
+          DFS_DATANODE_PEER_STATS_ENABLED_KEY), null,
+          dn.getConf().get(DFS_DATANODE_PEER_STATS_ENABLED_KEY));
+
+      // Reset DFS_DATANODE_PEER_STATS_ENABLED_KEY to true.
+      dn.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "true");
+
+      for (String parameter : slowPeersParameters) {
+        dn.reconfigureProperty(parameter, null);
+      }
+      assertEquals(String.format("expect %s is not configured",
+          DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY), null,
+          dn.getConf().get(DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY));
+      assertEquals(String.format("expect %s is not configured",
+          DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY), null,
+          dn.getConf().get(DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY));
+      assertEquals(String.format("expect %s is not configured",
+          DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY), null,
+          dn.getConf().get(DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY));
+      assertEquals(dn.getPeerMetrics().getSlowNodeDetector().getMinOutlierDetectionNodes(),
+          DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
+      assertEquals(dn.getPeerMetrics().getSlowNodeDetector().getLowThresholdMs(),
+          DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT);
     }
   }
 }
