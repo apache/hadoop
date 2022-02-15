@@ -552,7 +552,7 @@ class BPServiceActor implements Runnable {
         volumeFailureSummary.getFailedStorageLocations().length : 0;
     final boolean outliersReportDue = scheduler.isOutliersReportDue(now);
     final SlowPeerReports slowPeers =
-        outliersReportDue && dn.getPeerMetrics() != null ?
+        outliersReportDue && dnConf.peerStatsEnabled && dn.getPeerMetrics() != null ?
             SlowPeerReports.create(dn.getPeerMetrics().getOutliers()) :
             SlowPeerReports.EMPTY_REPORT;
     final SlowDiskReports slowDisks =
