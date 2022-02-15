@@ -99,7 +99,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final String ZK_DTSM_ZK_KERBEROS_PRINCIPAL = ZK_CONF_PREFIX
       + "kerberos.principal";
   public static final String ZK_DTSM_ZK_JUTE_MAXBUFFER = ZK_CONF_PREFIX
-          + "jute.maxbuffer";
+      + "jute.maxbuffer";
   public static final String ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE = ZK_CONF_PREFIX
       + "token.seqnum.batch.size";
   public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
