@@ -38,12 +38,6 @@ public interface Constants {
   public static final String CONFIG_VIEWFS_HOMEDIR = "homedir";
 
   /**
-   * Config key to specify the name of the default mount table.
-   */
-  String CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY =
-      "fs.viewfs.mounttable.default.name.key";
-
-  /**
    * Config variable name for the default mount table.
    */
   public static final String CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE = "default";
@@ -58,11 +52,6 @@ public interface Constants {
    * Config variable for specifying a simple link
    */
   public static final String CONFIG_VIEWFS_LINK = "link";
-
-  /**
-   * Config variable for specifying a fallback for link mount points.
-   */
-  String CONFIG_VIEWFS_LINK_FALLBACK = "linkFallback";
 
   /**
    * Config variable for specifying a merge link
