@@ -3029,6 +3029,9 @@ public abstract class Server {
       } else {
         callQueue.add(call);
       }
+
+      LOG.debug("Call has entered the CallQueue and is waiting to be processed. " +
+          "Call details: {}", call);
       long deltaNanos = Time.monotonicNowNanos() - call.timestampNanos;
       call.getProcessingDetails().set(Timing.ENQUEUE, deltaNanos,
           TimeUnit.NANOSECONDS);
