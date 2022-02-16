@@ -3627,7 +3627,7 @@ public abstract class Server {
           return;
         } else {
           count--;
-	}
+        }
         if (count == 0) {
           userToConnectionsMap.remove(user);
         } else {
