@@ -456,11 +456,11 @@ The atomicity and consistency constraints are as for
 
 ### `ContentSummary getContentSummary(Path path)`
 
-Given a path return it's content summary. 
+Given a path return it's content summary.
 
- GetContentSummary first checks if the given path is a file and if yes, it returns 0 for directory count 
+GetContentSummary first checks if the given path is a file and if yes, it returns 0 for directory count 
  and 1 for file count.
- 
+
 #### Preconditions
 
     exists(FS, path) else raise FileNotFoundException
