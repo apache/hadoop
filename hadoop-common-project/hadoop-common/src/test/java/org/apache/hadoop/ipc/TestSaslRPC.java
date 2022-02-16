@@ -40,7 +40,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -115,7 +114,7 @@ public class TestSaslRPC extends TestRpcBase {
     return params;
   }
 
-  boolean useNetty;
+  private boolean useNetty;
   QualityOfProtection[] qop;
   QualityOfProtection expectedQop;
   String saslPropertiesResolver ;

@@ -62,12 +62,12 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Enable the experimental use of netty instead of nio. */
   public static final String IPC_SERVER_NETTY_ENABLE_KEY =
       "ipc.server.netty.enable";
-  /** Default value for IPC_SERVER_NETTY_ENABLE_KEY */
+  /** Default value for IPC_SERVER_NETTY_ENABLE_KEY. */
   public static final boolean IPC_SERVER_NETTY_ENABLE_DEFAULT = false;
   /** Enable the experimental use of netty instead of nio. */
   public static final String IPC_CLIENT_NETTY_ENABLE_KEY =
       "ipc.client.netty.enable";
-  /** Default value for IPC_CLIENT_NETTY_ENABLE_KEY */
+  /** Default value for IPC_CLIENT_NETTY_ENABLE_KEY. */
   public static final boolean IPC_CLIENT_NETTY_ENABLE_DEFAULT = false;
   /** Responses larger than this will be logged */
   public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY =

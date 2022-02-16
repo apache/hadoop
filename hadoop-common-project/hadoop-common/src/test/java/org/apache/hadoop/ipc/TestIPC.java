@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -151,12 +152,12 @@ public class TestIPC {
   }
 
   static Configuration newConfiguration() {
-    Configuration conf = new Configuration();
-    conf.setBoolean(
+    Configuration confLocal = new Configuration();
+    confLocal.setBoolean(
         CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY, useNetty);
-    conf.setBoolean(
+    confLocal.setBoolean(
         CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY, useNetty);
-    return conf;
+    return confLocal;
   }
 
   static final Random RANDOM = new Random();
@@ -897,8 +898,8 @@ public class TestIPC {
   private void checkBlocking(int readers, int readerQ, int callQ) throws Exception {
     int handlers = 1; // makes it easier
     
-    final Configuration conf = newConfiguration();
-    conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY, readerQ);
+    final Configuration confLocal = newConfiguration();
+    confLocal.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY, readerQ);
 
     // send in enough clients to block up the handlers, callq, and readers
     final int initialClients = readers + callQ + handlers;
@@ -912,14 +913,14 @@ public class TestIPC {
 
     // start server
     final TestServerQueue server =
-        new TestServerQueue(clients, readers, callQ, handlers, conf);
+        new TestServerQueue(clients, readers, callQ, handlers, confLocal);
     CallQueueManager<Call> spy = spy(
         (CallQueueManager<Call>)Whitebox.getInternalState(server, "callQueue"));
     Whitebox.setInternalState(server, "callQueue", spy);
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();
 
-    Client.setConnectTimeout(conf, 10000);
+    Client.setConnectTimeout(confLocal, 10000);
     
     // instantiate the threads, will start in batches
     Thread[] threads = new Thread[clients];
@@ -927,10 +928,10 @@ public class TestIPC {
       threads[i] = new Thread(new Runnable() {
         @Override
         public void run() {
-          Client client = new Client(LongWritable.class, conf);
+          Client client = new Client(LongWritable.class, confLocal);
           try {
             call(client, new LongWritable(Thread.currentThread().getId()),
-                addr, 60000, conf);
+                addr, 60000, confLocal);
           } catch (Throwable e) {
             LOG.error(e.toString());
             failures.incrementAndGet();
@@ -1204,7 +1205,7 @@ public class TestIPC {
     // Sending unencrypted bytes through a socket output stream will not work
     // when SSL is on. We will need to figure out how to get this working with
     // SSL on. Disabling the test for now when SSL is turned on.
-    assumeTrue(useNetty == false);
+    assumeFalse(useNetty);
     doIpcVersionTest(NetworkTraces.HADOOP_0_18_3_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_18_3_RPC);
   }
@@ -1214,7 +1215,7 @@ public class TestIPC {
     // Sending unencrypted bytes through a socket output stream will not work
     // when SSL is on. We will need to figure out how to get this working with
     // SSL on. Disabling the test for now when SSL is turned on.
-    assumeTrue(useNetty == false);
+    assumeFalse(useNetty);
     doIpcVersionTest(NetworkTraces.HADOOP_0_20_3_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_20_3_RPC);
   }
@@ -1224,7 +1225,7 @@ public class TestIPC {
     // Sending unencrypted bytes through a socket output stream will not work
     // when SSL is on. We will need to figure out how to get this working with
     // SSL on. Disabling the test for now when SSL is turned on.
-    assumeTrue(useNetty == false);
+    assumeFalse(useNetty);
     doIpcVersionTest(NetworkTraces.HADOOP_0_21_0_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_21_0_RPC);
   }
@@ -1234,25 +1235,25 @@ public class TestIPC {
     // Sending unencrypted bytes through a socket output stream will not work
     // when SSL is on. We will need to figure out how to get this working with
     // SSL on. Disabling the test for now when SSL is turned on.
-    assumeTrue(useNetty == false);
+    assumeFalse(useNetty);
     doIpcVersionTest("GET / HTTP/1.0\r\n\r\n".getBytes(),
         Server.RECEIVED_HTTP_REQ_RESPONSE.getBytes());
   }
   
   @Test(timeout=60000)
   public void testConnectionRetriesOnSocketTimeoutExceptions() throws IOException {
-    Configuration conf = newConfiguration();
+    Configuration confLocal = newConfiguration();
     // set max retries to 0
-    conf.setInt(
+    confLocal.setInt(
       CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
       0);
-    assertRetriesOnSocketTimeouts(conf, 1);
+    assertRetriesOnSocketTimeouts(confLocal, 1);
 
     // set max retries to 3
-    conf.setInt(
+    confLocal.setInt(
       CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
       3);
-    assertRetriesOnSocketTimeouts(conf, 4);
+    assertRetriesOnSocketTimeouts(confLocal, 4);
   }
 
   static class CallInfo {
@@ -1335,10 +1336,10 @@ public class TestIPC {
     // 10000 times runs about 6s on a core i7 machine
     final int totalRetry = 10000;
     TestInvocationHandler handler =
-      new TestInvocationHandler(client, server, totalRetry);
+        new TestInvocationHandler(client, server, totalRetry);
     DummyProtocol proxy = (DummyProtocol) Proxy.newProxyInstance(
         DummyProtocol.class.getClassLoader(),
-        new Class[] { DummyProtocol.class }, handler);
+        new Class[] {DummyProtocol.class}, handler);
     DummyProtocol retryProxy = (DummyProtocol) RetryProxy.create(
         DummyProtocol.class, proxy, RetryPolicies.RETRY_FOREVER);
     
@@ -1630,7 +1631,7 @@ public class TestIPC {
     // for a version mismatch is not a SSL record. The test will have to be
     // revisited at a later time to verify how it can be enabled when SSL is
     // turned on.
-    assumeTrue(useNetty == false);
+    assumeFalse(useNetty);
     checkVersionMismatch();
   }
 
@@ -1640,7 +1641,7 @@ public class TestIPC {
     // for a version mismatch is not a SSL record. The test will have to be
     // revisited at a later time to verify how it can be enabled when SSL is
     // turned on.
-    assumeTrue(useNetty == false);
+    assumeFalse(useNetty);
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
     checkVersionMismatch();

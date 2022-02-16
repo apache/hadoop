@@ -1989,7 +1989,7 @@ public class Client implements AutoCloseable {
     private int soTimeout;
     private IOException channelIOE;
 
-    public NettyIpcStreams(Socket socket) throws IOException {
+    NettyIpcStreams(Socket socket) throws IOException {
       soTimeout = socket.getSoTimeout();
       if (!LOG.isDebugEnabled()) {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
@@ -2009,9 +2009,12 @@ public class Client implements AutoCloseable {
       SslHandler sslHandler = sslCtx.newHandler(channel.alloc());
 
       if (sslHandler != null) {
-        sslHandler.handshakeFuture().addListener(new GenericFutureListener<io.netty.util.concurrent.Future<Channel>>() {
+        sslHandler.handshakeFuture().addListener(
+            new GenericFutureListener<io.netty.util.concurrent.Future<Channel>>() {
           @Override
-          public void operationComplete(final io.netty.util.concurrent.Future<Channel> handshakeFuture) throws Exception {
+          public void operationComplete(
+              final io.netty.util.concurrent.Future<Channel> handshakeFuture)
+              throws Exception {
             if (handshakeFuture.isSuccess()) {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("TLS handshake success");
@@ -2068,7 +2071,7 @@ public class Client implements AutoCloseable {
       }
 
       @Override
-      public int read(byte b[], int off, int len) throws IOException {
+      public int read(byte [] b, int off, int len) throws IOException {
         synchronized (cbuf) {
           // trigger a read if the channel isn't at EOF but has less
           // buffered bytes than requested.  the method may still return
@@ -2089,7 +2092,7 @@ public class Client implements AutoCloseable {
               timeout = until - Time.monotonicNow();
             } while (readable == 0 && timeout > 0);
           }
-          switch(readable) {
+          switch (readable) {
             case -1:
               return -1;
             case 0:
@@ -2131,7 +2134,7 @@ public class Client implements AutoCloseable {
         throw new UnsupportedOperationException();
       }
       @Override
-      public void write(byte b[], int off, int len) throws IOException {
+      public void write(byte [] b, int off, int len) throws IOException {
         ByteBuf buf = Unpooled.wrappedBuffer(b, off, len);
         channel.writeAndFlush(buf, channel.voidPromise());
       }

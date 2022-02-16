@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.*;
-
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,6 +24,8 @@ import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Collection;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class TestRPCCallBenchmark {
@@ -46,13 +46,13 @@ public class TestRPCCallBenchmark {
   public void testBenchmarkWithProto() throws Exception {
     int rc = ToolRunner.run(new RPCCallBenchmark(),
         new String[] {
-      "--clientThreads", "30",
-      "--serverThreads", "30",
-      "--time", "10",
-      "--serverReaderThreads", "4",
-      "--messageSize", "1024",
-      "--engine", "protobuf",
-      "--ioImpl", useNetty ? "netty" : "nio"});
+            "--clientThreads", "30",
+            "--serverThreads", "30",
+            "--time", "10",
+            "--serverReaderThreads", "4",
+            "--messageSize", "1024",
+            "--engine", "protobuf",
+            "--ioImpl", useNetty ? "netty" : "nio"});
     assertEquals(0, rc);
   }
 }

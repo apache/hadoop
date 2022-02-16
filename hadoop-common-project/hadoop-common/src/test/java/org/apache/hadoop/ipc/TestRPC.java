@@ -142,12 +142,12 @@ public class TestRPC extends TestRpcBase {
         0, threadsBefore);
   }
 
- @After
- public void cleanup() {
-   int threadsBefore = countThreads("Socket Reader");
-   assertEquals("Expect no Reader threads running after test",
-     0, threadsBefore);
- }
+  @After
+  public void cleanup() {
+    int threadsBefore = countThreads("Socket Reader");
+    assertEquals("Expect no Reader threads running after test",
+        0, threadsBefore);
+  }
 
   int datasize = 1024*100;
   int numThreads = 50;

@@ -670,7 +670,7 @@ public abstract class Server {
    * @param <T> Input endpoint abstraction.
    * @param <O> Output endpoint abstraction after the bind succeeded.
    */
-  interface Binder<T,O> {
+  interface Binder<T, O> {
     /**
      * Bind the socket channel to a local host and port. The bind method
      * implementation that varies according to whether it operates on a native
@@ -685,8 +685,9 @@ public abstract class Server {
      */
     T bind(O obj, InetSocketAddress addr, int backlog)
         throws IOException;
+
     Binder<ServerSocket, ServerSocket> NIO =
-      new Binder<ServerSocket, ServerSocket>() {
+        new Binder<ServerSocket, ServerSocket>() {
         /**
          * Bind the input socket to the input address.
          *
@@ -707,7 +708,7 @@ public abstract class Server {
       };
     // Bootstrap a Netty Channel to the input port.
     Binder<io.netty.channel.Channel, ServerBootstrap> NETTY =
-      new Binder<io.netty.channel.Channel, ServerBootstrap>() {
+        new Binder<io.netty.channel.Channel, ServerBootstrap>() {
         /**
          * Bind the ServerBootstrap object to the input address.
          *
@@ -758,7 +759,7 @@ public abstract class Server {
     bind(Binder.NIO, socket, address, backlog, conf, rangeConf);
   }
 
-  static <T,O> T bind(Binder<T,O> binder, O obj, InetSocketAddress address,
+  static <T, O> T bind(Binder<T, O> binder, O obj, InetSocketAddress address,
       int backlog, Configuration conf, String rangeConf) throws IOException {
     try {
       IntegerRanges range = null;
@@ -1273,6 +1274,7 @@ public abstract class Server {
       return connection.getRemotePort();
     }
 
+    @SuppressWarnings("unchecked")
     private <T> T connection() {
       return (T)connection;
     }
@@ -1632,10 +1634,10 @@ public abstract class Server {
     @Override
     public void listen(InetSocketAddress addr) throws IOException {
       // Bind the server socket to the local host and port
-      ServerSocketChannel acceptChannel = ServerSocketChannel.open();
-      acceptChannel.configureBlocking(false);
-      Server.bind(acceptChannel.socket(), addr, backlogLength);
-      registerAcceptChannel(acceptChannel);
+      ServerSocketChannel acceptChannelLocal = ServerSocketChannel.open();
+      acceptChannelLocal.configureBlocking(false);
+      Server.bind(acceptChannelLocal.socket(), addr, backlogLength);
+      registerAcceptChannel(acceptChannelLocal);
     }
 
     @Override
@@ -2200,7 +2202,7 @@ public abstract class Server {
     private boolean connectionContextRead = false; //if connection context that
                                             //follows connection header is read
 
-    final T channel;
+    protected final T channel;
     private ByteBuffer data;
     private final ByteBuffer dataLengthBuffer;
     // number of outstanding rpcs
@@ -2239,7 +2241,7 @@ public abstract class Server {
     private boolean useWrap = false;
 
     abstract boolean isOpen();
-    abstract void setSendBufferSize(T channel, int size) throws IOException;
+    abstract void setSendBufferSize(T channelParam, int size) throws IOException;
     abstract int bufferRead(Object in, ByteBuffer buf) throws IOException;
     
     public Connection(T channel, InetSocketAddress localAddr,
@@ -2633,7 +2635,7 @@ public abstract class Server {
      * On the first pass, it processes the connectionHeader, 
      * connectionContext (an outOfBand RPC) and at most one RPC request that 
      * follows that. On future passes it will process at most one RPC request.
-     *  
+     *
      * Quirky things: dataLengthBuffer (4 bytes) is used to read "hrpc" OR 
      * rpc request length.
      *    
@@ -3303,9 +3305,9 @@ public abstract class Server {
     }
 
     @Override
-    void setSendBufferSize(SocketChannel channel, int size)
+    void setSendBufferSize(SocketChannel channelParam, int size)
         throws SocketException {
-      channel.socket().setSendBufferSize(size);
+      channelParam.socket().setSendBufferSize(size);
     }
 
     @Override
@@ -4351,7 +4353,7 @@ public abstract class Server {
         CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_KEY,
         CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_DEFAULT);
 
-    public NettyListener(int port) throws IOException {
+    NettyListener(int port) throws IOException {
       if (!LOG.isDebugEnabled()) {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
       }
@@ -4505,7 +4507,7 @@ public abstract class Server {
   }
 
   private class NettyConnection extends Connection<io.netty.channel.Channel> {
-    public NettyConnection(io.netty.channel.Channel channel)
+    NettyConnection(io.netty.channel.Channel channel)
         throws IOException {
       super(channel, (InetSocketAddress)channel.localAddress(),
                      (InetSocketAddress)channel.remoteAddress());
@@ -4545,7 +4547,9 @@ public abstract class Server {
       if (sslHandler != null) {
         sslHandler.handshakeFuture().addListener(new GenericFutureListener<Future<Channel>>() {
           @Override
-          public void operationComplete(final io.netty.util.concurrent.Future<Channel> handshakeFuture) throws Exception {
+          public void operationComplete(
+              final io.netty.util.concurrent.Future<Channel> handshakeFuture)
+              throws Exception {
             if (handshakeFuture.isSuccess()) {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("TLS handshake success");
@@ -4567,8 +4571,8 @@ public abstract class Server {
     }
 
     @Override
-    void setSendBufferSize(io.netty.channel.Channel channel, int size) {
-      channel.config().setOption(ChannelOption.SO_SNDBUF, size);
+    void setSendBufferSize(io.netty.channel.Channel channelParam, int size) {
+      channelParam.config().setOption(ChannelOption.SO_SNDBUF, size);
     }
 
     @Override

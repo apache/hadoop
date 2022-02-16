@@ -397,7 +397,6 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
-      <version>4.1.27.Final</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -699,7 +698,7 @@
                         <relocations>
                             <relocation>
                                 <pattern>io.netty</pattern>
-                                <shadedPattern>hrpc.io.netty</shadedPattern>
+                                <shadedPattern>org.apache.hadoop.thirdparty.io.netty</shadedPattern>
                             </relocation>
                         </relocations>
                     </configuration>
@@ -1074,7 +1073,7 @@
                   <relocations>
                     <relocation>
                       <pattern>io.netty</pattern>
-                      <shadedPattern>hrpc.io.netty</shadedPattern>
+                      <shadedPattern>org.apache.hadoop.thirdparty.io.netty</shadedPattern>
                     </relocation>
                   </relocations>
                 </configuration>

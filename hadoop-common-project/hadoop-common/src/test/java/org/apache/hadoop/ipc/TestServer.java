@@ -61,7 +61,7 @@ public class TestServer {
     this.useNetty = useNetty;
   }
 
-  Configuration conf;
+  private Configuration conf;
 
   @Before
   public void setup() {
@@ -216,11 +216,11 @@ public class TestServer {
 
   @Test (timeout=300000)
   public void testPurgeIntervalNanosConf() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setInt(CommonConfigurationKeysPublic.
+    Configuration confLocal = new Configuration();
+    confLocal.setInt(CommonConfigurationKeysPublic.
         IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY, 3);
     Server server = new Server("0.0.0.0", 0, LongWritable.class,
-            1, conf) {
+            1, confLocal) {
       @Override
       public Writable call(
               RPC.RpcKind rpcKind, String protocol, Writable param,
