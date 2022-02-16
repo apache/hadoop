@@ -36,7 +36,7 @@ public interface Constants {
    * then the hadoop default value (/user) is used.
    */
   public static final String CONFIG_VIEWFS_HOMEDIR = "homedir";
-
+  
   /**
    * Config variable name for the default mount table.
    */
@@ -52,7 +52,7 @@ public interface Constants {
    * Config variable for specifying a simple link
    */
   public static final String CONFIG_VIEWFS_LINK = "link";
-
+  
   /**
    * Config variable for specifying a merge link
    */
