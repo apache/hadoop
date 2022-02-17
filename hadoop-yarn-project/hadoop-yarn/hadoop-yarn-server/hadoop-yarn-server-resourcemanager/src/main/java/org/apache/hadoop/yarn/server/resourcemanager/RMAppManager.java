@@ -484,7 +484,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             csqueue == null ? queueName : csqueue.getQueuePath());
 
         YarnAuthorizationProvider dynamicAuthorizer = null;
-        boolean ambiguous = false;
         if (csqueue == null) {
           try {
             List<Permission> permissions =
@@ -494,21 +493,21 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
               dynamicAuthorizer = new ConfiguredYarnAuthorizer();
               dynamicAuthorizer.setPermission(permissions, userUgi);
             }
-          } catch (SchedulerDynamicEditException e) {
-            ambiguous = true;
+          } catch (SchedulerDynamicEditException ignored) {
           }
         }
 
-        String appName = submissionContext.getApplicationName();
-        if (!ambiguous && !checkPermission(
-            createAccessRequest(privilegedEntity, userUgi, applicationId,
-                appName, QueueACL.SUBMIT_APPLICATIONS), dynamicAuthorizer)
-            && !checkPermission(createAccessRequest(privilegedEntity, userUgi, applicationId,
-            appName, QueueACL.ADMINISTER_QUEUE), dynamicAuthorizer)) {
-          throw RPCUtil.getRemoteException(new AccessControlException(
-              "User " + user + " does not have permission to submit "
-                  + applicationId + " to queue "
-                  + submissionContext.getQueue()));
+        if (csqueue != null || dynamicAuthorizer != null) {
+          String appName = submissionContext.getApplicationName();
+          if (!checkPermission(createAccessRequest(privilegedEntity, userUgi, applicationId,
+                  appName, QueueACL.SUBMIT_APPLICATIONS), dynamicAuthorizer) &&
+              !checkPermission(createAccessRequest(privilegedEntity, userUgi, applicationId,
+                  appName, QueueACL.ADMINISTER_QUEUE), dynamicAuthorizer)) {
+            throw RPCUtil.getRemoteException(new AccessControlException(
+                "User " + user + " does not have permission to submit "
+                    + applicationId + " to queue "
+                    + submissionContext.getQueue()));
+          }
         }
       }
       if (scheduler instanceof FairScheduler) {
