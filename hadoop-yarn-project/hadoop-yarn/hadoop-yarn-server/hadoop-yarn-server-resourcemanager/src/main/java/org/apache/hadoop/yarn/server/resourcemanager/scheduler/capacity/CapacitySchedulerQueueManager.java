@@ -604,13 +604,13 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       CapacitySchedulerConfiguration csConf) throws SchedulerDynamicEditException {
 
     List<Permission> permissions = new ArrayList<>();
-    PrivilegedEntity privilegedEntity = getPrivilegedEntity(queuePath.getFullPath());
+    PrivilegedEntity privilegedEntity = new PrivilegedEntity(queuePath.getFullPath());
 
     CSQueue parentQueue = getQueueByFullName(queuePath.getParent());
     if (parentQueue == null) {
       for (String missingParent : determineMissingParents(queuePath)) {
         String parentOfMissingParent = new QueuePath(missingParent).getParent();
-        permissions.add(new Permission(getPrivilegedEntity(missingParent),
+        permissions.add(new Permission(new PrivilegedEntity(missingParent),
             getACLsForFlexibleAutoCreatedParentQueue(
                 new AutoCreatedQueueTemplate(csConf,
                     new QueuePath(parentOfMissingParent)))));
@@ -629,10 +629,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     }
 
     return permissions;
-  }
-
-  public static PrivilegedEntity getPrivilegedEntity(String queuePath) {
-    return new PrivilegedEntity(PrivilegedEntity.EntityType.QUEUE, queuePath);
   }
 
   /**

@@ -90,9 +90,6 @@ import org.apache.hadoop.yarn.util.StringHelper;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager.getPrivilegedEntity;
 
 /**
  * This class manages the list of applications for the resource manager.
@@ -483,7 +480,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             submissionContext.getQueue() : placementContext.getFullQueuePath();
         CapacityScheduler cs = (CapacityScheduler) scheduler;
         CSQueue csqueue = cs.getQueue(queueName);
-        PrivilegedEntity privilegedEntity = getPrivilegedEntity(
+        PrivilegedEntity privilegedEntity = new PrivilegedEntity(
             csqueue == null ? queueName : csqueue.getQueuePath());
 
         YarnAuthorizationProvider dynamicAuthorizer = null;
