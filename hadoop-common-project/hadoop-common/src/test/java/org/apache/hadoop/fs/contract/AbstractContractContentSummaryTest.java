@@ -21,13 +21,14 @@ package org.apache.hadoop.fs.contract;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public abstract class AbstractContractContentSummaryTest extends AbstractFSContractTestBase  {
 
@@ -63,11 +64,7 @@ public abstract class AbstractContractContentSummaryTest extends AbstractFSContr
 
         fs.mkdirs(parent);
 
-        try {
-            fs.getContentSummary(nested);
-            Assert.fail("Should throw FileNotFoundException");
-        }  catch (FileNotFoundException e) {
-          // expected
-        }
+        intercept(FileNotFoundException.class,
+            () -> fs.getContentSummary(nested));
     }
 }

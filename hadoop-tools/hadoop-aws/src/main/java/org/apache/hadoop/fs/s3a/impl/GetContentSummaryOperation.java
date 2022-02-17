@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +35,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
@@ -215,24 +215,24 @@ public class GetContentSummaryOperation extends
 
     /**
      * Get the status of a path.
-     * @param path path to probe.
+     *
+     * @param path   path to probe.
      * @param probes probes to exec
      * @return the status
      * @throws IOException failure
      */
     @Retries.RetryTranslated
-    S3AFileStatus probePathStatus(Path path,
-        Set<StatusProbeEnum> probes) throws IOException;
+    S3AFileStatus probePathStatus(Path path, Set<StatusProbeEnum> probes) throws IOException;
 
-    /**
-     * Incremental list of all entries in a directory.
-     * @param path path of dir
-     * @return an iterator
-     * @throws IOException failure
+    /***
+     * List all entries under a path
+     *
+     * @param path
+     * @param recursive if the subdirectories need to be traversed recursively
+     * @return an iterator over the listing.
+     * @throws IOException
      */
-    RemoteIterator<S3AFileStatus> listStatusIterator(Path path)
+    RemoteIterator<S3ALocatedFileStatus> listFilesIterator(Path path, boolean recursive)
         throws IOException;
-
-    RemoteIterator<S3ALocatedFileStatus> listFilesIterator(Path path, boolean recursive) throws IOException;
   }
 }
