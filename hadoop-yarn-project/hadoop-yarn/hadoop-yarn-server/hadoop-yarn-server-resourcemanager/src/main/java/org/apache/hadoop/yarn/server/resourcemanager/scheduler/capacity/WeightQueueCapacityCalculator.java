@@ -28,10 +28,8 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
   @Override
   public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
-    super.calculateResourcePrerequisites(resourceCalculationDriver);
-
     // Precalculate the summary of children's weight
-    for (CSQueue childQueue : resourceCalculationDriver.getQueue().getChildQueues()) {
+    for (CSQueue childQueue : resourceCalculationDriver.getChildQueues()) {
       for (String label : childQueue.getConfiguredNodeLabels()) {
         for (String resourceName : childQueue.getConfiguredCapacityVector(label)
             .getResourceNamesByCapacityType(getCapacityType())) {

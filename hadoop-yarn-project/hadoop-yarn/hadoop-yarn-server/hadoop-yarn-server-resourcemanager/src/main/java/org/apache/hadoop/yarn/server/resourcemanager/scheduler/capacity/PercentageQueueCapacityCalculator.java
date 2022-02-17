@@ -51,6 +51,11 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
   }
 
   @Override
+  public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
+
+  }
+
+  @Override
   public void updateCapacitiesAfterCalculation(ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label) {
     ((AbstractCSQueue) queue).updateAbsoluteCapacities();
   }

@@ -18,19 +18,29 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
+
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
-public class RootQueueCapacityCalculator extends
-    AbstractQueueCapacityCalculator {
+public class RootQueueCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
-  public double calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
-    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label).getResourceValue(context.getResourceName());
+  public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
+    AbsoluteResourceCapacityCalculator.setNormalizedResourceRatio(resourceCalculationDriver);
   }
 
   @Override
-  public double calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
-    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label).getResourceValue(context.getResourceName());
+  public double calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                         CalculationContext context, String label) {
+    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
+        .getResourceValue(context.getResourceName());
+  }
+
+  @Override
+  public double calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                         CalculationContext context, String label) {
+    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
+        .getResourceValue(context.getResourceName());
   }
 
   @Override
@@ -43,7 +53,7 @@ public class RootQueueCapacityCalculator extends
   }
 
   @Override
-  public QueueCapacityVector.ResourceUnitCapacityType getCapacityType() {
+  public ResourceUnitCapacityType getCapacityType() {
     return PERCENTAGE;
   }
 }

@@ -75,8 +75,8 @@ public abstract class AbstractQueueCapacityCalculator {
    * @param resourceCalculationDriver driver that contains the parent queue on which the prerequisite
    *                                  calculation should be made
    */
-  public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
-  }
+  public abstract void calculateResourcePrerequisites(
+      ResourceCalculationDriver resourceCalculationDriver);
 
   /**
    * Returns all resource names that are defined for the capacity type that is

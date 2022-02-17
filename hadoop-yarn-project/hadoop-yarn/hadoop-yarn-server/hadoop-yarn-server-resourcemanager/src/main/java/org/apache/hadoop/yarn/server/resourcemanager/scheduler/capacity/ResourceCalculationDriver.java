@@ -23,7 +23,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpdateWarning.QueueUpdateWarningType;
-import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -66,7 +65,6 @@ public class ResourceCalculationDriver {
     this.updateContext = updateContext;
     this.calculators = calculators;
     this.definedResources = definedResources;
-    setNormalizedResourceRatio();
   }
 
 
@@ -77,6 +75,15 @@ public class ResourceCalculationDriver {
    */
   public CSQueue getQueue() {
     return queue;
+  }
+
+  /**
+   * Returns all the children defined under the driver parent queue.
+   *
+   * @return child queues
+   */
+  public Collection<CSQueue> getChildQueues() {
+    return queue.getChildQueues();
   }
 
   /**
@@ -191,7 +198,7 @@ public class ResourceCalculationDriver {
 
     for (String resourceName : definedResources) {
       for (ResourceUnitCapacityType capacityType : CALCULATOR_PRECEDENCE) {
-        for (CSQueue childQueue : queue.getChildQueues()) {
+        for (CSQueue childQueue : getChildQueues()) {
           CalculationContext context = new CalculationContext(resourceName, capacityType, childQueue);
           calculateResourceOnChild(context);
         }
@@ -312,69 +319,6 @@ public class ResourceCalculationDriver {
       if (!batchRemainingResourcePerLabel.get(label).equals(ResourceVector.newInstance())) {
         updateContext.addUpdateWarning(QueueUpdateWarningType.BRANCH_UNDERUTILIZED.ofQueue(
             queue.getQueuePath()).withInfo("Label: " + label));
-      }
-    }
-  }
-
-  /**
-   * Calculates the normalized resource ratio of a parent queue, under which children are defined
-   * with absolute capacity type. If the effective resource of the parent is less, than the
-   * aggregated configured absolute resource of its children, the resource ratio will be less,
-   * than 1.
-   *
-   */
-  private void setNormalizedResourceRatio() {
-    for (String label : getQueue().getConfiguredNodeLabels()) {
-      // ManagedParents assign zero capacity to queues in case of overutilization, downscaling is
-      // turned off for their children
-      if (queue instanceof ManagedParentQueue) {
-        return;
-      }
-
-      for (QueueCapacityVectorEntry capacityVectorEntry : queue.getConfiguredCapacityVector(
-          label)) {
-        String resourceName = capacityVectorEntry.getResourceName();
-        long childrenConfiguredResource = 0;
-        long effectiveMinResource = queue.getQueueResourceQuotas().getEffectiveMinResource(
-            label).getResourceValue(resourceName);
-
-        // Total configured min resources of direct children of this given parent
-        // queue
-        for (CSQueue childQueue : queue.getChildQueues()) {
-          if (!childQueue.getConfiguredNodeLabels().contains(label)) {
-            continue;
-          }
-          QueueCapacityVector capacityVector = childQueue.getConfiguredCapacityVector(label);
-          if (capacityVector.isResourceOfType(resourceName, ResourceUnitCapacityType.ABSOLUTE)) {
-            childrenConfiguredResource += capacityVector.getResource(resourceName).getResourceValue();
-          }
-        }
-        // If no children is using ABSOLUTE capacity type, normalization is not needed
-        if (childrenConfiguredResource == 0) {
-          continue;
-        }
-        // Factor to scale down effective resource: When cluster has sufficient
-        // resources, effective_min_resources will be same as configured
-        // min_resources.
-        float numeratorForMinRatio = childrenConfiguredResource;
-        if (effectiveMinResource < childrenConfiguredResource) {
-          numeratorForMinRatio = queue.getQueueResourceQuotas().getEffectiveMinResource(label)
-              .getResourceValue(resourceName);
-          updateContext.addUpdateWarning(QueueUpdateWarningType.BRANCH_DOWNSCALED.ofQueue(
-              queue.getQueuePath()));
-        }
-
-        String unit = resourceName.equals(MEMORY_URI) ? MB_UNIT : "";
-        long convertedValue = UnitsConversionUtil.convert(unit,
-            updateContext.getUpdatedClusterResource(label).getResourceInformation(resourceName)
-                .getUnits(), childrenConfiguredResource);
-
-        if (convertedValue != 0) {
-          Map<String, ResourceVector> normalizedResourceRatios = getNormalizedResourceRatios();
-          normalizedResourceRatios.putIfAbsent(label, ResourceVector.newInstance());
-          normalizedResourceRatios.get(label).setValue(resourceName, numeratorForMinRatio /
-              convertedValue);
-        }
       }
     }
   }
