@@ -500,10 +500,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         }
 
         String appName = submissionContext.getApplicationName();
-        if (!ambiguous && !checkSubmitACLPermission(
-            getAccessRequest(privilegedEntity, userUgi, applicationId,
+        if (!ambiguous && !checkPermission(
+            createAccessRequest(privilegedEntity, userUgi, applicationId,
                 appName, QueueACL.SUBMIT_APPLICATIONS), dynamicAuthorizer)
-            && !checkAdminACLPermission(getAccessRequest(privilegedEntity, userUgi, applicationId,
+            && !checkPermission(createAccessRequest(privilegedEntity, userUgi, applicationId,
             appName, QueueACL.ADMINISTER_QUEUE), dynamicAuthorizer)) {
           throw RPCUtil.getRemoteException(new AccessControlException(
               "User " + user + " does not have permission to submit "
@@ -582,23 +582,17 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     return application;
   }
 
-  private boolean checkSubmitACLPermission(AccessRequest accessRequest,
-                                           YarnAuthorizationProvider dynamicAuthorizer) {
+  private boolean checkPermission(AccessRequest accessRequest,
+                                  YarnAuthorizationProvider dynamicAuthorizer) {
     return authorizer.checkPermission(accessRequest) ||
         (dynamicAuthorizer != null && dynamicAuthorizer.checkPermission(accessRequest));
   }
 
-  private boolean checkAdminACLPermission(AccessRequest accessRequest,
-                                          YarnAuthorizationProvider dynamicAuthorizer) {
-    return authorizer.checkPermission(accessRequest) ||
-        (dynamicAuthorizer != null && dynamicAuthorizer.checkPermission(accessRequest));
-  }
-
-  private AccessRequest getAccessRequest(PrivilegedEntity privilegedEntity,
-                                         UserGroupInformation userUgi,
-                                         ApplicationId applicationId,
-                                         String appName,
-                                         QueueACL submitApplications) {
+  private static AccessRequest createAccessRequest(PrivilegedEntity privilegedEntity,
+                                                   UserGroupInformation userUgi,
+                                                   ApplicationId applicationId,
+                                                   String appName,
+                                                   QueueACL submitApplications) {
     return new AccessRequest(privilegedEntity, userUgi,
         SchedulerUtils.toAccessType(submitApplications),
         applicationId.toString(), appName, Server.getRemoteAddress(),
