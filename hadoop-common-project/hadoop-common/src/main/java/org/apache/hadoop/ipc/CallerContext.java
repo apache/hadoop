@@ -147,7 +147,7 @@ public final class CallerContext {
         Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList("\t", "\n", "=")));
 
-    private static volatile Configs INSTANCE;
+    private static volatile Configs instance;
 
     private Configs(Configuration conf) {
       this.init(conf);
@@ -175,17 +175,17 @@ public final class CallerContext {
     }
 
     private static Configs getInstance(Configuration conf) {
-      if (INSTANCE == null) {
+      if (instance == null) {
         synchronized (Configs.class) {
-          if (INSTANCE == null) {
+          if (instance == null) {
             if (conf == null) {
               conf = new Configuration();
             }
-            INSTANCE = new Configs(conf);
+            instance = new Configs(conf);
           }
         }
       }
-      return INSTANCE;
+      return instance;
     }
   }
 
