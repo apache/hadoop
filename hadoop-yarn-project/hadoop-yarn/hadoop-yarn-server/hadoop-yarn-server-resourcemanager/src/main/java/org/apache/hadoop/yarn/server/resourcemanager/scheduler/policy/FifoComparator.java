@@ -29,6 +29,11 @@ public class FifoComparator
     @Override
   public int compare(SchedulableEntity r1, SchedulableEntity r2) {
     int res = r1.compareInputOrderTo(r2);
+
+    if (res == 0) {
+      res = (int) Math.signum(r1.getStartTime() - r2.getStartTime());
+    }
+
     return res;
   }
 }
