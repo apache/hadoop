@@ -202,9 +202,9 @@
     <hbase.one.version>1.7.1</hbase.one.version>
     <hbase.two.version>2.2.4</hbase.two.version>
     <junit.version>4.13.2</junit.version>
-    <junit.jupiter.version>5.5.1</junit.jupiter.version>
-    <junit.vintage.version>5.5.1</junit.vintage.version>
-    <junit.platform.version>1.5.1</junit.platform.version>
+    <junit.jupiter.version>5.8.2</junit.jupiter.version>
+    <junit.vintage.version>5.8.2</junit.vintage.version>
+    <junit.platform.version>1.8.2</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
     <powermock.version>1.5.6</powermock.version>
