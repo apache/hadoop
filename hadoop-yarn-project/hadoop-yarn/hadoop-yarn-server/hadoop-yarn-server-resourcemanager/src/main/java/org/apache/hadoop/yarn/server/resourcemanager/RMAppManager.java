@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -485,15 +484,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
         YarnAuthorizationProvider dynamicAuthorizer = null;
         if (csqueue == null) {
-          try {
-            List<Permission> permissions =
-                cs.getCapacitySchedulerQueueManager().getPermissionsForDynamicQueue(
-                    new QueuePath(queueName), cs.getConfiguration());
-            if (!permissions.isEmpty()) {
-              dynamicAuthorizer = new ConfiguredYarnAuthorizer();
-              dynamicAuthorizer.setPermission(permissions, userUgi);
-            }
-          } catch (SchedulerDynamicEditException ignored) {
+          List<Permission> permissions =
+              cs.getCapacitySchedulerQueueManager().getPermissionsForDynamicQueue(
+                  new QueuePath(queueName), cs.getConfiguration());
+          if (!permissions.isEmpty()) {
+            dynamicAuthorizer = new ConfiguredYarnAuthorizer();
+            dynamicAuthorizer.setPermission(permissions, userUgi);
           }
         }
 

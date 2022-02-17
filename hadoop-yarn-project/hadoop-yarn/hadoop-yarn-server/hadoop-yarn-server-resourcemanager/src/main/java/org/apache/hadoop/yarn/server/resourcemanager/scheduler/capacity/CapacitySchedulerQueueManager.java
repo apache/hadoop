@@ -601,31 +601,37 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
   public List<Permission> getPermissionsForDynamicQueue(
       QueuePath queuePath,
-      CapacitySchedulerConfiguration csConf) throws SchedulerDynamicEditException {
-
+      CapacitySchedulerConfiguration csConf) {
     List<Permission> permissions = new ArrayList<>();
-    PrivilegedEntity privilegedEntity = new PrivilegedEntity(queuePath.getFullPath());
 
-    CSQueue parentQueue = getQueueByFullName(queuePath.getParent());
-    if (parentQueue == null) {
-      for (String missingParent : determineMissingParents(queuePath)) {
-        String parentOfMissingParent = new QueuePath(missingParent).getParent();
-        permissions.add(new Permission(new PrivilegedEntity(missingParent),
-            getACLsForFlexibleAutoCreatedParentQueue(
-                new AutoCreatedQueueTemplate(csConf,
-                    new QueuePath(parentOfMissingParent)))));
+    try {
+      PrivilegedEntity privilegedEntity = new PrivilegedEntity(queuePath.getFullPath());
+
+      CSQueue parentQueue = getQueueByFullName(queuePath.getParent());
+      if (parentQueue == null) {
+        for (String missingParent : determineMissingParents(queuePath)) {
+          String parentOfMissingParent = new QueuePath(missingParent).getParent();
+          permissions.add(new Permission(new PrivilegedEntity(missingParent),
+              getACLsForFlexibleAutoCreatedParentQueue(
+                  new AutoCreatedQueueTemplate(csConf,
+                      new QueuePath(parentOfMissingParent)))));
+        }
       }
-    }
 
-    if (parentQueue instanceof AbstractManagedParentQueue) {
-      // An AbstractManagedParentQueue must have been found for Legacy AQC
-      permissions.add(new Permission(privilegedEntity,
-          csConf.getACLsForLegacyAutoCreatedLeafQueue(queuePath.getParent())));
-    } else {
-      // Every other case must be a Flexible Leaf Queue
-      permissions.add(new Permission(privilegedEntity,
-          getACLsForFlexibleAutoCreatedLeafQueue(
-              new AutoCreatedQueueTemplate(csConf, new QueuePath(queuePath.getParent())))));
+      if (parentQueue instanceof AbstractManagedParentQueue) {
+        // An AbstractManagedParentQueue must have been found for Legacy AQC
+        permissions.add(new Permission(privilegedEntity,
+            csConf.getACLsForLegacyAutoCreatedLeafQueue(queuePath.getParent())));
+      } else {
+        // Every other case must be a Flexible Leaf Queue
+        permissions.add(new Permission(privilegedEntity,
+            getACLsForFlexibleAutoCreatedLeafQueue(
+                new AutoCreatedQueueTemplate(csConf, new QueuePath(queuePath.getParent())))));
+      }
+
+    } catch (SchedulerDynamicEditException e) {
+      LOG.debug("Could not determine missing parents for queue {} reason {}",
+          queuePath.getFullPath(), e.getMessage());
     }
 
     return permissions;
