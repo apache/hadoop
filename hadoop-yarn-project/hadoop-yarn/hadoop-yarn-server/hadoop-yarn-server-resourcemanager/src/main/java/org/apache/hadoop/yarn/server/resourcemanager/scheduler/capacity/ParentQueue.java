@@ -102,11 +102,11 @@ public class ParentQueue extends AbstractCSQueue {
 
   private AutoCreatedQueueTemplate autoCreatedQueueTemplate;
 
-  // effective min ratio per resource, it is used during updateClusterResource,
-  // leaf queue can use this to calculate effective resources.
-  // This field will not be edited, reference will point to a new immutable map
-  // after every time recalculation
-  private Map<String, Map<String, Float>> effectiveMinRatioPerResource = new ConcurrentHashMap<>();
+  // A ratio of the queue's effective minimum resource and the summary of the configured
+  // minimum resource of its children grouped by labels and calculated for each resource names
+  // distinctively.
+  private final Map<String, Map<String, Float>> effectiveMinResourceRatio =
+      new ConcurrentHashMap<>();
 
   public ParentQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -1329,7 +1329,7 @@ public class ParentQueue extends AbstractCSQueue {
       }
     }
 
-    effectiveMinRatioPerResource.put(label, getEffectiveMinRatioPerResource(
+    effectiveMinResourceRatio.put(label, getEffectiveMinRatio(
         configuredMinResources, numeratorForMinRatio));
 
     // Update effective resources for my self;
@@ -1341,7 +1341,7 @@ public class ParentQueue extends AbstractCSQueue {
     }
   }
 
-  private Map<String, Float> getEffectiveMinRatioPerResource(
+  private Map<String, Float> getEffectiveMinRatio(
       Resource configuredMinResources, Resource numeratorForMinRatio) {
     Map<String, Float> effectiveMinRatioPerResource = new HashMap<>();
     if (numeratorForMinRatio != null) {
@@ -1638,8 +1638,8 @@ public class ParentQueue extends AbstractCSQueue {
     }
   }
 
-  Map<String, Float> getEffectiveMinRatioPerResource(String label) {
-    return effectiveMinRatioPerResource.get(label);
+  Map<String, Float> getEffectiveMinRatio(String label) {
+    return effectiveMinResourceRatio.get(label);
   }
 
   @Override
