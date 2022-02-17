@@ -440,7 +440,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     return replaceLabelsOnNodeWithUserName(r, node, userName, labelNames);
   }
 
-  private ClientResponse replaceLabelsOnNodeWithUserName(WebResource r, String node,
+  private static ClientResponse replaceLabelsOnNodeWithUserName(WebResource r, String node,
       String userName, String... labelNames) {
     LOG.info("Replacing labels on node '{}', label(s): {}", node, labelNames);
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
@@ -453,7 +453,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         .post(ClientResponse.class);
   }
 
-  private MultivaluedMapImpl createMultiValuedMap(String[] labelNames) {
+  private static MultivaluedMapImpl createMultiValuedMap(String[] labelNames) {
     MultivaluedMapImpl params = new MultivaluedMapImpl();
     for (String labelName : labelNames) {
       params.add("labels", labelName);
@@ -492,7 +492,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
   }
 
-  private ClientResponse addNodeLabels(WebResource r, List<Pair<String, Boolean>> nlInfos) throws Exception {
+  private ClientResponse addNodeLabels(WebResource r,
+      List<Pair<String, Boolean>> nlInfos) throws Exception {
     return addNodeLabelsInternal(r, nlInfos, userName);
   }
 
