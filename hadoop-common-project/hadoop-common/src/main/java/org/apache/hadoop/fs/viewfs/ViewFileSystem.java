@@ -216,19 +216,19 @@ public class ViewFileSystem extends FileSystem {
     /**
      * Array of target FileSystem URIs.
      */
-    private final URI[] targetFileSystemURIs;
+    private final String[] targetFileSystemPaths;
 
-    MountPoint(Path srcPath, URI[] targetFs) {
+    MountPoint(Path srcPath, String[] targetFs) {
       mountedOnPath = srcPath;
-      targetFileSystemURIs = targetFs;
+      targetFileSystemPaths = targetFs;
     }
 
     public Path getMountedOnPath() {
       return mountedOnPath;
     }
 
-    public URI[] getTargetFileSystemURIs() {
-      return targetFileSystemURIs;
+    public String[] getTargetFileSystemPaths() {
+      return targetFileSystemPaths;
     }
   }
 
