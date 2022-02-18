@@ -60,6 +60,9 @@ import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_DL_VERIFICATION_DISABLED;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DL_VERIFICATION_DISABLED;
+
 /**
  * Download a single URL to the local disk.
  *
@@ -270,12 +273,15 @@ public class FSDownload implements Callable<Path> {
     FileSystem sourceFs = sCopy.getFileSystem(conf);
     FileStatus sStat = sourceFs.getFileStatus(sCopy);
     if (sStat.getModificationTime() != resource.getTimestamp()) {
-      throw new IOException("Resource " + sCopy + " changed on src filesystem" +
-          " - expected: " +
-          "\"" + Times.formatISO8601(resource.getTimestamp()) + "\"" +
-          ", was: " +
-          "\"" + Times.formatISO8601(sStat.getModificationTime()) + "\"" +
-          ", current time: " + "\"" + Times.formatISO8601(Time.now()) + "\"");
+      String outOfSyncModTimes = "Resource " + sCopy + " changed on src filesystem - " +
+          "expected: " + "\"" + Times.formatISO8601(resource.getTimestamp()) + "\"" +
+          ", was: " + "\"" + Times.formatISO8601(sStat.getModificationTime()) + "\"" +
+          ", current time: " + "\"" + Times.formatISO8601(Time.now()) + "\"";
+      if(conf.getBoolean(NM_DL_VERIFICATION_DISABLED, DEFAULT_NM_DL_VERIFICATION_DISABLED)) {
+        LOG.warn(outOfSyncModTimes);
+      } else {
+        throw new IOException(outOfSyncModTimes); // default
+      }
     }
     if (resource.getVisibility() == LocalResourceVisibility.PUBLIC) {
       if (!isPublic(sourceFs, sCopy, sStat, statCache)) {

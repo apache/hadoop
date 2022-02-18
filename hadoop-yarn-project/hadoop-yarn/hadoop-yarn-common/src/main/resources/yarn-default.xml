@@ -1355,6 +1355,14 @@
   </property>
 
   <property>
+    <description>Whether or not to ignore distributed file modification time for verification
+      before downloading.
+    </description>
+    <name>yarn.nodemanager.download.verification.disabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>It limits the maximum number of files which will be localized
       in a single local directory. If the limit is reached then sub-directories
       will be created and new files will be localized in them. If it is set to
