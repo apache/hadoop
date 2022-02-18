@@ -46,6 +46,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-api</artifactId>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -60,6 +66,10 @@
           <groupId>com.google.inject</groupId>
           <artifactId>guice</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.osgi</groupId>
+          <artifactId>org.osgi.core</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -72,6 +82,10 @@
         <exclusion>
           <groupId>com.google.inject</groupId>
           <artifactId>guice</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.osgi</groupId>
+          <artifactId>org.osgi.core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
