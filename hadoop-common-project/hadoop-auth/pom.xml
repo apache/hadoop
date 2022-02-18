@@ -82,8 +82,8 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
+      <groupId>ch.qos.reload4j</groupId>
+      <artifactId>reload4j</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -185,6 +185,12 @@
       <artifactId>apacheds-server-integ</artifactId>
       <version>${apacheds.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.directory.server</groupId>
