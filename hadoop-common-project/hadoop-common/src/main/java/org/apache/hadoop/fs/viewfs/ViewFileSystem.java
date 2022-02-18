@@ -172,16 +172,25 @@ public class ViewFileSystem extends FileSystem {
      * One or more targets of the mount.
      * Multiple targets imply MergeMount.
      */
-    private URI[] targets;
+    private String[] targets;
 
-    MountPoint(Path srcPath, URI[] targetURIs) {
+    MountPoint(Path srcPath, String[] targetURIs) {
       src = srcPath;
       targets = targetURIs;
     }
     Path getSrc() {
       return src;
     }
+
     URI[] getTargets() {
+        URI[] targetUris = new URI[targets.length];
+        for (int i = 0; i < targets.length; i++) {
+          targetUris[i] = URI.create(targets[i]);
+        }
+        return targetUris;
+      }
+
+    public String[] getTargetFileSystemPaths() {
       return targets;
     }
   }
