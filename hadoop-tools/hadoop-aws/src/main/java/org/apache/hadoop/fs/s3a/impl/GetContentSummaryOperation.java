@@ -230,7 +230,7 @@ public class GetContentSummaryOperation extends
      * @param path
      * @param recursive if the subdirectories need to be traversed recursively
      * @return an iterator over the listing.
-     * @throws IOException
+     * @throws IOException failure
      */
     RemoteIterator<S3ALocatedFileStatus> listFilesIterator(Path path, boolean recursive)
         throws IOException;
