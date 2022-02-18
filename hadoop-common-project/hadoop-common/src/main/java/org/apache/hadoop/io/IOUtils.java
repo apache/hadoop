@@ -92,12 +92,14 @@ public class IOUtils {
     PrintStream ps = out instanceof PrintStream ? (PrintStream)out : null;
     byte buf[] = new byte[buffSize];
     int bytesRead = in.read(buf);
+    LOG.info("bytesRead: {}", bytesRead);
     while (bytesRead >= 0) {
       out.write(buf, 0, bytesRead);
       if ((ps != null) && ps.checkError()) {
         throw new IOException("Unable to write to output stream.");
       }
       bytesRead = in.read(buf);
+      LOG.info("bytesRead: {}", bytesRead);
     }
   }
 
