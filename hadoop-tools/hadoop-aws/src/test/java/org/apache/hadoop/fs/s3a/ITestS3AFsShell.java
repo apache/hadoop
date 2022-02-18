@@ -21,19 +21,25 @@ package org.apache.hadoop.fs.s3a;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 import static org.apache.hadoop.test.GenericTestUtils.getTempPath;
 
 /**
@@ -96,6 +102,7 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
         shellRun("-ls", "-d", testDir.toString()));
     assertTrue("Should print directory path to stdout",
         out.toString().contains(testDir.toString()));
+    out.reset();
 
     assertNotEquals("Should fail when list with display erasure coding policy flag", 0,
         shellRun("-ls", "-e", testDir.toString()));
@@ -238,7 +245,7 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     out.reset();
 
     assertEquals("Should copy source file to stdout", 0, shellRun("-cat", testDir + "/testFile"));
-    assertArrayEquals("Output doesn't match the original data", out.toByteArray(), data);
+    assertArrayEquals("-cat output doesn't match the original data", out.toByteArray(), data);
     out.reset();
 
     assertEquals("Should display first kilobyte of file", 0,
@@ -257,15 +264,19 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     out.reset();
 
     assertEquals("Should display file in text format", 0, shellRun("-text", testDir + "/testFile"));
-    assertArrayEquals("Output doesn't match the original data", out.toByteArray(), data);
+    assertArrayEquals("-text output doesn't match the original data", out.toByteArray(), data);
     out.reset();
 
     assertEquals("Should display file checksum", 0, shellRun("-checksum", testDir + "/testFile"));
-    assertTrue("Checksum from S3 object should be NONE", out.toString().contains("NONE"));
+    assertTrue("-checksum is not implemented, expected NONE", out.toString().contains("NONE"));
     out.reset();
 
     assertEquals("Should print matched files and directories by name", 0,
         shellRun("-find", testDir.toString(), "-name", "*touch*", "-print"));
+    assertTrue("Should display matched file",
+        out.toString().contains(testDir + "/subdir/touchFile"));
+    assertTrue("Should display matched file",
+        out.toString().contains(testDir + "/subdir/touchzFile"));
     out.reset();
 
     assertNotEquals("Should fail on concat", 0,
@@ -289,8 +300,9 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     Path testDir = methodPath();
 
     fs.mkdirs(testDir);
-    byte[] block = ContractTestUtils.dataset(BLOCK_SIZE, 0, 255);
-    ContractTestUtils.createFile(fs, new Path(testDir, "testFile"), true, block);
+    int fileLen = BLOCK_SIZE;
+    byte[] data = ContractTestUtils.dataset(fileLen, 0, 255);
+    ContractTestUtils.createFile(fs, new Path(testDir, "testFile"), true, data);
 
     ByteArrayOutputStream err = new ByteArrayOutputStream();
     System.setErr(new PrintStream(err));
@@ -375,23 +387,63 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
   @Test
   public void testFsShellStatOperations() throws IOException {
     Path testDir = methodPath();
+    Path emptyFile = new Path(testDir, "emptyFile");
+    Path nonEmptyFile = new Path(testDir, "nonEmptyFile");
 
     fs.mkdirs(testDir);
-    ContractTestUtils.touch(fs, new Path(testDir, "emptyFile"));
-    byte[] block = ContractTestUtils.dataset(BLOCK_SIZE, 0, 255);
-    ContractTestUtils.createFile(fs, new Path(testDir, "nonEmptyFile"), true, block);
+    ContractTestUtils.touch(fs, emptyFile);
+    int fileLen = BLOCK_SIZE;
+    byte[] data = ContractTestUtils.dataset(fileLen, 0, 255);
+    ContractTestUtils.createFile(fs, nonEmptyFile, true, data);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
 
     assertEquals("Should display free space", 0, shellRun("-df", testDir.toString()));
+    FsStatus fsStatus = fs.getStatus();
+    String dfOutput = out.toString();
+    assertTrue("-df output should contain capacity",
+        dfOutput.contains(Long.toString(fsStatus.getCapacity())));
+    assertTrue("-df output should contain used space",
+        dfOutput.contains(Long.toString(fsStatus.getUsed())));
+    assertTrue("-df output should contain remaining space",
+        dfOutput.contains(Long.toString(fsStatus.getRemaining())));
+    out.reset();
 
     assertEquals("Should display sizes of files and directories", 0,
         shellRun("-du", testDir.toString()));
+    String duOutput = out.toString();
+    FileStatus fileStatus1 = fs.getFileStatus(emptyFile);
+    FileStatus fileStatus2 = fs.getFileStatus(nonEmptyFile);
+    assertTrue(
+        "-du output should contain " + emptyFile.getName() + " with size " + fileStatus1.getLen(),
+        duOutput.contains(Long.toString(fileStatus1.getLen())));
+    assertTrue("-du output should contain " + nonEmptyFile.getName() + " with size "
+        + fileStatus2.getLen(), duOutput.contains(Long.toString(fileStatus2.getLen())));
+    out.reset();
 
     assertEquals("Should count directories, files and bytes under the path", 0,
         shellRun("-count", testDir.toString()));
+    String[] countResult = out.toString().trim().split("\\s+");
+    assertEquals("Expected output to has four columns", 4, countResult.length);
+    assertEquals("Directory count is " + countResult[0] + ", expected 1", "1", countResult[0]);
+    assertEquals("File count is " + countResult[1] + ", expected 2", "2", countResult[1]);
+    assertEquals("Byte count is " + countResult[2] + ", expected 1024", "1024", countResult[2]);
+    out.reset();
 
     assertEquals("Should print statistics", 0,
         shellRun("-stat", "\"type:%F perm:%a %u:%g size:%b mtime:%y atime:%x name:%n\"",
-            testDir.toString()));
+            nonEmptyFile.toString()));
+    SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    fmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+    FileStatus fileStatus = fs.getFileStatus(nonEmptyFile);
+    String modifiedTime = fmt.format(new Date(fileStatus.getModificationTime()));
+    String accessTime = fmt.format(new Date(fileStatus.getAccessTime()));
+    assertEquals("-stat output doesn't match pattern",
+        "\"type:regular file perm:666 " + fileStatus.getOwner() + ":" + fileStatus.getGroup()
+            + " size:" + fileStatus.getLen() + " mtime:" + modifiedTime + " atime:" + accessTime
+            + " name:" + nonEmptyFile.getName() + "\"\n", out.toString());
+    out.reset();
 
     assertEquals("Should return zero for a directory", 0,
         shellRun("-test", "-d", testDir.toString()));
@@ -435,7 +487,9 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     Path emptyFile = new Path(testDir, "emptyFile");
     ContractTestUtils.touch(fs, emptyFile);
 
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
     ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
 
     // permission
@@ -455,9 +509,30 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
         fs.getFileStatus(emptyFile).getOwner());
 
     assertEquals("Should run getfacl success", 0, shellRun("-getfacl", testDir + "/emptyFile"));
+    S3AFileStatus fileStatus = (S3AFileStatus) fs.getFileStatus(new Path(testDir, "emptyFile"));
+    String getfaclOutput = out.toString();
+    assertTrue("getfacl output doesn't contain owner name=" + fileStatus.getOwner(),
+        getfaclOutput.contains("owner: " + fileStatus.getOwner()));
+    assertTrue("getfacl output doesn't contain group name=" + fileStatus.getGroup(),
+        getfaclOutput.contains("group: " + fileStatus.getGroup()));
+    assertTrue("getfacl output doesn't contain user permission",
+        getfaclOutput.contains("user::rw-"));
+    assertTrue("getfacl output doesn't contain group permission",
+        getfaclOutput.contains("group::rw-"));
+    assertTrue("getfacl output doesn't contain other permission",
+        getfaclOutput.contains("other::rw-"));
+    out.reset();
 
     assertEquals("Should run getfattr success", 0,
         shellRun("-getfattr", "-d", testDir + "/emptyFile"));
+    Map<String, byte[]> xAttrs = fs.getXAttrs(new Path(testDir, "emptyFile"));
+    String getfattrOutput = out.toString();
+    for (String key : xAttrs.keySet()) {
+      String expectedString = key + "=\"" + decodeBytes(xAttrs.get(key)) + "\"";
+      assertTrue("Expected attribute " + key + " from getfattr output",
+          getfattrOutput.contains(expectedString));
+    }
+    out.reset();
 
     assertNotEquals("Should fail on setfacl", 0,
         shellRun("-setfacl", "-m", "user:hadoop:rw-", testDir + "/emptyFile"));
@@ -504,10 +579,12 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     // Set replication factor command will success but has no effect on the object
     assertEquals("Should return zero when set replication factor", 0,
         shellRun("-setrep", "2", testDir.toString()));
-    assertEquals("Replication factor is always 1", 1, fs.getFileStatus(testDir).getReplication());
+    assertEquals("S3AFileSystem replication factor is always 1", 1,
+        fs.getFileStatus(testDir).getReplication());
 
     assertEquals("Should return zero when set replication factor and wait to finish", 0,
         shellRun("-setrep", "-w", "2", testDir.toString()));
-    assertEquals("Replication factor is always 1", 1, fs.getFileStatus(testDir).getReplication());
+    assertEquals("S3AFileSystem replication factor is always 1", 1,
+        fs.getFileStatus(testDir).getReplication());
   }
 }
