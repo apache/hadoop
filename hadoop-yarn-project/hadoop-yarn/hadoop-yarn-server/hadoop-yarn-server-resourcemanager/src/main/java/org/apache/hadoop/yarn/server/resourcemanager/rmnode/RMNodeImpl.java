@@ -163,8 +163,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       new HashSet<ContainerId>();
 
   /* set of containers that need to be cleaned */
-  private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
-      new ContainerIdComparator());
+  private final Set<ContainerId> containersToClean = new HashSet<ContainerId>();
 
   /* set of containers that need to be signaled */
   private final List<SignalContainerRequest> containersToSignal =
