@@ -105,8 +105,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(RBFMetrics.class);
 
-  private final MetricsRegistry registry =
-      new MetricsRegistry("RBFMetrics");
+  private final MetricsRegistry registry = new MetricsRegistry("RBFMetrics");
 
   /** Format for a date. */
   private static final String DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
