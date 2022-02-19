@@ -827,6 +827,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.storage.policy.satisfier.retry.max.attempts";
   public static final int DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT =
       3;
+  public static final String DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_KEY =
+      "dfs.storage.policy.satisfier.move.task.retry.max.attempts";
+  public static final int DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT =
+      3;
   public static final String DFS_STORAGE_DEFAULT_POLICY =
       "dfs.storage.default.policy";
   public static final HdfsConstants.StoragePolicy

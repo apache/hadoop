@@ -33,6 +33,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SPS_KERBEROS_PRINCIPAL_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SPS_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
@@ -129,6 +130,14 @@ public class TestExternalStoragePolicySatisfier {
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private static final Logger LOG =
       LoggerFactory.getLogger(TestExternalStoragePolicySatisfier.class);
+  private final ExternalSPSFaultInjector injector = new ExternalSPSFaultInjector() {
+    @Override
+    public void mockAnException(int retry) throws IOException {
+      if (retry < DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT) {
+        throw new IOException("IO exception");
+      }
+    }
+  };
 
   @Before
   public void setUp() {
@@ -465,6 +474,20 @@ public class TestExternalStoragePolicySatisfier {
       // Reset first exit exception to avoid AssertionError in MiniDFSCluster#shutdown.
       // This has no effect on functionality.
       ExitUtil.resetFirstExitException();
+      shutdownCluster();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testWhenStoragePolicySetToCOLDWithException()
+      throws Exception {
+
+    try {
+      createCluster();
+      // Mock an IOException 3 times, and moving tasks should succeed finally.
+      ExternalSPSFaultInjector.instance = injector;
+      doTestWhenStoragePolicySetToCOLD();
+    } finally {
       shutdownCluster();
     }
   }

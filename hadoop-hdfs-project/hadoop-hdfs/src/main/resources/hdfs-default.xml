@@ -5508,6 +5508,14 @@
 </property>
 
 <property>
+  <name>dfs.storage.policy.satisfier.move.task.retry.max.attempts</name>
+  <value>3</value>
+  <description>
+    Max retries for moving task to satisfy the block storage policy.
+  </description>
+</property>
+
+<property>
   <name>dfs.storage.policy.satisfier.datanode.cache.refresh.interval.ms</name>
   <value>300000</value>
   <description>
