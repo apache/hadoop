@@ -37,6 +37,9 @@ public:
   ~Get() override = default;
 
 protected:
+  /**
+   * {@inheritdoc}
+   */
   [[nodiscard]] std::string GetToolName() const override;
 };
 } // namespace hdfs::tools
