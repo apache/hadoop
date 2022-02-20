@@ -81,6 +81,8 @@ protected:
   [[nodiscard]] virtual bool HandlePath(const std::string &source,
                                         const std::string &target) const;
 
+  [[nodiscard]] virtual std::string GetToolName() const;
+
 private:
   /**
    * A boost data-structure containing the description of positional arguments
