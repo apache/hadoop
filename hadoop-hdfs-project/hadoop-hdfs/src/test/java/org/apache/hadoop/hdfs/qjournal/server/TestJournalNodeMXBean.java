@@ -81,9 +81,8 @@ public class TestJournalNodeMXBean {
     assertFalse(journalStatus.contains(NAMESERVICE));
 
     // format the journal ns1
-    final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(NS_ID, "mycluster",
-        "my-bp", 0L);
-    jn.getOrCreateJournal(NAMESERVICE).format(FAKE_NSINFO, false);
+    final NamespaceInfo fakeNsInfo = new NamespaceInfo(NS_ID, "mycluster", "my-bp", 0L);
+    jn.getOrCreateJournal(NAMESERVICE).format(fakeNsInfo, false);
 
     // check again after format
     // getJournalsStatus
