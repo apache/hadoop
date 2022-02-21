@@ -691,36 +691,41 @@ public class FileUtil {
       unTarUsingTar(inFile, untarDir, gzipped);
     }
   }
-  
+
   private static void unTarUsingTar(File inFile, File untarDir,
       boolean gzipped) throws IOException {
     StringBuffer untarCommand = new StringBuffer();
+    // not using canonical path here; this postpones relative path
+    // resolution until bash is executed.
+    final String source = "'" + FileUtil.makeShellPath(inFile) + "'";
     if (gzipped) {
-      untarCommand.append(" gzip -dc '");
-      untarCommand.append(FileUtil.makeShellPath(inFile));
-      untarCommand.append("' | (");
-    } 
+      untarCommand.append(" gzip -dc ")
+          .append(source)
+          .append(" | (");
+    }
     untarCommand.append("cd '");
-    untarCommand.append(FileUtil.makeShellPath(untarDir)); 
+    untarCommand.append(FileUtil.makeShellPath(untarDir));
     untarCommand.append("' ; ");
     untarCommand.append("tar -xf ");
 
     if (gzipped) {
       untarCommand.append(" -)");
     } else {
-      untarCommand.append(FileUtil.makeShellPath(inFile));
+      untarCommand.append(source);
     }
-    String[] shellCmd = { "bash", "-c", untarCommand.toString() };
+    LOG.debug("executing [{}]", untarCommand);
+    String[] shellCmd = {"bash", "-c", untarCommand.toString()};
     ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
     shexec.execute();
     int exitcode = shexec.getExitCode();
     if (exitcode != 0) {
-      throw new IOException("Error untarring file " + inFile + 
-                  ". Tar process exited with exit code " + exitcode);
+      throw new IOException("Error untarring file " + inFile +
+          ". Tar process exited with exit code " + exitcode
+          + " from command " + untarCommand);
     }
   }
-  
-  private static void unTarUsingJava(File inFile, File untarDir,
+
+  static void unTarUsingJava(File inFile, File untarDir,
       boolean gzipped) throws IOException {
     InputStream inputStream = null;
     TarArchiveInputStream tis = null;

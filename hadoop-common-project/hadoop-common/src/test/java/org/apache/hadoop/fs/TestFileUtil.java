@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -1060,6 +1062,50 @@ public class TestFileUtil {
 
     doUntarAndVerify(new File(tarGzFileName), untarDir);
     doUntarAndVerify(new File(tarFileName), untarDir);
+  }
+
+  /**
+   * Verify we can't unTar a file which isn't there.
+   * This will test different codepaths on Windows from unix,
+   * but both MUST throw an IOE of some kind.
+   */
+  @Test(timeout = 30000)
+  public void testUntarMissingFile() throws Throwable {
+    final File dataDir = GenericTestUtils.getTestDir();
+    final File tarFile = new File(dataDir, "missing; true");
+    final File untarDir = new File(dataDir, "untarDir");
+    intercept(IOException.class,
+        new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            FileUtil.unTar(tarFile, untarDir);
+            return null;
+          }
+        });
+  }
+
+  /**
+   * Verify we can't unTar a file which isn't there
+   * through the java untar code.
+   * This is how {@code FileUtil.unTar(File, File}
+   * will behave on Windows,
+   */
+  @Test(timeout = 30000)
+  public void testUntarMissingFileThroughJava() throws Throwable {
+    final File dataDir = GenericTestUtils.getTestDir();
+    final File tarFile = new File(dataDir, "missing; true");
+    final File untarDir = new File(dataDir, "untarDir");
+    // java8 on unix throws java.nio.file.NoSuchFileException here;
+    // leaving as an IOE intercept in case windows throws something
+    // else.
+    intercept(IOException.class,
+        new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            FileUtil.unTarUsingJava(tarFile, untarDir, false);
+            return null;
+          }
+        });
   }
 
   @Test (timeout = 30000)
