@@ -427,7 +427,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   // JournalNodeMXBean
   public List<String> getStorageInfos() {
     return journalsById.values().stream()
-        .map(journal -> journal.getStorage().toString())
+        .map(journal -> journal.getStorage().toMapString())
         .collect(Collectors.toList());
   }
 

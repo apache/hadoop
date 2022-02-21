@@ -111,9 +111,9 @@ public class TestJournalNodeMXBean {
     assertEquals(jn.getVersion(), version);
     String[] journalStorageInfos = (String[]) mbs.getAttribute(mxbeanName, "StorageInfos");
     assertEquals(jn.getStorageInfos().size(), journalStorageInfos.length);
-    assertTrue(journalStorageInfos[1].contains("cid=mycluster"));
-    assertTrue(journalStorageInfos[1].contains("c=0"));
-    assertTrue(journalStorageInfos[1].contains("nsid=" + NS_ID));
+    assertTrue(journalStorageInfos[1].contains("ClusterId=mycluster"));
+    assertTrue(journalStorageInfos[1].contains("CreationTime=0"));
+    assertTrue(journalStorageInfos[1].contains("NamespaceId=" + NS_ID));
 
     // restart journal node without formatting
     jCluster = new MiniJournalCluster.Builder(new Configuration()).format(false)
