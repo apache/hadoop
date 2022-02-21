@@ -3284,8 +3284,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public RemoteIterator<S3ALocatedFileStatus> listFilesIterator(final Path path, final boolean recursive)
-            throws IOException {
+    public RemoteIterator<S3ALocatedFileStatus> listFilesIterator(final Path path,
+        final boolean recursive) throws IOException {
       return S3AFileSystem.this.innerListFiles(path, recursive, Listing.ACCEPT_ALL_BUT_S3N, null);
     }
   }

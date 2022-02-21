@@ -167,19 +167,21 @@ public class GetContentSummaryOperation extends
   }
 
   /***
-   * This method builds the set of all directories found under the base path. We need to do this because if the
-   * directory structure /a/b/c was created with a single mkdirs() call, it is stored as 1 object in S3 and the list
-   * files iterator will only return a single entry /a/b/c.
+   * This method builds the set of all directories found under the base path. We need to do this
+   * because if the directory structure /a/b/c was created with a single mkdirs() call, it is
+   * stored as 1 object in S3 and the list files iterator will only return a single entry /a/b/c.
    *
-   * We keep track of paths traversed so far to prevent duplication of work. For eg, if we had a/b/c/file-1.txt and
-   * /a/b/c/file-2.txt, we will only recurse over the complete path once and won't have to do anything for file-2.txt.
+   * We keep track of paths traversed so far to prevent duplication of work. For eg, if we had
+   * a/b/c/file-1.txt and /a/b/c/file-2.txt, we will only recurse over the complete path once
+   * and won't have to do anything for file-2.txt.
    *
    * @param dirSet Set of all directories found in the path
    * @param pathsTraversed Set of all paths traversed so far
    * @param basePath Path of directory to scan
    * @param parentPath Parent path of the current file/directory in the iterator
    */
-  private void buildDirectorySet(Set<Path> dirSet, Set<Path> pathsTraversed, Path basePath, Path parentPath) {
+  private void buildDirectorySet(Set<Path> dirSet, Set<Path> pathsTraversed, Path basePath,
+      Path parentPath) {
 
     if (parentPath == null || pathsTraversed.contains(parentPath) || parentPath.equals(basePath)) {
       return;
@@ -225,7 +227,7 @@ public class GetContentSummaryOperation extends
     S3AFileStatus probePathStatus(Path path, Set<StatusProbeEnum> probes) throws IOException;
 
     /***
-     * List all entries under a path
+     * List all entries under a path.
      *
      * @param path
      * @param recursive if the subdirectories need to be traversed recursively

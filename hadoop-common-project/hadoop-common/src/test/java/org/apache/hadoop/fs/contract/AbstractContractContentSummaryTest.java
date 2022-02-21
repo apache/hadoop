@@ -30,41 +30,36 @@ import java.io.FileNotFoundException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
-public abstract class AbstractContractContentSummaryTest extends AbstractFSContractTestBase  {
+public abstract class AbstractContractContentSummaryTest extends AbstractFSContractTestBase {
 
-    @Test
-    public void testGetContentSummary() throws Throwable {
-        FileSystem fs = getFileSystem();
+  @Test
+  public void testGetContentSummary() throws Throwable {
+    FileSystem fs = getFileSystem();
 
-        Path parent = path("parent");
-        Path nested = path(parent + "/a/b/c");
-        Path filePath = path(nested + "file.txt");
+    Path parent = path("parent");
+    Path nested = path(parent + "/a/b/c");
+    Path filePath = path(nested + "file.txt");
 
-        fs.mkdirs(parent);
-        fs.mkdirs(nested);
-        touch(getFileSystem(), filePath);
+    fs.mkdirs(parent);
+    fs.mkdirs(nested);
+    touch(getFileSystem(), filePath);
 
-        ContentSummary summary = fs.getContentSummary(parent);
+    ContentSummary summary = fs.getContentSummary(parent);
 
-        Assertions.assertThat(summary.getDirectoryCount())
-                .as("Summary " + summary)
-                .isEqualTo(4);
+    Assertions.assertThat(summary.getDirectoryCount()).as("Summary " + summary).isEqualTo(4);
 
-        Assertions.assertThat(summary.getFileCount())
-                .as("Summary " + summary)
-                .isEqualTo(1);
-    }
+    Assertions.assertThat(summary.getFileCount()).as("Summary " + summary).isEqualTo(1);
+  }
 
-    @Test
-    public void testGetContentSummaryIncorrectPath() throws Throwable {
-        FileSystem fs = getFileSystem();
+  @Test
+  public void testGetContentSummaryIncorrectPath() throws Throwable {
+    FileSystem fs = getFileSystem();
 
-        Path parent = path("parent");
-        Path nested = path(parent + "/a");
+    Path parent = path("parent");
+    Path nested = path(parent + "/a");
 
-        fs.mkdirs(parent);
+    fs.mkdirs(parent);
 
-        intercept(FileNotFoundException.class,
-            () -> fs.getContentSummary(nested));
-    }
+    intercept(FileNotFoundException.class, () -> fs.getContentSummary(nested));
+  }
 }
