@@ -321,6 +321,7 @@ org.apache.kerby:kerby-pkix:1.0.1
 org.apache.kerby:kerby-util:1.0.1
 org.apache.kerby:kerby-xdr:1.0.1
 org.apache.kerby:token-provider:1.0.1
+org.apache.solr:solr-solrj:8.8.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.6.3
 org.codehaus.jackson:jackson-core-asl:1.9.13
