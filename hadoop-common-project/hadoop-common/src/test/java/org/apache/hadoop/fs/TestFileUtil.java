@@ -1466,6 +1466,23 @@ public class TestFileUtil {
     Assert.assertEquals(file.getAbsolutePath(), result);
   }
 
+  @Test
+  public void testRegularFile() throws IOException {
+    byte[] data = "testRegularData".getBytes();
+    File tmpFile = new File(del, "reg1");
+
+    // write some data to the file
+    FileOutputStream os = new FileOutputStream(tmpFile);
+    os.write(data);
+    os.close();
+    assertTrue(FileUtil.isRegularFile(tmpFile));
+
+    // create a symlink to file
+    File link = new File(del, "reg2");
+    FileUtil.symLink(tmpFile.toString(), link.toString());
+    assertFalse(FileUtil.isRegularFile(link, false));
+  }
+
   /**
    * This test validates the correctness of {@link FileUtil#readLink(File)} when
    * it gets a file in input.
