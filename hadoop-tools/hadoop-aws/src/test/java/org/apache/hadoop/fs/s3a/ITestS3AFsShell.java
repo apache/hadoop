@@ -43,7 +43,7 @@ import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 import static org.apache.hadoop.test.GenericTestUtils.getTempPath;
 
 /**
- * Test of hadoop fs shell against S3A
+ * Test of hadoop fs shell against S3A.
  */
 public class ITestS3AFsShell extends AbstractS3ATestBase {
 
@@ -145,9 +145,6 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     fs.mkdirs(testDir);
     fs.mkdirs(new Path(testDir, "subdir"));
     ContractTestUtils.touch(fs, new Path(testDir, "emptyFile"));
-    int fileLen = BLOCK_SIZE * 2;
-    byte[] data = ContractTestUtils.dataset(fileLen, 0, 255);
-    ContractTestUtils.createFile(fs, new Path(testDir, "testFile"), true, data);
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     ByteArrayOutputStream err = new ByteArrayOutputStream();
@@ -240,9 +237,40 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
     assertEquals("Should delete files from trash success", 0,
         shellRun("-expunge", "-immediate", "-fs", fs.getUri().toString() + "/"));
 
-    assertEquals("Should list against a file success", 0, shellRun("-ls", testDir + "/testFile"));
-    assertTrue("Should print file path to stdout", out.toString().contains(testDir + "/testFile"));
+    assertEquals("Should list against a file success", 0,
+        shellRun("-ls", testDir + "/subdir/touchFile"));
+    assertTrue("Should print file path to stdout",
+        out.toString().contains(testDir + "/subdir/touchFile"));
     out.reset();
+
+    assertEquals("Should print matched files and directories by name", 0,
+        shellRun("-find", testDir.toString(), "-name", "*touch*", "-print"));
+    assertTrue("Should display matched file",
+        out.toString().contains(testDir + "/subdir/touchFile"));
+    assertTrue("Should display matched file",
+        out.toString().contains(testDir + "/subdir/touchzFile"));
+    out.reset();
+
+    assertEquals("Should display file checksum", 0,
+        shellRun("-checksum", testDir + "/subdir/touchFile"));
+    assertTrue("-checksum is not implemented, expected NONE", out.toString().contains("NONE"));
+    out.reset();
+  }
+
+  @Test
+  public void testFsShellStreamConcatOperations() throws IOException {
+    Path testDir = methodPath();
+
+    fs.mkdirs(testDir);
+    ContractTestUtils.touch(fs, new Path(testDir, "emptyFile"));
+    int fileLen = BLOCK_SIZE * 2;
+    byte[] data = ContractTestUtils.dataset(fileLen, 0, 255);
+    ContractTestUtils.createFile(fs, new Path(testDir, "testFile"), true, data);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
 
     assertEquals("Should copy source file to stdout", 0, shellRun("-cat", testDir + "/testFile"));
     assertArrayEquals("-cat output doesn't match the original data", out.toByteArray(), data);
@@ -265,18 +293,6 @@ public class ITestS3AFsShell extends AbstractS3ATestBase {
 
     assertEquals("Should display file in text format", 0, shellRun("-text", testDir + "/testFile"));
     assertArrayEquals("-text output doesn't match the original data", out.toByteArray(), data);
-    out.reset();
-
-    assertEquals("Should display file checksum", 0, shellRun("-checksum", testDir + "/testFile"));
-    assertTrue("-checksum is not implemented, expected NONE", out.toString().contains("NONE"));
-    out.reset();
-
-    assertEquals("Should print matched files and directories by name", 0,
-        shellRun("-find", testDir.toString(), "-name", "*touch*", "-print"));
-    assertTrue("Should display matched file",
-        out.toString().contains(testDir + "/subdir/touchFile"));
-    assertTrue("Should display matched file",
-        out.toString().contains(testDir + "/subdir/touchzFile"));
     out.reset();
 
     assertNotEquals("Should fail on concat", 0,
