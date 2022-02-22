@@ -17,24 +17,23 @@
  */
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.*;
-
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 
-public class TestRPCCallBenchmark {
-
-  @Test(timeout=20000)
+public class TestNettyRPCCallBenchmark {
+  @Test(timeout=60000)
   public void testBenchmarkWithProto() throws Exception {
     int rc = ToolRunner.run(new RPCCallBenchmark(),
         new String[] {
-      "--clientThreads", "30",
-      "--serverThreads", "30",
-      "--time", "5",
-      "--serverReaderThreads", "4",
-      "--messageSize", "1024",
-      "--engine", "protobuf"});
+            "--clientThreads", "30",
+            "--serverThreads", "30",
+            "--time", "10",
+            "--serverReaderThreads", "4",
+            "--messageSize", "1024",
+            "--engine", "protobuf",
+            "--ioImpl", "netty"});
     assertEquals(0, rc);
   }
 }

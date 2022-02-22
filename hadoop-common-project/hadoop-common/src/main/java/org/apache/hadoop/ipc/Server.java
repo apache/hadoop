@@ -4352,6 +4352,8 @@ public abstract class Server {
     private int backlogLength = conf.getInt(
         CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_KEY,
         CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_DEFAULT);
+    private EventLoopGroup acceptors;
+    private EventLoopGroup readers;
 
     NettyListener(int port) throws IOException {
       if (!LOG.isDebugEnabled()) {
@@ -4364,8 +4366,6 @@ public abstract class Server {
       // netty's readers double as responders so double the readers to
       // compensate.
       int numReaders = 2 * getNumReaders();
-      EventLoopGroup acceptors;
-      EventLoopGroup readers;
       // Attempt to use native transport if available.
       if (Epoll.isAvailable()) { // Linux.
         channelClass = EpollServerSocketChannel.class;
@@ -4434,23 +4434,31 @@ public abstract class Server {
     }
 
     @Override
-    public void interrupt() {}
+    public void interrupt() {
+      doStop();
+    }
 
     @Override
     public void doStop() {
       try {
+        //TODO : Add Boolean stopped to avoid double stoppage.
+
         // closing will send events to the bootstrap's event loop groups.
         closeAcceptChannels();
         connectionManager.stopIdleScan();
         connectionManager.closeAll();
         // shutdown the event loops to reject all further events.
         ServerBootstrapConfig config = bootstrap.config();
-        config.group().shutdownGracefully(0, 1, TimeUnit.SECONDS);
-        config.childGroup().shutdownGracefully(0, 1, TimeUnit.SECONDS);
-        // wait for outstanding close events to be processed.
-        config.group().terminationFuture().awaitUninterruptibly();
-        config.childGroup().terminationFuture().awaitUninterruptibly();
-      } finally {
+        //config.group().shutdownGracefully().awaitUninterruptibly();
+        //config.childGroup().shutdownGracefully().awaitUninterruptibly();
+        acceptors.shutdownGracefully().awaitUninterruptibly();
+        readers.shutdownGracefully().awaitUninterruptibly();
+        listenerFactory.close();
+        readerFactory.close();
+      } catch (IOException ioe) {
+        LOG.warn("Unable to shutdown Netty listener and reader threads : ", ioe);
+      }
+      finally {
         IOUtils.cleanupWithLogger(LOG, listenerFactory, readerFactory);
       }
     }

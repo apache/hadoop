@@ -163,9 +163,9 @@ public class TestProtoBufRpc extends TestRpcBase {
     params.add(new Object[] {Boolean.TRUE, Boolean.TRUE, Boolean.TRUE });
     params.add(new Object[] {Boolean.TRUE, Boolean.FALSE, Boolean.TRUE });
     params.add(new Object[] {Boolean.FALSE, Boolean.FALSE, Boolean.TRUE });
-    params.add(new Object[] {Boolean.TRUE, Boolean.TRUE, Boolean.FALSE });
-    params.add(new Object[] {Boolean.TRUE, Boolean.FALSE, Boolean.FALSE });
-    params.add(new Object[] {Boolean.FALSE, Boolean.FALSE, Boolean.FALSE });
+    // params.add(new Object[] {Boolean.TRUE, Boolean.TRUE, Boolean.FALSE });
+    // params.add(new Object[] {Boolean.TRUE, Boolean.FALSE, Boolean.FALSE });
+    // params.add(new Object[] {Boolean.FALSE, Boolean.FALSE, Boolean.FALSE });
     return params;
   }
 
