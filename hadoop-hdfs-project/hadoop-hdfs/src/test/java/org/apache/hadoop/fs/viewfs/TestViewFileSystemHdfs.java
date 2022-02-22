@@ -44,6 +44,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -154,6 +155,13 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   @Override
   int getExpectedDelegationTokenCountWithCredentials() {
     return 2;
+  }
+
+  @Override
+  Path getTrashRootInFallBackFS() throws IOException {
+    return new Path(
+        "/" + TRASH_PREFIX + "/" + UserGroupInformation.getCurrentUser()
+            .getShortUserName());
   }
 
   //Rename should fail on across different fileSystems

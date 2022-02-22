@@ -409,7 +409,7 @@ abstract class InodeTree<T> {
     return rootFallbackLink != null;
   }
 
-  private INodeLink<T> getRootFallbackLink() {
+  protected INodeLink<T> getRootFallbackLink() {
     Preconditions.checkState(root.isInternalDir());
     return rootFallbackLink;
   }
