@@ -1141,26 +1141,11 @@ abstract public class ViewFileSystemBaseTest {
       fsView2.getTrashRoot(nonExistentPath);
     } catch (NotInMountpointException ignored) {
     }
-
-    // Case 5: path p is in the same mount point as targetFS.getTrashRoot().
-    // Return targetFS.getTrashRoot()
-    // Use a new Configuration object, so that we can start with an empty
-    // mount table. This would avoid a conflict between the /user link in
-    // setupMountPoints() and homeDir we will need to setup for this test.
-    // default homeDir for hdfs is /user/.
-    Configuration conf3 = ViewFileSystemTestSetup.createConfig();
-    Path homeDir = fsTarget.getHomeDirectory();
-    String homeParentDir = homeDir.getParent().toUri().getPath();
-    conf3.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
-    ConfigUtil.addLink(conf3, homeParentDir,
-        new Path(targetTestRoot, homeParentDir).toUri());
-    Path homeTestPath = new Path(homeDir.toUri().getPath(), "testuser/file");
-    FileSystem fsView3 = FileSystem.get(FsConstants.VIEWFS_URI, conf3);
-    Assert.assertEquals(userTrashRoot, fsView3.getTrashRoot(homeTestPath));
   }
 
   /**
-   * A mocked FileSystem which returns a deep trash dir.
+   * A mocked FileSystem which returns overwrites getFileStatus() to always
+   * return an encrypted FileStatus.
    */
   static class MockTrashRootFS extends MockFileSystem {
     public static final Path TRASH =
@@ -1170,13 +1155,20 @@ abstract public class ViewFileSystemBaseTest {
     public Path getTrashRoot(Path path) {
       return TRASH;
     }
+
+    @Override
+    public FileStatus getFileStatus(Path path) throws IOException {
+      FileStatus status = super.getFileStatus(path);
+      return new FileStatus(0, false, 3, 1024, 0, 0, null, "test", "testg",
+          path, path, false, true, false);
+    }
   }
 
   /**
-   * Test a trash root that is inside a mount point for getTrashRoot
+   * Test a trash root that is encrypted for getTrashRoot
    */
   @Test
-  public void testTrashRootDeepTrashDir() throws IOException {
+  public void testTrashRootEncryptedTrashDir() throws IOException {
 
     Configuration conf2 = ViewFileSystemTestSetup.createConfig();
     conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);

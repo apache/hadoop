@@ -1128,6 +1128,17 @@ public class ViewFileSystem extends FileSystem {
     return allPolicies;
   }
 
+  // Test whether a path is inside a snapshot or encrypted.
+  boolean isSnapshotEnabledOrEncrypted(Path p) throws IOException {
+    try {
+      FileStatus status = getFileStatus(p);
+      return status.isSnapshotEnabled() || status.isEncrypted();
+    } catch (FileNotFoundException ignored) {
+      // return false if path p does not exist yet.
+      return false;
+    }
+  }
+
   /**
    * Get the trash root directory for current user when the path
    * specified is deleted.
@@ -1146,6 +1157,7 @@ public class ViewFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
+    LOG.info("new getTrashRoot for ViewFileSystem");
     boolean useMountPointLocalTrash =
         config.getBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH,
             CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT);
@@ -1155,15 +1167,13 @@ public class ViewFileSystem extends FileSystem {
           fsState.resolve(getUriPath(path), true);
 
       Path trashRoot = res.targetFileSystem.getTrashRoot(res.remainingPath);
-      if (!useMountPointLocalTrash) {
+      if (!useMountPointLocalTrash || isSnapshotEnabledOrEncrypted(path)) {
         return trashRoot;
       } else {
         // Path p is either in a mount point or in the fallback FS
 
-        if (ROOT_PATH.equals(new Path(res.resolvedPath))
-            || trashRoot.toUri().getPath().startsWith(res.resolvedPath)) {
-          // Path p is in the fallback FS or targetFileSystem.trashRoot is in
-          // the same mount point as Path p
+        if (ROOT_PATH.equals(new Path(res.resolvedPath))) {
+          // Path p is in the fallback FS
           return trashRoot;
         } else {
           // targetFileSystem.trashRoot is in a different mount point from

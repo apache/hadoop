@@ -132,6 +132,7 @@ public class TrashPolicyDefault extends TrashPolicy {
     String qpath = fs.makeQualified(path).toString();
 
     Path trashRoot = fs.getTrashRoot(path);
+    LOG.info("trashRoot: " + trashRoot);
     Path trashCurrent = new Path(trashRoot, CURRENT);
     if (qpath.startsWith(trashRoot.toString())) {
       return false;                               // already in trash
@@ -191,8 +192,8 @@ public class TrashPolicyDefault extends TrashPolicy {
         cause = e;
       }
     }
-    throw (IOException)
-      new IOException("Failed to move to trash: " + path).initCause(cause);
+    throw (IOException) new IOException(
+        "Failed to move " + path + " to trash " + trashPath).initCause(cause);
   }
 
   @SuppressWarnings("deprecation")
