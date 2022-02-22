@@ -275,10 +275,8 @@ public class DFSOutputStream extends FSOutputSummer
 
       // Retry the create if we get a RetryStartFileException up to a maximum
       // number of times
-      boolean shouldRetry = true;
       int retryCount = CREATE_RETRY_COUNT;
-      while (shouldRetry) {
-        shouldRetry = false;
+      while (true) {
         try {
           stat = dfsClient.namenode.create(src, masked, dfsClient.clientName,
               new EnumSetWritable<>(flag), createParent, replication,
@@ -301,7 +299,6 @@ public class DFSOutputStream extends FSOutputSummer
               UnknownCryptoProtocolVersionException.class);
           if (e instanceof RetryStartFileException) {
             if (retryCount > 0) {
-              shouldRetry = true;
               retryCount--;
             } else {
               throw new IOException("Too many retries because of encryption" +
