@@ -62,7 +62,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -97,7 +96,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
     MultipleBlockingQueue(int numQueue, int queueSize) {
       queues = new ArrayList<>(numQueue);
       for (int i = 0; i < numQueue; i++) {
-        queues.add(new LinkedBlockingQueue<T>(queueSize));
+        queues.add(new LinkedBlockingQueue<>(queueSize));
       }
     }
 
@@ -480,7 +479,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
         }
       }
     }
-    return excluded.toArray(new DatanodeInfo[excluded.size()]);
+    return excluded.toArray(DatanodeInfo.EMPTY_ARRAY);
   }
 
   private void allocateNewBlock() throws IOException {
@@ -1316,12 +1315,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
           // flush all data to Datanode
           final long toWaitFor = flushInternalWithoutWaitingAck();
           future = flushAllExecutorCompletionService.submit(
-              new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                  s.waitForAckedSeqno(toWaitFor);
-                  return null;
-                }
+              () -> {
+                s.waitForAckedSeqno(toWaitFor);
+                return null;
               });
           flushAllFuturesMap.put(future, i);
         } catch (Exception e) {

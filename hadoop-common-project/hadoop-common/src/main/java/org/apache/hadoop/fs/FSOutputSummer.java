@@ -38,9 +38,9 @@ abstract public class FSOutputSummer extends OutputStream implements
   // data checksum
   private final DataChecksum sum;
   // internal buffer for storing data before it is checksumed
-  private byte buf[];
+  private byte[] buf;
   // internal buffer for storing checksum
-  private byte checksum[];
+  private byte[] checksum;
   // The number of valid bytes in the buffer.
   private int count;
   
@@ -100,7 +100,7 @@ abstract public class FSOutputSummer extends OutputStream implements
    * @exception  IOException  if an I/O error occurs.
    */
   @Override
-  public synchronized void write(byte b[], int off, int len)
+  public synchronized void write(byte[] b, int off, int len)
       throws IOException {
     
     checkClosed();
@@ -117,7 +117,7 @@ abstract public class FSOutputSummer extends OutputStream implements
    * Write a portion of an array, flushing to the underlying
    * stream at most once if necessary.
    */
-  private int write1(byte b[], int off, int len) throws IOException {
+  private int write1(byte[] b, int off, int len) throws IOException {
     if(count==0 && len>=buf.length) {
       // local buffer is empty and user buffer size >= local buffer size, so
       // simply checksum the user buffer and send it directly to the underlying
@@ -129,7 +129,7 @@ abstract public class FSOutputSummer extends OutputStream implements
     
     // copy user data to local buffer
     int bytesToCopy = buf.length-count;
-    bytesToCopy = (len<bytesToCopy) ? len : bytesToCopy;
+    bytesToCopy = Math.min(len, bytesToCopy);
     System.arraycopy(b, off, buf, count, bytesToCopy);
     count += bytesToCopy;
     if (count == buf.length) {
@@ -207,20 +207,15 @@ abstract public class FSOutputSummer extends OutputStream implements
   /** Generate checksums for the given data chunks and output chunks & checksums
    * to the underlying output stream.
    */
-  private void writeChecksumChunks(byte b[], int off, int len)
+  private void writeChecksumChunks(byte[] b, int off, int len)
   throws IOException {
     sum.calculateChunkedSums(b, off, len, checksum, 0);
-    TraceScope scope = createWriteTraceScope();
-    try {
+    try (TraceScope scope = createWriteTraceScope()) {
       for (int i = 0; i < len; i += sum.getBytesPerChecksum()) {
         int chunkLen = Math.min(sum.getBytesPerChecksum(), len - i);
         int ckOffset = i / sum.getBytesPerChecksum() * getChecksumSize();
         writeChunk(b, off + i, chunkLen, checksum, ckOffset,
             getChecksumSize());
-      }
-    } finally {
-      if (scope != null) {
-        scope.close();
       }
     }
   }
