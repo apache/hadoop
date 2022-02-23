@@ -1280,7 +1280,7 @@ public class ParentQueue extends AbstractCSQueue {
           labelManager.getResourceByLabel(null, clusterResource),
           RMNodeLabelsManager.NO_LABEL, this);
     } catch (IOException e) {
-      LOG.error("Fatal issue found: e", e);
+      LOG.error("Error during updating cluster resource: ", e);
       throw new YarnRuntimeException("Fatal issue during scheduling", e);
     } finally {
       writeLock.unlock();
