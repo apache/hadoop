@@ -289,7 +289,7 @@ public class TestDistCpOptions {
         "atomicWorkPath=null, logPath=null, sourceFileListing=abc, " +
         "sourcePaths=null, targetPath=xyz, filtersFile='null', " +
         "blocksPerChunk=0, copyBufferSize=8192, verboseLog=false, " +
-        "directWrite=false, useiterator=false}";
+        "directWrite=false, useiterator=false, updateRoot=false}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
@@ -562,5 +562,16 @@ public class TestDistCpOptions {
             "Pls ensure the config label is provided when apply to config, " +
             "otherwise it may not be fetched properly",
             expectedValForEmptyConfigKey, config.get(""));
+  }
+
+  @Test
+  public void testUpdateRoot() {
+    final DistCpOptions options = new DistCpOptions.Builder(
+        Collections.singletonList(
+            new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"))
+        .withUpdateRoot(true)
+        .build();
+    Assert.assertTrue(options.shouldUpdateRoot());
   }
 }

@@ -156,7 +156,7 @@ public class TestRMWebServicesSchedulerActivities
       verifyStateOfAllocations(allocation,
           FN_ACT_FINAL_ALLOCATION_STATE, "ALLOCATED");
       verifyQueueOrder(allocation,
-          "root-root.a-root.b-root.b.b2-root.b.b3-root.b.b1");
+          "root-root.a-root.c-root.b-root.b.b2-root.b.b3-root.b.b1");
     } finally {
       rm.stop();
     }
@@ -380,7 +380,7 @@ public class TestRMWebServicesSchedulerActivities
       JSONObject allocations = getFirstSubNodeFromJson(json,
           FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS);
       verifyQueueOrder(allocations,
-          "root-root.a-root.b-root.b.b3-root.b.b1");
+          "root-root.c-root.a-root.b-root.b.b3-root.b.b1");
       verifyStateOfAllocations(allocations, FN_ACT_FINAL_ALLOCATION_STATE,
           "RESERVED");
 

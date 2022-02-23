@@ -244,8 +244,12 @@ public enum DistCpOptionSwitch {
   USE_ITERATOR(DistCpConstants.CONF_LABEL_USE_ITERATOR,
       new Option("useiterator", false,
           "Use single threaded list status iterator to build "
-              + "the listing to save the memory utilisation at the client"));
+              + "the listing to save the memory utilisation at the client")),
 
+  UPDATE_ROOT(DistCpConstants.CONF_LABEL_UPDATE_ROOT,
+      new Option("updateRoot", false,
+      "Update root directory attributes "
+          + "(eg permissions, ownership ...)"));
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";
   private final String confLabel;

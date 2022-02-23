@@ -120,7 +120,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
     // Define top-level queues
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b"});
+        new String[] {"a", "b", "c"});
 
     final String a = CapacitySchedulerConfiguration.ROOT + ".a";
     config.setCapacity(a, 10.5f);

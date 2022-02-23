@@ -1687,6 +1687,11 @@ public class TestBalancer {
       BalancerParameters p = BalancerParameters.DEFAULT;
       runBalancer(conf, totalUsedSpace, totalCapacity, p, 0);
 
+      // namenode will ask datanode to delete replicas in heartbeat response
+      cluster.triggerHeartbeats();
+      // namenode will update block locations according to the report
+      cluster.triggerDeletionReports();
+
       // verify locations of striped blocks
       locatedBlocks = client.getBlockLocations(fileName, 0, fileLen);
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks, groupSize);

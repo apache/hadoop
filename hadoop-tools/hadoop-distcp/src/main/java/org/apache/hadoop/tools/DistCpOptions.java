@@ -162,6 +162,8 @@ public final class DistCpOptions {
 
   private final boolean useIterator;
 
+  private final boolean updateRoot;
+
   /**
    * File attributes for preserve.
    *
@@ -228,6 +230,8 @@ public final class DistCpOptions {
     this.directWrite = builder.directWrite;
 
     this.useIterator = builder.useIterator;
+
+    this.updateRoot = builder.updateRoot;
   }
 
   public Path getSourceFileListing() {
@@ -374,6 +378,10 @@ public final class DistCpOptions {
     return useIterator;
   }
 
+  public boolean shouldUpdateRoot() {
+    return updateRoot;
+  }
+
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
@@ -427,6 +435,9 @@ public final class DistCpOptions {
 
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.USE_ITERATOR,
         String.valueOf(useIterator));
+
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.UPDATE_ROOT,
+        String.valueOf(updateRoot));
   }
 
   /**
@@ -465,6 +476,7 @@ public final class DistCpOptions {
         ", verboseLog=" + verboseLog +
         ", directWrite=" + directWrite +
         ", useiterator=" + useIterator +
+        ", updateRoot=" + updateRoot +
         '}';
   }
 
@@ -517,6 +529,8 @@ public final class DistCpOptions {
     private boolean directWrite = false;
 
     private boolean useIterator = false;
+
+    private boolean updateRoot = false;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -778,6 +792,11 @@ public final class DistCpOptions {
 
     public Builder withUseIterator(boolean useItr) {
       this.useIterator = useItr;
+      return this;
+    }
+
+    public Builder withUpdateRoot(boolean updateRootAttrs) {
+      this.updateRoot = updateRootAttrs;
       return this;
     }
   }

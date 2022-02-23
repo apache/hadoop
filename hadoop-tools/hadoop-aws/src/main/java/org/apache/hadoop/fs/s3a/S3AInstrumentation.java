@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -164,13 +163,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   private final MetricsRegistry registry =
       new MetricsRegistry("s3aFileSystem").setContext(CONTEXT);
-  private final MutableQuantiles putLatencyQuantile;
   private final MutableQuantiles throttleRateQuantile;
-  private final MutableQuantiles s3GuardThrottleRateQuantile;
-
-  /** Instantiate this without caring whether or not S3Guard is enabled. */
-  private final S3GuardInstrumentation s3GuardInstrumentation
-      = new S3GuardInstrumentation();
 
   /**
    * This is the IOStatistics store for the S3AFileSystem
@@ -224,10 +217,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     //todo need a config for the quantiles interval?
     int interval = 1;
-    putLatencyQuantile = quantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-        "ops", "latency", interval);
-    s3GuardThrottleRateQuantile = quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
-        "events", "frequency (Hz)", interval);
     throttleRateQuantile = quantiles(STORE_IO_THROTTLE_RATE,
         "events", "frequency (Hz)", interval);
 
@@ -678,15 +667,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   /**
-   * Create a MetastoreInstrumentation instrumentation instance.
-   * There's likely to be at most one instance of this per FS instance.
-   * @return the S3Guard instrumentation point.
-   */
-  public MetastoreInstrumentation getS3GuardInstrumentation() {
-    return s3GuardInstrumentation;
-  }
-
-  /**
    * Create a new instance of the committer statistics.
    * @return a new committer statistics instance
    */
@@ -703,9 +683,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     synchronized (METRICS_SYSTEM_LOCK) {
       // it is critical to close each quantile, as they start a scheduled
       // task in a shared thread pool.
-      putLatencyQuantile.stop();
       throttleRateQuantile.stop();
-      s3GuardThrottleRateQuantile.stop();
       metricsSystem.unregisterSource(metricsSourceName);
       metricsSourceActiveCounter--;
       int activeSources = metricsSourceActiveCounter;
@@ -1615,64 +1593,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       sb.append('}');
       return sb.toString();
     }
-  }
-
-  /**
-   * Instrumentation exported to S3Guard.
-   */
-  private final class S3GuardInstrumentation
-      implements MetastoreInstrumentation {
-
-    @Override
-    public void initialized() {
-      incrementCounter(S3GUARD_METADATASTORE_INITIALIZATION, 1);
-    }
-
-    @Override
-    public void storeClosed() {
-
-    }
-
-    @Override
-    public void throttled() {
-      // counters are incremented by owner.
-    }
-
-    @Override
-    public void retrying() {
-      // counters are incremented by owner.
-    }
-
-    @Override
-    public void recordsDeleted(int count) {
-      incrementCounter(S3GUARD_METADATASTORE_RECORD_DELETES, count);
-    }
-
-    @Override
-    public void recordsRead(int count) {
-      incrementCounter(S3GUARD_METADATASTORE_RECORD_READS, count);
-    }
-
-    @Override
-    public void recordsWritten(int count) {
-      incrementCounter(S3GUARD_METADATASTORE_RECORD_WRITES, count);
-    }
-
-    @Override
-    public void directoryMarkedAuthoritative() {
-      incrementCounter(
-          S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
-          1);
-    }
-
-    @Override
-    public void entryAdded(final long durationNanos) {
-      addValueToQuantiles(
-          S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-          durationNanos);
-      incrementCounter(S3GUARD_METADATASTORE_PUT_PATH_REQUEST, 1);
-    }
-
   }
 
   /**

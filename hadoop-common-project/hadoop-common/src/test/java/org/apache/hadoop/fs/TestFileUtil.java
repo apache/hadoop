@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -1135,6 +1136,38 @@ public class TestFileUtil {
     doUntarAndVerify(new File(tarFileName), untarDir);
   }
 
+  /**
+   * Verify we can't unTar a file which isn't there.
+   * This will test different codepaths on Windows from unix,
+   * but both MUST throw an IOE of some kind.
+   */
+  @Test(timeout = 30000)
+  public void testUntarMissingFile() throws Throwable {
+    File dataDir = GenericTestUtils.getTestDir();
+    File tarFile = new File(dataDir, "missing; true");
+    File untarDir = new File(dataDir, "untarDir");
+    intercept(IOException.class, () ->
+        FileUtil.unTar(tarFile, untarDir));
+  }
+
+  /**
+   * Verify we can't unTar a file which isn't there
+   * through the java untar code.
+   * This is how {@code FileUtil.unTar(File, File}
+   * will behave on Windows,
+   */
+  @Test(timeout = 30000)
+  public void testUntarMissingFileThroughJava() throws Throwable {
+    File dataDir = GenericTestUtils.getTestDir();
+    File tarFile = new File(dataDir, "missing; true");
+    File untarDir = new File(dataDir, "untarDir");
+    // java8 on unix throws java.nio.file.NoSuchFileException here;
+    // leaving as an IOE intercept in case windows throws something
+    // else.
+    intercept(IOException.class, () ->
+        FileUtil.unTarUsingJava(tarFile, untarDir, false));
+  }
+
   @Test (timeout = 30000)
   public void testCreateJarWithClassPath() throws Exception {
     // create files expected to match a wildcard
@@ -1431,6 +1464,23 @@ public class TestFileUtil {
 
     String result = FileUtil.readLink(link);
     Assert.assertEquals(file.getAbsolutePath(), result);
+  }
+
+  @Test
+  public void testRegularFile() throws IOException {
+    byte[] data = "testRegularData".getBytes();
+    File tmpFile = new File(del, "reg1");
+
+    // write some data to the file
+    FileOutputStream os = new FileOutputStream(tmpFile);
+    os.write(data);
+    os.close();
+    assertTrue(FileUtil.isRegularFile(tmpFile));
+
+    // create a symlink to file
+    File link = new File(del, "reg2");
+    FileUtil.symLink(tmpFile.toString(), link.toString());
+    assertFalse(FileUtil.isRegularFile(link, false));
   }
 
   /**

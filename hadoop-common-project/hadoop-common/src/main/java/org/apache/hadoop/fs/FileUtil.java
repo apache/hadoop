@@ -38,6 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -533,6 +534,26 @@ public class FileUtil {
     return dst;
   }
 
+  public static boolean isRegularFile(File file) {
+    return isRegularFile(file, true);
+  }
+
+  /**
+   * Check if the file is regular.
+   * @param file The file being checked.
+   * @param allowLinks Whether to allow matching links.
+   * @return Returns the result of checking whether the file is a regular file.
+   */
+  public static boolean isRegularFile(File file, boolean allowLinks) {
+    if (file != null) {
+      if (allowLinks) {
+        return Files.isRegularFile(file.toPath());
+      }
+      return Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS);
+    }
+    return true;
+  }
+
   /**
    * Convert a os-native filename to a path that works for the shell.
    * @param filename The filename to convert
@@ -888,10 +909,13 @@ public class FileUtil {
   private static void unTarUsingTar(File inFile, File untarDir,
       boolean gzipped) throws IOException {
     StringBuffer untarCommand = new StringBuffer();
+    // not using canonical path here; this postpones relative path
+    // resolution until bash is executed.
+    final String source = "'" + FileUtil.makeSecureShellPath(inFile) + "'";
     if (gzipped) {
-      untarCommand.append(" gzip -dc '")
-          .append(FileUtil.makeSecureShellPath(inFile))
-          .append("' | (");
+      untarCommand.append(" gzip -dc ")
+          .append(source)
+          .append(" | (");
     }
     untarCommand.append("cd '")
         .append(FileUtil.makeSecureShellPath(untarDir))
@@ -901,15 +925,17 @@ public class FileUtil {
     if (gzipped) {
       untarCommand.append(" -)");
     } else {
-      untarCommand.append(FileUtil.makeSecureShellPath(inFile));
+      untarCommand.append(source);
     }
+    LOG.debug("executing [{}]", untarCommand);
     String[] shellCmd = { "bash", "-c", untarCommand.toString() };
     ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
     shexec.execute();
     int exitcode = shexec.getExitCode();
     if (exitcode != 0) {
       throw new IOException("Error untarring file " + inFile +
-                  ". Tar process exited with exit code " + exitcode);
+          ". Tar process exited with exit code " + exitcode
+          + " from command " + untarCommand);
     }
   }
 

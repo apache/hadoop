@@ -3367,6 +3367,25 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.client.refresh.read-block-locations.register-automatically</name>
+    <value>true</value>
+    <description>
+      Whether to auto-register all DFSInputStreams for background LocatedBlock refreshes.
+      If false, user must manually register using DFSClient#addLocatedBlocksRefresh(DFSInputStream)
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.refresh.read-block-locations.threads</name>
+    <value>5</value>
+    <description>
+      Number of threads to use for refreshing LocatedBlocks of registered
+      DFSInputStreams. If a DFSClient opens many DFSInputStreams, increasing
+      this may help refresh them all in a timely manner.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.lease-recheck-interval-ms</name>
   <value>2000</value>
@@ -6335,6 +6354,16 @@
       The threshold to mark a slownode as a badnode. If we get PipelineAck from
       a slownode continuously for ${dfs.client.treat.slownode.as.badnode.threshold}
       times, we should mark it as a badnode.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.lockmanager.trace</name>
+    <value>false</value>
+    <description>
+      If this is true, after shut down datanode lock Manager will print all leak
+      thread that not release by lock Manager. Only used for test or trace dead lock
+      problem. In produce default set false, because it's have little performance loss.
     </description>
   </property>
 </configuration>
