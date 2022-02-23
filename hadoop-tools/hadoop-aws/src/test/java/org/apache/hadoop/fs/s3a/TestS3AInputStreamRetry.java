@@ -121,7 +121,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @param triggerGetObjectFailure true when getObject failure is enabled.
    * @return mocked object.
    */
-  private S3AInputStream.InputStreamCallbacks getMockedInputStreamCallback(boolean triggerGetObjectFailure) {
+  private S3AInputStream.InputStreamCallbacks getMockedInputStreamCallback(
+      boolean triggerGetObjectFailure) {
     return new S3AInputStream.InputStreamCallbacks() {
 
       private final S3Object mockedS3Object = getMockedS3Object();
