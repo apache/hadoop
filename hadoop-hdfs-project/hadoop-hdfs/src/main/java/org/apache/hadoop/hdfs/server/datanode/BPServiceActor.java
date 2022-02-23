@@ -1378,7 +1378,7 @@ class BPServiceActor implements Runnable {
     private final BlockingQueue<Runnable> queue;
 
     CommandProcessingThread(BPServiceActor actor) {
-      setName("Command processor-" + getId());
+      setName("Command processor (id=" + getId() + ") for " + dn.getDisplayName());
       this.actor = actor;
       this.queue = new LinkedBlockingQueue<>();
       setDaemon(true);
