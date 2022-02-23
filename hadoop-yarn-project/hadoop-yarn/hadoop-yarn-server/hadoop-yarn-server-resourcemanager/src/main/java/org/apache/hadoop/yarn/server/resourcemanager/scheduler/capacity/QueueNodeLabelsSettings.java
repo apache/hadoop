@@ -30,14 +30,14 @@ import java.util.Set;
  */
 public class QueueNodeLabelsSettings {
   private final CSQueue parent;
-  private final String queuePath;
+  private final QueuePath queuePath;
   private Set<String> accessibleLabels;
   private Set<String> configuredNodeLabels;
   private String defaultLabelExpression;
 
   public QueueNodeLabelsSettings(CapacitySchedulerConfiguration configuration,
       CSQueue parent,
-      String queuePath,
+      QueuePath queuePath,
       ConfiguredNodeLabels configuredNodeLabels) throws IOException {
     this.parent = parent;
     this.queuePath = queuePath;
@@ -54,7 +54,7 @@ public class QueueNodeLabelsSettings {
   }
 
   private void initializeAccessibleLabels(CapacitySchedulerConfiguration configuration) {
-    this.accessibleLabels = configuration.getAccessibleNodeLabels(queuePath);
+    this.accessibleLabels = configuration.getAccessibleNodeLabels(queuePath.getFullPath());
     // Inherit labels from parent if not set
     if (this.accessibleLabels == null && parent != null) {
       this.accessibleLabels = parent.getAccessibleNodeLabels();
@@ -62,7 +62,7 @@ public class QueueNodeLabelsSettings {
   }
 
   private void initializeDefaultLabelExpression(CapacitySchedulerConfiguration configuration) {
-    this.defaultLabelExpression = configuration.getDefaultNodeLabelExpression(queuePath);
+    this.defaultLabelExpression = configuration.getDefaultNodeLabelExpression(queuePath.getFullPath());
     // If the accessible labels is not null and the queue has a parent with a
     // similar set of labels copy the defaultNodeLabelExpression from the parent
     if (this.accessibleLabels != null && parent != null
@@ -75,21 +75,21 @@ public class QueueNodeLabelsSettings {
   private void initializeConfiguredNodeLabels(CapacitySchedulerConfiguration configuration,
       ConfiguredNodeLabels configuredNodeLabelsParam) {
     if (configuredNodeLabelsParam != null) {
-      if (queuePath.equals(ROOT)) {
+      if (queuePath.isRoot()) {
         this.configuredNodeLabels = configuredNodeLabelsParam.getAllConfiguredLabels();
       } else {
-        this.configuredNodeLabels = configuredNodeLabelsParam.getLabelsByQueue(queuePath);
+        this.configuredNodeLabels = configuredNodeLabelsParam.getLabelsByQueue(queuePath.getFullPath());
       }
     } else {
       // Fallback to suboptimal but correct logic
-      this.configuredNodeLabels = configuration.getConfiguredNodeLabels(queuePath);
+      this.configuredNodeLabels = configuration.getConfiguredNodeLabels(queuePath.getFullPath());
     }
   }
 
   private void validateNodeLabels() throws IOException {
     // Check if labels of this queue is a subset of parent queue, only do this
     // when the queue in question is not root
-    if (isNotRoot()) {
+    if (!queuePath.isRoot()) {
       if (parent.getAccessibleNodeLabels() != null && !parent
           .getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY)) {
         // If parent isn't "*", child shouldn't be "*" too
@@ -109,9 +109,6 @@ public class QueueNodeLabelsSettings {
     }
   }
 
-  private boolean isNotRoot() {
-    return parent != null && parent.getParent() != null;
-  }
 
   public boolean isAccessibleToPartition(String nodePartition) {
     // if queue's label is *, it can access any node
