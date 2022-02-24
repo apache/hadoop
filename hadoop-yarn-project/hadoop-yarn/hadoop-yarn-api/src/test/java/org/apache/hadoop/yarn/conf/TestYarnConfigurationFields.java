@@ -201,6 +201,7 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS);
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.DISPLAY_APPS_FOR_LOGGED_IN_USER);
+    configurationPrefixToSkipCompare.add(YarnConfiguration.APPLICATION_PLACEMENT_TYPE_CLASS);
 
     // Allocate for usage
     xmlPropsToSkipCompare = new HashSet<String>();
