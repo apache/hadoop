@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.Closeable;
@@ -556,7 +558,7 @@ class BPServiceActor implements Runnable {
             SlowPeerReports.create(dn.getPeerMetrics().getOutliers()) :
             SlowPeerReports.EMPTY_REPORT;
     final SlowDiskReports slowDisks =
-        outliersReportDue && dn.getDiskMetrics() != null ?
+        outliersReportDue && dnConf.diskStatsEnabled && dn.getDiskMetrics() != null ?
             SlowDiskReports.create(dn.getDiskMetrics().getDiskOutliersStats()) :
             SlowDiskReports.EMPTY_REPORT;
 
@@ -1195,7 +1197,7 @@ class BPServiceActor implements Runnable {
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
     private volatile long blockReportIntervalMs;
-    private final long outliersReportIntervalMs;
+    private volatile long outliersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
               long blockReportIntervalMs, long outliersReportIntervalMs) {
@@ -1356,8 +1358,20 @@ class BPServiceActor implements Runnable {
     }
 
     void setBlockReportIntervalMs(long intervalMs) {
-      Preconditions.checkArgument(intervalMs > 0);
+      Preconditions.checkArgument(intervalMs > 0,
+          DFS_BLOCKREPORT_INTERVAL_MSEC_KEY + " should be larger than 0");
       this.blockReportIntervalMs = intervalMs;
+    }
+
+    void setOutliersReportIntervalMs(long intervalMs) {
+      Preconditions.checkArgument(intervalMs > 0,
+          DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY + " should be larger than 0");
+      this.outliersReportIntervalMs = intervalMs;
+    }
+
+    @VisibleForTesting
+    long getOutliersReportIntervalMs() {
+      return this.outliersReportIntervalMs;
     }
 
     /**
