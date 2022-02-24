@@ -634,6 +634,7 @@ public class TestDataNodeReconfiguration {
       // Assert dnConf.
       assertTrue(dn.getDnConf().diskStatsEnabled);
       // Assert profilingEventHook.
+      assertTrue(dn.getFileIoProvider().getProfilingEventHook().getDiskStatsEnabled());
       assertEquals((int) ((double) 99 / 100 * Integer.MAX_VALUE),
           dn.getFileIoProvider().getProfilingEventHook().getSampleRangeMax());
       // Assert slowDiskDetector.
@@ -652,6 +653,7 @@ public class TestDataNodeReconfiguration {
       assertEquals(String.format("expect %s is not configured",
           DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY), null,
           dn.getConf().get(DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY));
+      assertFalse(dn.getFileIoProvider().getProfilingEventHook().getDiskStatsEnabled());
       assertEquals(0,
           dn.getFileIoProvider().getProfilingEventHook().getSampleRangeMax());
 

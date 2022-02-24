@@ -1365,10 +1365,11 @@ class BPServiceActor implements Runnable {
 
     void setOutliersReportIntervalMs(long intervalMs) {
       Preconditions.checkArgument(intervalMs > 0,
-      DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY + " should be larger than 0");
+          DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY + " should be larger than 0");
       this.outliersReportIntervalMs = intervalMs;
     }
 
+    @VisibleForTesting
     long getOutliersReportIntervalMs() {
       return this.outliersReportIntervalMs;
     }

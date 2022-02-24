@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -150,10 +151,12 @@ class ProfilingFileIoEvents {
         Integer.MAX_VALUE);
   }
 
+  @VisibleForTesting
   public boolean getDiskStatsEnabled() {
     return isEnabled;
   }
 
+  @VisibleForTesting
   public int getSampleRangeMax() {
     return sampleRangeMax;
   }
