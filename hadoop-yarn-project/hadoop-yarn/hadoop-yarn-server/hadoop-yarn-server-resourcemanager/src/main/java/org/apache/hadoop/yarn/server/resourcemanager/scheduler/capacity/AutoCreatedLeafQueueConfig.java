@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
-
 /**
  * Auto Created Leaf queue configurations, capacity
  */
@@ -33,19 +31,15 @@ public class AutoCreatedLeafQueueConfig {
 
   private CapacitySchedulerConfiguration leafQueueConfigs;
 
-  private final QueueResourceQuotas resourceQuotas;
-
   public AutoCreatedLeafQueueConfig(Builder builder) {
     this.queueCapacities = builder.queueCapacities;
     this.leafQueueConfigs = builder.leafQueueConfigs;
-    this.resourceQuotas = builder.queueResourceQuotas;
   }
 
   public static class Builder {
 
     private QueueCapacities queueCapacities;
     private CapacitySchedulerConfiguration leafQueueConfigs;
-    private QueueResourceQuotas queueResourceQuotas;
 
     public Builder capacities(QueueCapacities capacities) {
       this.queueCapacities = capacities;
@@ -60,11 +54,6 @@ public class AutoCreatedLeafQueueConfig {
     public AutoCreatedLeafQueueConfig build() {
       return new AutoCreatedLeafQueueConfig(this);
     }
-
-    public Builder resourceQuotas(QueueResourceQuotas queueResourceQuotas) {
-      this.queueResourceQuotas = queueResourceQuotas;
-      return this;
-    }
   }
 
   public QueueCapacities getQueueCapacities() {
@@ -73,10 +62,6 @@ public class AutoCreatedLeafQueueConfig {
 
   public CapacitySchedulerConfiguration getLeafQueueConfigs() {
     return leafQueueConfigs;
-  }
-
-  public QueueResourceQuotas getResourceQuotas() {
-    return resourceQuotas;
   }
 
   @Override public String toString() {

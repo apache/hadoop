@@ -804,18 +804,4 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/target/"});
     assertThat(options.getFiltersFile()).isEqualTo("/tmp/filters.txt");
   }
-
-  @Test
-  public void testParseUpdateRoot() {
-    DistCpOptions options = OptionsParser.parse(new String[] {
-        "hdfs://localhost:8020/source/first",
-        "hdfs://localhost:8020/target/"});
-    Assert.assertFalse(options.shouldUpdateRoot());
-
-    options = OptionsParser.parse(new String[] {
-        "-updateRoot",
-        "hdfs://localhost:8020/source/first",
-        "hdfs://localhost:8020/target/"});
-    Assert.assertTrue(options.shouldUpdateRoot());
-  }
 }

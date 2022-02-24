@@ -27,9 +27,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -43,7 +41,6 @@ public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest {
     // If all contract tests are running in parallel, some root level tests in FileSystemContractBaseTest will fail
     // due to the race condition. Hence for this contract test it should be tested in different container
     binding = new ABFSContractTestBinding(false);
-    globalTimeout = Timeout.millis(TEST_TIMEOUT);
   }
 
 

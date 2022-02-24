@@ -70,15 +70,4 @@ public interface OperationAuditor extends Service,
    * @return ID
    */
   String getAuditorId();
-
-  /**
-   * Span reference lost from GC operations.
-   * This is only called when an attempt is made to retrieve on
-   * the active thread or when a prune operation is cleaning up.
-   *
-   * @param threadId thread ID.
-   */
-  default void noteSpanReferenceLost(long threadId) {
-
-  }
 }

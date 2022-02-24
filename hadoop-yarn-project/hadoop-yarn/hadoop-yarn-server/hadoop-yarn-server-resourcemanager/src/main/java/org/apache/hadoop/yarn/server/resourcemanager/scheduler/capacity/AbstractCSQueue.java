@@ -74,7 +74,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 public abstract class AbstractCSQueue implements CSQueue {
@@ -280,23 +279,33 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   /**
-   * Set maximum capacity for empty node label.
+   * Set maximum capacity - used only for testing.
    * @param maximumCapacity new max capacity
    */
   @VisibleForTesting
   void setMaxCapacity(float maximumCapacity) {
-    internalSetMaximumCapacity(maximumCapacity, NO_LABEL);
+    writeLock.lock();
+    try {
+      // Sanity check
+      CSQueueUtils.checkMaxCapacity(this.queuePath,
+          queueCapacities.getCapacity(), maximumCapacity);
+      float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(
+          maximumCapacity, parent);
+      CSQueueUtils.checkAbsoluteCapacity(this.queuePath,
+          queueCapacities.getAbsoluteCapacity(), absMaxCapacity);
+
+      queueCapacities.setMaximumCapacity(maximumCapacity);
+      queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   /**
-   * Set maximum capacity.
+   * Set maximum capacity
    * @param maximumCapacity new max capacity
    */
   void setMaxCapacity(String nodeLabel, float maximumCapacity) {
-    internalSetMaximumCapacity(maximumCapacity, nodeLabel);
-  }
-
-  private void internalSetMaximumCapacity(float maximumCapacity, String nodeLabel) {
     writeLock.lock();
     try {
       // Sanity check
@@ -313,6 +322,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       writeLock.unlock();
     }
   }
+
 
   @Override
   public String getDefaultNodeLabelExpression() {
@@ -907,7 +917,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   private static String ensurePartition(String partition) {
-    return Optional.ofNullable(partition).orElse(NO_LABEL);
+    return Optional.ofNullable(partition).orElse(RMNodeLabelsManager.NO_LABEL);
   }
 
   @FunctionalInterface
@@ -1006,8 +1016,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     // Add NO_LABEL also to this list as NO_LABEL also can be granted with
     // resource in many general cases.
-    if (!nodeLabels.contains(NO_LABEL)) {
-      nodeLabels.add(NO_LABEL);
+    if (!nodeLabels.contains(RMNodeLabelsManager.NO_LABEL)) {
+      nodeLabels.add(RMNodeLabelsManager.NO_LABEL);
     }
     return nodeLabels;
   }
@@ -1288,7 +1298,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           CapacityConfigType.ABSOLUTE_RESOURCE)) {
         newEffectiveMinResource = createNormalizedMinResource(
             usageTracker.getQueueResourceQuotas().getConfiguredMinResource(label),
-            ((ParentQueue) parent).getEffectiveMinRatio(label));
+            ((ParentQueue) parent).getEffectiveMinRatioPerResource());
 
         // Max resource of a queue should be the minimum of {parent's maxResources,
         // this queue's maxResources}. Both parent's maxResources and this queue's

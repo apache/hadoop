@@ -21,7 +21,6 @@ package org.apache.hadoop.tools;
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -45,8 +44,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.tools.util.DistCpTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -553,45 +550,5 @@ public class TestDistCpSystem {
     String tgtStr2 = fs.makeQualified(tgtPath2).toString();
     String[] args2 = new String[]{rootStr, tgtStr2};
     Assert.assertThat(ToolRunner.run(conf, new DistCp(), args2), is(0));
-  }
-
-  @Test
-  public void testUpdateRoot() throws Exception {
-    FileSystem fs = cluster.getFileSystem();
-
-    Path source = new Path("/src");
-    Path dest1 = new Path("/dest1");
-    Path dest2 = new Path("/dest2");
-
-    fs.delete(source, true);
-    fs.delete(dest1, true);
-    fs.delete(dest2, true);
-
-    // Create a source dir
-    fs.mkdirs(source);
-    fs.setOwner(source, "userA", "groupA");
-    fs.setTimes(source, new Random().nextLong(), new Random().nextLong());
-
-    GenericTestUtils.createFiles(fs, source, 3, 5, 5);
-
-    // should not preserve attrs
-    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
-        dest1.toString(), "-p -update", conf);
-
-    FileStatus srcStatus = fs.getFileStatus(source);
-    FileStatus destStatus1 = fs.getFileStatus(dest1);
-    assertNotEquals(srcStatus.getOwner(), destStatus1.getOwner());
-    assertNotEquals(srcStatus.getModificationTime(),
-        destStatus1.getModificationTime());
-
-    // should preserve attrs
-    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
-        dest2.toString(), "-p -update -updateRoot",
-        conf);
-
-    FileStatus destStatus2 = fs.getFileStatus(dest2);
-    assertEquals(srcStatus.getOwner(), destStatus2.getOwner());
-    assertEquals(srcStatus.getModificationTime(),
-        destStatus2.getModificationTime());
   }
 }

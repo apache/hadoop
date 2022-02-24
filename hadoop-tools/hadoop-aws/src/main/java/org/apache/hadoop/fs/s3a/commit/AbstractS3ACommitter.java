@@ -904,8 +904,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       jobCompleted(false);
       abortJobInternal(context, true);
       throw e;
-    } finally {
-      resetCommonContext();
     }
   }
 
@@ -948,7 +946,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     } finally {
       destroyThreadPool();
       cleanupStagingDirs();
-      resetCommonContext();
     }
   }
 

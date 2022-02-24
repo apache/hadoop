@@ -210,7 +210,7 @@ public class AWSRequestAnalyzer {
    * @param request request
    * @return true if the transfer manager creates them.
    */
-  public static boolean
+  public static final boolean
       isRequestNotAlwaysInSpan(final Object request) {
     return request instanceof CopyPartRequest
         || request instanceof CompleteMultipartUploadRequest

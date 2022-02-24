@@ -60,7 +60,7 @@ public class OutlierDetector {
   /**
    * Minimum number of resources to run outlier detection.
    */
-  private volatile long minNumResources;
+  private final long minNumResources;
 
   /**
    * The multiplier is from Leys, C. et al.
@@ -70,7 +70,7 @@ public class OutlierDetector {
   /**
    * Threshold in milliseconds below which a node/ disk is definitely not slow.
    */
-  private volatile long lowThresholdMs;
+  private final long lowThresholdMs;
 
   /**
    * Deviation multiplier. A sample is considered to be an outlier if it
@@ -179,21 +179,5 @@ public class OutlierDetector {
       median /= 2;
     }
     return median;
-  }
-
-  public void setMinNumResources(long minNodes) {
-    minNumResources = minNodes;
-  }
-
-  public long getMinOutlierDetectionNodes() {
-    return minNumResources;
-  }
-
-  public void setLowThresholdMs(long thresholdMs) {
-    lowThresholdMs = thresholdMs;
-  }
-
-  public long getLowThresholdMs() {
-    return lowThresholdMs;
   }
 }

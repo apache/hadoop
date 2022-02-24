@@ -53,7 +53,6 @@ public abstract class YarnConfigurationStore {
    * audit logging and recovery.
    */
   public static class LogMutation implements Serializable {
-    private static final long serialVersionUID = 7754046036718906356L;
     private Map<String, String> updates;
     private String user;
 

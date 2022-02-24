@@ -967,12 +967,9 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.buffer.dir</name>
-  <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a</value>
+  <value>${hadoop.tmp.dir}/s3a</value>
   <description>Comma separated list of directories that will be used to buffer file
-    uploads to.
-    Yarn container path will be used as default value on yarn applications,
-    otherwise fall back to hadoop.tmp.dir
-  </description>
+    uploads to.</description>
 </property>
 
 <property>
@@ -1749,12 +1746,9 @@ consumed, and so eliminates heap size as the limiting factor in queued uploads
 
 <property>
   <name>fs.s3a.buffer.dir</name>
-  <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a</value>
+  <value>${hadoop.tmp.dir}/s3a</value>
   <description>Comma separated list of directories that will be used to buffer file
-    uploads to.
-    Yarn container path will be used as default value on yarn applications,
-    otherwise fall back to hadoop.tmp.dir
-  </description>
+    uploads to.</description>
 </property>
 ```
 

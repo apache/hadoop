@@ -223,14 +223,10 @@ public class TestRouter {
 
   @Test
   public void testSwitchRouter() throws IOException {
-    assertRouterHeartbeater(true, true, true);
-    assertRouterHeartbeater(true, true, false);
-    assertRouterHeartbeater(true, false, true);
-    assertRouterHeartbeater(true, false, false);
-    assertRouterHeartbeater(false, true, true);
-    assertRouterHeartbeater(false, true, false);
-    assertRouterHeartbeater(false, false, true);
-    assertRouterHeartbeater(false, false, false);
+    assertRouterHeartbeater(true, true);
+    assertRouterHeartbeater(true, false);
+    assertRouterHeartbeater(false, true);
+    assertRouterHeartbeater(false, false);
   }
 
   /**
@@ -239,19 +235,15 @@ public class TestRouter {
    * @param expectedRouterHeartbeat expect the routerHeartbeat enable state.
    * @param expectedNNHeartbeat expect the nnHeartbeat enable state.
    */
-  private void assertRouterHeartbeater(boolean enableRpcServer, boolean expectedRouterHeartbeat,
+  private void assertRouterHeartbeater(boolean expectedRouterHeartbeat,
       boolean expectedNNHeartbeat) throws IOException {
     final Router router = new Router();
-    Configuration baseCfg = new RouterConfigBuilder(conf).rpc(enableRpcServer).build();
+    Configuration baseCfg = new RouterConfigBuilder(conf).rpc().build();
     baseCfg.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
         expectedRouterHeartbeat);
     baseCfg.setBoolean(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_ENABLE,
         expectedNNHeartbeat);
     router.init(baseCfg);
-
-    // RouterId can not be null , used by RouterHeartbeatService.updateStateStore()
-    assertNotNull(router.getRouterId());
-
     RouterHeartbeatService routerHeartbeatService =
         router.getRouterHeartbeatService();
     if (expectedRouterHeartbeat) {

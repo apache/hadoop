@@ -119,78 +119,16 @@ The auditor then creates and returns a span for the specific operation.
 The AuditManagerS3A will automatically activate the span returned by the auditor
 (i.e. assign it the thread local variable tracking the active span in each thread).
 
-### Memory Leakage through `ThreadLocal` misuse
+### Memory Leakage through `ThreadLocal` use
 
-The original implementation of the integration with the S3AFileSystem class
-contained a critical defect,
+This architecture contains a critical defect,
 [HADOOP-18091](https://issues.apache.org/jira/browse/HADOOP-18091) _S3A auditing leaks memory through ThreadLocal references_.
 
-The original code was written with the assumption that when the `ActiveAuditManagerS3A` service was
-garbage collected, references in its `ThreadLocal` field would be freed.
-In fact, they are retained until all threads with references are terminated.
-If any long-lived thread had performed an s3 operation which created a span,
-a reference back to the audit manager instance was created
-*whose lifetime was that of the thread*
+The code was written assuming that when the `ActiveAuditManagerS3A` service is
+stopped, it's `ThreadLocal` fields would be freed.
+In fact, they are retained until the threads with references are terminated.
 
-In short-lived processes, and long-lived processes where a limited set of
-`S3AFileSystem` instances were reused, this had no adverse effect.
-Indeed, if the filesystem instances were retained in the cache until
-the process was shut down, there would be strong references to the owning
-`S3AFileSystem` instance anyway.
-
-Where it did have problems was when the following conditions were met
-1. Process was long-lived.
-2. Long-lived threads in the process invoked filesystem operations on `s3a://` URLs.
-3. Either `S3AFileSystem` instances were created repeatedly, rather than retrieved
-   from the cache of active instances.
-4. Or, after a query for a specific user was completed,
-   `FileSystem.closeAllForUGI(UserGroupInformation)` was invoked to remove all
-   cached FS instances of that user.
-
-Conditions 1, 2 and 4 are exactly those which long-lived Hive services can
-encounter.
-
-_Auditing was disabled by default until a fix was implemented._
-
-The memory leak has been fixed using a new class `org.apache.hadoop.util.WeakReferenceMap`
-to store a map of thread IDs to active spans. When the S3A filesystem is closed,
-its audit manager service is stopped and all references to spans removed from the
-map of thread ID to span.
-
-Weak References are used for the map so that span references do not consume memory even if
-threads are terminated without resetting the span reference of that thread.
-There is therefore a theoretical risk that if a garbage collection takes place during
-execution of a spanned operation, the reference will be lost.
-
-This is not considered an issue as all bounded entry points into the S3A filesystem
-retain a strong reference to their audit span.
-
-All entry points which return an object which can invoke s3 operations (input and output
-streams, list iterators, etc.) also retain a strong reference to their span, a reference
-they activate before performing S3 operations.
-A factory method is provided to demand-generate a new span if, somehow, these conditions
-are not met. The "unbounded span" is used here.
-Except in deployments where `fs.s3a.audit.reject.out.of.span.operations` is true,
-invoking S3 operations within the unbounded span are permitted.
-That option is set to `true` within S3A test suites.
-Therefore it is unlikely that any operations are invoked in unbounded spans except
-for the special case of copy operations invoked by the transfer manager threads.
-Those are already ignored in the logging auditor, whose unbounded span ignores
-requests which `AWSRequestAnalyzer.isRequestNotAlwaysInSpan()` indicates
-may happen outside of a span.
-This is restricted to bucket location probes possibly performed by the SDK
-on instantiation, and copy part/complete calls.
-
-
-```java
-  public static boolean
-      isRequestNotAlwaysInSpan(final Object request) {
-    return request instanceof CopyPartRequest
-        || request instanceof CompleteMultipartUploadRequest
-        || request instanceof GetBucketLocationRequest;
-  }
-```
-
+This is why auditing is now disabled by default until a fix is implemented.
 
 ### Class `org.apache.hadoop.fs.audit.CommonAuditContext`
 
@@ -210,39 +148,6 @@ auditors retrieve the values.
 Spans may be used on different thread from that which they were created.
 Spans MUST always use the values from the `currentAuditContext()` in the creation
 thread.
-
-#### Memory Usage of `CommonAuditContext`
-
-The `CommonAuditContext` map has a `ThreadLocal` field to store global
-information which is intended to span multiple operations across multiple
-filesystems, for example the MapReduce or Spark job ID, which is set
-in the S3A committers.
-
-Applications and Hadoop code MUST NOT attach context entries
-which directly or indirectly consumes lots of memory, as the life
-of that memory use will become that of the thread.
-
-Applications and Hadoop code SHOULD remove context entries when
-no-longer needed.
-
-If memory leakage is suspected here, set the log
-`org.apache.hadoop.fs.audit.CommonAuditContext` to `TRACE`
-to log the origin of operations which add log entries.
-
-This will produce a log entry whose stack trace will show the caller chain.
-```
-2022-01-26 16:10:28,384 TRACE audit.CommonAuditContext (CommonAuditContext.java:put(149)) - Adding context entry t1
-java.lang.Exception: t1
-    at org.apache.hadoop.fs.audit.CommonAuditContext.put(CommonAuditContext.java:149)
-    at org.apache.hadoop.fs.audit.CommonAuditContext.init(CommonAuditContext.java:192)
-    at org.apache.hadoop.fs.audit.CommonAuditContext.createInstance(CommonAuditContext.java:210)
-    at org.apache.hadoop.fs.audit.CommonAuditContext.lambda$static$0(CommonAuditContext.java:119)
-    at java.lang.ThreadLocal$SuppliedThreadLocal.initialValue(ThreadLocal.java:284)
-    at java.lang.ThreadLocal.setInitialValue(ThreadLocal.java:180)
-    at java.lang.ThreadLocal.get(ThreadLocal.java:170)
-    at org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext(CommonAuditContext.java:219)
-    at org.apache.hadoop.fs.audit.TestCommonAuditContext.<init>(TestCommonAuditContext.java:54)
-```
 
 
 ### class `NoopAuditor`

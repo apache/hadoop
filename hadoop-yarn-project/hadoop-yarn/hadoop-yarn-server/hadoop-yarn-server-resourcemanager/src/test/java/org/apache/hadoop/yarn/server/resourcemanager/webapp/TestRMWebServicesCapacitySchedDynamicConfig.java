@@ -102,6 +102,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       throws Exception {
     Configuration config = CSConfigGenerator
         .createPercentageConfig();
+    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
 
     initResourceManager(config);
 
@@ -119,6 +121,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       throws Exception {
     Configuration config = CSConfigGenerator
         .createPercentageConfigLegacyAutoCreation();
+    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
 
     initResourceManager(config);
 
@@ -137,6 +141,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       throws Exception {
     Configuration config = CSConfigGenerator
         .createAbsoluteConfigLegacyAutoCreation();
+    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
 
     initResourceManager(config);
     initAutoQueueHandler(8192 * GB);
@@ -151,6 +157,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       throws Exception {
     Configuration config = CSConfigGenerator
         .createAbsoluteConfig();
+    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
 
     initResourceManager(config);
 
@@ -168,6 +176,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       throws Exception {
     Configuration config = CSConfigGenerator
         .createWeightConfig();
+    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
 
     initResourceManager(config);
 
@@ -187,6 +197,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       throws Exception {
     Configuration config = CSConfigGenerator
         .createWeightConfigWithAutoQueueCreationEnabled();
+    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
     config.setInt(CapacitySchedulerConfiguration
         .getQueuePrefix("root.autoParent1") +
         AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX +
@@ -320,10 +332,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       for (Map.Entry<String, String> entry : configs.entrySet()) {
         config.set(entry.getKey(), entry.getValue());
       }
-
-      config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
-          YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-
       return config;
     }
   }

@@ -81,29 +81,13 @@ abstract class InodeTree<T> {
   private List<RegexMountPoint<T>> regexMountPointList =
       new ArrayList<RegexMountPoint<T>>();
 
-  public static class MountPoint<T> {
+  static class MountPoint<T> {
     String src;
     INodeLink<T> target;
 
     MountPoint(String srcPath, INodeLink<T> mountLink) {
       src = srcPath;
       target = mountLink;
-    }
-
-    /**
-     * Returns the source of mount point.
-     * @return The source
-     */
-    public String getSource() {
-      return this.src;
-    }
-
-    /**
-     * Returns the target link.
-     * @return The target INode link
-     */
-    public INodeLink<T> getTarget() {
-      return this.target;
     }
   }
 
@@ -272,7 +256,7 @@ abstract class InodeTree<T> {
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)
    */
-  public static class INodeLink<T> extends INode<T> {
+  static class INodeLink<T> extends INode<T> {
     final URI[] targetDirLinkList;
     private T targetFileSystem;   // file system object created from the link.
     // Function to initialize file system. Only applicable for simple links
@@ -306,7 +290,7 @@ abstract class InodeTree<T> {
      * Get the target of the link. If a merge link then it returned
      * as "," separated URI list.
      */
-    public Path getTargetLink() {
+    Path getTargetLink() {
       StringBuilder result = new StringBuilder(targetDirLinkList[0].toString());
       // If merge link, use "," as separator between the merged URIs
       for (int i = 1; i < targetDirLinkList.length; ++i) {
@@ -948,7 +932,7 @@ abstract class InodeTree<T> {
     }
   }
 
-  public List<MountPoint<T>> getMountPoints() {
+  List<MountPoint<T>> getMountPoints() {
     return mountPoints;
   }
 

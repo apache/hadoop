@@ -132,15 +132,6 @@ public class TestCommonAuditContext extends AbstractHadoopTestBase {
         .describedAs("Value of context element %s", key)
         .isNotBlank();
   }
-  /**
-   * Assert a context value is null.
-   * @param key key to look up
-   */
-  private void assertContextValueIsNull(final String key) {
-    assertThat(context.get(key))
-        .describedAs("Value of context element %s", key)
-        .isNull();
-  }
 
   @Test
   public void testNoteEntryPoint() throws Throwable {
@@ -167,13 +158,4 @@ public class TestCommonAuditContext extends AbstractHadoopTestBase {
     return anAssert;
   }
 
-  @Test
-  public void testAddRemove() throws Throwable {
-    final String key = "testAddRemove";
-    assertContextValueIsNull(key);
-    context.put(key, key);
-    assertContextValue(key).isEqualTo(key);
-    context.remove(key);
-    assertContextValueIsNull(key);
-  }
 }

@@ -75,7 +75,6 @@ public class CopyCommitter extends FileOutputCommitter {
   private boolean ignoreFailures = false;
   private boolean skipCrc = false;
   private int blocksPerChunk = 0;
-  private boolean updateRoot = false;
 
   /**
    * Create a output committer
@@ -101,8 +100,6 @@ public class CopyCommitter extends FileOutputCommitter {
     Configuration conf = jobContext.getConfiguration();
     syncFolder = conf.getBoolean(DistCpConstants.CONF_LABEL_SYNC_FOLDERS, false);
     overwrite = conf.getBoolean(DistCpConstants.CONF_LABEL_OVERWRITE, false);
-    updateRoot =
-        conf.getBoolean(CONF_LABEL_UPDATE_ROOT, false);
     targetPathExists = conf.getBoolean(
         DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, true);
     ignoreFailures = conf.getBoolean(
@@ -339,12 +336,9 @@ public class CopyCommitter extends FileOutputCommitter {
 
         Path targetFile = new Path(targetRoot.toString() + "/" + srcRelPath);
         //
-        // Skip the root folder when skipRoot is true.
+        // Skip the root folder when syncOrOverwrite is true.
         //
-        boolean skipRoot = syncOrOverwrite && !updateRoot;
-        if (targetRoot.equals(targetFile) && skipRoot) {
-          continue;
-        }
+        if (targetRoot.equals(targetFile) && syncOrOverwrite) continue;
 
         FileSystem targetFS = targetFile.getFileSystem(conf);
         DistCpUtils.preserve(targetFS, targetFile, srcFileStatus, attributes,

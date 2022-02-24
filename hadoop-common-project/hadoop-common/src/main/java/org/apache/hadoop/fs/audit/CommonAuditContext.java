@@ -24,9 +24,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -72,15 +69,10 @@ import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD1;
  * {@link #currentAuditContext()} to get the thread-local
  * context for the caller, which can then be manipulated.
  *
- * For further information, especially related to memory consumption,
- * read the document `auditing_architecture` in the `hadoop-aws` module.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class CommonAuditContext {
-
-  private static final Logger LOG = LoggerFactory.getLogger(
-      CommonAuditContext.class);
 
   /**
    * Process ID; currently built from UUID and timestamp.
@@ -100,7 +92,7 @@ public final class CommonAuditContext {
    * Supplier operations must themselves be thread safe.
    */
   private final Map<String, Supplier<String>> evaluatedEntries =
-      new ConcurrentHashMap<>(1);
+      new ConcurrentHashMap<>();
 
   static {
     // process ID is fixed.
@@ -116,7 +108,7 @@ public final class CommonAuditContext {
    * the span is finalized.
    */
   private static final ThreadLocal<CommonAuditContext> ACTIVE_CONTEXT =
-      ThreadLocal.withInitial(CommonAuditContext::createInstance);
+      ThreadLocal.withInitial(() -> createInstance());
 
   private CommonAuditContext() {
   }
@@ -133,21 +125,11 @@ public final class CommonAuditContext {
 
   /**
    * Put a context entry dynamically evaluated on demand.
-   * Important: as these supplier methods are long-lived,
-   * the supplier function <i>MUST NOT</i> be part of/refer to
-   * any object instance of significant memory size.
-   * Applications SHOULD remove references when they are
-   * no longer needed.
-   * When logged at TRACE, prints the key and stack trace of the caller,
-   * to allow for debugging of any problems.
    * @param key key
    * @param value new value
    * @return old value or null
    */
   public Supplier<String> put(String key, Supplier<String> value) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Adding context entry {}", key, new Exception(key));
-    }
     return evaluatedEntries.put(key, value);
   }
 
@@ -156,9 +138,6 @@ public final class CommonAuditContext {
    * @param key key
    */
   public void remove(String key) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Remove context entry {}", key);
-    }
     evaluatedEntries.remove(key);
   }
 
@@ -189,7 +168,7 @@ public final class CommonAuditContext {
   private void init() {
 
     // thread 1 is dynamic
-    put(PARAM_THREAD1, CommonAuditContext::currentThreadID);
+    put(PARAM_THREAD1, () -> currentThreadID());
   }
 
   /**

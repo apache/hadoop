@@ -1617,12 +1617,9 @@
 
 <property>
   <name>fs.s3a.buffer.dir</name>
-  <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a</value>
+  <value>${hadoop.tmp.dir}/s3a</value>
   <description>Comma separated list of directories that will be used to buffer file
-    uploads to.
-    Yarn container path will be used as default value on yarn applications,
-    otherwise fall back to hadoop.tmp.dir
-  </description>
+    uploads to.</description>
 </property>
 
 <property>
@@ -2025,17 +2022,6 @@
   <description>
     Warn but continue when applications use Syncable.hsync when writing
     to S3A.
-  </description>
-</property>
-
-<!--
-The switch to turn S3A auditing on or off.
--->
-<property>
-  <name>fs.s3a.audit.enabled</name>
-  <value>true</value>
-  <description>
-    Should auditing of S3A requests be enabled?
   </description>
 </property>
 

@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
@@ -41,6 +42,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -249,6 +252,33 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       totalAbsoluteActivatedChildQueueCapacityByLabel.clear();
     }
   }
+
+  /**
+   * Comparator that orders applications by their submit time
+   */
+  private class PendingApplicationComparator
+      implements Comparator<FiCaSchedulerApp> {
+
+    @Override
+    public int compare(FiCaSchedulerApp app1, FiCaSchedulerApp app2) {
+      RMApp rmApp1 = managedParentQueue.getQueueContext().getRMApp(
+          app1.getApplicationId());
+      RMApp rmApp2 = managedParentQueue.getQueueContext().getRMApp(
+          app2.getApplicationId());
+      if (rmApp1 != null && rmApp2 != null) {
+        return Long.compare(rmApp1.getSubmitTime(), rmApp2.getSubmitTime());
+      } else if (rmApp1 != null) {
+        return -1;
+      } else if (rmApp2 != null) {
+        return 1;
+      } else{
+        return 0;
+      }
+    }
+  }
+
+  private PendingApplicationComparator applicationComparator =
+      new PendingApplicationComparator();
 
   @Override
   public void init(final ParentQueue parentQueue) throws IOException {
@@ -592,18 +622,19 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
         for (String nodeLabel : updatedQueueTemplate.getQueueCapacities()
             .getExistingNodeLabels()) {
-          if (updatedQueueTemplate.getQueueCapacities().getCapacity(nodeLabel) > 0) {
+          if (updatedQueueTemplate.getQueueCapacities().
+              getCapacity(nodeLabel) > 0) {
             if (isActive(leafQueue, nodeLabel)) {
               LOG.debug("Queue is already active. Skipping activation : {}",
                   leafQueue.getQueuePath());
             } else{
               activate(leafQueue, nodeLabel);
             }
-          } else {
+          } else{
             if (!isActive(leafQueue, nodeLabel)) {
               LOG.debug("Queue is already de-activated. Skipping "
                   + "de-activation : {}", leafQueue.getQueuePath());
-            } else {
+            } else{
               /**
                * While deactivating queues of type ABSOLUTE_RESOURCE, configured
                * min resource has to be set based on updated capacity (which is
@@ -612,7 +643,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
                * leads to incorrect results.
                */
               leafQueue
-                  .mergeCapacities(updatedQueueTemplate.getQueueCapacities(), leafQueueTemplate.getResourceQuotas());
+                  .mergeCapacities(updatedQueueTemplate.getQueueCapacities());
               leafQueue.getQueueResourceQuotas()
                   .setConfiguredMinResource(Resources.multiply(
                       managedParentQueue.getQueueContext().getClusterResource(),
@@ -778,7 +809,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   private List<FiCaSchedulerApp> getSortedPendingApplications() {
     List<FiCaSchedulerApp> apps = new ArrayList<>(
         managedParentQueue.getAllApplications());
-    apps.sort(managedParentQueue.getQueueContext().getApplicationComparator());
+    Collections.sort(apps, applicationComparator);
     return apps;
   }
 
@@ -786,7 +817,6 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     AutoCreatedLeafQueueConfig.Builder templateBuilder =
         new AutoCreatedLeafQueueConfig.Builder();
     templateBuilder.capacities(capacities);
-    templateBuilder.resourceQuotas(managedParentQueue.getLeafQueueTemplate().getResourceQuotas());
     return new AutoCreatedLeafQueueConfig(templateBuilder);
   }
 }

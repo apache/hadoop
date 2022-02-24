@@ -260,7 +260,7 @@ class DistCpSync {
               list.add(new DiffInfo(source, target, dt));
             } else {
               list = diffMap.get(SnapshotDiffReport.DiffType.DELETE);
-              DiffInfo info = new DiffInfo(source, null,
+              DiffInfo info = new DiffInfo(source, target,
                   SnapshotDiffReport.DiffType.DELETE);
               list.add(info);
               if (deletedByExclusionDiffs == null) {

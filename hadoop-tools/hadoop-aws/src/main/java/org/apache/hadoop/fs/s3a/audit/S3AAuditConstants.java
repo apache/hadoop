@@ -44,7 +44,7 @@ public final class S3AAuditConstants {
    * Default auditing flag.
    * Value: {@value}.
    */
-  public static final boolean AUDIT_ENABLED_DEFAULT = true;
+  public static final boolean AUDIT_ENABLED_DEFAULT = false;
 
 
   /**
