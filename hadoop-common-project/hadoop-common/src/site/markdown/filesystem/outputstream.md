@@ -42,7 +42,7 @@ or `FSDataOutputStreamBuilder.build()`.
 These all return instances of `FSDataOutputStream`, through which data
 can be written through various `write()` methods.
 After a stream's `close()` method is called, all data written to the
-stream MUST BE persisted to the fileysystem and visible to oll other
+stream MUST BE persisted to the filesystem and visible to oll other
 clients attempting to read data from that path via `FileSystem.open()`.
 
 As well as operations to write the data, Hadoop's `OutputStream` implementations
@@ -126,7 +126,7 @@ consistent with the data at the filesystem.
 
 The output stream returned from a call of
  `FileSystem.append(path, buffersize, progress)` within a filesystem `FS`,
-can be modelled as a stream whose `buffer` is intialized to that of
+can be modelled as a stream whose `buffer` is initialized to that of
 the original file:
 
 ```python
@@ -648,7 +648,7 @@ in production.
 1. `OutputStream.write()` MAY persist the data, synchronously or asynchronously
 1. `OutputStream.flush()` flushes data to the destination. There
 are no strict persistence requirements.
-1. `Syncable.hflush()` synchronously sends all outstaning data to the destination
+1. `Syncable.hflush()` synchronously sends all outstanding data to the destination
 filesystem. After returning to the caller, the data MUST be visible to other readers,
 it MAY be durable. That is: it does not have to be persisted, merely guaranteed
 to be consistently visible to all clients attempting to open a new stream reading
