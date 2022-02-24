@@ -448,7 +448,8 @@ public final class ZKCuratorManager {
     ) throws Exception {
       ZKClientConfig zkClientConfig = new ZKClientConfig();
       if (zkPrincipal != null) {
-        LOG.info("Configuring zookeeper client to use {}", zkPrincipal);
+        LOG.info("Configuring zookeeper to use {} as the server principal",
+            zkPrincipal);
         zkClientConfig.setProperty(ZKClientConfig.ZK_SASL_CLIENT_USERNAME,
             zkPrincipal);
       }
