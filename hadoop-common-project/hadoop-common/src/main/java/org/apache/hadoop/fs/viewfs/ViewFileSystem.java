@@ -25,8 +25,8 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT_DEFAULT;
 
 import java.util.function.Function;
 import java.io.FileNotFoundException;
@@ -1158,8 +1158,8 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public Path getTrashRoot(Path path) {
     boolean useMountPointLocalTrash =
-        config.getBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH,
-            CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT);
+        config.getBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT,
+            CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT_DEFAULT);
 
     try {
       InodeTree.ResolveResult<FileSystem> res =
@@ -1204,8 +1204,8 @@ public class ViewFileSystem extends FileSystem {
 
     // Add trash dirs for each mount point
     boolean useMountPointLocalTrash =
-        config.getBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH,
-            CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT);
+        config.getBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT,
+            CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT_DEFAULT);
     if (useMountPointLocalTrash) {
 
       Set<Path> currentTrashPaths = new HashSet<>();

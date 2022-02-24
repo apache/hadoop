@@ -69,7 +69,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 
 import org.junit.After;
@@ -1111,7 +1111,7 @@ abstract public class ViewFileSystemBaseTest {
   public void testTrashRootRootOfMountPoint() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     Configuration conf2 = new Configuration(conf);
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT, true);
     ConfigUtil.addLinkFallback(conf2, targetTestRoot.toUri());
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
 
@@ -1131,7 +1131,7 @@ abstract public class ViewFileSystemBaseTest {
 
     // Case 3: turn off the CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH flag.
     // Return a trash root in user home dir in the mount point.
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, false);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT, false);
     fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
     Path dataUserTrashRoot = new Path(
         "/data" + fsTarget.getHomeDirectory().toUri().getPath() + "/"
@@ -1175,7 +1175,7 @@ abstract public class ViewFileSystemBaseTest {
   public void testTrashRootEncryptedTrashDir() throws IOException {
 
     Configuration conf2 = ViewFileSystemTestSetup.createConfig();
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT, true);
     conf2.setClass("fs.mocktrashfs.impl", MockTrashRootFS.class,
         FileSystem.class);
     ConfigUtil.addLink(conf2, "/mnt", URI.create("mocktrashfs://mnt/path"));
@@ -1191,7 +1191,7 @@ abstract public class ViewFileSystemBaseTest {
   @Test
   public void testTrashRootsAllUsers() throws IOException {
     Configuration conf2 = new Configuration(conf);
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT, true);
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
 
     // Case 1: verify correct trash roots from fsView and fsView2
@@ -1237,7 +1237,7 @@ abstract public class ViewFileSystemBaseTest {
     String currentUser =
         UserGroupInformation.getCurrentUser().getShortUserName();
     Configuration conf2 = new Configuration(conf);
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT, true);
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
 
     int beforeTrashRootNum = fsView.getTrashRoots(false).size();
