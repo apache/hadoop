@@ -1144,20 +1144,19 @@ public class ViewFileSystem extends FileSystem {
    * specified is deleted.
    *
    * If CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is not set, return
-   * the default trash root from targetFS.
+   * a trash root based on the trash root returned by targetFS.
    *
    * When CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is set to true,
-   * 1) If path p is in fallback FS or from the same mount point as the default
-   *    trash root for targetFS, return the default trash root for targetFS.
-   * 2) else, return a trash root in the mounted targetFS
-   *    (/mntpoint/.Trash/{user})
+   * 1) If path p is in a snapshot or encryption zone, or when it is in the
+   *    fallback FS, return a trash root based on the trash root returned
+   *    by targetFS (/mntpoint/trashRootInTargetFS).
+   * 2) else, return a trash root in the mount point (/mntpoint/.Trash/{user}).
    *
    * @param path the trash root of the path to be determined.
    * @return the trash root path.
    */
   @Override
   public Path getTrashRoot(Path path) {
-    LOG.info("new getTrashRoot for ViewFileSystem");
     boolean useMountPointLocalTrash =
         config.getBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH,
             CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT);
@@ -1166,7 +1165,10 @@ public class ViewFileSystem extends FileSystem {
       InodeTree.ResolveResult<FileSystem> res =
           fsState.resolve(getUriPath(path), true);
 
-      Path trashRoot = res.targetFileSystem.getTrashRoot(res.remainingPath);
+      Path targetFSTrashRoot =
+          res.targetFileSystem.getTrashRoot(res.remainingPath);
+      Path trashRoot =
+          new Path(res.resolvedPath + targetFSTrashRoot.toUri().getPath());
       if (!useMountPointLocalTrash || isSnapshotEnabledOrEncrypted(path)) {
         return trashRoot;
       } else {
@@ -1174,13 +1176,11 @@ public class ViewFileSystem extends FileSystem {
 
         if (ROOT_PATH.equals(new Path(res.resolvedPath))) {
           // Path p is in the fallback FS
+          trashRoot = new Path(targetFSTrashRoot.toUri().getPath());
           return trashRoot;
         } else {
-          // targetFileSystem.trashRoot is in a different mount point from
-          // Path p. Return the trash root for the mount point.
-          Path mountPointRoot =
-              res.targetFileSystem.getFileStatus(new Path("/")).getPath();
-          return new Path(mountPointRoot,
+          // Return the trash root for the mount point.
+          return new Path(res.resolvedPath,
               TRASH_PREFIX + "/" + ugi.getShortUserName());
         }
       }

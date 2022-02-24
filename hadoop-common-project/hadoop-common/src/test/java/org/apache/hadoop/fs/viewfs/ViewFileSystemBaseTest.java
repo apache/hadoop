@@ -1056,9 +1056,9 @@ abstract public class ViewFileSystemBaseTest {
     // Verify if Trash roots from ViewFileSystem matches that of the ones
     // from the target mounted FileSystem.
     assertEquals(mountDataRootTrashPath.toUri().getPath(),
-        fsTargetRootTrashRoot.toUri().getPath());
+        "/data" + fsTargetRootTrashRoot.toUri().getPath());
     assertEquals(mountDataFileTrashPath.toUri().getPath(),
-        fsTargetFileTrashPath.toUri().getPath());
+        "/data" + fsTargetFileTrashPath.toUri().getPath());
     assertEquals(mountDataRootTrashPath.toUri().getPath(),
         mountDataFileTrashPath.toUri().getPath());
 
@@ -1105,34 +1105,38 @@ abstract public class ViewFileSystemBaseTest {
   }
 
   /**
-   * Test the localized trash root for getTrashRoot.
+   * Test trash root at the root of mount points
    */
   @Test
-  public void testTrashRootLocalizedTrash() throws IOException {
+  public void testTrashRootRootOfMountPoint() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     Configuration conf2 = new Configuration(conf);
     conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
     ConfigUtil.addLinkFallback(conf2, targetTestRoot.toUri());
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
 
-    // Case 1: path p not in the default FS.
+    // Case 1: path p in the /data mount point.
     // Return a trash root within the mount point.
     Path dataTestPath = new Path("/data/dir/file");
-    Path dataTrashRoot = new Path(targetTestRoot,
-        "data/" + TRASH_PREFIX + "/" + ugi.getShortUserName());
+    Path dataTrashRoot =
+        new Path("/data/" + TRASH_PREFIX + "/" + ugi.getShortUserName());
     Assert.assertEquals(dataTrashRoot, fsView2.getTrashRoot(dataTestPath));
 
     // Case 2: path p not found in mount table, fall back to the default FS
     // Return a trash root in user home dir
     Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
-    Path userTrashRoot = new Path(fsTarget.getHomeDirectory(), TRASH_PREFIX);
+    Path userTrashRoot =
+        new Path(fsTarget.getHomeDirectory().toUri().getPath(), TRASH_PREFIX);
     Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(nonExistentPath));
 
     // Case 3: turn off the CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH flag.
-    // Return a trash root in user home dir.
+    // Return a trash root in user home dir in the mount point.
     conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, false);
     fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(dataTestPath));
+    Path dataUserTrashRoot = new Path(
+        "/data" + fsTarget.getHomeDirectory().toUri().getPath() + "/"
+            + TRASH_PREFIX);
+    Assert.assertEquals(dataUserTrashRoot, fsView2.getTrashRoot(dataTestPath));
 
     // Case 4: viewFS without fallback. Expect exception for a nonExistent path
     conf2 = new Configuration(conf);
@@ -1149,7 +1153,7 @@ abstract public class ViewFileSystemBaseTest {
    */
   static class MockTrashRootFS extends MockFileSystem {
     public static final Path TRASH =
-        new Path("/mnt/very/deep/deep/trash/dir/.Trash");
+        new Path("/very/deep/deep/trash/dir/.Trash");
 
     @Override
     public Path getTrashRoot(Path path) {
@@ -1175,9 +1179,10 @@ abstract public class ViewFileSystemBaseTest {
     conf2.setClass("fs.mocktrashfs.impl", MockTrashRootFS.class,
         FileSystem.class);
     ConfigUtil.addLink(conf2, "/mnt", URI.create("mocktrashfs://mnt/path"));
-    Path testPath = new Path(MockTrashRootFS.TRASH, "projs/proj");
+    Path testPath = new Path("/mnt/projs/proj");
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Assert.assertEquals(MockTrashRootFS.TRASH, fsView2.getTrashRoot(testPath));
+    Assert.assertEquals("/mnt" + MockTrashRootFS.TRASH,
+        fsView2.getTrashRoot(testPath).toUri().getPath());
   }
 
   /**
