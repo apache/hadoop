@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports.DiskOp;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
 
 /**
  * This class detects and maintains DataNode disk outliers and their
@@ -68,11 +72,11 @@ public class DataNodeDiskMetrics {
   /**
    * Minimum number of disks to run outlier detection.
    */
-  private final long minOutlierDetectionDisks;
+  private volatile long minOutlierDetectionDisks;
   /**
    * Threshold in milliseconds below which a disk is definitely not slow.
    */
-  private final long lowThresholdMs;
+  private volatile long lowThresholdMs;
   /**
    * The number of slow disks that needs to be excluded.
    */
@@ -268,5 +272,32 @@ public class DataNodeDiskMetrics {
 
   public List<String> getSlowDisksToExclude() {
     return slowDisksToExclude;
+  }
+
+  public void setLowThresholdMs(long thresholdMs) {
+    Preconditions.checkArgument(thresholdMs > 0,
+        DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY + " should be larger than 0");
+    lowThresholdMs = thresholdMs;
+    this.slowDiskDetector.setLowThresholdMs(thresholdMs);
+  }
+
+  public long getLowThresholdMs() {
+    return lowThresholdMs;
+  }
+
+  public void setMinOutlierDetectionDisks(long minDisks) {
+    Preconditions.checkArgument(minDisks > 0,
+        DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY + " should be larger than 0");
+    minOutlierDetectionDisks = minDisks;
+    this.slowDiskDetector.setMinNumResources(minDisks);
+  }
+
+  public long getMinOutlierDetectionDisks() {
+    return minOutlierDetectionDisks;
+  }
+
+  @VisibleForTesting
+  public OutlierDetector getSlowDiskDetector() {
+    return this.slowDiskDetector;
   }
 }

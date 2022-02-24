@@ -1070,4 +1070,8 @@ public class FileIoProvider {
     }
     profilingEventHook.onFailure(volume, begin);
   }
+
+  public ProfilingFileIoEvents getProfilingEventHook() {
+    return profilingEventHook;
+  }
 }
