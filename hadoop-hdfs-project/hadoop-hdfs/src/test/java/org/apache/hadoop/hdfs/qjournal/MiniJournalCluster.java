@@ -78,13 +78,13 @@ public class MiniJournalCluster {
       return this;
     }
 
-    public Builder setHttpPorts(int... httpPorts) {
-      this.httpPorts = httpPorts;
+    public Builder setHttpPorts(int... ports) {
+      this.httpPorts = ports;
       return this;
     }
 
-    public Builder setRpcPorts(int... rpcPorts) {
-      this.rpcPorts = rpcPorts;
+    public Builder setRpcPorts(int... ports) {
+      this.rpcPorts = ports;
       return this;
     }
 
