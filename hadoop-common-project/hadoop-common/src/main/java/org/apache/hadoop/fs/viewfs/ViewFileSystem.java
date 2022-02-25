@@ -1157,7 +1157,7 @@ public class ViewFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
-    boolean useMountPointLocalTrash =
+    boolean trashRootUnderMountPointRoot =
         config.getBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT,
             CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT_DEFAULT);
 
@@ -1167,22 +1167,19 @@ public class ViewFileSystem extends FileSystem {
 
       Path targetFSTrashRoot =
           res.targetFileSystem.getTrashRoot(res.remainingPath);
-      Path trashRoot =
-          new Path(res.resolvedPath + targetFSTrashRoot.toUri().getPath());
-      if (!useMountPointLocalTrash || isSnapshotEnabledOrEncrypted(path)) {
-        return trashRoot;
-      } else {
-        // Path p is either in a mount point or in the fallback FS
 
-        if (ROOT_PATH.equals(new Path(res.resolvedPath))) {
-          // Path p is in the fallback FS
-          trashRoot = new Path(targetFSTrashRoot.toUri().getPath());
-          return trashRoot;
-        } else {
-          // Return the trash root for the mount point.
-          return new Path(res.resolvedPath,
-              TRASH_PREFIX + "/" + ugi.getShortUserName());
-        }
+      if (!trashRootUnderMountPointRoot) {
+        return targetFSTrashRoot;
+      }
+
+      // New trash root policy
+      if (isSnapshotEnabledOrEncrypted(path) || ROOT_PATH.equals(
+          new Path(res.resolvedPath))) {
+        return targetFSTrashRoot;
+      } else {
+        // Return the trash root for the mount point.
+        return new Path(res.resolvedPath,
+            TRASH_PREFIX + "/" + ugi.getShortUserName());
       }
     } catch (IOException | IllegalArgumentException e) {
       throw new NotInMountpointException(path, "getTrashRoot");
@@ -1202,59 +1199,67 @@ public class ViewFileSystem extends FileSystem {
       trashRoots.addAll(fs.getTrashRoots(allUsers));
     }
 
-    // Add trash dirs for each mount point
-    boolean useMountPointLocalTrash =
+    boolean trashRootUnderMountPointRoot =
         config.getBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT,
             CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT_DEFAULT);
-    if (useMountPointLocalTrash) {
+    // Return trashRoots if CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT is
+    // disabled.
+    if (!trashRootUnderMountPointRoot) {
+      return trashRoots;
+    }
 
-      Set<Path> currentTrashPaths = new HashSet<>();
-      for (FileStatus file : trashRoots) {
-        currentTrashPaths.add(file.getPath());
-      }
+    // We use targetFS Path to check for duplicate paths.
+    Set<Path> uniqueTrashRoots = new HashSet<>();
+    for (FileStatus file : trashRoots) {
+      uniqueTrashRoots.add(file.getPath());
+    }
 
-      MountPoint[] mountPoints = getMountPoints();
-      try {
-        for (int i = 0; i < mountPoints.length; i++) {
-          Path trashRoot = makeQualified(
-              new Path(mountPoints[i].mountedOnPath + "/" + TRASH_PREFIX));
+    List<InodeTree.MountPoint<FileSystem>> mountPoints =
+        fsState.getMountPoints();
+    try {
+      for (InodeTree.MountPoint<FileSystem> mountPoint : mountPoints) {
 
-          // Continue if trashRoot does not exist for this filesystem
-          if (!exists(trashRoot)) {
-            continue;
-          }
+        Path trashRoot = new Path(mountPoint.src + "/" + TRASH_PREFIX);
 
-          InodeTree.ResolveResult<FileSystem> res =
-              fsState.resolve(getUriPath(trashRoot), true);
+        // Continue if trashRoot does not exist for this mount point
+        if (!exists(trashRoot)) {
+          continue;
+        }
 
-          if (!allUsers) {
-            Path userTrash =
+        if (!allUsers) {
+          Path userTrashRoot = new Path(trashRoot, ugi.getShortUserName());
+          if (exists(userTrashRoot)) {
+            Path targetFsTrashPath =
                 new Path("/" + TRASH_PREFIX + "/" + ugi.getShortUserName());
-            try {
-              FileStatus file = res.targetFileSystem.getFileStatus(userTrash);
-              if (!currentTrashPaths.contains(file.getPath())) {
-                trashRoots.add(file);
-                currentTrashPaths.add(file.getPath());
-              }
-            } catch (FileNotFoundException ignored) {
+            FileStatus targetFsTrash = mountPoint.target.getTargetFileSystem()
+                .getFileStatus(targetFsTrashPath);
+            if (!uniqueTrashRoots.contains(targetFsTrash.getPath())) {
+              FileStatus trash = getFileStatus(userTrashRoot);
+              trashRoots.add(trash);
+              uniqueTrashRoots.add(targetFsTrash.getPath());
             }
-          } else {
-            FileStatus[] targetFsTrashRoots =
-                res.targetFileSystem.listStatus(new Path("/" + TRASH_PREFIX));
-            for (FileStatus file : targetFsTrashRoots) {
-              // skip if we already include it in currentTrashPaths
-              if (currentTrashPaths.contains(file.getPath())) {
-                continue;
-              }
+          }
+        } else {
+          FileStatus[] mountPointTrashRoots = listStatus(trashRoot);
+          for (FileStatus trash : mountPointTrashRoots) {
+            // Remove the mountPoint to get the targetFS path
+            Path targetFsTrashPath =
+                new Path(trash.getPath().toUri().getPath()
+                    .substring(mountPoint.src.length()));
+            FileStatus targetFsTrash = mountPoint.target.getTargetFileSystem()
+                .getFileStatus(targetFsTrashPath);
+            // skip if we already include it in uniqueTrashRoots
+            if (uniqueTrashRoots.contains(targetFsTrash.getPath())) {
+              continue;
+            }
 
-              trashRoots.add(file);
-              currentTrashPaths.add(file.getPath());
-            }
+            trashRoots.add(trash);
+            uniqueTrashRoots.add(targetFsTrash.getPath());
           }
         }
-      } catch (IOException e) {
-        LOG.warn("Exception in get all trash roots", e);
       }
+    } catch (IOException e) {
+      LOG.warn("Exception in get all trash roots", e);
     }
 
     return trashRoots;

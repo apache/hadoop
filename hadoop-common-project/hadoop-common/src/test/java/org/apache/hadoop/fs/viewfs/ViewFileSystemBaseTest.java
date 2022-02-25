@@ -1056,12 +1056,11 @@ abstract public class ViewFileSystemBaseTest {
     // Verify if Trash roots from ViewFileSystem matches that of the ones
     // from the target mounted FileSystem.
     assertEquals(mountDataRootTrashPath.toUri().getPath(),
-        "/data" + fsTargetRootTrashRoot.toUri().getPath());
+        fsTargetRootTrashRoot.toUri().getPath());
     assertEquals(mountDataFileTrashPath.toUri().getPath(),
-        "/data" + fsTargetFileTrashPath.toUri().getPath());
+        fsTargetFileTrashPath.toUri().getPath());
     assertEquals(mountDataRootTrashPath.toUri().getPath(),
         mountDataFileTrashPath.toUri().getPath());
-
 
     // Verify trash root for an non-existing file but on a valid mountpoint.
     Path trashRoot = fsView.getTrashRoot(mountDataNonExistingFilePath);
@@ -1125,18 +1124,16 @@ abstract public class ViewFileSystemBaseTest {
     // Case 2: path p not found in mount table, fall back to the default FS
     // Return a trash root in user home dir
     Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
-    Path userTrashRoot =
-        new Path(fsTarget.getHomeDirectory().toUri().getPath(), TRASH_PREFIX);
-    Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(nonExistentPath));
+    Path targetFsTrashRoot = fsTarget.makeQualified(
+        new Path(fsTarget.getHomeDirectory().toUri().getPath(), TRASH_PREFIX));
+    Assert.assertEquals(targetFsTrashRoot,
+        fsView2.getTrashRoot(nonExistentPath));
 
     // Case 3: turn off the CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH flag.
-    // Return a trash root in user home dir in the mount point.
+    // Return a trash root in user home dir.
     conf2.setBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT, false);
     fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Path dataUserTrashRoot = new Path(
-        "/data" + fsTarget.getHomeDirectory().toUri().getPath() + "/"
-            + TRASH_PREFIX);
-    Assert.assertEquals(dataUserTrashRoot, fsView2.getTrashRoot(dataTestPath));
+    Assert.assertEquals(targetFsTrashRoot, fsView2.getTrashRoot(dataTestPath));
 
     // Case 4: viewFS without fallback. Expect exception for a nonExistent path
     conf2 = new Configuration(conf);
@@ -1181,8 +1178,7 @@ abstract public class ViewFileSystemBaseTest {
     ConfigUtil.addLink(conf2, "/mnt", URI.create("mocktrashfs://mnt/path"));
     Path testPath = new Path("/mnt/projs/proj");
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Assert.assertEquals("/mnt" + MockTrashRootFS.TRASH,
-        fsView2.getTrashRoot(testPath).toUri().getPath());
+    Assert.assertEquals(MockTrashRootFS.TRASH, fsView2.getTrashRoot(testPath));
   }
 
   /**
