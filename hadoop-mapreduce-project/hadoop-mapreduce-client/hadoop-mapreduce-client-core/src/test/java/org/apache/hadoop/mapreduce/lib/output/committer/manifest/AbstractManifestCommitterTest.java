@@ -62,7 +62,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTas
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -78,7 +77,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_FACTORY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.NAME_FORMAT_JOB_ATTEMPT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
@@ -796,8 +794,7 @@ public abstract class AbstractManifestCommitterTest
         .withJobDirectories(attemptDirs)
         .withName(String.format(NAME_FORMAT_JOB_ATTEMPT, jobId))
         .withOperations(getStoreOperations())
-        .withProgressable(getProgressCounter())
-        .withIOLimiter(RateLimitingFactory.create(OPT_IO_RATE_DEFAULT));
+        .withProgressable(getProgressCounter());
 
     // if there's a task attempt ID set, set up its details
     if (taskIndex >= 0) {

@@ -84,7 +84,7 @@ These can be done in `core-site.xml`, if it is not defined in the `mapred-defaul
 ```xml
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
-  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
   <description>
     The default committer factory for ABFS is for the manifest committer.
   </description>
@@ -98,20 +98,27 @@ These can be done in `core-site.xml`, if it is not defined in the `mapred-defaul
 </property>
 ```
 
-In `spark-default`
+## Binding to the manifest committer in Spark.
+
+In Apache Spark, the `spark-default` configuration needs to switch to using the committer factory
+mechanism to instantiate committers. This includes configuring Parquet with a subclass of the parquet
+committer which uses the factory mechansim internally.
 
 ```
-spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.gs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
 spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
 spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
-
 ```
+
+
+
+### using the `committerinfo` command to probe committer bindings.
 
 The hadoop committer settings can be validated in a recent build of [cloudstore](https://github.com/steveloughran/cloudstore)
 and its `committerinfo` command.
 This command instantiates a committer for that path through the same factory mechanism as MR and spark jobs use,
-then prints its toString value.
+then prints its `toString` value.
 
 ```
 hadoop jar cloudstore-1.0.jar committerinfo abfs://testing@ukwest.dfs.core.windows.net/
@@ -288,64 +295,37 @@ It's complicated, but the goal is to perform a fast/scalable delete
 fall back to a rename to trash if that fails, and
 throw a meaningful exception if that didn't work.
 
-# Rate Limiting
-
-To avoid triggering store throttling and backoff delays, the committer rate-limits read- and write
-operations per second.
-
-| Option | Meaning |
-|--------|---------|
-| `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for IO operations. |
-
-Set the option to `0` remove all rate limiting.
-
-If rate limiting is imposed, The statistics `io_acquire_write_permit` and `io_acquire_read_permit` report
-the time to acquire permits for read and write and so identify any delays.
-
-The need for any throttling can be determined by looking at job logs to see if
-throttling events and retries took place, or, (often easier) the store service's
-logs and their throttling status codes (usually 503 or 500).
-
 # Working with Azure Storage
 
-
-The option `mapreduce.manifest.committer.store.operations.classname` should be set to the Azure Specific store binding,  `org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations`.
-
-This allows for ABFS-specific performance and consistency logic to be used from within the committer.
-In particular, the [Etag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) header
-can be collected in listings and used in the job commit phase.
+To switch to the manifest committer, the factory for committers for destinations with `abfs://` URLs must
+be switched to the manifest committer factory.
 
 ```xml
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
-  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
 </property>
 ```
+
+This allows for ADLS Gen2 -specific performance and consistency logic to be used from within the committer.
+In particular,
+* the [Etag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) header
+can be collected in listings and used in the job commit phase.
+* IO rename operations are rate limited
+* recovery is attempted when throttling triggers rename failures.
 
 The core set of Azure-optimized options becomes
 
 ```xml
 <property>
 <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
-<value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
-</property>
-
-<property>
-  <name>mapreduce.manifest.committer.store.operations.classname</name>
-  <value>org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations</value>
+<value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
 </property>
 
 <property>
   <name>mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories</name>
   <value>true/value>
   <description>Parallel directory deletion to address scale-related timeouts.</description>
-</property>
-
-
-<property>
-<name>mapreduce.manifest.committer.io.rate</name>
-<value>10000</value>
-<description>Rate limit for a store, unless increased by Microsoft</description>
 </property>
 
 ```
@@ -355,16 +335,58 @@ And optional settings for debugging/performance analysis
 ```xml
 
 <property>
-  <name>mapreduce.manifest.committer.summary.report.directory/name>
+  <name>mapreduce.manifest.committer.summary.report.directory</name>
   <value>abfs:// Path within same store/separate store</value>
   <description>Optional: path to where job summaries are saved</description>
 </property>
 
 <property>
-<name>mapreduce.manifest.committer.validate.output</name>
-<value>true</value>
-<description>Validate the output</description>
+  <name>mapreduce.manifest.committer.validate.output</name>
+  <value>true</value>
+  <description>Validate the output</description>
 </property>
 
-        ``
 ```
+
+## Rate Limiting in job commit with ABFS
+
+To avoid triggering store throttling and backoff delays, as well as other
+throttling-related failure conditions file renames during job commit
+are throttled through the . 
+
+| Option | Meaning |
+|--------|---------|
+| `fs.azure.io.rate.limit` | Rate limit in operations/second for IO operations. |
+
+Set the option to `0` remove all rate limiting.
+
+The default value of this is set to 10000, which is the default IO capacity for
+an ADLS storage account.
+
+```xml
+<property>
+  <name>fs.azure.io.rate.limit</name>
+  <value>10000</value>
+  <description>maximum number of renames attempted per second</description>
+</property>
+```
+
+This capacity is set at the level of the filesystem client, and so not
+shared across all processes within a single application, let
+alone other applications sharing the same storage account.
+
+It will be shared with all jobs being committed by the same
+Spark driver, as these do share that filesystem connector.
+
+If rate limiting is imposed, the statistic `store_io_rate_limited` will
+report the time to acquire permits for committing files.
+
+If server-side throttling took place, signs of this can be seen in
+* The store service's logs and their throttling status codes (usually 503 or 500).
+* The job statistic `commit_file_rename_recovered`. This statistic indicates that
+  ADLS throttling manifested as failures in renames, failures which were recovered
+  from in the comitter.
+  
+If these are seen -or other applications running at the same time experience
+throttling/throttling-triggered problems, consider reducing the value of
+`fs.azure.io.rate.limit`, and/or requesting a higher IO capacity from Microsoft.

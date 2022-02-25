@@ -18,14 +18,22 @@
 
 package org.apache.hadoop.util;
 
+import java.time.Duration;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Minimal subset of google rate limiter class.
  * Can be used to throttle use of object stores where excess load
- * will trigger cluster-wide throttling, backoff etc and so collapse
+ * will trigger cluster-wide throttling, backoff etc. and so collapse
  * performance.
+ * The time waited is returned as a Duration type.
+ * The google rate limiter implements this by allowing a caller to ask for
+ * more capacity than is available. This will be granted
+ * but the subsequent request will be blocked if the bucket of
+ * capacity hasn't let refilled to the point where there is
+ * capacity again.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -37,7 +45,8 @@ public interface RateLimiting {
    * but the subsequent call will block until the capacity has been
    * refilled.
    * @param capacity capacity to acquire.
-   * @return time in milliseconds spent waiting for output.
+   * @return time spent waiting for output.
    */
-  int acquire(int capacity);
+  Duration acquire(int capacity);
+
 }

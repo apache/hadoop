@@ -52,8 +52,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * attempt context and a possibly null path.
  *
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class PathOutputCommitterFactory extends Configured {
   private static final Logger LOG =
       LoggerFactory.getLogger(PathOutputCommitterFactory.class);

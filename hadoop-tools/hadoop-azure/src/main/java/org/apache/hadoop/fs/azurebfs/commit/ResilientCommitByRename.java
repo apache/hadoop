@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.azurebfs.commit;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.Duration;
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -82,8 +84,10 @@ public interface ResilientCommitByRename extends IOStatisticsSource {
    * @throws PathIOException failure, including source and dest being the same path
    * @throws IOException any other exception
    */
-  boolean commitSingleFileByRename(
+  Pair<Boolean, Duration> commitSingleFileByRename(
       Path source,
       Path dest,
       @Nullable String sourceEtag) throws IOException;
+
+
 }

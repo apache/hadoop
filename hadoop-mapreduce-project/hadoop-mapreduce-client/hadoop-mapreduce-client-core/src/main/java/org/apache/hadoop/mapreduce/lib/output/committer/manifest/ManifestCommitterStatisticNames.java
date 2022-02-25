@@ -102,12 +102,6 @@ public final class ManifestCommitterStatisticNames {
   public static final String COMMITTER_TASK_FILE_SIZE_MEAN =
       "committer_task_file_size";
 
-  /** Time to acquire read permit {@value}. */
-  public static final String IO_ACQUIRE_READ_PERMIT_BLOCKED = "io_acquire_read_permit_blocked";
-
-  /** Time to acquire write permit {@value}. */
-  public static final String IO_ACQUIRE_WRITE_PERMIT_BLOCKED = "io_acquire_write_permit_blocked";
-
   /**
    * A file renamed during the commit operation {@value}.
    */

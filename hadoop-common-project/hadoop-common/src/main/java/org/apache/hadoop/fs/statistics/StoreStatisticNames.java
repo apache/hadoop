@@ -175,6 +175,9 @@ public final class StoreStatisticNames {
   public static final String STORE_IO_THROTTLED
       = "store_io_throttled";
 
+  /** Rate limiting was reported {@value}. */
+  public static final String STORE_IO_RATE_LIMITED = "store_io_rate_limited";
+
   /** Requests made of a store: {@value}. */
   public static final String STORE_IO_REQUEST
       = "store_io_request";

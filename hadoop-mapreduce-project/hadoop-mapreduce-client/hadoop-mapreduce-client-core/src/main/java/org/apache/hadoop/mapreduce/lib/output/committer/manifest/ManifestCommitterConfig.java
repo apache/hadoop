@@ -36,7 +36,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageCon
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageEventCallbacks;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
@@ -139,11 +138,6 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   private final StageEventCallbacks stageEventCallbacks;
 
   /**
-   * Read operation rate limit per second..
-   */
-  private final int iopsRate;
-
-  /**
    * Name for logging.
    */
   private final String name;
@@ -204,9 +198,6 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
     this.prepareParentDirectories = conf.getBoolean(
         OPT_PREPARE_PARENT_DIRECTORIES,
         OPT_PREPARE_PARENT_DIRECTORIES_DEFAULT);
-
-
-    this.iopsRate = conf.getInt(OPT_IO_RATE, OPT_IO_RATE_DEFAULT);
 
     // if constructed with a task attempt, build the task ID and path.
     if (context instanceof TaskAttemptContext) {
@@ -279,7 +270,6 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
         .withTaskAttemptDir(taskAttemptDir)
         .withTaskAttemptId(taskAttemptId)
         .withTaskId(taskId)
-        .withIOLimiter(RateLimitingFactory.create(iopsRate))
         .withDeleteTargetPaths(deleteTargetPaths)
         .withPrepareParentDirectories(prepareParentDirectories);
 

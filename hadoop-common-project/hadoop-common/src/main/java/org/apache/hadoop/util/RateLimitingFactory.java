@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.util;
 
+import java.time.Duration;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
@@ -33,6 +35,11 @@ public final class RateLimitingFactory {
 
   private static final RateLimiting UNLIMITED = new NoRateLimiting();
 
+  /**
+   * No waiting took place.
+   */
+  private static final Duration INSTANTLY = Duration.ofMillis(0);
+
   private RateLimitingFactory() {
   }
 
@@ -40,9 +47,11 @@ public final class RateLimitingFactory {
    * No Rate Limiting.
    */
   private static class NoRateLimiting implements RateLimiting {
+
+
     @Override
-    public int acquire(int capacity) {
-      return 0;
+    public Duration acquire(int capacity) {
+      return INSTANTLY;
     }
   }
 
@@ -61,10 +70,13 @@ public final class RateLimitingFactory {
     }
 
     @Override
-    public int acquire(int capacity) {
+    public Duration acquire(int capacity) {
       final double t = limiter.acquire(capacity);
-      return t == 0 ? 0 : (int) (t * 1000);
+      return t == 0
+          ? INSTANTLY
+          : Duration.ofMillis((long) (t * 1000));
     }
+
   }
 
   /**

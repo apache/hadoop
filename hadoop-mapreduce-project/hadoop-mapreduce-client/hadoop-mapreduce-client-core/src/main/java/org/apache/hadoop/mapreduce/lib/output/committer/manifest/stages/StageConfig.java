@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
-import java.util.Objects;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -28,8 +26,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOpera
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.RateLimiting;
-import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
@@ -144,11 +140,6 @@ public class StageConfig {
    */
   private final ThreadLocal<JsonSerialization<TaskManifest>> threadLocalSerializer =
       ThreadLocal.withInitial(TaskManifest::serializer);
-
-  /**
-   * Rate limiter for operations.
-   */
-  private RateLimiting ioLimiter = RateLimitingFactory.unlimitedRate();
 
   /**
    * Delete target paths on commit? Stricter, but
@@ -402,17 +393,6 @@ public class StageConfig {
   }
 
   /**
-   * Set read limiter.
-   * @param value new value
-   * @return the builder
-   */
-  public StageConfig withIOLimiter(RateLimiting value) {
-    checkOpen();
-    ioLimiter = Objects.requireNonNull(value);
-    return this;
-  }
-
-  /**
    * Set name of task/job.
    * @param value new value
    * @return the builder
@@ -570,38 +550,6 @@ public class StageConfig {
 
   public boolean getPrepareParentDirectories() {
     return prepareParentDirectories;
-  }
-
-  /**
-   * Read limiter.
-   * @return Read limiter.
-   */
-  public RateLimiting getIoLimiter() {
-    return ioLimiter;
-  }
-
-  /**
-   * Acquire a given number of read permits.
-   * The subsequent caller will block if the rate
-   * limiter mandates it.
-   * no-op if (in test setups) there's no rate limiter.
-   * @param permits permit count.
-   * @return delay in milliseconds; 0 if none.
-   */
-  public int acquireReadPermits(int permits) {
-    return ioLimiter.acquire(permits);
-  }
-
-  /**
-   * Acquire a given number of write permits.
-   * The subsequent caller will block if the rate
-   * limiter mandates it.
-   * no-op if (in test setups) there's no rate limiter.
-   * @param permits permit count.
-   * @return delay in milliseconds; 0 if none.
-   */
-  public int acquireWritePermits(int permits) {
-    return acquireReadPermits(permits);
   }
 
   /**

@@ -19,10 +19,12 @@
 package org.apache.hadoop.fs.azurebfs.commit;
 
 import java.io.IOException;
+import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
@@ -113,11 +115,13 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
   public CommitFileResult commitFile(final FileOrDirEntry entry) throws IOException {
 
     if (resilientCommitByRename != null) {
-      final boolean recovered = resilientCommitByRename.commitSingleFileByRename(
-          entry.getSourcePath(),
-          entry.getDestPath(),
-          entry.getEtag());
-      return CommitFileResult.fromResilientCommit(recovered);
+      final Pair<Boolean, Duration> result =
+          resilientCommitByRename.commitSingleFileByRename(
+              entry.getSourcePath(),
+              entry.getDestPath(),
+              entry.getEtag());
+      return CommitFileResult.fromResilientCommit(result.getLeft(),
+          result.getRight());
     } else {
       return super.commitFile(entry);
     }

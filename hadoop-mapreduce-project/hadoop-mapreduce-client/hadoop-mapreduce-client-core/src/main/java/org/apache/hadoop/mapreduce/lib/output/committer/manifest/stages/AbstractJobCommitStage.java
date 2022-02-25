@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -49,12 +50,11 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_LIMITED;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.createTracker;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_READ_PERMIT_BLOCKED;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_WRITE_PERMIT_BLOCKED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
@@ -62,14 +62,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_GET_FILE_STATUS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_LIST;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_OPEN_FILE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_COMMIT_FILE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_CREATE_FILE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_DELETE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_MKDIR;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_RENAME;
 
 /**
  * A Stage in Task/Job Commit.
@@ -313,43 +305,17 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   }
 
   /**
-   * Acquire a given number of read permits.
-   * The subsequent caller will block if the rate
-   * limiter mandates it.
-   * no-op if (in test setups) there's no rate limiter.
-   * Acquisition duration is added to stats when rate-limited.
-   * @param permits permit count.
-   */
-  public void acquireReadPermits(int permits) {
-    noteAnyRateLimiting(IO_ACQUIRE_READ_PERMIT_BLOCKED,
-        stageConfig.acquireReadPermits(permits));
-  }
-
-  /**
-   * Acquire a given number of write permits.
-   * The subsequent caller will block if the rate
-   * limiter mandates it.
-   * no-op if (in test setups) there's no rate limiter.
-   * Acquisition duration is added to stats when rate-limited.
-   * @param permits permit count.
-   */
-  public void acquireWritePermits(int permits) {
-    noteAnyRateLimiting(IO_ACQUIRE_WRITE_PERMIT_BLOCKED,
-        stageConfig.acquireWritePermits(permits));
-  }
-
-  /**
    * Note any rate limiting to the given timing statistic.
    * If the wait was 0, no statistics are updated.
    * @param statistic statistic key.
-   * @param wait wait time in seconds.
+   * @param wait wait duration.
    */
-  private void noteAnyRateLimiting(String statistic, int wait) {
-    if (wait > 0) {
+  private void noteAnyRateLimiting(String statistic, Duration wait) {
+    if (!wait.isZero()) {
       // rate limiting took place
       getIOStatistics().addTimedOperation(
           statistic,
-          wait);
+          wait.toMillis());
     }
   }
 
@@ -430,7 +396,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     LOG.trace("{}: getFileStatus('{}')", getName(), path);
     requireNonNull(path,
         () -> String.format("%s: Null path for getFileStatus() call", getName()));
-    acquireReadPermits(PERMIT_READ_GET_FILE_STATUS);
     return trackDuration(getIOStatistics(), OP_GET_FILE_STATUS, () ->
         operations.getFileStatus(path));
   }
@@ -446,7 +411,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       throws IOException {
     LOG.trace("{}: isFile('{}')", getName(), path);
     return trackDuration(getIOStatistics(), OP_IS_FILE, () -> {
-      acquireReadPermits(PERMIT_READ_GET_FILE_STATUS);
       return operations.isFile(path);
     });
   }
@@ -480,7 +444,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final String statistic)
       throws IOException {
     return trackDuration(getIOStatistics(), statistic, () -> {
-      acquireWritePermits(PERMIT_WRITE_DELETE);
       return operations.delete(path, recursive);
     });
   }
@@ -498,7 +461,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       throws IOException {
     LOG.trace("{}: mkdirs('{}')", getName(), path);
     return trackDuration(getIOStatistics(), OP_MKDIRS, () -> {
-      acquireWritePermits(PERMIT_WRITE_MKDIR);
       boolean success = operations.mkdirs(path);
       if (!success && escalateFailure) {
         throw new PathIOException(path.toUri().toString(),
@@ -520,7 +482,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final Path path)
       throws IOException {
     LOG.trace("{}: listStatusIterator('{}')", getName(), path);
-    acquireReadPermits(PERMIT_READ_LIST);
     return trackDuration(getIOStatistics(), OP_LIST_STATUS, () ->
         operations.listStatusIterator(path));
   }
@@ -535,7 +496,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final FileStatus status)
       throws IOException {
     LOG.trace("{}: loadManifest('{}')", getName(), status);
-    acquireReadPermits(PERMIT_READ_OPEN_FILE);
     return trackDuration(getIOStatistics(), OP_LOAD_MANIFEST, () ->
         operations.loadTaskManifest(
             stageConfig.currentManifestSerializer(),
@@ -630,7 +590,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final Path tempPath,
       final Path finalPath) throws IOException {
     LOG.trace("{}: save('{}, {}, {}')", getName(), manifestData, tempPath, finalPath);
-    acquireWritePermits(PERMIT_WRITE_CREATE_FILE);
     trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
         operations.save(manifestData, tempPath, true));
     renameFile(tempPath, finalPath);
@@ -659,7 +618,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       throws IOException {
     maybeDeleteDest(true, dest);
     executeRenamingOperation("renameFile", source, dest,
-        OP_RENAME_FILE, PERMIT_WRITE_RENAME, () ->
+        OP_RENAME_FILE, () ->
             operations.renameFile(source, dest));
   }
 
@@ -676,7 +635,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
 
     maybeDeleteDest(true, dest);
     executeRenamingOperation("renameDir", source, dest,
-        OP_RENAME_FILE, PERMIT_WRITE_RENAME, () ->
+        OP_RENAME_FILE, () ->
         operations.renameDir(source, dest)
     );
   }
@@ -697,7 +656,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     maybeDeleteDest(deleteDest, dest);
     if (storeSupportsResilientCommit()) {
       // get the commit permits
-      acquireWritePermits(PERMIT_WRITE_COMMIT_FILE);
       final StoreOperations.CommitFileResult result = trackDuration(getIOStatistics(),
           OP_COMMIT_FILE_RENAME, () ->
               operations.commitFile(entry));
@@ -705,10 +663,14 @@ public abstract class AbstractJobCommitStage<IN, OUT>
         // recovery took place.
         getIOStatistics().incrementCounter(OP_COMMIT_FILE_RENAME_RECOVERED);
       }
+      if (result.getWaitTime() != null) {
+        // note any delay which took place
+        noteAnyRateLimiting(STORE_IO_RATE_LIMITED, result.getWaitTime());
+      }
     } else {
       // commit with a simple rename; failures will be escalated.
       executeRenamingOperation("renameFile", source, dest,
-          OP_COMMIT_FILE_RENAME, PERMIT_WRITE_RENAME, () ->
+          OP_COMMIT_FILE_RENAME, () ->
               operations.renameFile(source, dest));
     }
     return new CommitOutcome();
@@ -742,13 +704,13 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @param source source path
    * @param dest dest path
    * @param statistic statistic to track
-   * @param cost cost for write permits
    * @param action callable of the operation
-   * @return the result
    * @throws IOException on any failure
    */
-  private void executeRenamingOperation(String operation, Path source, Path dest,
-      String statistic, int cost,
+  private void executeRenamingOperation(String operation,
+      Path source,
+      Path dest,
+      String statistic,
       CallableRaisingIOE<Boolean> action) throws IOException {
 
     LOG.debug("{}: {} '{}' to '{}')", getName(), operation, source, dest);
@@ -758,7 +720,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     // duration tracking is a bit convoluted as it
     // ensures that rename failures as well as IOEs are
     // treated as failures from a statistics perspective.
-    acquireWritePermits(cost);
 
     DurationTracker tracker = createTracker(getIOStatistics(), statistic);
     boolean success;

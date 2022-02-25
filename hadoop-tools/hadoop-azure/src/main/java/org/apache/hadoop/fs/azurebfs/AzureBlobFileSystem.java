@@ -27,6 +27,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
+import java.time.Duration;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import java.util.concurrent.Future;
 
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.azurebfs.commit.ResilientCommitByRename;
 import org.apache.hadoop.io.IOUtils;
@@ -101,6 +103,8 @@ import org.apache.hadoop.fs.store.DataBlocks;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.RateLimiting;
+import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
@@ -146,6 +150,9 @@ public class AzureBlobFileSystem extends FileSystem
   private DataBlocks.BlockFactory blockFactory;
   /** Maximum Active blocks per OutputStream. */
   private int blockOutputActiveBlocks;
+
+  /** Rate limiting for operations which use it to throttle their IO. */
+  private RateLimiting rateLimiting;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -219,7 +226,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
-
+    rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
@@ -496,7 +503,7 @@ public class AzureBlobFileSystem extends FileSystem
    * being used widely (as has happened to the S3A FS)
    */
   public class ResilientCommitByRenameImpl implements ResilientCommitByRename {
-    public boolean commitSingleFileByRename(
+    public Pair<Boolean, Duration> commitSingleFileByRename(
         final Path source,
         final Path dest,
         @Nullable final String sourceEtag) throws IOException {
@@ -517,13 +524,18 @@ public class AzureBlobFileSystem extends FileSystem
         throw new PathIOException(qualifiedSrcPath.toString(), "cannot rename object onto self");
       }
 
+      // acquire one IO permit
+      final Duration waitTime = rateLimiting.acquire(1);
+
       try {
-        return abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, sourceEtag);
+        final boolean recovered = abfsStore.rename(qualifiedSrcPath,
+            qualifiedDstPath, tracingContext, sourceEtag);
+        return Pair.of(recovered, waitTime);
       } catch (AzureBlobFileSystemException ex) {
         LOG.debug("Rename operation failed. ", ex);
         checkException(source, ex);
         // never reached
-        return false;
+        return null;
       }
 
     }

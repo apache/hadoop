@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.Duration;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -247,22 +249,31 @@ public abstract class StoreOperations implements Closeable {
     /** Did recovery take place? */
     private final boolean recovered;
 
+    /** Time waiting for IO capacity, may be null. */
+    @Nullable
+    private final Duration waitTime;
+
     /**
      * Full commit result.
      * @param recovered Did recovery take place?
+     * @param waitTime any time spent waiting for IO capacity.
      */
-    public static CommitFileResult fromResilientCommit(final boolean recovered) {
-      return new CommitFileResult(recovered);
+    public static CommitFileResult fromResilientCommit(
+        final boolean recovered,
+        final Duration waitTime) {
+      return new CommitFileResult(recovered, waitTime);
     }
 
     /**
      * Full commit result.
      * @param recovered Did recovery take place?
-     *
+     * @param waitTime any time spent waiting for IO capacity.
      */
-    private CommitFileResult(
-        final boolean recovered) {
+    public CommitFileResult(final boolean recovered,
+        @Nullable final Duration waitTime) {
+
       this.recovered = recovered;
+      this.waitTime = waitTime;
     }
 
     /**
@@ -273,6 +284,10 @@ public abstract class StoreOperations implements Closeable {
       return recovered;
     }
 
+    @Nullable
+    public Duration getWaitTime() {
+      return waitTime;
+    }
   }
 
   /**

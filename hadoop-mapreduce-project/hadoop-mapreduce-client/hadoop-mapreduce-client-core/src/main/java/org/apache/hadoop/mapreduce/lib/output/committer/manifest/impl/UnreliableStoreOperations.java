@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
 
@@ -378,6 +379,17 @@ public class UnreliableStoreOperations extends StoreOperations {
   @Override
   public String getEtag(FileStatus status) {
     return wrappedOperations.getEtag(status);
+  }
+
+  @Override
+  public boolean storeSupportsResilientCommit() {
+    return wrappedOperations.storeSupportsResilientCommit();
+  }
+
+  @Override
+  public CommitFileResult commitFile(final FileOrDirEntry entry)
+      throws IOException {
+    return wrappedOperations.commitFile(entry);
   }
 
   @Override

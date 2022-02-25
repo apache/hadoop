@@ -26,6 +26,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_DIRECTOR
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_LIMITED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.*;
 
 /**
@@ -82,8 +83,7 @@ public final class InternalConstants {
       OBJECT_LIST_REQUEST,
       OBJECT_CONTINUE_LIST_REQUEST,
 
-      IO_ACQUIRE_READ_PERMIT_BLOCKED,
-      IO_ACQUIRE_WRITE_PERMIT_BLOCKED
+      STORE_IO_RATE_LIMITED
   };
 
   /**
@@ -100,51 +100,6 @@ public final class InternalConstants {
       COMMITTER_TASK_FILE_SIZE_MEAN,
       OP_COMMIT_FILE_RENAME_RECOVERED,
   };
-
-  /**
-   * Read permit cost for any of the status probes: {@value}.
-   */
-  public static final int PERMIT_READ_GET_FILE_STATUS = 1;
-
-  /**
-   * Read permit cost for list operations: {@value}.
-   */
-  public static final int PERMIT_READ_LIST = 2;
-
-  /**
-   * Read permit cost for list operations: {@value}.
-   */
-  public static final int PERMIT_READ_OPEN_FILE = 2;
-
-  /**
-   * Write permit cost for delete(): {@value}.
-   */
-  public static final int PERMIT_WRITE_CREATE_FILE = 1;
-
-  /**
-   * Write permit cost for commit() when using the resilient
-   * commit algorithm: {@value}.
-   * This is set to two as when throttling does start on
-   * ABFS, and this triggers failures, extra HEAD requests
-   * are made...and this is the exact time rate limiting
-   * is most needed.
-   */
-  public static final int PERMIT_WRITE_COMMIT_FILE = 2;
-
-  /**
-   * Write permit cost for delete(): {@value}.
-   */
-  public static final int PERMIT_WRITE_DELETE = 1;
-
-  /**
-   * Write permit cost for mkdir(): {@value}.
-   */
-  public static final int PERMIT_WRITE_MKDIR = 1;
-
-  /**
-   * Write permit cost for rename(): {@value}.
-   */
-  public static final int PERMIT_WRITE_RENAME = 1;
 
   /**
    * Error string from ABFS connector on timeout.
