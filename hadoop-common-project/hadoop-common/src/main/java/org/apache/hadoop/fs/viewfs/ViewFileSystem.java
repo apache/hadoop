@@ -1189,6 +1189,10 @@ public class ViewFileSystem extends FileSystem {
   /**
    * Get all the trash roots for current user or all users.
    *
+   * When CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT is set to true, we
+   * also return trash roots under the root of each mount point, with their
+   * viewFS paths.
+   *
    * @param allUsers return trash roots for all users if true.
    * @return all Trash root directories.
    */

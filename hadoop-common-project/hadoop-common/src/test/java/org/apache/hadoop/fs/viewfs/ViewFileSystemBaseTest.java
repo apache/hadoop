@@ -1062,6 +1062,7 @@ abstract public class ViewFileSystemBaseTest {
     assertEquals(mountDataRootTrashPath.toUri().getPath(),
         mountDataFileTrashPath.toUri().getPath());
 
+
     // Verify trash root for an non-existing file but on a valid mountpoint.
     Path trashRoot = fsView.getTrashRoot(mountDataNonExistingFilePath);
     assertEquals(mountDataRootTrashPath.toUri().getPath(),
