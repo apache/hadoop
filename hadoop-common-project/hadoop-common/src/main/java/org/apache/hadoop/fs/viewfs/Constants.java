@@ -134,7 +134,7 @@ public interface Constants {
       HCFSMountTableConfigLoader.class;
 
   /**
-   * Enable ViewFileSystem to return a trashRoot which in the root dir of a
+   * Enable ViewFileSystem to return a trashRoot which is in the root dir of a
    * mount point.
    */
   String CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT =

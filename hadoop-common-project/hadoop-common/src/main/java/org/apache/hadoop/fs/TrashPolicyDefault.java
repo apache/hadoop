@@ -132,7 +132,6 @@ public class TrashPolicyDefault extends TrashPolicy {
     String qpath = fs.makeQualified(path).toString();
 
     Path trashRoot = fs.getTrashRoot(path);
-    LOG.info("trashRoot: " + trashRoot);
     Path trashCurrent = new Path(trashRoot, CURRENT);
     if (qpath.startsWith(trashRoot.toString())) {
       return false;                               // already in trash

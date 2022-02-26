@@ -1143,14 +1143,14 @@ public class ViewFileSystem extends FileSystem {
    * Get the trash root directory for current user when the path
    * specified is deleted.
    *
-   * If CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is not set, return
-   * a trash root based on the trash root returned by targetFS.
+   * If CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT is not set, return
+   * the default trash root from targetFS.
    *
-   * When CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is set to true,
+   * When CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT is set to true,
    * 1) If path p is in a snapshot or encryption zone, or when it is in the
-   *    fallback FS, return a trash root based on the trash root returned
-   *    by targetFS (/mntpoint/trashRootInTargetFS).
-   * 2) else, return a trash root in the mount point (/mntpoint/.Trash/{user}).
+   *    fallback FS, return the default trash root from targetFS.
+   * 2) else, return a viewFS path for the trash root under the root of the
+   *    mount point (/mntpoint/.Trash/{user}).
    *
    * @param path the trash root of the path to be determined.
    * @return the trash root path.
@@ -1173,8 +1173,8 @@ public class ViewFileSystem extends FileSystem {
       }
 
       // New trash root policy
-      if (isSnapshotEnabledOrEncrypted(path) || ROOT_PATH.equals(
-          new Path(res.resolvedPath))) {
+      if (isSnapshotEnabledOrEncrypted(path) ||
+          ROOT_PATH.equals(new Path(res.resolvedPath))) {
         return targetFSTrashRoot;
       } else {
         // Return the trash root for the mount point.
