@@ -1183,7 +1183,7 @@ abstract public class ViewFileSystemBaseTest {
   }
 
   /**
-   * Test localized trash roots in getTrashRoots() for all users.
+   * Test getTrashRoots() for all users.
    */
   @Test
   public void testTrashRootsAllUsers() throws IOException {
@@ -1227,7 +1227,7 @@ abstract public class ViewFileSystemBaseTest {
   }
 
   /**
-   * Test localized trash roots in getTrashRoots() for current user.
+   * Test getTrashRoots() for current user.
    */
   @Test
   public void testTrashRootsCurrentUser() throws IOException {
