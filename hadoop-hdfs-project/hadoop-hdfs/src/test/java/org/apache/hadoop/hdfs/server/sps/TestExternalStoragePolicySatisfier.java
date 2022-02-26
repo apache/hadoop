@@ -36,12 +36,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -82,6 +84,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockStorageMovementAttemptedItems;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
+import org.apache.hadoop.hdfs.server.sps.metrics.ExternalSPSBeanMetrics;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
@@ -100,6 +103,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.util.function.Supplier;
 
 /**
@@ -1714,6 +1719,36 @@ public class TestExternalStoragePolicySatisfier {
 
     public void clear() {
       actualBlockMovements.clear();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testExternalSPSMetrics() throws Exception {
+    try {
+      createCluster();
+      // Start JMX but stop SPS thread to prevent mock data from being consumed.
+      externalSps.stop(true);
+      externalCtxt.initMetrics(externalSps);
+
+      ExternalSPSBeanMetrics spsBeanMetrics = externalCtxt.getSpsBeanMetrics();
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxBeanName = new ObjectName("Hadoop:service=ExternalSPS,name=ExternalSPS");
+      // Assert metrics before update.
+      assertEquals(0, mbs.getAttribute(mxBeanName, "AttemptedItemsCount"));
+      assertEquals(0, mbs.getAttribute(mxBeanName, "ProcessingQueueSize"));
+      assertEquals(0, mbs.getAttribute(mxBeanName, "MovementFinishedBlocksCount"));
+
+      // Update metrics.
+      spsBeanMetrics.updateAttemptedItemsCount();
+      spsBeanMetrics.updateProcessingQueueSize();
+      spsBeanMetrics.updateMovementFinishedBlocksCount();
+
+      // Assert metrics after update.
+      assertEquals(1, mbs.getAttribute(mxBeanName, "AttemptedItemsCount"));
+      assertEquals(1, mbs.getAttribute(mxBeanName, "ProcessingQueueSize"));
+      assertEquals(1, mbs.getAttribute(mxBeanName, "MovementFinishedBlocksCount"));
+    } finally {
+      shutdownCluster();
     }
   }
 }
