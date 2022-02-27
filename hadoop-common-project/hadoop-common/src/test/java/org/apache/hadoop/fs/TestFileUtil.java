@@ -705,6 +705,9 @@ public class TestFileUtil {
   public void testUnZip() throws IOException {
     // make sa simple zip
     final File simpleZip = new File(del, FILE);
+    simpleZip.setExecutable(true);
+    simpleZip.setWritable(true);
+    simpleZip.setReadable(true);
     OutputStream os = new FileOutputStream(simpleZip); 
     ZipOutputStream tos = new ZipOutputStream(os);
     try {
@@ -725,7 +728,10 @@ public class TestFileUtil {
     // check result:
     assertTrue(new File(tmp, "foo").exists());
     assertEquals(12, new File(tmp, "foo").length());
-    
+    assertTrue(new File(tmp, "foo").canExecute());
+    assertTrue(new File(tmp, "foo").canRead());
+    assertTrue(new File(tmp, "foo").canWrite());
+
     final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
     regularFile.createNewFile();
     assertTrue(regularFile.exists());
