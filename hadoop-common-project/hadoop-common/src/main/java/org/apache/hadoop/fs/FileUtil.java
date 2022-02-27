@@ -683,11 +683,11 @@ public class FileUtil {
   }
 
   public static Set<PosixFilePermission> permissionsFromMode(Integer mode) {
-    EnumSet permissions =
+    EnumSet<PosixFilePermission> permissions =
             EnumSet.noneOf(PosixFilePermission.class);
-    addPermissions(permissions, "OTHERS", new Long((long) mode));
-    addPermissions(permissions, "GROUP", (new Long((long) mode) >> 3));
-    addPermissions(permissions, "OWNER", (new Long((long) mode) >> 6));
+    addPermissions(permissions, "OTHERS", (long) mode);
+    addPermissions(permissions, "GROUP", (long) mode >> 3);
+    addPermissions(permissions, "OWNER", (long) mode >> 6);
     return permissions;
   }
 
