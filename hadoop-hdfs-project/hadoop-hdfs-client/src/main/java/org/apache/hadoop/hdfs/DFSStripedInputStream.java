@@ -141,14 +141,6 @@ public class DFSStripedInputStream extends DFSInputStream {
     return curStripeBuf;
   }
 
-  protected String getSrc() {
-    return src;
-  }
-
-  protected LocatedBlocks getLocatedBlocks() {
-    return locatedBlocks;
-  }
-
   protected ByteBufferPool getBufferPool() {
     return BUFFER_POOL;
   }
@@ -165,6 +157,8 @@ public class DFSStripedInputStream extends DFSInputStream {
     if (target >= getFileLength()) {
       throw new IOException("Attempted to read past end of file");
     }
+
+    maybeRegisterBlockRefresh();
 
     // Will be getting a new BlockReader.
     closeCurrentBlockReaders();

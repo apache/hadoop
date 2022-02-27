@@ -1120,17 +1120,17 @@ public class TestOfflineImageViewer {
     LOG.info("Creating reverseImage.xml=" + reverseImageXml.getAbsolutePath() +
         ", reverseImage=" + reverseImage.getAbsolutePath() +
         ", reverseImage2Xml=" + reverseImage2Xml.getAbsolutePath());
-    if (OfflineImageViewerPB.run(new String[] { "-p", "XML",
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
          "-i", originalFsimage.getAbsolutePath(),
          "-o", reverseImageXml.getAbsolutePath() }) != 0) {
       throw new IOException("oiv returned failure creating first XML file.");
     }
-    if (OfflineImageViewerPB.run(new String[] { "-p", "ReverseXML",
+    if (OfflineImageViewerPB.run(new String[] {"-p", "ReverseXML",
           "-i", reverseImageXml.getAbsolutePath(),
           "-o", reverseImage.getAbsolutePath() }) != 0) {
       throw new IOException("oiv returned failure recreating fsimage file.");
     }
-    if (OfflineImageViewerPB.run(new String[] { "-p", "XML",
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
         "-i", reverseImage.getAbsolutePath(),
         "-o", reverseImage2Xml.getAbsolutePath() }) != 0) {
       throw new IOException("oiv returned failure creating second " +
@@ -1139,7 +1139,7 @@ public class TestOfflineImageViewer {
     // The XML file we wrote based on the re-created fsimage should be the
     // same as the one we dumped from the original fsimage.
     Assert.assertEquals("",
-      GenericTestUtils.getFilesDiff(reverseImageXml, reverseImage2Xml));
+        GenericTestUtils.getFilesDiff(reverseImageXml, reverseImage2Xml));
   }
 
   /**
@@ -1172,6 +1172,40 @@ public class TestOfflineImageViewer {
     } catch (Throwable t) {
       GenericTestUtils.assertExceptionContains("Layout version mismatch.", t);
     }
+  }
+
+  /**
+   * Tests that the ReverseXML processor doesn't accept XML files without the SnapshotDiffSection.
+   */
+  @Test
+  public void testReverseXmlWithoutSnapshotDiffSection() throws Throwable {
+    File imageWSDS = new File(tempDir, "imageWithoutSnapshotDiffSection.xml");
+    try(PrintWriter writer = new PrintWriter(imageWSDS, "UTF-8")) {
+      writer.println("<?xml version=\"1.0\"?>");
+      writer.println("<fsimage>");
+      writer.println("<version>");
+      writer.println("<layoutVersion>-67</layoutVersion>");
+      writer.println("<onDiskVersion>1</onDiskVersion>");
+      writer.println("<oivRevision>545bbef596c06af1c3c8dca1ce29096a64608478</oivRevision>");
+      writer.println("</version>");
+      writer.println("<FileUnderConstructionSection></FileUnderConstructionSection>");
+      writer.println("<ErasureCodingSection></ErasureCodingSection>");
+      writer.println("<INodeSection><lastInodeId>91488</lastInodeId><numInodes>0</numInodes>" +
+              "</INodeSection>");
+      writer.println("<SecretManagerSection><currentId>90</currentId><tokenSequenceNumber>35" +
+              "</tokenSequenceNumber><numDelegationKeys>0</numDelegationKeys><numTokens>0" +
+              "</numTokens></SecretManagerSection>");
+      writer.println("<INodeReferenceSection></INodeReferenceSection>");
+      writer.println("<SnapshotSection><snapshotCounter>0</snapshotCounter><numSnapshots>0" +
+              "</numSnapshots></SnapshotSection>");
+      writer.println("<NameSection><namespaceId>326384987</namespaceId></NameSection>");
+      writer.println("<CacheManagerSection><nextDirectiveId>1</nextDirectiveId><numPools>0" +
+              "</numPools><numDirectives>0</numDirectives></CacheManagerSection>");
+      writer.println("<INodeDirectorySection></INodeDirectorySection>");
+      writer.println("</fsimage>");
+    }
+      OfflineImageReconstructor.run(imageWSDS.getAbsolutePath(),
+              imageWSDS.getAbsolutePath() + ".out");
   }
 
   @Test

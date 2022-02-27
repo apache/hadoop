@@ -19,11 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
@@ -129,8 +127,7 @@ public class CapacitySchedulerQueueContext {
     return csContext.getApplicationAttempt(applicationAttemptId);
   }
 
-  // TODO this is used in GuaranteedOrZeroCapacityOverTimePolicy, refactor the comparator there
-  public RMApp getRMApp(ApplicationId applicationId) {
-    return csContext.getRMContext().getRMApps().get(applicationId);
+  public CapacityScheduler.PendingApplicationComparator getApplicationComparator() {
+    return csContext.getPendingApplicationComparator();
   }
 }

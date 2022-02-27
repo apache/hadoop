@@ -284,6 +284,10 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
       false;
 
+  /** Configure default application placement allocator. */
+  public static final String APPLICATION_PLACEMENT_TYPE_CLASS =
+      YARN_PREFIX + "scheduler.app-placement-allocator.class";
+
   /** Configured scheduler queue placement rules. */
   public static final String QUEUE_PLACEMENT_RULES = YARN_PREFIX
       + "scheduler.queue-placement-rules";
@@ -1255,7 +1259,21 @@ public class YarnConfiguration extends Configuration {
   /** Prefix for all node manager configs.*/
   public static final String NM_PREFIX = "yarn.nodemanager.";
 
-  /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM. */
+  /**
+   * At the NM, the policy to determine whether to queue an
+   * <code>OPPORTUNISTIC</code> container or not.
+   * If set to <code>BY_QUEUE_LEN</code>, uses the queue capacity, as set by
+   * {@link YarnConfiguration#NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH},
+   * to limit how many containers to accept/queue.
+   * If set to <code>BY_RESOURCES</code>, limits the number of containers
+   * accepted based on the resource capacity of the node.
+   */
+  public static final String NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY =
+      NM_PREFIX + "opportunistic-containers-queue-policy";
+
+  /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM.
+   *  If set to 0, NM does not accept any <code>OPPORTUNISTIC</code> containers.
+   *  If set to {@literal > 0}, enforces the queue capacity. */
   public static final String NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
       NM_PREFIX + "opportunistic-containers-max-queue-length";
   public static final int DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =

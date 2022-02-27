@@ -26,8 +26,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
-import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 
 import org.junit.After;
 import org.junit.Before;
@@ -68,10 +66,7 @@ public abstract class AbstractS3AMockTest {
     Configuration conf = new Configuration();
     conf.setClass(S3_CLIENT_FACTORY_IMPL, MockS3ClientFactory.class,
         S3ClientFactory.class);
-    // We explicitly disable MetadataStore. For unit
-    // test we don't issue request to AWS DynamoDB service.
-    conf.setClass(S3_METADATA_STORE_IMPL, NullMetadataStore.class,
-        MetadataStore.class);
+
     // use minimum multipart size for faster triggering
     conf.setLong(Constants.MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.setInt(Constants.S3A_BUCKET_PROBE, 1);

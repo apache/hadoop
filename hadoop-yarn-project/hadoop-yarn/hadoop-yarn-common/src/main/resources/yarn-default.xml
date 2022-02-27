@@ -1292,8 +1292,27 @@
   </property>
 
   <property>
-    <description>Max number of OPPORTUNISTIC containers to queue at the
-      nodemanager.</description>
+    <description>
+      At the NM, the policy to determine whether to queue an
+      OPPORTUNISTIC container or not.
+      If set to BY_QUEUE_LEN, uses the queue capacity, as set by
+      yarn.nodemanager.opportunistic-containers-max-queue-length
+      to limit how many containers to accept/queue.
+      If set to BY_RESOURCES, limits the number of containers
+      accepted based on the resource capacity of the node.
+    </description>
+    <name>yarn.nodemanager.opportunistic-containers-queue-policy</name>
+    <value>BY_QUEUE_LEN</value>
+  </property>
+
+  <property>
+    <description>
+      Max number of OPPORTUNISTIC containers to queue at the
+      nodemanager (NM). If the value is 0 or negative,
+      NMs do not allow any OPPORTUNISTIC containers.
+      If the value is positive, the NM caps the number of OPPORTUNISTIC
+      containers that can be queued at the NM.
+    </description>
     <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>
     <value>0</value>
   </property>

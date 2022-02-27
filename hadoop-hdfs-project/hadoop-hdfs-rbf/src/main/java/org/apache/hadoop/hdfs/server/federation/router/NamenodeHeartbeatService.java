@@ -48,6 +48,8 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+
 /**
  * The {@link Router} periodically checks the state of a Namenode (usually on
  * the same server) and reports their high availability (HA) state and
@@ -346,7 +348,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
           // Determine if NN is active
           // TODO: dynamic timeout
           if (localTargetHAProtocol == null) {
-            localTargetHAProtocol = localTarget.getProxy(conf, 30*1000);
+            localTargetHAProtocol = localTarget.getHealthMonitorProxy(conf, 30*1000);
+            LOG.debug("Get HA status with address {}", lifelineAddress);
           }
           HAServiceStatus status = localTargetHAProtocol.getServiceStatus();
           report.setHAServiceState(status.getState());
@@ -371,6 +374,11 @@ public class NamenodeHeartbeatService extends PeriodicService {
           getNamenodeDesc(), e.getMessage(), e);
     }
     return report;
+  }
+
+  @VisibleForTesting
+  NNHAServiceTarget getLocalTarget(){
+    return this.localTarget;
   }
 
   /**
