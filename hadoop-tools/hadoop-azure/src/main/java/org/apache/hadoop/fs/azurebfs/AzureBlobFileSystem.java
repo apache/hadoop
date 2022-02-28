@@ -225,8 +225,11 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
+<<<<<<< HEAD
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
     rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
+=======
+>>>>>>> ABFS: Added changes for expect hundred continue header with append requests
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 

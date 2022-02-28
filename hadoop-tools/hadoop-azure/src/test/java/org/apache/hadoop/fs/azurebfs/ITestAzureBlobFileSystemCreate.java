@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.util.EnumSet;
 import java.util.UUID;
 
@@ -36,6 +37,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
+import static org.junit.Assume.assumeTrue;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -43,6 +46,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperati
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingInterceptFactory;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -473,6 +478,66 @@ public class ITestAzureBlobFileSystemCreate extends
         abfsClientField.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
     abfsClientField.set(abfsStore, fieldObject);
     return abfsStore;
+  }
+
+  @Test
+  public void testCreatMultipleAccountThrottling()
+          throws Throwable {
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    String fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
+    String accountName = config.get(FS_AZURE_ACCOUNT_NAME);
+    if (accountName == null) {
+      // check if accountName is set using different config key
+      accountName = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
+    }
+    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
+            accountName != null && !accountName.isEmpty());
+
+    final String abfsUrl = fileSystemName + "@" + accountName;
+    URI defaultUri = null;
+    String abfsScheme = "abfss";
+    try {
+      defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
+    } catch (Exception ex) {
+      throw new AssertionError(ex);
+    }
+
+    Configuration rawConfig1 = new Configuration();
+    rawConfig1.addResource(TEST_CONFIGURATION_FILE_NAME);
+
+    AbfsConfiguration abfsConfig = new AbfsConfiguration(rawConfig1, accountName);
+
+    final AzureBlobFileSystem fs =
+            (AzureBlobFileSystem) FileSystem.newInstance(defaultUri,
+                    rawConfig1);
+    System.out.println(fs.toString());
+
+    AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(fs.getAbfsStore().getClient(), fs.getAbfsStore().getAbfsConfiguration());
+
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
+
+    AbfsRestOperation successOp = mock(AbfsRestOperation.class);
+    AbfsHttpOperation http500Op = mock(AbfsHttpOperation.class);
+    when(http500Op.getStatusCode()).thenReturn(HTTP_INTERNAL_ERROR);
+    when(successOp.getResult()).thenReturn(http500Op);
+
+    AbfsClientThrottlingIntercept instance1 = AbfsClientThrottlingInterceptFactory.getInstance(accountName, true, true);
+    String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
+    AbfsClientThrottlingIntercept instance2 = AbfsClientThrottlingInterceptFactory.getInstance(accountName1, true, true);
+    //if singleton is enabled, for different accounts both the instances should return same value
+    assertEquals(instance1, instance2);
+
+    AbfsClientThrottlingIntercept instance3 = AbfsClientThrottlingInterceptFactory.getInstance(accountName, true, false);
+    AbfsClientThrottlingIntercept instance4 = AbfsClientThrottlingInterceptFactory.getInstance(accountName1, true, false);
+    AbfsClientThrottlingIntercept instance5 = AbfsClientThrottlingInterceptFactory.getInstance(accountName, true, false);
+
+    //if singleton is not enabled, for different accounts instances should return different value
+    assertNotEquals(instance3, instance4);
+
+    //if singleton is not enabled, for same accounts instances should return same value
+    assertEquals(instance3, instance5);
   }
 
   private <E extends Throwable> void validateCreateFileException(final Class<E> exceptionClass, final AzureBlobFileSystemStore abfsStore)

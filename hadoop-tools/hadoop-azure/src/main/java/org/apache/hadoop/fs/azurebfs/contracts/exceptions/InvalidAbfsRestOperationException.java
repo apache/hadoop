@@ -30,14 +30,24 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class InvalidAbfsRestOperationException extends AbfsRestOperationException {
-  public InvalidAbfsRestOperationException(
-      final Exception innerException) {
-    super(
-        AzureServiceErrorCode.UNKNOWN.getStatusCode(),
-        AzureServiceErrorCode.UNKNOWN.getErrorCode(),
-        innerException != null
-            ? innerException.toString()
-            : "InvalidAbfsRestOperationException",
-        innerException);
-  }
+    public InvalidAbfsRestOperationException(
+            final Exception innerException) {
+        super(
+                AzureServiceErrorCode.UNKNOWN.getStatusCode(),
+                AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+                innerException != null
+                        ? innerException.toString()
+                        : "InvalidAbfsRestOperationException",
+                innerException);
+    }
+
+    public InvalidAbfsRestOperationException(final Exception innerException, int retryCount) {
+        super(
+                AzureServiceErrorCode.UNKNOWN.getStatusCode(),
+                AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+                innerException != null
+                        ? innerException.toString()
+                        : "InvalidAbfsRestOperationException" + "RetryCount: " + String.valueOf(retryCount),
+                innerException);
+    }
 }

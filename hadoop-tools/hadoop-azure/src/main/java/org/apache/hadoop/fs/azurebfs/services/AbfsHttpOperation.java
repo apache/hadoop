@@ -320,7 +320,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       // accompanying statusCode
       this.bytesSent = length;
       outputStream.write(buffer, offset, length);
-    } finally {
+    } catch (Exception e) {
+      this.statusCode = this.connection.getResponseCode();
+      this.bytesSent = length;
+      throw new IOException(e);
+    }
+    finally {
       if (this.isTraceEnabled) {
         this.sendRequestTimeMs = elapsedTimeMs(startTime);
       }
