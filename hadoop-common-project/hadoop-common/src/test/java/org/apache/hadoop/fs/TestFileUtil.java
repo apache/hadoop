@@ -706,6 +706,7 @@ public class TestFileUtil {
   public void testUnZip() throws IOException {
     // make sa simple zip
     final File simpleZip = new File(del, FILE);
+    OutputStream os = new FileOutputStream(simpleZip);
     ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os);
     try {
       ZipArchiveEntry ze = new  ZipArchiveEntry("foo");
