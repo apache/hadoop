@@ -658,8 +658,9 @@ public class ProtobufRpcEngine2 implements RpcEngine {
     public void writeTo(ResponseBuffer out) throws IOException {
       lock.lock();
       try {
-        requestHeader.writeDelimitedTo(out);
-        if (payload != null) {
+        RequestHeaderProto request = getRequestHeader();
+        if (payload != null && request != null) {
+          request.writeDelimitedTo(out);
           payload.writeDelimitedTo(out);
         }
       } finally {
@@ -672,6 +673,9 @@ public class ProtobufRpcEngine2 implements RpcEngine {
     public String toString() {
       try {
         RequestHeaderProto header = getRequestHeader();
+        if (header == null) {
+          throw new IllegalArgumentException("No request header is found");
+        }
         return header.getDeclaringClassProtocolName() + "." +
                header.getMethodName();
       } catch (IOException e) {
