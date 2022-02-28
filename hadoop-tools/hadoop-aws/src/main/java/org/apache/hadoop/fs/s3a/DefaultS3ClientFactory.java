@@ -32,7 +32,6 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3EncryptionClientV2Builder;
 import com.amazonaws.services.s3.AmazonS3EncryptionV2;
-import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.internal.ServiceUtils;
 import com.amazonaws.services.s3.model.CryptoConfigurationV2;
@@ -55,6 +54,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
+import static com.amazonaws.services.s3.Headers.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
@@ -75,6 +75,8 @@ public class DefaultS3ClientFactory extends Configured
     implements S3ClientFactory {
 
   private static final String S3_SERVICE_NAME = "s3";
+
+  private static final String REQUESTER_PAYS_HEADER_VALUE = "requester";
 
   /**
    * Subclasses refer to this.
@@ -121,7 +123,7 @@ public class DefaultS3ClientFactory extends Configured
 
     if (parameters.isRequesterPays()) {
       // All calls must acknowledge requester will pay via header.
-      awsConf.addHeader(Headers.REQUESTER_PAYS_HEADER, "requester");
+      awsConf.addHeader(REQUESTER_PAYS_HEADER, REQUESTER_PAYS_HEADER_VALUE);
     }
 
     // When EXPERIMENTAL_AWS_INTERNAL_THROTTLING is false
