@@ -28,6 +28,7 @@ public enum FSOperationType {
     DELETE("DL"),
     GET_ACL_STATUS("GA"),
     GET_ATTR("GR"),
+    GET_CONTENT_SUMMARY("GC"),
     GET_FILESTATUS("GF"),
     LISTSTATUS("LS"),
     MKDIR("MK"),

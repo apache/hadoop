@@ -1,0 +1,153 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.fs.azurebfs.services;
+
+import java.io.IOException;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
+/**
+ * Class to carry out parallelized recursive listing on a given path to
+ * collect directory and file count/size information, as part of the
+ * implementation for the Filesystem method getContentSummary
+ */
+public class ContentSummaryProcessor {
+  private static final int MAX_THREAD_COUNT = 16;
+  private static final int POLL_TIMEOUT = 100;
+  private static final Logger LOG = LoggerFactory.getLogger(ContentSummaryProcessor.class);
+  private final AtomicLong fileCount = new AtomicLong(0L);
+  private final AtomicLong directoryCount = new AtomicLong(0L);
+  private final AtomicLong totalBytes = new AtomicLong(0L);
+  private final AtomicInteger numTasks = new AtomicInteger(0);
+  private final ListingSupport abfsStore;
+  private final ExecutorService executorService;
+  private final CompletionService<Void> completionService;
+  private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
+
+  /**
+   * Processes a given path for count of subdirectories, files and total number
+   * of bytes
+   * @param abfsStore Instance of AzureBlobFileSystemStore, used to make
+   * listStatus calls to server
+   */
+  public ContentSummaryProcessor(ListingSupport abfsStore) {
+    this.abfsStore = abfsStore;
+    this.executorService = ((AzureBlobFileSystemStore) abfsStore).getContentSummaryExecutorService();
+    completionService = new ExecutorCompletionService<>(this.executorService);
+  }
+
+  public ContentSummary getContentSummary(Path path,
+      TracingContext tracingContext)
+      throws IOException, ExecutionException, InterruptedException {
+
+    processDirectoryTree(path, tracingContext);
+    while (!queue.isEmpty() || numTasks.get() > 0) {
+      try {
+        completionService.take().get();
+      } finally {
+        numTasks.decrementAndGet();
+        LOG.debug(
+            "FileStatus queue size = {}, number of submitted unfinished tasks"
+                + " = {}, active thread count = {}",
+            queue.size(), numTasks,
+            ((ThreadPoolExecutor) executorService).getActiveCount());
+      }
+    }
+
+    LOG.debug("Processed content summary of subtree under given path");
+    ContentSummary.Builder builder =
+        new ContentSummary.Builder().directoryCount(
+            directoryCount.get()).fileCount(fileCount.get())
+        .length(totalBytes.get()).spaceConsumed(totalBytes.get());
+    return builder.build();
+  }
+
+  /**
+   * Calls listStatus on given fileStatus and populated fileStatus queue with
+   * subdirectories. Is called by new tasks to process the complete subtree
+   * under a given fileStatus
+   * @param fileStatus : Path to a file or directory
+   * @throws IOException: listStatus error
+   * @throws InterruptedException: error while inserting into queue
+   */
+  private void processDirectoryTree(Path fileStatus,
+      TracingContext tracingContext) throws IOException, InterruptedException {
+    AbfsListStatusRemoteIterator iterator = new AbfsListStatusRemoteIterator(
+        fileStatus, abfsStore, tracingContext);
+    while (iterator.hasNext()) {
+      FileStatus status = iterator.next();
+      if (status.isDirectory()) {
+        queue.put(status);
+        processDirectory();
+        conditionalSubmitTaskToExecutor(tracingContext);
+      } else {
+        processFile(status);
+      }
+    }
+  }
+
+  private void processDirectory() {
+    directoryCount.incrementAndGet();
+  }
+
+  /**
+   * Increments file count and byte count
+   * @param fileStatus: Provides file size to update byte count
+   */
+  private void processFile(FileStatus fileStatus) {
+    fileCount.incrementAndGet();
+    totalBytes.addAndGet(fileStatus.getLen());
+  }
+
+  /**
+   * Submit task for processing a subdirectory based on current size of
+   * filestatus queue and number of already submitted tasks
+   */
+  private synchronized void conditionalSubmitTaskToExecutor(TracingContext tracingContext) {
+    if (!queue.isEmpty() && numTasks.get() < MAX_THREAD_COUNT) {
+      numTasks.incrementAndGet();
+      completionService.submit(() -> {
+        FileStatus fileStatus1;
+        while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
+                != null) {
+          processDirectoryTree(fileStatus1.getPath(),
+              new TracingContext(tracingContext));
+        }
+        return null;
+      });
+    }
+  }
+
+}
