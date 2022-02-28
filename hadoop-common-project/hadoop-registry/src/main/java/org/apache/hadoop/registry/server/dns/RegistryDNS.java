@@ -1100,7 +1100,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     LOG.debug("calling addAnswer");
     byte rcode = addAnswer(response, name, type, dclass, 0, flags);
     if (rcode != Rcode.NOERROR) {
-      rcode = remoteLookup(response, name, type, 0);
+      rcode = remoteLookup(response, name, type);
       response.getHeader().setRcode(rcode);
     }
     addAdditional(response, flags);
@@ -1118,55 +1118,44 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   /**
    * Lookup record from upstream DNS servers.
    */
-  private byte remoteLookup(Message response, Name name, int type,
-      int iterations) {
+  private byte remoteLookup(Message response, Name name, int type) {
     // If retrieving the root zone, query for NS record type
     if (name.toString().equals(".")) {
       type = Type.NS;
     }
 
-    // Support for CNAME chaining
-    if (type != Type.CNAME) {
-      Name targetName = name;
-      while (iterations < 6) {
-        Record[] cnameAnswers = getRecords(targetName, Type.CNAME).answers;
-        if (cnameAnswers == null) {
-          break;
-        }
-        for (Record cnameR : cnameAnswers) {
-          if (!response.findRecord(cnameR)) {
-            response.addRecord(cnameR, Section.ANSWER);
-            targetName = ((CNAMERecord) cnameR).getTarget();
-          }
-        }
-        iterations++;
-      }
-      if (iterations < 6 && !targetName.equals(name)) {
-        return remoteLookup(response, targetName, type, iterations + 1);
-      }
-    }
-
     // Forward lookup to primary DNS servers
     RemoteAnswer ra = getRecords(name, type);
+
+    // Support for CNAME/DNAME chaining
+    if (ra.aliases != null) {
+      for (Name targetName : ra.aliases) {
+        Record[] answers = getRecords(targetName, Type.CNAME).answers;
+        if (answers == null) {
+          answers = getRecords(targetName, Type.DNAME).answers;
+        }
+        if (answers != null) {
+          for (Record r : answers) {
+            if (!response.findRecord(r)) {
+              response.addRecord(r, Section.ANSWER);
+            }
+          }
+        }
+      }
+    }
     Record[] answers = ra.answers;
     // no answer
     if (answers == null) {
       return (byte)ra.rcode;
     }
-    try {
-      for (Record r : answers) {
-        if (!response.findRecord(r)) {
-          if (r.getType() == Type.SOA) {
-            response.addRecord(r, Section.AUTHORITY);
-          } else {
-            response.addRecord(r, Section.ANSWER);
-          }
+    for (Record r : answers) {
+      if (!response.findRecord(r)) {
+        if (r.getType() == Type.SOA) {
+          response.addRecord(r, Section.AUTHORITY);
+        } else {
+          response.addRecord(r, Section.ANSWER);
         }
       }
-    } catch (NullPointerException e) {
-      return Rcode.NXDOMAIN;
-    } catch (Throwable e) {
-      return Rcode.SERVFAIL;
     }
     return Rcode.NOERROR;
   }
@@ -1196,12 +1185,12 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
           LOG.warn("Unexpected result from lookup: {} type: {} error: {}", name, Type.string(type), lookup.getErrorString());
           break;
       }
-      return new RemoteAnswer(lookup.getAnswers(), rcode);
+      return new RemoteAnswer(lookup.getAnswers(), lookup.getAliases(), rcode);
     } catch (InterruptedException | ExecutionException |
         TimeoutException | NullPointerException |
         ExceptionInInitializerError e) {
       LOG.warn("Failed to lookup: {} type: {}", name, Type.string(type), e);
-      return new RemoteAnswer(null, Rcode.NXDOMAIN);
+      return new RemoteAnswer(null, null, Rcode.NXDOMAIN);
     } finally {
       executor.shutdown();
     }
@@ -1801,10 +1790,12 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
   public static class RemoteAnswer {
     public Record[] answers;
+    public Name[] aliases;
     public int rcode;
 
-    public RemoteAnswer(Record[] answers, int rcode) {
+    public RemoteAnswer(Record[] answers, Name[] aliases, int rcode) {
       this.answers = answers;
+      this.aliases = aliases;
       this.rcode = rcode;
     }
   }
