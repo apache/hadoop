@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
@@ -48,28 +47,28 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
 
     Configuration conf = this.createConfiguration();
     conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, true);
-    S3AContract contract = (S3AContract) createContract(conf);
-    contract.init();
-
     Path requesterPaysPath = getRequesterPaysPath(conf);
-    FileSystem fs = contract.getFileSystem(requesterPaysPath.toUri());
 
-    long fileLength = fs.getFileStatus(requesterPaysPath).getLen();
-    FSDataInputStream inputStream = fs.open(requesterPaysPath);
+    try (
+        FileSystem fs = requesterPaysPath.getFileSystem(conf);
+        FSDataInputStream inputStream = fs.open(requesterPaysPath);
+    ) {
+      long fileLength = fs.getFileStatus(requesterPaysPath).getLen();
 
-    inputStream.seek(fileLength - 1);
-    inputStream.readByte();
+      inputStream.seek(fileLength - 1);
+      inputStream.readByte();
 
-    // Jump back to the start, triggering a new GetObject request.
-    inputStream.seek(0);
-    inputStream.readByte();
+      // Jump back to the start, triggering a new GetObject request.
+      inputStream.seek(0);
+      inputStream.readByte();
 
-    assertEquals(
-        "Expected two GetObject requests", // We want to test header is applied to all requests made
-        2,
-        inputStream.getIOStatistics().counters()
-            .get(StreamStatisticNames.STREAM_READ_OPENED).intValue()
-    );
+      assertEquals(
+          "Expected two GetObject requests",
+          2,
+          inputStream.getIOStatistics().counters()
+              .get(StreamStatisticNames.STREAM_READ_OPENED).intValue()
+      );
+    }
   }
 
   @Test
@@ -78,18 +77,16 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
 
     Configuration conf = this.createConfiguration();
     conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, false);
-    S3AContract contract = (S3AContract) createContract(conf);
-    contract.init();
-
     Path requesterPaysPath = getRequesterPaysPath(conf);
-    FileSystem fs = contract.getFileSystem(requesterPaysPath.toUri());
 
-    intercept(
-        AccessDeniedException.class,
-        "403 Forbidden",
-        "Expected requester pays bucket to fail without header set",
-        () -> fs.open(requesterPaysPath)
-    );
+    try (FileSystem fs = requesterPaysPath.getFileSystem(conf)) {
+      intercept(
+          AccessDeniedException.class,
+          "403 Forbidden",
+          "Expected requester pays bucket to fail without header set",
+          () -> fs.open(requesterPaysPath).close()
+      );
+    }
   }
 
   private Path getRequesterPaysPath(Configuration conf) {
