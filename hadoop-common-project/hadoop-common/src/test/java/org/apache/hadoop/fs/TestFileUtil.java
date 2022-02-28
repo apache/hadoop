@@ -52,11 +52,11 @@ import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -706,18 +706,15 @@ public class TestFileUtil {
   public void testUnZip() throws IOException {
     // make sa simple zip
     final File simpleZip = new File(del, FILE);
-    simpleZip.setExecutable(true);
-    simpleZip.setWritable(true);
-    simpleZip.setReadable(true);
-    OutputStream os = new FileOutputStream(simpleZip); 
-    ZipOutputStream tos = new ZipOutputStream(os);
+    ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os);
     try {
-      ZipEntry ze = new ZipEntry("foo");
+      ZipArchiveEntry ze = new  ZipArchiveEntry("foo");
+      ze.setUnixMode(0755);
       byte[] data = "some-content".getBytes("UTF-8");
       ze.setSize(data.length);
-      tos.putNextEntry(ze);
+      tos.putArchiveEntry(ze);
       tos.write(data);
-      tos.closeEntry();
+      tos.closeArchiveEntry();
       tos.flush();
       tos.finish();
     } finally {
@@ -749,14 +746,14 @@ public class TestFileUtil {
     // make a simple zip
     final File simpleZip = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleZip);
-    try (ZipOutputStream tos = new ZipOutputStream(os)) {
+    try (ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os)) {
       // Add an entry that contains invalid filename
-      ZipEntry ze = new ZipEntry("../foo");
+      ZipArchiveEntry ze = new ZipArchiveEntry("../foo");
       byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
       ze.setSize(data.length);
-      tos.putNextEntry(ze);
+      tos.putArchiveEntry(ze);
       tos.write(data);
-      tos.closeEntry();
+      tos.closeArchiveEntry();
       tos.flush();
       tos.finish();
     }
