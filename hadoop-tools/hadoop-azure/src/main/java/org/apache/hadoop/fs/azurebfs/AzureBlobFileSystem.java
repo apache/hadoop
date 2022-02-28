@@ -214,8 +214,6 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
-    AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
-
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 

@@ -117,6 +117,15 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
   private boolean optimizeFooterRead;
 
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED,
+          DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED)
+  private boolean isExpectHeaderEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_SINGLETON_ENABLED,
+          DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_SINGLETON_ENABLED)
+  private boolean isSingletonEnabled;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_READ_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
       MaxValue = MAX_BUFFER_SIZE,
@@ -683,6 +692,10 @@ public class AbfsConfiguration{
   public String getAppendBlobDirs() {
     return this.azureAppendBlobDirs;
   }
+
+  public boolean isExpectHeaderEnabled() { return this.isExpectHeaderEnabled; }
+
+  public boolean isSingletonEnabled() {return this.isSingletonEnabled; }
 
   public String getAzureInfiniteLeaseDirs() {
     return this.azureInfiniteLeaseDirs;
