@@ -128,6 +128,7 @@ public class TestBPOfferService {
   private final int[] heartbeatCounts = new int[3];
   private DataNode mockDn;
   private FsDatasetSpi<?> mockFSDataset;
+  private DataSetLockManager dataSetLockManager = new DataSetLockManager();
   private boolean isSlownode;
 
   @Before
@@ -153,6 +154,7 @@ public class TestBPOfferService {
 
     // Wire the dataset to the DN.
     Mockito.doReturn(mockFSDataset).when(mockDn).getFSDataset();
+    Mockito.doReturn(dataSetLockManager).when(mockDn).getDataSetLockManager();
   }
 
   /**
@@ -508,6 +510,7 @@ public class TestBPOfferService {
   public void testBPInitErrorHandling() throws Exception {
     final DataNode mockDn = Mockito.mock(DataNode.class);
     Mockito.doReturn(true).when(mockDn).shouldRun();
+    Mockito.doReturn(dataSetLockManager).when(mockDn).getDataSetLockManager();
     Configuration conf = new Configuration();
     File dnDataDir = new File(
       new File(TEST_BUILD_DATA, "testBPInitErrorHandling"), "data");
