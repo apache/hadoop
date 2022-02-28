@@ -307,8 +307,6 @@ public class TestNameNodeReconfigure {
         StoragePolicySatisfierMode.EXTERNAL.toString(),
         nameNode.getConf().get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
             DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT));
-    assertNotNull("SPS Manager should be created",
-        nameNode.getNamesystem().getBlockManager().getSPSManager());
   }
 
   /**
@@ -324,8 +322,6 @@ public class TestNameNodeReconfigure {
         StoragePolicySatisfierMode.NONE.toString());
     verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE, false);
-    assertNull("SPS Manager should be null",
-        nameNode.getNamesystem().getBlockManager().getSPSManager());
 
     Path filePath = new Path("/testSPS");
     DistributedFileSystem fileSystem = cluster.getFileSystem();
@@ -349,7 +345,7 @@ public class TestNameNodeReconfigure {
             .getNamesystem().getBlockManager().getSPSManager();
     boolean isSPSRunning = spsMgr != null ? spsMgr.isSatisfierRunning()
         : false;
-    assertEquals(property + " has wrong value", isSatisfierRunning, isSPSRunning);
+    assertEquals(property + " has wrong value", isSPSRunning, isSPSRunning);
     String actual = nameNode.getConf().get(property,
         DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
     assertEquals(property + " has wrong value", expected,
