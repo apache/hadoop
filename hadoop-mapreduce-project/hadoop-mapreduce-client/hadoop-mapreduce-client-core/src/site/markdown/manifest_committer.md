@@ -86,15 +86,10 @@ These can be done in `core-site.xml`, if it is not defined in the `mapred-defaul
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
   <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
   <description>
-    The default committer factory for ABFS is for the manifest committer.
-  </description>
 </property>
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.gs</name>
   <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
-  <description>
-    The default committer factory for GCS is for the manifest committer.
-  </description>
 </property>
 ```
 

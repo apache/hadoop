@@ -103,6 +103,15 @@ public final class ManifestCommitterStatisticNames {
       "committer_task_file_size";
 
   /**
+   * The size of manifest files. This will be a MeanStatistic.
+   * Useful to highlight whether this size is too large and
+   * effort to optimise for file IO and memory consumption
+   * justified.
+   */
+  public static final String COMMITTER_TASK_MANIFEST_FILE_SIZE =
+      "committer_task_manifest_file_size";
+
+  /**
    * A file renamed during the commit operation {@value}.
    */
   public static final String OP_COMMIT_FILE_RENAME =
