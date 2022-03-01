@@ -184,7 +184,7 @@ This document covers the requirements of such implementations.
 
 HDFS's `FileSystem` implementation, `DistributedFileSystem`, returns an instance
 of `HdfsDataOutputStream`. This implementation has at least two behaviors
-which are not explicitly declared by the base Java implmentation
+which are not explicitly declared by the base Java implementation
 
 1. Writes are synchronized: more than one thread can write to the same
 output stream. This is a use pattern which HBase relies on.
@@ -678,7 +678,7 @@ public void hflush() throws IOException {
 ```
 
 This is perfectly acceptable as an implementation: the semantics of `hflush()`
-are satisifed.
+are satisfied.
 What is not acceptable is downgrading `hsync()` to `hflush()`, as the durability guarantee is no longer met.
 
 
@@ -863,7 +863,7 @@ local data as can be written to full checksummed blocks of data.
 That is, the hsync/hflush operations are not guaranteed to write all the pending
 data until the file is finally closed.
 
-For this reason, the local fileystem accessed via `file://` URLs
+For this reason, the local filesystem accessed via `file://` URLs
 does not support `Syncable` unless `setWriteChecksum(false)` was
 called on that FileSystem instance so as to disable checksum creation.
 After which, obviously, checksums are not generated for any file.
