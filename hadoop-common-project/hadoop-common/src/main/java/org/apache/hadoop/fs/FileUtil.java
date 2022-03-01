@@ -40,13 +40,13 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 
-import java.util.*;
 import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -682,7 +682,7 @@ public class FileUtil {
     }
   }
 
-  public static Set<PosixFilePermission> permissionsFromMode(Integer mode) {
+  public static Set<PosixFilePermission> permissionsFromMode(int mode) {
     EnumSet<PosixFilePermission> permissions =
             EnumSet.noneOf(PosixFilePermission.class);
     addPermissions(permissions, "OTHERS", (long) mode);
@@ -746,9 +746,9 @@ public class FileUtil {
               }
             } finally {
               out.close();
-              if (entry.getPlatform() == ZipArchiveEntry.PLATFORM_UNIX) {
+            }
+            if (entry.getPlatform() == ZipArchiveEntry.PLATFORM_UNIX) {
                 Files.setPosixFilePermissions(file.toPath(), permissionsFromMode(entry.getUnixMode()));
-              }
             }
           } finally {
             in.close();
