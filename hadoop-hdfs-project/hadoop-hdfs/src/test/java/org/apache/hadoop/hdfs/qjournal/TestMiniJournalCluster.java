@@ -27,10 +27,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
-import org.junit.Test;
+import org.apache.hadoop.test.LambdaTestUtils;
 
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestMiniJournalCluster {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMiniJournalCluster.class);
 
   @Test
   public void testStartStop() throws IOException {
@@ -55,67 +60,83 @@ public class TestMiniJournalCluster {
   }
 
   @Test
-  public void testStartStopWithPorts() throws IOException {
+  public void testStartStopWithPorts() throws Exception {
     Configuration conf = new Configuration();
 
-    try {
-      new MiniJournalCluster.Builder(conf).setHttpPorts(8481).build();
-      fail("Should not reach here");
-    } catch (IllegalArgumentException e) {
-      assertEquals("Num of http ports (1) should match num of JournalNodes (3)", e.getMessage());
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "Num of http ports (1) should match num of JournalNodes (3)",
+        "MiniJournalCluster port validation failed",
+        () -> {
+          new MiniJournalCluster.Builder(conf).setHttpPorts(8481).build();
+        });
+
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "Num of rpc ports (2) should match num of JournalNodes (3)",
+        "MiniJournalCluster port validation failed",
+        () -> {
+          new MiniJournalCluster.Builder(conf).setRpcPorts(8481, 8482).build();
+        });
+
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "Num of rpc ports (1) should match num of JournalNodes (3)",
+        "MiniJournalCluster port validation failed",
+        () -> {
+          new MiniJournalCluster.Builder(conf).setHttpPorts(800, 9000, 10000).setRpcPorts(8481)
+              .build();
+        });
+
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "Num of http ports (4) should match num of JournalNodes (3)",
+        "MiniJournalCluster port validation failed",
+        () -> {
+          new MiniJournalCluster.Builder(conf).setHttpPorts(800, 9000, 1000, 2000)
+              .setRpcPorts(8481, 8482, 8483).build();
+        });
+
+    final int[] httpPorts = new int[3];
+    final int[] rpcPorts = new int[3];
+    try (MiniJournalCluster miniJournalCluster = new MiniJournalCluster.Builder(conf).build()) {
+      miniJournalCluster.waitActive();
+
+      for (int i = 0; i < 3; i++) {
+        httpPorts[i] = miniJournalCluster.getJournalNode(i).getHttpAddress().getPort();
+      }
+
+      for (int i = 0; i < 3; i++) {
+        rpcPorts[i] = miniJournalCluster.getJournalNode(i).getRpcServer().getAddress().getPort();
+      }
     }
 
-    try {
-      new MiniJournalCluster.Builder(conf).setRpcPorts(8481, 8482)
-          .build();
-      fail("Should not reach here");
-    } catch (IllegalArgumentException e) {
-      assertEquals("Num of rpc ports (2) should match num of JournalNodes (3)", e.getMessage());
-    }
+    LOG.info("Http ports selected: {}", httpPorts);
+    LOG.info("Rpc ports selected: {}", rpcPorts);
 
-    try {
-      new MiniJournalCluster.Builder(conf).setHttpPorts(800, 9000, 10000).setRpcPorts(8481)
-          .build();
-      fail("Should not reach here");
-    } catch (IllegalArgumentException e) {
-      assertEquals("Num of rpc ports (1) should match num of JournalNodes (3)", e.getMessage());
-    }
-
-    try {
-      new MiniJournalCluster.Builder(conf).setHttpPorts(800, 9000, 1000, 2000)
-          .setRpcPorts(8481, 8482, 8483)
-          .build();
-      fail("Should not reach here");
-    } catch (IllegalArgumentException e) {
-      assertEquals("Num of http ports (4) should match num of JournalNodes (3)", e.getMessage());
-    }
-
-    MiniJournalCluster miniJournalCluster =
-        new MiniJournalCluster.Builder(conf).setHttpPorts(8481, 8482, 8483)
-            .setRpcPorts(8491, 8492, 8493).build();
-    try {
+    try (MiniJournalCluster miniJournalCluster = new MiniJournalCluster.Builder(conf)
+        .setHttpPorts(httpPorts)
+        .setRpcPorts(rpcPorts).build()) {
       miniJournalCluster.waitActive();
       URI uri = miniJournalCluster.getQuorumJournalURI("myjournal");
       String[] addrs = uri.getAuthority().split(";");
       assertEquals(3, addrs.length);
 
-      assertEquals(8481, miniJournalCluster.getJournalNode(0).getHttpAddress().getPort());
-      assertEquals(8482, miniJournalCluster.getJournalNode(1).getHttpAddress().getPort());
-      assertEquals(8483, miniJournalCluster.getJournalNode(2).getHttpAddress().getPort());
+      assertEquals(httpPorts[0], miniJournalCluster.getJournalNode(0).getHttpAddress().getPort());
+      assertEquals(httpPorts[1], miniJournalCluster.getJournalNode(1).getHttpAddress().getPort());
+      assertEquals(httpPorts[2], miniJournalCluster.getJournalNode(2).getHttpAddress().getPort());
 
-      assertEquals(8491,
+      assertEquals(rpcPorts[0],
           miniJournalCluster.getJournalNode(0).getRpcServer().getAddress().getPort());
-      assertEquals(8492,
+      assertEquals(rpcPorts[1],
           miniJournalCluster.getJournalNode(1).getRpcServer().getAddress().getPort());
-      assertEquals(8493,
+      assertEquals(rpcPorts[2],
           miniJournalCluster.getJournalNode(2).getRpcServer().getAddress().getPort());
 
       JournalNode node = miniJournalCluster.getJournalNode(0);
       String dir = node.getConf().get(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY);
       assertEquals(new File(MiniDFSCluster.getBaseDirectory() + "journalnode-0").getAbsolutePath(),
           dir);
-    } finally {
-      miniJournalCluster.shutdown();
     }
   }
 

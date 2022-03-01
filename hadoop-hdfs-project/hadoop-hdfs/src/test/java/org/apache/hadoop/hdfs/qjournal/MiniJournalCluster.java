@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.qjournal;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.FAKE_NSINFO;
 import static org.junit.Assert.fail;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -45,7 +46,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.test.GenericTestUtils;
 
-public class MiniJournalCluster {
+public class MiniJournalCluster implements Closeable {
+
   public static final String CLUSTER_WAITACTIVE_URI = "waitactive";
   public static class Builder {
     private String baseDir;
@@ -301,4 +303,10 @@ public class MiniJournalCluster {
           .DFS_NAMENODE_SHARED_EDITS_DIR_KEY, quorumJournalURI.toString());
     }
   }
+
+  @Override
+  public void close() throws IOException {
+    this.shutdown();
+  }
+
 }
