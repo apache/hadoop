@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.Test;
@@ -97,22 +98,18 @@ public class TestMiniJournalCluster {
               .setRpcPorts(8481, 8482, 8483).build();
         });
 
-    final int[] httpPorts = new int[3];
-    final int[] rpcPorts = new int[3];
-    try (MiniJournalCluster miniJournalCluster = new MiniJournalCluster.Builder(conf).build()) {
-      miniJournalCluster.waitActive();
-
-      for (int i = 0; i < 3; i++) {
-        httpPorts[i] = miniJournalCluster.getJournalNode(i).getHttpAddress().getPort();
-      }
-
-      for (int i = 0; i < 3; i++) {
-        rpcPorts[i] = miniJournalCluster.getJournalNode(i).getRpcServer().getAddress().getPort();
-      }
-    }
+    final int[] httpPorts = new int[] { NetUtils.getFreeSocketPort(), NetUtils.getFreeSocketPort(),
+        NetUtils.getFreeSocketPort() };
+    final int[] rpcPorts = new int[] { NetUtils.getFreeSocketPort(), NetUtils.getFreeSocketPort(),
+        NetUtils.getFreeSocketPort() };
 
     LOG.info("Http ports selected: {}", httpPorts);
     LOG.info("Rpc ports selected: {}", rpcPorts);
+
+    for (int i = 0; i < 3; i++) {
+      assertNotEquals(0, rpcPorts[i]);
+      assertNotEquals(0, httpPorts[i]);
+    }
 
     try (MiniJournalCluster miniJournalCluster = new MiniJournalCluster.Builder(conf)
         .setHttpPorts(httpPorts)
