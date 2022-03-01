@@ -79,14 +79,18 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static SSLFactory clientSslFactory;
   private static String cipherSuitesPropertyValue;
   private static String sslDebugPropertyValue;
-  static final String EXCLUDED_CIPHERS =
-          "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
-      + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, \n"
-      + "SSL_RSA_WITH_DES_CBC_SHA,"
-      + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
-      + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
-      + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
-      + "SSL_RSA_WITH_RC4_128_MD5 \t";
+  public static final String EXCLUDED_CIPHERS;
+
+  static {
+    EXCLUDED_CIPHERS = "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
+        + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, \n"
+        + "SSL_RSA_WITH_DES_CBC_SHA,"
+        + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
+        + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
+        + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
+        + "SSL_RSA_WITH_RC4_128_MD5 \t";
+  }
+
   private static final String ONE_ENABLED_CIPHERS_TLS1_2 = EXCLUDED_CIPHERS
       + ",TLS_RSA_WITH_AES_128_CBC_SHA";
   private static final String ONE_ENABLED_CIPHERS_TLS1_3 = EXCLUDED_CIPHERS

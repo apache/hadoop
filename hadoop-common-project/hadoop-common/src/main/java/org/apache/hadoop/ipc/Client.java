@@ -82,6 +82,7 @@ import javax.security.sasl.Sasl;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.Map.Entry;
@@ -1898,12 +1899,16 @@ public class Client implements AutoCloseable {
     public DataOutputStream out;
     private int maxResponseLength;
     private boolean firstResponse = true;
+    private static boolean useNettyTest = true;
 
     static IpcStreams newInstance(Socket socket, int maxResponseLength,
-                                  Configuration conf) throws IOException {
+                                  Configuration conf) throws Exception {
       boolean useNetty = conf.getBoolean(
           CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
           CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_DEFAULT);
+      useNettyTest = conf.getBoolean(
+          CommonConfigurationKeys.IPC_NETTY_TESTING,
+          CommonConfigurationKeys.IPC_NETTY_TESTING_DEFAULT);
       // use netty only if a channel is available.
       IpcStreams streams = (useNetty && socket.getChannel() != null)
           ? new NettyIpcStreams(socket) : new NioIpcStreams(socket);
@@ -1989,7 +1994,7 @@ public class Client implements AutoCloseable {
     private int soTimeout;
     private IOException channelIOE;
 
-    NettyIpcStreams(Socket socket) throws IOException {
+    NettyIpcStreams(Socket socket) throws Exception {
       soTimeout = socket.getSoTimeout();
       if (!LOG.isDebugEnabled()) {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
@@ -1997,33 +2002,51 @@ public class Client implements AutoCloseable {
       channel = new NioSocketChannel(socket.getChannel());
       channel.config().setAutoRead(false);
 
-      SslContext sslCtx = null;
+      SslHandler sslHandler = null;
 
-      try {
-        sslCtx = SslContextBuilder.forClient()
-            .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-      } catch (SSLException e) {
-        throw new IOException("Exception while building SSL Context", e);
+      if (IpcStreams.useNettyTest) {
+
+        SslContext sslCtx = null;
+
+        try {
+          sslCtx = SslContextBuilder.forClient()
+              .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+        } catch (SSLException e) {
+          throw new IOException("Exception while building SSL Context", e);
+        }
+
+        sslHandler = sslCtx.newHandler(channel.alloc());
       }
+      else {
+        //TODO: Find where we will get the location to ssl-server.xml and
+        //      ssl-client.xml. For now we proceed with the assumption that
+        //      these configuration files are available
+        String sslServerConfFile = "ssl-client.xml";
 
-      SslHandler sslHandler = sslCtx.newHandler(channel.alloc());
+        SSLHandlerProvider sslServerHandlerProvider =
+            new SSLHandlerProvider(sslServerConfFile, "TLS", "SHA1withRSA",
+                false);
+
+        sslHandler = sslServerHandlerProvider.getSSLHandler(channel.alloc());
+      }
 
       if (sslHandler != null) {
         sslHandler.handshakeFuture().addListener(
             new GenericFutureListener<io.netty.util.concurrent.Future<Channel>>() {
-          @Override
-          public void operationComplete(
-              final io.netty.util.concurrent.Future<Channel> handshakeFuture)
-              throws Exception {
-            if (handshakeFuture.isSuccess()) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("TLS handshake success");
+              @Override
+              public void operationComplete(
+                  final io.netty.util.concurrent.Future<Channel> handshakeFuture)
+                  throws Exception {
+                if (handshakeFuture.isSuccess()) {
+                  if (LOG.isDebugEnabled()) {
+                    LOG.debug("TLS handshake success");
+                  }
+                } else {
+                  throw new IOException(
+                      "TLS handshake failed." + handshakeFuture.cause());
+                }
               }
-            } else {
-              throw new IOException("TLS handshake failed." + handshakeFuture.cause());
-            }
-          }
-        });
+            });
       }
 
       if (LOG.isDebugEnabled()) {

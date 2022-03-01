@@ -18,67 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.apache.hadoop.ipc.ProcessingDetails.Timing;
-import static org.apache.hadoop.ipc.RpcConstants.AUTHORIZATION_FAILED_CALL_ID;
-import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
-import static org.apache.hadoop.ipc.RpcConstants.CURRENT_VERSION;
-import static org.apache.hadoop.ipc.RpcConstants.HEADER_LEN_AFTER_HRPC_PART;
-import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.net.BindException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
-import java.net.StandardSocketOptions;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.channels.CancelledKeyException;
-import java.nio.channels.Channels;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
-import java.security.PrivilegedExceptionAction;
-import java.security.cert.CertificateException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
-
-import javax.net.ssl.SSLException;
-import javax.security.sasl.Sasl;
-import javax.security.sasl.SaslException;
-import javax.security.sasl.SaslServer;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.bootstrap.ServerBootstrapConfig;
 import io.netty.buffer.ByteBuf;
@@ -121,6 +61,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -135,6 +76,7 @@ import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcKindProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -143,7 +85,6 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.Rpc
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslAuth;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
-import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
@@ -159,22 +100,80 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf.Message;
+import org.apache.hadoop.tracing.Span;
+import org.apache.hadoop.tracing.SpanContext;
+import org.apache.hadoop.tracing.TraceScope;
+import org.apache.hadoop.tracing.TraceUtils;
+import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.tracing.Span;
-import org.apache.hadoop.tracing.SpanContext;
-import org.apache.hadoop.tracing.TraceScope;
-import org.apache.hadoop.tracing.Tracer;
-import org.apache.hadoop.tracing.TraceUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.protobuf.ByteString;
-import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
-import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLException;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.net.BindException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.StandardSocketOptions;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.Channels;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
+import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+
+import static org.apache.hadoop.ipc.ProcessingDetails.Timing;
+import static org.apache.hadoop.ipc.RpcConstants.AUTHORIZATION_FAILED_CALL_ID;
+import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
+import static org.apache.hadoop.ipc.RpcConstants.CURRENT_VERSION;
+import static org.apache.hadoop.ipc.RpcConstants.HEADER_LEN_AFTER_HRPC_PART;
+import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -3648,6 +3647,12 @@ public abstract class Server {
         CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_DEFAULT);
   }
 
+  boolean enableNettyTesting() {
+    return conf.getBoolean(
+        CommonConfigurationKeys.IPC_NETTY_TESTING,
+        CommonConfigurationKeys.IPC_NETTY_TESTING_DEFAULT);
+  }
+
   // get the security type from the conf. implicitly include token support
   // if a secret manager is provided, or fail if token is the conf value but
   // there is no secret manager
@@ -4392,7 +4397,7 @@ public abstract class Server {
           .childHandler(new ChannelInitializer<Channel>() {
               @Override
               protected void initChannel(io.netty.channel.Channel channel)
-                  throws IOException {
+                  throws Exception {
                 connectionManager.register(new NettyConnection(channel));
               }});
 
@@ -4516,15 +4521,16 @@ public abstract class Server {
 
   private class NettyConnection extends Connection<io.netty.channel.Channel> {
     NettyConnection(io.netty.channel.Channel channel)
-        throws IOException {
-      super(channel, (InetSocketAddress)channel.localAddress(),
-                     (InetSocketAddress)channel.remoteAddress());
-      ChannelInboundHandler decoder = new ByteToMessageDecoder(){
+        throws Exception {
+      super(channel, (InetSocketAddress) channel.localAddress(),
+          (InetSocketAddress) channel.remoteAddress());
+      ChannelInboundHandler decoder = new ByteToMessageDecoder() {
         @Override
         public void decode(ChannelHandlerContext ctx, ByteBuf in,
                            List<Object> out) throws Exception {
           doRead(in);
         }
+
         // client closed the connection.
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
@@ -4532,41 +4538,62 @@ public abstract class Server {
         }
       };
 
-      SelfSignedCertificate ssc = null;
-
-      try {
-        ssc = new SelfSignedCertificate();
-      } catch (CertificateException e) {
-        throw new IOException(
-            "Exception while creating a SelfSignedCertificate object.", e);
-      }
+      //TODO: Make the self signed certificate creation optional for testing
+      //      purposes only.
 
       SslContext sslCtx = null;
 
-      try {
-        sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-            .build();
-      } catch (SSLException e) {
-        throw new IOException("Exception while building a SSLContext", e);
+      SslHandler sslHandler = null;
+
+      if (enableNettyTesting()) {
+        SelfSignedCertificate ssc = null;
+
+        try {
+          ssc = new SelfSignedCertificate();
+        } catch (CertificateException e) {
+          throw new IOException(
+              "Exception while creating a SelfSignedCertificate object.", e);
+        }
+
+        try {
+          sslCtx =
+              SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                  .build();
+        } catch (SSLException e) {
+          throw new IOException("Exception while building a SSLContext", e);
+        }
+
+        sslHandler = sslCtx.newHandler(channel.alloc());
+      } else {
+        //TODO: Find where we will get the location to ssl-server.xml and
+        //      ssl-client.xml. For now we proceed with the assumption that
+        //      these configuration files are available
+        String sslServerConfFile = "ssl-server.xml";
+
+        SSLHandlerProvider sslServerHandlerProvider =
+            new SSLHandlerProvider(sslServerConfFile, "TLS", "SHA1withRSA",
+                false);
+
+        sslHandler = sslServerHandlerProvider.getSSLHandler(channel.alloc());
       }
 
-      SslHandler sslHandler = sslCtx.newHandler(channel.alloc());
-
       if (sslHandler != null) {
-        sslHandler.handshakeFuture().addListener(new GenericFutureListener<Future<Channel>>() {
-          @Override
-          public void operationComplete(
-              final io.netty.util.concurrent.Future<Channel> handshakeFuture)
-              throws Exception {
-            if (handshakeFuture.isSuccess()) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("TLS handshake success");
+        sslHandler.handshakeFuture()
+            .addListener(new GenericFutureListener<Future<Channel>>() {
+              @Override
+              public void operationComplete(
+                  final io.netty.util.concurrent.Future<Channel> handshakeFuture)
+                  throws Exception {
+                if (handshakeFuture.isSuccess()) {
+                  if (LOG.isDebugEnabled()) {
+                    LOG.debug("TLS handshake success");
+                  }
+                } else {
+                  throw new IOException(
+                      "TLS handshake failed." + handshakeFuture.cause());
+                }
               }
-            } else {
-              throw new IOException("TLS handshake failed." + handshakeFuture.cause());
-            }
-          }
-        });
+            });
       }
 
       if (LOG.isDebugEnabled()) {
@@ -4575,7 +4602,7 @@ public abstract class Server {
       channel.pipeline().addLast(sslHandler);
       // decoder maintains state, responder doesn't so it can be reused.
       channel.pipeline().addLast(new CombinedChannelDuplexHandler(
-          decoder, (NettyResponder)responder));
+          decoder, (NettyResponder) responder));
     }
 
     @Override

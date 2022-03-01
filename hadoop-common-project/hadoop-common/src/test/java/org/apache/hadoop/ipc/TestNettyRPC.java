@@ -21,6 +21,7 @@ package org.apache.hadoop.ipc;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -42,6 +43,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
+import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -60,6 +62,7 @@ import org.slf4j.event.Level;
 
 import javax.net.SocketFactory;
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationHandler;
@@ -88,6 +91,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.hadoop.http.TestSSLHttpServer.EXCLUDED_CIPHERS;
+import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.CLIENT_KEY_STORE_PASSWORD_DEFAULT;
+import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.SERVER_KEY_STORE_PASSWORD_DEFAULT;
+import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.TRUST_STORE_PASSWORD_DEFAULT;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
@@ -112,15 +119,41 @@ public class TestNettyRPC extends TestRpcBase {
 
   public static final Logger LOG = LoggerFactory.getLogger(TestNettyRPC.class);
 
+  private static String keystoreDir;
+  private static String sslConfDir;
+
+  private static final String BASEDIR =
+      GenericTestUtils.getTempPath(TestNettyRPC.class.getSimpleName());
+
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     GenericTestUtils.setLogLevel(Client.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
+
     setupConf();
+
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
         true);
     conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
         true);
+    conf.setBoolean(CommonConfigurationKeys.IPC_NETTY_TESTING,
+        true);
+
+    File base = new File(BASEDIR);
+
+    FileUtil.fullyDelete(base);
+
+    base.mkdirs();
+
+    keystoreDir = new File(BASEDIR).getAbsolutePath();
+
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(TestNettyRPC.class);
+
+    KeyStoreTestUtil.setupSSLConfig(keystoreDir, sslConfDir, conf,
+        false, true,
+        EXCLUDED_CIPHERS, SERVER_KEY_STORE_PASSWORD_DEFAULT,
+        CLIENT_KEY_STORE_PASSWORD_DEFAULT, TRUST_STORE_PASSWORD_DEFAULT);
+
     int threadsBefore = countThreads("Socket Reader");
     assertEquals("Expect no Reader threads running before test",
         0, threadsBefore);

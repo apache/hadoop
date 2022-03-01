@@ -69,6 +69,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "ipc.client.netty.enable";
   /** Default value for IPC_CLIENT_NETTY_ENABLE_KEY. */
   public static final boolean IPC_CLIENT_NETTY_ENABLE_DEFAULT = false;
+  /** Allow the use of self-signed certificates for testing. */
+  public static final String IPC_NETTY_TESTING = "ipc.netty.testing.enable";
+  /** Self signed certificates should be used only during testing. */
+  /** TODO: true for now, will be made false before final change */
+  public static final boolean IPC_NETTY_TESTING_DEFAULT = true;
   /** Responses larger than this will be logged */
   public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY =
     "ipc.server.max.response.size";
