@@ -35,17 +35,13 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
-
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.
-    CapacitySchedulerConfiguration.RESOURCE_PATTERN;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.
-    CapacitySchedulerConfiguration.CAPACITY;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -160,10 +156,8 @@ public class CapacitySchedulerQueueInfo {
           .getConfigName();
     }
 
-    String configuredCapacity = conf.get(
-        CapacitySchedulerConfiguration.getQueuePrefix(queuePath) + CAPACITY);
-    isAbsoluteResource = (configuredCapacity != null)
-        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+    isAbsoluteResource = q.getCapacityConfigType() ==
+        AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE;
 
     autoCreateChildQueueEnabled = conf.
         isAutoCreateChildQueueEnabled(queuePath);

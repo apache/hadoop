@@ -128,7 +128,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   // either at this level or anywhere in the queue's hierarchy.
   private volatile boolean defaultAppLifetimeWasSpecifiedInConfig = false;
 
-  protected enum CapacityConfigType {
+  public enum CapacityConfigType {
     NONE, PERCENTAGE, ABSOLUTE_RESOURCE
   };
   protected CapacityConfigType capacityConfigType =
