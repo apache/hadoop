@@ -693,9 +693,13 @@ public class AbfsConfiguration{
     return this.azureAppendBlobDirs;
   }
 
-  public boolean isExpectHeaderEnabled() { return this.isExpectHeaderEnabled; }
+  public boolean isExpectHeaderEnabled() {
+    return this.isExpectHeaderEnabled;
+  }
 
-  public boolean isSingletonEnabled() {return this.isSingletonEnabled; }
+  public boolean isSingletonEnabled() {
+    return this.isSingletonEnabled;
+  }
 
   public String getAzureInfiniteLeaseDirs() {
     return this.azureInfiniteLeaseDirs;

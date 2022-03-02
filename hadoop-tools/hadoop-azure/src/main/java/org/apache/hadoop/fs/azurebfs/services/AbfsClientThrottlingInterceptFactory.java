@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.azurebfs.Abfs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
