@@ -323,7 +323,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     } catch (Exception e) {
       this.statusCode = this.connection.getResponseCode();
       this.bytesSent = length;
-      throw new IOException(e);
+      if (this.statusCode != -1 && this.statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
+        throw new IOException(e);
+      }
     }
     finally {
       if (this.isTraceEnabled) {
@@ -348,7 +350,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     if (this.isTraceEnabled) {
       startTime = System.nanoTime();
     }
-
     this.statusCode = this.connection.getResponseCode();
 
     if (this.isTraceEnabled) {

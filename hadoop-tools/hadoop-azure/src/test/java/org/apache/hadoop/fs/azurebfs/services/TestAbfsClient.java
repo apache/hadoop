@@ -306,7 +306,7 @@ public final class TestAbfsClient {
     when(client.getAccessToken()).thenCallRealMethod();
     when(client.getSharedKeyCredentials()).thenCallRealMethod();
     when(client.createDefaultHeaders()).thenCallRealMethod();
-
+    when(client.getAbfsConfiguration()).thenReturn(abfsConfig);
     // override baseurl
     client = TestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
         abfsConfig);
