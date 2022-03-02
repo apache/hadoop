@@ -331,7 +331,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Collect and set the Node label configuration
       this.queueNodeLabelsSettings = new QueueNodeLabelsSettings(configuration, parent,
-          getQueuePath(), queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
+          queuePath, queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
 
       // Initialize the queue capacities
       setupConfigurableCapacities();
@@ -379,7 +379,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Setup application related limits
       this.queueAppLifetimeSettings = new QueueAppLifetimeAndLimitSettings(configuration,
-          this, getQueuePath());
+          this, queuePath);
     } finally {
       writeLock.unlock();
     }
