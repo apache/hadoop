@@ -317,7 +317,7 @@ public class AbfsRestOperation {
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
-        throw new InvalidAbfsRestOperationException(ex,retryCount);
+        throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
 
       return false;

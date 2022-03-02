@@ -608,7 +608,7 @@ public class AbfsClient implements Closeable {
     addCustomerProvidedKeyHeaders(requestHeaders);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
-    if (isExpectHeaderEnabled == true) {
+    if (isExpectHeaderEnabled) {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
