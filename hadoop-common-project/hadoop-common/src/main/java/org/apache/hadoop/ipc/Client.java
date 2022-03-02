@@ -2021,11 +2021,11 @@ public class Client implements AutoCloseable {
         //TODO: Find where we will get the location to ssl-server.xml and
         //      ssl-client.xml. For now we proceed with the assumption that
         //      these configuration files are available
-        String sslServerConfFile = "ssl-client.xml";
+        String sslClientConfFile = "ssl-client.xml";
 
         SSLHandlerProvider sslServerHandlerProvider =
-            new SSLHandlerProvider(sslServerConfFile, "TLS", "SHA1withRSA",
-                false);
+            new SSLHandlerProvider(sslClientConfFile, "TLS", "SHA1withRSA",
+                true);
 
         sslHandler = sslServerHandlerProvider.getSSLHandler(channel.alloc());
       }
