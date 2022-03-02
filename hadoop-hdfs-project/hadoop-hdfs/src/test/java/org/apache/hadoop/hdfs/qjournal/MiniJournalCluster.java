@@ -46,7 +46,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.test.GenericTestUtils;
 
-public class MiniJournalCluster implements Closeable {
+public final class MiniJournalCluster implements Closeable {
 
   public static final String CLUSTER_WAITACTIVE_URI = "waitactive";
   public static class Builder {

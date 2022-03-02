@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -98,10 +99,20 @@ public class TestMiniJournalCluster {
               .setRpcPorts(8481, 8482, 8483).build();
         });
 
-    final int[] httpPorts = new int[] { NetUtils.getFreeSocketPort(), NetUtils.getFreeSocketPort(),
-        NetUtils.getFreeSocketPort() };
-    final int[] rpcPorts = new int[] { NetUtils.getFreeSocketPort(), NetUtils.getFreeSocketPort(),
-        NetUtils.getFreeSocketPort() };
+    final Set<Integer> httpAndRpcPorts = NetUtils.getFreeSocketPorts(6);
+    LOG.info("Free socket ports: {}", httpAndRpcPorts);
+
+    final int[] httpPorts = new int[3];
+    final int[] rpcPorts = new int[3];
+    int httpPortIdx = 0;
+    int rpcPortIdx = 0;
+    for (Integer httpAndRpcPort : httpAndRpcPorts) {
+      if (httpPortIdx < 3) {
+        httpPorts[httpPortIdx++] = httpAndRpcPort;
+      } else {
+        rpcPorts[rpcPortIdx++] = httpAndRpcPort;
+      }
+    }
 
     LOG.info("Http ports selected: {}", httpPorts);
     LOG.info("Rpc ports selected: {}", rpcPorts);
