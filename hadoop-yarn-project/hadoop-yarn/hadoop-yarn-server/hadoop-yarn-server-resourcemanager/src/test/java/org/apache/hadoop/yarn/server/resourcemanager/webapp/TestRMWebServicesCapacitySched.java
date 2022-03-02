@@ -130,7 +130,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
     // Define top-level queues
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b"});
+        new String[] {"a", "b", "c"});
 
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     config.setCapacity(A, 10.5f);
@@ -391,7 +391,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     assertEquals("utilization", info.getString("orderingPolicyInfo"));
 
     JSONArray arr = info.getJSONObject("queues").getJSONArray("queue");
-    assertEquals("incorrect number of elements in: " + arr, 2, arr.length());
+    assertEquals("incorrect number of elements in: " + arr, 3, arr.length());
 
     // test subqueues
     for (int i = 0; i < arr.length(); i++) {
@@ -433,6 +433,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     qi.numApplications = info.getInt("numApplications");
     qi.queueName = info.getString("queueName");
     qi.state = info.getString("state");
+    qi.isAbsoluteResource = info.getBoolean("isAbsoluteResource");
 
     verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
 
@@ -506,7 +507,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         + " expected: " + q, qshortName.matches(info.queueName));
     assertTrue("state doesn't match",
         (csConf.getState(q).toString()).matches(info.state));
-    if (q.equals("c")) {
+
+    if (q.equals("root.c")) {
       assertTrue("c queue is not configured in Absolute resource",
           info.isAbsoluteResource);
     } else {
