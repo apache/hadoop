@@ -194,9 +194,9 @@ import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
 /********************************************************
@@ -863,7 +863,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   public long getRefreshReadBlkLocationsInterval() {
-    return dfsClientConf.getRefreshReadBlockLocationsMS();
+    return dfsClientConf.getLocatedBlocksRefresherInterval();
   }
 
   /**
@@ -3458,5 +3458,37 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public DeadNodeDetector getDeadNodeDetector() {
     return clientContext.getDeadNodeDetector();
+  }
+
+  /**
+   * Obtain LocatedBlocksRefresher of the current client.
+   */
+  public LocatedBlocksRefresher getLocatedBlockRefresher() {
+    return clientContext.getLocatedBlocksRefresher();
+  }
+
+  /**
+   * Adds the {@link DFSInputStream} to the {@link LocatedBlocksRefresher}, so that
+   * the underlying {@link LocatedBlocks} is periodically refreshed.
+   */
+  public void addLocatedBlocksRefresh(DFSInputStream dfsInputStream) {
+    if (isLocatedBlocksRefresherEnabled()) {
+      clientContext.getLocatedBlocksRefresher().addInputStream(dfsInputStream);
+    }
+  }
+
+  /**
+   * Removes the {@link DFSInputStream} from the {@link LocatedBlocksRefresher}, so that
+   * the underlying {@link LocatedBlocks} is no longer periodically refreshed.
+   * @param dfsInputStream
+   */
+  public void removeLocatedBlocksRefresh(DFSInputStream dfsInputStream) {
+    if (isLocatedBlocksRefresherEnabled()) {
+      clientContext.getLocatedBlocksRefresher().removeInputStream(dfsInputStream);
+    }
+  }
+
+  private boolean isLocatedBlocksRefresherEnabled() {
+    return clientContext.isLocatedBlocksRefresherEnabled();
   }
 }

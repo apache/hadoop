@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NMToken;

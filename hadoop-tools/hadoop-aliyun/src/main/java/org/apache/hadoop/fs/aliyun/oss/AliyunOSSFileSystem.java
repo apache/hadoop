@@ -49,7 +49,6 @@ import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.Progressable;
 
 import com.aliyun.oss.model.OSSObjectSummary;
-import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.ObjectMetadata;
 
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
@@ -271,14 +270,15 @@ public class AliyunOSSFileSystem extends FileSystem {
       meta = store.getObjectMetadata(key);
     }
     if (meta == null) {
-      ObjectListing listing = store.listObjects(key, 1, null, false);
+      OSSListRequest listRequest = store.createListObjectsRequest(key,
+          maxKeys, null, null, false);
+      OSSListResult listing = store.listObjects(listRequest);
       do {
         if (CollectionUtils.isNotEmpty(listing.getObjectSummaries()) ||
             CollectionUtils.isNotEmpty(listing.getCommonPrefixes())) {
           return new OSSFileStatus(0, true, 1, 0, 0, qualifiedPath, username);
         } else if (listing.isTruncated()) {
-          listing = store.listObjects(key, 1000, listing.getNextMarker(),
-              false);
+          listing = store.continueListObjects(listRequest, listing);
         } else {
           throw new FileNotFoundException(
               path + ": No such file or directory!");
@@ -416,7 +416,9 @@ public class AliyunOSSFileSystem extends FileSystem {
         LOG.debug("listStatus: doing listObjects for directory " + key);
       }
 
-      ObjectListing objects = store.listObjects(key, maxKeys, null, false);
+      OSSListRequest listRequest = store.createListObjectsRequest(key,
+          maxKeys, null, null, false);
+      OSSListResult objects = store.listObjects(listRequest);
       while (true) {
         for (OSSObjectSummary objectSummary : objects.getObjectSummaries()) {
           String objKey = objectSummary.getKey();
@@ -456,8 +458,7 @@ public class AliyunOSSFileSystem extends FileSystem {
           if (LOG.isDebugEnabled()) {
             LOG.debug("listStatus: list truncated - getting next batch");
           }
-          String nextMarker = objects.getNextMarker();
-          objects = store.listObjects(key, maxKeys, nextMarker, false);
+          objects = store.continueListObjects(listRequest, objects);
         } else {
           break;
         }
@@ -520,7 +521,7 @@ public class AliyunOSSFileSystem extends FileSystem {
           locations);
     } else {
       return store.createLocatedFileStatusIterator(key, maxKeys, this, filter,
-          acceptor, recursive ? null : "/");
+          acceptor, recursive);
     }
   }
 
@@ -707,7 +708,9 @@ public class AliyunOSSFileSystem extends FileSystem {
     ExecutorService executorService = MoreExecutors.listeningDecorator(
         new SemaphoredDelegatingExecutor(boundedCopyThreadPool,
             maxConcurrentCopyTasksPerDir, true));
-    ObjectListing objects = store.listObjects(srcKey, maxKeys, null, true);
+    OSSListRequest listRequest = store.createListObjectsRequest(srcKey,
+        maxKeys, null, null, true);
+    OSSListResult objects = store.listObjects(listRequest);
     // Copy files from src folder to dst
     int copiesToFinish = 0;
     while (true) {
@@ -729,8 +732,7 @@ public class AliyunOSSFileSystem extends FileSystem {
         }
       }
       if (objects.isTruncated()) {
-        String nextMarker = objects.getNextMarker();
-        objects = store.listObjects(srcKey, maxKeys, nextMarker, true);
+        objects = store.continueListObjects(listRequest, objects);
       } else {
         break;
       }

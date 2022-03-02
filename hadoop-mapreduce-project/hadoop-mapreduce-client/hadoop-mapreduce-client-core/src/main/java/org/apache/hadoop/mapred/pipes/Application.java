@@ -48,13 +48,13 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -117,7 +117,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     if (interpretor != null) {
       cmd.add(interpretor);
     }
-    String executable = DistributedCache.getLocalCacheFiles(conf)[0].toString();
+    String executable = JobContextImpl.getLocalCacheFiles(conf)[0].toString();
     if (!FileUtil.canExecute(new File(executable))) {
       // LinuxTaskController sets +x permissions on all distcache files already.
       // In case of DefaultTaskController, set permissions here.

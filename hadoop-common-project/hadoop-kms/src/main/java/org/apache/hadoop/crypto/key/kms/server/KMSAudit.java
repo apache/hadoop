@@ -20,8 +20,8 @@ package org.apache.hadoop.crypto.key.kms.server;
 import static org.apache.hadoop.crypto.key.kms.server.KMSAuditLogger.AuditEvent;
 import static org.apache.hadoop.crypto.key.kms.server.KMSAuditLogger.OpStatus;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KMSACLs.Type;
 import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;

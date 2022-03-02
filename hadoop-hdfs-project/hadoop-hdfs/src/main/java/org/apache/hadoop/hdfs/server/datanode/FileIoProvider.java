@@ -513,6 +513,7 @@ public class FileIoProvider {
     try {
       faultInjectorEventHook.beforeMetadataOp(volume, DELETE);
       boolean deleted = FileUtil.fullyDelete(dir);
+      LOG.trace("Deletion of dir {} {}", dir, deleted ? "succeeded" : "failed");
       profilingEventHook.afterMetadataOp(volume, DELETE, begin);
       return deleted;
     } catch(Exception e) {
@@ -1069,5 +1070,9 @@ public class FileIoProvider {
       datanode.checkDiskErrorAsync(volume);
     }
     profilingEventHook.onFailure(volume, begin);
+  }
+
+  public ProfilingFileIoEvents getProfilingEventHook() {
+    return profilingEventHook;
   }
 }

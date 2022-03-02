@@ -18,13 +18,11 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
 import org.apache.hadoop.fs.StorageType;
@@ -141,7 +139,7 @@ public class DatanodeManager {
   private final boolean avoidStaleDataNodesForRead;
 
   /** Whether or not to avoid using slow DataNodes for reading. */
-  private final boolean avoidSlowDataNodesForRead;
+  private volatile boolean avoidSlowDataNodesForRead;
 
   /** Whether or not to consider lad for reading. */
   private final boolean readConsiderLoad;
@@ -216,8 +214,7 @@ public class DatanodeManager {
   private static Set<String> slowNodesUuidSet = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
-  private final int maxSlowPeerReportNodes;
-  private boolean excludeSlowNodesEnabled;
+  private volatile int maxSlowPeerReportNodes;
 
   @Nullable
   private final SlowDiskTracker slowDiskTracker;
@@ -260,9 +257,6 @@ public class DatanodeManager {
     final Timer timer = new Timer();
     this.slowPeerTracker = dataNodePeerStatsEnabled ?
         new SlowPeerTracker(conf, timer) : null;
-    this.excludeSlowNodesEnabled = conf.getBoolean(
-        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
-        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT);
     this.maxSlowPeerReportNodes = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_DEFAULT);
@@ -270,7 +264,7 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
-    if (slowPeerTracker != null && excludeSlowNodesEnabled) {
+    if (slowPeerTracker != null) {
       startSlowPeerCollector();
     }
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
@@ -511,7 +505,25 @@ public class DatanodeManager {
   private boolean isSlowNode(String dnUuid) {
     return avoidSlowDataNodesForRead && slowNodesUuidSet.contains(dnUuid);
   }
-  
+
+  public void setAvoidSlowDataNodesForReadEnabled(boolean enable) {
+    this.avoidSlowDataNodesForRead = enable;
+  }
+
+  @VisibleForTesting
+  public boolean getEnableAvoidSlowDataNodesForRead() {
+    return this.avoidSlowDataNodesForRead;
+  }
+
+  public void setMaxSlowpeerCollectNodes(int maxNodes) {
+    this.maxSlowPeerReportNodes = maxNodes;
+  }
+
+  @VisibleForTesting
+  public int getMaxSlowpeerCollectNodes() {
+    return this.maxSlowPeerReportNodes;
+  }
+
   /**
    * Sort the non-striped located blocks by the distance to the target host.
    *
@@ -2170,7 +2182,8 @@ public class DatanodeManager {
     for (int i = 0; i < reports.length; i++) {
       final DatanodeDescriptor d = datanodes.get(i);
       reports[i] = new DatanodeStorageReport(
-          new DatanodeInfoBuilder().setFrom(d).build(), d.getStorageReports());
+          new DatanodeInfoBuilder().setFrom(d).setNumBlocks(d.numBlocks()).build(),
+          d.getStorageReports());
     }
     return reports;
   }

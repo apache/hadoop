@@ -58,7 +58,7 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.apache.http.client.utils.URIBuilder;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.eclipse.jetty.io.EofException;
 
 import static org.apache.hadoop.hdfs.server.common.Util.IO_FILE_BUFFER_SIZE;

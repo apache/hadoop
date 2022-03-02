@@ -147,6 +147,11 @@
 # Router specific parameters
 ###
 
+# Specify the max heapsize for the Router.  If no units are
+# given, it will be assumed to be in MB.
+# Default is the same as HADOOP_HEAPSIZE_MAX
+#export YARN_ROUTER_HEAPSIZE=
+
 # Specify the JVM options to be used when starting the Router.
 # These options will be appended to the options specified as HADOOP_OPTS
 # and therefore may override any similar flags set in HADOOP_OPTS

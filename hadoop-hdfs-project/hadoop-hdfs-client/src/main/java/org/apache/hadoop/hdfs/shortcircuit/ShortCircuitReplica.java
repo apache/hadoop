@@ -31,8 +31,8 @@ import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,7 +160,7 @@ public class ShortCircuitReplica {
       long deltaMs = Time.monotonicNow() - creationTimeMs;
       long staleThresholdMs = cache.getStaleThresholdMs();
       if (deltaMs > staleThresholdMs) {
-        LOG.trace("{} is stale because it's {} ms old and staleThreadholdMS={}",
+        LOG.trace("{} is stale because it's {} ms old and staleThresholdMs={}",
             this, deltaMs, staleThresholdMs);
         return true;
       } else {

@@ -43,7 +43,7 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -616,10 +616,12 @@ public class SimpleCopyListing extends CopyListing {
       DistCpContext context) throws IOException {
     boolean syncOrOverwrite = context.shouldSyncFolder() ||
         context.shouldOverwrite();
+    boolean skipRootPath = syncOrOverwrite && !context.shouldUpdateRoot();
     for (CopyListingFileStatus fs : fileStatus) {
       if (fs.getPath().equals(sourcePathRoot) &&
-          fs.isDirectory() && syncOrOverwrite) {
-        // Skip the root-paths when syncOrOverwrite
+          fs.isDirectory() && skipRootPath) {
+        // Skip the root-paths when skipRootPath (syncOrOverwrite and
+        // update root directory is not a must).
         LOG.debug("Skip {}", fs.getPath());
         return;
       }

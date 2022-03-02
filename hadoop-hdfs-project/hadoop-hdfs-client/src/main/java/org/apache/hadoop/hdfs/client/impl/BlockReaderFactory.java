@@ -74,8 +74,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.PerformanceAdvisory;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -645,6 +645,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           "attempting to set up short-circuit access to " +
           fileName + resp.getMessage();
       LOG.debug("{}:{}", this, msg);
+      if (slot != null) {
+        cache.freeSlot(slot);
+      }
       return new ShortCircuitReplicaInfo(new InvalidToken(msg));
     default:
       final long expiration =

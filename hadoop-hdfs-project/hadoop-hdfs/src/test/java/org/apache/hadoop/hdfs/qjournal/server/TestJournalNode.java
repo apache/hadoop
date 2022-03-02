@@ -97,7 +97,8 @@ public class TestJournalNode {
       conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY,
           editsDir.getAbsolutePath());
     } else if (testName.getMethodName().equals(
-        "testJournalDefaultDirForOneNameSpace")) {
+        "testJournalDefaultDirForOneNameSpace") ||
+        testName.getMethodName().equals("testJournalMetricTags")) {
       FileUtil.fullyDelete(new File(DFSConfigKeys
           .DFS_JOURNALNODE_EDITS_DIR_DEFAULT));
       setFederationConf();
@@ -151,7 +152,8 @@ public class TestJournalNode {
         testName.getMethodName().equals(
             "testJournalCommonDirAcrossNameSpace") ||
         testName.getMethodName().equals(
-            "testJournalDefaultDirForOneNameSpace")) {
+            "testJournalDefaultDirForOneNameSpace") ||
+        testName.getMethodName().equals("testJournalMetricTags")) {
       Collection<String> nameServiceIds = DFSUtilClient.getNameServiceIds(conf);
       for(String nsId: nameServiceIds) {
         journalId = "test-journalid-" + nsId;
@@ -240,6 +242,23 @@ public class TestJournalNode {
         File.separator + jid);
     assertEquals(editsDir.toString(), journalStorage.getRoot().toString());
   }
+
+  @Test(timeout=100000)
+  public void testJournalMetricTags() {
+    setupStaticHostResolution(2, "journalnode");
+    String jid = "test-journalid-ns1";
+    Journal nsJournal = jn.getJournal(jid);
+    MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(
+        nsJournal.getMetrics().getName());
+    MetricsAsserts.assertTag("JournalId", jid, metrics);
+
+    jid = "test-journalid-ns2";
+    nsJournal = jn.getJournal(jid);
+    metrics = MetricsAsserts.getMetrics(
+        nsJournal.getMetrics().getName());
+    MetricsAsserts.assertTag("JournalId", jid, metrics);
+  }
+
   @Test(timeout=100000)
   public void testJournal() throws Exception {
     MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(

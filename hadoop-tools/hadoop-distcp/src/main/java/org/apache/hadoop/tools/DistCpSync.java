@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -260,7 +260,7 @@ class DistCpSync {
               list.add(new DiffInfo(source, target, dt));
             } else {
               list = diffMap.get(SnapshotDiffReport.DiffType.DELETE);
-              DiffInfo info = new DiffInfo(source, target,
+              DiffInfo info = new DiffInfo(source, null,
                   SnapshotDiffReport.DiffType.DELETE);
               list.add(info);
               if (deletedByExclusionDiffs == null) {

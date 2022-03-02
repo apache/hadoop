@@ -50,7 +50,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A {@link org.apache.hadoop.io.retry.FailoverProxyProvider} implementation
@@ -214,7 +214,6 @@ public class ObserverReadProxyProvider<T>
         OBSERVER_PROBE_RETRY_PERIOD_KEY,
         OBSERVER_PROBE_RETRY_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
 
-    // TODO : make this configurable or remove this variable
     if (wrappedProxy instanceof ClientProtocol) {
       this.observerReadEnabled = true;
     } else {

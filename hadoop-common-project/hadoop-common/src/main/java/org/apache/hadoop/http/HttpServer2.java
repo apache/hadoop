@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -54,8 +55,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -243,7 +244,9 @@ public final class HttpServer2 implements FilterContainer {
 
     private String hostName;
     private boolean disallowFallbackToRandomSignerSecretProvider;
-    private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
+    private final List<String> authFilterConfigurationPrefixes =
+        new ArrayList<>(Collections.singletonList(
+            "hadoop.http.authentication."));
     private String excludeCiphers;
 
     private boolean xFrameEnabled;
@@ -365,8 +368,15 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
-    public Builder authFilterConfigurationPrefix(String value) {
-      this.authFilterConfigurationPrefix = value;
+    public Builder setAuthFilterConfigurationPrefix(String value) {
+      this.authFilterConfigurationPrefixes.clear();
+      this.authFilterConfigurationPrefixes.add(value);
+      return this;
+    }
+
+    public Builder setAuthFilterConfigurationPrefixes(String[] prefixes) {
+      this.authFilterConfigurationPrefixes.clear();
+      Collections.addAll(this.authFilterConfigurationPrefixes, prefixes);
       return this;
     }
 
@@ -473,8 +483,10 @@ public final class HttpServer2 implements FilterContainer {
       HttpServer2 server = new HttpServer2(this);
 
       if (this.securityEnabled &&
-          !this.conf.get(authFilterConfigurationPrefix + "type").
-          equals(PseudoAuthenticationHandler.TYPE)) {
+          authFilterConfigurationPrefixes.stream().noneMatch(
+              prefix -> this.conf.get(prefix + "type")
+                  .equals(PseudoAuthenticationHandler.TYPE))
+      ) {
         server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
       }
 
@@ -760,6 +772,28 @@ public final class HttpServer2 implements FilterContainer {
 
     addDefaultServlets();
     addPrometheusServlet(conf);
+    addAsyncProfilerServlet(contexts, conf);
+  }
+
+  private void addAsyncProfilerServlet(ContextHandlerCollection contexts, Configuration conf)
+      throws IOException {
+    final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
+    if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
+      addServlet("prof", "/prof", ProfileServlet.class);
+      Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
+      if (Files.notExists(tmpDir)) {
+        Files.createDirectories(tmpDir);
+      }
+      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hadoop");
+      genCtx.addServlet(ProfileOutputServlet.class, "/*");
+      genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
+      genCtx.setDisplayName("prof-output-hadoop");
+      setContextAttributes(genCtx, conf);
+    } else {
+      addServlet("prof", "/prof", ProfilerDisabledServlet.class);
+      LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
+          + "not specified. Disabling /prof endpoint.");
+    }
   }
 
   private void addPrometheusServlet(Configuration conf) {
@@ -811,18 +845,25 @@ public final class HttpServer2 implements FilterContainer {
       throws Exception {
     final Configuration conf = b.conf;
     Properties config = getFilterProperties(conf,
-                                            b.authFilterConfigurationPrefix);
+        b.authFilterConfigurationPrefixes);
     return AuthenticationFilter.constructSecretProvider(
         ctx, config, b.disallowFallbackToRandomSignerSecretProvider);
   }
 
-  private static Properties getFilterProperties(Configuration conf, String
-      prefix) {
-    Properties prop = new Properties();
-    Map<String, String> filterConfig = AuthenticationFilterInitializer
-        .getFilterConfigMap(conf, prefix);
-    prop.putAll(filterConfig);
-    return prop;
+  public static Properties getFilterProperties(Configuration conf, List<String> prefixes) {
+    Properties props = new Properties();
+    for (String prefix : prefixes) {
+      Map<String, String> filterConfigMap =
+          AuthenticationFilterInitializer.getFilterConfigMap(conf, prefix);
+      for (Map.Entry<String, String> entry : filterConfigMap.entrySet()) {
+        Object previous = props.setProperty(entry.getKey(), entry.getValue());
+        if (previous != null && !previous.equals(entry.getValue())) {
+          LOG.warn("Overwriting configuration for key='{}' with value='{}' " +
+              "previous value='{}'", entry.getKey(), entry.getValue(), previous);
+        }
+      }
+    }
+    return props;
   }
 
   private static void addNoCacheFilter(ServletContextHandler ctxt) {

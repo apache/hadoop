@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
@@ -48,8 +49,9 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -124,7 +126,7 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -373,7 +375,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             RoundRobinVolumeChoosingPolicy.class,
             VolumeChoosingPolicy.class), conf);
     volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
-        blockChooserImpl, conf);
+        blockChooserImpl, conf, datanode.getDiskMetrics());
     asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode, conf);
     deletingBlock = new HashMap<String, Set<Long>>();
@@ -1049,12 +1051,17 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   static File[] hardLinkBlockFiles(ReplicaInfo srcReplica, File dstMeta,
       File dstFile)
       throws IOException {
+    FsVolumeSpi srcReplicaVolume = srcReplica.getVolume();
+    File destParentFile = dstFile.getParentFile();
     // Create parent folder if not exists.
-    srcReplica.getFileIoProvider()
-        .mkdirs(srcReplica.getVolume(), dstFile.getParentFile());
+    boolean isDirCreated = srcReplica.getFileIoProvider()
+        .mkdirs(srcReplicaVolume, destParentFile);
+    LOG.trace("Dir creation of {} on volume {} {}", destParentFile,
+        srcReplicaVolume, isDirCreated ? "succeeded" : "failed");
+    URI srcReplicaUri = srcReplica.getBlockURI();
     try {
       HardLink.createHardLink(
-          new File(srcReplica.getBlockURI()), dstFile);
+          new File(srcReplicaUri), dstFile);
     } catch (IOException e) {
       throw new IOException("Failed to hardLink "
           + srcReplica + " block file to "
@@ -1068,9 +1075,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + srcReplica + " metadata to "
           + dstMeta, e);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.info("Linked " + srcReplica.getBlockURI() + " to " + dstFile);
-    }
+    LOG.debug("Linked {} to {} . Dest meta file: {}", srcReplicaUri, dstFile,
+        dstMeta);
     return new File[]{dstMeta, dstFile};
   }
 
@@ -2640,6 +2646,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           Block.getGenerationStamp(diskMetaFile.getName()) :
           HdfsConstants.GRANDFATHER_GENERATION_STAMP;
 
+      final boolean isRegular = FileUtil.isRegularFile(diskMetaFile, false) &&
+          FileUtil.isRegularFile(diskFile, false);
+
       if (vol.getStorageType() == StorageType.PROVIDED) {
         if (memBlockInfo == null) {
           // replica exists on provided store but not in memory
@@ -2807,6 +2816,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             + memBlockInfo.getNumBytes() + " to "
             + memBlockInfo.getBlockDataLength());
         memBlockInfo.setNumBytes(memBlockInfo.getBlockDataLength());
+      } else if (!isRegular) {
+        corruptBlock = new Block(memBlockInfo);
+        LOG.warn("Block:{} is not a regular file.", corruptBlock.getBlockId());
       }
     } finally {
       if (dataNodeMetrics != null) {

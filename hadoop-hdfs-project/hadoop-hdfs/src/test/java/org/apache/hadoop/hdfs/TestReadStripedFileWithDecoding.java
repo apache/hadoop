@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
@@ -127,7 +128,7 @@ public class TestReadStripedFileWithDecoding {
   }
 
   @Test
-  public void testInvalidateBlock() throws IOException {
+  public void testInvalidateBlock() throws IOException, InterruptedException {
     final Path file = new Path("/invalidate");
     final int length = 10;
     final byte[] bytes = StripedFileTestUtil.generateBytes(length);
@@ -151,6 +152,8 @@ public class TestReadStripedFileWithDecoding {
     try {
       // delete the file
       dfs.delete(file, true);
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+          cluster.getNamesystem().getBlockManager());
       // check the block is added to invalidateBlocks
       final FSNamesystem fsn = cluster.getNamesystem();
       final BlockManager bm = fsn.getBlockManager();

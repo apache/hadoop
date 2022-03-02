@@ -21,8 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -38,11 +40,15 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
+
+import org.fusesource.leveldbjni.JniDBFactory;
+import org.iq80.leveldb.Options;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.eclipse.jetty.util.log.Log;
+import org.mockito.Mockito;
 
 /** Test class to verify RollingLevelDBTimelineStore. */
 @InterfaceAudience.Private
@@ -415,6 +421,36 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
 
     long duration = System.currentTimeMillis() - start;
     Log.getLog().info("Duration for " + num + ": " + duration);
+  }
+
+  @Test
+  /**
+   * Test that RollingLevelDb repair is attempted at least once during
+   * serviceInit for RollingLeveldbTimelineStore in case open fails the
+   * first time.
+   */ public void testLevelDbRepair() throws IOException {
+    RollingLevelDBTimelineStore store = new RollingLevelDBTimelineStore();
+    JniDBFactory factory = Mockito.mock(JniDBFactory.class);
+    Mockito.when(factory.open(Mockito.any(File.class), Mockito.any(Options.class)))
+        .thenThrow(new IOException()).thenCallRealMethod();
+    store.setFactory(factory);
+
+    //Create the LevelDb in a different location
+    File path = new File("target", this.getClass().getSimpleName() + "-tmpDir2").getAbsoluteFile();
+    Configuration conf = new Configuration(this.config);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH, path.getAbsolutePath());
+    try {
+      store.init(conf);
+      Mockito.verify(factory, Mockito.times(1))
+          .repair(Mockito.any(File.class), Mockito.any(Options.class));
+      FilenameFilter fileFilter =
+          new WildcardFileFilter("*" + RollingLevelDBTimelineStore.BACKUP_EXT + "*");
+      Assert.assertTrue(new File(path.getAbsolutePath(), RollingLevelDBTimelineStore.FILENAME)
+          .list(fileFilter).length > 0);
+    } finally {
+      store.close();
+      fsContext.delete(new Path(path.getAbsolutePath()), true);
+    }
   }
 
   public static void main(String[] args) throws Exception {

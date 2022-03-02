@@ -143,6 +143,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_DATANODE_MAX_LOCKED_MEMORY_DEFAULT = 0;
   public static final String  DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY = "dfs.datanode.fsdatasetcache.max.threads.per.volume";
   public static final int     DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_DEFAULT = 4;
+  public static final String  DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY =
+      "dfs.datanode.fsdatasetasyncdisk.max.threads.per.volume";
+  public static final int     DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_DEFAULT = 4;
   public static final String  DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC = "dfs.datanode.lazywriter.interval.sec";
   public static final int     DFS_DATANODE_LAZY_WRITER_INTERVAL_DEFAULT_SEC = 60;
   public static final String  DFS_DATANODE_RAM_DISK_REPLICA_TRACKER_KEY = "dfs.datanode.ram.disk.replica.tracker";
@@ -207,6 +210,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.replqueue.threshold-pct";
   public static final String  DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY = "dfs.namenode.safemode.min.datanodes";
   public static final int     DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT = 0;
+  public static final String  DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY =
+      "dfs.namenode.safemode.recheck.interval";
+  public static final long    DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_DEFAULT =
+      1000;
   public static final String  DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
   public static final String  DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT =
@@ -694,6 +701,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.max.disks.to.report";
   public static final int DFS_DATANODE_MAX_DISKS_TO_REPORT_DEFAULT =
       5;
+  public static final String DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY =
+      "dfs.datanode.max.slowdisks.to.exclude";
+  public static final int DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT =
+      0;
   public static final String  DFS_DATANODE_HOST_NAME_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_HOST_NAME_KEY;
   public static final String  DFS_NAMENODE_CHECKPOINT_DIR_KEY =
@@ -723,6 +734,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.metrics.logger.period.seconds";
   public static final int DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT =
       600;
+  public static final String  DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY =
+      "dfs.namenode.audit.log.with.remote.port";
+  public static final boolean DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_DEFAULT =
+      false;
   /**
    * The maximum number of getBlocks RPCs data movement utilities can make to
    * a NameNode per second. Values &lt;= 0 disable throttling. This affects
@@ -1192,12 +1207,25 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final float   DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT =
       0.6f;
   public static final String
+          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY =
+          "dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance";
+  public static final int
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT =
+      5;
+  public static final String
       DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY =
       "dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy"
           + ".balanced-space-preference-fraction";
   public static final float
       DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT =
       0.6f;
+  public static final String
+      DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY =
+      "dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy"
+          + ".balanced-space-tolerance";
+  public static final int
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT =
+      5;
   public static final String
       DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY =
       "dfs.namenode.available-space-block-placement-policy.balance-local-node";
@@ -1502,6 +1530,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String[] NNTOP_WINDOWS_MINUTES_DEFAULT = {"1", "5", "25"};
   public static final String DFS_PIPELINE_ECN_ENABLED = "dfs.pipeline.ecn";
   public static final boolean DFS_PIPELINE_ECN_ENABLED_DEFAULT = false;
+  public static final String DFS_PIPELINE_SLOWNODE_ENABLED = "dfs.pipeline.slownode";
+  public static final boolean DFS_PIPELINE_SLOWNODE_ENABLED_DEFAULT = false;
 
   // Key Provider Cache Expiry
   public static final String DFS_DATANODE_BLOCK_PINNING_ENABLED =
@@ -1627,6 +1657,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String
       DFS_NAMESERVICES_RESOLVER_IMPL =
       "dfs.datanode.nameservices.resolver.impl";
+
+  public static final String
+      DFS_DATANODE_LOCKMANAGER_TRACE =
+      "dfs.datanode.lockmanager.trace";
+
+  public static final boolean
+      DFS_DATANODE_LOCKMANAGER_TRACE_DEFAULT = false;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated

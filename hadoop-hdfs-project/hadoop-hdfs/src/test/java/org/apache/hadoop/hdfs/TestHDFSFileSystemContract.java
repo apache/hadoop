@@ -63,6 +63,11 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
     return defaultWorkingDirectory;
   }
 
+  @Override
+  protected int getGlobalTimeout() {
+    return 60 * 1000;
+  }
+
   @Test
   public void testAppend() throws IOException {
     AppendTestUtil.testAppend(fs, new Path("/testAppend/f"));

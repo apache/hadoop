@@ -55,6 +55,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import static org.apache.hadoop.util.Time.now;
+import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -65,8 +66,8 @@ import org.apache.zookeeper.data.Id;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * An implementation of {@link AbstractDelegationTokenSecretManager} that
@@ -98,6 +99,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       + "kerberos.keytab";
   public static final String ZK_DTSM_ZK_KERBEROS_PRINCIPAL = ZK_CONF_PREFIX
       + "kerberos.principal";
+  public static final String ZK_DTSM_ZK_KERBEROS_SERVER_PRINCIPAL = ZK_CONF_PREFIX
+      + "kerberos.server.principal";
   public static final String ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE = ZK_CONF_PREFIX
       + "token.seqnum.batch.size";
   public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
@@ -202,6 +205,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         builder =
             CuratorFrameworkFactory
                 .builder()
+                .zookeeperFactory(new ZKCuratorManager.HadoopZookeeperFactory(
+                    conf.get(ZK_DTSM_ZK_KERBEROS_SERVER_PRINCIPAL)))
                 .aclProvider(aclProvider)
                 .namespace(
                     conf.get(ZK_DTSM_ZNODE_WORKING_PATH,

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.client.api.impl;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

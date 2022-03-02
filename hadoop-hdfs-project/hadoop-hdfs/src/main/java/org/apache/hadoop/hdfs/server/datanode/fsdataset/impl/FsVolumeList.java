@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeDiskMetrics;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
@@ -67,15 +69,17 @@ class FsVolumeList {
   private final boolean enableSameDiskTiering;
   private final MountVolumeMap mountVolumeMap;
   private Map<URI, Double> capacityRatioMap;
+  private final DataNodeDiskMetrics diskMetrics;
 
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
       BlockScanner blockScanner,
       VolumeChoosingPolicy<FsVolumeImpl> blockChooser,
-      Configuration config) {
+      Configuration config, DataNodeDiskMetrics dataNodeDiskMetrics) {
     this.blockChooser = blockChooser;
     this.blockScanner = blockScanner;
     this.checkDirsLock = new AutoCloseableLock();
     this.checkDirsLockCondition = checkDirsLock.newCondition();
+    this.diskMetrics = dataNodeDiskMetrics;
     for (VolumeFailureInfo volumeFailureInfo: initialVolumeFailureInfos) {
       volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
           volumeFailureInfo);
@@ -100,6 +104,15 @@ class FsVolumeList {
 
   private FsVolumeReference chooseVolume(List<FsVolumeImpl> list,
       long blockSize, String storageId) throws IOException {
+
+    // Exclude slow disks when choosing volume.
+    if (diskMetrics != null) {
+      List<String> slowDisksToExclude = diskMetrics.getSlowDisksToExclude();
+      list = list.stream()
+          .filter(volume -> !slowDisksToExclude.contains(volume.getBaseURI().getPath()))
+          .collect(Collectors.toList());
+    }
+
     while (true) {
       FsVolumeImpl volume = blockChooser.chooseVolume(list, blockSize,
           storageId);

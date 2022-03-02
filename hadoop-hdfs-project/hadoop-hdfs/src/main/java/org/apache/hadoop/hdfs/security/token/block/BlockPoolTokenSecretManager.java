@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier.AccessMo
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.StorageType;
 
 /**

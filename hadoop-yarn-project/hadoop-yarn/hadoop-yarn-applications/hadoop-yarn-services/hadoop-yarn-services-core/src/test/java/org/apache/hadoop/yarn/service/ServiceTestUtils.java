@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
@@ -98,7 +98,7 @@ public class ServiceTestUtils {
 
   public static final JsonSerDeser<Service> JSON_SER_DESER =
       new JsonSerDeser<>(Service.class,
-          PropertyNamingStrategy.SNAKE_CASE);
+          PropertyNamingStrategies.SNAKE_CASE);
 
   // Example service definition
   // 2 components, each of which has 2 containers.

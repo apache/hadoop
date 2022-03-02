@@ -33,7 +33,6 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -175,20 +174,7 @@ public class TestFsShellCopy {
     checkPut(dirPath, targetDir, true);
   }
 
-  @Test
-  public void testCopyBetweenFsEqualPath() throws Exception {
-    Path testRoot = new Path(testRootDir, "testPutFile");
-    lfs.delete(testRoot, true);
-    lfs.mkdirs(testRoot);
-
-    Path filePath = new Path(testRoot, "sameSourceTarget");
-    lfs.create(filePath).close();
-    final FileStatus status = lfs.getFileStatus(filePath);
-    LambdaTestUtils.intercept(PathOperationException.class, () ->
-        FileUtil.copy(lfs, status, lfs, filePath, false, true, conf)
-    );
-  }
-
+  
   private void checkPut(Path srcPath, Path targetDir, boolean useWindowsPath)
   throws Exception {
     lfs.delete(targetDir, true);

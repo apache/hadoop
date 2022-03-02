@@ -39,8 +39,7 @@ Clients with this token have the full permissions of the user.
 
 *Role Delegation Tokens:* These contain an "STS Session Token" requested by by the
 STS "Assume Role" API, so grant the caller to interact with S3 as specific AWS
-role, *with permissions restricted to purely accessing the S3 bucket
-and associated S3Guard data*.
+role, *with permissions restricted to purely accessing that specific S3 bucket*.
 
 Role Delegation Tokens are the most powerful. By restricting the access rights
 of the granted STS token, no process receiving the token may perform
@@ -121,6 +120,8 @@ Because applications only collect Delegation Tokens in secure clusters,
 It does mean that to be able to submit delegation tokens in transient
 cloud-hosted Hadoop clusters, _these clusters must also have Kerberos enabled_.
 
+*Tip*: you should only be deploying Hadoop in public clouds with Kerberos enabled.
+
 
 ### <a name="session-tokens"></a> S3A Session Delegation Tokens
 
@@ -143,8 +144,7 @@ for specifics details on the (current) token lifespan.
 A Role Delegation Tokens is created by asking the AWS
 [Security Token Service](http://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html)
 for set of "Assumed Role" credentials, with a AWS account specific role for a limited duration..
-This role is restricted to only grant access the S3 bucket, the S3Guard table
-and all KMS keys,
+This role is restricted to only grant access the S3 bucket and all KMS keys,
 They are marshalled into the S3A Delegation Token.
 
 Other S3A connectors can extract these credentials and use them to
@@ -389,10 +389,10 @@ There are some further configuration options:
 | `fs.s3a.assumed.role.sts.endpoint.region` | region for issued tokens |  (undefined) |
 
 The option `fs.s3a.assumed.role.arn` must be set to a role which the
-user can assume. It must have permissions to access the bucket, any
-associated S3Guard table and any KMS encryption keys. The actual
+user can assume. It must have permissions to access the bucket and
+any KMS encryption keys. The actual
 requested role will be this role, explicitly restricted to the specific
-bucket and S3Guard table.
+bucket.
 
 The XML settings needed to enable session tokens are:
 
@@ -416,13 +416,9 @@ A JSON role policy for the role/session will automatically be generated which wi
 consist of
 1. Full access to the S3 bucket for all operations used by the S3A client
 (read, write, list, multipart operations, get bucket location, etc).
-1. Full user access to any S3Guard DynamoDB table used by the bucket.
 1. Full user access to KMS keys. This is to be able to decrypt any data
 in the bucket encrypted with SSE-KMS, as well as encrypt new data if that
 is the encryption policy.
-
-If the client doesn't have S3Guard enabled, but the remote application does,
-the issued role tokens will not have permission to access the S3Guard table.
 
 ### <a name="enabling-full-tokens"></a> Enabling Full Delegation Tokens
 
@@ -663,7 +659,7 @@ for unmarshalling.
 
 This identifier must contain all information needed at the far end to
 authenticate the caller with AWS services used by the S3A client: AWS S3 and
-potentially AWS KMS (for SSE-KMS) and AWS DynamoDB (for S3Guard).
+potentially AWS KMS (for SSE-KMS).
 
 It must have its own unique *Token Kind*, to ensure that it can be distinguished
 from the other token identifiers when tokens are being unmarshalled.
@@ -693,8 +689,7 @@ is needed to keep them out of logs.
 * Secrets MUST NOT be logged, even at debug level.
 * Prefer short-lived session secrets over long-term secrets.
 * Try to restrict the permissions to what a client with the delegated token
-  may perform to those needed to access data in the S3 bucket. This potentially
-  includes a DynamoDB table, KMS access, etc.
+  may perform to those needed to access data in the S3 bucket.
 * Implementations need to be resistant to attacks which pass in invalid data as
 their token identifier: validate the types of the unmarshalled data; set limits
 on the size of all strings and other arrays to read in, etc.
@@ -798,7 +793,6 @@ Create the delegation token.
 If non-empty, the `policy` argument contains an AWS policy model to grant access to:
 
 * The target S3 bucket.
-* Any S3Guard DDB table it is bonded to.
 * KMS key `"kms:GenerateDataKey` and `kms:Decrypt`permissions for all KMS keys.
 
 This can be converted to a string and passed to the AWS `assumeRole` operation.

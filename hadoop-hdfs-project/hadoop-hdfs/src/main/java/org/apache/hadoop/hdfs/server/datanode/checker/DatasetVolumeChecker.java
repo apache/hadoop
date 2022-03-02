@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -77,7 +77,6 @@ public class DatasetVolumeChecker {
 
   private final AtomicLong numVolumeChecks = new AtomicLong(0);
   private final AtomicLong numSyncDatasetChecks = new AtomicLong(0);
-  private final AtomicLong numAsyncDatasetChecks = new AtomicLong(0);
   private final AtomicLong numSkippedChecks = new AtomicLong(0);
 
   /**

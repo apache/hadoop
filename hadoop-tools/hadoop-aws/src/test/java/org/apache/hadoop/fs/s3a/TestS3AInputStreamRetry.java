@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.SocketException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -200,8 +200,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @return mocked object.
    */
   private S3ObjectInputStream getMockedInputStream(boolean triggerFailure) {
-    return new S3ObjectInputStream(
-        IOUtils.toInputStream(INPUT, Charset.defaultCharset()), null) {
+    return new S3ObjectInputStream(IOUtils.toInputStream(INPUT, StandardCharsets.UTF_8), null) {
 
       private final IOException exception =
           new SSLException(new SocketException("Connection reset"));

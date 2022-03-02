@@ -42,7 +42,7 @@ import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Tests MiniDFS cluster setup/teardown and isolation.
@@ -309,6 +309,14 @@ public class TestMiniDFSCluster {
             DFSUtil.addKeySuffixes(
             DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1")));
       }
+
+      // Shutdown namenodes individually.
+      cluster.shutdownNameNode(0);
+      cluster.shutdownNameNode(1);
+
+      // Restart namenodes individually with wait active, both should be successful.
+      cluster.restartNameNode(0);
+      cluster.restartNameNode(1);
     }
   }
 }

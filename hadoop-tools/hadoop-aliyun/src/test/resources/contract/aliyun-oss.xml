@@ -95,7 +95,7 @@
 
     <property>
         <name>fs.contract.rename-overwrites-dest</name>
-        <value>true</value>
+        <value>false</value>
     </property>
 
     <property>

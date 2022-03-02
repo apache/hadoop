@@ -116,6 +116,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <dependency-check-maven.version>1.4.3</dependency-check-maven.version>
     <spotbugs.version>4.2.2</spotbugs.version>
     <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
+    <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
 
     <shell-executable>bash</shell-executable>
 
@@ -182,6 +183,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                     <reason>Use hadoop-thirdparty shaded instead of curator shaded</reason>
                     <bannedImports>
                       <bannedImport>org.apache.curator.shaded.**</bannedImport>
+                      <bannedImport>static org.apache.curator.shaded.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
                   <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -189,7 +191,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                     <reason>Use hadoop-common provided Sets rather than Guava provided Sets</reason>
                     <bannedImports>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Sets</bannedImport>
-                      <bannedImport>com.google.common.collect.Sets</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.collect.Sets.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
                   <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -197,7 +199,86 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                     <reason>Use hadoop-common provided Lists rather than Guava provided Lists</reason>
                     <bannedImports>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Lists</bannedImport>
-                      <bannedImport>com.google.common.collect.Lists</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.collect.Lists.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use hadoop-annotation provided VisibleForTesting rather than the one provided by Guava</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternatives to Guava common classes</reason>
+                    <bannedImports>
+                      <bannedImport>com.google.common.**</bannedImport>
+                      <bannedImport>static com.google.common.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided BaseEncoding</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided Optional</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Optional</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.base.Optional.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided Function</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Function</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.base.Function.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided Predicate</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Predicate</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.base.Predicate.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided Supplier</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Supplier</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.base.Supplier.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided ImmutableListMultimap</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableListMultimap</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableListMultimap.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use hadoop-common provided Preconditions rather than Guava provided</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Preconditions</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use Fasterxml Jackson 2 dependency in place of org.codehaus Jackson 1</reason>
+                    <bannedImports>
+                      <bannedImport>org.codehaus.jackson.**</bannedImport>
+                      <bannedImport>static org.codehaus.jackson.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
                 </rules>
@@ -399,6 +480,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
               <version>${spotbugs.version}</version>
             </dependency>
           </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.jsonschema2pojo</groupId>
+          <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+          <version>${jsonschema2pojo-maven-plugin.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>

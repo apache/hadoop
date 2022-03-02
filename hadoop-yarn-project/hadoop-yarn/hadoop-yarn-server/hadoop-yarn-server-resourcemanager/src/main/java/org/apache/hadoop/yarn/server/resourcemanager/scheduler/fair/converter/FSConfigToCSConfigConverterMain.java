@@ -18,7 +18,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import java.util.function.Consumer;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;

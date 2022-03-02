@@ -23,8 +23,8 @@ import javax.annotation.Nullable;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -366,10 +366,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Retries.RetryTranslated
   private void lazySeek(long targetPos, long len) throws IOException {
 
-    // With S3Guard, the metadatastore gave us metadata for the file in
-    // open(), so we use a slightly different retry policy, but only on initial
-    // open.  After that, an exception generally means the file has changed
-    // and there is no point retrying anymore.
     Invoker invoker = context.getReadInvoker();
     invoker.maybeRetry(streamStatistics.getOpenOperations() == 0,
         "lazySeek", pathStr, true,
@@ -397,7 +393,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   @Override
-  @Retries.RetryTranslated  // Some retries only happen w/ S3Guard, as intended.
+  @Retries.RetryTranslated
   public synchronized int read() throws IOException {
     checkNotClosed();
     if (this.contentLength == 0 || (nextReadPos >= contentLength)) {
@@ -410,10 +406,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       return -1;
     }
 
-    // With S3Guard, the metadatastore gave us metadata for the file in
-    // open(), so we use a slightly different retry policy.
-    // read() may not be likely to fail, but reopen() does a GET which
-    // certainly could.
     Invoker invoker = context.getReadInvoker();
     int byteRead = invoker.retry("read", pathStr, true,
         () -> {
@@ -478,7 +470,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @throws IOException if there are other problems
    */
   @Override
-  @Retries.RetryTranslated  // Some retries only happen w/ S3Guard, as intended.
+  @Retries.RetryTranslated
   public synchronized int read(byte[] buf, int off, int len)
       throws IOException {
     checkNotClosed();
@@ -499,10 +491,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       return -1;
     }
 
-    // With S3Guard, the metadatastore gave us metadata for the file in
-    // open(), so we use a slightly different retry policy.
-    // read() may not be likely to fail, but reopen() does a GET which
-    // certainly could.
     Invoker invoker = context.getReadInvoker();
 
     streamStatistics.readOperationStarted(nextReadPos, len);
@@ -766,7 +754,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    *
    */
   @Override
-  @Retries.RetryTranslated  // Some retries only happen w/ S3Guard, as intended.
+  @Retries.RetryTranslated
   public void readFully(long position, byte[] buffer, int offset, int length)
       throws IOException {
     checkNotClosed();

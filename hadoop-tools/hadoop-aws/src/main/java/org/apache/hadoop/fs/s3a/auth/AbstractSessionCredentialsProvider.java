@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentials;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;

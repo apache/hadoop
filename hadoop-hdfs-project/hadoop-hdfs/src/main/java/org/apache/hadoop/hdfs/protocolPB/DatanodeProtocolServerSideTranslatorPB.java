@@ -61,7 +61,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
@@ -152,6 +152,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     }
 
     builder.setFullBlockReportLeaseId(response.getFullBlockReportLeaseId());
+    builder.setIsSlownode(response.getIsSlownode());
     return builder.build();
   }
 

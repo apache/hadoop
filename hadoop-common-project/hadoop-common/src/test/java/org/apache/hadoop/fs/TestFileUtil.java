@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -445,6 +446,35 @@ public class TestFileUtil {
     boolean ret = FileUtil.fullyDelete(new MyFile(del), true);
     // this time the directories with revoked permissions *should* be deleted:
     validateAndSetWritablePermissions(false, ret);
+  }
+
+
+  /**
+   * Tests if fullyDelete deletes symlink's content when deleting unremovable dir symlink.
+   * @throws IOException
+   */
+  @Test (timeout = 30000)
+  public void testFailFullyDeleteDirSymlinks() throws IOException {
+    File linkDir = new File(del, "tmpDir");
+    FileUtil.setWritable(del, false);
+    // Since tmpDir is symlink to tmp, fullyDelete(tmpDir) should not
+    // delete contents of tmp. See setupDirs for details.
+    boolean ret = FileUtil.fullyDelete(linkDir);
+    // fail symlink deletion
+    Assert.assertFalse(ret);
+    Assert.assertTrue(linkDir.exists());
+    Assert.assertEquals(5, del.list().length);
+    // tmp dir should exist
+    validateTmpDir();
+    // simulate disk recovers and turns good
+    FileUtil.setWritable(del, true);
+    ret = FileUtil.fullyDelete(linkDir);
+    // success symlink deletion
+    Assert.assertTrue(ret);
+    Assert.assertFalse(linkDir.exists());
+    Assert.assertEquals(4, del.list().length);
+    // tmp dir should exist
+    validateTmpDir();
   }
 
   /**
@@ -1106,6 +1136,38 @@ public class TestFileUtil {
     doUntarAndVerify(new File(tarFileName), untarDir);
   }
 
+  /**
+   * Verify we can't unTar a file which isn't there.
+   * This will test different codepaths on Windows from unix,
+   * but both MUST throw an IOE of some kind.
+   */
+  @Test(timeout = 30000)
+  public void testUntarMissingFile() throws Throwable {
+    File dataDir = GenericTestUtils.getTestDir();
+    File tarFile = new File(dataDir, "missing; true");
+    File untarDir = new File(dataDir, "untarDir");
+    intercept(IOException.class, () ->
+        FileUtil.unTar(tarFile, untarDir));
+  }
+
+  /**
+   * Verify we can't unTar a file which isn't there
+   * through the java untar code.
+   * This is how {@code FileUtil.unTar(File, File}
+   * will behave on Windows,
+   */
+  @Test(timeout = 30000)
+  public void testUntarMissingFileThroughJava() throws Throwable {
+    File dataDir = GenericTestUtils.getTestDir();
+    File tarFile = new File(dataDir, "missing; true");
+    File untarDir = new File(dataDir, "untarDir");
+    // java8 on unix throws java.nio.file.NoSuchFileException here;
+    // leaving as an IOE intercept in case windows throws something
+    // else.
+    intercept(IOException.class, () ->
+        FileUtil.unTarUsingJava(tarFile, untarDir, false));
+  }
+
   @Test (timeout = 30000)
   public void testCreateJarWithClassPath() throws Exception {
     // create files expected to match a wildcard
@@ -1402,6 +1464,23 @@ public class TestFileUtil {
 
     String result = FileUtil.readLink(link);
     Assert.assertEquals(file.getAbsolutePath(), result);
+  }
+
+  @Test
+  public void testRegularFile() throws IOException {
+    byte[] data = "testRegularData".getBytes();
+    File tmpFile = new File(del, "reg1");
+
+    // write some data to the file
+    FileOutputStream os = new FileOutputStream(tmpFile);
+    os.write(data);
+    os.close();
+    assertTrue(FileUtil.isRegularFile(tmpFile));
+
+    // create a symlink to file
+    File link = new File(del, "reg2");
+    FileUtil.symLink(tmpFile.toString(), link.toString());
+    assertFalse(FileUtil.isRegularFile(link, false));
   }
 
   /**

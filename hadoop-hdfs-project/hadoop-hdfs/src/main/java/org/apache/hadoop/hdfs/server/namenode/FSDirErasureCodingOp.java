@@ -34,7 +34,7 @@ import org.apache.hadoop.io.erasurecode.CodecRegistry;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

@@ -57,7 +57,7 @@ Refer to  dev-support/docker/Dockerfile):
 
 * Open JDK 1.8
   $ sudo apt-get update
-  $ sudo apt-get -y install java-8-openjdk
+  $ sudo apt-get -y install openjdk-8-jdk
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
@@ -326,40 +326,35 @@ to update SNAPSHOTs from external repos.
 ----------------------------------------------------------------------------------
 Importing projects to eclipse
 
-When you import the project to eclipse, install hadoop-maven-plugins at first.
+At first, install artifacts including hadoop-maven-plugins at the top of the source tree.
 
-  $ cd hadoop-maven-plugins
-  $ mvn install
+  $ mvn clean install -DskipTests -DskipShade
 
-Then, generate eclipse project files.
-
-  $ mvn eclipse:eclipse -DskipTests
-
-At last, import to eclipse by specifying the root directory of the project via
-[File] > [Import] > [Existing Projects into Workspace].
+Then, import to eclipse by specifying the root directory of the project via
+[File] > [Import] > [Maven] > [Existing Maven Projects].
 
 ----------------------------------------------------------------------------------
 Building distributions:
 
-Create binary distribution without native code and without documentation:
+Create binary distribution without native code and without Javadocs:
 
   $ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true
 
-Create binary distribution with native code and with documentation:
+Create binary distribution with native code:
 
-  $ mvn package -Pdist,native,docs -DskipTests -Dtar
+  $ mvn package -Pdist,native -DskipTests -Dtar
 
 Create source distribution:
 
   $ mvn package -Psrc -DskipTests
 
-Create source and binary distributions with native code and documentation:
+Create source and binary distributions with native code:
 
-  $ mvn package -Pdist,native,docs,src -DskipTests -Dtar
+  $ mvn package -Pdist,native,src -DskipTests -Dtar
 
 Create a local staging version of the website (in /tmp/hadoop-site)
 
-  $ mvn clean site -Preleasedocs; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
+  $ mvn site site:stage -Preleasedocs,docs -DstagingDirectory=/tmp/hadoop-site
 
 Note that the site needs to be built in a second pass after other artifacts.
 

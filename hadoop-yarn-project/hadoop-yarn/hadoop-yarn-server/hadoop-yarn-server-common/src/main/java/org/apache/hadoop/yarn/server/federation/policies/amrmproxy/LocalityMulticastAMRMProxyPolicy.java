@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -50,8 +51,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * An implementation of the {@link FederationAMRMProxyPolicy} interface that
@@ -131,6 +132,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   private SubClusterResolver resolver;
 
   private Map<SubClusterId, Resource> headroom;
+  private Map<SubClusterId, EnhancedHeadroom> enhancedHeadroom;
   private float hrAlpha;
   private FederationStateStoreFacade federationFacade;
   private SubClusterId homeSubcluster;
@@ -182,6 +184,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
     if (headroom == null) {
       headroom = new ConcurrentHashMap<>();
+      enhancedHeadroom = new ConcurrentHashMap<>();
     }
     hrAlpha = policy.getHeadroomAlpha();
 
@@ -195,9 +198,14 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       AllocateResponse response) throws YarnException {
     if (response.getAvailableResources() != null) {
       headroom.put(subClusterId, response.getAvailableResources());
-      LOG.info("Subcluster {} updated with {} memory headroom", subClusterId,
-          response.getAvailableResources().getMemorySize());
     }
+    if (response.getEnhancedHeadroom() != null) {
+      this.enhancedHeadroom.put(subClusterId, response.getEnhancedHeadroom());
+    }
+    LOG.info(
+        "Subcluster {} updated with AvailableResource {}, EnhancedHeadRoom {}",
+        subClusterId, response.getAvailableResources(),
+        response.getEnhancedHeadroom());
   }
 
   @Override

@@ -108,7 +108,7 @@ set(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 hadoop_set_find_shared_library_without_version()
 set(OPENSSL_NAME "crypto")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    SET(OPENSSL_NAME "eay32")
+    SET(OPENSSL_NAME "libcrypto")
 endif()
 message("CUSTOM_OPENSSL_PREFIX = ${CUSTOM_OPENSSL_PREFIX}")
 find_library(OPENSSL_LIBRARY

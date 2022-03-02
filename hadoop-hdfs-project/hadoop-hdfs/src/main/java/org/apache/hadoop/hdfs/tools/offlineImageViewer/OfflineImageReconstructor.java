@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_NAME_MASK;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_NAME_OFFSET;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_SCOPE_OFFSET;
@@ -1761,6 +1761,10 @@ class OfflineImageReconstructor {
       XMLEvent ev = expectTag("[section header]", true);
       if (ev.getEventType() == XMLStreamConstants.END_ELEMENT) {
         if (ev.asEndElement().getName().getLocalPart().equals("fsimage")) {
+          if(unprocessedSections.size() == 1 && unprocessedSections.contains
+                  (SnapshotDiffSectionProcessor.NAME)){
+            break;
+          }
           throw new IOException("FSImage XML ended prematurely, without " +
               "including section(s) " + StringUtils.join(", ",
               unprocessedSections));

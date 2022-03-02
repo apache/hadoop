@@ -122,10 +122,12 @@
     ]
   },
   "gcc": {
-    "debian:10": [
-      "gcc",
-      "g++"
-    ],
+    "debian:10": {
+      "bullseye": [
+        "gcc",
+        "g++"
+      ]
+    },
     "ubuntu:focal": [
       "gcc",
       "g++"

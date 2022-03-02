@@ -22,7 +22,7 @@ import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.statistics.DurationTracker;
