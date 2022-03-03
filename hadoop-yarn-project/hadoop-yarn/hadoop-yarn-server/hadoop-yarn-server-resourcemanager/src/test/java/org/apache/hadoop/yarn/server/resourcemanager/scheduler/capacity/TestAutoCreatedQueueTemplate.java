@@ -89,6 +89,17 @@ public class TestAutoCreatedQueueTemplate {
   }
 
   @Test
+  public void testWildcardAfterRoot() {
+    conf.set(getTemplateKey("root.*", "acl_submit_applications"), "user");
+    AutoCreatedQueueTemplate template =
+        new AutoCreatedQueueTemplate(conf, new QueuePath("root.a"));
+    template.setTemplateEntriesForChild(conf, "root.a");
+
+    Assert.assertEquals("acl_submit_applications is set", "user",
+        template.getTemplateProperties().get("acl_submit_applications"));
+  }
+
+  @Test
   public void testTemplatePrecedence() {
     conf.set(getTemplateKey("root.a.b", "capacity"), "6w");
     conf.set(getTemplateKey("root.a.*", "capacity"), "4w");

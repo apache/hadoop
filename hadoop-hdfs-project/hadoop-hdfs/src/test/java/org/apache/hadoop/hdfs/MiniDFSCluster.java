@@ -1068,7 +1068,7 @@ public class MiniDFSCluster implements AutoCloseable {
    * Do the rest of the NN configuration for things like shared edits,
    * as well as directory formatting, etc. for a single nameservice
    * @param nnCounter the count of the number of namenodes already configured/started. Also,
-   *                  acts as the <i>index</i> to the next NN to start (since indicies start at 0).
+   *                  acts as the <i>index</i> to the next NN to start (since indices start at 0).
    * @throws IOException
    */
   private void configureNameService(MiniDFSNNTopology.NSConf nameservice, int nsCounter,
