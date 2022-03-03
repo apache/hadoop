@@ -43,7 +43,7 @@ public class ITestAuditManagerDisabled extends AbstractS3ACostTest {
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     resetAuditOptions(conf);
-    conf.set(AUDIT_ENABLED, "false");
+    conf.setBoolean(AUDIT_ENABLED, false);
     return conf;
   }
 
