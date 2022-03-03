@@ -161,12 +161,7 @@ public class CreateOutputDirectoriesStage extends
             .executeWith(getIOProcessors(createCount))
             .onFailure(this::reportMkDirFailure)
             .stopOnFailure()
-            .run(dir -> {
-              updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
-              if (maybeCreateOneDirectory(dir)) {
-                addCreatedDirectory(dir);
-              }
-            }));
+            .run(this::createOneDirectory));
     LOG.info("Time to prepare directories {}", humanTime(d.toMillis()));
     return createdDirectories;
   }
@@ -292,92 +287,119 @@ public class CreateOutputDirectoriesStage extends
     return ancestors;
   }
 
+  private void createOneDirectory(final Path dir) throws IOException {
+    // report progress back
+    progress();
+    updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
+    final DirMapState state = maybeCreateOneDirectory(dir);
+    switch (state) {
+    case dirFoundInStore:
+    case dirWasCreated:
+    case dirCreatedOnSecondAttempt:
+      addCreatedDirectory(dir);
+      addToDirectoryMap(dir, state);
+      break;
+    default:
+      break;
+    }
+
+  }
+
 
   /**
-   * Try to efficiently create a directory in a method which is
+   * Try to efficiently and robustly create a directory in a method which is
    * expected to be executed in parallel with operations creating
    * peer directories.
    * @param path path to create
    * @return true if dir created/found
    * @throws IOException IO Failure.
    */
-  private boolean maybeCreateOneDirectory(final Path path) throws IOException {
-    LOG.debug("Creating directory {}", path);
+  private DirMapState maybeCreateOneDirectory(final Path path) throws IOException {
+    LOG.info("Creating directory {}", path);
     // if a directory is in the map: return.
     final DirMapState dirMapState = dirMap.get(path);
     if (dirMapState != null) {
       LOG.debug("{}: Directory {} found in state {}; no need to create",
           getName(), path, dirMapState);
       // already exists in this job
-      return false;
+      return DirMapState.dirFoundInMap;
     }
-    // report progress back
-    progress();
-    DirMapState outcome;
 
-    // create the dir
+    // this call is 10x faster than mkdirs for GCS, so issue
+    // it first
+    FileStatus st = getFileStatusOrNull(path);
+    if (st != null) {
+      if (st.isDirectory()) {
+        // is good.
+        return DirMapState.dirFoundInStore;
+      } else {
+        // is bad: delete a file
+        LOG.info("{}: Deleting file where a directory should go: {}",
+            getName(), st);
+        delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
+      }
+    }
+
     try {
       if (mkdirs(path, false)) {
-        // add the dir to the map, along with all parents.
-        addToDirectoryMap(path, DirMapState.dirWasCreated);
         // success -return immediately.
-        return true;
+        return DirMapState.dirWasCreated;
       }
       getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
-      outcome = DirMapState.mkdirReturnedFalse;
+
       LOG.info("{}: mkdirs({}) returned false, attempting to recover",
           getName(), path);
     } catch (IOException e) {
       // can be caused by file existing, etc.
       LOG.info("{}: mkdir({}) raised exception {}", getName(), path, e.toString());
       LOG.debug("{}: Mkdir stack", getName(), e);
-      outcome = DirMapState.mkdirRaisedException;
+
     }
 
-    // no mkdirs. Assume here that there's a problem.
-    // See if it exists
-    boolean create;
-    final FileStatus st = getFileStatusOrNull(path);
+    // no mkdirs. Assume here that there's a race between two calls each of which
+    // may take tens of milliseconds.
+    // so look in the map to see if it is now present
+    if (dirMap.containsKey(path)) {
+      LOG.debug("{}: directory {} created/registered in another thread", getName(), path);
+      return DirMapState.dirFoundInMap;
+    }
+
+    // fallback to checking the FS, in case a different process did it.
+    st = getFileStatusOrNull(path);
     if (st != null) {
       if (!st.isDirectory()) {
         // is bad: delete a file
         LOG.info("{}: Deleting file where a directory should go: {}",
             getName(), st);
         delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
-        create = true;
+
       } else {
         // is good.
-        LOG.warn("{}: Even though mkdirs({}) failed, there is a directory there",
+        LOG.warn("{}: Even though mkdirs({}) failed, there is now a directory there",
             getName(), path);
-        create = false;
+        return DirMapState.dirFoundInStore;
       }
     } else {
-      // nothing found. This should never happen as the first mkdirs should have created it.
-      // so the getFileStatus call never reached.
+      // nothing found. This should never happen.
       LOG.warn("{}: Although mkdirs({}) returned false, there's nothing at that path to prevent it",
           getName(), path);
 
-      create = true;
     }
 
-    if (create) {
-      // create the directory
-      // if this fails, and IOE is still raised, well, that's bad news
-      // which will be escalated as a failure
-      if (!mkdirs(path, false)) {
-        // two possible outcomes. Something went very wrong
-        // or the directory was created by an action in a parallel thread
+    // try to create the directory again
+    // if this fails, and IOE is still raised, that
+    // propagate to the caller.
+    if (!mkdirs(path, false)) {
 
-        getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
+      // mkdirs failed again
+      getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
 
-        // require the dir to exist, raising an exception if it does not.
-        directoryMustExist("Creating directory ", path);
-        create = false;
-      }
+      // require the dir to exist, raising an exception if it does not.
+      directoryMustExist("Creating directory ", path);
     }
-    // and whatever that outcome was, record it
-    addToDirectoryMap(path, outcome);
-    return create;
+
+    // we only get here if the second attempt recovered
+    return DirMapState.dirCreatedOnSecondAttempt;
 
   }
 
@@ -458,9 +480,10 @@ public class CreateOutputDirectoriesStage extends
    * Enumeration of dir states in the dir map.
    */
   public enum DirMapState {
+    dirFoundInStore,
+    dirFoundInMap,
     dirWasCreated,
-    mkdirReturnedFalse,
-    mkdirRaisedException,
+    dirCreatedOnSecondAttempt,
     ancestorWasFileNowDeleted,
     ancestorWasDirOrMissing,
     parentWasNotFile,

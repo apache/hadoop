@@ -175,18 +175,19 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     Assertions.assertThat(result.getDirMap())
         .describedAs("Directory Map entry for %s", path)
         .isNotNull()
+        .containsKey(path)
         .containsEntry(path, expected);
   }
 
   /**
    * Prepare a deep tree {@code c ^ 3} of entries.
    * Make one of the parent dirs a file and so expect
-   * the first attempt to intially fail as the stage configuration
+   * the first attempt to initially fail as the stage configuration
    * does not parent dir preparation.
    * The second attempt will, so succeeds.
    *
    * From a test-purity perspective, this should
-   * be two separate tests. But attempting both
+   * be separate tests. But attempting both
    * operations in the same test cases spreads the
    * directory setup costs across both, rather than
    * duplicating it.
@@ -238,26 +239,35 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
         .isGreaterThanOrEqualTo(0);
 
     // create a job configured to clean up first
-    CreateOutputDirectoriesStage secondAttempt
+    CreateOutputDirectoriesStage attempt2
         = new CreateOutputDirectoriesStage(
         createStageConfigForJob(JOB1, destDir)
             .withPrepareParentDirectories(true)
             .withDeleteTargetPaths(true));
     LOG.info("Executing failing attempt to create the directories");
 
-    final CreateOutputDirectoriesStage.Result result = secondAttempt.apply(manifests);
+    final CreateOutputDirectoriesStage.Result result = attempt2.apply(manifests);
     LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
 
-
     assertDirMapStatus(result, destIsFile,
-        CreateOutputDirectoriesStage.DirMapState.mkdirRaisedException);
+        CreateOutputDirectoriesStage.DirMapState.dirWasCreated);
+
     // for the parent dir, all is good
     assertDirMapStatus(result, parentIsFile,
         CreateOutputDirectoriesStage.DirMapState.ancestorWasFileNowDeleted);
     Assertions.assertThat(result.getCreatedDirectories())
         .describedAs("output of %s", mkdirStage)
         .containsExactlyInAnyOrderElementsOf(level2);
-    verifyStatisticCounterValue(iostats, failuresKey, 1 + initialFailureCount);
+    verifyStatisticCounterValue(iostats, failuresKey, initialFailureCount);
+
+    // and now, do a rerun. where everything is good.
+    CreateOutputDirectoriesStage attempt3 =
+        new CreateOutputDirectoriesStage(
+            createStageConfigForJob(JOB1, destDir)
+                .withPrepareParentDirectories(true)
+                .withDeleteTargetPaths(true));
+    assertDirMapStatus(attempt3.apply(manifests), destIsFile,
+        CreateOutputDirectoriesStage.DirMapState.dirFoundInStore);
   }
 
   /**
