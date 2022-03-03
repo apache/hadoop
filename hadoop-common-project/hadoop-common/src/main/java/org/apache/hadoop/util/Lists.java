@@ -232,4 +232,20 @@ public final class Lists {
     return addAll(addTo, elementsToAdd.iterator());
   }
 
+  public static <T> List<List<T>> partition(List<T> originalList, int pageSize) {
+
+    Preconditions.checkArgument(originalList != null && originalList.size() > 0,
+            "Invalid original list");
+    Preconditions.checkArgument(pageSize > 0, "Page size should " +
+            "be greater than 0 for performing partition");
+
+    List<List<T>> result = new ArrayList<>();
+    int i=0;
+    while (i < originalList.size()) {
+      result.add(originalList.subList(i,
+              Math.min(i + pageSize, originalList.size())));
+      i = i + pageSize;
+    }
+    return result;
+  }
 }

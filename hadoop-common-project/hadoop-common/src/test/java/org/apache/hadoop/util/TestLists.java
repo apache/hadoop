@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.util;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -77,6 +79,39 @@ public class TestLists {
     List<String> list = Lists.newLinkedList(set);
     list.add("record4");
     Assert.assertEquals(4, list.size());
+  }
+
+  @Test
+  public void testListsPartition() {
+    List<String> list = new ArrayList<>();
+    list.add("a");
+    list.add("b");
+    list.add("c");
+    list.add("d");
+    list.add("e");
+    List<List<String>> res = Lists.
+            partition(list, 2);
+    Assertions.assertThat(res.size())
+            .describedAs("Number of partitions post partition")
+            .isEqualTo(3);
+    Assertions.assertThat(res.get(0).size())
+            .describedAs("Number of elements in first partition")
+            .isEqualTo(2);
+    Assertions.assertThat(res.get(2).size())
+            .describedAs("Number of elements in last partition")
+            .isEqualTo(1);
+
+    List<List<String>> res2 = Lists.
+            partition(list, 1);
+    Assertions.assertThat(res2.size())
+            .describedAs("Number of partitions post partition")
+            .isEqualTo(5);
+    Assertions.assertThat(res2.get(0).size())
+            .describedAs("Number of elements in first partition")
+            .isEqualTo(1);
+    Assertions.assertThat(res2.get(4).size())
+            .describedAs("Number of elements in last partition")
+            .isEqualTo(1);
   }
 
   @Test
