@@ -102,6 +102,11 @@ public class TestMiniJournalCluster {
     final Set<Integer> httpAndRpcPorts = NetUtils.getFreeSocketPorts(6);
     LOG.info("Free socket ports: {}", httpAndRpcPorts);
 
+    for (Integer httpAndRpcPort : httpAndRpcPorts) {
+      assertNotEquals("None of the acquired socket port should not be zero", 0,
+          httpAndRpcPort.intValue());
+    }
+
     final int[] httpPorts = new int[3];
     final int[] rpcPorts = new int[3];
     int httpPortIdx = 0;
@@ -116,11 +121,6 @@ public class TestMiniJournalCluster {
 
     LOG.info("Http ports selected: {}", httpPorts);
     LOG.info("Rpc ports selected: {}", rpcPorts);
-
-    for (int i = 0; i < 3; i++) {
-      assertNotEquals(0, rpcPorts[i]);
-      assertNotEquals(0, httpPorts[i]);
-    }
 
     try (MiniJournalCluster miniJournalCluster = new MiniJournalCluster.Builder(conf)
         .setHttpPorts(httpPorts)
