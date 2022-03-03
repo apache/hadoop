@@ -365,8 +365,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         callableWithinAuditSpan(
             getAuditSpan(), () -> {
               asyncDeleteAction(
-                  keyList,
-                  LOG.isDebugEnabled());
+                  keyList);
               return null;
             }));
   }
@@ -382,10 +381,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    */
   @Retries.RetryTranslated
   private void asyncDeleteAction(
-      final List<DeleteEntry> keyList,
-      final boolean auditDeletedKeys)
+      final List<DeleteEntry> keyList)
       throws IOException {
-    List<DeleteObjectsResult.DeletedObject> deletedObjects = new ArrayList<>();
     try (DurationInfo ignored =
              new DurationInfo(LOG, false,
                  "Delete page of %d keys", keyList.size())) {
@@ -397,15 +394,12 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
             .map(e -> e.keyVersion)
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} file objects", files.size());
-        result = Invoker.once("Remove S3 Files",
+      Invoker.once("Remove S3 Files",
             status.getPath().toString(),
             () -> callbacks.removeKeys(
                 files,
-                false,
-                !auditDeletedKeys));
-        if (result != null) {
-          deletedObjects.addAll(result.getDeletedObjects());
-        }
+                false
+            ));
         // now the dirs
         List<DeleteObjectsRequest.KeyVersion> dirs = keyList.stream()
             .filter(e -> e.isDirMarker)
@@ -413,32 +407,12 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} directory markers", dirs.size());
         // This is invoked with deleteFakeDir.
-        result = Invoker.once("Remove S3 Dir Markers",
+        Invoker.once("Remove S3 Dir Markers",
             status.getPath().toString(),
             () -> callbacks.removeKeys(
                 dirs,
-                true,
-                !auditDeletedKeys));
-        if (result != null) {
-          deletedObjects.addAll(result.getDeletedObjects());
-        }
-      }
-      if (auditDeletedKeys) {
-        // audit the deleted keys
-        if (deletedObjects.size() != keyList.size()) {
-          // size mismatch
-          LOG.warn("Size mismatch in deletion operation. "
-                  + "Expected count of deleted files: {}; "
-                  + "actual: {}",
-              keyList.size(), deletedObjects.size());
-          // strip out the deleted keys
-          for (DeleteObjectsResult.DeletedObject del : deletedObjects) {
-            keyList.removeIf(kv -> kv.getKey().equals(del.getKey()));
-          }
-          for (DeleteEntry kv : keyList) {
-            LOG.debug("{}", kv.getKey());
-          }
-        }
+                true
+            ));
       }
     }
   }
