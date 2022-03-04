@@ -371,7 +371,9 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public long getSkipOperations() { return 0; }
+    public long getSkipOperations() {
+      return 0;
+    }
 
     @Override
     public Long lookupCounterValue(final String name) {
