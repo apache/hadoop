@@ -34,19 +34,21 @@ public class AppendRequestParameters {
   private final Mode mode;
   private final boolean isAppendBlob;
   private final String leaseId;
+  private boolean isExpectHeaderEnabled;
 
   public AppendRequestParameters(final long position,
       final int offset,
       final int length,
       final Mode mode,
       final boolean isAppendBlob,
-      final String leaseId) {
+      final String leaseId, boolean isExpectHeaderEnabled) {
     this.position = position;
     this.offset = offset;
     this.length = length;
     this.mode = mode;
     this.isAppendBlob = isAppendBlob;
     this.leaseId = leaseId;
+    this.isExpectHeaderEnabled = isExpectHeaderEnabled;
   }
 
   public long getPosition() {
@@ -71,5 +73,13 @@ public class AppendRequestParameters {
 
   public String getLeaseId() {
     return this.leaseId;
+  }
+
+  public boolean getIsExpectHeaderEnabled() {
+    return isExpectHeaderEnabled;
+  }
+
+  public void setExpectHeaderEnabled(boolean expectHeaderEnabled) {
+    isExpectHeaderEnabled = expectHeaderEnabled;
   }
 }

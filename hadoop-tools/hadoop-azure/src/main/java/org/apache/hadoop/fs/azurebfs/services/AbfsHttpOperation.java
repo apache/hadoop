@@ -266,7 +266,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
-
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
       HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
@@ -321,13 +320,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       this.bytesSent = length;
       outputStream.write(buffer, offset, length);
     } catch (Exception e) {
-      this.statusCode = this.connection.getResponseCode();
       this.bytesSent = length;
-      if (this.statusCode != -1 && this.statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
-        throw new IOException(e);
-      }
-    }
-    finally {
+    } finally {
       if (this.isTraceEnabled) {
         this.sendRequestTimeMs = elapsedTimeMs(startTime);
       }

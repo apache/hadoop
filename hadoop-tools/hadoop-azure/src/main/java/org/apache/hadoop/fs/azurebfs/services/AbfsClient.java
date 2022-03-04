@@ -38,6 +38,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -99,7 +100,6 @@ public class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
-  private boolean isExpectHeaderEnabled;
 
   private final ListeningScheduledExecutorService executorService;
 
@@ -115,7 +115,6 @@ public class AbfsClient implements Closeable {
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
-    this.isExpectHeaderEnabled = abfsConfiguration.isExpectHeaderEnabled();
 
     String encryptionKey = this.abfsConfiguration
         .getClientProvidedEncryptionKey();
@@ -608,7 +607,7 @@ public class AbfsClient implements Closeable {
     addCustomerProvidedKeyHeaders(requestHeaders);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
-    if (isExpectHeaderEnabled) {
+    if (reqParams.getIsExpectHeaderEnabled()) {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -648,6 +647,12 @@ public class AbfsClient implements Closeable {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
       // If we have no HTTP response, throw the original exception.
+      if ((((AbfsRestOperationException) e).getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST &&
+              ((AbfsRestOperationException) e).getStatusCode() < HttpURLConnection.HTTP_INTERNAL_ERROR) &&
+              reqParams.getIsExpectHeaderEnabled()) {
+        reqParams.setExpectHeaderEnabled(false);
+        this.append(path, buffer, reqParams, cachedSasToken, tracingContext);
+      }
       if (!op.hasResult()) {
         throw e;
       }
