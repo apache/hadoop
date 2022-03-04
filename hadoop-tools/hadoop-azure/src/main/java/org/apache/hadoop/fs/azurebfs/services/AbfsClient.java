@@ -557,13 +557,16 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
-      // If we have no HTTP response, throw the original exception.
+      /*
+        If the http response code indicates a user error we retry the same append request with expect header disabled
+       */
       if ((((AbfsRestOperationException) e).getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST &&
               ((AbfsRestOperationException) e).getStatusCode() < HttpURLConnection.HTTP_INTERNAL_ERROR) &&
               reqParams.getIsExpectHeaderEnabled()) {
         reqParams.setExpectHeaderEnabled(false);
         this.append(path, buffer, reqParams, cachedSasToken, tracingContext);
       }
+      // If we have no HTTP response, throw the original exception.
       if (!op.hasResult()) {
         throw e;
       }
