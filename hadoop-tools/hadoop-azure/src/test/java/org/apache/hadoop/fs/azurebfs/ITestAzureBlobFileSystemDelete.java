@@ -221,16 +221,10 @@ public class ITestAzureBlobFileSystemDelete extends
 
   @Test
   public void testDeleteIdempotencyTriggerHttp404() throws Exception {
-    AbfsConfiguration abfsConfig
-            = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(
-            getConfiguration(),
-            REDUCED_RETRY_COUNT, REDUCED_MAX_BACKOFF_INTERVALS_MS);
-
     final AzureBlobFileSystem fs = getFileSystem();
-    AbfsClient abfsClient = fs.getAbfsStore().getClient();
     AbfsClient client = TestAbfsClient.createTestClientFromCurrentContext(
-            abfsClient,
-            abfsConfig);
+            fs.getAbfsStore().getClient(),
+            this.getConfiguration());
 
     // Case 1: Not a retried case should throw error back
     // Add asserts at AzureBlobFileSystemStore and AbfsClient levels
@@ -249,7 +243,7 @@ public class ITestAzureBlobFileSystemDelete extends
     // mock idempotency check to mimic retried case
     AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
-        abfsConfig);
+        this.getConfiguration());
     AzureBlobFileSystemStore mockStore = mock(AzureBlobFileSystemStore.class);
     mockStore = TestMockHelpers.setClassField(AzureBlobFileSystemStore.class, mockStore,
         "client", mockClient);
