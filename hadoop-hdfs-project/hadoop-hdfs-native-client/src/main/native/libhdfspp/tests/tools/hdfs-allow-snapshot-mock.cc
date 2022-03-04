@@ -53,4 +53,5 @@ void AllowSnapshotMock::SetExpectations(
         .WillOnce(testing::Return(true));
   }
 }
+
 } // namespace hdfs::tools::test
