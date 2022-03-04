@@ -537,7 +537,7 @@ public class ITestS3AConfiguration {
     Assert.assertEquals(s3SignerOverride,
         clientConfiguration.getSignerOverride());
     clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
     Assert.assertNull(clientConfiguration.getSignerOverride());
 
     // Configured base SIGNING_ALGORITHM, overridden for S3 only
@@ -549,41 +549,9 @@ public class ITestS3AConfiguration {
     Assert.assertEquals(s3SignerOverride,
         clientConfiguration.getSignerOverride());
     clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
     Assert
         .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
   }
 
-  @Test(timeout = 10_000L)
-  public void testDdbSpecificSignerOverride() throws IOException {
-    ClientConfiguration clientConfiguration = null;
-    Configuration config;
-
-    String signerOverride = "testSigner";
-    String ddbSignerOverride = "testDdbSigner";
-
-    // Default SIGNING_ALGORITHM, overridden for S3
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
-    Assert.assertEquals(ddbSignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert.assertNull(clientConfiguration.getSignerOverride());
-
-    // Configured base SIGNING_ALGORITHM, overridden for S3
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM, signerOverride);
-    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
-    Assert.assertEquals(ddbSignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert
-        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
-  }
 }

@@ -426,6 +426,19 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private ConfigurationProperties configurationProperties;
 
+  public int getMaximumAutoCreatedQueueDepth(String queuePath) {
+    return getInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH,
+        getInt(PREFIX + MAXIMUM_QUEUE_DEPTH, DEFAULT_MAXIMUM_QUEUE_DEPTH));
+  }
+
+  public void setMaximumAutoCreatedQueueDepth(String queuePath, int value) {
+    setInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH, value);
+  }
+
+  public void setMaximumAutoCreatedQueueDepth(int value) {
+    setInt(PREFIX + MAXIMUM_QUEUE_DEPTH, value);
+  }
+
   /**
    * Different resource types supported.
    */
@@ -2135,6 +2148,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final int
       DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES = 1000;
+
+  @Private
+  public static final String MAXIMUM_QUEUE_DEPTH =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "maximum-queue-depth";
+
+  @Private
+  public static final int DEFAULT_MAXIMUM_QUEUE_DEPTH = 2;
 
   @Private
   public static final boolean DEFAULT_AUTO_QUEUE_CREATION_ENABLED = false;

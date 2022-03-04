@@ -74,6 +74,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 public abstract class AbstractCSQueue implements CSQueue {
@@ -279,33 +280,23 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   /**
-   * Set maximum capacity - used only for testing.
+   * Set maximum capacity for empty node label.
    * @param maximumCapacity new max capacity
    */
   @VisibleForTesting
   void setMaxCapacity(float maximumCapacity) {
-    writeLock.lock();
-    try {
-      // Sanity check
-      CSQueueUtils.checkMaxCapacity(this.queuePath,
-          queueCapacities.getCapacity(), maximumCapacity);
-      float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(
-          maximumCapacity, parent);
-      CSQueueUtils.checkAbsoluteCapacity(this.queuePath,
-          queueCapacities.getAbsoluteCapacity(), absMaxCapacity);
-
-      queueCapacities.setMaximumCapacity(maximumCapacity);
-      queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
-    } finally {
-      writeLock.unlock();
-    }
+    internalSetMaximumCapacity(maximumCapacity, NO_LABEL);
   }
 
   /**
-   * Set maximum capacity
+   * Set maximum capacity.
    * @param maximumCapacity new max capacity
    */
   void setMaxCapacity(String nodeLabel, float maximumCapacity) {
+    internalSetMaximumCapacity(maximumCapacity, nodeLabel);
+  }
+
+  private void internalSetMaximumCapacity(float maximumCapacity, String nodeLabel) {
     writeLock.lock();
     try {
       // Sanity check
@@ -322,7 +313,6 @@ public abstract class AbstractCSQueue implements CSQueue {
       writeLock.unlock();
     }
   }
-
 
   @Override
   public String getDefaultNodeLabelExpression() {
@@ -341,7 +331,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Collect and set the Node label configuration
       this.queueNodeLabelsSettings = new QueueNodeLabelsSettings(configuration, parent,
-          getQueuePath(), queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
+          queuePath, queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
 
       // Initialize the queue capacities
       setupConfigurableCapacities();
@@ -359,7 +349,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Initialize the queue state based on previous state, configured state
       // and its parent state
-      initializeQueueState();
+      QueueStateHelper.setQueueState(this);
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
@@ -389,7 +379,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Setup application related limits
       this.queueAppLifetimeSettings = new QueueAppLifetimeAndLimitSettings(configuration,
-          this, getQueuePath());
+          this, queuePath);
     } finally {
       writeLock.unlock();
     }
@@ -561,60 +551,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   public QueueCapacityVector getConfiguredCapacityVector(
       String label) {
     return configuredCapacityVectors.get(label);
-  }
-
-  private void initializeQueueState() {
-    QueueState previousState = getState();
-    QueueState configuredState = queueContext.getConfiguration()
-        .getConfiguredState(getQueuePath());
-    QueueState parentState = (parent == null) ? null : parent.getState();
-
-    // verify that we can not any value for State other than RUNNING/STOPPED
-    if (configuredState != null && configuredState != QueueState.RUNNING
-        && configuredState != QueueState.STOPPED) {
-      throw new IllegalArgumentException("Invalid queue state configuration."
-          + " We can only use RUNNING or STOPPED.");
-    }
-    // If we did not set state in configuration, use Running as default state
-    QueueState defaultState = QueueState.RUNNING;
-
-    if (previousState == null) {
-      // If current state of the queue is null, we would inherit the state
-      // from its parent. If this queue does not has parent, such as root queue,
-      // we would use the configured state.
-      if (parentState == null) {
-        updateQueueState((configuredState == null) ? defaultState
-            : configuredState);
-      } else {
-        if (configuredState == null) {
-          updateQueueState((parentState == QueueState.DRAINING) ?
-              QueueState.STOPPED : parentState);
-        } else if (configuredState == QueueState.RUNNING
-            && parentState != QueueState.RUNNING) {
-          throw new IllegalArgumentException(
-              "The parent queue:" + parent.getQueuePath()
-                  + " cannot be STOPPED as the child queue:" + getQueuePath()
-                  + " is in RUNNING state.");
-        } else {
-          updateQueueState(configuredState);
-        }
-      }
-    } else {
-      // when we get a refreshQueue request from AdminService,
-      if (previousState == QueueState.RUNNING) {
-        if (configuredState == QueueState.STOPPED) {
-          stopQueue();
-        }
-      } else {
-        if (configuredState == QueueState.RUNNING) {
-          try {
-            activateQueue();
-          } catch (YarnException ex) {
-            throw new IllegalArgumentException(ex.getMessage());
-          }
-        }
-      }
-    }
   }
 
   protected QueueInfo getQueueInfo() {
@@ -917,7 +853,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   private static String ensurePartition(String partition) {
-    return Optional.ofNullable(partition).orElse(RMNodeLabelsManager.NO_LABEL);
+    return Optional.ofNullable(partition).orElse(NO_LABEL);
   }
 
   @FunctionalInterface
@@ -1016,8 +952,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     // Add NO_LABEL also to this list as NO_LABEL also can be granted with
     // resource in many general cases.
-    if (!nodeLabels.contains(RMNodeLabelsManager.NO_LABEL)) {
-      nodeLabels.add(RMNodeLabelsManager.NO_LABEL);
+    if (!nodeLabels.contains(NO_LABEL)) {
+      nodeLabels.add(NO_LABEL);
     }
     return nodeLabels;
   }
@@ -1298,7 +1234,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           CapacityConfigType.ABSOLUTE_RESOURCE)) {
         newEffectiveMinResource = createNormalizedMinResource(
             usageTracker.getQueueResourceQuotas().getConfiguredMinResource(label),
-            ((ParentQueue) parent).getEffectiveMinRatioPerResource());
+            ((ParentQueue) parent).getEffectiveMinRatio(label));
 
         // Max resource of a queue should be the minimum of {parent's maxResources,
         // this queue's maxResources}. Both parent's maxResources and this queue's

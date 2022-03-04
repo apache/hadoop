@@ -96,7 +96,8 @@ public class StaticRouterRpcFairnessPolicyController extends
     }
 
     // Assign remaining handlers if any to fan out calls.
-    int leftOverHandlers = handlerCount % unassignedNS.size();
+    int leftOverHandlers = unassignedNS.isEmpty() ? handlerCount :
+        handlerCount % unassignedNS.size();
     int existingPermits = getAvailablePermits(CONCURRENT_NS);
     if (leftOverHandlers > 0) {
       LOG.info("Assigned extra {} handlers to commons pool", leftOverHandlers);

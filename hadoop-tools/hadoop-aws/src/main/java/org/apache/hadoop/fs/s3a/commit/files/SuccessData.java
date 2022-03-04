@@ -47,7 +47,7 @@ import org.apache.hadoop.util.JsonSerialization;
  * <ol>
  *   <li>File length == 0: classic {@code FileOutputCommitter}.</li>
  *   <li>Loadable as {@link SuccessData}:
- *   A s3guard committer with name in in {@link #committer} field.</li>
+ *   An S3A committer with name in in {@link #committer} field.</li>
  *   <li>Not loadable? Something else.</li>
  * </ol>
  *

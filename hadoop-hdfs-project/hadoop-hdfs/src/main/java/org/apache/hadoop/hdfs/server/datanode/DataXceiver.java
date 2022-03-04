@@ -341,7 +341,7 @@ class DataXceiver extends Receiver implements Runnable {
    * the thread dies away.
    */
   private void collectThreadLocalStates() {
-    if (datanode.getPeerMetrics() != null) {
+    if (datanode.getDnConf().peerStatsEnabled && datanode.getPeerMetrics() != null) {
       datanode.getPeerMetrics().collectThreadLocalStates();
     }
   }
@@ -415,6 +415,9 @@ class DataXceiver extends Receiver implements Runnable {
                     "Not verifying {}", slotId);
         }
         success = true;
+        // update metrics
+        datanode.metrics.addReadBlockOp(elapsed());
+        datanode.metrics.incrReadsFromClient(true, blk.getNumBytes());
       }
     } finally {
       if ((!success) && (registeredSlotId != null)) {

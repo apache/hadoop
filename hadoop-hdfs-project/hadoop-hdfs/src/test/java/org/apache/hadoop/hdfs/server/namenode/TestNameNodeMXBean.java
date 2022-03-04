@@ -1031,7 +1031,8 @@ public class TestNameNodeMXBean {
   @Test
   public void testTotalBlocksMetrics() throws Exception {
     MiniDFSCluster cluster = null;
-    FSNamesystem namesystem = null;
+    FSNamesystem activeNn = null;
+    FSNamesystem standbyNn = null;
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
@@ -1046,12 +1047,16 @@ public class TestNameNodeMXBean {
       conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
 
       cluster = new MiniDFSCluster.Builder(conf)
-          .numDataNodes(totalSize).build();
-      namesystem = cluster.getNamesystem();
-      fs = cluster.getFileSystem();
+          .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(1)).
+              numDataNodes(totalSize).build();
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+      activeNn = cluster.getNamesystem(0);
+      standbyNn = cluster.getNamesystem(1);
+      fs = cluster.getFileSystem(0);
       fs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
-      verifyTotalBlocksMetrics(0L, 0L, namesystem.getTotalBlocks());
+      verifyTotalBlocksMetrics(0L, 0L, activeNn.getTotalBlocks());
 
       // create small file
       Path replDirPath = new Path("/replicated");
@@ -1068,7 +1073,7 @@ public class TestNameNodeMXBean {
       final int smallLength = cellSize * dataBlocks;
       final byte[] smallBytes = StripedFileTestUtil.generateBytes(smallLength);
       DFSTestUtil.writeFile(fs, ecFileSmall, smallBytes);
-      verifyTotalBlocksMetrics(1L, 1L, namesystem.getTotalBlocks());
+      verifyTotalBlocksMetrics(1L, 1L, activeNn.getTotalBlocks());
 
       // create learge file
       Path replFileLarge = new Path(replDirPath, "replfile_large");
@@ -1079,15 +1084,20 @@ public class TestNameNodeMXBean {
       final int largeLength = blockSize * totalSize + smallLength;
       final byte[] largeBytes = StripedFileTestUtil.generateBytes(largeLength);
       DFSTestUtil.writeFile(fs, ecFileLarge, largeBytes);
-      verifyTotalBlocksMetrics(3L, 3L, namesystem.getTotalBlocks());
+      verifyTotalBlocksMetrics(3L, 3L, activeNn.getTotalBlocks());
 
       // delete replicated files
       fs.delete(replDirPath, true);
-      verifyTotalBlocksMetrics(0L, 3L, namesystem.getTotalBlocks());
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+          cluster.getNamesystem(0).getBlockManager());
+      verifyTotalBlocksMetrics(0L, 3L, activeNn.getTotalBlocks());
 
       // delete ec files
       fs.delete(ecDirPath, true);
-      verifyTotalBlocksMetrics(0L, 0L, namesystem.getTotalBlocks());
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+          cluster.getNamesystem(0).getBlockManager());
+      verifyTotalBlocksMetrics(0L, 0L, activeNn.getTotalBlocks());
+      verifyTotalBlocksMetrics(0L, 0L, standbyNn.getTotalBlocks());
     } finally {
       if (fs != null) {
         try {
@@ -1096,9 +1106,16 @@ public class TestNameNodeMXBean {
           throw e;
         }
       }
-      if (namesystem != null) {
+      if (activeNn != null) {
         try {
-          namesystem.close();
+          activeNn.close();
+        } catch (Exception e) {
+          throw e;
+        }
+      }
+      if (standbyNn != null) {
+        try {
+          standbyNn.close();
         } catch (Exception e) {
           throw e;
         }

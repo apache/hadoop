@@ -318,11 +318,40 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     createQueue("root.a.a2-auto");
   }
 
-  @Test(expected = SchedulerDynamicEditException.class)
-  public void testAutoCreateQueueShouldFailIfDepthIsAboveLimit()
+  @Test()
+  public void testAutoCreateMaximumQueueDepth()
       throws Exception {
     startScheduler();
-    createQueue("root.a.a3-auto.a4-auto.a5-auto");
+    // By default, max depth is 2, therefore this is an invalid scenario
+    Assert.assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("root.a.a3-auto.a4-auto.a5-auto"));
+
+    // Set depth 3 for root.a, making it a valid scenario
+    csConf.setMaximumAutoCreatedQueueDepth("root.a", 3);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    try {
+      createQueue("root.a.a3-auto.a4-auto.a5-auto");
+    } catch (SchedulerDynamicEditException sde) {
+      LOG.error("%s", sde);
+      Assert.fail("Depth is set for root.a, exception should not be thrown");
+    }
+
+    // Set global depth to 3
+    csConf.setMaximumAutoCreatedQueueDepth(3);
+    csConf.unset(CapacitySchedulerConfiguration.getQueuePrefix("root.a")
+        + CapacitySchedulerConfiguration.MAXIMUM_QUEUE_DEPTH);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    try {
+      createQueue("root.a.a6-auto.a7-auto.a8-auto");
+    } catch (SchedulerDynamicEditException sde) {
+      LOG.error("%s", sde);
+      Assert.fail("Depth is set globally, exception should not be thrown");
+    }
+
+    // Set depth on a dynamic queue, which has no effect on auto queue creation validation
+    csConf.setMaximumAutoCreatedQueueDepth("root.a.a6-auto.a7-auto.a8-auto", 10);
+    Assert.assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("root.a.a6-auto.a7-auto.a8-auto.a9-auto.a10-auto.a11-auto"));
   }
 
   @Test(expected = SchedulerDynamicEditException.class)
