@@ -112,4 +112,5 @@ bool AllowSnapshot::HandlePath(const std::string &path) const {
   }
   return true;
 }
+
 } // namespace hdfs::tools
