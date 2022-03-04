@@ -136,7 +136,6 @@ target_link_libraries(hdfs_config_connect_bugs_test common gmock_main bindings_c
 add_memcheck_test(hdfs_config_connect_bugs hdfs_config_connect_bugs_test)
 
 
-
 #
 #
 #   INTEGRATION TESTS - TESTS THE FULL LIBRARY AGAINST ACTUAL SERVERS
