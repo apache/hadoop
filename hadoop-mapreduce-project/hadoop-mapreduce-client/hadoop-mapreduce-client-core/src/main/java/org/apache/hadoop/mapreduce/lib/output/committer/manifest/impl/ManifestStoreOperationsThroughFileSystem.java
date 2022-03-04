@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,12 +39,18 @@ import org.apache.hadoop.util.JsonSerialization;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 
 /**
- * Implement task and job operations through the filesystem API.
+ * Implementation of manifest store operations through the filesystem API.
+ * {@link #moveToTrash(String, Path)} uses the normal Trash classes.
+ * resilient commit is not available.
+ * This class is subclassed in the ABFS module, which does add the resilient
+ * commit method.
  */
-public class StoreOperationsThroughFileSystem extends StoreOperations {
+@InterfaceAudience.LimitedPrivate("mapreduce, object-stores")
+@InterfaceStability.Unstable
+public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOperations {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      StoreOperationsThroughFileSystem.class);
+      ManifestStoreOperationsThroughFileSystem.class);
 
   /**
    * Trash.moveToTrash() returned false.
@@ -64,14 +72,14 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
    * Direct Constructor.
    * @param fileSystem filesystem to write through.
    */
-  public StoreOperationsThroughFileSystem(final FileSystem fileSystem) {
+  public ManifestStoreOperationsThroughFileSystem(final FileSystem fileSystem) {
     this.fileSystem = fileSystem;
   }
 
   /**
    * Constructor used for introspection-based binding.
    */
-  public StoreOperationsThroughFileSystem() {
+  public ManifestStoreOperationsThroughFileSystem() {
   }
 
   @Override

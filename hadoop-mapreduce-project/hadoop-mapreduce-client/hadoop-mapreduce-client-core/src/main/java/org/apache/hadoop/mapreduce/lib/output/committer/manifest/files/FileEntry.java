@@ -35,32 +35,33 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.Ab
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.verify;
 
 /**
- * A File or directory entry in the task manifest.
+ * A File entry in the task manifest.
+ * Uses shorter field names for smaller files.
  */
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public final class FileOrDirEntry implements Serializable {
+public final class FileEntry implements Serializable {
 
   private static final long serialVersionUID = -550288489009777867L;
 
-  @JsonProperty("source")
+  @JsonProperty("s")
   private String source;
 
-  @JsonProperty("dest")
+  @JsonProperty("d")
   private String dest;
 
-  @JsonProperty("size")
+  @JsonProperty("z")
   private long size;
 
   /**
    * Etag value if we can extract this.
    */
-  @JsonProperty("etag")
+  @JsonProperty("e")
   private String etag;
 
-  public FileOrDirEntry() {
+  public FileEntry() {
   }
 
   /**
@@ -70,7 +71,7 @@ public final class FileOrDirEntry implements Serializable {
    * @param size file size.
    * @param etag optional etag
    */
-  public FileOrDirEntry(
+  public FileEntry(
       final String source,
       final String dest,
       final long size,
@@ -89,7 +90,7 @@ public final class FileOrDirEntry implements Serializable {
    * @param size file size.
    * @param etag optional etag
    */
-  public FileOrDirEntry(
+  public FileEntry(
       final Path source,
       final Path dest,
       final long size,
@@ -170,25 +171,15 @@ public final class FileOrDirEntry implements Serializable {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    FileOrDirEntry that = (FileOrDirEntry) o;
-    return size == that.size && source.equals(that.source) && dest.equals(that.dest) &&
+    FileEntry that = (FileEntry) o;
+    return size == that.size && source.equals(that.source) && dest.equals(
+        that.dest) &&
         Objects.equals(etag, that.etag);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(source, dest);
-  }
-
-  /**
-   * A directory entry.
-   * @param src source path
-   * @param dest destination path.
-   * @return an entry with the given source and destination, no file.
-   */
-  public static FileOrDirEntry dirEntry(Path src, Path dest) {
-    return new FileOrDirEntry(src,
-        dest, 0, null);
   }
 
 }

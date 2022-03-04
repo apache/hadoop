@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Progressable;
@@ -116,7 +116,7 @@ public class StageConfig {
    * go through the superclass which
    * adds statistics and logging.
    */
-  private StoreOperations operations;
+  private ManifestStoreOperations operations;
 
   /**
    * Submitter for doing IO against the store other than
@@ -309,7 +309,7 @@ public class StageConfig {
    * @param value new value
    * @return this
    */
-  public StageConfig withOperations(final StoreOperations value) {
+  public StageConfig withOperations(final ManifestStoreOperations value) {
     checkOpen();
     operations = value;
     return this;
@@ -474,7 +474,7 @@ public class StageConfig {
    * go through the wrapper classes in this class, which
    * add statistics and logging.
    */
-  public StoreOperations getOperations() {
+  public ManifestStoreOperations getOperations() {
     return operations;
   }
 

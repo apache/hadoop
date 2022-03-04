@@ -51,11 +51,12 @@ import org.apache.hadoop.fs.contract.localfs.LocalFSContract;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SaveTaskManifestStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
@@ -76,14 +77,14 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_FACTORY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.NAME_FORMAT_JOB_ATTEMPT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createIOStatisticsStore;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createTaskManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.getProjectBuildDir;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.NAME_FORMAT_JOB_ATTEMPT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createIOStatisticsStore;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createTaskManifest;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
@@ -180,7 +181,7 @@ public abstract class AbstractManifestCommitterTest
    * Prefer to use these to interact with the FS to
    * ensure more implicit coverage.
    */
-  private StoreOperations storeOperations;
+  private ManifestStoreOperations storeOperations;
 
   /**
    * Progress counter used in all stage configs.
@@ -235,7 +236,7 @@ public abstract class AbstractManifestCommitterTest
    * Store operations to interact with..
    * @return store operations.
    */
-  protected StoreOperations getStoreOperations() {
+  protected ManifestStoreOperations getStoreOperations() {
     return storeOperations;
   }
 
@@ -243,7 +244,7 @@ public abstract class AbstractManifestCommitterTest
    * Set store operations.
    * @param storeOperations new value
    */
-  protected void setStoreOperations(final StoreOperations storeOperations) {
+  protected void setStoreOperations(final ManifestStoreOperations storeOperations) {
     this.storeOperations = storeOperations;
   }
 
@@ -325,16 +326,16 @@ public abstract class AbstractManifestCommitterTest
     // thread pool for task submission.
     setSubmitter(createCloseableTaskSubmitter(POOL_SIZE, TASK_IDS.getJobId()));
     // store operations for the target filesystem.
-    storeOperations = createStoreOperations();
+    storeOperations = createManifestStoreOperations();
   }
 
   /**
    * Overrride point: create the store operations.
    * @return store operations for this suite.
    */
-  protected StoreOperations createStoreOperations() throws IOException {
+  protected ManifestStoreOperations createManifestStoreOperations() throws IOException {
     final FileSystem fs = getFileSystem();
-    return ManifestCommitterSupport.createStoreOperations(fs.getConf(), fs, getTestPath());
+    return ManifestCommitterSupport.createManifestStoreOperations(fs.getConf(), fs, getTestPath());
   }
 
   @Override
@@ -649,7 +650,7 @@ public abstract class AbstractManifestCommitterTest
     // get the list of source paths
     Set<Path> filesToRename = manifest.getFilesToCommit()
         .stream()
-        .map(FileOrDirEntry::getSourcePath)
+        .map(FileEntry::getSourcePath)
         .collect(Collectors.toSet());
     // which must match that of all the files created
     Assertions.assertThat(filesToRename)
@@ -908,13 +909,13 @@ public abstract class AbstractManifestCommitterTest
     for (int i = 0; i < filesPerTaskAttempt; i++) {
       Path in = new Path(taDir, "dir-" + i);
       Path out = new Path(getDestDir(), "dir-" + i);
-      manifest.addDirectory(new FileOrDirEntry(in, out, 0, null));
+      manifest.addDirectory(DirEntry.dirEntry(out, 0));
       String name = taskStageConfig.getTaskAttemptId() + ".csv";
       Path src = new Path(in, name);
       Path dest = new Path(out, name);
       long fileSize = size + i * 1000L;
       manifest.addFileToCommit(
-          new FileOrDirEntry(src, dest, fileSize, null));
+          new FileEntry(src, dest, fileSize, null));
       totalDataSize.addAndGet(fileSize);
     }
 

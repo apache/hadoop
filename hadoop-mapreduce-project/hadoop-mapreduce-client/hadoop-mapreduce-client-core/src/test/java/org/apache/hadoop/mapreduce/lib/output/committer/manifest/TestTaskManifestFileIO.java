@@ -24,14 +24,15 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
 
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.assertFileOrDirEntryMatch;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.assertDirEntryMatch;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.assertFileEntryMatch;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.marshallPath;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.unmarshallPath;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry.dirEntry;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -70,14 +71,13 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
     describe("Save manifest file to string and back");
     Path subdirS = new Path(taPath, "subdir");
     Path subdirD = new Path(testPath, "subdir");
-    FileOrDirEntry subdirEntry = dirEntry(subdirS, subdirD);
-    source.addDirectory(subdirEntry);
+    source.addDirectory(DirEntry.dirEntry(subdirD, 0));
 
     // a file
     Path subfileS = new Path(subdirS, "file");
     Path subfileD = new Path(subdirD, "file");
     long len = 256L;
-    FileOrDirEntry subFileEntry = new FileOrDirEntry(subfileS,
+    FileEntry subFileEntry = new FileEntry(subfileS,
         subfileD, len, "etag");
     source.addFileToCommit(subFileEntry);
 
@@ -101,12 +101,12 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
 
     Assertions.assertThat(deser.getDirectoriesToCreate())
         .hasSize(1)
-        .allSatisfy(d -> assertFileOrDirEntryMatch(d, subdirS, subdirD, 0));
+        .allSatisfy(d -> assertDirEntryMatch(d, subdirD, 0));
     Assertions.assertThat(deser.getFilesToCommit())
         .hasSize(1)
-        .allSatisfy(d -> assertFileOrDirEntryMatch(d, subfileS, subfileD, len));
-    final FileOrDirEntry entry = deser.getFilesToCommit().get(0);
-    assertFileOrDirEntryMatch(entry, subfileS, subfileD, len);
+        .allSatisfy(d -> assertFileEntryMatch(d, subfileS, subfileD, len));
+    final FileEntry entry = deser.getFilesToCommit().get(0);
+    assertFileEntryMatch(entry, subfileS, subfileD, len);
     Assertions.assertThat(entry.getEtag())
         .describedAs("etag of %s", entry)
         .isEqualTo("etag");
@@ -123,8 +123,7 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
 
     Path subdirS = new Path(taPath, "subdir");
     Path subdirD = new Path(testPath, "subdir");
-    FileOrDirEntry subdirEntry = dirEntry(subdirS, subdirD);
-    source.addDirectory(subdirEntry);
+    source.addDirectory(DirEntry.dirEntry(subdirD, 0));
 
     // a file
     Path subfileS = new Path(subdirS, "file");
@@ -132,9 +131,9 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
     Path subfileD = new Path(subdirD, "file");
     long len = 256L;
     source.addFileToCommit(
-        new FileOrDirEntry(subfileS, subfileD, len, "tag1"));
+        new FileEntry(subfileS, subfileD, len, "tag1"));
     source.addFileToCommit(
-        new FileOrDirEntry(subfileS2, subfileD, len, "tag2"));
+        new FileEntry(subfileS2, subfileD, len, "tag2"));
     assertValidationFailureOnRoundTrip(source);
   }
 
@@ -146,7 +145,7 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
   @Test
   public void testValidateRejectsIncompleteFileEntry() throws Throwable {
     source.addFileToCommit(
-        new FileOrDirEntry(taPath, null, 0, null));
+        new FileEntry(taPath, null, 0, null));
     assertValidationFailureOnRoundTrip(source);
   }
 
@@ -156,7 +155,7 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
   @Test
   public void testValidateRejectsInvalidFileLength() throws Throwable {
     source.addFileToCommit(
-        new FileOrDirEntry(taPath, testPath, -1, null));
+        new FileEntry(taPath, testPath, -1, null));
     assertValidationFailureOnRoundTrip(source);
   }
 

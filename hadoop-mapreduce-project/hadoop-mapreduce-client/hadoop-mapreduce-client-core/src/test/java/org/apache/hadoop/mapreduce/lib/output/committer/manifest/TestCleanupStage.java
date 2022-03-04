@@ -27,14 +27,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.E_TIMEOUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.E_TRASH_DISABLED;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations.E_TIMEOUT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -62,7 +62,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   /**
    * Fault Injection.
    */
-  private UnreliableStoreOperations failures;
+  private UnreliableManifestStoreOperations failures;
 
   /**
    * Manifests created.
@@ -73,7 +73,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   public void setup() throws Exception {
     super.setup();
     failures
-        = new UnreliableStoreOperations(createStoreOperations());
+        = new UnreliableManifestStoreOperations(createManifestStoreOperations());
     setStoreOperations(failures);
     Path destDir = methodPath();
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
@@ -189,7 +189,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     // now throw it.
     intercept(PathIOException.class, E_TIMEOUT,
         result::maybeRethrowException);
-    StoreOperations.MoveToTrashResult moveResult = result.getMoveResult();
+    ManifestStoreOperations.MoveToTrashResult moveResult = result.getMoveResult();
     // there's an exception here
     Assertions.assertThat(moveResult.getException())
         .describedAs("exception in " + moveResult)

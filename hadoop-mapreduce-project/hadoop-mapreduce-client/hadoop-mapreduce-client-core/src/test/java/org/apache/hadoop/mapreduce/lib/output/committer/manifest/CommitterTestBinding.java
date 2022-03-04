@@ -33,8 +33,8 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitter.TASK_COMMITTER;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createIOStatisticsStore;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.randomJobId;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createIOStatisticsStore;
 
 /**
  * This class represents a binding to a job in the target dir with TA, JA
@@ -128,7 +128,7 @@ class CommitterTestBinding implements
    */
   StageConfig createStageConfig(Path outputPath) {
     return createCommitterConfig(outputPath)
-        .createJobStageConfig()
+        .createStageConfig()
         .withProgressable(new ProgressCallback());
   }
 

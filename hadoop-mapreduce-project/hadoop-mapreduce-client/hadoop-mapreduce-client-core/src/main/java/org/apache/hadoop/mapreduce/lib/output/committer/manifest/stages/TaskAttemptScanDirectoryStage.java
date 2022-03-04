@@ -30,7 +30,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.DurationInfo;
 
@@ -39,7 +40,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_FILE_COUNT_MEAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_FILE_SIZE_MEAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_SCAN_DIRECTORY;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry.dirEntry;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createTaskManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.maybeAddIOStatistics;
 
@@ -76,9 +76,9 @@ public final class TaskAttemptScanDirectoryStage
     final int depth = scanDirectoryTree(manifest, taskAttemptDir,
         getDestinationDir(),
         0);
-    List<FileOrDirEntry> filesToCommit = manifest.getFilesToCommit();
+    List<FileEntry> filesToCommit = manifest.getFilesToCommit();
     LongSummaryStatistics fileSummary = filesToCommit.stream()
-        .mapToLong(FileOrDirEntry::getSize)
+        .mapToLong(FileEntry::getSize)
         .summaryStatistics();
     long fileDataSize = fileSummary.getSum();
     long fileCount = fileSummary.getCount();
@@ -145,7 +145,7 @@ public final class TaskAttemptScanDirectoryStage
         final FileStatus st = listing.next();
         if (st.isFile()) {
           files++;
-          final FileOrDirEntry entry = fileEntry(st, destDir);
+          final FileEntry entry = fileEntry(st, destDir);
           manifest.addFileToCommit(entry);
           LOG.debug("To rename: {}", entry);
         } else {
@@ -164,7 +164,7 @@ public final class TaskAttemptScanDirectoryStage
     // if this is not the base directory.
     // it must exist
     if (depth > 0) {
-      manifest.addDirectory(dirEntry(srcDir, destDir));
+      manifest.addDirectory(DirEntry.dirEntry(destDir, 0));
     }
 
     // now scan the subdirectories

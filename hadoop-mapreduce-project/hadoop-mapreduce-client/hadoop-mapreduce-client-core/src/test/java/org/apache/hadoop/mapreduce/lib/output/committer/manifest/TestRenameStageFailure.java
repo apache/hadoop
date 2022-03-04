@@ -32,18 +32,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.RenameFilesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations.SIMULATED_FAILURE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.SIMULATED_FAILURE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.FAILED_TO_RENAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -61,7 +61,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
   /**
    * Fault Injection.
    */
-  private UnreliableStoreOperations failures;
+  private UnreliableManifestStoreOperations failures;
 
   /** etags returned in listing/file status operations? */
   private boolean etagsSupported;
@@ -94,9 +94,9 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     etagsPreserved = fs.hasPathCapability(methodPath,
         CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME);
 
-    final StoreOperations wrappedOperations = getStoreOperations();
+    final ManifestStoreOperations wrappedOperations = getStoreOperations();
     failures
-        = new UnreliableStoreOperations(wrappedOperations);
+        = new UnreliableManifestStoreOperations(wrappedOperations);
     setStoreOperations(failures);
     resilientCommit = wrappedOperations.storeSupportsResilientCommit();
   }
@@ -130,8 +130,8 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     // which one of whose renames will fail
     TaskManifest manifest = new TaskManifest();
     createFileset(destDir, jobAttemptTaskSubDir, manifest);
-    final List<FileOrDirEntry> filesToCommit = manifest.getFilesToCommit();
-    final FileOrDirEntry entry = filesToCommit.get(FAILING_FILE_INDEX);
+    final List<FileEntry> filesToCommit = manifest.getFilesToCommit();
+    final FileEntry entry = filesToCommit.get(FAILING_FILE_INDEX);
     failures.addRenameSourceFilesToFail(entry.getSourcePath());
 
     // rename MUST fail
@@ -159,11 +159,11 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
     Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
     TaskManifest manifest = new TaskManifest();
-    final List<FileOrDirEntry> filesToCommit = manifest.getFilesToCommit();
+    final List<FileEntry> filesToCommit = manifest.getFilesToCommit();
 
     Path source = new Path(jobAttemptTaskSubDir, "source.parquet");
     Path dest = new Path(destDir, "destdir.parquet");
-    filesToCommit.add(new FileOrDirEntry(source, dest, 0, null));
+    filesToCommit.add(new FileEntry(source, dest, 0, null));
     final FileNotFoundException ex = expectRenameFailure(
         new RenameFilesStage(stageConfig),
         manifest,
@@ -188,8 +188,8 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     TaskManifest manifest = new TaskManifest();
     createFileset(destDir, jobAttemptTaskSubDir, manifest);
 
-    final List<FileOrDirEntry> filesToCommit = manifest.getFilesToCommit();
-    final FileOrDirEntry entry = filesToCommit.get(FAILING_FILE_INDEX);
+    final List<FileEntry> filesToCommit = manifest.getFilesToCommit();
+    final FileEntry entry = filesToCommit.get(FAILING_FILE_INDEX);
     failures.addRenameSourceFilesToFail(entry.getSourcePath());
 
     // switch to rename returning false.; again, this must
@@ -213,7 +213,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
       Path src = new Path(jobAttemptTaskSubDir, name);
       Path dest = new Path(destDir, name);
       ContractTestUtils.touch(fs, src);
-      final FileOrDirEntry entry = createEntryWithEtag(src, dest);
+      final FileEntry entry = createEntryWithEtag(src, dest);
       manifest.addFileToCommit(entry);
     }
   }
@@ -225,7 +225,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
    * @return entry
    * @throws IOException if getFileStatus failed.
    */
-  private FileOrDirEntry createEntryWithEtag(final Path src, final Path dest)
+  private FileEntry createEntryWithEtag(final Path src, final Path dest)
       throws IOException {
     final String etag;
     if (etagsSupported) {
@@ -233,7 +233,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     } else {
       etag = null;
     }
-    final FileOrDirEntry entry = new FileOrDirEntry(src, dest, 0, etag);
+    final FileEntry entry = new FileEntry(src, dest, 0, etag);
     return entry;
   }
 

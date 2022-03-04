@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
@@ -35,7 +35,7 @@ import org.apache.hadoop.util.JsonSerialization;
  * Files have etags of their filename; if you move a file without changing its
  * name, the etag is preserved.
  */
-public class StubStoreOperations extends StoreOperations {
+public class StubStoreOperations extends ManifestStoreOperations {
 
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {

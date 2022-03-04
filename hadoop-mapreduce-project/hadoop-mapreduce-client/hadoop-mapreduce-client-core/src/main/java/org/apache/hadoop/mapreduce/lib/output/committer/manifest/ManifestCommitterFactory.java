@@ -43,8 +43,7 @@ public class ManifestCommitterFactory extends PathOutputCommitterFactory {
   /**
    * Name of this factory.
    */
-  public static final String NAME
-      = "org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory";
+  public static final String NAME = ManifestCommitterFactory.class.getName();
 
   @Override
   public ManifestCommitter createOutputCommitter(final Path outputPath,

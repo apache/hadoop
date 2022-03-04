@@ -131,8 +131,8 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * The list of files to commit from this task attempt, including
    * precalculated destination and size.
    */
-  @JsonProperty("filesToCommit")
-  private final List<FileOrDirEntry> filesToCommit = new ArrayList<>();
+  @JsonProperty("files")
+  private final List<FileEntry> filesToCommit = new ArrayList<>();
 
   /**
    * The list of directories needed by this task attempt, both
@@ -140,8 +140,8 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * All these directories must exist in the destination before any of
    * the files can be renamed there.
    */
-  @JsonProperty("directoriesToCreate")
-  private final List<FileOrDirEntry> directoriesToCreate = new ArrayList<>();
+  @JsonProperty("directories")
+  private final List<DirEntry> directoriesToCreate = new ArrayList<>();
 
   /**
    * Any custom extra data committers may choose to add.
@@ -231,11 +231,11 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * Add a file to the list of files to commit.
    * @param entry entry  to add
    */
-  public void addFileToCommit(FileOrDirEntry entry) {
+  public void addFileToCommit(FileEntry entry) {
     filesToCommit.add(entry);
   }
 
-  public List<FileOrDirEntry> getFilesToCommit() {
+  public List<FileEntry> getFilesToCommit() {
     return filesToCommit;
   }
 
@@ -245,10 +245,10 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    */
   @JsonIgnore
   public long getTotalFileSize() {
-    return filesToCommit.stream().mapToLong(FileOrDirEntry::getSize).sum();
+    return filesToCommit.stream().mapToLong(FileEntry::getSize).sum();
   }
 
-  public List<FileOrDirEntry> getDirectoriesToCreate() {
+  public List<DirEntry> getDirectoriesToCreate() {
     return directoriesToCreate;
   }
 
@@ -256,7 +256,7 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * Add a directory to the list of directories to create.
    * @param entry entry  to add
    */
-  public void addDirectory(FileOrDirEntry entry) {
+  public void addDirectory(DirEntry entry) {
     directoriesToCreate.add(entry);
   }
 
@@ -295,8 +295,8 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
     validateCollectionClass(extraData.keySet(), String.class);
     validateCollectionClass(extraData.values(), String.class);
     Set<String> destinations = new HashSet<>(filesToCommit.size());
-    validateCollectionClass(filesToCommit, FileOrDirEntry.class);
-    for (FileOrDirEntry c : filesToCommit) {
+    validateCollectionClass(filesToCommit, FileEntry.class);
+    for (FileEntry c : filesToCommit) {
       c.validate();
       verify(!destinations.contains(c.getDest()),
           "Destination %s is written to by more than one pending commit",

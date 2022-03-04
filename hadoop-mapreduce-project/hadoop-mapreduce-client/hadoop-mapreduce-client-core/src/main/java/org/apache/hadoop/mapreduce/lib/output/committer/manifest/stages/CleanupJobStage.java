@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -192,7 +192,7 @@ public class CleanupJobStage extends
       }
     }
 
-    StoreOperations.MoveToTrashResult moveToTrashResult = null;
+    ManifestStoreOperations.MoveToTrashResult moveToTrashResult = null;
     if (moveToTrash) {
       // move temp dir to trash.
       progress();
@@ -481,14 +481,14 @@ public class CleanupJobStage extends
      * Result of any move to trash call; null if none
      * took place.
      */
-    private final StoreOperations.MoveToTrashResult moveResult;
+    private final ManifestStoreOperations.MoveToTrashResult moveResult;
 
     public Result(
         final Outcome outcome,
         final Path directory,
         final int deleteCalls,
         IOException exception,
-        StoreOperations.MoveToTrashResult moveResult) {
+        ManifestStoreOperations.MoveToTrashResult moveResult) {
       this.outcome = requireNonNull(outcome, "outcome");
       this.directory = directory;
       this.deleteCalls = deleteCalls;
@@ -529,7 +529,7 @@ public class CleanupJobStage extends
       return exception;
     }
 
-    public StoreOperations.MoveToTrashResult getMoveResult() {
+    public ManifestStoreOperations.MoveToTrashResult getMoveResult() {
       return moveResult;
     }
 

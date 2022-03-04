@@ -17,14 +17,13 @@
  */
 
 /**
- * Implementation classes for the manifest committer.
- * Nothing outside this module should be using these classes,
- * except where explicitly stated.
+ * These test suites are subclassed in internal modules (hadoop-azure) and
+ * externally for gcs integration testing.
+ * Do test with both before making changes.
  */
-
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate("integration tests")
 @InterfaceStability.Unstable
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

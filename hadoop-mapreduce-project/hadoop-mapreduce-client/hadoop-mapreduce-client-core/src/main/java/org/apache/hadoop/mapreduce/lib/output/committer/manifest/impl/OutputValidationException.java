@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 
@@ -25,6 +26,7 @@ import org.apache.hadoop.fs.PathIOException;
  * Exception raised during validation.
  * This can be treated differently from other outcomes.
  */
+@InterfaceAudience.Private
 public class OutputValidationException extends PathIOException {
   public OutputValidationException(Path path, String error) {
     super(path.toUri().toString(), error);

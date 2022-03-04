@@ -41,8 +41,8 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestS
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperationsThroughFileSystem;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbortTaskStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitJobStage;
@@ -145,7 +145,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @param context job/task context
    * @throws IOException failure.
    */
-  ManifestCommitter(final Path outputPath,
+  public ManifestCommitter(final Path outputPath,
       final TaskAttemptContext context) throws IOException {
     super(outputPath, context);
     this.destinationDir = resolveDestinationDirectory(outputPath,
@@ -187,13 +187,14 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @param jobContext Context of the job whose output is being written.
    * @throws IOException IO Failure.
    */
+  @Override
   public void setupJob(final JobContext jobContext) throws IOException {
     ManifestCommitterConfig committerConfig = enterCommitter(false,
         jobContext);
     StageConfig stageConfig =
         committerConfig
-            .createJobStageConfig()
-            .withOperations(createStoreOperations())
+            .createStageConfig()
+            .withOperations(createManifestStoreOperations())
             .build();
     // set up the job.
     new SetupJobStage(stageConfig)
@@ -211,14 +212,15 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @param context task context.
    * @throws IOException IO Failure.
    */
+  @Override
   public void setupTask(final TaskAttemptContext context)
       throws IOException {
     ManifestCommitterConfig committerConfig =
         enterCommitter(true, context);
     StageConfig stageConfig =
         committerConfig
-            .createJobStageConfig()
-            .withOperations(createStoreOperations())
+            .createStageConfig()
+            .withOperations(createManifestStoreOperations())
             .build();
     // create task attempt dir; delete if present. Or fail?
     new SetupTaskStage(stageConfig).apply("");
@@ -232,6 +234,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @return true
    * @throws IOException IO Failure.
    */
+  @Override
   public boolean needsTaskCommit(final TaskAttemptContext context)
       throws IOException {
     LOG.info("Probe for needsTaskCommit({})",
@@ -290,13 +293,14 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @param context task context.
    * @throws IOException IO Failure.
    */
+  @Override
   public void commitTask(final TaskAttemptContext context)
       throws IOException {
     ManifestCommitterConfig committerConfig = enterCommitter(true,
         context);
     try {
-      StageConfig stageConfig = committerConfig.createJobStageConfig()
-          .withOperations(createStoreOperations())
+      StageConfig stageConfig = committerConfig.createStageConfig()
+          .withOperations(createManifestStoreOperations())
           .build();
       taskAttemptCommittedManifest = new CommitTaskStage(stageConfig)
           .apply(null).getTaskManifest();
@@ -316,14 +320,15 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @param context task context
    * @throws IOException failure during the delete
    */
+  @Override
   public void abortTask(final TaskAttemptContext context)
       throws IOException {
     ManifestCommitterConfig committerConfig = enterCommitter(true,
         context);
     try {
       new AbortTaskStage(
-          committerConfig.createJobStageConfig()
-              .withOperations(createStoreOperations())
+          committerConfig.createStageConfig()
+              .withOperations(createManifestStoreOperations())
               .build())
           .apply(false);
     } finally {
@@ -341,7 +346,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
       ManifestCommitterConfig committerConfig) {
     if (successReport == null) {
       successReport = createManifestOutcome(
-          committerConfig.createJobStageConfig(), activeStage);
+          committerConfig.createStageConfig(), activeStage);
     }
     return successReport;
   }
@@ -366,9 +371,9 @@ public class ManifestCommitter extends PathOutputCommitter implements
     IOException failure = null;
     try (CloseableTaskPoolSubmitter ioProcs =
              committerConfig.createSubmitter();
-         StoreOperations storeOperations = createStoreOperations()) {
+         ManifestStoreOperations storeOperations = createManifestStoreOperations()) {
       // the stage config will be shared across all stages.
-      StageConfig stageConfig = committerConfig.createJobStageConfig()
+      StageConfig stageConfig = committerConfig.createStageConfig()
           .withOperations(storeOperations)
           .withIOProcessors(ioProcs)
           .build();
@@ -486,8 +491,8 @@ public class ManifestCommitter extends PathOutputCommitter implements
              committerConfig.createSubmitter()) {
 
       return new CleanupJobStage(
-          committerConfig.createJobStageConfig()
-              .withOperations(createStoreOperations())
+          committerConfig.createStageConfig()
+              .withOperations(createManifestStoreOperations())
               .withIOProcessors(ioProcs)
               .build())
           .apply(cleanupStageOptionsFromConfig(
@@ -500,6 +505,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * Output path: destination directory of the job.
    * @return the overall job destination directory.
    */
+  @Override
   public Path getOutputPath() {
     return getDestinationDir();
   }
@@ -509,6 +515,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * This is null if the task does not have one.
    * @return a path.
    */
+  @Override
   public Path getWorkPath() {
     return getTaskAttemptDir();
   }
@@ -640,15 +647,15 @@ public class ManifestCommitter extends PathOutputCommitter implements
   }
 
   /**
-   * Create a FS level store operations for the destination store.
+   * Create manifest store operations for the destination store.
    * This MUST NOT be used for the success report operations, as
    * they may be to a different filesystem.
    * This is a point which can be overridden during testing.
    * @return a new store operations instance bonded to the destination fs.
    * @throws IOException failure to instantiate.
    */
-  protected StoreOperations createStoreOperations() throws IOException {
-    return ManifestCommitterSupport.createStoreOperations(
+  protected ManifestStoreOperations createManifestStoreOperations() throws IOException {
+    return ManifestCommitterSupport.createManifestStoreOperations(
         baseConfig.getConf(),
         baseConfig.getDestinationFileSystem(),
         baseConfig.getDestinationDir());
@@ -717,8 +724,11 @@ public class ManifestCommitter extends PathOutputCommitter implements
       report.recordJobFailure(thrown);
     }
     report.putDiagnostic(STAGE, activeStage);
+    // the store operations here is explicitly created for the FS where
+    // the reports go, which may not be the target FS of the job.
+
     final FileSystem fs = path.getFileSystem(conf);
-    try (StoreOperations operations = new StoreOperationsThroughFileSystem(fs)) {
+    try (ManifestStoreOperations operations = new ManifestStoreOperationsThroughFileSystem(fs)) {
       if (!overwrite) {
         // check for file existence so there is no need to worry about
         // precisely what exception is raised when overwrite=false and dest file

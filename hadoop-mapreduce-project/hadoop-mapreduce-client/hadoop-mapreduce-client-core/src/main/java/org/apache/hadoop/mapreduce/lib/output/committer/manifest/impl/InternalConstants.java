@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
@@ -32,6 +34,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 /**
  * Constants internal to the manifest committer.
  */
+@InterfaceAudience.Private
 public final class InternalConstants {
   private InternalConstants() {
   }

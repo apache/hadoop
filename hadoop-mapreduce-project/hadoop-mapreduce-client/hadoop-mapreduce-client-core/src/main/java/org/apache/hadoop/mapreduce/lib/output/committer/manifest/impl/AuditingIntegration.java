@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConfig;
 
@@ -30,8 +31,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Helper class to support integration with Hadoop 3.3.2+ Auditing.
  * This MUST BE the sole place where fs.audit methods are used, so can be replaced
  * by a stub class on any backport.
- * All use of auditing is currently commented out so it *is the stub*
  */
+@InterfaceAudience.Private
 public final class AuditingIntegration {
   private AuditingIntegration() {
   }
@@ -69,7 +70,6 @@ public final class AuditingIntegration {
     currentAuditContext().remove(CONTEXT_ATTR_STAGE);
   }
 
-
   /**
    * Remove commit info at the end of the task or job.
    */
@@ -77,8 +77,6 @@ public final class AuditingIntegration {
     currentAuditContext().remove(PARAM_JOB_ID);
     currentAuditContext().remove(CONTEXT_ATTR_TASK_ATTEMPT_ID);
   }
-
-
 
   /**
    * Update the thread context with the stage name and

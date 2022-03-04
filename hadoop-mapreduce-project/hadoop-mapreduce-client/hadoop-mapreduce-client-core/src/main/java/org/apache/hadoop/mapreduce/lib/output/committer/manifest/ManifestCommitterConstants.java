@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperationsThroughFileSystem;
 
 /**
  * Public constants for the manifest committer.
@@ -88,7 +89,7 @@ public final class ManifestCommitterConstants {
    * Committer classname as recorded in the committer _SUCCESS file.
    */
   public static final String MANIFEST_COMMITTER_CLASSNAME =
-      "org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitter";
+      ManifestCommitter.class.getName();
 
   /**
    * Marker file to create on success: {@value}.
@@ -263,8 +264,7 @@ public final class ManifestCommitterConstants {
    * Value: {@value}.
    */
   public static final String STORE_OPERATIONS_CLASS_DEFAULT =
-      "org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl" +
-          ".StoreOperationsThroughFileSystem";
+      ManifestStoreOperationsThroughFileSystem.class.getName();
 
   /**
    * Stage attribute in audit context: {@value}.

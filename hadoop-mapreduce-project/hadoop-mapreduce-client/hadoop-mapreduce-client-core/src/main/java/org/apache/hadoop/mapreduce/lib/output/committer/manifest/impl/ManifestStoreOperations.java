@@ -24,12 +24,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.Duration;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
 
@@ -38,15 +40,14 @@ import static java.util.Objects.requireNonNull;
 /**
  * FileSystem operations which are needed to generate the task manifest.
  * The specific choice of which implementation to use is configurable.
- *
- * If a store provides a custom file commit operation then it must
- * offer a subclass of this which returns true in
- * {@link #storeSupportsResilientCommit()}
- * and then implement
- * {@link #commitFile(FileOrDirEntry)}.
- *
+ * Object store implementations MAY subclass if they
+ * need to implement resilient commit operations.
+ * However, the actual API MUST NOT be used outside
+ * the manifest committer and its tests.
  */
-public abstract class StoreOperations implements Closeable {
+@InterfaceAudience.LimitedPrivate("mapreduce, object-stores")
+@InterfaceStability.Unstable
+public abstract class ManifestStoreOperations implements Closeable {
 
   /**
    * Bind to the filesystem.
@@ -156,8 +157,8 @@ public abstract class StoreOperations implements Closeable {
       FileStatus st) throws IOException;
 
   /**
-   * Save a task manifest by create(); there's no attempt at
-   * renaming anything here.
+   * Save a task manifest by {@code FileSystem.create(path)}.
+   * there's no attempt at renaming anything here.
    * @param manifestData the manifest/success file
    * @param path temp path for the initial save
    * @param overwrite should create(overwrite=true) be used?
@@ -212,7 +213,7 @@ public abstract class StoreOperations implements Closeable {
 
   /**
    * Does the store provide rename resilience through an
-   * implementation of {@link #commitFile(FileOrDirEntry)}?
+   * implementation of {@link #commitFile(FileEntry)}?
    * If true then that method will be invoked to commit work
    * @return true if resilient commit support is available.
    */
@@ -229,18 +230,21 @@ public abstract class StoreOperations implements Closeable {
    *
    * If etags were collected during task commit, these will be
    * in the entries passed in here.
+   *
+   * The base implementation always raises
+   * {@code UnsupportedOperationException}
    * @param entry entry to commit
    * @return the result of the commit
    * @throws IOException failure.
    * @throws UnsupportedOperationException if not available.
    *
    */
-  public CommitFileResult commitFile(FileOrDirEntry entry) throws IOException {
+  public CommitFileResult commitFile(FileEntry entry) throws IOException {
     throw new UnsupportedOperationException("Resilient commit not supported");
   }
 
   /**
-   * Outcome from the operation {@link #commitFile(FileOrDirEntry)}.
+   * Outcome from the operation {@link #commitFile(FileEntry)}.
    * As a rename failure MUST raise an exception, this result
    * only declares whether or not some form of recovery took place.
    */

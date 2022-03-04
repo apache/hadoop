@@ -34,8 +34,8 @@ import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractManifestCommitterTest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
@@ -47,14 +47,14 @@ import static org.junit.Assume.assumeTrue;
  * in ABFS (preservation across renames) and in the client (are they consisten
  * in LIST and HEAD calls)
  */
-public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterTest {
+public class ITestAbfsManifestManifestStoreOperations extends AbstractManifestCommitterTest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestAbfsManifestStoreOperations.class);
+      LoggerFactory.getLogger(ITestAbfsManifestManifestStoreOperations.class);
 
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsManifestStoreOperations() throws Exception {
+  public ITestAbfsManifestManifestStoreOperations() throws Exception {
     binding = new ABFSContractTestBinding();
   }
 
@@ -89,7 +89,7 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
     final Path path = methodPath();
     final FileSystem fs = getFileSystem();
     ContractTestUtils.touch(fs, path);
-    final StoreOperations operations = createStoreOperations();
+    final ManifestStoreOperations operations = createManifestStoreOperations();
     Assertions.assertThat(operations)
         .describedAs("Store operations class loaded via Configuration")
         .isInstanceOf(AbfsManifestStoreOperations.class);
@@ -124,7 +124,7 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
 
     ContractTestUtils.createFile(fs, src, true,
         "data1234".getBytes(StandardCharsets.UTF_8));
-    final StoreOperations operations = createStoreOperations();
+    final ManifestStoreOperations operations = createManifestStoreOperations();
     final FileStatus srcStatus = operations.getFileStatus(src);
     final String srcTag = operations.getEtag(srcStatus);
     LOG.info("etag of file 1 is \"{}\"", srcTag);
@@ -153,7 +153,7 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
 
     ContractTestUtils.createFile(fs, src, true,
         "sample data".getBytes(StandardCharsets.UTF_8));
-    final StoreOperations operations = createStoreOperations();
+    final ManifestStoreOperations operations = createManifestStoreOperations();
     final FileStatus srcStatus = operations.getFileStatus(src);
     final String srcTag = operations.getEtag(srcStatus);
     LOG.info("etag of short file is \"{}\"", srcTag);
@@ -163,7 +163,7 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
         .isNotBlank();
 
     // rename
-    operations.commitFile(new FileOrDirEntry(src, dest, 0, srcTag));
+    operations.commitFile(new FileEntry(src, dest, 0, srcTag));
 
     // validate
     FileStatus destStatus = operations.getFileStatus(dest);

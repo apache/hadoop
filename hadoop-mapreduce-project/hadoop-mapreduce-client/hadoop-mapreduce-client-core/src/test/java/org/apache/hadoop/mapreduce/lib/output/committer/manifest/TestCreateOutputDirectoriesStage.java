@@ -29,21 +29,22 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CreateOutputDirectoriesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 import org.apache.hadoop.util.Lists;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry.dirEntry;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -69,14 +70,15 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
   protected static final int TASK_ATTEMPT_COUNT = 10;
 
   /**
-   * How many delete calls for the root job delete?
+   * Deep tree width, subclasses (including in external projects)
+   * may change.
    */
-  protected static final int ROOT_DELETE_COUNT = 1;
+  protected static final int DEEP_TREE_WIDTH = 4;
 
   /**
    * Fault Injection.
    */
-  private UnreliableStoreOperations failures;
+  private UnreliableManifestStoreOperations failures;
   private Path destDir;
   private CreateOutputDirectoriesStage mkdirStage;
   private StageConfig stageConfig;
@@ -89,7 +91,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     // clean up dest dir completely
     destDir.getFileSystem(getConfiguration()).delete(destDir, true);
     failures
-        = new UnreliableStoreOperations(createStoreOperations());
+        = new UnreliableManifestStoreOperations(createManifestStoreOperations());
     setStoreOperations(failures);
     stageConfig = createStageConfigForJob(JOB1, destDir)
         .withPrepareParentDirectories(false)
@@ -103,12 +105,12 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
   @Test
   public void testPrepareSomeDirs() throws Throwable {
     // assert original count of dirs created == 2 : job and task manifest
-    final int initialCount = 2;
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, initialCount);
-
+    final int directoriesCreatedInSetup = 2;
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, directoriesCreatedInSetup);
+    final long initialFileStatusCount = lookupCounterStatistic(iostats, OP_GET_FILE_STATUS);
     final int dirCount = 8;
     final List<Path> dirs = subpaths(destDir, dirCount);
-    final List<FileOrDirEntry> dirEntries = dirEntries(dirs);
+    final List<DirEntry> dirEntries = dirEntries(dirs);
 
     // two manifests with duplicate entries
     final List<TaskManifest> manifests = Lists.newArrayList(
@@ -122,7 +124,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
 
     // now dirCount new dirs are added.
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, initialCount + dirCount);
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, directoriesCreatedInSetup + dirCount);
 
     // now rerun the same preparation sequence
     final CreateOutputDirectoriesStage s2 =
@@ -136,13 +138,12 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
         .containsExactlyInAnyOrderElementsOf(dirs);
     LOG.info("Job Statistics after second pass\n{}", ioStatisticsToPrettyString(iostats));
 
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, initialCount + dirCount * 2);
+    // both runs probed all dest dirs
+    verifyStatisticCounterValue(iostats, OP_GET_FILE_STATUS, initialFileStatusCount + dirCount * 2);
+    // but no new mkdir calls were made the second time
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, directoriesCreatedInSetup + dirCount);
     verifyStatisticCounterValue(iostats, OP_DELETE_FILE_UNDER_DESTINATION, 0);
     verifyStatisticCounterValue(iostats, OP_IS_FILE, 0);
-
-    // and they are also tagged as created in the map
-    dirs.forEach(d ->
-        assertDirMapStatus(r2, d, CreateOutputDirectoriesStage.DirMapState.dirWasCreated));
   }
 
   /**
@@ -150,13 +151,13 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
    * @param paths list of paths
    * @return list of entries where src == dest.
    */
-  protected List<FileOrDirEntry> dirEntries(Collection<Path> paths) {
+  protected List<DirEntry> dirEntries(Collection<Path> paths) {
     return paths.stream()
-        .map(p -> dirEntry(p, p))
+        .map(p -> DirEntry.dirEntry(p, 0))
         .collect(Collectors.toList());
   }
 
-  protected TaskManifest manifestWithDirsToCreate(List<FileOrDirEntry> dirEntries) {
+  protected TaskManifest manifestWithDirsToCreate(List<DirEntry> dirEntries) {
     final TaskManifest taskManifest = new TaskManifest();
     taskManifest.getDirectoriesToCreate().addAll(dirEntries);
     return taskManifest;
@@ -220,7 +221,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
         .join();
 
     // manifest dir entry list is only that bottom list
-    final List<FileOrDirEntry> dirEntries = dirEntries(level2);
+    final List<DirEntry> dirEntries = dirEntries(level2);
 
 
     final List<TaskManifest> manifests = Lists.newArrayList(
@@ -276,7 +277,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
    * @return number of subdirs to create at each level. Must be at least 2
    */
   protected int getDeepTreeWidth() {
-    return 4;
+    return DEEP_TREE_WIDTH;
   }
 
 

@@ -250,13 +250,13 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   }
 
   /**
-   * Create the job stage config from the committer
+   * Create the stage config from the committer
    * configuration.
    * This does not bind the store operations
    * or processors.
    * @return a stage config with configuration options passed in.
    */
-  StageConfig createJobStageConfig() {
+  StageConfig createStageConfig() {
     StageConfig stageConfig = new StageConfig();
     stageConfig
         .withIOStatistics(iostatistics)

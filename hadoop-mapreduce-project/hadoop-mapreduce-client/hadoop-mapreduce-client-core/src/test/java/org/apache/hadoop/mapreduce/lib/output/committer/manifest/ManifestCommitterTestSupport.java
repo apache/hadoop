@@ -37,9 +37,10 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -196,8 +197,8 @@ public final class ManifestCommitterTestSupport {
    * @param dest dest path
    * @param l length
    */
-  static void assertFileOrDirEntryMatch(
-      final FileOrDirEntry fileOrDir,
+  static void assertFileEntryMatch(
+      final FileEntry fileOrDir,
       final Path src,
       final Path dest,
       final long l) {
@@ -212,6 +213,27 @@ public final class ManifestCommitterTestSupport {
         .describedAs("Size of " + entry)
         .isEqualTo(l);
   }
+
+  /**
+   * Assert that a dir entry matches the given parameters.
+   * Matching on paths, not strings, helps validate marshalling.
+   * @param fileOrDir file or directory
+   * @param dest dest path
+   * @param type type
+   */
+  static void assertDirEntryMatch(
+      final DirEntry fileOrDir,
+      final Path dest,
+      final long type) {
+    String entry = fileOrDir.toString();
+    assertThat(fileOrDir.getDestPath())
+        .describedAs("Dest path of " + entry)
+        .isEqualTo(dest);
+    assertThat(fileOrDir.getType())
+        .describedAs("type of " + entry)
+        .isEqualTo(type);
+  }
+
 
   /**
    * Enable Trash in a filesystem configuration; needed

@@ -27,22 +27,23 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.OPERATION_TIMED_OUT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem.E_TRASH_FALSE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperationsThroughFileSystem.E_TRASH_FALSE;
 
 /**
- * Wrap an existing StoreOperations implementation and fail on
+ * Wrap an existing {@link ManifestStoreOperations} implementation and fail on
  * specific paths.
  * This is for testing. It could be implemented via
  * Mockito 2 spy code but is not so that:
@@ -51,11 +52,12 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Sto
  * the production module -to allow for downstream tests to adopt it.
  * 3. You can actually debug what's going on.
  */
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class UnreliableStoreOperations extends StoreOperations {
+public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      UnreliableStoreOperations.class);
+      UnreliableManifestStoreOperations.class);
 
   /**
    * The timeout message ABFS raises.
@@ -71,7 +73,7 @@ public class UnreliableStoreOperations extends StoreOperations {
   /**
    * Underlying store operations to wrap.
    */
-  private final StoreOperations wrappedOperations;
+  private final ManifestStoreOperations wrappedOperations;
 
   /**
    * Paths of delete operations to fail.
@@ -138,7 +140,7 @@ public class UnreliableStoreOperations extends StoreOperations {
    * Constructor.
    * @param wrappedOperations operations to wrap.
    */
-  public UnreliableStoreOperations(final StoreOperations wrappedOperations) {
+  public UnreliableManifestStoreOperations(final ManifestStoreOperations wrappedOperations) {
     this.wrappedOperations = wrappedOperations;
   }
 
@@ -387,7 +389,7 @@ public class UnreliableStoreOperations extends StoreOperations {
   }
 
   @Override
-  public CommitFileResult commitFile(final FileOrDirEntry entry)
+  public CommitFileResult commitFile(final FileEntry entry)
       throws IOException {
     return wrappedOperations.commitFile(entry);
   }

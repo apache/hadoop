@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -51,7 +51,7 @@ public class RenameFilesStage extends
   /**
    * List of all files committed.
    */
-  private final List<FileOrDirEntry> filesCommitted = new ArrayList<>();
+  private final List<FileEntry> filesCommitted = new ArrayList<>();
 
   /**
    * Total file size.
@@ -67,7 +67,7 @@ public class RenameFilesStage extends
    * Access is not synchronized.
    * @return direct access to the list of files.
    */
-  public synchronized  List<FileOrDirEntry> getFilesCommitted() {
+  public synchronized  List<FileEntry> getFilesCommitted() {
     return filesCommitted;
   }
 
@@ -101,7 +101,7 @@ public class RenameFilesStage extends
     // list of files to commit.
     // Which Guava can do in a zero-copy concatenated iterator
 
-    final Iterable<FileOrDirEntry> filesToCommit = concat(taskManifests.stream()
+    final Iterable<FileEntry> filesToCommit = concat(taskManifests.stream()
         .map(TaskManifest::getFilesToCommit)
         .collect(Collectors.toList()));
 
@@ -111,7 +111,7 @@ public class RenameFilesStage extends
         .run(this::commitOneFile);
 
     // synchronized block to keep spotbugs happy.
-    List<FileOrDirEntry> committed = getFilesCommitted();
+    List<FileEntry> committed = getFilesCommitted();
     LOG.info("{}: Files committed: {}. Total size {}",
         getName(), committed.size(), getTotalFileSize());
 
@@ -120,7 +120,7 @@ public class RenameFilesStage extends
     success.getFilenames().addAll(
         committed
             .subList(0, Math.min(committed.size(), SUCCESS_MARKER_FILE_LIMIT))
-            .stream().map(FileOrDirEntry::getDest)
+            .stream().map(FileEntry::getDest)
             .collect(Collectors.toList()));
 
     success.setSuccess(true);
@@ -134,7 +134,7 @@ public class RenameFilesStage extends
    * @param entry entry to commit.
    * @throws IOException faiure.
    */
-  private void commitOneFile(FileOrDirEntry entry) throws IOException {
+  private void commitOneFile(FileEntry entry) throws IOException {
     updateAuditContext(OP_STAGE_JOB_RENAME_FILES);
 
     // report progress back

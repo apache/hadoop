@@ -32,10 +32,10 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestJobThroughManifestCommitter;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
 
@@ -85,9 +85,9 @@ public class ITestAbfsJobThroughManifestCommitter
       List<Path> files,
       TaskManifest manifest) throws IOException {
     super.validateTaskAttemptManifest(attemptId, files, manifest);
-    final List<FileOrDirEntry> commit = manifest.getFilesToCommit();
-    final StoreOperations operations = getStoreOperations();
-    for (FileOrDirEntry entry : commit) {
+    final List<FileEntry> commit = manifest.getFilesToCommit();
+    final ManifestStoreOperations operations = getStoreOperations();
+    for (FileEntry entry : commit) {
       Assertions.assertThat(entry.getEtag())
           .describedAs("Etag of %s", entry)
           .isNotEmpty();

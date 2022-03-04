@@ -31,20 +31,22 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperationsThroughFileSystem;
 
 /**
  * Extension of StoreOperationsThroughFileSystem with ABFS awareness.
  * Purely for use by jobs committing work through the manifest committer.
- * its classname MUST NOT be changed otherwise these jobs will fail.
+ * The {@link AzureManifestCommitterFactory} will configure the
+ * configure to use this as the binding to the FS.
  *
  * ADLS Gen2 stores support etag-recovery on renames, but not WASB
  * stores.
  */
 @InterfaceAudience.LimitedPrivate("mapreduce")
 @InterfaceStability.Unstable
-public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSystem {
+public class AbfsManifestStoreOperations extends
+    ManifestStoreOperationsThroughFileSystem {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsManifestStoreOperations.class);
@@ -52,8 +54,7 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
   /**
    * Classname, which can be declared in jpb configurations.
    */
-  public static final String NAME
-      = "org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations";
+  public static final String NAME = AbfsManifestStoreOperations.class.getName();
 
   /**
    * Resilient rename calls; only available on an ADLS Gen2 store.
@@ -112,7 +113,7 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
    * @throws UnsupportedOperationException if not available.
    */
   @Override
-  public CommitFileResult commitFile(final FileOrDirEntry entry) throws IOException {
+  public CommitFileResult commitFile(final FileEntry entry) throws IOException {
 
     if (resilientCommitByRename != null) {
       final Pair<Boolean, Duration> result =

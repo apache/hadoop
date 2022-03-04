@@ -34,9 +34,9 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.util.OperationDuration;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
@@ -67,7 +67,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Aud
  * A Stage in Task/Job Commit.
  * A stage can be executed once only, creating the return value of the
  * {@link #apply(Object)} method, and, potentially, updating the state of the
- * store via {@link StoreOperations}.
+ * store via {@link ManifestStoreOperations}.
  * IOStatistics will also be updated.
  * Stages are expected to be combined to form the commit protocol.
  * @param <IN> Type of arguments to the stage.
@@ -113,7 +113,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * go through the wrapper classes in this class, which
    * add statistics and logging.
    */
-  private final StoreOperations operations;
+  private final ManifestStoreOperations operations;
 
   /**
    * Submitter for doing IO against the store.
@@ -646,7 +646,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @throws PathIOException if the rename() call returned false and was uprated.
    * @throws IOException failure
    */
-  protected final CommitOutcome commitFile(FileOrDirEntry entry,
+  protected final CommitOutcome commitFile(FileEntry entry,
       boolean deleteDest)
       throws IOException {
 
@@ -656,7 +656,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     maybeDeleteDest(deleteDest, dest);
     if (storeSupportsResilientCommit()) {
       // get the commit permits
-      final StoreOperations.CommitFileResult result = trackDuration(getIOStatistics(),
+      final ManifestStoreOperations.CommitFileResult result = trackDuration(getIOStatistics(),
           OP_COMMIT_FILE_RENAME, () ->
               operations.commitFile(entry));
       if (result.recovered()) {
@@ -935,12 +935,12 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * Move dest/__temporary to trash using the jobID as the unique name.
    * @return result of operation..
    */
-  protected StoreOperations.MoveToTrashResult moveOutputTemporaryDirToTrash()
+  protected ManifestStoreOperations.MoveToTrashResult moveOutputTemporaryDirToTrash()
       throws IOException {
     Path dir = getStageConfig().getOutputTempSubDir();
     if (!operations.isTrashEnabled(dir)) {
-      return new StoreOperations.MoveToTrashResult(
-          StoreOperations.MoveToTrashOutcome.DISABLED,
+      return new ManifestStoreOperations.MoveToTrashResult(
+          ManifestStoreOperations.MoveToTrashOutcome.DISABLED,
           new PathIOException(
               dir.toString(),
               E_TRASH_DISABLED));
@@ -958,10 +958,10 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @param destDir destination directory
    * @return an entry which includes the rename path
    */
-  protected FileOrDirEntry fileEntry(FileStatus status, Path destDir) {
+  protected FileEntry fileEntry(FileStatus status, Path destDir) {
     // generate a new path under the dest dir
     Path dest = new Path(destDir, status.getPath().getName());
-    return new FileOrDirEntry(status.getPath(),
+    return new FileEntry(status.getPath(),
         dest,
         status.getLen(),
         getEtag(status));

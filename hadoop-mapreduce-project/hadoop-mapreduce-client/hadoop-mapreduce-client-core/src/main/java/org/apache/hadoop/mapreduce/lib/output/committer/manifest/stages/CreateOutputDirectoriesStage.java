@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.functional.TaskPool;
 
@@ -49,12 +49,11 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.util.OperationDuration.humanTime;
 
 /**
- * Prepare the destination directory tree, by making as few IO calls as
+ * Prepare the destination directory tree, as efficiently as possible.
  * possible -and doing those IO operations in the thread pool.
  *
  * The classic FileOutputCommitter does a recursive treewalk and
  * deletes any files found at paths where directories are to be created.
- *
  *
  * Each task manifest's directories are combined with those of the other tasks
  * to build a set of all directories which are needed, without duplicates.
@@ -68,13 +67,11 @@ import static org.apache.hadoop.util.OperationDuration.humanTime;
  * Across a thread pool, An isFile() probe is made for all parents;
  * if there is a file there then it is deleted.
  *
- * After any ancestor dir preparation, the final dir set is created
- * though mkdirs() calls, with some handling for race conditions.
- * It is not an error if mkdirs() fails because the dest dir is there;
- * if it fails because a file was found -that file will be deleted.
- *
  * The stage returns the list of directories created, and for testing,
  * the map of paths to outcomes.
+ *
+ * Directory creation can be surprisingly slow against object stores,
+ * do use benchmarks from real test runs when tuning this algorithm.
  */
 public class CreateOutputDirectoriesStage extends
     AbstractJobCommitStage<List<TaskManifest>, CreateOutputDirectoriesStage.Result> {
@@ -138,9 +135,9 @@ public class CreateOutputDirectoriesStage extends
     // hopefully there is a lot of overlap, so the
     // final number of dirs to create is small.
     for (TaskManifest task : taskManifests) {
-      final List<FileOrDirEntry> dirEntries
+      final List<DirEntry> dirEntries
           = task.getDirectoriesToCreate();
-      for (FileOrDirEntry entry: dirEntries) {
+      for (DirEntry entry: dirEntries) {
         // add the dest path
         directoriesToCreate.add(entry.getDestPath());
       }

@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.time.ZonedDateTime;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FileStatus;
@@ -64,6 +66,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Int
 /**
  * Class for manifest committer support util methods.
  */
+
+@InterfaceAudience.Private
 public final class ManifestCommitterSupport {
 
   private ManifestCommitterSupport() {
@@ -246,7 +250,7 @@ public final class ManifestCommitterSupport {
   }
 
   /**
-   * Create the store operations for the given FS.
+   * Create the manifest store operations for the given FS.
    * This supports binding to custom filesystem handlers.
    * @param conf configuration.
    * @param filesystem fs.
@@ -254,15 +258,16 @@ public final class ManifestCommitterSupport {
    * @return a bonded store operations.
    * @throws IOException on binding/init problems.
    */
-  public static StoreOperations createStoreOperations(Configuration conf,
-      FileSystem filesystem,
-      Path path) throws IOException {
+  public static ManifestStoreOperations createManifestStoreOperations(
+      final Configuration conf,
+      final FileSystem filesystem,
+      final Path path) throws IOException {
     try {
-      final Class<? extends StoreOperations> storeClass = conf.getClass(
+      final Class<? extends ManifestStoreOperations> storeClass = conf.getClass(
           OPT_STORE_OPERATIONS_CLASS,
-          StoreOperationsThroughFileSystem.class,
-          StoreOperations.class);
-      final StoreOperations operations = storeClass.
+          ManifestStoreOperationsThroughFileSystem.class,
+          ManifestStoreOperations.class);
+      final ManifestStoreOperations operations = storeClass.
           getDeclaredConstructor().newInstance();
       operations.bindToFileSystem(filesystem, path);
       return operations;

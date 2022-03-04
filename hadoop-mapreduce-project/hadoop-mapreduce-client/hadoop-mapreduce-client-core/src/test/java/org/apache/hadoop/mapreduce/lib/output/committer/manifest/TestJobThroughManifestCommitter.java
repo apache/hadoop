@@ -32,7 +32,7 @@ import org.junit.runners.MethodSorters;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
@@ -58,10 +58,10 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_FILES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadAndPrintManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.PRINCIPAL;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage.DISABLED;
 import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -490,7 +490,7 @@ public class TestJobThroughManifestCommitter
     // Now verify their files exist, returning the list of renamed files.
     List<String> committedFiles = new ValidateRenamedFilesStage(jobStageConfig)
         .apply(manifests)
-        .stream().map(FileOrDirEntry::getDest)
+        .stream().map(FileEntry::getDest)
         .collect(Collectors.toList());
 
     // verify that the list of committed files also matches
@@ -502,7 +502,7 @@ public class TestJobThroughManifestCommitter
         .containsAll(successData.getFilenames());
 
     // now patch one of the manifest files by editing an entry
-    FileOrDirEntry entry = manifests.get(0).getFilesToCommit().get(0);
+    FileEntry entry = manifests.get(0).getFilesToCommit().get(0);
     // no longer exists.
     String oldName = entry.getDest();
     String newName = oldName + ".missing";

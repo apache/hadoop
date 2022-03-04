@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.OutputValidationException;
@@ -49,7 +49,7 @@ import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.c
  * Raises a {@link OutputValidationException} on a validation failure.
  */
 public class ValidateRenamedFilesStage extends
-    AbstractJobCommitStage<List<TaskManifest>, List<FileOrDirEntry>> {
+    AbstractJobCommitStage<List<TaskManifest>, List<FileEntry>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ValidateRenamedFilesStage.class);
@@ -62,7 +62,7 @@ public class ValidateRenamedFilesStage extends
   /**
    * List of all files committed.
    */
-  private List<FileOrDirEntry> filesCommitted = new ArrayList<>();
+  private List<FileEntry> filesCommitted = new ArrayList<>();
 
   public ValidateRenamedFilesStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_VALIDATE_OUTPUT, true);
@@ -72,7 +72,7 @@ public class ValidateRenamedFilesStage extends
    * Get the list of files committed.
    * @return a possibly empty list.
    */
-  private synchronized List<FileOrDirEntry> getFilesCommitted() {
+  private synchronized List<FileEntry> getFilesCommitted() {
     return filesCommitted;
   }
 
@@ -80,7 +80,7 @@ public class ValidateRenamedFilesStage extends
    * Add a file entry to the list of committed files.
    * @param entry entry
    */
-  private synchronized void addFileCommitted(FileOrDirEntry entry) {
+  private synchronized void addFileCommitted(FileEntry entry) {
     filesCommitted.add(entry);
   }
 
@@ -97,7 +97,7 @@ public class ValidateRenamedFilesStage extends
    * @return list of files committed.
    */
   @Override
-  protected List<FileOrDirEntry> executeStage(
+  protected List<FileEntry> executeStage(
       final List<TaskManifest> taskManifests)
       throws IOException {
 
@@ -109,7 +109,7 @@ public class ValidateRenamedFilesStage extends
 
     // validate all the files.
 
-    final Iterable<FileOrDirEntry> filesToCommit = concat(taskManifests.stream()
+    final Iterable<FileEntry> filesToCommit = concat(taskManifests.stream()
         .map(TaskManifest::getFilesToCommit)
         .collect(Collectors.toList()));
 
@@ -127,7 +127,7 @@ public class ValidateRenamedFilesStage extends
    * @throws IOException IO problem.
    * @throws OutputValidationException if the entry is not valid
    */
-  private void validateOneFile(FileOrDirEntry entry) throws IOException {
+  private void validateOneFile(FileEntry entry) throws IOException {
     updateAuditContext(OP_STAGE_JOB_VALIDATE_OUTPUT);
 
     if (halt.get()) {
