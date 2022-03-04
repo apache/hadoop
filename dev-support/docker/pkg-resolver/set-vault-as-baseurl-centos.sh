@@ -21,17 +21,11 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
-pkg-resolver/check_platform.py "$1"
-if [ $? -eq 1 ]; then
-  echo "ERROR: Unsupported platform $1"
-  exit 1
-fi
-
 if [ "$1" == "centos:7" ] || [ "$1" == "centos:8" ]; then
   cd /etc/yum.repos.d/ || exit &&
     sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* &&
     sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* &&
-    yum install -y &&
+    yum update -y &&
     cd /root || exit
 else
   echo "ERROR: Setting the archived baseurl is only supported for centos 7 and 8 environments"
