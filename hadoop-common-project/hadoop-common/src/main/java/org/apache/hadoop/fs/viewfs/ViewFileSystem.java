@@ -25,8 +25,8 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT;
 
 import java.util.function.Function;
 import java.io.FileNotFoundException;
@@ -1149,8 +1149,8 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public Path getTrashRoot(Path path) {
     boolean trashRootUnderMountPointRoot =
-        config.getBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT,
-            CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT_DEFAULT);
+        config.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+            CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT);
 
     try {
       InodeTree.ResolveResult<FileSystem> res =
@@ -1220,8 +1220,8 @@ public class ViewFileSystem extends FileSystem {
     }
 
     boolean trashRootUnderMountPointRoot =
-        config.getBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT,
-            CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT_DEFAULT);
+        config.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+            CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT);
     // Return trashRoots if CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT is
     // disabled.
     if (!trashRootUnderMountPointRoot) {
