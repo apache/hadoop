@@ -1108,7 +1108,7 @@ abstract public class ViewFileSystemBaseTest {
    * Test TRASH_FORCE_INSIDE_MOUNT_POINT feature for getTrashRoot
    */
   @Test
-  public void testTrashRootRootOfMountPoint() throws IOException {
+  public void testTrashRootForceInsideMountPoint() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     Configuration conf2 = new Configuration(conf);
     conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
