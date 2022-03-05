@@ -134,10 +134,9 @@ public interface Constants {
       HCFSMountTableConfigLoader.class;
 
   /**
-   * Enable ViewFileSystem to return a trashRoot which is in the root dir of a
-   * mount point.
+   * Enable ViewFileSystem to return the viewFS path for the trashRoot
    */
-  String CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT =
-      "fs.viewfs.trash.force-inside-mount-point";
-  boolean CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT = true;
+  String CONFIG_VIEWFS_TRASH_USE_VIEWFS_PATH =
+      "fs.viewfs.trash.use-viewfs-path";
+  boolean CONFIG_VIEWFS_TRASH_VIEWFS_PATH_DEFAULT = true;
 }
