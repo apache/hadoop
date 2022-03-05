@@ -31,6 +31,7 @@
 #include "hdfs-df-mock.h"
 #include "hdfs-disallow-snapshot-mock.h"
 #include "hdfs-du-mock.h"
+#include "hdfs-get-mock.h"
 #include "hdfs-mkdir-mock.h"
 #include "hdfs-move-to-local-mock.h"
 #include "hdfs-rename-snapshot-mock.h"
@@ -109,6 +110,11 @@ INSTANTIATE_TEST_SUITE_P(
                     Pass2Paths<hdfs::tools::test::CopyToLocalMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsGet, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::GetMock>,
+                    Pass2Paths<hdfs::tools::test::GetMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsMoveToLocal, HdfsToolBasicTest,
     testing::Values(CallHelp<hdfs::tools::test::MoveToLocalMock>,
                     Pass2Paths<hdfs::tools::test::MoveToLocalMock>));
@@ -174,6 +180,10 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(Pass3Paths<hdfs::tools::test::CopyToLocalMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsGet, HdfsToolNegativeTestThrows,
+    testing::Values(Pass3Paths<hdfs::tools::test::GetMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsMoveToLocal, HdfsToolNegativeTestThrows,
     testing::Values(Pass3Paths<hdfs::tools::test::MoveToLocalMock>));
 
@@ -219,6 +229,10 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsCopyToLocal, HdfsToolNegativeTestNoThrow,
     testing::Values(PassAPath<hdfs::tools::test::CopyToLocalMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsGet, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::GetMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsDeleteSnapshot, HdfsToolNegativeTestNoThrow,

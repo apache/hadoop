@@ -60,8 +60,7 @@ add_subdirectory(hdfs-df)
 
 add_subdirectory(hdfs-du)
 
-add_executable(hdfs_get hdfs_get.cc)
-target_link_libraries(hdfs_get tools_common hdfspp_static)
+add_subdirectory(hdfs-get)
 
 add_subdirectory(hdfs-copy-to-local)
 
