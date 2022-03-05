@@ -466,7 +466,7 @@ public class RouterRpcClient {
           + router.getRouterId());
     }
 
-    appendClientIpPortToCallerContextIfAbsent();
+    addClientIpToCallerContext();
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -590,17 +590,26 @@ public class RouterRpcClient {
    * It adds trace info "clientIp:ip" and "clientPort:port"
    * to caller context if they are absent.
    */
-  private void appendClientIpPortToCallerContextIfAbsent() {
+  private void addClientIpToCallerContext() {
     CallerContext ctx = CallerContext.getCurrent();
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
-    CallerContext.setCurrent(
-        new CallerContext.Builder(origContext, contextFieldSeparator)
-            .appendIfAbsent(CLIENT_IP_STR, Server.getRemoteAddress())
-            .appendIfAbsent(CLIENT_PORT_STR,
+    CallerContext.Builder builder =
+        new CallerContext.Builder("", contextFieldSeparator)
+            .append(CLIENT_IP_STR, Server.getRemoteAddress())
+            .append(CLIENT_PORT_STR,
                 Integer.toString(Server.getRemotePort()))
-            .setSignature(origSignature)
-            .build());
+            .setSignature(origSignature);
+    // Append the original caller context
+    if (origContext != null) {
+      for (String part : origContext.split(contextFieldSeparator)) {
+        if (!part.startsWith(CLIENT_IP_STR) &&
+            !part.startsWith(CLIENT_PORT_STR)) {
+          builder.append(part);
+        }
+      }
+    }
+    CallerContext.setCurrent(builder.build());
   }
 
   /**
