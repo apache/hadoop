@@ -1177,9 +1177,9 @@ public class ViewFileSystem extends FileSystem {
             fsState.resolve(targetFSTrashRootPath, true);
         if (!ROOT_PATH.equals(new Path(res2.resolvedPath))) {
           LOG.warn(String.format("A mount point %s exists for trash root %s "
-              + "returned by fallback FS for path %s. Rename between %s and "
-                  + "trash root %s will fail, as the trash root is in a mount"
-                  + " point while %s is in the fallback FS",
+              + "returned by fallback FS for path %s. Rename between path %s "
+                  + "and trash root %s will fail, as the trash root is in a "
+                  + "mount point while path %s is in the fallback FS",
               res2.resolvedPath, targetFSTrashRootPath, path, path,
               targetFSTrashRootPath, path));
         }
