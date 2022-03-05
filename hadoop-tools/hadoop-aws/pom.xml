@@ -417,6 +417,8 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-bundle</artifactId>
+      <!-- AWS WebIdentityTokenProvider class name changed since 1.11 -->
+      <version>1.12.167</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
