@@ -25,8 +25,8 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_USE_VIEWFS_PATH;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_VIEWFS_PATH_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT;
 
 import java.util.function.Function;
 import java.io.FileNotFoundException;
@@ -1149,9 +1149,9 @@ public class ViewFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
-    boolean trashRootUnderMountPointRoot =
-        config.getBoolean(CONFIG_VIEWFS_TRASH_USE_VIEWFS_PATH,
-            CONFIG_VIEWFS_TRASH_VIEWFS_PATH_DEFAULT);
+    boolean trashForceInsideMountPoint =
+        config.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+            CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT);
 
     try {
       InodeTree.ResolveResult<FileSystem> res =
@@ -1162,7 +1162,7 @@ public class ViewFileSystem extends FileSystem {
       String targetFSTrashRootPath = targetFSTrashRoot.toUri().getPath();
       String mountTargetPath = res.targetFileSystem.getUri().getPath();
 
-      if (!trashRootUnderMountPointRoot) {
+      if (!trashForceInsideMountPoint) {
         return targetFSTrashRoot;
       }
 
@@ -1206,7 +1206,7 @@ public class ViewFileSystem extends FileSystem {
   /**
    * Get all the trash roots for current user or all users.
    *
-   * When TRASH_USE_VIEWFS_PATH is set to true, we also return trash roots
+   * When FORCE_INSIDE_MOUNT_POINT is set to true, we also return trash roots
    * under the root of each mount point, with their viewFS paths.
    *
    * @param allUsers return trash roots for all users if true.
@@ -1219,12 +1219,11 @@ public class ViewFileSystem extends FileSystem {
       trashRoots.addAll(fs.getTrashRoots(allUsers));
     }
 
-    boolean trashRootUnderMountPointRoot =
-        config.getBoolean(CONFIG_VIEWFS_TRASH_USE_VIEWFS_PATH,
-            CONFIG_VIEWFS_TRASH_VIEWFS_PATH_DEFAULT);
-    // Return trashRoots if CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT is
-    // disabled.
-    if (!trashRootUnderMountPointRoot) {
+    boolean trashForceInsideMountPoint =
+        config.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+            CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT);
+    // Return trashRoots if FORCE_INSIDE_MOUNT_POINT is disabled.
+    if (!trashForceInsideMountPoint) {
       return trashRoots;
     }
 
