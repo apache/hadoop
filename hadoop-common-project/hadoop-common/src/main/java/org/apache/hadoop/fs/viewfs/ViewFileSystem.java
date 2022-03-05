@@ -1128,17 +1128,6 @@ public class ViewFileSystem extends FileSystem {
     return allPolicies;
   }
 
-  // Test whether a path is inside a snapshot or encrypted.
-  boolean isSnapshotEnabledOrEncrypted(Path p) throws IOException {
-    try {
-      FileStatus status = getFileStatus(p);
-      return status.isSnapshotEnabled() || status.isEncrypted();
-    } catch (FileNotFoundException ignored) {
-      // return false if path p does not exist yet.
-      return false;
-    }
-  }
-
   /**
    * Get the trash root directory for current user when the path
    * specified is deleted.
@@ -1147,10 +1136,12 @@ public class ViewFileSystem extends FileSystem {
    * the default trash root from targetFS.
    *
    * When CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT is set to true,
-   * 1) If path p is in a snapshot or encryption zone, or when it is in the
-   *    fallback FS, return the default trash root from targetFS.
-   * 2) else, return a viewFS path for the trash root under the root of the
-   *    mount point (/mntpoint/.Trash/{user}).
+   * 1) If path p in fallback FS, return trash root from fallback FS. Print a
+   *    warning if there is a mount point for trash root.
+   * 2) If trash root for path p is in the same mount point as path p, get
+   *    the corresponding viewFS path for the trash root and return it.
+   * 3) else, return the trash root under the root of the mount point
+   *          (/mntpoint/.Trash/{user}).
    *
    * @param path the trash root of the path to be determined.
    * @return the trash root path.
@@ -1167,15 +1158,40 @@ public class ViewFileSystem extends FileSystem {
 
       Path targetFSTrashRoot =
           res.targetFileSystem.getTrashRoot(res.remainingPath);
+      String targetFSTrashRootPath = targetFSTrashRoot.toUri().getPath();
+      String mountTargetPath = res.targetFileSystem.getUri().getPath();
 
       if (!trashRootUnderMountPointRoot) {
         return targetFSTrashRoot;
       }
 
       // New trash root policy
-      if (isSnapshotEnabledOrEncrypted(path) ||
-          ROOT_PATH.equals(new Path(res.resolvedPath))) {
-        return targetFSTrashRoot;
+      if (ROOT_PATH.equals(new Path(res.resolvedPath))) {
+        // Path path is in fallback FS. Return targetFSTrashRootPath;
+
+        // Check and print a warning if a mountpoint exists for
+        // targetFSTrashRootPath. The trash root from fallback FS should be in
+        // the fallback FS, not in a different mount point.
+        InodeTree.ResolveResult<FileSystem> res2 =
+            fsState.resolve(targetFSTrashRootPath, true);
+        if (!ROOT_PATH.equals(new Path(res2.resolvedPath))) {
+          LOG.warn(String.format("A mount point %s exists for trash root %s "
+              + "returned by fallback FS for path %s. Rename between %s and "
+                  + "trash root %s will fail, as the trash root is in a mount"
+                  + " point while %s is in the fallback FS",
+              res2.resolvedPath, targetFSTrashRootPath, path, path,
+              targetFSTrashRootPath, path));
+        }
+        return new Path(targetFSTrashRootPath);
+      } else if (targetFSTrashRootPath.startsWith(mountTargetPath)) {
+        // targetFSTrash is inside mountPoint.targetPath
+        String relativeTrashRoot =
+            targetFSTrashRootPath.substring(mountTargetPath.length());
+        // remove the starting '/' if it exists
+        if (relativeTrashRoot.startsWith("/")) {
+          relativeTrashRoot = relativeTrashRoot.substring(1);
+        }
+        return new Path(res.resolvedPath, relativeTrashRoot);
       } else {
         // Return the trash root for the mount point.
         return new Path(res.resolvedPath,

@@ -1125,16 +1125,18 @@ abstract public class ViewFileSystemBaseTest {
     // Case 2: path p not found in mount table, fall back to the default FS
     // Return a trash root in user home dir
     Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
-    Path targetFsTrashRoot = fsTarget.makeQualified(
-        new Path(fsTarget.getHomeDirectory().toUri().getPath(), TRASH_PREFIX));
-    Assert.assertEquals(targetFsTrashRoot,
+    Path userHomeTrashRoot =
+        new Path(fsTarget.getHomeDirectory().toUri().getPath(), TRASH_PREFIX);
+    Assert.assertEquals(userHomeTrashRoot,
         fsView2.getTrashRoot(nonExistentPath));
 
     // Case 3: turn off the CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH flag.
     // Return a trash root in user home dir.
     conf2.setBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT, false);
     fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Assert.assertEquals(targetFsTrashRoot, fsView2.getTrashRoot(dataTestPath));
+    Path targetFSUserHomeTrashRoot = fsTarget.makeQualified(userHomeTrashRoot);
+    Assert.assertEquals(targetFSUserHomeTrashRoot,
+        fsView2.getTrashRoot(dataTestPath));
 
     // Case 4: viewFS without fallback. Expect exception for a nonExistent path
     conf2 = new Configuration(conf);
@@ -1146,40 +1148,35 @@ abstract public class ViewFileSystemBaseTest {
   }
 
   /**
-   * A mocked FileSystem which returns overwrites getFileStatus() to always
-   * return an encrypted FileStatus.
+   * A mocked FileSystem which returns a deep trash dir.
    */
   static class MockTrashRootFS extends MockFileSystem {
     public static final Path TRASH =
-        new Path("/very/deep/deep/trash/dir/.Trash");
+        new Path("/vol/very/deep/deep/trash/dir/.Trash");
 
     @Override
     public Path getTrashRoot(Path path) {
       return TRASH;
     }
-
-    @Override
-    public FileStatus getFileStatus(Path path) throws IOException {
-      FileStatus status = super.getFileStatus(path);
-      return new FileStatus(0, false, 3, 1024, 0, 0, null, "test", "testg",
-          path, path, false, true, false);
-    }
   }
 
   /**
-   * Test a trash root that is encrypted for getTrashRoot
+   * Test a trash root that is inside a mount point for getTrashRoot
    */
   @Test
-  public void testTrashRootEncryptedTrashDir() throws IOException {
+  public void testTrashRootDeepTrashDir() throws IOException {
 
     Configuration conf2 = ViewFileSystemTestSetup.createConfig();
     conf2.setBoolean(CONFIG_VIEWFS_TRASH_ROOT_UNDER_MOUNT_POINT_ROOT, true);
     conf2.setClass("fs.mocktrashfs.impl", MockTrashRootFS.class,
         FileSystem.class);
-    ConfigUtil.addLink(conf2, "/mnt", URI.create("mocktrashfs://mnt/path"));
-    Path testPath = new Path("/mnt/projs/proj");
+    ConfigUtil.addLink(conf2, "/mnt/datavol1",
+        URI.create("mocktrashfs://localhost/vol"));
+    Path testPath = new Path("/mnt/datavol1/projs/proj");
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Assert.assertEquals(MockTrashRootFS.TRASH, fsView2.getTrashRoot(testPath));
+    Path expectedTrash =
+        new Path("/mnt/datavol1/very/deep/deep/trash/dir/.Trash");
+    Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(testPath));
   }
 
   /**
