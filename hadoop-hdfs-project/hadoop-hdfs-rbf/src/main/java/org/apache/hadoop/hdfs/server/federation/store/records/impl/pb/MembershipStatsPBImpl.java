@@ -149,6 +149,16 @@ public class MembershipStatsPBImpl extends MembershipStats
   }
 
   @Override
+  public void setNumOfBlocksPendingRecovery(int blocks) {
+    this.translator.getBuilder().setNumOfBlocksPendingRecovery(blocks);
+  }
+
+  @Override
+  public int getNumOfBlocksPendingRecovery() {
+    return this.translator.getProtoOrBuilder().getNumOfBlocksPendingRecovery();
+  }
+
+  @Override
   public void setNumOfActiveDatanodes(int nodes) {
     this.translator.getBuilder().setNumOfActiveDatanodes(nodes);
   }

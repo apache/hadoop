@@ -293,6 +293,7 @@ public class TestRBFMetrics extends TestMetricsBase {
     int numCorruptsFilesCount = 0;
     long scheduledReplicationBlocks = 0;
     long numberOfMissingBlocksWithReplicationFactorOne = 0;
+    long numOfBlocksPendingRecovery = 0;
     long highestPriorityLowRedundancyReplicatedBlocks = 0;
     long highestPriorityLowRedundancyECBlocks = 0;
     long numFiles = 0;
@@ -316,6 +317,7 @@ public class TestRBFMetrics extends TestMetricsBase {
           stats.getHighestPriorityLowRedundancyReplicatedBlocks();
       highestPriorityLowRedundancyECBlocks +=
           stats.getHighestPriorityLowRedundancyECBlocks();
+      numOfBlocksPendingRecovery += stats.getNumOfBlocksPendingRecovery();
     }
 
     assertEquals(numBlocks, bean.getNumBlocks());
@@ -342,6 +344,7 @@ public class TestRBFMetrics extends TestMetricsBase {
         bean.getHighestPriorityLowRedundancyReplicatedBlocks());
     assertEquals(highestPriorityLowRedundancyECBlocks,
         bean.getHighestPriorityLowRedundancyECBlocks());
+    assertEquals(numOfBlocksPendingRecovery, bean.getNumOfBlocksPendingRecovery());
   }
 
   private void validateClusterStatsRouterBean(RouterMBean bean) {

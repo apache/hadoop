@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.DisabledNameservice;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
@@ -111,6 +112,10 @@ public class TestStateStoreDriverBase {
     return RANDOM.nextLong();
   }
 
+  private int generateRandomInt() {
+    return RANDOM.nextInt();
+  }
+
   @SuppressWarnings("rawtypes")
   private <T extends Enum> T generateRandomEnum(Class<T> enumClass) {
     int x = RANDOM.nextInt(enumClass.getEnumConstants().length);
@@ -123,13 +128,17 @@ public class TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
 
     if (recordClass == MembershipState.class) {
-      return (T) MembershipState.newInstance(generateRandomString(),
+      MembershipStats stats = MembershipStats.newInstance();
+      stats.setNumOfBlocksPendingRecovery(generateRandomInt());
+      MembershipState state = MembershipState.newInstance(generateRandomString(),
           generateRandomString(), generateRandomString(),
           generateRandomString(), generateRandomString(),
           generateRandomString(), generateRandomString(),
           generateRandomString(), "http", generateRandomString(),
           generateRandomEnum(FederationNamenodeServiceState.class),
           false);
+      state.setStats(stats);
+      return (T) state;
     } else if (recordClass == MountTable.class) {
       String src = "/" + generateRandomString();
       Map<String, String> destMap = Collections.singletonMap(
@@ -177,17 +186,24 @@ public class TestStateStoreDriverBase {
       Object data2 = getField(committed, key);
       if (assertEquals) {
         assertEquals("Field " + key + " does not match", data1, data2);
+        // If data1 or data2 is an instance of the MembershipStats type,
+        // compare as many fields as possible.
+        if (data1 instanceof MembershipStats || data2 instanceof MembershipStats) {
+          validateRecord((BaseRecord) data1, (BaseRecord) data2, true);
+        }
       } else if (!data1.equals(data2)) {
         ret = false;
       }
     }
 
-    long now = stateStore.getDriver().getTime();
-    assertTrue(
-        committed.getDateCreated() <= now && committed.getDateCreated() > 0);
-    // since expired record doesn't update the modification time, let's skip it
-    if (!committed.isExpired()) {
-      assertTrue(committed.getDateModified() >= committed.getDateCreated());
+    if (!(committed instanceof MembershipStats)) {
+      long now = stateStore.getDriver().getTime();
+      assertTrue(
+              committed.getDateCreated() <= now && committed.getDateCreated() > 0);
+      // since expired record doesn't update the modification time, let's skip it
+      if (!committed.isExpired()) {
+        assertTrue(committed.getDateModified() >= committed.getDateCreated());
+      }
     }
 
     return ret;

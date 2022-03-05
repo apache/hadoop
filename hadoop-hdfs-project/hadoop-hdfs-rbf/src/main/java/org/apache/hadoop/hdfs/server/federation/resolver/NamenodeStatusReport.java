@@ -68,6 +68,7 @@ public class NamenodeStatusReport {
   private long numOfBlocksPendingReplication = -1;
   private long numOfBlocksUnderReplicated = -1;
   private long numOfBlocksPendingDeletion = -1;
+  private int numOfBlocksPendingRecovery = -1;
   private long totalSpace = -1;
   private long providedSpace = -1;
   private int corruptFilesCount = -1;
@@ -368,11 +369,13 @@ public class NamenodeStatusReport {
    * @param numBlocksUnderReplicated Number of blocks under replication.
    * @param numBlocksPendingDeletion Number of blocks pending deletion.
    * @param providedSpace Space in provided storage.
+   * @param numBlocksPendingRecovery Number of blocks pending recovery.
    */
   public void setNamesystemInfo(long available, long total,
       long numFiles, long numBlocks, long numBlocksMissing,
       long numBlocksPendingReplication, long numBlocksUnderReplicated,
-      long numBlocksPendingDeletion, long providedSpace) {
+      long numBlocksPendingDeletion, long providedSpace,
+      int numBlocksPendingRecovery) {
     this.totalSpace = total;
     this.availableSpace = available;
     this.numOfBlocks = numBlocks;
@@ -383,6 +386,7 @@ public class NamenodeStatusReport {
     this.numOfFiles = numFiles;
     this.statsValid = true;
     this.providedSpace = providedSpace;
+    this.numOfBlocksPendingRecovery = numBlocksPendingRecovery;
   }
 
   /**
@@ -538,6 +542,10 @@ public class NamenodeStatusReport {
    */
   public long getNumOfBlocksPendingDeletion() {
     return this.numOfBlocksPendingDeletion;
+  }
+
+  public int getNumOfBlocksPendingRecovery() {
+    return this.numOfBlocksPendingRecovery;
   }
 
   /**

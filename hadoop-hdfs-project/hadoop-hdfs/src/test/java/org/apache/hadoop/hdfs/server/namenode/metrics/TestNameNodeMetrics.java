@@ -48,6 +48,10 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
@@ -949,6 +953,19 @@ public class TestNameNodeMetrics {
     MetricsRecordBuilder rbNew = getMetrics(NN_METRICS);
     assertTrue(MetricsAsserts.getLongCounter("TransactionsNumOps", rbNew) >
         startWriteCounter);
+  }
+
+  @Test
+  public void testPendingRecoveryBlocksMetric() throws Exception {
+    BlockInfo blk1 = new BlockInfoContiguous(new Block(1), (short) 0);
+    BlockInfo blk2 = new BlockInfoContiguous(new Block(2), (short) 0);
+    bm.addBlockRecoveryAttempt(blk1);
+    bm.addBlockRecoveryAttempt(blk2);
+    assertGauge("PendingRecoveryBlocks", 2, getMetrics(NS_METRICS));
+
+    bm.successfulBlockRecovery(blk1);
+    bm.successfulBlockRecovery(blk2);
+    assertGauge("PendingRecoveryBlocks", 0, getMetrics(NS_METRICS));
   }
 
   /**

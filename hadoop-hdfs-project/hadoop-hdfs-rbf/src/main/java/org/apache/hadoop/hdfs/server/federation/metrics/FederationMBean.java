@@ -211,6 +211,12 @@ public interface FederationMBean {
   long getNumOfBlocksPendingDeletion();
 
   /**
+   * Number of blocks currently undergoing or about to recover.
+   * @return number of blocks currently undergoing or about to recover
+   */
+  int getNumOfBlocksPendingRecovery();
+
+  /**
    * Get the number of files in the federation.
    * @return Number of files in the federation.
    */

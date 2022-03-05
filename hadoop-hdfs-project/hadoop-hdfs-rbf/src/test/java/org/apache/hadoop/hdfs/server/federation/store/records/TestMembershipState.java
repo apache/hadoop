@@ -62,6 +62,7 @@ public class TestMembershipState {
   private static final long MISSING_BLOCK_WITH_REPLICATION_ONE = 221;
   private static final long HIGHEST_PRIORITY_LOW_REDUNDANCY_REPL_BLOCK = 212;
   private static final long HIGHEST_PRIORITY_LOW_REDUNDANCY_EC_BLOCK = 122;
+  private static final int RECOVERY_BLOCK = 123;
 
   private static final long TOTAL_SPACE = 1100;
   private static final long AVAILABLE_SPACE = 1200;
@@ -101,6 +102,7 @@ public class TestMembershipState {
         HIGHEST_PRIORITY_LOW_REDUNDANCY_REPL_BLOCK);
     stats.setHighestPriorityLowRedundancyECBlocks(
         HIGHEST_PRIORITY_LOW_REDUNDANCY_EC_BLOCK);
+    stats.setNumOfBlocksPendingRecovery(RECOVERY_BLOCK);
     record.setStats(stats);
     return record;
   }
@@ -142,6 +144,7 @@ public class TestMembershipState {
         stats.getHighestPriorityLowRedundancyReplicatedBlocks());
     assertEquals(HIGHEST_PRIORITY_LOW_REDUNDANCY_EC_BLOCK,
         stats.getHighestPriorityLowRedundancyECBlocks());
+    assertEquals(RECOVERY_BLOCK, stats.getNumOfBlocksPendingRecovery());
   }
 
   @Test
