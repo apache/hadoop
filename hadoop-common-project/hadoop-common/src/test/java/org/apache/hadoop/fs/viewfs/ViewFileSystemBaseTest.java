@@ -1105,7 +1105,7 @@ abstract public class ViewFileSystemBaseTest {
   }
 
   /**
-   * Test TRASH_FORCE_INSIDE_MOUNT_POINT feature for getTrashRoot
+   * Test TRASH_FORCE_INSIDE_MOUNT_POINT feature for getTrashRoot.
    */
   @Test
   public void testTrashRootForceInsideMountPoint() throws IOException {
