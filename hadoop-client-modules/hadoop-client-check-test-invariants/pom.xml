@@ -89,7 +89,7 @@
                     <!-- Leave commons-logging unshaded so downstream users can configure logging. -->
                     <exclude>commons-logging:commons-logging</exclude>
                     <!-- Leave log4j unshaded so downstream users can configure logging. -->
-                    <exclude>log4j:log4j</exclude>
+                    <exclude>ch.qos.reload4j:reload4j</exclude>
                     <!-- Leave JUnit unshaded so downstream can use our test helper classes -->
                     <exclude>junit:junit</exclude>
                     <!-- JUnit brings in hamcrest -->

@@ -208,6 +208,7 @@ License Version 2.0:
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
+ch.qos.reload4j:reload4j:1.2.18.3
 com.aliyun:aliyun-java-sdk-core:3.4.0
 com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
@@ -273,7 +274,6 @@ io.reactivex:rxjava-string:1.1.1
 io.reactivex:rxnetty:0.4.20
 io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
-log4j:log4j:1.2.17
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:2.4.7
 net.minidev:json-smart:2.4.7
@@ -436,9 +436,10 @@ org.codehaus.mojo:animal-sniffer-annotations:1.17
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
 org.ojalgo:ojalgo:43.0
-org.slf4j:jul-to-slf4j:1.7.30
-org.slf4j:slf4j-api:1.7.30
-org.slf4j:slf4j-log4j12:1.7.30
+org.slf4j:jcl-over-slf4j:1.7.35
+org.slf4j:jul-to-slf4j:1.7.35
+org.slf4j:slf4j-api:1.7.35
+org.slf4j:slf4j-reload4j:1.7.35
 
 
 CDDL 1.1 + GPLv2 with classpath exception
