@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestRenameStage
 public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
 
   /**
-   * How many files to create
+   * How many files to create.
    */
   private static final int FILES_TO_CREATE = 20;
 

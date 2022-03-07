@@ -64,12 +64,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterTest {
 
   /**
-   * Number of task attempts to create. Manifests are created and written
-   * as well as test dirs, but no actual files.
-   */
-  protected static final int TASK_ATTEMPT_COUNT = 10;
-
-  /**
    * Deep tree width, subclasses (including in external projects)
    * may change.
    */
@@ -97,6 +91,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
         .withPrepareParentDirectories(false)
         .withDeleteTargetPaths(true);
     setJobStageConfig(stageConfig);
+    // creates the job directories.
     new SetupJobStage(stageConfig).apply(true);
     mkdirStage = new CreateOutputDirectoriesStage(stageConfig);
     iostats = stageConfig.getIOStatistics();

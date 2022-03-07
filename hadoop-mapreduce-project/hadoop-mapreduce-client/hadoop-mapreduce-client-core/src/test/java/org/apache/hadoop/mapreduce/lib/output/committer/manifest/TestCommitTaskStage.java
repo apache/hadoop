@@ -37,7 +37,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test committing a task
+ * Test committing a task.
  */
 public class TestCommitTaskStage extends AbstractManifestCommitterTest {
 

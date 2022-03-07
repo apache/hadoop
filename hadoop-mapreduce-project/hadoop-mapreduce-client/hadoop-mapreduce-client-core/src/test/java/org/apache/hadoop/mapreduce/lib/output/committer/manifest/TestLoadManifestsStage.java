@@ -63,7 +63,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
   }
 
   /**
-   * build a large number of manifests, but without the real files
+   * Build a large number of manifests, but without the real files
    * and directories.
    * Save the manifests under the job attempt dir, then load
    * them via the {@link LoadManifestsStage}.
@@ -97,8 +97,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     LoadManifestsStage stage = new LoadManifestsStage(
         getJobStageConfig());
 
-    LoadManifestsStage.Result result
-        = stage.apply(true);
+    LoadManifestsStage.Result result = stage.apply(true);
     LoadManifestsStage.SummaryInfo summary = result.getSummary();
     List<TaskManifest> loadedManifests = result.getManifests();
 

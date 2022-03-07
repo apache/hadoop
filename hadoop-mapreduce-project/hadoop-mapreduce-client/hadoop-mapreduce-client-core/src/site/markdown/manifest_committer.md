@@ -13,7 +13,22 @@
 -->
 
 
-# "Intermediate Manifest" Committer for Azure and GCS
+# The Manifest Committer for Azure and Google Cloud Storage
+ 
+This document how to use the _Manifest Committer_.
+
+The _Manifest_ committer is a committer for work which provides
+performance on ABFS for "real world" queries,
+and performance and correctness on GCS.
+
+The architecture and implementation of the committer is covered in
+[Manifest Committer Architecture](manifest_committer_architecture.html).
+
+
+The protocol and its correctness are covered in
+[Manifest Committer Protocol](manifest_committer_protocol.html).
+
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 ## Problem:
 
@@ -231,7 +246,7 @@ This allows for the statistics of jobs to be collected irrespective of their out
 Whether or not saving the `_SUCCESS` marker is enabled, and without problems
 caused by a chain of queries overwriting the markers.
 
-# Viewing Success/Summary files through the `ManifestPrinter` command.
+## Viewing Success/Summary files through the `ManifestPrinter` tool.
 
 The summary files are JSON, and can be viewed in any text editor.
 
@@ -240,17 +255,6 @@ For a more succinct summary, including better display of statistics, use the `Ma
 ```
 hadoop org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter <path>
 ```
-
-
-## Testing only: Validating output
-
-The option `mapreduce.manifest.committer.validate.output` triggers a check
-of every renamed file to verify it has the expected length.
-
-This adds the overhead of a `HEAD` request per file, and so is
-recommended for testing only.
-
-There is no verification of the actual contents.
 
 ## Cleanup
 
@@ -277,7 +281,7 @@ The algorithm is:
 3. Attempt parallel task attempt directory delete unless
    `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` is false.
    Any error here is swallowed.
-4. Attempt delete of base `_temporary` directory. Any error here is cached.
+4. Attempt to delete the base `_temporary` directory. Any error here is cached.
 5. Delete failed in step #4 or was skipped, and if trash is enabled for the filesystem
    attempt to rename  `_temporary` directory under trash dir.
 
@@ -319,10 +323,9 @@ The core set of Azure-optimized options becomes
 
 <property>
   <name>mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories</name>
-  <value>true/value>
+  <value>true</value>
   <description>Parallel directory deletion to address scale-related timeouts.</description>
 </property>
-
 ```
 
 And optional settings for debugging/performance analysis
@@ -334,20 +337,15 @@ And optional settings for debugging/performance analysis
   <value>abfs:// Path within same store/separate store</value>
   <description>Optional: path to where job summaries are saved</description>
 </property>
-
-<property>
-  <name>mapreduce.manifest.committer.validate.output</name>
-  <value>true</value>
-  <description>Validate the output</description>
-</property>
-
 ```
 
 ## Rate Limiting in job commit with ABFS
 
 To avoid triggering store throttling and backoff delays, as well as other
 throttling-related failure conditions file renames during job commit
-are throttled through the . 
+are throttled through a "rate limiter" which limits the number of
+rename operations per second a single instance of the ABFS FileSystem client
+may issue.
 
 | Option | Meaning |
 |--------|---------|
@@ -385,3 +383,47 @@ If server-side throttling took place, signs of this can be seen in
 If these are seen -or other applications running at the same time experience
 throttling/throttling-triggered problems, consider reducing the value of
 `fs.azure.io.rate.limit`, and/or requesting a higher IO capacity from Microsoft.
+
+## Full set of ABFS options for spark
+
+```
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory
+spark.hadoop.fs.azure.io.rate.limit 10000
+spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+
+spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
+```
+
+# Working with Google Cloud Storage
+
+The manifest committer is compatible with and tested against Google cloud storage through
+the gcs-connector library from google, which provides a Hadoop filesystem client for the
+schema `gs`. 
+
+Google cloud storage has the semantics needed for the commit protocol
+to work safely.
+
+The settings to switch to this committer are
+
+```
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.gs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
+spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+
+spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
+```
+
+The store's directory delete operations are `O(files)` so the value
+of `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories`
+SHOULD be left at the default of `true`.
+
+
+# Testing only: Validating output
+
+The option `mapreduce.manifest.committer.validate.output` triggers a check of every renamed file to
+verify it has the expected length.
+
+This adds the overhead of a `HEAD` request per file, and so is recommended for testing only.
+
+There is no verification of the actual contents.

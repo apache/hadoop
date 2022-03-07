@@ -106,12 +106,12 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   private final Set<Path> pathNotFound = new HashSet<>();
 
   /**
-   * Source file whose rename will fail.
+   * Source file whose rename/commit will fail.
    */
   private final Set<Path> renameSourceFilesToFail = new HashSet<>();
 
   /**
-   * Dest dir into which all renames will fail.
+   * Dest dir into which all renames/commits will fail.
    * Subdirectories under this are not checked.
    */
   private final Set<Path> renameDestDirsToFail = new HashSet<>();
@@ -391,6 +391,12 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   @Override
   public CommitFileResult commitFile(final FileEntry entry)
       throws IOException {
+    if (renameToFailWithException) {
+      maybeRaiseIOE("commitFile",
+          entry.getSourcePath(), renameSourceFilesToFail);
+      maybeRaiseIOE("commitFile",
+          entry.getDestPath().getParent(), renameDestDirsToFail);
+    }
     return wrappedOperations.commitFile(entry);
   }
 

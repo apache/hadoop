@@ -25,7 +25,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.test.HadoopTestBase;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CreateOutputDirectoriesStage.extractAncestors;
 
@@ -35,17 +35,26 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.C
  * This is used when building the list of parent directories to
  * probe for being files if the job is set to prepare parent directories.
  */
-public class TestExtractAncestors extends HadoopTestBase {
+public class TestExtractAncestors extends AbstractHadoopTestBase {
 
   private static final Path BASE = new Path("file:///base");
+
   private static final Path DEST = new Path(BASE, "dest");
+
   private static final Path DEST_1 = new Path(DEST, "1");
+
   private static final Path DEST_2 = new Path(DEST, "2");
+
   private static final Path DEST_1_1 = new Path(DEST_1, "1");
+
   private static final Path DEST_1_2 = new Path(DEST_1, "2");
+
   private static final Path DEST_1_1_1 = new Path(DEST_1_1, "1");
+
   private static final Path DEST_1_1_2 = new Path(DEST_1_1, "2");
+
   private static final Path DEST_2_1 = new Path(DEST_2, "1");
+
   private static final Path DEST_2_2 = new Path(DEST_2, "2");
 
   @Test
@@ -93,14 +102,16 @@ public class TestExtractAncestors extends HadoopTestBase {
 
   @Test
   public void testExtractDuplicates() {
-    Assertions.assertThat(extract(DEST_1_1, DEST_1_2, DEST_2_1, DEST_2_2, DEST_1_1, DEST_1_2))
+    Assertions.assertThat(
+            extract(DEST_1_1, DEST_1_2, DEST_2_1, DEST_2_2, DEST_1_1, DEST_1_2))
         .describedAs("Source collection with duplicates")
         .containsExactlyInAnyOrder(DEST_1, DEST_2);
   }
 
   @Test
   public void testExtractParentsInSet() {
-    Assertions.assertThat(extract(DEST_1, DEST_2, DEST_1_1, DEST_1_2, DEST_2_1, DEST_2_2))
+    Assertions.assertThat(
+            extract(DEST_1, DEST_2, DEST_1_1, DEST_1_2, DEST_2_1, DEST_2_2))
         .describedAs("extraction with ancestors in directoriesToCreate")
         .isEmpty();
   }

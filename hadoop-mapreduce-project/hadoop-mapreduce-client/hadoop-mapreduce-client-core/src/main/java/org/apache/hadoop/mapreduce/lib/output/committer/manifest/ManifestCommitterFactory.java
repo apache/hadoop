@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
 
@@ -48,6 +49,11 @@ public class ManifestCommitterFactory extends PathOutputCommitterFactory {
   @Override
   public ManifestCommitter createOutputCommitter(final Path outputPath,
       final TaskAttemptContext context) throws IOException {
+    // safety check. S3A does not support this, so fail fast.
+    if ("s3a".equals(outputPath.toUri().getScheme())) {
+      throw new PathIOException(outputPath.toString(),
+          "This committer does not work with S3 storage");
+    }
     return new ManifestCommitter(outputPath, context);
   }
 

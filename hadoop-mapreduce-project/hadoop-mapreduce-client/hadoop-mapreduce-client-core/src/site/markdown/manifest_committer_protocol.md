@@ -18,6 +18,8 @@
 This document describes the commit protocol
  of the [Manifest Committer](manifest_committer.html)
 
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+
 ## Background
 
 ### Terminology
@@ -328,7 +330,7 @@ Stores/filesystems supported by this committer MUST:
 * Have consistent listings.
 * Have an atomic `O(1)` file rename operation.
 
-Stores/filesystems supported by this committer SHOULD:jj
+Stores/filesystems supported by this committer SHOULD:
 
 * Rename files successfully, even under load. ABFS does not do this,
   so special recovery is provided there.
@@ -366,6 +368,7 @@ this committer, though it will still work there.
 
 The S3 store does not meet the rename requirements of this committer,
 even now that it is consistent.
+This committer is not safe to use on S3.
 
 ### Task and Job IDs
 
@@ -600,7 +603,7 @@ taskAttemptWorkingDirectories.map(p -> delete(p))
 * Allows for an optional preflight validation check (verify no duplicate files created by different tasks).
 * Manifests can be viewed, size of output determined, etc., during development/debugging.
 
-### Disadvantages of the new protocol compared to the v1 algorithm
+## Disadvantages of the new protocol compared to the v1 algorithm
 
 * Needs a new manifest file format.
 * Manifests may get large if tasks create many files and/or subdirectories, or if

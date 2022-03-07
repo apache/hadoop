@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.CommonPathCapabilities;
@@ -178,6 +179,8 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     describe("commit where rename() returns false for one file." +
         " Expect failure to be escalated to an IOE");
 
+    Assume.assumeTrue("not used when resilient commits are available",
+        !resilientCommit);
     // destination directory.
     Path destDir = methodPath();
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);

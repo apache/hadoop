@@ -18,13 +18,15 @@
 This document describes the architecture and other implementation/correctness
 aspects of the [Manifest Committer](manifest_committer.html)
 
-The _Manifest_ committer is a new committer for
-work which should deliver performance on ABFS
-for "real world" queries, and performance and correctness on GCS.
+The protocol and its correctness are covered in [Manifest Committer Protocol](manifest_committer_protocol.html).
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+
+The _Manifest_ committer is a committer for work which provides performance on ABFS for "real world"
+queries, and performance and correctness on GCS.
 
 This committer uses the extension point which came in for the S3A committers.
 Users can declare a new committer factory for `abfs://` and `gcs://` URLs.
-A suitably configured spark deployment will pick up the new committer.
+It can be used through Hadoop MapReduce and Apache Spark.
 
 ## Background
 
@@ -84,13 +86,13 @@ Although it will work with MapReduce
 there is no handling of multiple job attempts with recovery from previous failed
 attempts. (Plan: fail on MR AM restart)
 
-### 
+### The Manifest
 
 A Manifest file is designed which contains (along with IOStatistics and some
 other things)
 
 1. A list of destination directories which must be created if they do not exist.
-1. A list of files to rename as (absolute source, absolute destination,
+1. A list of files to rename, recorded as (absolute source, absolute destination,
    file-size) entries.
 
 ### Task Commit
@@ -98,20 +100,18 @@ other things)
 Task attempts are committed by:
 
 1. Recursively listing the task attempt working dir to build
-   1. A list of directories to create.
+   1. A list of directories under which files are renamed.
    2. A list of files to rename: source, destination, size and optionally, etag.
 2. Saving this information in a manifest file in the job attempt directory with
-   a filename derived from the Task ID. The task attempt ID is not used in the
-   filename -only one task attempt may successfully write a manifest. 
+   a filename derived from the Task ID.
    Note: writing to a temp file and then renaming to the final path will be used
    to ensure the manifest creation is atomic.
 
 
 No renaming takes place —the files are left in their original location.
 
-The directory treewalk is single-threaded, then it is `O(directories)`, 
-`ith each directory listing using one or more
-paged LIST calls.
+The directory treewalk is single-threaded, then it is `O(directories)`,
+with each directory listing using one or more paged LIST calls.
 
 This is simple, and for most tasks, the scan is off the critical path of of the job.
 
@@ -161,7 +161,7 @@ create.
 
 ### File Rename
 
-Files are renamed in parallel. 
+Files are renamed in parallel.
 
 A pre-rename check for anything being at that path (and deleting it) will be optional.
 With spark creating new UUIDs for each file, this isn't going to happen, and
