@@ -1132,10 +1132,10 @@ public class ViewFileSystem extends FileSystem {
    * Get the trash root directory for current user when the path
    * specified is deleted.
    *
-   * If TRASH_USE_VIEWFS_PATH flag is not set, return the default trash root
+   * If FORCE_INSIDE_MOUNT_POINT flag is not set, return the default trash root
    * from targetFS.
    *
-   * When TRASH_USE_VIEWFS_PATH is set to true,
+   * When FORCE_INSIDE_MOUNT_POINT is set to true,
    * 1) If path p in fallback FS, return trash root from fallback FS. Print a
    *    warning if there is a mount point for the trash root.
    * 2) If the trash root for path p is in the same mount point as path p,
