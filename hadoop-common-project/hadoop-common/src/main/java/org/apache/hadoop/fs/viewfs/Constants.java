@@ -138,5 +138,5 @@ public interface Constants {
    */
   String CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT =
       "fs.viewfs.trash.force-inside-mount-point";
-  boolean CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT = true;
+  boolean CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT = false;
 }

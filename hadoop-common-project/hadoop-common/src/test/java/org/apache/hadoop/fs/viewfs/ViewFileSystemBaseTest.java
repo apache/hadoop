@@ -1161,7 +1161,7 @@ abstract public class ViewFileSystemBaseTest {
   }
 
   /**
-   * Test a trash root that is inside a mount point for getTrashRoot
+   * Test getTrashRoot that is very deep inside a mount point.
    */
   @Test
   public void testTrashRootDeepTrashDir() throws IOException {
