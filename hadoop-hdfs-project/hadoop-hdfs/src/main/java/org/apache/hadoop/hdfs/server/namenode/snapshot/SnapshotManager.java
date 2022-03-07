@@ -402,7 +402,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     final String path = iip.getPath();
     final INode inode = iip.getLastINode();
     final INodeDirectory dir;
-    if (inode.isDirectory()) {
+    if (inode != null && inode.isDirectory()) {
       dir = INodeDirectory.valueOf(inode, path);
     } else {
       dir = INodeDirectory.valueOf(iip.getINode(-2), iip.getParentPath());
