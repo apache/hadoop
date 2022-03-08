@@ -64,11 +64,9 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
     Path taDir = taskStageConfig.getTaskAttemptDir();
     assertPathDoesNotExist("task attempt path", taDir);
 
-    // but the task commit succeeds
+    // so the task commit fails
     intercept(FileNotFoundException.class, () ->
         new CommitTaskStage(taskStageConfig).apply(null));
-
-
   }
 
   @Test
@@ -88,7 +86,7 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
         .apply(null);
 
     final TaskManifest manifest = result.getTaskManifest();
-    Assertions.assertThat(manifest.getDirectoriesToCreate())
+    Assertions.assertThat(manifest.getDestDirectories())
         .as("directories to create")
         .isEmpty();
     Assertions.assertThat(manifest.getFilesToCommit())

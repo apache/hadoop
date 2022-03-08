@@ -149,11 +149,6 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   private final boolean deleteTargetPaths;
 
   /**
-   * Prepare parent dirs by scanning them for files?
-   */
-  private final boolean prepareParentDirectories;
-
-  /**
    * Constructor.
    * @param outputPath destination path of the job.
    * @param role role for log messages.
@@ -195,9 +190,6 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
     this.deleteTargetPaths = conf.getBoolean(
         OPT_PREPARE_TARGET_FILES,
         OPT_VALIDATE_OUTPUT_DEFAULT);
-    this.prepareParentDirectories = conf.getBoolean(
-        OPT_PREPARE_PARENT_DIRECTORIES,
-        OPT_PREPARE_PARENT_DIRECTORIES_DEFAULT);
 
     // if constructed with a task attempt, build the task ID and path.
     if (context instanceof TaskAttemptContext) {
@@ -270,8 +262,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
         .withTaskAttemptDir(taskAttemptDir)
         .withTaskAttemptId(taskAttemptId)
         .withTaskId(taskId)
-        .withDeleteTargetPaths(deleteTargetPaths)
-        .withPrepareParentDirectories(prepareParentDirectories);
+        .withDeleteTargetPaths(deleteTargetPaths);
 
     return stageConfig;
   }

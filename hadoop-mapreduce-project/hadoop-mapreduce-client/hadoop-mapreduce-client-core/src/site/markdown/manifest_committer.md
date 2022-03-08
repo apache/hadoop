@@ -180,7 +180,6 @@ or in the case of S3A filesystems, one of the S3A committers. They all use the s
 | `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for store operations. | `10000` |
 | `mapreduce.manifest.committer.io.thread.count` | Thread count for parallel operations | `64` |
 | `mapreduce.manifest.committer.store.operations.classname` | Classname for Store Operations | `""` |
-| `mapreduce.manifest.committer.prepare.parent.directories` | Prepare parent directories? | `false` |
 | `mapreduce.manifest.committer.prepare.target.files` | Delete target files? | `false` |
 | `mapreduce.manifest.committer.validate.output` | Perform output validation? | `false` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
@@ -203,14 +202,8 @@ arise
 2. A previous job has created a file *or directory* at a path which the current job
    generated a file.
 
-Problem 1 is rare and unusual. If it does arise, set
-`mapreduce.manifest.committer.prepare.parent.directories` to `true`
-This adds the overhead of probing every parent directory in the table,
-which is done across multiple threads.
-
-```
-spark.hadoop.mapreduce.manifest.committer.prepare.parent.directories true
-```
+Problem 1 is rare and unusual. It is automatically handled when encountered;
+the destination directory is deleted.
 
 Problem 2, "existing files" may happen in jobs which appends data to existing
 tables _and do not generate unique names_.

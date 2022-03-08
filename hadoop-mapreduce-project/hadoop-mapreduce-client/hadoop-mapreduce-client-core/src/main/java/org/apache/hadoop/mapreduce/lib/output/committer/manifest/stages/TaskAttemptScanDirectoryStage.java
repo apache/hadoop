@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.EntryStatus;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.DurationInfo;
@@ -82,7 +83,7 @@ public final class TaskAttemptScanDirectoryStage
         .summaryStatistics();
     long fileDataSize = fileSummary.getSum();
     long fileCount = fileSummary.getCount();
-    int dirCount = manifest.getDirectoriesToCreate().size();
+    int dirCount = manifest.getDestDirectories().size();
     LOG.info("{}: directory {} contained {} file(s); data size {}",
         getName(),
         taskAttemptDir,
@@ -161,10 +162,14 @@ public final class TaskAttemptScanDirectoryStage
       // add any statistics provided by the listing.
       maybeAddIOStatistics(getIOStatistics(), listing);
     }
-    // if this is not the base directory.
-    // it must exist
+    // probe for and add the dest dir entry for all but
+    // the base dir
     if (depth > 0) {
-      manifest.addDirectory(DirEntry.dirEntry(destDir, 0));
+      final FileStatus destDirStatus = getFileStatusOrNull(destDir);
+      manifest.addDirectory(DirEntry.dirEntry(
+          destDir,
+          EntryStatus.toEntryStatus(destDirStatus),
+          depth));
     }
 
     // now scan the subdirectories

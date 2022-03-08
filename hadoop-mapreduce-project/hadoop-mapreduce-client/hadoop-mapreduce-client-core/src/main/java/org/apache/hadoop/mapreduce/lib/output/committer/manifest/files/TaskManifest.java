@@ -141,7 +141,7 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * the files can be renamed there.
    */
   @JsonProperty("directories")
-  private final List<DirEntry> directoriesToCreate = new ArrayList<>();
+  private final List<DirEntry> destDirectories = new ArrayList<>();
 
   /**
    * Any custom extra data committers may choose to add.
@@ -248,8 +248,12 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
     return filesToCommit.stream().mapToLong(FileEntry::getSize).sum();
   }
 
-  public List<DirEntry> getDirectoriesToCreate() {
-    return directoriesToCreate;
+  /**
+   * All the destination directories.
+   * @return directory list.
+   */
+  public List<DirEntry> getDestDirectories() {
+    return destDirectories;
   }
 
   /**
@@ -257,7 +261,7 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * @param entry entry  to add
    */
   public void addDirectory(DirEntry entry) {
-    directoriesToCreate.add(entry);
+    destDirectories.add(entry);
   }
 
   public Map<String, String> getExtraData() {

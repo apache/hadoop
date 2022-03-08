@@ -267,7 +267,7 @@ public class LoadManifestsStage extends
       manifestCount++;
       iostatistics.aggregate(manifest.getIOStatistics());
       fileCount += manifest.getFilesToCommit().size();
-      directoryCount += manifest.getDirectoriesToCreate().size();
+      directoryCount += manifest.getDestDirectories().size();
       totalFileSize += manifest.getTotalFileSize();
     }
 

@@ -61,7 +61,11 @@ public final class FileEntry implements Serializable {
   @JsonProperty("e")
   private String etag;
 
-  public FileEntry() {
+  /**
+   * Constructor only for use by jackson.
+   * Do Not Delete.
+   */
+  private FileEntry() {
   }
 
   /**

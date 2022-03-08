@@ -148,11 +148,6 @@ public class StageConfig {
   private boolean deleteTargetPaths;
 
   /**
-   * Prepare parent dirs by scanning them for files?
-   */
-  private boolean prepareParentDirectories;
-
-  /**
    * Name for logging.
    */
   private String name = "";
@@ -535,21 +530,6 @@ public class StageConfig {
 
   public boolean getDeleteTargetPaths() {
     return deleteTargetPaths;
-  }
-
-  /**
-   * Set builder value.
-   * @param value new value
-   * @return the builder
-   */
-  public StageConfig withPrepareParentDirectories(final boolean value) {
-    checkOpen();
-    prepareParentDirectories = value;
-    return this;
-  }
-
-  public boolean getPrepareParentDirectories() {
-    return prepareParentDirectories;
   }
 
   /**

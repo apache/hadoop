@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +37,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.EntryStatus;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.measureDurationOfInvocation;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_PREPARE_PARENT_DIRECTORIES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_DIRECTORIES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MKDIRS_RETURNED_FALSE;
@@ -58,14 +60,12 @@ import static org.apache.hadoop.util.OperationDuration.humanTime;
  * Each task manifest's directories are combined with those of the other tasks
  * to build a set of all directories which are needed, without duplicates.
  *
- * If the option to prepare parent directories was set,
- * these are also prepared for the commit.
- * A set of ancestor directories is built up, all of which MUST NOT
- * be files and SHALL be in one of two states
- * - directory
- * - nonexistent
- * Across a thread pool, An isFile() probe is made for all parents;
- * if there is a file there then it is deleted.
+ * This stage requires the aggregate set of manifests to contain
+ * all directories to create, including level,
+ * and expects them to have been probed for existence/state.
+ *
+ * For each level, all dirs are processed in parallel to
+ * be created or, if files, deleted.
  *
  * The stage returns the list of directories created, and for testing,
  * the map of paths to outcomes.
@@ -78,14 +78,6 @@ public class CreateOutputDirectoriesStage extends
 
   private static final Logger LOG = LoggerFactory.getLogger(
       CreateOutputDirectoriesStage.class);
-
-  /**
-   * Message to print on first mkdir failure if the parent dirs were not
-   * prepared.
-   */
-  private static final String HINT_PREPARE_PARENT_DIR = "Setting "
-      + OPT_PREPARE_PARENT_DIRECTORIES + " to \"true\" performs more parent directory"
-      + " preparation and so may fix this problem";
 
   /**
    * Directories as a map of (path, path).
@@ -123,42 +115,62 @@ public class CreateOutputDirectoriesStage extends
   private List<Path> createAllDirectories(final List<TaskManifest> taskManifests)
       throws IOException {
 
-    // the set is all directories which need to exist across all
+    // all directories which need to exist across all
     // tasks.
-    // This set is probed during parent dir scanning, so
-    //  needs to be efficient to look up values.
-    final Set<Path> directoriesToCreate = new HashSet<>();
+    final Map<Path, DirEntry> directories = new HashMap<>();
+    final Set<Path> filesToDelete = new HashSet<>();
+    int maxDepth = 0;
 
     // iterate through the task manifests
     // and all output dirs into the set of dirs to
     // create.
     // hopefully there is a lot of overlap, so the
     // final number of dirs to create is small.
-    for (TaskManifest task : taskManifests) {
-      final List<DirEntry> dirEntries
-          = task.getDirectoriesToCreate();
-      for (DirEntry entry: dirEntries) {
-        // add the dest path
-        directoriesToCreate.add(entry.getDestPath());
+    for (TaskManifest task: taskManifests) {
+      for (DirEntry entry: task.getDestDirectories()) {
+        // add the dest entry
+        final Path path = entry.getDestPath();
+        if (!directories.containsKey(path)) {
+          directories.put(path, entry);
+          // check for and update the level
+          if (entry.getLevel() > maxDepth) {
+            maxDepth = entry.getLevel();
+          }
+          // if it is a file to delete, record this.
+          if (entry.getStatus() == EntryStatus.file) {
+            filesToDelete.add(path);
+          }
+        }
       }
     }
 
+    // at this point then there is a map of all entries,
+    // and the maximum level is known.
+    // we can iterate through all levels deleting any files if there are any.
+
     // Prepare parent directories.
-    if (getStageConfig().getPrepareParentDirectories()) {
-      prepareParentDirectories(directoriesToCreate);
-    }
+    deleteFiles(filesToDelete);
 
     // Now the real work.
-
-    final int createCount = directoriesToCreate.size();
+    final int createCount = directories.size();
     LOG.info("Preparing {} directory/directories", createCount);
-    // now probe for and create the parent dirs of all renames
-    Duration d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
-        TaskPool.foreach(directoriesToCreate)
-            .executeWith(getIOProcessors(createCount))
-            .onFailure(this::reportMkDirFailure)
-            .stopOnFailure()
-            .run(this::createOneDirectory));
+    // now probe for and create the leaf dirs, which are those at the
+    // bottom level
+    final int depth = maxDepth;
+    Duration d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () -> {
+      for (int i = 1; i <= depth; i++) {
+            final int level = i;
+            final Collection<DirEntry> leafDirs= directories.values().stream()
+                .filter(e -> e.getLevel() == level)
+                .collect(Collectors.toList());
+
+            TaskPool.foreach(leafDirs)
+                .executeWith(getIOProcessors(createCount))
+                .onFailure(this::reportMkDirFailure)
+                .stopOnFailure()
+                .run(this::createOneDirectory);
+          }
+        });
     LOG.info("Time to prepare directories {}", humanTime(d.toMillis()));
     return createdDirectories;
   }
@@ -173,45 +185,37 @@ public class CreateOutputDirectoriesStage extends
    * @param path path which could not be deleted
    * @param e exception raised.
    */
-  private void reportMkDirFailure(Path path, Exception e) {
+  private void reportMkDirFailure(DirEntry dirEntry, Exception e) {
+    Path path = dirEntry.getDestPath();
     final int count = failureCount.incrementAndGet();
     LOG.warn("{}: mkdir failure #{} Failed to create directory \"{}\": {}",
         getName(), count, path, e.toString());
     LOG.debug("{}: Full exception details",
         getName(), e);
-    if (count == 1  && !getStageConfig().getPrepareParentDirectories()) {
-      // first failure and no parent dir setup, so recommend
-      // preparing the parent dir
-      LOG.warn(HINT_PREPARE_PARENT_DIR);
-    }
   }
 
   /**
-   * Clean up parent dirs. No attempt is made to create them, because
-   * we know mkdirs() will do that (assuming it has the permissions,
-   * of course)
-   * @param directoriesToCreate set of dirs to create
+   * Delete all directories where there is a file.
+   * @param filesToDelete set of dirs to where there is a file.
    * @throws IOException IO problem
    */
-  private void prepareParentDirectories(final Set<Path> directoriesToCreate)
+  private void deleteFiles(final Set<Path> filesToDelete)
       throws IOException {
 
-    // include parents in the paths
-    final Set<Path> ancestors = extractAncestors(
-        getStageConfig().getDestinationDir(),
-        directoriesToCreate);
-
-    final int ancestorCount = ancestors.size();
-    LOG.info("Preparing {} ancestor directory/directories", ancestorCount);
-    // if there is a single ancestor, don't bother with parallisation.
+    final int size = filesToDelete.size();
+    if (size == 0) {
+      // nothing to delete.
+      return;
+    }
+    LOG.info("Preparing {} ancestor directory/directories", size);
     Duration d = measureDurationOfInvocation(getIOStatistics(),
         OP_PREPARE_DIR_ANCESTORS, () ->
-            TaskPool.foreach(ancestors)
-                .executeWith(getIOProcessors(ancestorCount))
+            TaskPool.foreach(filesToDelete)
+                .executeWith(getIOProcessors(size))
                 .stopOnFailure()
                 .run(dir -> {
                   updateAuditContext(OP_PREPARE_DIR_ANCESTORS);
-                  prepareParentDir(dir);
+                  prepareDirWithFile(dir);
                 }));
     LOG.info("Time to prepare ancestor directories {}", humanTime(d.toMillis()));
   }
@@ -221,76 +225,26 @@ public class CreateOutputDirectoriesStage extends
    * @param dir directory to probe
    * @throws IOException failure in probe other than FNFE
    */
-  private void prepareParentDir(Path dir) throws IOException {
+  private void prepareDirWithFile(Path dir) throws IOException {
     // report progress back
     progress();
-    LOG.debug("{}: Probing parent dir {}", getName(), dir);
-    if (isFile(dir)) {
-      // it's a file: delete it.
-      LOG.info("{}: Deleting file {}", getName(), dir);
-      delete(dir, false, OP_DELETE_FILE_UNDER_DESTINATION);
-      // note its final state
-      addToDirectoryMap(dir, DirMapState.ancestorWasFileNowDeleted);
-    } else {
-      // and add to dir map as a dir or missing entry
-      LOG.debug("{}: Dir {} is missing or a directory", getName(), dir);
-      addToDirectoryMap(dir, DirMapState.ancestorWasDirOrMissing);
-    }
+    LOG.info("{}: Deleting file {}", getName(), dir);
+    delete(dir, false, OP_DELETE_FILE_UNDER_DESTINATION);
+    // note its final state
+    addToDirectoryMap(dir, DirMapState.fileNowDeleted);
   }
 
-  /**
-   * Determine all ancestors of the dirs to create which are
-   * under the dest path, not in the set of dirs to create.
-   * Static and public for testability.
-   * @param destDir destination dir of the job
-   * @param directoriesToCreate set of dirs to create from tasks.
-   * @return the set of parent dirs
-   */
-  public static Set<Path> extractAncestors(
-      final Path destDir,
-      final Collection<Path> directoriesToCreate) {
 
-    final Set<Path> ancestors = new HashSet<>(directoriesToCreate.size());
-    // minor optimization to save a set lookup on the common case where
-    // multiple dirs in the list contain the same parent
-    Path previousAncestor = destDir;
-    for (Path dir : directoriesToCreate) {
-      if (dir.isRoot()) {
-        // sanity check
-        LOG.warn("Root directory {} is one of the destination directories", dir);
-        break;
-      }
-      if (ancestors.contains(dir) || destDir.equals(dir)) {
-        // dir is in the ancestor set or is the destDir itself
-        continue;
-      }
-      // get its ancestor
-      Path ancestor = dir.getParent();
-      // add all the parents.
-      while (!ancestor.isRoot()
-          && !ancestor.equals(destDir)
-          && !ancestor.equals(previousAncestor)
-          && !ancestors.contains(ancestor)
-          && !directoriesToCreate.contains(ancestor)) {
-        // add to the set of dirs to create
-        ancestors.add(ancestor);
-        // and determine next parent
-        ancestor = ancestor.getParent();
-      }
-      // and remember the previous, so that we can bail out fast if there is a
-      // set of partitions.
-      previousAncestor = dir.getParent();
-    }
-    return ancestors;
-  }
-
-  private void createOneDirectory(final Path dir) throws IOException {
+  private void createOneDirectory(final DirEntry dirEntry) throws IOException {
     // report progress back
     progress();
+    final Path dir = dirEntry.getDestPath();
     updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
-    final DirMapState state = maybeCreateOneDirectory(dir);
+    final DirMapState state = maybeCreateOneDirectory(dirEntry);
     switch (state) {
     case dirFoundInStore:
+      addToDirectoryMap(dir, state);
+      break;
     case dirWasCreated:
     case dirCreatedOnSecondAttempt:
       addCreatedDirectory(dir);
@@ -311,31 +265,22 @@ public class CreateOutputDirectoriesStage extends
    * @return true if dir created/found
    * @throws IOException IO Failure.
    */
-  private DirMapState maybeCreateOneDirectory(final Path path) throws IOException {
-    LOG.info("Creating directory {}", path);
-    // if a directory is in the map: return.
-    final DirMapState dirMapState = dirMap.get(path);
-    if (dirMapState != null) {
-      LOG.debug("{}: Directory {} found in state {}; no need to create",
-          getName(), path, dirMapState);
-      // already exists in this job
-      return DirMapState.dirFoundInMap;
+  private DirMapState maybeCreateOneDirectory(DirEntry dirEntry) throws IOException {
+    final EntryStatus status = dirEntry.getStatus();
+    if (status == EntryStatus.dir) {
+      return DirMapState.dirFoundInStore;
+    }
+    // present in case directories are ever created in task commits
+    if (status == EntryStatus.created_dir) {
+      return DirMapState.dirWasCreated;
     }
 
-    // this call is 10x faster than mkdirs for GCS, so issue
-    // it first
-    FileStatus st = getFileStatusOrNull(path);
-    if (st != null) {
-      if (st.isDirectory()) {
-        // is good.
-        return DirMapState.dirFoundInStore;
-      } else {
-        // is bad: delete a file
-        LOG.info("{}: Deleting file where a directory should go: {}",
-            getName(), st);
-        delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
-      }
-    }
+    // here the dir doesn't exist because
+    // it was a file and has been deleted, or
+    // checks failed. create it.
+    final Path path = dirEntry.getDestPath();
+
+    LOG.info("Creating directory {}", path);
 
     try {
       if (mkdirs(path, false)) {
@@ -350,19 +295,10 @@ public class CreateOutputDirectoriesStage extends
       // can be caused by file existing, etc.
       LOG.info("{}: mkdir({}) raised exception {}", getName(), path, e.toString());
       LOG.debug("{}: Mkdir stack", getName(), e);
-
-    }
-
-    // no mkdirs. Assume here that there's a race between two calls each of which
-    // may take tens of milliseconds.
-    // so look in the map to see if it is now present
-    if (dirMap.containsKey(path)) {
-      LOG.debug("{}: directory {} created/registered in another thread", getName(), path);
-      return DirMapState.dirFoundInMap;
     }
 
     // fallback to checking the FS, in case a different process did it.
-    st = getFileStatusOrNull(path);
+    FileStatus st = getFileStatusOrNull(path);
     if (st != null) {
       if (!st.isDirectory()) {
         // is bad: delete a file
@@ -411,32 +347,17 @@ public class CreateOutputDirectoriesStage extends
   }
 
   /**
-   * Add a dir and all parents to the directory map.
+   * Add a dir  to the directory map if there is not already an entry there.
    * @param dir directory.
    * @param state state of entry
    */
   private void addToDirectoryMap(final Path dir,
       DirMapState state) {
-    dirMap.put(dir, state);
-    addParentsToDirectoryMap(dir);
-  }
-
-  /**
-   * Add parents of a dir to the directory map.
-   * @param dir directory.
-   */
-  private void addParentsToDirectoryMap(final Path dir) {
-    Path parent = dir.getParent();
-    while (parent != null && !parent.isRoot() && !getDestinationDir().equals(parent)) {
-      if (dirMap.get(parent) == null) {
-        dirMap.put(parent, DirMapState.parentOfCreatedDir);
-        parent = parent.getParent();
-      } else {
-        // it's in the map, so stop worrying
-        break;
-      }
+    if (!dirMap.containsKey(dir)) {
+      dirMap.put(dir, state);
     }
   }
+
 
   /**
    * Result of the operation.
@@ -481,7 +402,7 @@ public class CreateOutputDirectoriesStage extends
     dirFoundInMap,
     dirWasCreated,
     dirCreatedOnSecondAttempt,
-    ancestorWasFileNowDeleted,
+    fileNowDeleted,
     ancestorWasDirOrMissing,
     parentWasNotFile,
     parentOfCreatedDir

@@ -71,7 +71,7 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
     describe("Save manifest file to string and back");
     Path subdirS = new Path(taPath, "subdir");
     Path subdirD = new Path(testPath, "subdir");
-    source.addDirectory(DirEntry.dirEntry(subdirD, 0));
+    source.addDirectory(DirEntry.dirEntry(subdirD, 0, 0));
 
     // a file
     Path subfileS = new Path(subdirS, "file");
@@ -99,7 +99,7 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
             deser.getTaskAttemptDir())
         .isEqualTo(taPath);
 
-    Assertions.assertThat(deser.getDirectoriesToCreate())
+    Assertions.assertThat(deser.getDestDirectories())
         .hasSize(1)
         .allSatisfy(d -> assertDirEntryMatch(d, subdirD, 0));
     Assertions.assertThat(deser.getFilesToCommit())
@@ -123,7 +123,7 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
 
     Path subdirS = new Path(taPath, "subdir");
     Path subdirD = new Path(testPath, "subdir");
-    source.addDirectory(DirEntry.dirEntry(subdirD, 0));
+    source.addDirectory(DirEntry.dirEntry(subdirD, 0, 0));
 
     // a file
     Path subfileS = new Path(subdirS, "file");

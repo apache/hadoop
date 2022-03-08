@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.marshallPath;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.unmarshallPath;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.verify;
@@ -36,8 +37,9 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.Ab
 /**
  * A directory entry in the task manifest.
  * Uses shorter field names for smaller files.
+ * Hash and equals are on dir name only; there's no real expectation
+ * that those operations are needed.
  */
-
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class DirEntry implements Serializable {
@@ -51,40 +53,54 @@ public final class DirEntry implements Serializable {
   private String dir;
 
   /**
-   * Type of dir as found in task committer.
+   * Type of dest entry as found in task committer.
    */
   @JsonProperty("t")
   private int type;
 
-  public DirEntry() {
+  /**
+   * Level in the treewalk.
+   */
+  @JsonProperty("l")
+  private int level;
+
+  /**
+   * Constructor only for use by jackson.
+   * Do Not Delete.
+   */
+  private DirEntry() {
   }
 
   /**
    * Construct an entry.
-   * @param source source path.
-   * @param etag optional etag
+   *
    * @param dir destination path.
-   * @param type file size.
+   * @param type type of dest entry
+   * @param level Level in the treewalk.
+   *
    */
   public DirEntry(
       final String dir,
-      final int type) {
-    this.dir = dir;
+      final int type,
+      final int level) {
+    this.dir = requireNonNull(dir);
     this.type = type;
+    this.level = level;
   }
-
 
   /**
    * Construct an entry.
-   * @param source source path.
+   *
    * @param dir destination path.
-   * @param type file size.
-   * @param etag optional etag
+   * @param type type of dest entry
+   * @param level Level in the treewalk.
+   *
    */
   public DirEntry(
       final Path dir,
-      final int type) {
-    this(marshallPath(dir), type);
+      final int type,
+      final int level) {
+    this(marshallPath(dir), type, level);
   }
 
   public void setDir(final String dir) {
@@ -108,17 +124,27 @@ public final class DirEntry implements Serializable {
     this.type = type;
   }
 
+  public void setLevel(final int level) {
+    this.level = level;
+  }
+
+  public int getLevel() {
+    return level;
+  }
+
   @JsonIgnore
-  public Status getStatus() {
-    return toStatus(type);
+  public EntryStatus getStatus() {
+    return EntryStatus.toEntryStatus(type);
   }
 
   public void validate() throws IOException {
     final String s = toString();
     verify(dir != null && dir.length() > 0,
-        "Source is missing from " + s);
+        "destination path is missing from " + s);
     verify(type >= 0,
         "Invalid type in " + s);
+    verify(level >= 0,
+        "Invalid level in " + s);
   }
 
   @Override
@@ -126,81 +152,43 @@ public final class DirEntry implements Serializable {
     return "DirEntry{" +
         "dir='" + dir + '\'' +
         ", type=" + type +
+        ", level=" + level +
         '}';
   }
 
   @Override
   public boolean equals(final Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
+    if (this == o) {return true;}
+    if (o == null || getClass() != o.getClass()) {return false;}
     DirEntry dirEntry = (DirEntry) o;
-    return type == dirEntry.type && dir.equals(dirEntry.dir);
+    return dir.equals(dirEntry.dir);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(dir, type);
+    return Objects.hash(dir);
   }
 
   /**
    * A directory entry.
    * @param dest destination path.
    * @param type type
-   * @return an entry with the given source and type
+   * @param level Level in the treewalk.
+   * @return an entry
    */
-  public static DirEntry dirEntry(Path dest, int type) {
-    return new DirEntry(dest, type);
+  public static DirEntry dirEntry(Path dest, int type, int level) {
+    return new DirEntry(dest, type, level);
   }
 
   /**
    * A directory entry.
    * @param dest destination path.
    * @param type type
-   * @return an entry with the given source and type
+   * @param level Level in the treewalk.
+   * @return an entry
    */
-  public static DirEntry dirEntry(Path dest, Status type) {
-    return new DirEntry(dest, type.value);
+  public static DirEntry dirEntry(Path dest, EntryStatus type, int level) {
+    return dirEntry(dest, type.ordinal(), level);
   }
 
-  /**
-   * Status.
-   */
-  public enum Status {
-
-    unknown(0),
-    file(1),
-    isdir(2),
-    created(3);
-
-    private final int value;
-
-    Status(final int value) {
-      this.value = value;
-    }
-
-  }
-
-  /**
-   * Go from a marshalled type to a status value.
-   * Any out of range value is converted to unknown.
-   * @param type type
-   * @return the status value.
-   */
-  static Status toStatus(int type) {
-    switch (type) {
-    case 1:
-      return Status.file;
-    case 2:
-      return Status.isdir;
-    case 3:
-      return Status.created;
-    default:
-      return Status.unknown;
-
-    }
-  }
 }

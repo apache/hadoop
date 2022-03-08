@@ -904,7 +904,7 @@ public class TestManifestCommitProtocol
     Assertions.assertThat(taskManifest.getFilesToCommit())
         .describedAs("Files to commit in task manifest %s", manifestJSON)
         .hasSize(filesCreated);
-    Assertions.assertThat(taskManifest.getDirectoriesToCreate())
+    Assertions.assertThat(taskManifest.getDestDirectories())
         .describedAs("Directories to create in task manifest %s",
             manifestJSON)
         .isEmpty();
