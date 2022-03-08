@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +40,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManif
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.measureDurationOfInvocation;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_DIRECTORIES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
@@ -118,6 +117,7 @@ public class CreateOutputDirectoriesStage extends
     // all directories which need to exist across all
     // tasks.
     final Map<Path, DirEntry> directories = new HashMap<>();
+    final Map<Path, DirEntry> parents = new HashMap<>();
     final Set<Path> filesToDelete = new HashSet<>();
     int maxDepth = 0;
 
@@ -140,6 +140,13 @@ public class CreateOutputDirectoriesStage extends
           if (entry.getStatus() == EntryStatus.file) {
             filesToDelete.add(path);
           }
+          final Path parent = path.getParent();
+          if (parent != null && directories.containsKey(parent)) {
+            // there's a parent dir, remove it from the dir list
+            // and add to parent list
+            parents.put(parent,
+                directories.remove(parent));
+          }
         }
       }
     }
@@ -157,20 +164,12 @@ public class CreateOutputDirectoriesStage extends
     // now probe for and create the leaf dirs, which are those at the
     // bottom level
     final int depth = maxDepth;
-    Duration d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () -> {
-      for (int i = 1; i <= depth; i++) {
-            final int level = i;
-            final Collection<DirEntry> leafDirs= directories.values().stream()
-                .filter(e -> e.getLevel() == level)
-                .collect(Collectors.toList());
-
-            TaskPool.foreach(leafDirs)
-                .executeWith(getIOProcessors(createCount))
-                .onFailure(this::reportMkDirFailure)
-                .stopOnFailure()
-                .run(this::createOneDirectory);
-          }
-        });
+    Duration d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
+        TaskPool.foreach(directories.values())
+            .executeWith(getIOProcessors(createCount))
+            .onFailure(this::reportMkDirFailure)
+            .stopOnFailure()
+            .run(this::createOneDirectory));
     LOG.info("Time to prepare directories {}", humanTime(d.toMillis()));
     return createdDirectories;
   }
@@ -207,7 +206,7 @@ public class CreateOutputDirectoriesStage extends
       // nothing to delete.
       return;
     }
-    LOG.info("Preparing {} ancestor directory/directories", size);
+    LOG.info("{}: Directory entries containing files to delete: {}", getName(), size);
     Duration d = measureDurationOfInvocation(getIOStatistics(),
         OP_PREPARE_DIR_ANCESTORS, () ->
             TaskPool.foreach(filesToDelete)
@@ -215,9 +214,9 @@ public class CreateOutputDirectoriesStage extends
                 .stopOnFailure()
                 .run(dir -> {
                   updateAuditContext(OP_PREPARE_DIR_ANCESTORS);
-                  prepareDirWithFile(dir);
+                  deleteDirWithFile(dir);
                 }));
-    LOG.info("Time to prepare ancestor directories {}", humanTime(d.toMillis()));
+    LOG.info("Time to delete files {}", humanTime(d.toMillis()));
   }
 
   /**
@@ -225,16 +224,23 @@ public class CreateOutputDirectoriesStage extends
    * @param dir directory to probe
    * @throws IOException failure in probe other than FNFE
    */
-  private void prepareDirWithFile(Path dir) throws IOException {
+  private void deleteDirWithFile(Path dir) throws IOException {
     // report progress back
     progress();
     LOG.info("{}: Deleting file {}", getName(), dir);
-    delete(dir, false, OP_DELETE_FILE_UNDER_DESTINATION);
+    delete(dir, false, OP_DELETE);
     // note its final state
     addToDirectoryMap(dir, DirMapState.fileNowDeleted);
   }
 
 
+  /**
+   * Create a directory is required, updating the directory map
+   * and, if the operation took place, the list of created dirs.
+   * Reports progress on invocation.
+   * @param dirEntry entry
+   * @throws IOException failure.
+   */
   private void createOneDirectory(final DirEntry dirEntry) throws IOException {
     // report progress back
     progress();

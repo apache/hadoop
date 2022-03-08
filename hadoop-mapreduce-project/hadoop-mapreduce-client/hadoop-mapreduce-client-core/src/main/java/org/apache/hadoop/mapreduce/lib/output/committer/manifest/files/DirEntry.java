@@ -137,6 +137,10 @@ public final class DirEntry implements Serializable {
     return EntryStatus.toEntryStatus(type);
   }
 
+  @JsonIgnore
+  public void setStatus(EntryStatus status) {
+    setType(status.ordinal());
+  }
   public void validate() throws IOException {
     final String s = toString();
     verify(dir != null && dir.length() > 0,

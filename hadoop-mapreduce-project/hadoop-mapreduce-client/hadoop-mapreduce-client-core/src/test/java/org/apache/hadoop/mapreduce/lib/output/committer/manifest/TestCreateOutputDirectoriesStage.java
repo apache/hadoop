@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -32,7 +33,6 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.EntryStatus;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CreateOutputDirectoriesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
@@ -41,24 +41,22 @@ import org.apache.hadoop.util.Lists;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_PREPARE_DIR_ANCESTORS;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test directory creation.
- * There's issues here with concurrency, but also that the
- * state of the directory is unknown and could be considered
- * inconsistent with the current job.
- *
- * Bad
- * - file ancestor of target dir
- * - file is target dir
- * Good
- * - dir exists, empty
- * - dir exists, not empty
- * plus concurrency.
+ * As the directory creation phase relies on input from the task manifest to
+ * determine which directories to explicitly create, delete files at
+ * etc, these tests build up manifests and assert that the output
+ * of the directory creation stage matches that of the combination
+ * of the manifest and the filesystem state.
  */
 public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterTest {
 
@@ -69,9 +67,11 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
   protected static final int DEEP_TREE_WIDTH = 4;
 
   /**
-   * Fault Injection.
+   * The number of directories created in test setup; this must be
+   * added to all assertions of the value of OP_MKDIRS.
    */
-  private UnreliableManifestStoreOperations failures;
+  private static final int DIRECTORIES_CREATED_IN_SETUP = 2;
+
   private Path destDir;
   private CreateOutputDirectoriesStage mkdirStage;
   private StageConfig stageConfig;
@@ -83,9 +83,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     destDir = methodPath();
     // clean up dest dir completely
     destDir.getFileSystem(getConfiguration()).delete(destDir, true);
-    failures
-        = new UnreliableManifestStoreOperations(createManifestStoreOperations());
-    setStoreOperations(failures);
+    setStoreOperations(createManifestStoreOperations());
     stageConfig = createStageConfigForJob(JOB1, destDir)
         .withDeleteTargetPaths(true);
     setJobStageConfig(stageConfig);
@@ -93,13 +91,16 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     new SetupJobStage(stageConfig).apply(true);
     mkdirStage = new CreateOutputDirectoriesStage(stageConfig);
     iostats = stageConfig.getIOStatistics();
+    // assert original count of dirs created == 2 : job and task manifest
+    verifyStatisticCounterValue(iostats, OP_MKDIRS,
+        DIRECTORIES_CREATED_IN_SETUP);
+    // reset the value to simplify future work
+    iostats.getCounterReference(OP_MKDIRS).set(0);
   }
 
   @Test
   public void testPrepareSomeDirs() throws Throwable {
-    // assert original count of dirs created == 2 : job and task manifest
-    final int directoriesCreatedInSetup = 2;
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, directoriesCreatedInSetup);
+
     final long initialFileStatusCount = lookupCounterStatistic(iostats, OP_GET_FILE_STATUS);
     final int dirCount = 8;
     final List<Path> dirs = subpaths(destDir, dirCount);
@@ -117,7 +118,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
 
     // now dirCount new dirs are added.
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, directoriesCreatedInSetup + dirCount);
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, dirCount);
 
     // now rerun the same preparation sequence, but this
     // time declare that the directories exist (as they do)
@@ -136,7 +137,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     // second run probed no dest dirs
     verifyStatisticCounterValue(iostats, OP_GET_FILE_STATUS, initialFileStatusCount);
     // and no new mkdir calls were made
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, directoriesCreatedInSetup + dirCount);
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, dirCount);
     verifyStatisticCounterValue(iostats, OP_DELETE_FILE_UNDER_DESTINATION, 0);
     verifyStatisticCounterValue(iostats, OP_IS_FILE, 0);
   }
@@ -188,19 +189,16 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
 
   /**
    * Prepare a deep tree {@code c ^ 3} of entries.
-   * Make one of the parent dirs a file and so expect
-   * the first attempt to initially fail as the stage configuration
-   * does not parent dir preparation.
-   * The second attempt will, so succeeds.
+   * Make one of the parent dirs a file.
    *
    * From a test-purity perspective, this should
-   * be separate tests. But attempting both
+   * be separate tests. But attempting
    * operations in the same test cases spreads the
    * directory setup costs across both, rather than
    * duplicating it.
    */
   @Test
-  public void testPrepareDeepTree() throws Throwable {
+  public void testPrepareDirtyTree() throws Throwable {
 
     // build the lists of paths for the different levels
     final int c = getDeepTreeWidth();
@@ -211,58 +209,87 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     final List<Path> level3 = level2.stream().flatMap(p ->
             subpaths(p, c).stream())
         .collect(Collectors.toList());
-
+    // manifest dir entry list contains all levels > 0
+    final List<DirEntry> directories = new ArrayList<>();
+    final List<DirEntry> l1 = dirEntries(level1, 1, EntryStatus.not_found);
+    directories.addAll(l1);
+    final List<DirEntry> l2 = dirEntries(level2, 2, EntryStatus.not_found);
+    directories.addAll(l2);
+    final List<DirEntry> l3 = dirEntries(level3, 3, EntryStatus.not_found);
+    directories.addAll(l3);
     // one of the level 0 paths is going to be a file
-    final Path parentIsFile = level1.get(1);
+    final DirEntry parentIsFile = l1.get(1);
     // one entry has a dir already
-    final Path parentIsDir = level2.get(0);
+    final DirEntry parentIsDir = l2.get(0);
     // and one of the dest dirs is a file.
-    final Path destIsFile = level3.get(0);
+    final DirEntry leafIsFile = l3.get(0);
 
     // prepare the output
     CompletableFuture.allOf(
-        asyncPut(parentIsFile, NO_DATA),
-        asyncPut(destIsFile, NO_DATA),
-        asyncMkdir(parentIsDir))
+        asyncPut(parentIsFile.getDestPath(), NO_DATA),
+        asyncPut(leafIsFile.getDestPath(), NO_DATA),
+        asyncMkdir(parentIsDir.getDestPath()))
         .join();
 
-    // manifest dir entry list contains all levels > 0
-    final List<DirEntry> directories = new ArrayList<>();
-    directories.addAll(dirEntries(level1, 1, EntryStatus.not_found));
-    directories.addAll(dirEntries(level2, 2, EntryStatus.not_found));
-    final List<DirEntry> l3 = dirEntries(level3, 3, EntryStatus.not_found);
-    l3.get(0).setType(EntryStatus.file.ordinal());
-    directories.addAll(l3);
-
+    // patch the entries, which, as they are references
+    // into the lists, updates the values there.
+    parentIsFile.setStatus(EntryStatus.file);
+    parentIsDir.setStatus(EntryStatus.dir);
+    leafIsFile.setStatus(EntryStatus.file);
 
     final List<TaskManifest> manifests = Lists.newArrayList(
         manifestWithDirsToCreate(directories));
 
-    // first attempt will fail because of the parent dir & this job is set
-    // to not try and delete
-    LOG.info("Executing failing attempt to create the directories");
+    // first attempt will succeed.
     final CreateOutputDirectoriesStage.Result result =
         mkdirStage.apply(manifests);
 
     LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
 
-    assertDirMapStatus(result, destIsFile,
-        CreateOutputDirectoriesStage.DirMapState.dirWasCreated);
+    assertDirMapStatus(result, leafIsFile.getDestPath(),
+        CreateOutputDirectoriesStage.DirMapState.fileNowDeleted);
 
     // for the parent dir, all is good
-    assertDirMapStatus(result, parentIsFile,
+    assertDirMapStatus(result, parentIsFile.getDestPath(),
         CreateOutputDirectoriesStage.DirMapState.fileNowDeleted);
     Assertions.assertThat(result.getCreatedDirectories())
         .describedAs("output of %s", mkdirStage)
         .containsExactlyInAnyOrderElementsOf(level3);
-
-    // and now, do a rerun. where everything is good.
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, level3.size());
+    // do a rerun. where the directory setup will fail because
+    // a directory is present where the manifest says there is
+    // a file.
     CreateOutputDirectoriesStage attempt2 =
         new CreateOutputDirectoriesStage(
             createStageConfigForJob(JOB1, destDir)
                 .withDeleteTargetPaths(true));
-    assertDirMapStatus(attempt2.apply(manifests), destIsFile,
-        CreateOutputDirectoriesStage.DirMapState.dirFoundInStore);
+    // attempt will fail because one of the entries marked as
+    // a file to delete is now a non-empty directory
+    LOG.info("Executing failing attempt to create the directories");
+    intercept(IOException.class, () -> attempt2.apply(manifests));
+    verifyStatisticCounterValue(iostats, OP_PREPARE_DIR_ANCESTORS + SUFFIX_FAILURES, 1);
+    verifyStatisticCounterValue(iostats, OP_DELETE + SUFFIX_FAILURES, 1);
+
+    // build a new directory list where everything is declared a directory;
+    // no dirs will be created
+    final List<DirEntry> directories3 = new ArrayList<>();
+    directories3.addAll(dirEntries(level1, 1, EntryStatus.dir));
+    directories3.addAll(dirEntries(level2, 2, EntryStatus.dir));
+    directories3.addAll(dirEntries(level3, 3, EntryStatus.dir));
+
+    final List<TaskManifest> manifests3 = Lists.newArrayList(
+        manifestWithDirsToCreate(directories3));
+    CreateOutputDirectoriesStage attempt3 =
+        new CreateOutputDirectoriesStage(
+            createStageConfigForJob(JOB1, destDir)
+                .withDeleteTargetPaths(true));
+    final CreateOutputDirectoriesStage.Result r3 =
+        attempt3.apply(manifests3);
+    assertDirMapStatus(r3, leafIsFile.getDestPath(),
+       CreateOutputDirectoriesStage.DirMapState.dirFoundInStore);
+    Assertions.assertThat(r3.getCreatedDirectories())
+        .describedAs("created directories")
+        .isEmpty();
   }
 
   /**
@@ -273,6 +300,4 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
   protected int getDeepTreeWidth() {
     return DEEP_TREE_WIDTH;
   }
-
-
 }
