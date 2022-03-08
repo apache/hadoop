@@ -1190,9 +1190,10 @@ public class ViewFileSystem extends FileSystem {
         // targetFSTrashRootPath is the default trash root based on user home
         // dir.
         Path defaultUserHome = res.targetFileSystem.getHomeDirectory();
-        if ((mountTargetPath == null || ROOT_PATH.equals(mountTargetPath))
-            && defaultUserHome != null && targetFSTrashRootPath.equals(
-            new Path(defaultUserHome, TRASH_PREFIX))) {
+        if ((mountTargetPath == null || mountTargetPath.isEmpty()
+            || ROOT_PATH.equals(mountTargetPath)) && defaultUserHome != null
+            && targetFSTrashRootPath.equals(
+            defaultUserHome.toUri().getPath() + "/" + TRASH_PREFIX)) {
           return makeQualified(new Path(res.resolvedPath,
               TRASH_PREFIX + "/" + ugi.getShortUserName()));
         } else {
