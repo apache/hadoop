@@ -40,10 +40,11 @@ import java.util.List;
 import java.nio.file.AccessDeniedException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.impl.ITestPartialRenamesDeletes.createFiles;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
+import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
+import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
  * ITest for failure handling, primarily multipart deletion.
@@ -85,13 +86,10 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     Path path = path("largeDir");
     mkdirs(path);
     createFiles(fs, path, 1, 1005, 0);
-    List<String> keys = new ArrayList<>();
     RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator =
             fs.listFiles(path, false);
-    while (locatedFileStatusRemoteIterator.hasNext()) {
-      Path file = locatedFileStatusRemoteIterator.next().getPath();
-      keys.add(fs.pathToKey(file));
-    }
+    List<String> keys  = toList(mappingRemoteIterator(locatedFileStatusRemoteIterator,
+            locatedFileStatus -> fs.pathToKey(locatedFileStatus.getPath())));
     // After implementation of paging during multi object deletion,
     // no exception is encountered.
     Long bulkDeleteReqBefore = getNumberOfBulkDeleteRequestsMadeTillNow(fs);

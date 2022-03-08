@@ -375,7 +375,6 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * the keys from S3 and paths from S3Guard.
    *
    * @param keyList keys to delete.
-   * @param auditDeletedKeys should the results be audited and undeleted
    * entries logged?
    * @throws IOException failure
    */
@@ -386,7 +385,6 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
     try (DurationInfo ignored =
              new DurationInfo(LOG, false,
                  "Delete page of %d keys", keyList.size())) {
-      DeleteObjectsResult result;
       if (!keyList.isEmpty()) {
         // first delete the files.
         List<DeleteObjectsRequest.KeyVersion> files = keyList.stream()
@@ -394,9 +392,9 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
             .map(e -> e.keyVersion)
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} file objects", files.size());
-      Invoker.once("Remove S3 Files",
+        Invoker.once("Remove S3 Files",
             status.getPath().toString(),
-            () -> callbacks.removeKeys(
+          () -> callbacks.removeKeys(
                 files,
                 false
             ));
@@ -409,7 +407,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         // This is invoked with deleteFakeDir.
         Invoker.once("Remove S3 Dir Markers",
             status.getPath().toString(),
-            () -> callbacks.removeKeys(
+          () -> callbacks.removeKeys(
                 dirs,
                 true
             ));

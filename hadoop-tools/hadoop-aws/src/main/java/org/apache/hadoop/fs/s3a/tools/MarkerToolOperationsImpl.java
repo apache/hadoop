@@ -56,8 +56,7 @@ public class MarkerToolOperationsImpl implements MarkerToolOperations {
   @Override
   public void removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      final boolean deleteFakeDir,
-      final boolean quiet)
+      final boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     operationCallbacks.removeKeys(keysToDelete, deleteFakeDir
     );

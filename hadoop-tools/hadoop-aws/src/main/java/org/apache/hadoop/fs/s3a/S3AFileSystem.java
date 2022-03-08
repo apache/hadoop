@@ -552,8 +552,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
-      // Is this required ? as I have already added the check in RenameOp
-      // In DeleteOp, check was already present.
       checkArgument(pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
               "page size out of range: %s", pageSize);
       listing = new Listing(listingOperationCallbacks, createStoreContext());
@@ -2853,13 +2851,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     try {
       if (enableMultiObjectsDelete) {
-        // Multi object deletion of more than 1000 keys is not supported
-        // by s3. So we are paging the keys by page size whose default
-        // value is 250.
-        for (List<DeleteObjectsRequest.KeyVersion> batchOfKeysToDelete :
-                Lists.partition(keysToDelete, pageSize)) {
+        if (keysToDelete.size() <= pageSize) {
           deleteObjects(getRequestFactory()
-                  .newBulkDeleteRequest(batchOfKeysToDelete));
+                  .newBulkDeleteRequest(keysToDelete));
+        } else {
+          // Multi object deletion of more than 1000 keys is not supported
+          // by s3. So we are paging the keys by page size.
+          LOG.debug("Partitioning the keys to delete as it is more than " +
+                  "page size. Number of keys: {}, Page size: {}",
+                  keysToDelete.size(), pageSize);
+          for (List<DeleteObjectsRequest.KeyVersion> batchOfKeysToDelete :
+                  Lists.partition(keysToDelete, pageSize)) {
+            deleteObjects(getRequestFactory()
+                    .newBulkDeleteRequest(batchOfKeysToDelete));
+          }
         }
       } else {
         for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {

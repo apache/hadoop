@@ -58,10 +58,7 @@ public interface MarkerToolOperations {
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs.
-   * @param quiet should a bulk query be quiet, or should its result list
    * all deleted keys
-   * @return the deletion result if a multi object delete was invoked
-   * and it returned without a failure, else null.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -72,8 +69,7 @@ public interface MarkerToolOperations {
   @Retries.RetryMixed
   void removeKeys(
       List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean deleteFakeDir,
-      boolean quiet)
+      boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
              IOException;
 
