@@ -993,7 +993,7 @@ public class FileUtil {
           + " would create entry outside of " + outputDir);
     }
 
-    if (Shell.WINDOWS && (entry.isSymbolicLink() || entry.isLink())) {
+    if (entry.isSymbolicLink() || entry.isLink()) {
       String canonicalTargetPath = getCanonicalPath(entry.getLinkName(), outputDir);
       if (!canonicalTargetPath.startsWith(targetDirPath)) {
         throw new IOException(
