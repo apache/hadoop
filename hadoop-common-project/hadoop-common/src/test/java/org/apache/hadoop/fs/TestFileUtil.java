@@ -1401,6 +1401,8 @@ public class TestFileUtil {
 
     File rootDir = new File("tmp");
     try (TarArchiveOutputStream tos = new TarArchiveOutputStream(os)) {
+      tos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
+
       // Create arbitrary dir
       File arbitraryDir = new File(rootDir, "arbitrary-dir/");
       assertTrue(arbitraryDir.mkdirs());
