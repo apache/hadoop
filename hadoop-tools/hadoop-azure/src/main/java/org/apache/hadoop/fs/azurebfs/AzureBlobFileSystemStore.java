@@ -53,7 +53,6 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -63,6 +62,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Listenable
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -914,25 +914,29 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     String sourceRelativePath = getRelativePath(source);
     String destinationRelativePath = getRelativePath(destination);
-    final AtomicBoolean recovered = new AtomicBoolean(false);
+    // was any operation recovered from?
+    boolean recovered = false;
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
-        AbfsRestOperation op = client
-            .renamePath(sourceRelativePath, destinationRelativePath,
-                continuation, tracingContext, sourceEtag, recovered);
+        final Pair<AbfsRestOperation, Boolean> pair =
+            client.renamePath(sourceRelativePath, destinationRelativePath,
+                continuation, tracingContext, sourceEtag);
+
+        AbfsRestOperation op = pair.getLeft();
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();
-
+        // update the recovery flag.
+        recovered |= pair.getRight();
         if (!shouldContinue) {
           perfInfo.registerAggregates(startAggregate, countAggregate);
         }
       }
     } while (shouldContinue);
-    return recovered.get();
+    return recovered;
   }
 
   public void delete(final Path path, final boolean recursive,

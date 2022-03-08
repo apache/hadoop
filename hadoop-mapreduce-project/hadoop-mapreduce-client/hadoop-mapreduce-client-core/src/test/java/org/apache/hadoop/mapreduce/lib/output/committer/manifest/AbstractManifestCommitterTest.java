@@ -909,13 +909,13 @@ public abstract class AbstractManifestCommitterTest
     for (int i = 0; i < filesPerTaskAttempt; i++) {
       Path in = new Path(taDir, "dir-" + i);
       Path out = new Path(getDestDir(), "dir-" + i);
-      manifest.addDirectory(DirEntry.dirEntry(out, 0));
+      manifest.addDirectory(DirEntry.dirEntry(out, 0, 1));
       String name = taskStageConfig.getTaskAttemptId() + ".csv";
       Path src = new Path(in, name);
       Path dest = new Path(out, name);
       long fileSize = size + i * 1000L;
       manifest.addFileToCommit(
-          new FileEntry(src, dest, fileSize, null));
+          new FileEntry(src, dest, fileSize, Long.toString(fileSize, 16)));
       totalDataSize.addAndGet(fileSize);
     }
 

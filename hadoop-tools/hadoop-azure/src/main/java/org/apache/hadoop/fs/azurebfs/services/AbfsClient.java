@@ -36,7 +36,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -52,6 +51,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
@@ -487,22 +487,24 @@ public class AbfsClient implements Closeable {
    * If a source etag is passed in, the operation will attempt to recover
    * from a missing source file by probing the destination for
    * existence and comparing etags.
+   * The second value in the result will be true to indicate that this
+   * took place.
+   * As rename recovery is only attempted if the source etag is non-empty,
+   * in normal rename operations rename recovery will never happen.
    * @param source path to source file
    * @param destination destination of rename.
    * @param continuation continuation.
    * @param tracingContext trace context
    * @param sourceEtag etag of source file. may be null or empty
-   * @param recovered atomic boolean set to true if recovery was needed and succeeded.
-   * @return the rename operation
+   * @return pair of (the rename operation, flag indicating recovery took place)
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    */
-  public AbfsRestOperation renamePath(
+  public Pair<AbfsRestOperation, Boolean> renamePath(
       final String source,
       final String destination,
       final String continuation,
       final TracingContext tracingContext,
-      final String sourceEtag,
-      final AtomicBoolean recovered)
+      final String sourceEtag)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
@@ -530,6 +532,7 @@ public class AbfsClient implements Closeable {
             requestHeaders);
     try {
       op.execute(tracingContext);
+      return Pair.of(op, false);
     } catch (AzureBlobFileSystemException e) {
         // If we have no HTTP response, throw the original exception.
         if (!op.hasResult()) {
@@ -542,13 +545,9 @@ public class AbfsClient implements Closeable {
           // idempotency did not return different result
           // throw back the exception
           throw e;
-        } else {
-          recovered.set(true);
-          return op;
         }
+      return Pair.of(op, true);
     }
-
-    return op;
   }
 
   /**
@@ -560,7 +559,7 @@ public class AbfsClient implements Closeable {
    * If it matches the source etag, then the rename is considered
    * a success.
    * Exceptions raised in the probe of the destination are swallowed,
-   * so that thet do not interfere with the original rename failures.
+   * so that they do not interfere with the original rename failures.
    * @param source source path
    * @param op Rename request REST operation response with non-null HTTP response
    * @param destination rename destination path
