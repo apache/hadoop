@@ -1274,9 +1274,9 @@ public class ViewFileSystem extends FileSystem {
         } else {
           FileStatus[] mountPointTrashRoots = listStatus(trashRoot);
           for (FileStatus trash : mountPointTrashRoots) {
-            // Remove the mountPoint to get the targetFS path and use
+            // Remove the mountPoint to get the targetFsTrash path
             String targetFsTrash = trash.getPath().toUri().getPath()
-                .substring(mountPoint.src.length());
+                                        .substring(mountPoint.src.length());
 
             // Use getFileStatus to get the full path.
             // Do not use targetFS.makeQualified(new Path(targetFsTrash)).
