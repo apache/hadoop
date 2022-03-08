@@ -1164,6 +1164,8 @@ public class ViewFileSystem extends FileSystem {
       }
 
       // New trash root policy
+      // Uri.getPath() will return an empty string if path is not defined in
+      // the URI.
       String targetFSTrashRootPath = targetFSTrashRoot.toUri().getPath();
       String mountTargetPath = res.targetFileSystem.getUri().getPath();
       if (ROOT_PATH.equals(new Path(res.resolvedPath))) {
@@ -1190,9 +1192,9 @@ public class ViewFileSystem extends FileSystem {
         // targetFSTrashRootPath is the default trash root based on user home
         // dir.
         Path defaultUserHome = res.targetFileSystem.getHomeDirectory();
-        if ((mountTargetPath == null || mountTargetPath.isEmpty()
-            || ROOT_PATH.equals(mountTargetPath)) && defaultUserHome != null
-            && targetFSTrashRootPath.equals(
+        if ((mountTargetPath.isEmpty() ||
+            ROOT_PATH.equals(new Path(mountTargetPath)))
+            && defaultUserHome != null && targetFSTrashRootPath.equals(
             defaultUserHome.toUri().getPath() + "/" + TRASH_PREFIX)) {
           return makeQualified(new Path(res.resolvedPath,
               TRASH_PREFIX + "/" + ugi.getShortUserName()));
