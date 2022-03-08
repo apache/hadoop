@@ -387,7 +387,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   public static WebAppDescriptor createWebAppDescriptor() {
     return new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
+        TestRMWebServicesCapacitySched.class.getPackage().getName())
         .contextListenerClass(GuiceServletConfig.class)
         .filterClass(com.google.inject.servlet.GuiceFilter.class)
         .contextPath("jersey-guice-filter").servletPath("/").build();
