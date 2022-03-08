@@ -1118,8 +1118,8 @@ abstract public class ViewFileSystemBaseTest {
     // Case 1: path p in the /data mount point.
     // Return a trash root within the mount point.
     Path dataTestPath = new Path("/data/dir/file");
-    Path dataTrashRoot =
-        new Path("/data/" + TRASH_PREFIX + "/" + ugi.getShortUserName());
+    Path dataTrashRoot = fsView2.makeQualified(
+        new Path("/data/" + TRASH_PREFIX + "/" + ugi.getShortUserName()));
     Assert.assertEquals(dataTrashRoot, fsView2.getTrashRoot(dataTestPath));
 
     // Case 2: path p not found in mount table, fall back to the default FS
@@ -1127,7 +1127,8 @@ abstract public class ViewFileSystemBaseTest {
     Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
     Path userHomeTrashRoot =
         new Path(fsTarget.getHomeDirectory().toUri().getPath(), TRASH_PREFIX);
-    Assert.assertEquals(userHomeTrashRoot,
+    Path viewFSUserHomeTrashRoot = fsView2.makeQualified(userHomeTrashRoot);
+    Assert.assertEquals(viewFSUserHomeTrashRoot,
         fsView2.getTrashRoot(nonExistentPath));
 
     // Case 3: turn off the CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT flag.
@@ -1174,8 +1175,8 @@ abstract public class ViewFileSystemBaseTest {
         URI.create("mocktrashfs://localhost/vol"));
     Path testPath = new Path("/mnt/datavol1/projs/proj");
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Path expectedTrash =
-        new Path("/mnt/datavol1/very/deep/deep/trash/dir/.Trash");
+    Path expectedTrash = fsView2.makeQualified(
+        new Path("/mnt/datavol1/very/deep/deep/trash/dir/.Trash"));
     Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(testPath));
   }
 

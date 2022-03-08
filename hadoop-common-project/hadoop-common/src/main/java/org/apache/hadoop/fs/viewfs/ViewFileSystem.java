@@ -1149,24 +1149,23 @@ public class ViewFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
-    boolean trashForceInsideMountPoint =
-        config.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
-            CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT);
 
     try {
       InodeTree.ResolveResult<FileSystem> res =
           fsState.resolve(getUriPath(path), true);
-
       Path targetFSTrashRoot =
           res.targetFileSystem.getTrashRoot(res.remainingPath);
-      String targetFSTrashRootPath = targetFSTrashRoot.toUri().getPath();
-      String mountTargetPath = res.targetFileSystem.getUri().getPath();
 
+      boolean trashForceInsideMountPoint =
+          config.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+              CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT);
       if (!trashForceInsideMountPoint) {
         return targetFSTrashRoot;
       }
 
       // New trash root policy
+      String targetFSTrashRootPath = targetFSTrashRoot.toUri().getPath();
+      String mountTargetPath = res.targetFileSystem.getUri().getPath();
       if (ROOT_PATH.equals(new Path(res.resolvedPath))) {
         // Path path is in fallback FS. Return targetFSTrashRootPath;
 
@@ -1177,26 +1176,38 @@ public class ViewFileSystem extends FileSystem {
             fsState.resolve(targetFSTrashRootPath, true);
         if (!ROOT_PATH.equals(new Path(res2.resolvedPath))) {
           LOG.warn(String.format("A mount point %s exists for trash root %s "
-              + "returned by fallback FS for path %s. Rename between path %s "
-                  + "and trash root %s will fail, as the trash root is in a "
+                  + "returned by fallback FS for path %s. Rename between path "
+                  + "%s and trash root %s will fail, as the trash root is in a "
                   + "mount point while path %s is in the fallback FS",
               res2.resolvedPath, targetFSTrashRootPath, path, path,
               targetFSTrashRootPath, path));
         }
-        return new Path(targetFSTrashRootPath);
+        return makeQualified(new Path(targetFSTrashRootPath));
       } else if (targetFSTrashRootPath.startsWith(mountTargetPath)) {
         // targetFSTrash is inside mountPoint.targetPath
-        String relativeTrashRoot =
-            targetFSTrashRootPath.substring(mountTargetPath.length());
-        // remove the starting '/' if it exists
-        if (relativeTrashRoot.startsWith("/")) {
-          relativeTrashRoot = relativeTrashRoot.substring(1);
+
+        // Check whether mountTargetPath is null or '/' and whether
+        // targetFSTrashRootPath is the default trash root based on user home
+        // dir.
+        Path defaultUserHome = res.targetFileSystem.getHomeDirectory();
+        if ((mountTargetPath == null || ROOT_PATH.equals(mountTargetPath))
+            && defaultUserHome != null && targetFSTrashRootPath.equals(
+            new Path(defaultUserHome, TRASH_PREFIX))) {
+          return makeQualified(new Path(res.resolvedPath,
+              TRASH_PREFIX + "/" + ugi.getShortUserName()));
+        } else {
+          String relativeTrashRoot =
+              targetFSTrashRootPath.substring(mountTargetPath.length());
+          // remove the starting '/' if it exists
+          if (relativeTrashRoot.startsWith("/")) {
+            relativeTrashRoot = relativeTrashRoot.substring(1);
+          }
+          return makeQualified(new Path(res.resolvedPath, relativeTrashRoot));
         }
-        return new Path(res.resolvedPath, relativeTrashRoot);
       } else {
         // Return the trash root for the mount point.
-        return new Path(res.resolvedPath,
-            TRASH_PREFIX + "/" + ugi.getShortUserName());
+        return makeQualified(new Path(res.resolvedPath,
+            TRASH_PREFIX + "/" + ugi.getShortUserName()));
       }
     } catch (IOException | IllegalArgumentException e) {
       throw new NotInMountpointException(path, "getTrashRoot");
@@ -1214,9 +1225,17 @@ public class ViewFileSystem extends FileSystem {
    */
   @Override
   public Collection<FileStatus> getTrashRoots(boolean allUsers) {
-    List<FileStatus> trashRoots = new ArrayList<>();
+    // A map from targetFSPath -> FileStatus.
+    // FileStatus can be from targetFS or viewFS.
+
+    // TargetFS path is used to check and remove duplicate trash roots
+    // between childFS.getTrashRoots() and trash roots in TRASH_PREFIX dir for
+    // each mount point.
+    HashMap<Path, FileStatus> trashRoots = new HashMap<>();
     for (FileSystem fs : getChildFileSystems()) {
-      trashRoots.addAll(fs.getTrashRoots(allUsers));
+      for (FileStatus trash : fs.getTrashRoots(allUsers)) {
+        trashRoots.put(trash.getPath(), trash);
+      }
     }
 
     boolean trashForceInsideMountPoint =
@@ -1224,56 +1243,49 @@ public class ViewFileSystem extends FileSystem {
             CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT);
     // Return trashRoots if FORCE_INSIDE_MOUNT_POINT is disabled.
     if (!trashForceInsideMountPoint) {
-      return trashRoots;
+      return trashRoots.values();
     }
 
-    // We use targetFS Path to check for duplicate paths.
-    Set<Path> uniqueTrashRoots = new HashSet<>();
-    for (FileStatus file : trashRoots) {
-      uniqueTrashRoots.add(file.getPath());
-    }
-
+    // Get trash roots in TRASH_PREFIX dir inside mount points.
     List<InodeTree.MountPoint<FileSystem>> mountPoints =
         fsState.getMountPoints();
     try {
       for (InodeTree.MountPoint<FileSystem> mountPoint : mountPoints) {
 
-        Path trashRoot = new Path(mountPoint.src + "/" + TRASH_PREFIX);
+        Path trashRoot =
+            makeQualified(new Path(mountPoint.src + "/" + TRASH_PREFIX));
 
         // Continue if trashRoot does not exist for this mount point
         if (!exists(trashRoot)) {
           continue;
         }
 
+        FileSystem targetFS = mountPoint.target.getTargetFileSystem();
         if (!allUsers) {
           Path userTrashRoot = new Path(trashRoot, ugi.getShortUserName());
           if (exists(userTrashRoot)) {
-            Path targetFsTrashPath =
-                new Path("/" + TRASH_PREFIX + "/" + ugi.getShortUserName());
-            FileStatus targetFsTrash = mountPoint.target.getTargetFileSystem()
-                .getFileStatus(targetFsTrashPath);
-            if (!uniqueTrashRoots.contains(targetFsTrash.getPath())) {
-              FileStatus trash = getFileStatus(userTrashRoot);
-              trashRoots.add(trash);
-              uniqueTrashRoots.add(targetFsTrash.getPath());
-            }
+            Path targetFsTrashPath = targetFS.getFileStatus(
+                new Path("/" + TRASH_PREFIX + "/" + ugi.getShortUserName()))
+                .getPath();
+            // Set or replace FileStatus for targetFsTrashPath with the
+            // FileStatus from viewFS
+            trashRoots.put(targetFsTrashPath, getFileStatus(userTrashRoot));
           }
         } else {
           FileStatus[] mountPointTrashRoots = listStatus(trashRoot);
           for (FileStatus trash : mountPointTrashRoots) {
-            // Remove the mountPoint to get the targetFS path
-            Path targetFsTrashPath =
-                new Path(trash.getPath().toUri().getPath()
-                    .substring(mountPoint.src.length()));
-            FileStatus targetFsTrash = mountPoint.target.getTargetFileSystem()
-                .getFileStatus(targetFsTrashPath);
-            // skip if we already include it in uniqueTrashRoots
-            if (uniqueTrashRoots.contains(targetFsTrash.getPath())) {
-              continue;
-            }
+            // Remove the mountPoint to get the targetFS path and use
+            String targetFsTrash = trash.getPath().toUri().getPath()
+                .substring(mountPoint.src.length());
 
-            trashRoots.add(trash);
-            uniqueTrashRoots.add(targetFsTrash.getPath());
+            // Use getFileStatus to get the full path.
+            // Do not use targetFS.makeQualified(new Path(targetFsTrash)).
+            Path targetFsTrashPath =
+                targetFS.getFileStatus(new Path(targetFsTrash)).getPath();
+
+            // Set or replace FileStatus for targetFsTrashPath with the
+            // FileStatus from viewFS
+            trashRoots.put(targetFsTrashPath, trash);
           }
         }
       }
@@ -1281,7 +1293,7 @@ public class ViewFileSystem extends FileSystem {
       LOG.warn("Exception in get all trash roots", e);
     }
 
-    return trashRoots;
+    return trashRoots.values();
   }
 
   @Override
