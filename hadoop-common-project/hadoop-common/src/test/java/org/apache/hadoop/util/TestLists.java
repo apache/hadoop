@@ -91,27 +91,36 @@ public class TestLists {
     list.add("e");
     List<List<String>> res = Lists.
             partition(list, 2);
-    Assertions.assertThat(res.size())
+    Assertions.assertThat(res)
             .describedAs("Number of partitions post partition")
-            .isEqualTo(3);
-    Assertions.assertThat(res.get(0).size())
+            .hasSize(3);
+    Assertions.assertThat(res.get(0))
             .describedAs("Number of elements in first partition")
-            .isEqualTo(2);
-    Assertions.assertThat(res.get(2).size())
+            .hasSize(2);
+    Assertions.assertThat(res.get(2))
             .describedAs("Number of elements in last partition")
-            .isEqualTo(1);
+            .hasSize(1);
 
     List<List<String>> res2 = Lists.
             partition(list, 1);
-    Assertions.assertThat(res2.size())
+    Assertions.assertThat(res2)
             .describedAs("Number of partitions post partition")
-            .isEqualTo(5);
-    Assertions.assertThat(res2.get(0).size())
+            .hasSize(5);
+    Assertions.assertThat(res2.get(0))
             .describedAs("Number of elements in first partition")
-            .isEqualTo(1);
-    Assertions.assertThat(res2.get(4).size())
+            .hasSize(1);
+    Assertions.assertThat(res2.get(4))
             .describedAs("Number of elements in last partition")
-            .isEqualTo(1);
+            .hasSize(1);
+
+    List<List<String>> res3 = Lists.
+            partition(list, 6);
+    Assertions.assertThat(res3)
+            .describedAs("Number of partitions post partition")
+            .hasSize(1);
+    Assertions.assertThat(res3.get(0))
+            .describedAs("Number of elements in first partition")
+            .hasSize(5);
   }
 
   @Test
