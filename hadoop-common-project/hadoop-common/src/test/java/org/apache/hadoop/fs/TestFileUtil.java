@@ -163,12 +163,12 @@ public class TestFileUtil {
     FileUtils.forceMkdir(dir1);
     FileUtils.forceMkdir(dir2);
 
-    createNewFileAndVerify(new File(del, FILE));
-    File tmpFile = createNewFileAndVerify(new File(tmp, FILE));
+    Verify.createNewFile(new File(del, FILE));
+    File tmpFile = Verify.createNewFile(new File(tmp, FILE));
 
     // create files
-    createNewFileAndVerify(new File(dir1, FILE));
-    createNewFileAndVerify(new File(dir2, FILE));
+    Verify.createNewFile(new File(dir1, FILE));
+    Verify.createNewFile(new File(dir2, FILE));
 
     // create a symlink to file
     File link = new File(del, LINK);
@@ -366,15 +366,15 @@ public class TestFileUtil {
    * @throws IOException
    */
   private void setupDirsAndNonWritablePermissions() throws IOException {
-    createNewFileAndVerify(new MyFile(del, FILE_1_NAME));
+    Verify.createNewFile(new MyFile(del, FILE_1_NAME));
 
     // "file1" is non-deletable by default, see MyFile.delete().
 
     xSubDir.mkdirs();
-    createNewFileAndVerify(file2);
+    Verify.createNewFile(file2);
 
     xSubSubDir.mkdirs();
-    createNewFileAndVerify(file22);
+    Verify.createNewFile(file22);
 
     revokePermissions(file22);
     revokePermissions(xSubSubDir);
@@ -383,9 +383,9 @@ public class TestFileUtil {
     revokePermissions(xSubDir);
 
     ySubDir.mkdirs();
-    createNewFileAndVerify(file3);
+    Verify.createNewFile(file3);
 
-    File tmpFile = createNewFileAndVerify(new File(tmp, FILE));
+    File tmpFile = Verify.createNewFile(new File(tmp, FILE));
     FileUtil.symLink(tmpFile.toString(), zlink.toString());
   }
 
@@ -486,17 +486,22 @@ public class TestFileUtil {
   }
 
   /**
-   * Creates a new file and verifies the result of the operation.
-   *
-   * @param file The {@link File} to create.
-   * @return The {@link File} instance that was passed.
-   * @throws IOException As per {@link File#createNewFile()}.
+   * Helper class to perform {@link File} operation and also verify them.
    */
-  private File createNewFileAndVerify(File file) throws IOException {
-    assertTrue("Unable to create new file " + file, file.createNewFile());
-    return file;
+  public static class Verify {
+    /**
+     * Creates a new file and verifies the result of the operation.
+     *
+     * @param file The {@link File} to create.
+     * @return The {@link File} instance that was passed.
+     * @throws IOException As per {@link File#createNewFile()}.
+     */
+    public static File createNewFile(File file) throws IOException {
+      assertTrue("Unable to create new file " + file, file.createNewFile());
+      return file;
+    }
   }
-
+  
   /**
    * Extend {@link File}. Same as {@link File} except for two things: (1) This
    * treats file1Name as a very special file which is not delete-able
@@ -653,14 +658,14 @@ public class TestFileUtil {
     assertEquals(12, new File(tmp, "/bar/foo").length());
 
     final File regularFile =
-        createNewFileAndVerify(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
+        Verify.createNewFile(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
     LambdaTestUtils.intercept(IOException.class, () -> FileUtil.unTar(simpleTar, regularFile));
   }
   
   @Test (timeout = 30000)
   public void testReplaceFile() throws IOException {
     // src exists, and target does not exist:
-    final File srcFile = createNewFileAndVerify(new File(tmp, "src"));
+    final File srcFile = Verify.createNewFile(new File(tmp, "src"));
     final File targetFile = new File(tmp, "target");
     assertTrue(!targetFile.exists());
     FileUtil.replaceFile(srcFile, targetFile);
@@ -668,18 +673,18 @@ public class TestFileUtil {
     assertTrue(targetFile.exists());
 
     // src exists and target is a regular file: 
-    createNewFileAndVerify(srcFile);
+    Verify.createNewFile(srcFile);
     assertTrue(srcFile.exists());
     FileUtil.replaceFile(srcFile, targetFile);
     assertTrue(!srcFile.exists());
     assertTrue(targetFile.exists());
     
     // src exists, and target is a non-empty directory: 
-    createNewFileAndVerify(srcFile);
+    Verify.createNewFile(srcFile);
     assertTrue(srcFile.exists());
     targetFile.delete();
     targetFile.mkdirs();
-    File obstacle = createNewFileAndVerify(new File(targetFile, "obstacle"));
+    File obstacle = Verify.createNewFile(new File(targetFile, "obstacle"));
     assertTrue(targetFile.exists() && targetFile.isDirectory());
     try {
       FileUtil.replaceFile(srcFile, targetFile);
@@ -734,7 +739,7 @@ public class TestFileUtil {
     assertEquals(12, new File(tmp, "foo").length());
 
     final File regularFile =
-        createNewFileAndVerify(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
+        Verify.createNewFile(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
     LambdaTestUtils.intercept(IOException.class, () -> FileUtil.unZip(simpleZip, regularFile));
   }
 
@@ -891,7 +896,7 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkRenameTo() throws Exception {
-    File file = createNewFileAndVerify(new File(del, FILE));
+    File file = Verify.createNewFile(new File(del, FILE));
     File link = new File(del, "_link");
 
     // create the symlink
@@ -919,7 +924,7 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkDelete() throws Exception {
-    File file = createNewFileAndVerify(new File(del, FILE));
+    File file = Verify.createNewFile(new File(del, FILE));
     File link = new File(del, "_link");
 
     // create the symlink
@@ -1178,9 +1183,9 @@ public class TestFileUtil {
     }
 
     // create non-jar files, which we expect to not be included in the classpath
-    createNewFileAndVerify(new File(tmp, "text.txt"));
-    createNewFileAndVerify(new File(tmp, "executable.exe"));
-    createNewFileAndVerify(new File(tmp, "README"));
+    Verify.createNewFile(new File(tmp, "text.txt"));
+    Verify.createNewFile(new File(tmp, "executable.exe"));
+    Verify.createNewFile(new File(tmp, "README"));
 
     // create classpath jar
     String wildcardPath = tmp.getCanonicalPath() + File.separator + "*";
@@ -1266,9 +1271,9 @@ public class TestFileUtil {
     }
 
     // create non-jar files, which we expect to not be included in the result
-    createNewFileAndVerify(new File(tmp, "text.txt"));
-    createNewFileAndVerify(new File(tmp, "executable.exe"));
-    createNewFileAndVerify(new File(tmp, "README"));
+    Verify.createNewFile(new File(tmp, "text.txt"));
+    Verify.createNewFile(new File(tmp, "executable.exe"));
+    Verify.createNewFile(new File(tmp, "README"));
 
     // pass in the directory
     String directory = tmp.getCanonicalPath();
