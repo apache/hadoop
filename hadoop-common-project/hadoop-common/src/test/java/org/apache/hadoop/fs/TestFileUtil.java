@@ -485,6 +485,13 @@ public class TestFileUtil {
     Assertions.assertThat(del.list()).describedAs("del list").isNotNull().hasSize(expectedLength);
   }
 
+  /**
+   * Creates a new file and verifies the result of the operation.
+   *
+   * @param file The {@link File} to create.
+   * @return The {@link File} instance that was passed.
+   * @throws IOException As per {@link File#createNewFile()}.
+   */
   private File createNewFileAndVerify(File file) throws IOException {
     assertTrue("Unable to create new file " + file, file.createNewFile());
     return file;
