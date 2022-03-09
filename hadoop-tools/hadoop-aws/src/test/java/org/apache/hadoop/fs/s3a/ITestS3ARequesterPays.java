@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.nio.file.AccessDeniedException;
+
+import org.junit.Test;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.statistics.StreamStatisticNames;
-import org.junit.Test;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-
-import java.nio.file.AccessDeniedException;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
