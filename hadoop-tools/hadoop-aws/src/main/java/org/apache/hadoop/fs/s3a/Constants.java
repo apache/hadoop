@@ -160,7 +160,7 @@ public final class Constants {
   /**
    * Configuration option for S3 Requester Pays feature: {@value}.
    */
-  public static final String ALLOW_REQUESTER_PAYS = "fs.s3a.requester-pays.enabled";
+  public static final String ALLOW_REQUESTER_PAYS = "fs.s3a.requester.pays.enabled";
   /**
    * Default configuration for {@value ALLOW_REQUESTER_PAYS}: {@value}.
    */

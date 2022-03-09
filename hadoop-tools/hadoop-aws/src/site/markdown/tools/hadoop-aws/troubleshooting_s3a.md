@@ -559,7 +559,7 @@ com.amazonaws.services.s3.model.AmazonS3Exception: Forbidden (Service: Amazon S3
 Error Code: 403 Forbidden; Request ID: myshortreqid; S3 Extended Request ID: mylongreqid):403 Forbidden
 ```
 
-To enable requester pays, set `fs.s3a.requester-pays.enabled` property to `true`.
+To enable requester pays, set `fs.s3a.requester.pays.enabled` property to `true`.
 
 ### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
 

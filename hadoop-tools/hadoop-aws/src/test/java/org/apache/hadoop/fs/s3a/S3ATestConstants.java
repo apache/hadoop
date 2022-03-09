@@ -101,7 +101,7 @@ public interface S3ATestConstants {
    * Configuration key for an existing object in a requester pays bucket: {@value}.
    * If not set, defaults to {@value DEFAULT_REQUESTER_PAYS_FILE}.
    */
-  String KEY_REQUESTER_PAYS_FILE = TEST_FS_S3A + "requester-pays.file";
+  String KEY_REQUESTER_PAYS_FILE = TEST_FS_S3A + "requester.pays.file";
 
   /**
    * Default path for an S3 object inside a requester pays enabled bucket: {@value}.

@@ -1639,11 +1639,11 @@ S3A supports buckets with [Requester Pays](https://docs.aws.amazon.com/AmazonS3/
 
 For requests to be successful, the S3 client must acknowledge that they will pay for these requests by setting a request flag, usually a header, on each request.
 
-To enable this feature within S3A, configure the `fs.s3a.requester-pays.enabled` property.
+To enable this feature within S3A, configure the `fs.s3a.requester.pays.enabled` property.
 
 ```xml
 <property>
-    <name>fs.s3a.requester-pays.enabled</name>
+    <name>fs.s3a.requester.pays.enabled</name>
     <value>true</value>
 </property>
 ```
