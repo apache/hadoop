@@ -66,6 +66,8 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarOutputStream;
+
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -278,13 +280,13 @@ public class TestFileUtil {
   @Test (timeout = 30000)
   public void testFullyDeleteSymlinks() throws IOException {
     File link = new File(del, LINK);
-    Assert.assertEquals(5, Objects.requireNonNull(del.list()).length);
+    assertDelListLength(5);
     // Since tmpDir is symlink to tmp, fullyDelete(tmpDir) should not
     // delete contents of tmp. See setupDirs for details.
     boolean ret = FileUtil.fullyDelete(link);
     Assert.assertTrue(ret);
     Assert.assertFalse(link.exists());
-    Assert.assertEquals(4, Objects.requireNonNull(del.list()).length);
+    assertDelListLength(4);
     validateTmpDir();
 
     File linkDir = new File(del, "tmpDir");
@@ -293,7 +295,7 @@ public class TestFileUtil {
     ret = FileUtil.fullyDelete(linkDir);
     Assert.assertTrue(ret);
     Assert.assertFalse(linkDir.exists());
-    Assert.assertEquals(3, Objects.requireNonNull(del.list()).length);
+    assertDelListLength(3);
     validateTmpDir();
   }
 
@@ -313,12 +315,12 @@ public class TestFileUtil {
 
     // dangling symlink to file
     File link = new File(del, LINK);
-    Assert.assertEquals(5, Objects.requireNonNull(del.list()).length);
+    assertDelListLength(5);
     // Even though 'y' is dangling symlink to file tmp/x, fullyDelete(y)
     // should delete 'y' properly.
     ret = FileUtil.fullyDelete(link);
     Assert.assertTrue(ret);
-    Assert.assertEquals(4, Objects.requireNonNull(del.list()).length);
+    assertDelListLength(4);
 
     // dangling symlink to directory
     File linkDir = new File(del, "tmpDir");
@@ -326,7 +328,7 @@ public class TestFileUtil {
     // delete tmpDir properly.
     ret = FileUtil.fullyDelete(linkDir);
     Assert.assertTrue(ret);
-    Assert.assertEquals(3, Objects.requireNonNull(del.list()).length);
+    assertDelListLength(3);
   }
 
   @Test (timeout = 30000)
@@ -462,7 +464,7 @@ public class TestFileUtil {
     // fail symlink deletion
     Assert.assertFalse(ret);
     Assert.assertTrue(linkDir.exists());
-    Assert.assertEquals(5, Objects.requireNonNull(del.list()).length);
+    assertDelListLength(5);
     // tmp dir should exist
     validateTmpDir();
     // simulate disk recovers and turns good
@@ -471,9 +473,18 @@ public class TestFileUtil {
     // success symlink deletion
     Assert.assertTrue(ret);
     Assert.assertFalse(linkDir.exists());
-    Assert.assertEquals(4, Objects.requireNonNull(del.list()).length);
+    assertDelListLength(4);
     // tmp dir should exist
     validateTmpDir();
+  }
+
+  /**
+   * Asserts if the {@link TestFileUtil#del} meets the given expected length.
+   *
+   * @param expectedLength The expected length of the {@link TestFileUtil#del}.
+   */
+  private void assertDelListLength(int expectedLength) {
+    Assertions.assertThat(del.list()).describedAs("del list").isNotNull().hasSize(expectedLength);
   }
 
   /**
