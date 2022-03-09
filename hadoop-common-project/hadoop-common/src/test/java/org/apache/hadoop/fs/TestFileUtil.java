@@ -558,7 +558,7 @@ public class TestFileUtil {
       return file;
     }
   }
-  
+
   /**
    * Extend {@link File}. Same as {@link File} except for two things: (1) This
    * treats file1Name as a very special file which is not delete-able
