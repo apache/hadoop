@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,10 +43,5 @@ public class ITestS3AContractRootDir extends
   @Override
   public S3AFileSystem getFileSystem() {
     return (S3AFileSystem) super.getFileSystem();
-  }
-
-  @Override
-  @Ignore("S3 always return false when non-recursively remove root dir")
-  public void testRmNonEmptyRootDirNonRecursive() throws Throwable {
   }
 }

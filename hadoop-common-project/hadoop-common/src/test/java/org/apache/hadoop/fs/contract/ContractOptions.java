@@ -235,6 +235,12 @@ public interface ContractOptions {
   String TEST_ROOT_TESTS_ENABLED = "test.root-tests-enabled";
 
   /**
+   * Does the FS support root directory delete?
+   * {@value}
+   */
+  String SUPPORTS_ROOT_DELETE = "supports-root-delete";
+
+  /**
    * Limit for #of random seeks to perform.
    * Keep low for remote filesystems for faster tests
    * {@value}

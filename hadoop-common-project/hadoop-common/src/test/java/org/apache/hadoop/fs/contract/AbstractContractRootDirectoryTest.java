@@ -80,9 +80,20 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
     assertIsDirectory(root);
-    boolean deleted = getFileSystem().delete(root, true);
-    LOG.info("rm -r / of empty dir result is {}", deleted);
-    assertIsDirectory(root);
+    if (isSupported(SUPPORTS_ROOT_DELETE)) {
+      boolean deleted = getFileSystem().delete(root, true);
+      LOG.info("rm -r / of empty dir result is {}", deleted);
+      assertIsDirectory(root);
+    } else {
+      // An exception is expected from unsupported file system
+      try {
+        boolean deleted = getFileSystem().delete(root, true);
+        fail("unsupported file system should have raised an exception," +
+            " but completed with exit code " + deleted);
+      } catch (IOException e) {
+        handleExpectedException(e);
+      }
+    }
   }
 
   @Test
@@ -119,9 +130,20 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         },
         new LambdaTestUtils.ProportionalRetryInterval(50, 1000));
     // then try to delete the empty one
-    boolean deleted = fs.delete(root, false);
-    LOG.info("rm / of empty dir result is {}", deleted);
-    assertIsDirectory(root);
+    if (isSupported(SUPPORTS_ROOT_DELETE)) {
+      boolean deleted = fs.delete(root, false);
+      LOG.info("rm / of empty dir result is {}", deleted);
+      assertIsDirectory(root);
+    } else {
+      // An exception is expected from unsupported file system
+      try {
+        boolean deleted = getFileSystem().delete(root, true);
+        fail("unsupported file system should have raised an exception," +
+            " but completed with exit code " + deleted);
+      } catch (IOException e) {
+        handleExpectedException(e);
+      }
+    }
   }
 
   @Test
@@ -157,13 +179,24 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     Path file = new Path("/testRmRootRecursive");
     try {
       ContractTestUtils.touch(getFileSystem(), file);
-      boolean deleted = getFileSystem().delete(root, true);
-      assertIsDirectory(root);
-      LOG.info("rm -rf / result is {}", deleted);
-      if (deleted) {
-        assertPathDoesNotExist("expected file to be deleted", file);
+      if (isSupported(SUPPORTS_ROOT_DELETE)) {
+        boolean deleted = getFileSystem().delete(root, true);
+        assertIsDirectory(root);
+        LOG.info("rm -rf / result is {}", deleted);
+        if (deleted) {
+          assertPathDoesNotExist("expected file to be deleted", file);
+        } else {
+          assertPathExists("expected file to be preserved", file);
+        }
       } else {
-        assertPathExists("expected file to be preserved", file);
+        // An exception is expected from unsupported file system
+        try {
+          boolean deleted = getFileSystem().delete(root, true);
+          fail("unsupported file system should have raised an exception," +
+              " but completed with exit code " + deleted);
+        } catch (IOException e) {
+          handleExpectedException(e);
+        }
       }
     } finally{
       getFileSystem().delete(file, false);
