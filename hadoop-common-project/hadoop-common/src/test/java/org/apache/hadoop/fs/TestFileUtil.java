@@ -163,13 +163,12 @@ public class TestFileUtil {
     FileUtils.forceMkdir(dir1);
     FileUtils.forceMkdir(dir2);
 
-    new File(del, FILE).createNewFile();
-    File tmpFile = new File(tmp, FILE);
-    assertTrue(tmpFile.createNewFile());
+    createNewFileAndVerify(new File(del, FILE));
+    File tmpFile = createNewFileAndVerify(new File(tmp, FILE));
 
     // create files
-    new File(dir1, FILE).createNewFile();
-    new File(dir2, FILE).createNewFile();
+    createNewFileAndVerify(new File(dir1, FILE));
+    createNewFileAndVerify(new File(dir2, FILE));
 
     // create a symlink to file
     File link = new File(del, LINK);
@@ -367,15 +366,15 @@ public class TestFileUtil {
    * @throws IOException
    */
   private void setupDirsAndNonWritablePermissions() throws IOException {
-    new MyFile(del, FILE_1_NAME).createNewFile();
+    createNewFileAndVerify(new MyFile(del, FILE_1_NAME));
 
     // "file1" is non-deletable by default, see MyFile.delete().
 
     xSubDir.mkdirs();
-    file2.createNewFile();
+    createNewFileAndVerify(file2);
 
     xSubSubDir.mkdirs();
-    file22.createNewFile();
+    createNewFileAndVerify(file22);
 
     revokePermissions(file22);
     revokePermissions(xSubSubDir);
@@ -384,10 +383,9 @@ public class TestFileUtil {
     revokePermissions(xSubDir);
 
     ySubDir.mkdirs();
-    file3.createNewFile();
+    createNewFileAndVerify(file3);
 
-    File tmpFile = new File(tmp, FILE);
-    tmpFile.createNewFile();
+    File tmpFile = createNewFileAndVerify(new File(tmp, FILE));
     FileUtil.symLink(tmpFile.toString(), zlink.toString());
   }
 
@@ -485,6 +483,11 @@ public class TestFileUtil {
    */
   private void assertDelListLength(int expectedLength) {
     Assertions.assertThat(del.list()).describedAs("del list").isNotNull().hasSize(expectedLength);
+  }
+
+  private File createNewFileAndVerify(File file) throws IOException {
+    assertTrue("Unable to create new file " + file, file.createNewFile());
+    return file;
   }
 
   /**
@@ -642,19 +645,15 @@ public class TestFileUtil {
     assertTrue(new File(tmp, "/bar/foo").exists());
     assertEquals(12, new File(tmp, "/bar/foo").length());
 
-    final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
-    regularFile.createNewFile();
-    assertTrue(regularFile.exists());
+    final File regularFile =
+        createNewFileAndVerify(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
     LambdaTestUtils.intercept(IOException.class, () -> FileUtil.unTar(simpleTar, regularFile));
   }
   
   @Test (timeout = 30000)
   public void testReplaceFile() throws IOException {
-    final File srcFile = new File(tmp, "src");
-    
     // src exists, and target does not exist:
-    srcFile.createNewFile();
-    assertTrue(srcFile.exists());
+    final File srcFile = createNewFileAndVerify(new File(tmp, "src"));
     final File targetFile = new File(tmp, "target");
     assertTrue(!targetFile.exists());
     FileUtil.replaceFile(srcFile, targetFile);
@@ -662,20 +661,18 @@ public class TestFileUtil {
     assertTrue(targetFile.exists());
 
     // src exists and target is a regular file: 
-    srcFile.createNewFile();
+    createNewFileAndVerify(srcFile);
     assertTrue(srcFile.exists());
     FileUtil.replaceFile(srcFile, targetFile);
     assertTrue(!srcFile.exists());
     assertTrue(targetFile.exists());
     
     // src exists, and target is a non-empty directory: 
-    srcFile.createNewFile();
+    createNewFileAndVerify(srcFile);
     assertTrue(srcFile.exists());
     targetFile.delete();
     targetFile.mkdirs();
-    File obstacle = new File(targetFile, "obstacle");
-    obstacle.createNewFile();
-    assertTrue(obstacle.exists());
+    File obstacle = createNewFileAndVerify(new File(targetFile, "obstacle"));
     assertTrue(targetFile.exists() && targetFile.isDirectory());
     try {
       FileUtil.replaceFile(srcFile, targetFile);
@@ -728,10 +725,9 @@ public class TestFileUtil {
     // check result:
     assertTrue(new File(tmp, "foo").exists());
     assertEquals(12, new File(tmp, "foo").length());
-    
-    final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
-    regularFile.createNewFile();
-    assertTrue(regularFile.exists());
+
+    final File regularFile =
+        createNewFileAndVerify(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
     LambdaTestUtils.intercept(IOException.class, () -> FileUtil.unZip(simpleZip, regularFile));
   }
 
@@ -888,8 +884,7 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkRenameTo() throws Exception {
-    File file = new File(del, FILE);
-    file.createNewFile();
+    File file = createNewFileAndVerify(new File(del, FILE));
     File link = new File(del, "_link");
 
     // create the symlink
@@ -917,8 +912,7 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkDelete() throws Exception {
-    File file = new File(del, FILE);
-    file.createNewFile();
+    File file = createNewFileAndVerify(new File(del, FILE));
     File link = new File(del, "_link");
 
     // create the symlink
@@ -1177,9 +1171,9 @@ public class TestFileUtil {
     }
 
     // create non-jar files, which we expect to not be included in the classpath
-    Assert.assertTrue(new File(tmp, "text.txt").createNewFile());
-    Assert.assertTrue(new File(tmp, "executable.exe").createNewFile());
-    Assert.assertTrue(new File(tmp, "README").createNewFile());
+    createNewFileAndVerify(new File(tmp, "text.txt"));
+    createNewFileAndVerify(new File(tmp, "executable.exe"));
+    createNewFileAndVerify(new File(tmp, "README"));
 
     // create classpath jar
     String wildcardPath = tmp.getCanonicalPath() + File.separator + "*";
@@ -1265,9 +1259,9 @@ public class TestFileUtil {
     }
 
     // create non-jar files, which we expect to not be included in the result
-    assertTrue(new File(tmp, "text.txt").createNewFile());
-    assertTrue(new File(tmp, "executable.exe").createNewFile());
-    assertTrue(new File(tmp, "README").createNewFile());
+    createNewFileAndVerify(new File(tmp, "text.txt"));
+    createNewFileAndVerify(new File(tmp, "executable.exe"));
+    createNewFileAndVerify(new File(tmp, "README"));
 
     // pass in the directory
     String directory = tmp.getCanonicalPath();
