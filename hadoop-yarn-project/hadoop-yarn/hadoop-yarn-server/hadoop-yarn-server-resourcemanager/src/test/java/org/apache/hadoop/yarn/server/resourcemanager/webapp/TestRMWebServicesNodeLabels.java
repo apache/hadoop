@@ -81,6 +81,19 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private static final String LABEL_X = "x";
   private static final String LABEL_Y = "y";
   private static final String LABEL_Z = "z";
+  public static final boolean DEFAULT_NL_EXCLUSIVITY = true;
+  private static final String PATH_WS = "ws";
+  private static final String PATH_V1 = "v1";
+  private static final String PATH_NODES = "nodes";
+  private static final String PATH_CLUSTER = "cluster";
+  private static final String PATH_REPLACE_NODE_TO_LABELS = "replace-node-to-labels";
+  private static final String PATH_LABEL_MAPPINGS = "label-mappings";
+  private static final String PATH_GET_LABELS = "get-labels";
+  private static final String PATH_REPLACE_LABELS = "replace-labels";
+  private static final String PATH_REMOVE_LABELS = "remove-node-labels";
+  private static final String PATH_GET_NODE_TO_LABELS = "get-node-to-labels";
+  private static final String QUERY_USER_NAME = "user.name";
+  private static final String PATH_ADD_NODE_LABELS = "add-node-labels";
 
   private static MockRM rm;
   private static YarnConfiguration conf;
@@ -88,7 +101,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private static String userName;
   private static String notUserName;
   private static RMWebServices rmWebService;
-  public static final boolean DEFAULT_NL_EXCLUSIVITY = true;
+  private WebResource resource;
+
 
   private static class WebServletModule extends ServletModule {
 
@@ -121,6 +135,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     super.setUp();
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule()));
+    resource = resource();
   }
 
   public TestRMWebServicesNodeLabels() {
@@ -133,25 +148,24 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   @Test
   public void testNodeLabels() throws Exception {
-    WebResource r = resource();
     ClientResponse response;
 
     // Add a label
-    response = addNodeLabels(r, Lists.newArrayList(Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY)));
+    response = addNodeLabels(Lists.newArrayList(Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY)));
     assertHttp200(response);
 
     // Verify
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfo(response.getEntity(NodeLabelsInfo.class), Lists.newArrayList(
         Pair.of(LABEL_A, true)));
 
     // Add another
-    response = addNodeLabels(r, Lists.newArrayList(Pair.of(LABEL_B, false)));
+    response = addNodeLabels(Lists.newArrayList(Pair.of(LABEL_B, false)));
     assertHttp200(response);
 
     // Verify
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     // Verify exclusivity for 'b' as false
     assertNodeLabelsInfo(response.getEntity(NodeLabelsInfo.class),
@@ -160,19 +174,19 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             Pair.of(LABEL_B, false)));
 
     // Add labels to a node
-    response = replaceLabelsOnNode(r, NODE_0, LABEL_A);
+    response = replaceLabelsOnNode(NODE_0, LABEL_A);
     assertHttp200(response);
 
     // Add labels to another node
-    response = replaceLabelsOnNode(r, NODE_1, LABEL_B);
+    response = replaceLabelsOnNode(NODE_1, LABEL_B);
     assertHttp200(response);
 
     // Add labels to another node
-    response = replaceLabelsOnNode(r, NODE_2, LABEL_B);
+    response = replaceLabelsOnNode(NODE_2, LABEL_B);
     assertHttp200(response);
 
     // Verify all, using get-labels-to-Nodes
-    response = getNodeLabelMappings(r);
+    response = getNodeLabelMappings();
     assertApplicationJsonUtf8Response(response);
     LabelsToNodesInfo labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertLabelsToNodesInfo(labelsToNodesInfo, 2, Lists.newArrayList(
@@ -181,7 +195,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     ));
 
     // Verify, using get-labels-to-Nodes for specified set of labels
-    response = getNodeLabelMappingsByLabels(r, LABEL_A);
+    response = getNodeLabelMappingsByLabels(LABEL_A);
     assertApplicationJsonUtf8Response(response);
     labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertLabelsToNodesInfo(labelsToNodesInfo, 1, Lists.newArrayList(
@@ -189,27 +203,27 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     ));
 
     // Verify
-    response = getLabelsOfNode(r, NODE_0);
+    response = getLabelsOfNode(NODE_0);
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfoContains(response.getEntity(NodeLabelsInfo.class),
         Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY));
 
     // Replace
-    response = replaceLabelsOnNode(r, NODE_0, LABEL_B);
+    response = replaceLabelsOnNode(NODE_0, LABEL_B);
     assertHttp200(response);
 
     // Verify
-    response = getLabelsOfNode(r, NODE_0);
+    response = getLabelsOfNode(NODE_0);
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfoContains(response.getEntity(NodeLabelsInfo.class), Pair.of(LABEL_B, false));
 
     // Replace labels using node-to-labels
-    response = replaceNodeToLabels(r, Lists.newArrayList(Pair.of(NODE_0,
+    response = replaceNodeToLabels(Lists.newArrayList(Pair.of(NODE_0,
         Lists.newArrayList(LABEL_A))));
     assertHttp200(response);
 
     // Verify, using node-to-labels
-    response = getNodeToLabels(r);
+    response = getNodeToLabels();
     assertApplicationJsonUtf8Response(response);
     NodeToLabelsInfo nodeToLabelsInfo = response.getEntity(NodeToLabelsInfo.class);
     NodeLabelsInfo nodeLabelsInfo = nodeToLabelsInfo.getNodeToLabels().get(NODE_0);
@@ -217,56 +231,56 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoContains(nodeLabelsInfo, Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY));
 
     // Remove all
-    response = replaceLabelsOnNode(r, NODE_0, "");
+    response = replaceLabelsOnNode(NODE_0, "");
     assertHttp200(response);
     // Verify
-    response = getLabelsOfNode(r, NODE_0);
+    response = getLabelsOfNode(NODE_0);
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsSize(response.getEntity(NodeLabelsInfo.class), 0);
 
     // Add a label back for auth tests
-    response = replaceLabelsOnNode(r, NODE_0, LABEL_A);
+    response = replaceLabelsOnNode(NODE_0, LABEL_A);
     assertHttp200(response);
 
     // Verify
-    response = getLabelsOfNode(r, NODE_0);
+    response = getLabelsOfNode(NODE_0);
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfoContains(response.getEntity(NodeLabelsInfo.class),
         Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY));
 
     // Auth fail replace labels on node
-    response = replaceLabelsOnNodeWithUserName(r, NODE_0, notUserName, LABEL_B);
+    response = replaceLabelsOnNodeWithUserName(NODE_0, notUserName, LABEL_B);
     assertHttp401(response);
     // Verify
-    response = getLabelsOfNode(r, NODE_0);
+    response = getLabelsOfNode(NODE_0);
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfoContains(response.getEntity(NodeLabelsInfo.class),
         Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY));
 
     // Fail to add a label with wrong user
-    response = addNodeLabelsWithUser(r, Lists.newArrayList(Pair.of("c", DEFAULT_NL_EXCLUSIVITY)),
+    response = addNodeLabelsWithUser(Lists.newArrayList(Pair.of("c", DEFAULT_NL_EXCLUSIVITY)),
         notUserName);
     assertHttp401(response);
 
     // Verify
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsSize(response.getEntity(NodeLabelsInfo.class), 2);
 
     // Remove cluster label (succeed, we no longer need it)
-    response = removeNodeLabel(r, LABEL_B);
+    response = removeNodeLabel(LABEL_B);
     assertHttp200(response);
     // Verify
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfo(response.getEntity(NodeLabelsInfo.class),
         Lists.newArrayList(Pair.of(LABEL_A, true)));
 
     // Remove cluster label with post
-    response = removeNodeLabel(r, LABEL_A);
+    response = removeNodeLabel(LABEL_A);
     assertHttp200(response);
     // Verify
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(0, nodeLabelsInfo.getNodeLabels().size());
@@ -274,23 +288,23 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Following test cases are to test replace when distributed node label
     // configuration is on
     // Reset for testing : add cluster labels
-    response = addNodeLabels(r, Lists.newArrayList(
+    response = addNodeLabels(Lists.newArrayList(
         Pair.of(LABEL_X, false), Pair.of(LABEL_Y, false)));
     assertHttp200(response);
     // Reset for testing : Add labels to a node
-    response = replaceLabelsOnNode(r, NODE_0, LABEL_Y);
+    response = replaceLabelsOnNode(NODE_0, LABEL_Y);
     assertHttp200(response);
 
     //setting rmWebService for non-centralized NodeLabel Configuration
     rmWebService.isCentralizedNodeLabelConfiguration = false;
 
     // Case1 : Replace labels using node-to-labels
-    response = replaceNodeToLabels(r, Lists.newArrayList(Pair.of(NODE_0,
+    response = replaceNodeToLabels(Lists.newArrayList(Pair.of(NODE_0,
         Lists.newArrayList(LABEL_X))));
     assertHttp404(response);
 
     // Verify, using node-to-labels that previous operation has failed
-    response = getNodeToLabels(r);
+    response = getNodeToLabels();
     assertApplicationJsonUtf8Response(response);
     nodeToLabelsInfo = response.getEntity(NodeToLabelsInfo.class);
     nodeLabelsInfo = nodeToLabelsInfo.getNodeToLabels().get(NODE_0);
@@ -298,11 +312,11 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoDoesNotContain(nodeLabelsInfo, Pair.of(LABEL_X, false));
 
     // Case2 : failure to Replace labels using replace-labels
-    response = replaceLabelsOnNode(r, NODE_0, LABEL_X);
+    response = replaceLabelsOnNode(NODE_0, LABEL_X);
     assertHttp404(response);
 
     // Verify, using node-to-labels that previous operation has failed
-    response = getNodeToLabels(r);
+    response = getNodeToLabels();
     assertApplicationJsonUtf8Response(response);
     nodeToLabelsInfo = response.getEntity(NodeToLabelsInfo.class);
     nodeLabelsInfo = nodeToLabelsInfo.getNodeToLabels().get(NODE_0);
@@ -310,28 +324,28 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoDoesNotContain(nodeLabelsInfo, Pair.of(LABEL_X, false));
 
     //  Case3 : Remove cluster label should be successful
-    response = removeNodeLabel(r, LABEL_X);
+    response = removeNodeLabel(LABEL_X);
     assertHttp200(response);
     // Verify
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfoAtPosition(response.getEntity(NodeLabelsInfo.class), Pair.of(LABEL_Y,
         false), 0);
 
     // Remove y
-    response = removeNodeLabel(r, LABEL_Y);
+    response = removeNodeLabel(LABEL_Y);
     assertHttp200(response);
 
     // Verify
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsSize(response.getEntity(NodeLabelsInfo.class), 0);
 
     // add a new nodelabel with exclusivity=false
-    response = addNodeLabels(r, Lists.newArrayList(Pair.of(LABEL_Z, false)));
+    response = addNodeLabels(Lists.newArrayList(Pair.of(LABEL_Z, false)));
     assertHttp200(response);
     // Verify
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfoAtPosition(response.getEntity(NodeLabelsInfo.class),
         Pair.of(LABEL_Z, false), 0);
@@ -400,8 +414,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(expectedSize, nodeLabelsInfo.getNodeLabelsInfo().size());
   }
 
-  private ClientResponse replaceNodeToLabels(WebResource r,
-      List<Pair<String, List<String>>> nodeToLabelInfos) throws Exception {
+  private ClientResponse replaceNodeToLabels(List<Pair<String, List<String>>> nodeToLabelInfos) throws Exception {
     NodeToLabelsEntryList nodeToLabelsEntries = new NodeToLabelsEntryList();
 
     for (Pair<String, List<String>> nodeToLabelInfo : nodeToLabelInfos) {
@@ -410,44 +423,44 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       NodeToLabelsEntry nli = new NodeToLabelsEntry(nodeId, labelList);
       nodeToLabelsEntries.getNodeToLabels().add(nli);
     }
-    return r.path("ws").path("v1").path("cluster")
-        .path("replace-node-to-labels")
-        .queryParam("user.name", userName)
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+        .path(PATH_REPLACE_NODE_TO_LABELS)
+        .queryParam(QUERY_USER_NAME, userName)
         .accept(MediaType.APPLICATION_JSON)
         .entity(toJson(nodeToLabelsEntries, NodeToLabelsEntryList.class),
             MediaType.APPLICATION_JSON)
         .post(ClientResponse.class);
   }
 
-  private ClientResponse getNodeLabelMappings(WebResource r) {
+  private ClientResponse getNodeLabelMappings() {
     ClientResponse response;
     response =
-        r.path("ws").path("v1").path("cluster")
-            .path("label-mappings").queryParam("user.name", userName)
+        resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+            .path(PATH_LABEL_MAPPINGS).queryParam(QUERY_USER_NAME, userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     return response;
   }
 
-  private ClientResponse getNodeLabelMappingsByLabels(WebResource r, String... labelNames) {
+  private ClientResponse getNodeLabelMappingsByLabels(String... labelNames) {
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
-    return r.path("ws").path("v1").path("cluster")
-        .path("label-mappings").queryParam("user.name", userName)
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+        .path(PATH_LABEL_MAPPINGS).queryParam(QUERY_USER_NAME, userName)
         .queryParams(params)
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
   }
 
-  private ClientResponse replaceLabelsOnNode(WebResource r, String node, String... labelNames) {
-    return replaceLabelsOnNodeWithUserName(r, node, userName, labelNames);
+  private ClientResponse replaceLabelsOnNode(String node, String... labelNames) {
+    return replaceLabelsOnNodeWithUserName(node, userName, labelNames);
   }
 
-  private static ClientResponse replaceLabelsOnNodeWithUserName(WebResource r, String node,
+  private ClientResponse replaceLabelsOnNodeWithUserName(String node,
       String userName, String... labelNames) {
     LOG.info("Replacing labels on node '{}', label(s): {}", node, labelNames);
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
-    return r.path("ws").path("v1").path("cluster")
-        .path("nodes").path(node)
-        .path("replace-labels")
-        .queryParam("user.name", userName)
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+        .path(PATH_NODES).path(node)
+        .path(PATH_REPLACE_LABELS)
+        .queryParam(QUERY_USER_NAME, userName)
         .queryParams(params)
         .accept(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class);
@@ -461,48 +474,47 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     return params;
   }
 
-  private ClientResponse removeNodeLabel(WebResource r, String... labelNames) {
+  private ClientResponse removeNodeLabel(String... labelNames) {
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
-    return r.path("ws").path("v1").path("cluster")
-        .path("remove-node-labels")
-        .queryParam("user.name", userName)
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+        .path(PATH_REMOVE_LABELS)
+        .queryParam(QUERY_USER_NAME, userName)
         .queryParams(params)
         .accept(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class);
   }
 
-  private ClientResponse getLabelsOfNode(WebResource r, String node) {
-    return r.path("ws").path("v1").path("cluster")
-        .path("nodes").path(node)
-        .path("get-labels").queryParam("user.name", userName)
+  private ClientResponse getLabelsOfNode(String node) {
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+        .path(PATH_NODES).path(node)
+        .path(PATH_GET_LABELS).queryParam(QUERY_USER_NAME, userName)
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
   }
 
-  private ClientResponse getNodeLabels(WebResource r) {
-    return r.path("ws").path("v1").path("cluster")
-        .path("get-node-labels")
-        .queryParam("user.name", userName)
+  private ClientResponse getNodeLabels() {
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+        .path(PATH_GET_NODE_TO_LABELS)
+        .queryParam(QUERY_USER_NAME, userName)
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
   }
 
-  private ClientResponse getNodeToLabels(WebResource r) {
-    return r.path("ws").path("v1").path("cluster")
-        .path("get-node-to-labels")
-        .queryParam("user.name", userName)
+  private ClientResponse getNodeToLabels() {
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+        .path(PATH_GET_NODE_TO_LABELS)
+        .queryParam(QUERY_USER_NAME, userName)
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
   }
 
-  private ClientResponse addNodeLabels(WebResource r,
-      List<Pair<String, Boolean>> nlInfos) throws Exception {
-    return addNodeLabelsInternal(r, nlInfos, userName);
+  private ClientResponse addNodeLabels(List<Pair<String, Boolean>> nlInfos) throws Exception {
+    return addNodeLabelsInternal(nlInfos, userName);
   }
 
-  private ClientResponse addNodeLabelsWithUser(WebResource r, List<Pair<String, Boolean>> nlInfos,
+  private ClientResponse addNodeLabelsWithUser(List<Pair<String, Boolean>> nlInfos,
       String userName) throws Exception {
-    return addNodeLabelsInternal(r, nlInfos, userName);
+    return addNodeLabelsInternal(nlInfos, userName);
   }
 
-  private ClientResponse addNodeLabelsInternal(WebResource r, List<Pair<String, Boolean>> nlInfos,
+  private ClientResponse addNodeLabelsInternal(List<Pair<String, Boolean>> nlInfos,
       String userName) throws Exception {
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     for (Pair<String, Boolean> nlInfo : nlInfos) {
@@ -510,9 +522,9 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
     }
 
-    return r.path("ws").path("v1").path("cluster")
-        .path("add-node-labels")
-        .queryParam("user.name", userName)
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
+        .path(PATH_ADD_NODE_LABELS)
+        .queryParam(QUERY_USER_NAME, userName)
         .accept(MediaType.APPLICATION_JSON)
         .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
             MediaType.APPLICATION_JSON)
@@ -540,9 +552,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   @Test
   public void testLabelInvalidAddition()
       throws Exception {
-    WebResource r = resource();
     // Add a invalid label
-    ClientResponse response = addNodeLabels(r, Lists.newArrayList(Pair.of("a&",
+    ClientResponse response = addNodeLabels(Lists.newArrayList(Pair.of("a&",
         DEFAULT_NL_EXCLUSIVITY)));
     String expectedMessage =
         "java.io.IOException: label name should only contains"
@@ -554,12 +565,11 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   @Test
   public void testLabelChangeExclusivity()
       throws Exception {
-    WebResource r = resource();
     ClientResponse response;
-    response = addNodeLabels(r, Lists.newArrayList(Pair.of("newLabel", DEFAULT_NL_EXCLUSIVITY)));
+    response = addNodeLabels(Lists.newArrayList(Pair.of("newLabel", DEFAULT_NL_EXCLUSIVITY)));
     assertHttp200(response);
     // new info and change exclusivity
-    response = addNodeLabels(r, Lists.newArrayList(Pair.of("newLabel", false)));
+    response = addNodeLabels(Lists.newArrayList(Pair.of("newLabel", false)));
     String expectedMessage =
         "java.io.IOException: Exclusivity cannot be modified for an existing"
             + " label with : <newLabel:exclusivity=false>";
@@ -587,10 +597,9 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   @Test
   public void testLabelInvalidReplace()
       throws Exception {
-    WebResource r = resource();
     ClientResponse response;
     // replace label which doesn't exist
-    response = replaceLabelsOnNode(r, NODE_0, "idontexist");
+    response = replaceLabelsOnNode(NODE_0, "idontexist");
 
     String expectedMessage =
         "Not all labels being replaced contained by known label"
@@ -601,9 +610,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   @Test
   public void testLabelInvalidRemove()
       throws Exception {
-    WebResource r = resource();
     ClientResponse response;
-    response = removeNodeLabel(r, "ireallydontexist");
+    response = removeNodeLabel("ireallydontexist");
     String expectedMessage =
         "java.io.IOException: Node label=ireallydontexist to be"
             + " removed doesn't existed in cluster node labels"
@@ -613,16 +621,14 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   @Test
   public void testNodeLabelPartitionInfo() throws Exception {
-    WebResource r = resource();
-
     ClientResponse response;
 
     // Add a node label
-    response = addNodeLabels(r, Lists.newArrayList(Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY)));
+    response = addNodeLabels(Lists.newArrayList(Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY)));
     assertHttp200(response);
 
     // Verify partition info in get-node-labels
-    response = getNodeLabels(r);
+    response = getNodeLabels();
     assertApplicationJsonUtf8Response(response);
     NodeLabelsInfo nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertNodeLabelsSize(nodeLabelsInfo, 1);
@@ -634,11 +640,11 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     }
 
     // Add node label to a node
-    response = replaceLabelsOnNode(r, "nodeId:0", LABEL_A);
+    response = replaceLabelsOnNode("nodeId:0", LABEL_A);
     assertHttp200(response);
 
     // Verify partition info in label-mappings
-    response = getNodeLabelMappings(r);
+    response = getNodeLabelMappings();
     assertApplicationJsonUtf8Response(response);
     LabelsToNodesInfo labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertLabelsToNodesInfo(labelsToNodesInfo, 1, Lists.newArrayList(
