@@ -1434,7 +1434,7 @@ public class TestFileUtil {
     if (f.isDirectory()) {
       tos.putArchiveEntry(new TarArchiveEntry(f));
       tos.closeArchiveEntry();
-      for (File child : Objects.requireNonNull(f.listFiles())) {
+      for (File child : f.listFiles()) {
         putEntriesInTar(tos, child);
       }
     }
