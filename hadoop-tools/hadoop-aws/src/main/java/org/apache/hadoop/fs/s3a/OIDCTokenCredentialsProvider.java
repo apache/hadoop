@@ -36,10 +36,8 @@ public class OIDCTokenCredentialsProvider implements AWSCredentialsProvider {
 
     public OIDCTokenCredentialsProvider(Configuration conf) {
         try {
-            LOG.info("conf {}", conf.toString());
             Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
                     conf, S3AFileSystem.class);
-            LOG.info("c {}", c.toString());
             this.jwtPath = S3AUtils.lookupPassword(c, JWT_PATH, null);
             this.roleARN = S3AUtils.lookupPassword(c, ROLE_ARN, null);
             this.sessionName = S3AUtils.lookupPassword(c, SESSION_NAME, null);
@@ -55,7 +53,7 @@ public class OIDCTokenCredentialsProvider implements AWSCredentialsProvider {
                     lookupIOE);
         }
 
-        LOG.info("jwtPath {} roleARN {}", jwtPath, roleARN);
+        LOG.debug("jwtPath {} roleARN {}", jwtPath, roleARN);
 
         if (!StringUtils.isEmpty(jwtPath) && !StringUtils.isEmpty(roleARN)) {
             final AWSCredentialsProvider credentialsProvider =
@@ -64,9 +62,9 @@ public class OIDCTokenCredentialsProvider implements AWSCredentialsProvider {
                     .roleArn(roleARN)
                     .roleSessionName(sessionName)
                     .build();
-            credentialsProvider.getCredentials();
+            return credentialsProvider.getCredentials();
         }
-        throw new CredentialInitializationException(
+        else throw new CredentialInitializationException(
                 "OIDC token path or role ARN is null");
     }
 
