@@ -2751,6 +2751,11 @@ public class BlockManager implements BlockStatsMXBean {
       return true;
     }
     DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
+    if (node == null) {
+      final UnregisteredNodeException e = new UnregisteredNodeException(nodeID, null);
+      NameNode.stateChangeLog.error("BLOCK* NameSystem.getDatanode: " + e.getLocalizedMessage());
+      throw e;
+    }
     final long startTime = Time.monotonicNow();
     return blockReportLeaseManager.checkLease(node, startTime,
         context.getLeaseId());
