@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -56,12 +57,11 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
       inputStream.seek(0);
       inputStream.readByte();
 
-      assertEquals(
-          "Expected two GetObject requests",
-          2,
-          inputStream.getIOStatistics().counters()
-              .get(StreamStatisticNames.STREAM_READ_OPENED).intValue()
-      );
+      // Verify > 1 call was made, so we're sure it is correctly configured for each request
+      IOStatisticAssertions
+          .assertThatStatisticCounter(inputStream.getIOStatistics(),
+              StreamStatisticNames.STREAM_READ_OPENED)
+          .isGreaterThan(1);
     }
   }
 
