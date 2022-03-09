@@ -370,10 +370,10 @@ public class TestFileUtil {
 
     // "file1" is non-deletable by default, see MyFile.delete().
 
-    xSubDir.mkdirs();
+    Verify.mkdirs(xSubDir);
     Verify.createNewFile(file2);
 
-    xSubSubDir.mkdirs();
+    Verify.mkdirs(xSubSubDir);
     Verify.createNewFile(file22);
 
     revokePermissions(file22);
@@ -382,7 +382,7 @@ public class TestFileUtil {
     revokePermissions(file2);
     revokePermissions(xSubDir);
 
-    ySubDir.mkdirs();
+    Verify.mkdirs(ySubDir);
     Verify.createNewFile(file3);
 
     File tmpFile = Verify.createNewFile(new File(tmp, FILE));
@@ -498,6 +498,17 @@ public class TestFileUtil {
      */
     public static File createNewFile(File file) throws IOException {
       assertTrue("Unable to create new file " + file, file.createNewFile());
+      return file;
+    }
+
+    /**
+     * Invokes {@link File#mkdirs()} on the given {@link File} instance.
+     *
+     * @param file The file to call {@link File#mkdirs()} on.
+     * @return The result of {@link File#mkdirs()}.
+     */
+    public static File mkdirs(File file) {
+      assertTrue("Unable to mkdirs for " + file, file.mkdirs());
       return file;
     }
   }
@@ -683,7 +694,7 @@ public class TestFileUtil {
     Verify.createNewFile(srcFile);
     assertTrue(srcFile.exists());
     targetFile.delete();
-    targetFile.mkdirs();
+    Verify.mkdirs(targetFile);
     File obstacle = Verify.createNewFile(new File(targetFile, "obstacle"));
     assertTrue(targetFile.exists() && targetFile.isDirectory());
     try {
@@ -1373,12 +1384,8 @@ public class TestFileUtil {
       final String tmpDir = "tmp/test";
       File tmpDir1 = new File(tmpDir, "dir1/");
       File tmpDir2 = new File(tmpDir, "dir2/");
-      if (!tmpDir1.mkdirs()) {
-        throw new IOException(String.format("Unable to create directory %s", tmpDir1));
-      }
-      if (!tmpDir2.mkdirs()) {
-        throw new IOException(String.format("Unable to create directory %s", tmpDir2));
-      }
+      Verify.mkdirs(tmpDir1);
+      Verify.mkdirs(tmpDir2);
 
       java.nio.file.Path symLink = Paths.get(tmpDir1.getPath(), "sl");
 
@@ -1413,12 +1420,12 @@ public class TestFileUtil {
 
       // Create arbitrary dir
       File arbitraryDir = new File(rootDir, "arbitrary-dir/");
-      assertTrue(arbitraryDir.mkdirs());
+      Verify.mkdirs(arbitraryDir);
 
       // We will tar from the tar-root lineage
       File tarRoot = new File(rootDir, "tar-root/");
       File dir1 = new File(tarRoot, "dir1/");
-      assertTrue(dir1.mkdirs());
+      Verify.mkdirs(dir1);
 
       // Create Symbolic Link to an arbitrary dir
       java.nio.file.Path symLink = Paths.get(dir1.getPath(), "sl");
