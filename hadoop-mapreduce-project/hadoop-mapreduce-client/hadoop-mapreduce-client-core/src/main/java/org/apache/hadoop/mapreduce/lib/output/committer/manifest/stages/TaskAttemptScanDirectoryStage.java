@@ -74,9 +74,10 @@ public final class TaskAttemptScanDirectoryStage
     LOG.info("{}: scanning directory {}",
         getName(), taskAttemptDir);
 
-    final int depth = scanDirectoryTree(manifest, taskAttemptDir,
+    final int depth = scanDirectoryTree(manifest,
+        taskAttemptDir,
         getDestinationDir(),
-        0);
+        0, true);
     List<FileEntry> filesToCommit = manifest.getFilesToCommit();
     LongSummaryStatistics fileSummary = filesToCommit.stream()
         .mapToLong(FileEntry::getSize)
@@ -118,6 +119,7 @@ public final class TaskAttemptScanDirectoryStage
    * @param srcDir dir to scan
    * @param destDir destination directory
    * @param depth depth from the task attempt dir.
+   * @param parentDirExists does the parent dir exist?
    * @return the maximum depth of child directories
    * @throws IOException IO failure.
    */
@@ -125,26 +127,55 @@ public final class TaskAttemptScanDirectoryStage
       TaskManifest manifest,
       Path srcDir,
       Path destDir,
-      int depth) throws IOException {
+      int depth,
+      boolean parentDirExists) throws IOException {
 
     // generate some task progress in case directory scanning is very slow.
     progress();
 
     int maxDepth = 0;
     int files = 0;
+    boolean dirExists = parentDirExists;
     List<FileStatus> subdirs = new ArrayList<>();
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "Task Attempt %s source dir %s, dest dir %s",
         getTaskAttemptId(), srcDir, destDir)) {
 
       // list the directory. This may block until the listing is complete,
-      // or, if the FS does incremental or asynchronous fetching, until the
-      // first page of results is ready.
+      // or, if the FS does incremental or asynchronous fetching,
+      // then the next()/hasNext() call will block for the results
+      // unless turned off, ABFS does to this async
       final RemoteIterator<FileStatus> listing = listStatusIterator(srcDir);
 
+      // when the FS (especially ABFS) does an asyn fetch of the listing,
+      // we can probe for the status of the destination dir while that
+      // page is being fetched.
+      // probe for and add the dest dir entry for all but
+      // the base dir
+
+      if (depth > 0) {
+        final EntryStatus status;
+        if (parentDirExists) {
+          final FileStatus destDirStatus = getFileStatusOrNull(destDir);
+          status = EntryStatus.toEntryStatus(destDirStatus);
+          dirExists = destDirStatus != null;
+        } else {
+          // if there is no parent dir, then there is no need to look
+          // for this directory -report it as missing automatically.
+          status = EntryStatus.not_found;
+        }
+        manifest.addDirectory(DirEntry.dirEntry(
+            destDir,
+            status,
+            depth));
+      }
+
+      // process the listing; this is where abfs will block
+      // to wait the result of the list call.
       while (listing.hasNext()) {
         final FileStatus st = listing.next();
         if (st.isFile()) {
+          // this is a file, so add to the list of files to commit.
           files++;
           final FileEntry entry = fileEntry(st, destDir);
           manifest.addFileToCommit(entry);
@@ -162,15 +193,6 @@ public final class TaskAttemptScanDirectoryStage
       // add any statistics provided by the listing.
       maybeAddIOStatistics(getIOStatistics(), listing);
     }
-    // probe for and add the dest dir entry for all but
-    // the base dir
-    if (depth > 0) {
-      final FileStatus destDirStatus = getFileStatusOrNull(destDir);
-      manifest.addDirectory(DirEntry.dirEntry(
-          destDir,
-          EntryStatus.toEntryStatus(destDirStatus),
-          depth));
-    }
 
     // now scan the subdirectories
     LOG.debug("{}: Number of subdirectories under {} found: {}; file count {}",
@@ -178,8 +200,11 @@ public final class TaskAttemptScanDirectoryStage
 
     for (FileStatus st : subdirs) {
       Path destSubDir = new Path(destDir, st.getPath().getName());
-      final int d = scanDirectoryTree(manifest, st.getPath(), destSubDir,
-          depth + 1);
+      final int d = scanDirectoryTree(manifest,
+          st.getPath(),
+          destSubDir,
+          depth + 1,
+          dirExists);
       maxDepth = Math.max(maxDepth, d);
     }
 

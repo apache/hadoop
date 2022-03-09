@@ -14,7 +14,7 @@
 
 
 # The Manifest Committer for Azure and Google Cloud Storage
- 
+
 This document how to use the _Manifest Committer_.
 
 The _Manifest_ committer is a committer for work which provides
@@ -83,7 +83,7 @@ only one process may rename a file, and if it exists, then the caller is notifie
 
 The full details are covered in [Manifest Committer Architecture](manifest_committer_architecture.html).
 
-#### Switching to the committer
+# Using the committer
 
 The hooks put in to support the S3A committers were designed to allow every
 filesystem schema to provide their own committer.
@@ -100,7 +100,6 @@ These can be done in `core-site.xml`, if it is not defined in the `mapred-defaul
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
   <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
-  <description>
 </property>
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.gs</name>
@@ -173,21 +172,64 @@ If this file exists and is zero bytes long: the classic `FileOutputCommitter` wa
 If this file exists and is greater than zero bytes wrong, either the manifest committer was used,
 or in the case of S3A filesystems, one of the S3A committers. They all use the same JSON format.
 
-## Configuration options
+# <a name="configuration"></a> Configuration options
+
+Here are the main configuration options of the committer.
+
 
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
 | `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for store operations. | `10000` |
 | `mapreduce.manifest.committer.io.thread.count` | Thread count for parallel operations | `64` |
-| `mapreduce.manifest.committer.store.operations.classname` | Classname for Store Operations | `""` |
 | `mapreduce.manifest.committer.prepare.target.files` | Delete target files? | `false` |
-| `mapreduce.manifest.committer.validate.output` | Perform output validation? | `false` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` | Delete task attempt directories in parallel | `true` |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Create a `_SUCCESS` marker file on successful completion. (and delete any existing one in job setup) | `true` |
+
+There are some more, as covered in the (Advanced)[#advanced] section.
+
+
+## Scaling jobs `mapreduce.manifest.committer.io.thread.count`
+
+The core reason that this committer is faster than the classic FileOutputCommitter
+is that it tries to parallelize as much file IO as it can during job commit, specifically
+
+* task manifest loading
+* deletion of files where directories will be created
+* directory creation
+* file-by-file renaming
+* deletion of task attempt directories in job cleanup
+
+These operations are all performed in the same thread pool, whose size is set
+in the option `mapreduce.manifest.committer.io.thread.count`.
+
+Larger values may be used.
+
+```xml
+<property>
+  <name>mapreduce.manifest.committer.io.thread.count</name>
+  <value>200</value>
+```
+
+A larger value than that of the number of cores allocated to
+the MapReduce AM or Spark Driver does not directly overload
+the CPUs, as the threads are normally waiting for (slow) IO
+against the object store/filesystem to complete.
+
+Caveats
+* In Spark, multiple jobs may be committed in the same process,
+  each of which will create their own thread pool during job
+  commit or cleanup.
+* Azure rate throttling may be triggered if too many IO requests
+  are made against the store. The rate throttling option
+  `mapreduce.manifest.committer.io.rate` can help avoid this.
+  
+
+
+
 
 ## Job Commit Preparation options `mapreduce.manifest.committer.prepare`
 
@@ -310,8 +352,8 @@ The core set of Azure-optimized options becomes
 
 ```xml
 <property>
-<name>mapreduce.outputcommitter.factory.scheme.abfs</name>
-<value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
+  <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
 </property>
 
 <property>
@@ -324,7 +366,6 @@ The core set of Azure-optimized options becomes
 And optional settings for debugging/performance analysis
 
 ```xml
-
 <property>
   <name>mapreduce.manifest.committer.summary.report.directory</name>
   <value>abfs:// Path within same store/separate store</value>
@@ -392,7 +433,7 @@ spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: U
 
 The manifest committer is compatible with and tested against Google cloud storage through
 the gcs-connector library from google, which provides a Hadoop filesystem client for the
-schema `gs`. 
+schema `gs`.
 
 Google cloud storage has the semantics needed for the commit protocol
 to work safely.
@@ -411,8 +452,25 @@ The store's directory delete operations are `O(files)` so the value
 of `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories`
 SHOULD be left at the default of `true`.
 
+For mapreduce, declare the binding in `core-site.xml`or `mapred-site.xml`
+```xml
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
+</property>
+```
 
-# Testing only: Validating output
+# <a name="advanced"></a> Advanced options and operations
+
+Advanced Configuration options
+
+| Option | Meaning | Default Value |
+|--------|---------|---------------|
+| `mapreduce.manifest.committer.store.operations.classname` | Classname for Manifest Store Operations | `""` |
+| `mapreduce.manifest.committer.validate.output` | Perform output validation? | `false` |
+
+
+## Validating output  `mapreduce.manifest.committer.validate.outputl
 
 The option `mapreduce.manifest.committer.validate.output` triggers a check of every renamed file to
 verify it has the expected length.
@@ -420,3 +478,32 @@ verify it has the expected length.
 This adds the overhead of a `HEAD` request per file, and so is recommended for testing only.
 
 There is no verification of the actual contents.
+
+## Controlling storage integration `mapreduce.manifest.committer.store.operations.classname`
+
+The manifest committer interacts with filesystems through implementations of the interface
+`ManifestStoreOperations`.
+It is possible to provide custom implementations for store-specific features.
+There is one of these for ABFS; when the abfs-specific committer factory is used this
+is automatically set. 
+
+It can be explicitly set.
+```xml
+<property>
+  <name>mapreduce.manifest.committer.store.operations.classname</name>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations</value>
+</property>
+```
+
+The default implementation may also be configured.
+
+```xml
+<property>
+  <name>mapreduce.manifest.committer.store.operations.classname</name>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperationsThroughFileSystem</value>
+</property>
+```
+
+There is no need to alter these values, except when writing new implementations for other stores,
+something which is only needed if the store provides extra integration support for the
+committer.

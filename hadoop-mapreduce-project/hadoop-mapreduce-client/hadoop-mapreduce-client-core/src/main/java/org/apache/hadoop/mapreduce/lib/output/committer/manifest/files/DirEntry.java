@@ -53,7 +53,7 @@ public final class DirEntry implements Serializable {
   private String dir;
 
   /**
-   * Type of dest entry as found in task committer.
+   * Type of dest entry as found when probed for in task commit.
    */
   @JsonProperty("t")
   private int type;
@@ -162,8 +162,12 @@ public final class DirEntry implements Serializable {
 
   @Override
   public boolean equals(final Object o) {
-    if (this == o) {return true;}
-    if (o == null || getClass() != o.getClass()) {return false;}
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     DirEntry dirEntry = (DirEntry) o;
     return dir.equals(dirEntry.dir);
   }

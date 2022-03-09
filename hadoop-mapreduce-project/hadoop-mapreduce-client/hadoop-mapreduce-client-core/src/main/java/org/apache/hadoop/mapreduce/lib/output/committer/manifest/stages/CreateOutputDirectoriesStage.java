@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -116,10 +117,14 @@ public class CreateOutputDirectoriesStage extends
 
     // all directories which need to exist across all
     // tasks.
-    final Map<Path, DirEntry> directories = new HashMap<>();
+    // leaf directories
+    final Map<Path, DirEntry> leaves = new HashMap<>();
+    // parent directories. these do not need to be
+    // explicitly created.
     final Map<Path, DirEntry> parents = new HashMap<>();
+    // the files which must be deleted as a directory
+    // will be created at that path.
     final Set<Path> filesToDelete = new HashSet<>();
-    int maxDepth = 0;
 
     // iterate through the task manifests
     // and all output dirs into the set of dirs to
@@ -127,31 +132,32 @@ public class CreateOutputDirectoriesStage extends
     // hopefully there is a lot of overlap, so the
     // final number of dirs to create is small.
     for (TaskManifest task: taskManifests) {
-      for (DirEntry entry: task.getDestDirectories()) {
+      final List<DirEntry> destDirectories = task.getDestDirectories();
+      Collections.sort(destDirectories, (o1, o2) ->
+          o1.getLevel() - o2.getLevel());
+      for (DirEntry entry: destDirectories) {
         // add the dest entry
         final Path path = entry.getDestPath();
-        if (!directories.containsKey(path)) {
-          directories.put(path, entry);
-          // check for and update the level
-          if (entry.getLevel() > maxDepth) {
-            maxDepth = entry.getLevel();
-          }
+        if (!leaves.containsKey(path)) {
+          leaves.put(path, entry);
+
           // if it is a file to delete, record this.
           if (entry.getStatus() == EntryStatus.file) {
             filesToDelete.add(path);
           }
           final Path parent = path.getParent();
-          if (parent != null && directories.containsKey(parent)) {
+          if (parent != null && leaves.containsKey(parent)) {
             // there's a parent dir, remove it from the dir list
             // and add to parent list
             parents.put(parent,
-                directories.remove(parent));
+                leaves.remove(parent));
           }
         }
       }
     }
 
-    // at this point then there is a map of all entries,
+    // at this point then there is a map of all directories which
+    // are leaf entries and so need to be created if not present,
     // and the maximum level is known.
     // we can iterate through all levels deleting any files if there are any.
 
@@ -159,13 +165,12 @@ public class CreateOutputDirectoriesStage extends
     deleteFiles(filesToDelete);
 
     // Now the real work.
-    final int createCount = directories.size();
+    final int createCount = leaves.size();
     LOG.info("Preparing {} directory/directories", createCount);
     // now probe for and create the leaf dirs, which are those at the
     // bottom level
-    final int depth = maxDepth;
     Duration d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
-        TaskPool.foreach(directories.values())
+        TaskPool.foreach(leaves.values())
             .executeWith(getIOProcessors(createCount))
             .onFailure(this::reportMkDirFailure)
             .stopOnFailure()
@@ -311,7 +316,6 @@ public class CreateOutputDirectoriesStage extends
         LOG.info("{}: Deleting file where a directory should go: {}",
             getName(), st);
         delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
-
       } else {
         // is good.
         LOG.warn("{}: Even though mkdirs({}) failed, there is now a directory there",

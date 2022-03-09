@@ -61,7 +61,7 @@ in the directory tree.
 The committer built into `hadoop-mapreduce-client-core` module is the `FileOutputCommitter`.
 
 
-It has two algorithms, v1 and v2. 
+It has two algorithms, v1 and v2.
 
 The v1 algorithm is resilient to all forms of task failure, but slow
 when committing the final aggregate output as it renames each newly created file
@@ -353,7 +353,7 @@ Stores/filesystems supported by this committer MAY NOT:
   The manifests are committed by writing to a path including the task attempt ID,
   then renamed to their final path.
 * Support fast `listFiles(path, recursive=true)` calls.
-  This API call is not used. 
+  This API call is not used.
 
 When compared with the `FileOutputCommitter`, the requirements
 which have been removed are:
@@ -400,7 +400,7 @@ checks for destination files to be omitted by default.
 Given a destination directory `destDir: Path`
 
 A job of id `jobID: String` and attempt number `jobAttemptNumber:int`
-will use the directory 
+will use the directory:
 
 ```
 $destDir/_temporary/manifest_$jobID/$jobAttemptNumber/
@@ -429,7 +429,7 @@ $destDir/_temporary/manifest_$jobID/$jobAttemptNumber/manifests/$taskId-manifest
 ```
 
 Is the final location for the manifest of all files created by
-a committed task. It is termed the _Manifest Path of a Committed Task_. 
+a committed task. It is termed the _Manifest Path of a Committed Task_.
 
 Task attempts will save their manifest into this directory with
 a temporary filename
@@ -493,7 +493,8 @@ mkdir(taskAttemptWorkingDirectory)
 Task attempts are committed by:
 
 1. Recursively listing the task attempt working dir to build
-   1. A list of directories to create.
+   1. A list of destination directories under which files will be renamed,
+      and their status (exists, not_found, file)
    2. A list of files to rename: source, destination, size and optionally, etag.
 2. These lists populate a JSON file, the _Intermediate Manifest_.
 3. The task attempt saves this file to its _Temporary Path of a Task Attempt's
@@ -530,14 +531,17 @@ Job Commit consists of:
    testing; use write and rename for atomic save)
 
 The job commit phase supports parallelization for many tasks and many files
-per task, specifically:
+per task, specifically there is a thread pool for parallel store IO
 
-1. Manifest tasks are loaded and processed in a pool of "manifest processor"
-   threads.
-2. Directory creation and file rename operations are each processed in a pool of "
-   executor" threads: many renames can execute in parallel as they use minimal
-   network IO.
-   
+1. Manifest tasks are loaded and processed in parallel.
+1. Deletion of files where directories are intended to be created.
+1. Creation of leaf directories.
+1. File rename.
+1. In cleanup and abort: deletion of task attempt directories
+1. If validation of output is enabled for testing/debugging: getFileStatus calls
+   to compare file length and, if possible etags.   
+
+
 ```
 let manifestPaths = list("$manifestDirectory/*-manifest.json")
 let manifests = manifestPaths.map(p -> loadManifest(p))

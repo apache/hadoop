@@ -99,7 +99,7 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
 
     LOG.info("manifest at {} of length {}:\n{}",
         path, manifestBody.length(), manifestBody);
-    
+
     // now commit
     final CommitJobStage.Result outcome = new CommitJobStage(getJobStageConfig())
         .apply(new CommitJobStage.Arguments(

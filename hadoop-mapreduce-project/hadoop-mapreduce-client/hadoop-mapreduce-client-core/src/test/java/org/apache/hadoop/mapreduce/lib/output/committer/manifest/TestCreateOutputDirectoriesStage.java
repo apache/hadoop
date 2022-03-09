@@ -210,13 +210,17 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
             subpaths(p, c).stream())
         .collect(Collectors.toList());
     // manifest dir entry list contains all levels > 0
+    // adding them out of order verifies sorting takes place
+    // before the merge routine which is intended to strip
+    // out parent dirs
     final List<DirEntry> directories = new ArrayList<>();
     final List<DirEntry> l1 = dirEntries(level1, 1, EntryStatus.not_found);
     directories.addAll(l1);
-    final List<DirEntry> l2 = dirEntries(level2, 2, EntryStatus.not_found);
-    directories.addAll(l2);
     final List<DirEntry> l3 = dirEntries(level3, 3, EntryStatus.not_found);
     directories.addAll(l3);
+    final List<DirEntry> l2 = dirEntries(level2, 2, EntryStatus.not_found);
+    directories.addAll(l2);
+
     // one of the level 0 paths is going to be a file
     final DirEntry parentIsFile = l1.get(1);
     // one entry has a dir already
@@ -286,7 +290,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     final CreateOutputDirectoriesStage.Result r3 =
         attempt3.apply(manifests3);
     assertDirMapStatus(r3, leafIsFile.getDestPath(),
-       CreateOutputDirectoriesStage.DirMapState.dirFoundInStore);
+        CreateOutputDirectoriesStage.DirMapState.dirFoundInStore);
     Assertions.assertThat(r3.getCreatedDirectories())
         .describedAs("created directories")
         .isEmpty();

@@ -72,8 +72,8 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    failures
-        = new UnreliableManifestStoreOperations(createManifestStoreOperations());
+    failures = new UnreliableManifestStoreOperations(
+        createManifestStoreOperations());
     setStoreOperations(failures);
     Path destDir = methodPath();
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
