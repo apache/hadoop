@@ -31,6 +31,7 @@ import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.util.Lists;
@@ -91,6 +92,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private static final String PATH_GET_LABELS = "get-labels";
   private static final String PATH_REPLACE_LABELS = "replace-labels";
   private static final String PATH_REMOVE_LABELS = "remove-node-labels";
+  private static final String PATH_GET_NODE_LABELS = "get-node-labels";
   private static final String PATH_GET_NODE_TO_LABELS = "get-node-to-labels";
   private static final String QUERY_USER_NAME = "user.name";
   private static final String PATH_ADD_NODE_LABELS = "add-node-labels";
@@ -144,6 +146,50 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         .contextListenerClass(GuiceServletConfig.class)
         .filterClass(com.google.inject.servlet.GuiceFilter.class)
         .contextPath("jersey-guice-filter").servletPath("/").build());
+  }
+
+  private WebResource getClusterWebResource() {
+    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER);
+  }
+
+  private ClientResponse get(String path) {
+    return getClusterWebResource()
+        .path(path)
+        .queryParam(QUERY_USER_NAME, userName)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+  }
+
+  private ClientResponse get(String path, MultivaluedMapImpl queryParams) {
+    return getClusterWebResource()
+        .path(path)
+        .queryParam(QUERY_USER_NAME, userName)
+        .queryParams(queryParams)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+  }
+
+  private ClientResponse post(String path, String userName, Object payload,
+      Class<?> payloadClass) throws Exception {
+    return getClusterWebResource()
+        .path(path)
+        .queryParam(QUERY_USER_NAME, userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(toJson(payload, payloadClass),
+            MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
+  }
+
+  private ClientResponse post(String path, String userName, Object payload,
+      Class<?> payloadClass, MultivaluedMapImpl queryParams) throws Exception {
+    WebResource.Builder builder = getClusterWebResource()
+        .path(path)
+        .queryParam(QUERY_USER_NAME, userName)
+        .queryParams(queryParams)
+        .accept(MediaType.APPLICATION_JSON);
+
+    if (payload != null && payloadClass != null) {
+      builder.entity(toJson(payload, payloadClass), MediaType.APPLICATION_JSON);
+    }
+    return builder.post(ClientResponse.class);
   }
 
   @Test
@@ -423,47 +469,29 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       NodeToLabelsEntry nli = new NodeToLabelsEntry(nodeId, labelList);
       nodeToLabelsEntries.getNodeToLabels().add(nli);
     }
-    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-        .path(PATH_REPLACE_NODE_TO_LABELS)
-        .queryParam(QUERY_USER_NAME, userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(nodeToLabelsEntries, NodeToLabelsEntryList.class),
-            MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+    return post(PATH_REPLACE_NODE_TO_LABELS, userName, nodeToLabelsEntries, NodeToLabelsEntryList.class);
   }
 
   private ClientResponse getNodeLabelMappings() {
-    ClientResponse response;
-    response =
-        resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-            .path(PATH_LABEL_MAPPINGS).queryParam(QUERY_USER_NAME, userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    return response;
+    return get(PATH_LABEL_MAPPINGS);
   }
 
   private ClientResponse getNodeLabelMappingsByLabels(String... labelNames) {
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
-    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-        .path(PATH_LABEL_MAPPINGS).queryParam(QUERY_USER_NAME, userName)
-        .queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    return get(PATH_LABEL_MAPPINGS, params);
   }
 
-  private ClientResponse replaceLabelsOnNode(String node, String... labelNames) {
+  private ClientResponse replaceLabelsOnNode(String node, String... labelNames) throws Exception {
     return replaceLabelsOnNodeWithUserName(node, userName, labelNames);
   }
 
   private ClientResponse replaceLabelsOnNodeWithUserName(String node,
-      String userName, String... labelNames) {
+      String userName, String... labelNames) throws Exception {
     LOG.info("Replacing labels on node '{}', label(s): {}", node, labelNames);
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
-    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-        .path(PATH_NODES).path(node)
-        .path(PATH_REPLACE_LABELS)
-        .queryParam(QUERY_USER_NAME, userName)
-        .queryParams(params)
-        .accept(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+    String path = UriBuilder.fromPath(PATH_NODES).path(node)
+        .path(PATH_REPLACE_LABELS).build().toString();
+    return post(path, userName, null, null, params);
   }
 
   private static MultivaluedMapImpl createMultiValuedMap(String[] labelNames) {
@@ -474,35 +502,23 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     return params;
   }
 
-  private ClientResponse removeNodeLabel(String... labelNames) {
+  private ClientResponse removeNodeLabel(String... labelNames) throws Exception {
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
-    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-        .path(PATH_REMOVE_LABELS)
-        .queryParam(QUERY_USER_NAME, userName)
-        .queryParams(params)
-        .accept(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+    return post(PATH_REMOVE_LABELS, userName, null, null, params);
   }
 
   private ClientResponse getLabelsOfNode(String node) {
-    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-        .path(PATH_NODES).path(node)
-        .path(PATH_GET_LABELS).queryParam(QUERY_USER_NAME, userName)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    String path = UriBuilder.fromPath(PATH_NODES).path(node)
+        .path(PATH_GET_LABELS).build().toString();
+    return get(path);
   }
 
   private ClientResponse getNodeLabels() {
-    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-        .path(PATH_GET_NODE_TO_LABELS)
-        .queryParam(QUERY_USER_NAME, userName)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    return get(PATH_GET_NODE_LABELS);
   }
 
   private ClientResponse getNodeToLabels() {
-    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-        .path(PATH_GET_NODE_TO_LABELS)
-        .queryParam(QUERY_USER_NAME, userName)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    return get(PATH_GET_NODE_TO_LABELS);
   }
 
   private ClientResponse addNodeLabels(List<Pair<String, Boolean>> nlInfos) throws Exception {
@@ -521,15 +537,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nlInfo.getLeft(), nlInfo.getRight());
       nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
     }
-
-    return resource.path(PATH_WS).path(PATH_V1).path(PATH_CLUSTER)
-        .path(PATH_ADD_NODE_LABELS)
-        .queryParam(QUERY_USER_NAME, userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
-            MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
-
+    return post(PATH_ADD_NODE_LABELS, userName, nodeLabelsInfo, NodeLabelsInfo.class);
   }
 
   private void assertApplicationJsonUtf8Response(ClientResponse response) {
