@@ -490,10 +490,10 @@ public class TestFileUtil {
    */
   public static class Verify {
     /**
-     * Creates a new file and verifies the result of the operation.
+     * Invokes {@link File#createNewFile()} on the given {@link File} instance.
      *
-     * @param file The {@link File} to create.
-     * @return The {@link File} instance that was passed.
+     * @param file The file to call {@link File#createNewFile()} on.
+     * @return The result of {@link File#createNewFile()}.
      * @throws IOException As per {@link File#createNewFile()}.
      */
     public static File createNewFile(File file) throws IOException {
@@ -520,6 +520,17 @@ public class TestFileUtil {
      */
     public static File mkdirs(File file) {
       assertTrue("Unable to mkdirs for " + file, file.mkdirs());
+      return file;
+    }
+
+    /**
+     * Invokes {@link File#delete()} on the given {@link File} instance.
+     *
+     * @param file The file to call {@link File#delete()} on.
+     * @return The result of {@link File#delete()}.
+     */
+    public static File delete(File file) {
+      assertTrue("Unable to delete " + file, file.delete());
       return file;
     }
   }
@@ -704,7 +715,7 @@ public class TestFileUtil {
     // src exists, and target is a non-empty directory: 
     Verify.createNewFile(srcFile);
     assertTrue(srcFile.exists());
-    targetFile.delete();
+    Verify.delete(targetFile);
     Verify.mkdirs(targetFile);
     File obstacle = Verify.createNewFile(new File(targetFile, "obstacle"));
     assertTrue(targetFile.exists() && targetFile.isDirectory());
@@ -730,8 +741,8 @@ public class TestFileUtil {
     assertTrue(tmp1.exists() && tmp2.exists());
     assertTrue(tmp1.canWrite() && tmp2.canWrite());
     assertTrue(tmp1.canRead() && tmp2.canRead());
-    tmp1.delete();
-    tmp2.delete();
+    Verify.delete(tmp1);
+    Verify.delete(tmp2);
     assertTrue(!tmp1.exists() && !tmp2.exists());
   }
   
@@ -814,7 +825,7 @@ public class TestFileUtil {
     assertTrue(srcFile.exists()); // should not be deleted
     
     // copy regular file, delete src:
-    dest.delete();
+    Verify.delete(dest);
     assertTrue(!dest.exists());
     result = FileUtil.copy(fs, srcPath, dest, true, conf);
     assertTrue(result);
@@ -824,7 +835,7 @@ public class TestFileUtil {
     assertTrue(!srcFile.exists()); // should be deleted
     
     // copy a dir:
-    dest.delete();
+    Verify.delete(dest);
     assertTrue(!dest.exists());
     srcPath = new Path(partitioned.toURI());
     result = FileUtil.copy(fs, srcPath, dest, true, conf);
@@ -985,12 +996,12 @@ public class TestFileUtil {
     Assert.assertEquals(data.length, file.length());
     Assert.assertEquals(data.length, link.length());
 
-    file.delete();
+    Verify.delete(file);
     Assert.assertFalse(file.exists());
 
     Assert.assertEquals(0, link.length());
 
-    link.delete();
+    Verify.delete(link);
     Assert.assertFalse(link.exists());
   }
 
@@ -1057,7 +1068,7 @@ public class TestFileUtil {
   public void testSymlinkSameFile() throws IOException {
     File file = new File(del, FILE);
 
-    file.delete();
+    Verify.delete(file);
 
     // Create a symbolic link
     // The operation should succeed
@@ -1546,7 +1557,7 @@ public class TestFileUtil {
     String result = FileUtil.readLink(file);
     Assert.assertEquals("", result);
 
-    file.delete();
+    Verify.delete(file);
   }
 
   /**
