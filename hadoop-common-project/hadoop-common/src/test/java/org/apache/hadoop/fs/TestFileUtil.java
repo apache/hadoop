@@ -218,7 +218,7 @@ public class TestFileUtil {
 
     //Test existing directory with no files case 
     File newDir = new File(tmp.getPath(),"test");
-    assertTrue(newDir.mkdir());
+    Verify.mkdir(newDir);
     Assert.assertTrue("Failed to create test dir", newDir.exists());
     files = FileUtil.listFiles(newDir);
     Assert.assertEquals(0, files.length);
@@ -244,7 +244,7 @@ public class TestFileUtil {
 
     //Test existing directory with no files case 
     File newDir = new File(tmp.getPath(),"test");
-    assertTrue(newDir.mkdir());
+    Verify.mkdir(newDir);
     Assert.assertTrue("Failed to create test dir", newDir.exists());
     files = FileUtil.list(newDir);
     Assert.assertEquals("New directory unexpectedly contains files", 0, files.length);
@@ -498,6 +498,17 @@ public class TestFileUtil {
      */
     public static File createNewFile(File file) throws IOException {
       assertTrue("Unable to create new file " + file, file.createNewFile());
+      return file;
+    }
+
+    /**
+     * Invokes {@link File#mkdir()} on the given {@link File} instance.
+     *
+     * @param file The file to call {@link File#mkdir()} on.
+     * @return The result of {@link File#mkdir()}.
+     */
+    public static File mkdir(File file) {
+      assertTrue("Unable to mkdir for " + file, file.mkdir());
       return file;
     }
 
