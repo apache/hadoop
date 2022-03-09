@@ -47,19 +47,37 @@ import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFr
  * There is no retry logic: it is expected to be handled by the closures.
  * From {@code org.apache.hadoop.fs.s3a.commit.Tasks} which came from
  * the Netflix committer patch.
- * Apoche Iceberg has its own version of this, with a common ancestor
+ * Apache Iceberg has its own version of this, with a common ancestor
  * at some point in its history.
- * A key difference with this class is that the itertor is always,
+ * A key difference with this class is that the iterator is always,
  * internally, an {@link RemoteIterator}.
  * This is to allow tasks to be scheduled while incremental operations
- * such as paged directory listngs are still collecting in results.
+ * such as paged directory listings are still collecting in results.
  *
- * While awiting completion, this thread spins and sleeps a time of
+ * While awaiting completion, this thread spins and sleeps a time of
  * {@link #SLEEP_INTERVAL_AWAITING_COMPLETION}, which, being a
  * busy-wait, is inefficient.
  * There's an implicit assumption that remote IO is being performed, and
  * so this is not impacting throughput/performance.
  *
+ * History:
+ * This class came with the Netflix contributions to the S3A committers
+ * in HADOOP-13786.
+ * It was moved into hadoop-common for use in the manifest committer and
+ * anywhere else it is needed, and renamed in the process as
+ * "Tasks" has too many meanings in the hadoop source.
+ * The iterator was then changed from a normal java iterable
+ * to a hadoop {@link org.apache.hadoop.fs.RemoteIterator}.
+ * This allows a task pool to be supplied with incremental listings
+ * from object stores, scheduling work as pages of listing
+ * results come in, rather than blocking until the entire
+ * directory/directory tree etc has been enumerated.
+ *
+ * There is a variant of this in Apache Iceberg in
+ * {@code org.apache.iceberg.util.Tasks}
+ * That is not derived from any version in the hadoop codebase, it
+ * just shares a common ancestor somewhere in the Netflix codebase.
+ * It is the more sophisticated version.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -161,10 +179,21 @@ public final class TaskPool {
       return this;
     }
 
+    /**
+     * Suppress exceptions from tasks.
+     * RemoteIterator exceptions are not suppressable.
+     * @return the builder.
+     */
     public Builder<I> suppressExceptions() {
       return suppressExceptions(true);
     }
 
+    /**
+     * Suppress exceptions from tasks.
+     * RemoteIterator exceptions are not suppressable.
+     * @param suppress new value
+     * @return the builder.
+     */
     public Builder<I> suppressExceptions(boolean suppress) {
       this.suppressExceptions = suppress;
       return this;
@@ -412,7 +441,7 @@ public final class TaskPool {
           }));
         }
       } catch (IOException e) {
-        // iterotor failure.
+        // iterator failure.
         LOG.debug("IOException when iterating through {}", iterator, e);
         iteratorIOE = e;
         // mark as a task failure so all submitted tasks will halt/abort
@@ -453,19 +482,20 @@ public final class TaskPool {
         waitFor(futures, sleepInterval);
       }
 
-      if (!suppressExceptions) {
-        // give priority to execution exceptions over
-        // iterator exceptions.
-        if (!exceptions.isEmpty()) {
-          TaskPool.<E>throwOne(exceptions);
-        }
-        // raise any iterator exception.
-        if (iteratorIOE != null) {
-          throw iteratorIOE;
-        }
-
+      // give priority to execution exceptions over
+      // iterator exceptions.
+      if (!suppressExceptions && !exceptions.isEmpty()) {
+        // there's an exception list to build up, cast and throw.
+        TaskPool.<E>throwOne(exceptions);
       }
 
+      // raise any iterator exception.
+      // this can not be suppressed.
+      if (iteratorIOE != null) {
+        throw iteratorIOE;
+      }
+
+      // return true if all tasks succeeded.
       return !taskFailed.get();
     }
   }

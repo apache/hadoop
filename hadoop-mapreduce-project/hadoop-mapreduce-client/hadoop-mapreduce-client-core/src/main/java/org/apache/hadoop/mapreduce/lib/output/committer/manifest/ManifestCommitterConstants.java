@@ -160,7 +160,7 @@ public final class ManifestCommitterConstants {
   /**
    * Threads to use for IO.
    */
-  public static final String OPT_IO_PROCESSORS = OPT_PREFIX + "io.thread.count";
+  public static final String OPT_IO_PROCESSORS = OPT_PREFIX + "io.threads";
 
   /**
    * Default value:  {@value}.

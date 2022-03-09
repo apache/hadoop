@@ -79,11 +79,11 @@ only one process may rename a file, and if it exists, then the caller is notifie
 
 
 
-# How it works
+# <a name="how"></a> How it works
 
 The full details are covered in [Manifest Committer Architecture](manifest_committer_architecture.html).
 
-# Using the committer
+# <a name="use"></a> Using the committer
 
 The hooks put in to support the S3A committers were designed to allow every
 filesystem schema to provide their own committer.
@@ -121,8 +121,7 @@ spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOut
 ```
 
 
-
-### using the `committerinfo` command to probe committer bindings.
+### <a name="committerinfo"></a> Using the Cloudstore `committerinfo` command to probe committer bindings.
 
 The hadoop committer settings can be validated in a recent build of [cloudstore](https://github.com/steveloughran/cloudstore)
 and its `committerinfo` command.
@@ -180,7 +179,7 @@ Here are the main configuration options of the committer.
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
 | `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for store operations. | `10000` |
-| `mapreduce.manifest.committer.io.thread.count` | Thread count for parallel operations | `64` |
+| `` | Thread count for parallel operations | `64` |
 | `mapreduce.manifest.committer.prepare.target.files` | Delete target files? | `false` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
@@ -192,7 +191,7 @@ Here are the main configuration options of the committer.
 There are some more, as covered in the (Advanced)[#advanced] section.
 
 
-## Scaling jobs `mapreduce.manifest.committer.io.thread.count`
+## Scaling jobs `mapreduce.manifest.committer.io.threads`
 
 The core reason that this committer is faster than the classic FileOutputCommitter
 is that it tries to parallelize as much file IO as it can during job commit, specifically
@@ -204,14 +203,21 @@ is that it tries to parallelize as much file IO as it can during job commit, spe
 * deletion of task attempt directories in job cleanup
 
 These operations are all performed in the same thread pool, whose size is set
-in the option `mapreduce.manifest.committer.io.thread.count`.
+in the option `mapreduce.manifest.committer.io.threads`.
 
 Larger values may be used.
 
+XML 
 ```xml
 <property>
-  <name>mapreduce.manifest.committer.io.thread.count</name>
+  <name>mapreduce.manifest.committer.io.threads</name>
   <value>200</value>
+</property>
+```
+
+spark-defaults.conf
+```
+spark.hadoop.mapreduce.manifest.committer.io.threads 200
 ```
 
 A larger value than that of the number of cores allocated to
@@ -226,9 +232,6 @@ Caveats
 * Azure rate throttling may be triggered if too many IO requests
   are made against the store. The rate throttling option
   `mapreduce.manifest.committer.io.rate` can help avoid this.
-  
-
-
 
 
 ## Job Commit Preparation options `mapreduce.manifest.committer.prepare`
@@ -266,32 +269,67 @@ are added to each filename, enable deletion of the target files.
 spark.hadoop.mapreduce.manifest.committer.prepare.target.files true
 ```
 
-## Collecting Job Summaries into a report directory
+# <a name="SUCCESS"></a> Job Summaries in `_SUCCESS` files
 
-The committer can be configured to save the `_SUCCESS` summary files to a report directory,
-Irrespective of whether the job succeed or failed.
+The original hadoop committer creates a zero byte `_SUCCESS` file in the root of the output directory
+unless disabled.
 
-`mapreduce.manifest.committer.summary.report.directory`
+This committer writes a JSON summary which includes
+* The name of the committer.
+* Diagnostics information.
+* A list of some of the files created (for testing; a full list is excluded as it can get big).
+* IO Statistics.
 
-If this is set to a path in the cluster FS/object store then after job commit
-succeeds/fails or after an `abort()` operation, a JSON file is created using the Job ID
-in the filename.
+If, after running a query, this `_SUCCESS` file is zero bytes long,
+*the new committer has not been used*
 
-This allows for the statistics of jobs to be collected irrespective of their outcome,
-Whether or not saving the `_SUCCESS` marker is enabled, and without problems
-caused by a chain of queries overwriting the markers.
+If it is not empty, then it can be examined.
 
-## Viewing Success/Summary files through the `ManifestPrinter` tool.
+## <a name="success"></a> Viewing `_SUCCESS` file files through the `ManifestPrinter` tool.
 
 The summary files are JSON, and can be viewed in any text editor.
 
 For a more succinct summary, including better display of statistics, use the `ManifestPrinter` tool.
 
-```
+```bash
 hadoop org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter <path>
 ```
 
-## Cleanup
+This works for the files saved at the base of an output directory, and
+any reports saved to a report directory.
+
+## <a name="summaries"></a> Collecting Job Summaries `mapreduce.manifest.committer.summary.report.directory`
+
+The committer can be configured to save the `_SUCCESS` summary files to a report directory,
+irrespective of whether the job succeed or failed, by setting a fileystem path in
+the option `mapreduce.manifest.committer.summary.report.directory`.
+
+The path does not have to be on the same
+store/filesystem as the destination of work. For example, a local fileystem could be used.
+
+XML
+
+```xml
+<property>
+  <name>mapreduce.manifest.committer.summary.report.directory</name>
+  <value>file:///tmp/reports</value>
+</property>
+```
+
+spark-defaults.conf
+
+```
+spark.hadoop.mapreduce.manifest.committer.summary.report.directory file:///tmp/reports
+```
+
+This allows for the statistics of jobs to be collected irrespective of their outcome, Whether or not
+saving the `_SUCCESS` marker is enabled, and without problems caused by a chain of queries
+overwriting the markers.
+
+
+
+
+# <a name="cleanup"></a> Cleanup
 
 Job cleanup is convoluted as it is designed to address a number of issues which
 may surface in cloud storage.
@@ -328,6 +366,7 @@ If the dir could not be deleted/renamed:
 It's complicated, but the goal is to perform a fast/scalable delete
 fall back to a rename to trash if that fails, and
 throw a meaningful exception if that didn't work.
+
 
 # Working with Azure Storage
 
@@ -429,7 +468,7 @@ spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOut
 spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
 ```
 
-# Working with Google Cloud Storage
+# <a name="gcs"></a> Working with Google Cloud Storage
 
 The manifest committer is compatible with and tested against Google cloud storage through
 the gcs-connector library from google, which provides a Hadoop filesystem client for the
@@ -460,9 +499,12 @@ For mapreduce, declare the binding in `core-site.xml`or `mapred-site.xml`
 </property>
 ```
 
-# <a name="advanced"></a> Advanced options and operations
+# <a name="advanced"></a> Advanced Topics
 
-Advanced Configuration options
+## Advanced Configuration options
+
+Here are some advanced options which are intended for
+development and testing.
 
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
@@ -470,7 +512,7 @@ Advanced Configuration options
 | `mapreduce.manifest.committer.validate.output` | Perform output validation? | `false` |
 
 
-## Validating output  `mapreduce.manifest.committer.validate.outputl
+## Validating output  `mapreduce.manifest.committer.validate.output`
 
 The option `mapreduce.manifest.committer.validate.output` triggers a check of every renamed file to
 verify it has the expected length.
@@ -507,3 +549,19 @@ The default implementation may also be configured.
 There is no need to alter these values, except when writing new implementations for other stores,
 something which is only needed if the store provides extra integration support for the
 committer.
+
+## Support for concurrent test runs.
+
+It *may* be possible to run multiple jobs targeting the same directory tree.
+
+For this to work, a number of conditions must be met:
+
+* When using spark, unique job IDs must be set.
+* Cleanup of the `_temporary` directory must be disabled by setting 1.
+  `mapreduce.fileoutputcommitter.cleanup.skipped` to `true`.
+* All jobs/tasks must create files with unique filenames.
+* All jobs must create output with the same directory partition structure.
+* Remember to delete the `_temporary` directory later!
+
+This has *NOT BEEN TESTED*
+

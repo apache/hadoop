@@ -147,8 +147,8 @@ public class CreateOutputDirectoriesStage extends
           }
           final Path parent = path.getParent();
           if (parent != null && leaves.containsKey(parent)) {
-            // there's a parent dir, remove it from the dir list
-            // and add to parent list
+            // there's a parent dir, move it from the leaf list
+            // to parent list
             parents.put(parent,
                 leaves.remove(parent));
           }
