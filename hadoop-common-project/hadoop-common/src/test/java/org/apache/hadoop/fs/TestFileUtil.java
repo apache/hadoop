@@ -266,7 +266,7 @@ public class TestFileUtil {
   public void testFullyDelete() throws IOException {
     boolean ret = FileUtil.fullyDelete(del);
     Assert.assertTrue(ret);
-    Assert.assertFalse(del.exists());
+    Verify.notExists(del);
     validateTmpDir();
   }
 
@@ -284,7 +284,7 @@ public class TestFileUtil {
     // delete contents of tmp. See setupDirs for details.
     boolean ret = FileUtil.fullyDelete(link);
     Assert.assertTrue(ret);
-    Assert.assertFalse(link.exists());
+    Verify.notExists(link);
     assertDelListLength(4);
     validateTmpDir();
 
@@ -293,7 +293,7 @@ public class TestFileUtil {
     // delete contents of tmp. See setupDirs for details.
     ret = FileUtil.fullyDelete(linkDir);
     Assert.assertTrue(ret);
-    Assert.assertFalse(linkDir.exists());
+    Verify.notExists(linkDir);
     assertDelListLength(3);
     validateTmpDir();
   }
@@ -310,7 +310,7 @@ public class TestFileUtil {
     // to make y as a dangling link to file tmp/x
     boolean ret = FileUtil.fullyDelete(tmp);
     Assert.assertTrue(ret);
-    Assert.assertFalse(tmp.exists());
+    Verify.notExists(tmp);
 
     // dangling symlink to file
     File link = new File(del, LINK);
@@ -334,15 +334,15 @@ public class TestFileUtil {
   public void testFullyDeleteContents() throws IOException {
     boolean ret = FileUtil.fullyDeleteContents(del);
     Assert.assertTrue(ret);
-    Assert.assertTrue(del.exists());
+    Verify.exists(del);
     Assert.assertEquals(0, Objects.requireNonNull(del.listFiles()).length);
     validateTmpDir();
   }
 
   private void validateTmpDir() {
-    Assert.assertTrue(tmp.exists());
+    Verify.exists(tmp);
     Assert.assertEquals(1, Objects.requireNonNull(tmp.listFiles()).length);
-    Assert.assertTrue(new File(tmp, FILE).exists());
+    Verify.exists(new File(tmp, FILE));
   }
 
   /**
@@ -385,7 +385,8 @@ public class TestFileUtil {
     Verify.mkdirs(ySubDir);
     Verify.createNewFile(file3);
 
-    File tmpFile = Verify.createNewFile(new File(tmp, FILE));
+    File tmpFile = new File(tmp, FILE);
+    tmpFile.createNewFile();
     FileUtil.symLink(tmpFile.toString(), zlink.toString());
   }
 
@@ -461,7 +462,7 @@ public class TestFileUtil {
     boolean ret = FileUtil.fullyDelete(linkDir);
     // fail symlink deletion
     Assert.assertFalse(ret);
-    Assert.assertTrue(linkDir.exists());
+    Verify.exists(linkDir);
     assertDelListLength(5);
     // tmp dir should exist
     validateTmpDir();
@@ -470,7 +471,7 @@ public class TestFileUtil {
     ret = FileUtil.fullyDelete(linkDir);
     // success symlink deletion
     Assert.assertTrue(ret);
-    Assert.assertFalse(linkDir.exists());
+    Verify.notExists(linkDir);
     assertDelListLength(4);
     // tmp dir should exist
     validateTmpDir();
@@ -531,6 +532,29 @@ public class TestFileUtil {
      */
     public static File delete(File file) {
       assertTrue("Unable to delete " + file, file.delete());
+      return file;
+    }
+
+    /**
+     * Invokes {@link File#exists()} on the given {@link File} instance.
+     *
+     * @param file The file to call {@link File#exists()} on.
+     * @return The result of {@link File#exists()}.
+     */
+    public static File exists(File file) {
+      assertTrue("Expected file " + file + " doesn't exist", file.exists());
+      return file;
+    }
+
+    /**
+     * Invokes {@link File#exists()} on the given {@link File} instance to check if the
+     * {@link File} doesn't exists.
+     *
+     * @param file The file to call {@link File#exists()} on.
+     * @return The negation of the result of {@link File#exists()}.
+     */
+    public static File notExists(File file) {
+      assertFalse("Expected file " + file + " must not exist", file.exists());
       return file;
     }
   }
@@ -687,7 +711,7 @@ public class TestFileUtil {
     // successfully untar it into an existing dir:
     FileUtil.unTar(simpleTar, tmp);
     // check result:
-    assertTrue(new File(tmp, "/bar/foo").exists());
+    Verify.exists(new File(tmp, "/bar/foo"));
     assertEquals(12, new File(tmp, "/bar/foo").length());
 
     final File regularFile =
@@ -700,21 +724,21 @@ public class TestFileUtil {
     // src exists, and target does not exist:
     final File srcFile = Verify.createNewFile(new File(tmp, "src"));
     final File targetFile = new File(tmp, "target");
-    assertTrue(!targetFile.exists());
+    Verify.notExists(targetFile);
     FileUtil.replaceFile(srcFile, targetFile);
-    assertTrue(!srcFile.exists());
-    assertTrue(targetFile.exists());
+    Verify.notExists(srcFile);
+    Verify.exists(targetFile);
 
     // src exists and target is a regular file: 
     Verify.createNewFile(srcFile);
-    assertTrue(srcFile.exists());
+    Verify.exists(srcFile);
     FileUtil.replaceFile(srcFile, targetFile);
-    assertTrue(!srcFile.exists());
-    assertTrue(targetFile.exists());
+    Verify.notExists(srcFile);
+    Verify.exists(targetFile);
     
     // src exists, and target is a non-empty directory: 
     Verify.createNewFile(srcFile);
-    assertTrue(srcFile.exists());
+    Verify.exists(srcFile);
     Verify.delete(targetFile);
     Verify.mkdirs(targetFile);
     File obstacle = Verify.createNewFile(new File(targetFile, "obstacle"));
@@ -726,9 +750,9 @@ public class TestFileUtil {
       // okay
     }
     // check up the post-condition: nothing is deleted:
-    assertTrue(srcFile.exists());
+    Verify.exists(srcFile);
     assertTrue(targetFile.exists() && targetFile.isDirectory());
-    assertTrue(obstacle.exists());
+    Verify.exists(obstacle);
   }
   
   @Test (timeout = 30000)
@@ -768,7 +792,7 @@ public class TestFileUtil {
     // successfully unzip it into an existing dir:
     FileUtil.unZip(simpleZip, tmp);
     // check result:
-    assertTrue(new File(tmp, "foo").exists());
+    Verify.exists(new File(tmp, "foo"));
     assertEquals(12, new File(tmp, "foo").length());
 
     final File regularFile =
@@ -819,24 +843,24 @@ public class TestFileUtil {
     final File dest = new File(del, "dest");
     boolean result = FileUtil.copy(fs, srcPath, dest, false, conf);
     assertTrue(result);
-    assertTrue(dest.exists());
+    Verify.exists(dest);
     assertEquals(content.getBytes().length 
         + System.getProperty("line.separator").getBytes().length, dest.length());
-    assertTrue(srcFile.exists()); // should not be deleted
+    Verify.exists(srcFile); // should not be deleted
     
     // copy regular file, delete src:
     Verify.delete(dest);
-    assertTrue(!dest.exists());
+    Verify.notExists(dest);
     result = FileUtil.copy(fs, srcPath, dest, true, conf);
     assertTrue(result);
-    assertTrue(dest.exists());
+    Verify.exists(dest);
     assertEquals(content.getBytes().length 
         + System.getProperty("line.separator").getBytes().length, dest.length());
-    assertTrue(!srcFile.exists()); // should be deleted
+    Verify.notExists(srcFile); // should be deleted
     
     // copy a dir:
     Verify.delete(dest);
-    assertTrue(!dest.exists());
+    Verify.notExists(dest);
     srcPath = new Path(partitioned.toURI());
     result = FileUtil.copy(fs, srcPath, dest, true, conf);
     assertTrue(result);
@@ -848,7 +872,7 @@ public class TestFileUtil {
       assertEquals(3 
           + System.getProperty("line.separator").getBytes().length, f.length());
     }
-    assertTrue(!partitioned.exists()); // should be deleted
+    Verify.notExists(partitioned); // should be deleted
   }  
 
   @Test (timeout = 30000)
@@ -929,14 +953,15 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkRenameTo() throws Exception {
-    File file = Verify.createNewFile(new File(del, FILE));
+    File file = new File(del, FILE);
+    file.createNewFile();
     File link = new File(del, "_link");
 
     // create the symlink
     FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
 
-    Assert.assertTrue(file.exists());
-    Assert.assertTrue(link.exists());
+    Verify.exists(file);
+    Verify.exists(link);
 
     File link2 = new File(del, "_link2");
 
@@ -946,10 +971,10 @@ public class TestFileUtil {
     // Make sure the file still exists
     // (NOTE: this would fail on Java6 on Windows if we didn't
     // copy the file in FileUtil#symlink)
-    Assert.assertTrue(file.exists());
+    Verify.exists(file);
 
-    Assert.assertTrue(link2.exists());
-    Assert.assertFalse(link.exists());
+    Verify.exists(link2);
+    Verify.notExists(link);
   }
 
   /**
@@ -957,19 +982,20 @@ public class TestFileUtil {
    */
   @Test (timeout = 30000)
   public void testSymlinkDelete() throws Exception {
-    File file = Verify.createNewFile(new File(del, FILE));
+    File file = new File(del, FILE);
+    file.createNewFile();
     File link = new File(del, "_link");
 
     // create the symlink
     FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
 
-    Assert.assertTrue(file.exists());
-    Assert.assertTrue(link.exists());
+    Verify.exists(file);
+    Verify.exists(link);
 
     // make sure that deleting a symlink works properly
-    Assert.assertTrue(link.delete());
-    Assert.assertFalse(link.exists());
-    Assert.assertTrue(file.exists());
+    Verify.delete(link);
+    Verify.notExists(link);
+    Verify.exists(file);
   }
 
   /**
@@ -997,12 +1023,12 @@ public class TestFileUtil {
     Assert.assertEquals(data.length, link.length());
 
     Verify.delete(file);
-    Assert.assertFalse(file.exists());
+    Verify.notExists(file);
 
     Assert.assertEquals(0, link.length());
 
     Verify.delete(link);
-    Assert.assertFalse(link.exists());
+    Verify.notExists(link);
   }
 
   /**
@@ -1141,21 +1167,21 @@ public class TestFileUtil {
 
     String parentDir = untarDir.getCanonicalPath() + Path.SEPARATOR + "name";
     File testFile = new File(parentDir + Path.SEPARATOR + "version");
-    Assert.assertTrue(testFile.exists());
+    Verify.exists(testFile);
     Assert.assertTrue(testFile.length() == 0);
     String imageDir = parentDir + Path.SEPARATOR + "image";
     testFile = new File(imageDir + Path.SEPARATOR + "fsimage");
-    Assert.assertTrue(testFile.exists());
+    Verify.exists(testFile);
     Assert.assertTrue(testFile.length() == 157);
     String currentDir = parentDir + Path.SEPARATOR + "current";
     testFile = new File(currentDir + Path.SEPARATOR + "fsimage");
-    Assert.assertTrue(testFile.exists());
+    Verify.exists(testFile);
     Assert.assertTrue(testFile.length() == 4331);
     testFile = new File(currentDir + Path.SEPARATOR + "edits");
-    Assert.assertTrue(testFile.exists());
+    Verify.exists(testFile);
     Assert.assertTrue(testFile.length() == 1033);
     testFile = new File(currentDir + Path.SEPARATOR + "fstime");
-    Assert.assertTrue(testFile.exists());
+    Verify.exists(testFile);
     Assert.assertTrue(testFile.length() == 8);
   }
 
