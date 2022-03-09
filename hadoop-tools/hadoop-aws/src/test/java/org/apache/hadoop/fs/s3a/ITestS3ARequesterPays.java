@@ -35,13 +35,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestS3ARequesterPays extends AbstractS3ATestBase {
 
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    S3ATestUtils.disableFilesystemCaching(conf);
-    return conf;
-  }
-
   @Test
   public void testRequesterPaysOptionSuccess() throws Throwable {
     describe("Test requester pays enabled case by reading last then first byte");
