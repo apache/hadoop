@@ -25,7 +25,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
@@ -394,7 +393,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         LOG.debug("Deleting of {} file objects", files.size());
         Invoker.once("Remove S3 Files",
             status.getPath().toString(),
-          () -> callbacks.removeKeys(
+            () -> callbacks.removeKeys(
                 files,
                 false
             ));
@@ -407,7 +406,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         // This is invoked with deleteFakeDir.
         Invoker.once("Remove S3 Dir Markers",
             status.getPath().toString(),
-          () -> callbacks.removeKeys(
+            () -> callbacks.removeKeys(
                 dirs,
                 true
             ));

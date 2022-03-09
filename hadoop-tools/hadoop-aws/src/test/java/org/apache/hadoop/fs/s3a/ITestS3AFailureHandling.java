@@ -89,7 +89,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator =
             fs.listFiles(path, false);
     List<String> keys  = toList(mappingRemoteIterator(locatedFileStatusRemoteIterator,
-            locatedFileStatus -> fs.pathToKey(locatedFileStatus.getPath())));
+        locatedFileStatus -> fs.pathToKey(locatedFileStatus.getPath())));
     // After implementation of paging during multi object deletion,
     // no exception is encountered.
     Long bulkDeleteReqBefore = getNumberOfBulkDeleteRequestsMadeTillNow(fs);
