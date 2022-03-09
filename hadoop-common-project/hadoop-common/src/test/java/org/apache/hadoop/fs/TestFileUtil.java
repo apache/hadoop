@@ -62,6 +62,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarOutputStream;
@@ -607,9 +608,9 @@ public class TestFileUtil {
       FileUtil.chmod(partitioned.getAbsolutePath(), "0777", true/*recursive*/);
     }
   }
-  
+
   @Test (timeout = 30000)
-  public void testUnTar() throws IOException {
+  public void testUnTar() throws Exception {
     // make a simple tar:
     final File simpleTar = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleTar);
@@ -629,16 +630,11 @@ public class TestFileUtil {
     // check result:
     assertTrue(new File(tmp, "/bar/foo").exists());
     assertEquals(12, new File(tmp, "/bar/foo").length());
-    
+
     final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
     regularFile.createNewFile();
     assertTrue(regularFile.exists());
-    try {
-      FileUtil.unTar(simpleTar, regularFile);
-      fail("An IOException expected.");
-    } catch (IOException ioe) {
-      // okay
-    }
+    LambdaTestUtils.intercept(IOException.class, () -> FileUtil.unTar(simpleTar, regularFile));
   }
   
   @Test (timeout = 30000)
@@ -698,7 +694,7 @@ public class TestFileUtil {
   }
   
   @Test (timeout = 30000)
-  public void testUnZip() throws IOException {
+  public void testUnZip() throws Exception {
     // make sa simple zip
     final File simpleZip = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleZip); 
@@ -725,12 +721,7 @@ public class TestFileUtil {
     final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
     regularFile.createNewFile();
     assertTrue(regularFile.exists());
-    try {
-      FileUtil.unZip(simpleZip, regularFile);
-      assertTrue("An IOException expected.", false);
-    } catch (IOException ioe) {
-      // okay
-    }
+    LambdaTestUtils.intercept(IOException.class, () -> FileUtil.unZip(simpleZip, regularFile));
   }
 
   @Test (timeout = 30000)
