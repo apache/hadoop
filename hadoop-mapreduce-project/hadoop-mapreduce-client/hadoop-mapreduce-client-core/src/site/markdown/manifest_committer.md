@@ -178,9 +178,8 @@ Here are the main configuration options of the committer.
 
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
-| `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for store operations. | `10000` |
-| `` | Thread count for parallel operations | `64` |
-| `mapreduce.manifest.committer.prepare.target.files` | Delete target files? | `false` |
+| `mapreduce.manifest.committer.delete.target.files` | Delete target files? | `false` |
+| `mapreduce.manifest.committer.io.threads` | Thread count for parallel operations | `64` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` | Delete task attempt directories in parallel | `true` |
@@ -191,10 +190,10 @@ Here are the main configuration options of the committer.
 There are some more, as covered in the (Advanced)[#advanced] section.
 
 
-## Scaling jobs `mapreduce.manifest.committer.io.threads`
+## <a name="scaling"></a> Scaling jobs `mapreduce.manifest.committer.io.threads`
 
-The core reason that this committer is faster than the classic FileOutputCommitter
-is that it tries to parallelize as much file IO as it can during job commit, specifically
+The core reason that this committer is faster than the classic `FileOutputCommitter`
+is that it tries to parallelize as much file IO as it can during job commit, specifically:
 
 * task manifest loading
 * deletion of files where directories will be created
@@ -207,7 +206,7 @@ in the option `mapreduce.manifest.committer.io.threads`.
 
 Larger values may be used.
 
-XML 
+XML
 ```xml
 <property>
   <name>mapreduce.manifest.committer.io.threads</name>
@@ -234,40 +233,40 @@ Caveats
   `mapreduce.manifest.committer.io.rate` can help avoid this.
 
 
-## Job Commit Preparation options `mapreduce.manifest.committer.prepare`
+## <a name="deleting"></a> Optional: deleting target files in Job Commit 
 
-Two committer options enable behaviors found in the classic FileOutputCommitter.
+The classic `FileOutputCommitter` deletes files at the destination paths
+before renaming the job's files into place.
 
-Setting these options to `false` increases performance with a risk of job failures in
-jobs which update directories without any initial cleanup, and either of two situations
-arise
+This is optional in the manifest committers, set in the option
+`mapreduce.manifest.committer.delete.target.files` with a default value of `false`.
 
-1. A previous job has created a file at a path which is now a parent/ancestor directory
-   of a file being committed.
-2. A previous job has created a file *or directory* at a path which the current job
-   generated a file.
+This increases performance and is safe to use when all files created by a job
+have unique filenames. 
 
-Problem 1 is rare and unusual. It is automatically handled when encountered;
-the destination directory is deleted.
-
-Problem 2, "existing files" may happen in jobs which appends data to existing
-tables _and do not generate unique names_.
-
-Apache Spark does generate unique filenames for ORC and Parquet
-since
+Apache Spark does generate unique filenames for ORC and Parquet since
 [SPARK-8406](https://issues.apache.org/jira/browse/SPARK-8406)
 _Adding UUID to output file name to avoid accidental overwriting_
 
-Avoiding checks for/deleting target files saves one delete call per file being committed,
-so can save a significant amount of store IO.
+Avoiding checks for/deleting target files saves one delete call per file being committed, so can
+save a significant amount of store IO.
 
 When appending to existing tables, using formats other than ORC and parquet,
 unless confident that unique identifiers
 are added to each filename, enable deletion of the target files.
 
 ```
-spark.hadoop.mapreduce.manifest.committer.prepare.target.files true
+spark.hadoop.mapreduce.manifest.committer.delete.target.files true
 ```
+
+*Note 1:* the committer will skip deletion operations when it
+created the directory into which a file is to be renamed.
+This makes it slightly more efficient, at least if jobs
+appending data are creating and writing into new partitions.
+
+*Note 2:* the committer still requires tasks within a single
+job to create unique files. This is foundational for
+any job to generate correct data.
 
 # <a name="SUCCESS"></a> Job Summaries in `_SUCCESS` files
 
@@ -285,7 +284,7 @@ If, after running a query, this `_SUCCESS` file is zero bytes long,
 
 If it is not empty, then it can be examined.
 
-## <a name="success"></a> Viewing `_SUCCESS` file files through the `ManifestPrinter` tool.
+## <a name="printer"></a> Viewing `_SUCCESS` file files through the `ManifestPrinter` tool.
 
 The summary files are JSON, and can be viewed in any text editor.
 
@@ -327,8 +326,6 @@ saving the `_SUCCESS` marker is enabled, and without problems caused by a chain 
 overwriting the markers.
 
 
-
-
 # <a name="cleanup"></a> Cleanup
 
 Job cleanup is convoluted as it is designed to address a number of issues which
@@ -349,10 +346,10 @@ may surface in cloud storage.
 
 The algorithm is:
 
-1. If `mapreduce.fileoutputcommitter.cleanup.skipped` is true, skip all cleanup.
-2. if `mapreduce.manifest.committer.cleanup.move.to.trash` is true, jump to step #5
+1. If `mapreduce.fileoutputcommitter.cleanup.skipped` is `true`, skip all cleanup.
+2. if `mapreduce.manifest.committer.cleanup.move.to.trash` is `true`, jump to step #5
 3. Attempt parallel task attempt directory delete unless
-   `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` is false.
+   `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` is `false`.
    Any error here is swallowed.
 4. Attempt to delete the base `_temporary` directory. Any error here is cached.
 5. Delete failed in step #4 or was skipped, and if trash is enabled for the filesystem
@@ -360,7 +357,7 @@ The algorithm is:
 
 If the dir could not be deleted/renamed:
 1. if `mapreduce.fileoutputcommitter.cleanup-failures.ignored`
-   is true then the stage warns and continues.
+   is `true` then the stage warns and continues.
 2. Else the last raised exception is rethown.
 
 It's complicated, but the goal is to perform a fast/scalable delete
@@ -368,10 +365,11 @@ fall back to a rename to trash if that fails, and
 throw a meaningful exception if that didn't work.
 
 
-# Working with Azure Storage
+# <a name="abfs"></a> Working with Azure ADLS Gen2 Storage
 
 To switch to the manifest committer, the factory for committers for destinations with `abfs://` URLs must
-be switched to the manifest committer factory.
+be switched to the manifest committer factory, either for the application or
+the entire cluster.
 
 ```xml
 <property>
@@ -381,11 +379,14 @@ be switched to the manifest committer factory.
 ```
 
 This allows for ADLS Gen2 -specific performance and consistency logic to be used from within the committer.
-In particular,
+In particular:
 * the [Etag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) header
 can be collected in listings and used in the job commit phase.
 * IO rename operations are rate limited
 * recovery is attempted when throttling triggers rename failures.
+
+*Warning* This committer is not compatible with older Azure storage services
+(WASB or ADLS Gen 1).
 
 The core set of Azure-optimized options becomes
 
@@ -412,7 +413,18 @@ And optional settings for debugging/performance analysis
 </property>
 ```
 
-## Rate Limiting in job commit with ABFS
+## <a name="abfs-options"></a> Full set of ABFS options for spark
+
+```
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory
+spark.hadoop.fs.azure.io.rate.limit 10000
+spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+
+spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
+```
+
+## ABFS Rename Rate Limiting `fs.azure.io.rate.limit`
 
 To avoid triggering store throttling and backoff delays, as well as other
 throttling-related failure conditions file renames during job commit
@@ -452,21 +464,10 @@ If server-side throttling took place, signs of this can be seen in
 * The job statistic `commit_file_rename_recovered`. This statistic indicates that
   ADLS throttling manifested as failures in renames, failures which were recovered
   from in the comitter.
-  
+
 If these are seen -or other applications running at the same time experience
 throttling/throttling-triggered problems, consider reducing the value of
 `fs.azure.io.rate.limit`, and/or requesting a higher IO capacity from Microsoft.
-
-## Full set of ABFS options for spark
-
-```
-spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory
-spark.hadoop.fs.azure.io.rate.limit 10000
-spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
-spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
-
-spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
-```
 
 # <a name="gcs"></a> Working with Google Cloud Storage
 
@@ -477,7 +478,7 @@ schema `gs`.
 Google cloud storage has the semantics needed for the commit protocol
 to work safely.
 
-The settings to switch to this committer are
+The Spark settings to switch to this committer are
 
 ```
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.gs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
@@ -495,16 +496,41 @@ For mapreduce, declare the binding in `core-site.xml`or `mapred-site.xml`
 ```xml
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
-  <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
 </property>
+```
+
+
+# <a name="hdfs"></a> Working with HDFS
+
+This committer _does_ work with HDFS, it has just been targeted at object stores with
+reduced performance on some operations, especially listing and renaming,
+and semantics too reduced for the classic `FileOutputCommitter` to rely on
+(specifically GCS).
+
+To use on HDFS, set the `ManifestCommitterFactory` as the committer factory for `hdfs://` URLs.
+
+Because HDFS does fast directory deletion, there is no need to parallelize deletion
+of task attempt directories during cleanup, so set
+`mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` to `false`
+
+The final spark bindings becomes
+
+```
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.hdfs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
+spark.hadoop.mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories false
+spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+
+spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
 ```
 
 # <a name="advanced"></a> Advanced Topics
 
 ## Advanced Configuration options
 
-Here are some advanced options which are intended for
-development and testing.
+There are some advanced options which are intended for development and testing,
+rather than production use.
 
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
@@ -527,7 +553,7 @@ The manifest committer interacts with filesystems through implementations of the
 `ManifestStoreOperations`.
 It is possible to provide custom implementations for store-specific features.
 There is one of these for ABFS; when the abfs-specific committer factory is used this
-is automatically set. 
+is automatically set.
 
 It can be explicitly set.
 ```xml
@@ -550,14 +576,18 @@ There is no need to alter these values, except when writing new implementations 
 something which is only needed if the store provides extra integration support for the
 committer.
 
-## Support for concurrent test runs.
+## <a name="concurrent"></a> Support for concurrent test runs.
 
 It *may* be possible to run multiple jobs targeting the same directory tree.
 
 For this to work, a number of conditions must be met:
 
-* When using spark, unique job IDs must be set.
-* Cleanup of the `_temporary` directory must be disabled by setting 1.
+* When using spark, unique job IDs must be set. This meangs the Spark distribution
+  MUST contain the patches for
+  [SPARK-33402](https://issues.apache.org/jira/browse/SPARK-33402)
+  and 
+  [SPARK-33230](https://issues.apache.org/jira/browse/SPARK-33230).
+* Cleanup of the `_temporary` directory must be disabled by setting
   `mapreduce.fileoutputcommitter.cleanup.skipped` to `true`.
 * All jobs/tasks must create files with unique filenames.
 * All jobs must create output with the same directory partition structure.

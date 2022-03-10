@@ -20,14 +20,18 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.CommonPathCapabilities;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
@@ -35,21 +39,26 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.RenameFilesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.getEtag;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.SIMULATED_FAILURE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.FAILED_TO_RENAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test rename files with fault injection.
+ * Test renaming files with fault injection.
+ * This explores etag support and overwrite-on-rename semantics
+ * of the target FS, so some of the tests behave differently
+ * on different stores.
  */
 public class TestRenameStageFailure extends AbstractManifestCommitterTest {
 
@@ -130,7 +139,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     // create a manifest with a lot of files, but for
     // which one of whose renames will fail
     TaskManifest manifest = new TaskManifest();
-    createFileset(destDir, jobAttemptTaskSubDir, manifest);
+    createFileset(destDir, jobAttemptTaskSubDir, manifest, filesToCreate());
     final List<FileEntry> filesToCommit = manifest.getFilesToCommit();
     final FileEntry entry = filesToCommit.get(FAILING_FILE_INDEX);
     failures.addRenameSourceFilesToFail(entry.getSourcePath());
@@ -174,6 +183,71 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     LOG.info("Exception raised: {}", ex.toString());
   }
 
+  /**
+   * Verify that when a job is configured to delete target paths,
+   * renaming will overwrite them.
+   * This test has to use FileSystem contract settings to determine
+   * whether or not the FS will actually permit file-over-file rename.
+   * As POSIX does, local filesystem tests will not fail if the
+   * destination exists.
+   * As ABFS and GCS do reject it, they are required to fail the
+   * first rename sequence, but succeed once delete.target.paths
+   * is true.
+   */
+  @Test
+  public void testDeleteTargetPaths() throws Throwable {
+    describe("Verify that target path deletion works");
+    // destination directory.
+    Path destDir = methodPath();
+    StageConfig stageConfig = createStageConfigForJob(JOB1, destDir)
+        .withDeleteTargetPaths(true);
+    Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
+    final Path source = new Path(jobAttemptTaskSubDir, "source.txt");
+    final Path dest = new Path(destDir, "source.txt");
+    final byte[] sourceData = "data".getBytes(StandardCharsets.UTF_8);
+    final FileSystem fs = getFileSystem();
+    ContractTestUtils.createFile(fs, source, false, sourceData);
+    touch(fs, dest);
+    TaskManifest manifest = new TaskManifest();
+    final FileEntry entry = createEntryWithEtag(source, dest);
+    manifest.addFileToCommit(entry);
+
+    List<TaskManifest> manifests = new ArrayList<>();
+    manifests.add(manifest);
+
+    // local POSIX filesystems allow rename of file onto file, so
+    // don't fail on the rename.
+    boolean renameOverwritesDest = isSupported(RENAME_OVERWRITES_DEST);
+
+    if (!renameOverwritesDest) {
+      // HDFS, ABFS and GCS do all reject rename of file onto file.
+      // ABFS will use its rename operation so will even raise a
+      // meaningful exception here.
+      final IOException ex = expectRenameFailure(
+          new RenameFilesStage(stageConfig.withDeleteTargetPaths(false)),
+          manifest,
+          0,
+          "",
+          IOException.class);
+      LOG.info("Exception raised: {}", ex.toString());
+    }
+
+    // delete target paths and it works
+    new RenameFilesStage(stageConfig.withDeleteTargetPaths(true))
+        .apply(Pair.of(manifests, Collections.emptySet()));
+
+    // and the new data made it over
+    verifyFileContents(fs, dest, sourceData);
+
+    // lets check the etag too, for completeness
+    if (isEtagsPreserved()) {
+      Assertions.assertThat(getEtag(fs.getFileStatus(dest)))
+          .describedAs("Etag of destination file %s", dest)
+          .isEqualTo(entry.getEtag());
+    }
+
+  }
+
   @Test
   public void testRenameReturnsFalse() throws Throwable {
     describe("commit where rename() returns false for one file." +
@@ -189,7 +263,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     // create a manifest with a lot of files, but for
     // which one of whose renames will fail
     TaskManifest manifest = new TaskManifest();
-    createFileset(destDir, jobAttemptTaskSubDir, manifest);
+    createFileset(destDir, jobAttemptTaskSubDir, manifest, filesToCreate());
 
     final List<FileEntry> filesToCommit = manifest.getFilesToCommit();
     final FileEntry entry = filesToCommit.get(FAILING_FILE_INDEX);
@@ -206,38 +280,47 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
         PathIOException.class);
   }
 
-  private void createFileset(final Path destDir,
-      final Path jobAttemptTaskSubDir,
-      final TaskManifest manifest) throws IOException {
-    int files = filesToCreate();
+  /**
+   * Create the source files for a task.
+   * @param destDir destination directory
+   * @param taskAttemptDir directory of the task attempt
+   * @param manifest manifest to update.
+   * @param fileCount how many files.
+   */
+  private void createFileset(
+      final Path destDir,
+      final Path taskAttemptDir,
+      final TaskManifest manifest,
+      final int fileCount) throws IOException {
     final FileSystem fs = getFileSystem();
-    for (int i = 0; i < files; i++) {
+    for (int i = 0; i < fileCount; i++) {
       String name = String.format("file%04d", i);
-      Path src = new Path(jobAttemptTaskSubDir, name);
+      Path src = new Path(taskAttemptDir, name);
       Path dest = new Path(destDir, name);
-      ContractTestUtils.touch(fs, src);
+      touch(fs, src);
+
       final FileEntry entry = createEntryWithEtag(src, dest);
       manifest.addFileToCommit(entry);
     }
   }
 
   /**
-   * Create a manifest entry. If the FS supports etags, one is retrieved.
-   * @param src source
+   * Create a manifest entry, including size.
+   * If the FS supports etags, one is retrieved.
+   * @param source source
    * @param dest dest
    * @return entry
    * @throws IOException if getFileStatus failed.
    */
-  private FileEntry createEntryWithEtag(final Path src, final Path dest)
+  private FileEntry createEntryWithEtag(final Path source,
+      final Path dest)
       throws IOException {
-    final String etag;
-    if (etagsSupported) {
-      etag = ManifestCommitterSupport.getEtag(getFileSystem().getFileStatus(src));
-    } else {
-      etag = null;
-    }
-    final FileEntry entry = new FileEntry(src, dest, 0, etag);
-    return entry;
+    final FileStatus st = getFileSystem().getFileStatus(source);
+    final String etag = isEtagsSupported()
+        ? getEtag(st)
+        : null;
+
+    return new FileEntry(source, dest, st.getLen(), etag);
   }
 
   /**
@@ -267,7 +350,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
 
     // rename MUST raise an exception.
     E ex = intercept(exceptionClass, errorText, () ->
-        stage.apply(manifests));
+        stage.apply(Pair.of(manifests, Collections.emptySet())));
 
     LOG.info("Statistics {}", ioStatisticsToPrettyString(iostatistics));
     // the IOStatistics record the rename as a failure.

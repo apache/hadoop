@@ -104,7 +104,7 @@ public class CreateOutputDirectoriesStage extends
 
     final List<Path> directories = createAllDirectories(taskManifests);
     LOG.debug("{}: Created {} directories", getName(), directories.size());
-    return new Result(directories, dirMap);
+    return new Result(new HashSet<>(directories), dirMap);
   }
 
   /**
@@ -375,20 +375,20 @@ public class CreateOutputDirectoriesStage extends
   public static final class Result {
 
     /** directories created. */
-    private final List<Path> createdDirectories;
+    private final Set<Path> createdDirectories;
 
     /**
      * Map of dirs built up during preparation.
      */
     private final Map<Path, DirMapState> dirMap;
 
-    public Result(List<Path> createdDirectories,
+    public Result(Set<Path> createdDirectories,
         Map<Path, DirMapState> dirMap) {
       this.createdDirectories = requireNonNull(createdDirectories);
       this.dirMap = requireNonNull(dirMap);
     }
 
-    public List<Path> getCreatedDirectories() {
+    public Set<Path> getCreatedDirectories() {
       return createdDirectories;
     }
 

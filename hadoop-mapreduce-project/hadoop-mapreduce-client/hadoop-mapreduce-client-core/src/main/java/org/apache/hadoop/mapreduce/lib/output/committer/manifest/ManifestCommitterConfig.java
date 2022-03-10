@@ -188,8 +188,8 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
         OPT_VALIDATE_OUTPUT,
         OPT_VALIDATE_OUTPUT_DEFAULT);
     this.deleteTargetPaths = conf.getBoolean(
-        OPT_PREPARE_TARGET_FILES,
-        OPT_VALIDATE_OUTPUT_DEFAULT);
+        OPT_DELETE_TARGET_FILES,
+        OPT_DELETE_TARGET_FILES_DEFAULT);
 
     // if constructed with a task attempt, build the task ID and path.
     if (context instanceof TaskAttemptContext) {

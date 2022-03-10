@@ -21,11 +21,14 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -39,11 +42,15 @@ import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.c
 
 /**
  * This stage renames all the files.
- * It retuns a manifest success data file summarizing the
+ * Input: the manifests and the set of directories created, as returned by
+ * {@link CreateOutputDirectoriesStage}.
+ * If the job is configured to delete target files, if the parent dir
+ * had to be created, the delete() call can be skipped.
+ * It returns a manifest success data file summarizing the
  * output, but does not add iostatistics to it.
  */
 public class RenameFilesStage extends
-    AbstractJobCommitStage<List<TaskManifest>, ManifestSuccessData> {
+    AbstractJobCommitStage<Pair<List<TaskManifest>, Set<Path>>, ManifestSuccessData> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       RenameFilesStage.class);
@@ -57,6 +64,8 @@ public class RenameFilesStage extends
    * Total file size.
    */
   private long totalFileSize = 0;
+
+  private Set<Path> createdDirectories;
 
   public RenameFilesStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_RENAME_FILES, true);
@@ -87,8 +96,11 @@ public class RenameFilesStage extends
    */
   @Override
   protected ManifestSuccessData executeStage(
-      final List<TaskManifest> taskManifests)
+      Pair<List<TaskManifest>,Set<Path>> args)
       throws IOException {
+
+    final List<TaskManifest> taskManifests = args.getLeft();
+    createdDirectories = args.getRight();
 
     final ManifestSuccessData success = createManifestOutcome(getStageConfig(),
         OP_STAGE_JOB_COMMIT);
@@ -139,8 +151,14 @@ public class RenameFilesStage extends
 
     // report progress back
     progress();
+
+    // if the dest dir is to be deleted,
+    // look to see if the parent dir was created.
+    // if it was. we know that the file doesn't exist.
+    final boolean deleteDest = getStageConfig().getDeleteTargetPaths()
+        && !createdDirectories.contains(entry.getDestPath().getParent());
     // do the rename
-    commitFile(entry, getStageConfig().getDeleteTargetPaths());
+    commitFile(entry, deleteDest);
 
     // update the list and IOStats
     synchronized (this) {

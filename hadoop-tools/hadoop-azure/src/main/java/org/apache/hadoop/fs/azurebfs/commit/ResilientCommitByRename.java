@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public interface ResilientCommitByRename extends IOStatisticsSource {
+
   /**
    * Rename source file to dest path *Exactly*; no subdirectory games here.
    * if the method does not raise an exception,then

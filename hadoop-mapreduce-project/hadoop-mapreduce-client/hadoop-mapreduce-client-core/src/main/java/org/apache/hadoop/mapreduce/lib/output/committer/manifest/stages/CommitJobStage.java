@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -26,6 +27,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
@@ -88,17 +90,19 @@ public class CommitJobStage extends
     iostats.aggregate(summary.getIOStatistics());
 
     // prepare destination directories.
-    new CreateOutputDirectoriesStage(stageConfig)
-        .apply(manifests);
+    final CreateOutputDirectoriesStage.Result dirStageResults =
+        new CreateOutputDirectoriesStage(stageConfig)
+            .apply(manifests);
 
     // commit all the tasks.
     // The success data includes a snapshot of the IO Statistics
     // and hence all aggregate stats from the tasks.
     ManifestSuccessData successData;
-    successData = new RenameFilesStage(stageConfig).apply(manifests);
+    successData = new RenameFilesStage(stageConfig).apply(
+        Pair.of(manifests, dirStageResults.getCreatedDirectories()));
     LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
     // update the counter of bytes committed and files.
-    // use setCounter so as to ignore any values accumlated when
+    // use setCounter so as to ignore any values accumulated when
     // aggregating tasks.
     iostats.setCounter(
         COMMITTER_FILES_COMMITTED_COUNT,

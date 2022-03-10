@@ -168,17 +168,6 @@ public final class ManifestCommitterConstants {
   public static final int OPT_IO_PROCESSORS_DEFAULT = 64;
 
   /**
-   * Rate limit in operations/second for IO operations.
-   * Value: {@value}.
-   */
-  public static final String OPT_IO_RATE = OPT_PREFIX + "io.rate";
-
-  /**
-   * Default value:  {@value}.
-   */
-  public static final int OPT_IO_RATE_DEFAULT = 10000;
-
-  /**
    * Directory for saving job summary reports.
    * These are the _SUCCESS files, but are saved even on
    * job failures.
@@ -208,32 +197,32 @@ public final class ManifestCommitterConstants {
   public static final boolean OPT_VALIDATE_OUTPUT_DEFAULT = false;
 
   /**
-   * Should job commit probe for files/directories at the targets
+   * Should job commit delete for files/directories at the targets
    * of renames, and, if found, deleting them?
    *
    * This is part of the effective behavior of the FileOutputCommitter,
    * however it adds an extra delete call per file being committed.
    *
-   * If a job is writing to a directory tree which has only just been created
+   * If a job is writing to a directory which has only just been created
    * or were unique filenames are being used, there is no need to perform
    * this preparation.
+   * The recognition of newly created dirs is automatic.
    *
    * Value: {@value}.
    */
-  public static final String OPT_PREPARE_TARGET_FILES =
-      OPT_PREFIX + "prepare.target.files";
+  public static final String OPT_DELETE_TARGET_FILES =
+      OPT_PREFIX + "delete.target.files";
 
   /**
    * Default value: {@value}.
    */
-  public static final boolean OPT_PREPARE_TARGET_FILES_DEFAULT = true;
+  public static final boolean OPT_DELETE_TARGET_FILES_DEFAULT = false;
 
   /**
    * Name of the factory: {@value}.
    */
   public static final String MANIFEST_COMMITTER_FACTORY =
-      "org.apache.hadoop.mapreduce.lib.output.committer.manifest" +
-          ".ManifestCommitterFactory";
+      ManifestCommitterFactory.class.getName();
 
   /**
    * Classname of the store operations; filesystems and tests

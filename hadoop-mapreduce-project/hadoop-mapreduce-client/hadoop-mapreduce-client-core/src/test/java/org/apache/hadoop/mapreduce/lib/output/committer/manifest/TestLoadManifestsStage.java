@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
@@ -120,7 +121,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         .containsExactlyInAnyOrderElementsOf(manifestTaskIds);
 
     // now let's see about aggregating a large set of directories
-    List<Path> createdDirectories = new CreateOutputDirectoriesStage(
+    Set<Path> createdDirectories = new CreateOutputDirectoriesStage(
         getJobStageConfig())
         .apply(loadedManifests)
         .getCreatedDirectories();

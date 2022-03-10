@@ -724,9 +724,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     DurationTracker tracker = createTracker(getIOStatistics(), statistic);
     boolean success;
     try {
-
       success = action.apply();
-
       if (!success) {
         // record failure in the tracker before closing it
         tracker.failed();

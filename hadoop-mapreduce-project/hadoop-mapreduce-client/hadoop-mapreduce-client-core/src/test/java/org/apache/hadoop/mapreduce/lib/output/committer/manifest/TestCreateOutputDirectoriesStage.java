@@ -275,7 +275,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     verifyStatisticCounterValue(iostats, OP_DELETE + SUFFIX_FAILURES, 1);
 
     // build a new directory list where everything is declared a directory;
-    // no dirs will be created
+    // no dirs will be created this time as they all exist.
     final List<DirEntry> directories3 = new ArrayList<>();
     directories3.addAll(dirEntries(level1, 1, EntryStatus.dir));
     directories3.addAll(dirEntries(level2, 2, EntryStatus.dir));

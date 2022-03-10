@@ -539,8 +539,7 @@ per task, specifically there is a thread pool for parallel store IO
 1. File rename.
 1. In cleanup and abort: deletion of task attempt directories
 1. If validation of output is enabled for testing/debugging: getFileStatus calls
-   to compare file length and, if possible etags.   
-
+   to compare file length and, if possible etags.
 
 ```
 let manifestPaths = list("$manifestDirectory/*-manifest.json")
@@ -615,5 +614,6 @@ taskAttemptWorkingDirectories.map(p -> delete(p))
   The HTTP protocol limits each etag to 8 KiB, so the cost may be 8 KiB per file.
 * Makes task commit more complex than the v1 algorithm.
 * Possibly suboptimal on jobs where individual tasks create unique output directories,
-  as directory rename will never be used to commit a directory
+  as directory rename will never be used to commit a directory.
+
 
