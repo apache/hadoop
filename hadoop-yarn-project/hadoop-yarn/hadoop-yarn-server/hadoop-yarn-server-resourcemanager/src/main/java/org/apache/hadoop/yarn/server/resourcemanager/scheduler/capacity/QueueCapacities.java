@@ -313,7 +313,6 @@ public class QueueCapacities {
         _set(label, CapacityType.ABS_CAP, 0);
         _set(label, CapacityType.ABS_MAX_CAP, 0);
         _set(label, CapacityType.WEIGHT, -1);
-        _set(label, CapacityType.NORMALIZED_WEIGHT, -1);
       }
     } finally {
       writeLock.unlock();
