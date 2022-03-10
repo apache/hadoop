@@ -167,7 +167,7 @@ The new committer will write a JSON summary of the operation, including statisti
 
 If this file exists and is zero bytes long: the classic `FileOutputCommitter` was used.
 
-If this file exists and is greater than zero bytes wrong, either the manifest committer was used,
+If this file exists and is greater than zero bytes long, either the manifest committer was used,
 or in the case of S3A filesystems, one of the S3A committers. They all use the same JSON format.
 
 # <a name="configuration"></a> Configuration options
