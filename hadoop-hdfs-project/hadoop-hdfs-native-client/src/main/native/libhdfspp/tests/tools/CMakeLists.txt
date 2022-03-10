@@ -35,6 +35,7 @@ add_executable(hdfs_tool_tests
                 hdfs-count-mock.cc
                 hdfs-mkdir-mock.cc
                 hdfs-rm-mock.cc
+                hdfs-get-mock.cc
                 main.cc)
 target_include_directories(hdfs_tool_tests PRIVATE
                             ../tools
@@ -54,6 +55,7 @@ target_include_directories(hdfs_tool_tests PRIVATE
                             ../../tools/hdfs-count
                             ../../tools/hdfs-mkdir
                             ../../tools/hdfs-rm
+                            ../../tools/hdfs-get
                             ../../tools/hdfs-cat)
 target_link_libraries(hdfs_tool_tests PRIVATE
                        gmock_main
@@ -72,5 +74,6 @@ target_link_libraries(hdfs_tool_tests PRIVATE
                        hdfs_count_lib
                        hdfs_mkdir_lib
                        hdfs_rm_lib
+                       hdfs_get_lib
                        hdfs_cat_lib)
 add_test(hdfs_tool_tests hdfs_tool_tests)

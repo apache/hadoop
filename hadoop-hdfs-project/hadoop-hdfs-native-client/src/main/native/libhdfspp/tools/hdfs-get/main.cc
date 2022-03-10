@@ -15,48 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.http;
 
-import org.apache.log4j.spi.LoggingEvent;
-import org.apache.log4j.AppenderSkeleton;
+#include <cstdlib>
+#include <exception>
+#include <iostream>
 
-/**
- * Log4j Appender adapter for HttpRequestLog
- */
-public class HttpRequestLogAppender extends AppenderSkeleton {
+#include <google/protobuf/stubs/common.h>
 
-  private String filename;
-  private int retainDays;
+#include "hdfs-get.h"
 
-  public HttpRequestLogAppender() {
+int main(int argc, char *argv[]) {
+  const auto result = std::atexit([]() -> void {
+    // Clean up static data on exit and prevent valgrind memory leaks
+    google::protobuf::ShutdownProtobufLibrary();
+  });
+  if (result != 0) {
+    std::cerr << "Error: Unable to schedule clean-up tasks for HDFS "
+                 "get tool, exiting"
+              << std::endl;
+    std::exit(EXIT_FAILURE);
   }
 
-  public void setRetainDays(int retainDays) {
-    this.retainDays = retainDays;
+  hdfs::tools::Get get(argc, argv);
+  auto success = false;
+
+  try {
+    success = get.Do();
+  } catch (const std::exception &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
   }
 
-  public int getRetainDays() {
-    return retainDays;
+  if (!success) {
+    std::exit(EXIT_FAILURE);
   }
-
-  public void setFilename(String filename) {
-    this.filename = filename;
-  }
-
-  public String getFilename() {
-    return filename;
-  }
-
-  @Override
-  public void append(LoggingEvent event) {
-  }
-
-  @Override
-  public void close() {
-  }
-
-  @Override
-  public boolean requiresLayout() {
-    return false;
-  }
+  return 0;
 }

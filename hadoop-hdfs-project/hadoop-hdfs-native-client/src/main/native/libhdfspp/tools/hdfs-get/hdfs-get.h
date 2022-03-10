@@ -15,23 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.http;
 
-import org.junit.Test;
+#ifndef LIBHDFSPP_TOOLS_HDFS_GET
+#define LIBHDFSPP_TOOLS_HDFS_GET
 
-import static org.junit.Assert.assertEquals;
+#include "hdfs-copy-to-local/hdfs-copy-to-local.h"
 
-public class TestHttpRequestLogAppender {
+namespace hdfs::tools {
+class Get : public CopyToLocal {
+public:
+  /**
+   * {@inheritdoc}
+   */
+  Get(int argc, char **argv);
 
-  @Test
-  public void testParameterPropagation() {
+  // Abiding to the Rule of 5
+  Get(const Get &) = default;
+  Get(Get &&) = default;
+  Get &operator=(const Get &) = delete;
+  Get &operator=(Get &&) = delete;
+  ~Get() override = default;
 
-    HttpRequestLogAppender requestLogAppender = new HttpRequestLogAppender();
-    requestLogAppender.setFilename("jetty-namenode-yyyy_mm_dd.log");
-    requestLogAppender.setRetainDays(17);
-    assertEquals("Filename mismatch", "jetty-namenode-yyyy_mm_dd.log",
-        requestLogAppender.getFilename());
-    assertEquals("Retain days mismatch", 17,
-        requestLogAppender.getRetainDays());
-  }
-}
+protected:
+  /**
+   * {@inheritdoc}
+   */
+  [[nodiscard]] std::string GetToolName() const override;
+};
+} // namespace hdfs::tools
+
+#endif

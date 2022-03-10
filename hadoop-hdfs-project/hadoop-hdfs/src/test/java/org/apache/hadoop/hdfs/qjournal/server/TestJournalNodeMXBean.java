@@ -44,6 +44,7 @@ public class TestJournalNodeMXBean {
   
   private static final String NAMESERVICE = "ns1";
   private static final int NUM_JN = 1;
+  private static final int NS_ID = 12345;
   
   private MiniJournalCluster jCluster;
   private JournalNode jn;
@@ -80,9 +81,8 @@ public class TestJournalNodeMXBean {
     assertFalse(journalStatus.contains(NAMESERVICE));
 
     // format the journal ns1
-    final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(12345, "mycluster",
-        "my-bp", 0L);
-    jn.getOrCreateJournal(NAMESERVICE).format(FAKE_NSINFO, false);
+    final NamespaceInfo fakeNsInfo = new NamespaceInfo(NS_ID, "mycluster", "my-bp", 0L);
+    jn.getOrCreateJournal(NAMESERVICE).format(fakeNsInfo, false);
 
     // check again after format
     // getJournalsStatus
@@ -109,6 +109,11 @@ public class TestJournalNodeMXBean {
     assertEquals(jn.getJNStartedTimeInMillis(), startTime);
     String version = (String) mbs.getAttribute(mxbeanName, "Version");
     assertEquals(jn.getVersion(), version);
+    String[] journalStorageInfos = (String[]) mbs.getAttribute(mxbeanName, "StorageInfos");
+    assertEquals(jn.getStorageInfos().size(), journalStorageInfos.length);
+    assertTrue(journalStorageInfos[1].contains("ClusterId=mycluster"));
+    assertTrue(journalStorageInfos[1].contains("CreationTime=0"));
+    assertTrue(journalStorageInfos[1].contains("NamespaceId=" + NS_ID));
 
     // restart journal node without formatting
     jCluster = new MiniJournalCluster.Builder(new Configuration()).format(false)

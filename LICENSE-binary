@@ -321,6 +321,7 @@ org.apache.kerby:kerby-pkix:1.0.1
 org.apache.kerby:kerby-util:1.0.1
 org.apache.kerby:kerby-xdr:1.0.1
 org.apache.kerby:token-provider:1.0.1
+org.apache.solr:solr-solrj:8.8.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.6.3
 org.codehaus.jackson:jackson-core-asl:1.9.13
@@ -467,8 +468,8 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk15on:1.60
-org.bouncycastle:bcprov-jdk15on:1.60
+org.bouncycastle:bcpkix-jdk15on:1.68
+org.bouncycastle:bcprov-jdk15on:1.68
 org.checkerframework:checker-qual:2.5.2
 org.codehaus.mojo:animal-sniffer-annotations:1.17
 org.jruby.jcodings:jcodings:1.0.13

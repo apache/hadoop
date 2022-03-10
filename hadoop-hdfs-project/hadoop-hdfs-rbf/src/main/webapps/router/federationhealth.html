@@ -458,7 +458,7 @@ No nodes are decommissioning.
   </ul>
 </div>
 <small>
-<table class="table">
+<table class="table" id="table-mounttable">
   <thead>
     <tr>
       <th>Global path</th>
@@ -478,9 +478,9 @@ No nodes are decommissioning.
   <tbody>
     {#MountTable}
     <tr>
-      <td>{sourcePath}</td>
-      <td>{nameserviceId}</td>
-      <td>{path}</td>
+      <td ng-value="{sourcePath}">{sourcePath}</td>
+      <td ng-value="{nameserviceId}">{nameserviceId}</td>
+      <td ng-value="{path}">{path}</td>
       <td>{order}</td>
       <td align="center" class="federationhealth-mounttable-icon federationhealth-mounttable-{readonly}" title="{status}"/>
       <td align="center" class="mount-table-icon mount-table-fault-tolerant-{faulttolerant}" title="{ftStatus}"></td>
