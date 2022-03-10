@@ -36,7 +36,7 @@ It can be used through Hadoop MapReduce and Apache Spark.
 |------|--------|
 | Committer |  A class which can be invoked by MR/Spark to perform the task and job commit operations. |
 | Spark Driver | The spark process scheduling the work and choreographing the commit operation.|
-| Job: in MapReduce | The entire application. In spark, this is a single stage in a chain of work |
+| Job  | In MapReduce. the entire application. In spark, this is a single stage in a chain of work |
 | Job Attempt | A single attempt at a job. MR supports multiple Job attempts with recovery on partial job failure. Spark says "start again from scratch" |
 | Task | a subsection of a job, such as processing one file, or one part of a file |
 | Task ID |  ID of the task, unique within this job. Usually starts at 0 and is used in filenames (part-0000, part-001, etc.) |
