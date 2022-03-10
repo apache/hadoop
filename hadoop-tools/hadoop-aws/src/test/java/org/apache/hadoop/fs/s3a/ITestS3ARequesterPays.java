@@ -39,7 +39,9 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, Constants.ALLOW_REQUESTER_PAYS);
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        Constants.ALLOW_REQUESTER_PAYS,
+        Constants.S3A_BUCKET_PROBE);
     return conf;
   }
 
@@ -49,6 +51,9 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
 
     Configuration conf = this.createConfiguration();
     conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, true);
+    // Enable bucket exists check, the first failure point people may encounter
+    conf.setInt(Constants.S3A_BUCKET_PROBE, 2);
+
     Path requesterPaysPath = getRequesterPaysPath(conf);
 
     try (
