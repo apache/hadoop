@@ -291,7 +291,7 @@ same second, they had the same job ID. This caused the HDFS directories used by
 the staging committers to be intermingled.
 
 What is notable is this: these are all problems which the minimal integration
-test suites did not or discover.
+test suites did not discover.
 
 The good news: we now know of these issues and are better placed to avoid
 replicating them again. And know what to write tests for.
