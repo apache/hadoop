@@ -29,7 +29,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestFifoOrderingPolicy {
+public
+class TestFifoOrderingPolicy {
   
   @Test
   public void testFifoOrderingPolicy() {
@@ -84,7 +85,7 @@ public class TestFifoOrderingPolicy {
   }
   
   @Test
-  public void testFifoOrderingPolicyAlongWithPriorty() {
+  public void testFifoOrderingPolicyAlongWithPriority() {
     FifoOrderingPolicy<MockSchedulableEntity> policy =
         new FifoOrderingPolicy<MockSchedulableEntity>();
     MockSchedulableEntity r1 = new MockSchedulableEntity();
@@ -107,14 +108,14 @@ public class TestFifoOrderingPolicy {
     r1.setApplicationPriority(p1);
     r2.setApplicationPriority(null);
     assertTrue("The priority of r1 is not null, the priority of r2 is null," +
-            "the comparator should return a positive integer.",
+            "the comparator should return a positive value.",
         policy.getComparator().compare(r1, r2) > 0);
 
     // r1 is not null and r2 is not null
     r1.setApplicationPriority(p1);
     r2.setApplicationPriority(p2);
     Assert.assertTrue("Both priorities are not null, the r1 has higher, " +
-            "the result should be a positive value.",
+            "the result should be a negative value.",
         policy.getComparator().compare(r1, r2) < 0);
   }
 
