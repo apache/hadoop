@@ -109,8 +109,7 @@ These can be done in `core-site.xml`, if it is not defined in the `mapred-defaul
 
 ## Binding to the manifest committer in Spark.
 
-In Apache Spark, the `spark-default` configuration needs to switch to using the committer factory
-mechanism to instantiate committers. This includes configuring Parquet with a subclass of the parquet
+In Apache Spark, the configuration can be done either with command line options (after the '--conf') or by using the `spark-defaults.conf` file. The following is an example of using `spark-defaults.conf` also including the configuration for Parquet with a subclass of the parquet
 committer which uses the factory mechansim internally.
 
 ```
