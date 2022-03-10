@@ -4409,6 +4409,9 @@ public class YarnConfiguration extends Configuration {
   private static final String RM_NODE_LABELS_PREFIX = RM_PREFIX
       + "node-labels.";
 
+  public static final String AM_DEFAULT_NODE_LABEL =
+      RM_NODE_LABELS_PREFIX + "am.default-node-label-expression";
+
   public static final String RM_NODE_LABELS_PROVIDER_CONFIG =
       RM_NODE_LABELS_PREFIX + "provider";
 
