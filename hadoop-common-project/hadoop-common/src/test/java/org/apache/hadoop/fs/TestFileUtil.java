@@ -42,7 +42,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -1472,11 +1471,11 @@ public class TestFileUtil {
 
       // We will tar from the tar-root lineage
       File tarRoot = new File(rootDir, "tar-root/");
-      File dir1 = new File(tarRoot, "dir1/");
-      Verify.mkdirs(dir1);
+      File symlinkRoot = new File(tarRoot, "dir1/");
+      Verify.mkdirs(symlinkRoot);
 
       // Create Symbolic Link to an arbitrary dir
-      java.nio.file.Path symLink = Paths.get(dir1.getPath(), "sl");
+      java.nio.file.Path symLink = Paths.get(symlinkRoot.getPath(), "sl");
       Files.createSymbolicLink(symLink, arbitraryDir.toPath().toAbsolutePath());
 
       // Put entries in tar file
