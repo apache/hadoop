@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
+import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
+import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -40,8 +42,8 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
-        Constants.ALLOW_REQUESTER_PAYS,
-        Constants.S3A_BUCKET_PROBE);
+        ALLOW_REQUESTER_PAYS,
+        S3A_BUCKET_PROBE);
     return conf;
   }
 
@@ -50,9 +52,9 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
     describe("Test requester pays enabled case by reading last then first byte");
 
     Configuration conf = this.createConfiguration();
-    conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, true);
+    conf.setBoolean(ALLOW_REQUESTER_PAYS, true);
     // Enable bucket exists check, the first failure point people may encounter
-    conf.setInt(Constants.S3A_BUCKET_PROBE, 2);
+    conf.setInt(S3A_BUCKET_PROBE, 2);
 
     Path requesterPaysPath = getRequesterPaysPath(conf);
 
@@ -85,7 +87,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
     describe("Verify expected failure for requester pays buckets when client has it disabled");
 
     Configuration conf = this.createConfiguration();
-    conf.setBoolean(Constants.ALLOW_REQUESTER_PAYS, false);
+    conf.setBoolean(ALLOW_REQUESTER_PAYS, false);
     Path requesterPaysPath = getRequesterPaysPath(conf);
 
     try (FileSystem fs = requesterPaysPath.getFileSystem(conf)) {
