@@ -62,6 +62,9 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
           .assertThatStatisticCounter(inputStream.getIOStatistics(),
               StreamStatisticNames.STREAM_READ_OPENED)
           .isGreaterThan(1);
+
+      // Check list calls work without error
+      fs.listFiles(requesterPaysPath.getParent(), false);
     }
   }
 
