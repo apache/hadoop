@@ -34,7 +34,7 @@ It can be used through Hadoop MapReduce and Apache Spark.
 
 | Term | Meaning|
 |------|--------|
-| Committer |  A class which can be invoked by MR Spark to perform the task and job commit operations. |
+| Committer |  A class which can be invoked by MR/Spark to perform the task and job commit operations. |
 | Spark Driver | The spark process scheduling the work and choreographing the commit operation.|
 | Job: in MapReduce | The entire application. In spark, this is a single stage in a chain of work |
 | Job Attempt | A single attempt at a job. MR supports multiple Job attempts with recovery on partial job failure. Spark says "start again from scratch" |
