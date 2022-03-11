@@ -731,9 +731,15 @@ public class TestFileUtil {
     assertFalse("file has write permissions", new File(tmp, "foo").canWrite());
     assertTrue("file lacks read permissions", new File(tmp, "foo").canRead());
 
-    final File regularFile =
-        Verify.createNewFile(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
-    LambdaTestUtils.intercept(IOException.class, () -> FileUtil.unZip(simpleZip, regularFile));
+    final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
+    regularFile.createNewFile();
+    assertTrue(regularFile.exists());
+    try {
+      FileUtil.unZip(simpleZip, regularFile);
+      assertTrue("An IOException expected.", false);
+    } catch (IOException ioe) {
+      // okay
+    }
   }
 
   @Test (timeout = 30000)
