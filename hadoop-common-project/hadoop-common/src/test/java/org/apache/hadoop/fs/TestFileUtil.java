@@ -706,39 +706,40 @@ public class TestFileUtil {
   public void testUnZip() throws IOException {
     // make sa simple zip
     final File simpleZip = new File(del, FILE);
-    OutputStream os = new FileOutputStream(simpleZip);
-    ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os);
-    try {
-      ZipArchiveEntry ze = new  ZipArchiveEntry("foo");
-      ze.setUnixMode(0555);
-      byte[] data = "some-content".getBytes("UTF-8");
-      ze.setSize(data.length);
-      tos.putArchiveEntry(ze);
-      tos.write(data);
-      tos.closeArchiveEntry();
-      tos.flush();
-      tos.finish();
-    } finally {
-      tos.close();
-    }
-    
-    // successfully unzip it into an existing dir:
-    FileUtil.unZip(simpleZip, tmp);
-    // check result:
-    assertTrue(new File(tmp, "foo").exists());
-    assertEquals(12, new File(tmp, "foo").length());
-    assertTrue("file lacks execute permissions", new File(tmp, "foo").canExecute());
-    assertFalse("file has write permissions", new File(tmp, "foo").canWrite());
-    assertTrue("file lacks read permissions", new File(tmp, "foo").canRead());
+    try (OutputStream os = new FileOutputStream(simpleZip);
+         ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os)) {
+      try {
+        ZipArchiveEntry ze = new  ZipArchiveEntry("foo");
+        ze.setUnixMode(0555);
+        byte[] data = "some-content".getBytes("UTF-8");
+        ze.setSize(data.length);
+        tos.putArchiveEntry(ze);
+        tos.write(data);
+        tos.closeArchiveEntry();
+        tos.flush();
+        tos.finish();
+      } finally {
+        tos.close();
+      }
 
-    final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
-    regularFile.createNewFile();
-    assertTrue(regularFile.exists());
-    try {
-      FileUtil.unZip(simpleZip, regularFile);
-      assertTrue("An IOException expected.", false);
-    } catch (IOException ioe) {
-      // okay
+      // successfully unzip it into an existing dir:
+      FileUtil.unZip(simpleZip, tmp);
+      // check result:
+      assertTrue(new File(tmp, "foo").exists());
+      assertEquals(12, new File(tmp, "foo").length());
+      assertTrue("file lacks execute permissions", new File(tmp, "foo").canExecute());
+      assertFalse("file has write permissions", new File(tmp, "foo").canWrite());
+      assertTrue("file lacks read permissions", new File(tmp, "foo").canRead());
+
+      final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
+      regularFile.createNewFile();
+      assertTrue(regularFile.exists());
+      try {
+        FileUtil.unZip(simpleZip, regularFile);
+        assertTrue("An IOException expected.", false);
+      } catch (IOException ioe) {
+        // okay
+      }
     }
   }
 
