@@ -595,11 +595,11 @@ exception.
 
 ### Testing Requester Pays
 
-By default, the requester pays tests will look for a bucket that exists on Amazon S3 
+By default, the requester pays tests will look for a bucket that exists on Amazon S3
 in us-east-1.
 
 If the endpoint does support requester pays, you can specify an alternative object.
-The test only requires an object of at least a few bytes in order 
+The test only requires an object of at least a few bytes in order
 to check that lists and basic reads work.
 
 ```xml
@@ -609,7 +609,7 @@ to check that lists and basic reads work.
 </property>
 ```
 
-If the endpoint does not support requester pays, you can also disable the tests by configuring 
+If the endpoint does not support requester pays, you can also disable the tests by configuring
 the test URI as a single space.
 
 ```xml
