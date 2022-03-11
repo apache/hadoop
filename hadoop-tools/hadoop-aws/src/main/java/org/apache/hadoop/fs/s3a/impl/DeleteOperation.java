@@ -25,7 +25,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
@@ -365,8 +364,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         callableWithinAuditSpan(
             getAuditSpan(), () -> {
               asyncDeleteAction(
-                  keyList,
-                  LOG.isDebugEnabled());
+                  keyList);
               return null;
             }));
   }
@@ -376,20 +374,16 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * the keys from S3 and paths from S3Guard.
    *
    * @param keyList keys to delete.
-   * @param auditDeletedKeys should the results be audited and undeleted
    * entries logged?
    * @throws IOException failure
    */
   @Retries.RetryTranslated
   private void asyncDeleteAction(
-      final List<DeleteEntry> keyList,
-      final boolean auditDeletedKeys)
+      final List<DeleteEntry> keyList)
       throws IOException {
-    List<DeleteObjectsResult.DeletedObject> deletedObjects = new ArrayList<>();
     try (DurationInfo ignored =
              new DurationInfo(LOG, false,
                  "Delete page of %d keys", keyList.size())) {
-      DeleteObjectsResult result;
       if (!keyList.isEmpty()) {
         // first delete the files.
         List<DeleteObjectsRequest.KeyVersion> files = keyList.stream()
@@ -397,15 +391,12 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
             .map(e -> e.keyVersion)
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} file objects", files.size());
-        result = Invoker.once("Remove S3 Files",
+        Invoker.once("Remove S3 Files",
             status.getPath().toString(),
             () -> callbacks.removeKeys(
                 files,
-                false,
-                !auditDeletedKeys));
-        if (result != null) {
-          deletedObjects.addAll(result.getDeletedObjects());
-        }
+                false
+            ));
         // now the dirs
         List<DeleteObjectsRequest.KeyVersion> dirs = keyList.stream()
             .filter(e -> e.isDirMarker)
@@ -413,32 +404,12 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} directory markers", dirs.size());
         // This is invoked with deleteFakeDir.
-        result = Invoker.once("Remove S3 Dir Markers",
+        Invoker.once("Remove S3 Dir Markers",
             status.getPath().toString(),
             () -> callbacks.removeKeys(
                 dirs,
-                true,
-                !auditDeletedKeys));
-        if (result != null) {
-          deletedObjects.addAll(result.getDeletedObjects());
-        }
-      }
-      if (auditDeletedKeys) {
-        // audit the deleted keys
-        if (deletedObjects.size() != keyList.size()) {
-          // size mismatch
-          LOG.warn("Size mismatch in deletion operation. "
-                  + "Expected count of deleted files: {}; "
-                  + "actual: {}",
-              keyList.size(), deletedObjects.size());
-          // strip out the deleted keys
-          for (DeleteObjectsResult.DeletedObject del : deletedObjects) {
-            keyList.removeIf(kv -> kv.getKey().equals(del.getKey()));
-          }
-          for (DeleteEntry kv : keyList) {
-            LOG.debug("{}", kv.getKey());
-          }
-        }
+                true
+            ));
       }
     }
   }

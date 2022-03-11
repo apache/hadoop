@@ -817,7 +817,7 @@ public final class MarkerTool extends S3GuardTool {
           end);
       once("Remove S3 Keys",
           tracker.getBasePath().toString(), () ->
-              operations.removeKeys(page, true, false));
+              operations.removeKeys(page, true));
       summary.deleteRequests++;
       // and move to the start of the next page
       start = end;
