@@ -748,7 +748,7 @@ public class FileUtil {
               out.close();
             }
             if (entry.getPlatform() == ZipArchiveEntry.PLATFORM_UNIX) {
-                Files.setPosixFilePermissions(file.toPath(), permissionsFromMode(entry.getUnixMode()));
+              Files.setPosixFilePermissions(file.toPath(), permissionsFromMode(entry.getUnixMode()));
             }
           } finally {
             in.close();
