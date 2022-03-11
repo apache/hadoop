@@ -710,7 +710,7 @@ public class TestFileUtil {
     ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os);
     try {
       ZipArchiveEntry ze = new  ZipArchiveEntry("foo");
-      ze.setUnixMode(0755);
+      ze.setUnixMode(0555);
       byte[] data = "some-content".getBytes("UTF-8");
       ze.setSize(data.length);
       tos.putArchiveEntry(ze);
@@ -727,19 +727,13 @@ public class TestFileUtil {
     // check result:
     assertTrue(new File(tmp, "foo").exists());
     assertEquals(12, new File(tmp, "foo").length());
-    assertTrue(new File(tmp, "foo").canExecute());
-    assertTrue(new File(tmp, "foo").canRead());
-    assertTrue(new File(tmp, "foo").canWrite());
+    assertTrue("file lacks execute permissions", new File(tmp, "foo").canExecute());
+    assertFalse("file has write permissions", new File(tmp, "foo").canWrite());
+    assertTrue("file lacks read permissions", new File(tmp, "foo").canRead());
 
-    final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
-    regularFile.createNewFile();
-    assertTrue(regularFile.exists());
-    try {
-      FileUtil.unZip(simpleZip, regularFile);
-      assertTrue("An IOException expected.", false);
-    } catch (IOException ioe) {
-      // okay
-    }
+    final File regularFile =
+        Verify.createNewFile(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
+    LambdaTestUtils.intercept(IOException.class, () -> FileUtil.unZip(simpleZip, regularFile));
   }
 
   @Test (timeout = 30000)
