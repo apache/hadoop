@@ -34,6 +34,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * A Committer for the manifest committer which performs all bindings needed
  * to work best with abfs.
  * This includes, at a minimum, switching to the abfs-specific manifest store operations.
+ *
+ * This classname is referenced in configurations, so MUST NOT change.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -43,8 +45,7 @@ public class AzureManifestCommitterFactory extends ManifestCommitterFactory {
   /**
    * Classname, which can be declared in jpb configurations.
    */
-  public static final String NAME
-      = "org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory";
+  public static final String NAME = ManifestCommitterFactory.class.getName();
 
   @Override
   public ManifestCommitter createOutputCommitter(final Path outputPath,

@@ -32,6 +32,13 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * API exclusively for committing files.
+ *
+ * This is only for use by (@link {@link AbfsManifestStoreOperations},
+ * and is intended to be implemented by ABFS.
+ * To ensure that there is no need to add mapreduce JARs to the
+ * classpath just to work with ABFS, this interface
+ * MUST NOT refer to anything in the
+ * {@code org.apache.hadoop.mapreduce} package.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
