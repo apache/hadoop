@@ -588,7 +588,8 @@ public class RouterRpcClient {
   /**
    * For tracking which is the actual client address.
    * It adds trace info "clientIp:ip" and "clientPort:port"
-   * to caller context if they are absent.
+   * in the caller context, removing the old values if they were
+   * already present.
    */
   private void addClientIpToCallerContext() {
     CallerContext ctx = CallerContext.getCurrent();
@@ -603,9 +604,12 @@ public class RouterRpcClient {
     // Append the original caller context
     if (origContext != null) {
       for (String part : origContext.split(contextFieldSeparator)) {
-        if (!part.startsWith(CLIENT_IP_STR) &&
-            !part.startsWith(CLIENT_PORT_STR)) {
-          builder.append(part);
+        String[] keyValue =
+            part.split(CallerContext.Builder.KEY_VALUE_SEPARATOR, 2);
+        if (keyValue.length == 2) {
+          builder.appendIfAbsent(keyValue[0], keyValue[1]);
+        } else if (keyValue.length == 1) {
+          builder.append(keyValue[0]);
         }
       }
     }

@@ -1950,7 +1950,7 @@ public class TestRouterRpc {
     FsPermission permission = new FsPermission("755");
     routerProtocol.mkdirs(dirPath, permission, false);
 
-    // The audit log should contains "callerContext=clientContext,clientIp:"
+    // The audit log should contains "callerContext=clientIp:...,clientContext"
     final String logOutput = auditlog.getOutput();
     assertTrue(logOutput.contains("callerContext=clientIp:"));
     assertTrue(logOutput.contains(",clientContext"));
