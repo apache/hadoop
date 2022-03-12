@@ -1104,9 +1104,13 @@ abstract public class ViewFileSystemBaseTest {
     Assert.assertTrue("", fsView.getTrashRoots(true).size() > 0);
   }
 
-  private String getTrashRootForPathInFallBackFS() {
-    return fsTarget.getHomeDirectory().toUri().getPath() + "/" + TRASH_PREFIX;
+  // Default implementation of getTrashRoot for a fallback FS mounted at root:
+  // e.g., fallbackFS.uri.getPath = '/'
+  Path getTrashRootInFallBackFS() throws IOException {
+    return new Path(fsTarget.getHomeDirectory().toUri().getPath(),
+        TRASH_PREFIX);
   }
+
   /**
    * Test TRASH_FORCE_INSIDE_MOUNT_POINT feature for getTrashRoot.
    */
@@ -1128,15 +1132,8 @@ abstract public class ViewFileSystemBaseTest {
     // Case 2: path p not found in mount table, fall back to the default FS
     // Return a trash root in mount point "/"
     Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
-    Path expectedTrash;
-    if (targetTestRoot.toUri().getPath().equals("/")) {
-      expectedTrash =
-          fsView2.makeQualified(new Path(fsTarget.getHomeDirectory().toUri().getPath(),
-              TRASH_PREFIX));
-    } else {
-      expectedTrash =
-          fsView2.makeQualified(new Path("/" + TRASH_PREFIX + "/" + ugi.getShortUserName()));
-    }
+    Path expectedTrash =
+        fsView2.makeQualified(getTrashRootInFallBackFS());
 
     Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(nonExistentPath));
 
