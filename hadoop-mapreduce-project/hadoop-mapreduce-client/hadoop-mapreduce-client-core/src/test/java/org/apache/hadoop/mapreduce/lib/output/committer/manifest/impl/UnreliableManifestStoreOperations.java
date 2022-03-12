@@ -40,7 +40,6 @@ import org.apache.hadoop.util.JsonSerialization;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.OPERATION_TIMED_OUT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperationsThroughFileSystem.E_TRASH_FALSE;
 
 /**
  * Wrap an existing {@link ManifestStoreOperations} implementation and fail on
@@ -89,11 +88,6 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    * Paths of List operations to fail.
    */
   private final Set<Path> listToFail = new HashSet<>();
-
-  /**
-   * Paths of move to trash operations to fail.
-   */
-  private final Set<Path> moveToTrashToFail = new HashSet<>();
 
   /**
    * Paths of mkdirs operations to fail.
@@ -151,7 +145,6 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   public void reset() {
     deletePathsToFail.clear();
     deletePathsToTimeOut.clear();
-    moveToTrashToFail.clear();
     pathNotFound.clear();
     renameSourceFilesToFail.clear();
     renameDestDirsToFail.clear();
@@ -197,14 +190,6 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    */
   public void addListToFail(Path path) {
     listToFail.add(requireNonNull(path));
-  }
-
-  /**
-   * Add a path to the list of move to trash paths to fail.
-   * @param path path to add.
-   */
-  public void addMoveToTrashToFail(Path path) {
-    moveToTrashToFail.add(requireNonNull(path));
   }
 
   /**
@@ -403,20 +388,6 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   @Override
   public boolean storePreservesEtagsThroughRenames(Path path) {
     return wrappedOperations.storePreservesEtagsThroughRenames(path);
-  }
-
-  @Override
-  public MoveToTrashResult moveToTrash(final String jobId, final Path path) {
-    if (trashDisabled) {
-      // same exception as FS implementation.
-      return new MoveToTrashResult(MoveToTrashOutcome.FAILURE,
-          new PathIOException(path.toString(), E_TRASH_FALSE));
-    }
-    if (moveToTrashToFail.contains(path)) {
-      return new MoveToTrashResult(MoveToTrashOutcome.FAILURE,
-          new PathIOException(path.toString(), SIMULATED_FAILURE));
-    }
-    return wrappedOperations.moveToTrash(jobId, path);
   }
 
   @Override

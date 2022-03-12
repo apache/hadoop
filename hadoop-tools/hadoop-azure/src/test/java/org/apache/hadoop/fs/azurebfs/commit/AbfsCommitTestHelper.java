@@ -38,8 +38,8 @@ final class AbfsCommitTestHelper {
    */
   static Configuration prepareTestConfiguration(
       ABFSContractTestBinding contractTestBinding) {
-    final Configuration conf = ManifestCommitterTestSupport.enableTrash(
-        contractTestBinding.getRawConfiguration());
+    final Configuration conf =
+        contractTestBinding.getRawConfiguration();
 
     // use ABFS Store operations
     conf.set(OPT_STORE_OPERATIONS_CLASS,

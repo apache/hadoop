@@ -49,7 +49,6 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_ST
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_LIMITED;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.createTracker;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
@@ -82,13 +81,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   /**
    * Error text on rename failure: {@value}.
    */
-  public static final String FAILED_TO_RENAME = "Failed to ";
-
-  /**
-   * Error text on when clean up is to trash, but
-   * the FS has trash disabled: {@value}.
-   */
-  public static final String E_TRASH_DISABLED = "Trash is disabled";
+  public static final String FAILED_TO_RENAME_PREFIX = "Failed to ";
 
   /**
    * Is this a task stage? If so, toString() includes task
@@ -775,7 +768,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
         sourceStatus, destStatus);
 
     return new PathIOException(source.toString(),
-        FAILED_TO_RENAME + operation + " to " + dest);
+        FAILED_TO_RENAME_PREFIX + operation + " to " + dest);
   }
 
   /**
@@ -927,25 +920,6 @@ public abstract class AbstractJobCommitStage<IN, OUT>
         return ex;
       }
     }
-  }
-
-  /**
-   * Move dest/__temporary to trash using the jobID as the unique name.
-   * @return result of operation..
-   */
-  protected ManifestStoreOperations.MoveToTrashResult moveOutputTemporaryDirToTrash()
-      throws IOException {
-    Path dir = getStageConfig().getOutputTempSubDir();
-    if (!operations.isTrashEnabled(dir)) {
-      return new ManifestStoreOperations.MoveToTrashResult(
-          ManifestStoreOperations.MoveToTrashOutcome.DISABLED,
-          new PathIOException(
-              dir.toString(),
-              E_TRASH_DISABLED));
-    }
-
-    return trackDuration(getIOStatistics(), OP_RENAME, () ->
-        operations.moveToTrash(getJobId(), dir));
   }
 
   /**

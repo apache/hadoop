@@ -20,22 +20,15 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.util.List;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.E_TIMEOUT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.E_TRASH_DISABLED;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test the cleanup stage.
@@ -84,16 +77,6 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     manifests = executeTaskAttempts(TASK_ATTEMPT_COUNT, 0);
   }
 
-  /**
-   * Turn trash on.
-   * @return FS config.
-   */
-  @Override
-  protected Configuration createConfiguration() {
-
-    return ManifestCommitterTestSupport.enableTrash(super.createConfiguration());
-  }
-
   @Test
   public void testCleanupInParallelHealthy() throws Throwable {
     describe("parallel cleanup of TA dirs.");
@@ -130,70 +113,6 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     // if skipped, that happens first
     cleanup(false, true, false, true,
         CleanupJobStage.Outcome.DISABLED, 0);
-  }
-
-  @Test
-  public void testRenameToTrash() throws Throwable {
-    describe("cleanup by rename to trash");
-
-    cleanup(
-        true, true, false, true,
-        CleanupJobStage.Outcome.RENAMED_TO_TRASH, 0);
-    verifyJobDirsCleanedUp();
-  }
-
-  @Test
-  public void testRenameToTrashFailure() throws Throwable {
-    describe("cleanup by rename to trash");
-    // trash will fail.
-    failures.setTrashDisabled(true);
-    intercept(PathIOException.class, E_TRASH_DISABLED, () ->
-        cleanup(true, true, false, true,
-            CleanupJobStage.Outcome.MOVE_TO_TRASH_FAILED, 0));
-  }
-
-  @Test
-  public void testDeleteFailureFallbackToRename() throws Throwable {
-    describe("cleanup where delete fails but rename() works." +
-        " Even without suppressing exceptions");
-    failures.addDeletePathToTimeOut(getJobStageConfig().getOutputTempSubDir());
-    CleanupJobStage.Result result = cleanup(true, false, false, false,
-        CleanupJobStage.Outcome.RENAMED_TO_TRASH, ROOT_DELETE_COUNT);
-    verifyJobDirsCleanedUp();
-    // result contains the delete exception
-    intercept(PathIOException.class, result.getDirectory().toString(),
-        result::maybeRethrowException);
-  }
-
-  @Test
-  public void testNonparallelDoubleFailure() throws Throwable {
-    describe("cleanup where delete fails as does moveToTrash()");
-    Path tempSubDir = getJobStageConfig().getOutputTempSubDir();
-    failures.addDeletePathToTimeOut(tempSubDir);
-    failures.addMoveToTrashToFail(tempSubDir);
-    intercept(PathIOException.class, E_TIMEOUT, () ->
-        cleanup(true, false, false, false,
-            CleanupJobStage.Outcome.FAILURE, ROOT_DELETE_COUNT));
-  }
-
-  @Test
-  public void testDoubleFailureSuppressing() throws Throwable {
-    describe("cleanup where delete fails as does rename()" +
-        " but exceptions suppressed");
-    Path tempSubDir = getJobStageConfig().getOutputTempSubDir();
-    failures.addDeletePathToTimeOut(tempSubDir);
-    failures.addMoveToTrashToFail(tempSubDir);
-    CleanupJobStage.Result result = cleanup(true, false, true, false,
-        CleanupJobStage.Outcome.FAILURE, ROOT_DELETE_COUNT);
-
-    // now throw it.
-    intercept(PathIOException.class, E_TIMEOUT,
-        result::maybeRethrowException);
-    ManifestStoreOperations.MoveToTrashResult moveResult = result.getMoveResult();
-    // there's an exception here
-    Assertions.assertThat(moveResult.getException())
-        .describedAs("exception in " + moveResult)
-        .isNotNull();
   }
 
   @Test

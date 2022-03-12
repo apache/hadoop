@@ -51,7 +51,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsTo
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.getEtag;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.SIMULATED_FAILURE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.FAILED_TO_RENAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.FAILED_TO_RENAME_PREFIX;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -276,7 +276,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
         new RenameFilesStage(stageConfig),
         manifest,
         filesToCommit.size(),
-        FAILED_TO_RENAME,
+        FAILED_TO_RENAME_PREFIX,
         PathIOException.class);
   }
 

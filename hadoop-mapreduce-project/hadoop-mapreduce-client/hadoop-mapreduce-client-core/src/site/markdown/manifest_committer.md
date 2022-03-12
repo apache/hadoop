@@ -20,6 +20,9 @@ This document how to use the _Manifest Committer_.
 The _Manifest_ committer is a committer for work which provides
 performance on ABFS for "real world" queries,
 and performance and correctness on GCS.
+It also works with other filesystems, including HDFS.
+However, the design is optimized for object stores where
+listing operatons are slow and expensive.
 
 The architecture and implementation of the committer is covered in
 [Manifest Committer Architecture](manifest_committer_architecture.html).
@@ -181,7 +184,7 @@ Here are the main configuration options of the committer.
 | `mapreduce.manifest.committer.io.threads` | Thread count for parallel operations | `64` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
-| `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` | Delete task attempt directories in parallel | `true` |
+| `mapreduce.manifest.committer.cleanup.parallel.delete` | Delete temporary directories in parallel | `true` |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Create a `_SUCCESS` marker file on successful completion. (and delete any existing one in job setup) | `true` |
@@ -330,9 +333,8 @@ overwriting the markers.
 Job cleanup is convoluted as it is designed to address a number of issues which
 may surface in cloud storage.
 
-* Slow performance for deletion of directories (GCS, where it is file-by-file)
-* Service timeout when deleting very deep and wide directory trees.
-  (Azure with OAuth auth)
+* Slow performance for deletion of directories.
+* Timeout when deleting very deep and wide directory trees.
 * General resilience to cleanup issues escalating to job failures.
 
 
@@ -340,28 +342,30 @@ may surface in cloud storage.
 |--------|---------|---------------|
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
-| `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` | Delete task attempt directories in parallel | `true` |
-| `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
+| `mapreduce.manifest.committer.cleanup.parallel.delete` | Delete task attempt directories in parallel | `true` |
 
 The algorithm is:
 
-1. If `mapreduce.fileoutputcommitter.cleanup.skipped` is `true`, skip all cleanup.
-2. if `mapreduce.manifest.committer.cleanup.move.to.trash` is `true`, jump to step #5
-3. Attempt parallel task attempt directory delete unless
-   `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` is `false`.
-   Any error here is swallowed.
-4. Attempt to delete the base `_temporary` directory. Any error here is cached.
-5. Delete failed in step #4 or was skipped, and if trash is enabled for the filesystem
-   attempt to rename  `_temporary` directory under trash dir.
+```
+if `mapreduce.fileoutputcommitter.cleanup.skipped`:
+  return
+if `mapreduce.manifest.committer.cleanup.parallel.delete`:
+  attempt parallel delete of task directories; catch any exception
+if not `mapreduce.fileoutputcommitter.cleanup.skipped`:
+  delete(`_temporary`); catch any exception
+if caught-exception and not `mapreduce.fileoutputcommitter.cleanup-failures.ignored`:
+  throw caught-exception
+```
 
-If the dir could not be deleted/renamed:
-1. if `mapreduce.fileoutputcommitter.cleanup-failures.ignored`
-   is `true` then the stage warns and continues.
-2. Else the last raised exception is rethown.
-
-It's complicated, but the goal is to perform a fast/scalable delete
-fall back to a rename to trash if that fails, and
+It's a bit complicated, but the goal is to perform a fast/scalable delete and
 throw a meaningful exception if that didn't work.
+
+When working with ABFS and GCS, these settings should normally be left alone.
+If somehow errors surface during cleanup, enabling the option to
+ignore failures will ensure the job still completes.
+Disabling cleanup even avoids the overhead of cleanup, but
+requires a workflow or manual operation to clean up all
+`_temporary` directories on a regular basis.
 
 
 # <a name="abfs"></a> Working with Azure ADLS Gen2 Storage
@@ -396,9 +400,8 @@ The core set of Azure-optimized options becomes
 </property>
 
 <property>
-  <name>mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories</name>
-  <value>true</value>
-  <description>Parallel directory deletion to address scale-related timeouts.</description>
+  <name>spark.hadoop.fs.azure.io.rate.limit</name>
+  <value>10000</value>
 </property>
 ```
 
@@ -488,13 +491,13 @@ spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: U
 ```
 
 The store's directory delete operations are `O(files)` so the value
-of `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories`
+of `mapreduce.manifest.committer.cleanup.parallel.delete`
 SHOULD be left at the default of `true`.
 
 For mapreduce, declare the binding in `core-site.xml`or `mapred-site.xml`
 ```xml
 <property>
-  <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+  <name>mapreduce.outputcommitter.factory.scheme.gcs</name>
   <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
 </property>
 ```
@@ -511,13 +514,13 @@ To use on HDFS, set the `ManifestCommitterFactory` as the committer factory for 
 
 Because HDFS does fast directory deletion, there is no need to parallelize deletion
 of task attempt directories during cleanup, so set
-`mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` to `false`
+`mapreduce.manifest.committer.cleanup.parallel.delete` to `false`
 
 The final spark bindings becomes
 
 ```
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.hdfs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
-spark.hadoop.mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories false
+spark.hadoop.mapreduce.manifest.committer.cleanup.parallel.delete false
 spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
 spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
 

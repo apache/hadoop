@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -40,10 +39,8 @@ import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUT
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_MOVE_TO_TRASH;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_MOVE_TO_TRASH_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 
 /**
@@ -52,6 +49,29 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Returns: the outcome of the overall operation and any move to trash.
  * The result is detailed purely for the benefit of tests, which need
  * to make assertions about error handling and fallbacks.
+ *
+ * There's a few known issues with the azure and GCS stores which
+ * this stage tries to address.
+ * - Google GCS directory deletion is O(entries), so is slower for big jobs.
+ * - Azure storage directory delete, when using OAuth authentication or
+ *   when not the store owner triggers a scan down the tree to verify the
+ *   caller has the permission to delete each subdir.
+ *   If this scan takes over 90s, the operation can time out.
+ *
+ * The main solution for both of these is that task attempts are
+ * deleted in parallel, in different threads.
+ * This will speed up GCS cleanup and reduce the risk of
+ * abfs related timeouts.
+ * Exceptions during cleanup can be suppressed,
+ * so that these do not cause the job to fail.
+ *
+ * Also, some users want to be able to run multiple independent jobs
+ * targeting the same output directory simultaneously.
+ * If one job deletes the directory `__temporary` all the others
+ * will fail.
+ *
+ * This can be addressed by disabling cleanup entirely.
+ *
  */
 public class CleanupJobStage extends
     AbstractJobCommitStage<
@@ -74,7 +94,7 @@ public class CleanupJobStage extends
   /**
    * Last delete exception; non null if deleteFailureCount is not zero.
    */
-  private IOException lastDeleteException = null;
+  private IOException lastDeleteException;
 
   /**
    * Stage name as passed in from arguments.
@@ -112,26 +132,19 @@ public class CleanupJobStage extends
     if (!args.enabled) {
       LOG.info("{}: Cleanup of {} disabled", getName(), baseDir);
       return new Result(Outcome.DISABLED, baseDir,
-          0, null, null);
+          0, null);
     }
     // shortcut of a single existence check before anything else
     if (getFileStatusOrNull(baseDir) == null) {
       return new Result(Outcome.NOTHING_TO_CLEAN_UP,
           baseDir,
-          0, null, null);
+          0, null);
     }
 
-    // move to trash?
-    // this will be set if delete fails.
-    boolean moveToTrash = args.moveToTrash;
-
-    // delete
-    final boolean attemptDelete = !moveToTrash;
-
     Outcome outcome = null;
-    IOException exception = null;
+    IOException exception;
 
-    if (attemptDelete) {
+
       // to delete.
       LOG.info("{}: Deleting job directory {}", getName(), baseDir);
 
@@ -179,8 +192,6 @@ public class CleanupJobStage extends
       exception = deleteOneDir(baseDir);
       if (exception != null) {
         // failure, report and continue
-        LOG.warn("{}: Deleting job directory {} failed: moving to trash", getName(), baseDir);
-        moveToTrash = true;
         // assume failure.
         outcome = Outcome.FAILURE;
       } else {
@@ -190,49 +201,12 @@ public class CleanupJobStage extends
           outcome = Outcome.DELETED;
         }
       }
-    }
-
-    ManifestStoreOperations.MoveToTrashResult moveToTrashResult = null;
-    if (moveToTrash) {
-      // move temp dir to trash.
-      progress();
-
-      LOG.info("{}: Moving temporary directory to trash {}", getName(), baseDir);
-      moveToTrashResult = moveOutputTemporaryDirToTrash();
-      // if rename did not work, maybe raise an exception
-      // this depends on whether delete was attempted first,
-      // as on a failure we don't want to lose original error
-
-      switch (moveToTrashResult.getOutcome()) {
-      case DISABLED:
-      case FAILURE:
-        // escalate this, giving priority to any
-        // delete exception
-        if (outcome == null) {
-          // the move to trash was not triggered by a delete
-          // failure. so mark as a failure with
-          // the ne exception.
-          outcome = Outcome.FAILURE;
-          exception = moveToTrashResult.getException();
-        }
-        break;
-
-      case RENAMED_TO_TRASH:
-        outcome = Outcome.RENAMED_TO_TRASH;
-        break;
-
-      default:
-        // this doesn't exist, but is needed to keep checkstyle quiet
-        break;
-      }
-    }
 
     Result result = new Result(
         outcome,
         baseDir,
         deleteDirCount.get(),
-        exception,
-        moveToTrashResult);
+        exception);
     if (!result.succeeded() && !args.suppressExceptions) {
       result.maybeRethrowException();
     }
@@ -315,29 +289,23 @@ public class CleanupJobStage extends
     /** Ignore failures? */
     private final boolean suppressExceptions;
 
-    /** Rather than delete: move to trash? */
-    private final boolean moveToTrash;
-
     /**
      * Arguments to the stage.
      * @param statisticName stage name to report
      * @param enabled is the stage enabled?
      * @param deleteTaskAttemptDirsInParallel delete task attempt dirs in
-     *        parallel?
+ *        parallel?
      * @param suppressExceptions suppress exceptions?
-     * @param moveToTrash attempt to move to trash before trying to delete?
      */
     public Arguments(
         final String statisticName,
         final boolean enabled,
         final boolean deleteTaskAttemptDirsInParallel,
-        final boolean suppressExceptions,
-        final boolean moveToTrash) {
+        final boolean suppressExceptions) {
       this.statisticName = statisticName;
       this.enabled = enabled;
       this.deleteTaskAttemptDirsInParallel = deleteTaskAttemptDirsInParallel;
       this.suppressExceptions = suppressExceptions;
-      this.moveToTrash = moveToTrash;
     }
 
     public String getStatisticName() {
@@ -356,10 +324,6 @@ public class CleanupJobStage extends
       return suppressExceptions;
     }
 
-    public boolean isMoveToTrash() {
-      return moveToTrash;
-    }
-
     @Override
     public String toString() {
       return "Arguments{" +
@@ -368,7 +332,6 @@ public class CleanupJobStage extends
           + ", deleteTaskAttemptDirsInParallel="
           + deleteTaskAttemptDirsInParallel
           + ", suppressExceptions=" + suppressExceptions
-          + ", moveToTrash=" + moveToTrash
           + '}';
     }
   }
@@ -379,8 +342,8 @@ public class CleanupJobStage extends
   public static final Arguments DISABLED = new Arguments(OP_STAGE_JOB_CLEANUP,
       false,
       false,
-      false,
-      false);
+      false
+  );
 
   /**
    * Build an options argument from a configuration, using the
@@ -397,18 +360,15 @@ public class CleanupJobStage extends
     boolean suppressExceptions = conf.getBoolean(
         FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED,
         FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED_DEFAULT);
-    boolean moveToTrash = conf.getBoolean(
-        OPT_CLEANUP_MOVE_TO_TRASH,
-        OPT_CLEANUP_MOVE_TO_TRASH_DEFAULT);
     boolean deleteTaskAttemptDirsInParallel = conf.getBoolean(
-        OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS,
-        OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS_DEFAULT);
+        OPT_CLEANUP_PARALLEL_DELETE,
+        OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT);
     return new Arguments(
         statisticName,
         enabled,
         deleteTaskAttemptDirsInParallel,
-        suppressExceptions,
-        moveToTrash);
+        suppressExceptions
+    );
   }
 
   /**
@@ -477,23 +437,15 @@ public class CleanupJobStage extends
      */
     private final IOException exception;
 
-    /**
-     * Result of any move to trash call; null if none
-     * took place.
-     */
-    private final ManifestStoreOperations.MoveToTrashResult moveResult;
-
     public Result(
         final Outcome outcome,
         final Path directory,
         final int deleteCalls,
-        IOException exception,
-        ManifestStoreOperations.MoveToTrashResult moveResult) {
+        IOException exception) {
       this.outcome = requireNonNull(outcome, "outcome");
       this.directory = directory;
       this.deleteCalls = deleteCalls;
       this.exception = exception;
-      this.moveResult = moveResult;
       if (outcome == Outcome.FAILURE) {
         requireNonNull(exception, "No exception in failure result");
       }
@@ -529,10 +481,6 @@ public class CleanupJobStage extends
       return exception;
     }
 
-    public ManifestStoreOperations.MoveToTrashResult getMoveResult() {
-      return moveResult;
-    }
-
     /**
      * If there was an IOE caught, throw it.
      * For ease of use in (meaningful) lambda expressions
@@ -554,7 +502,6 @@ public class CleanupJobStage extends
           ", directory=" + directory +
           ", deleteCalls=" + deleteCalls +
           ", exception=" + exception +
-          ", moveResult=" + moveResult +
           '}';
     }
   }

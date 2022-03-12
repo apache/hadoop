@@ -62,7 +62,7 @@ public class StubStoreOperations extends ManifestStoreOperations {
   @Override
   public RemoteIterator<FileStatus> listStatusIterator(final Path path)
       throws IOException {
-    return new EmptyRemoteIterator<FileStatus>();
+    return new EmptyRemoteIterator<>();
   }
 
   @Override
@@ -88,10 +88,6 @@ public class StubStoreOperations extends ManifestStoreOperations {
 
   }
 
-  @Override
-  public MoveToTrashResult moveToTrash(final String jobId, final Path path) {
-    return new MoveToTrashResult(MoveToTrashOutcome.RENAMED_TO_TRASH, null);
-  }
 
   @Override
   public void close() throws IOException {

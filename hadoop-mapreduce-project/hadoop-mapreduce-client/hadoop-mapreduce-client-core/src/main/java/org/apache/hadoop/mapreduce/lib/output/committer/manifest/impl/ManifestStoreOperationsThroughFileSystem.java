@@ -29,14 +29,10 @@ import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 
 /**
  * Implementation of manifest store operations through the filesystem API.
@@ -51,12 +47,6 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ManifestStoreOperationsThroughFileSystem.class);
-
-  /**
-   * Trash.moveToTrash() returned false.
-   */
-  public static final String E_TRASH_FALSE = "Failed to rename to trash" +
-      " -check trash interval in " + FS_TRASH_INTERVAL_KEY +": ";
 
   /**
    * Filesystem; set in {@link #bindToFileSystem(FileSystem, Path)}.
@@ -210,40 +200,6 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
       // set the unsupported flag so no future attempts are made.
       msyncUnsupported = true;
     }
-  }
-
-  /**
-   * Move a dir/file to the user's trash dir under the jobID.
-   * IOExceptions in rename are caught, logged at info
-   * and then downgraded to a "return false"
-   * @param jobId job ID.
-   * @param path path to move, assumed to be _temporary
-   * @return true if the rename succeeded.
-   */
-  @Override
-  public MoveToTrashResult moveToTrash(String jobId, Path path) {
-
-    MoveToTrashOutcome outcome;
-    IOException ioe = null;
-    try {
-      boolean renamed = Trash.moveToAppropriateTrash(fileSystem,
-          path, fileSystem.getConf());
-      if (!renamed) {
-        ioe = new PathIOException(path.toString(),
-            E_TRASH_FALSE + fileSystem.getServerDefaults(
-                path).getTrashInterval());
-        outcome = MoveToTrashOutcome.FAILURE;
-      } else {
-        outcome = MoveToTrashOutcome.RENAMED_TO_TRASH;
-      }
-    } catch (IOException ex) {
-      outcome = MoveToTrashOutcome.FAILURE;
-      LOG.info("Failed to move {} to trash: {}",
-          path, ex.toString());
-      LOG.debug("Full stack", ex);
-      ioe = ex;
-    }
-    return new MoveToTrashResult(outcome, ioe);
   }
 
 }

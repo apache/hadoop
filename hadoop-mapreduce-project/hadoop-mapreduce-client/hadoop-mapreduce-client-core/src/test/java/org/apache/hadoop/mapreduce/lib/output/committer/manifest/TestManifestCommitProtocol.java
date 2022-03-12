@@ -1620,6 +1620,9 @@ public class TestManifestCommitProtocol
 
   /**
    * Make sure that two jobs in parallel directory trees coexist.
+   * Note: the two jobs are not trying to write to the same
+   * output directory.
+   * That should be possible, but cleanup must be disabled.
    */
   @Test
   public void testParallelJobsToAdjacentPaths() throws Throwable {

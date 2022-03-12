@@ -35,8 +35,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * FileSystem operations which are needed to generate the task manifest.
  * The specific choice of which implementation to use is configurable.
@@ -294,77 +292,4 @@ public abstract class ManifestStoreOperations implements Closeable {
     }
   }
 
-  /**
-   * Move a directory to trash, with the jobID as its name.
-   * IOExceptions are caught and included in the outcome.
-   * @param jobId job ID.
-   * @param path path to move, assumed to be _temporary
-   * @return the outcome.
-   */
-  public abstract MoveToTrashResult moveToTrash(String jobId, Path path);
-
-  /**
-   * Enum of outcomes.
-   */
-  public enum MoveToTrashOutcome {
-    DISABLED("Disabled"),
-    RENAMED_TO_TRASH("Renamed under trash"),
-    FAILURE("Rename failed");
-
-    private final String description;
-
-    MoveToTrashOutcome(String description) {
-      this.description = description;
-    }
-
-    @Override
-    public String toString() {
-      return "Outcome{" + name() +
-          " '" + description + '\'' +
-          "}";
-    }
-  }
-
-  /**
-   * Result of moving to trash.
-   * if outcome != RENAMED_TO_TRASH then exception must be non-null.
-   */
-  public static final class MoveToTrashResult {
-
-    /**
-     * Outcome of the move.
-     */
-    private final MoveToTrashOutcome outcome;
-
-    /**
-     * The exception raised when after a failure to
-     * rename to trash.
-     */
-    private final IOException exception;
-
-    public MoveToTrashResult(MoveToTrashOutcome outcome,
-        IOException exception) {
-      if (outcome != MoveToTrashOutcome.RENAMED_TO_TRASH) {
-        requireNonNull(exception, "No exception in failure result");
-      }
-      this.outcome = outcome;
-      this.exception = exception;
-    }
-
-    public MoveToTrashOutcome getOutcome() {
-      return outcome;
-    }
-
-    public IOException getException() {
-      return exception;
-    }
-
-    @Override
-    public String toString() {
-      return "MoveToTrashResult{" +
-          "renamed=" + outcome +
-          ", failure=" + exception +
-          '}';
-    }
-  }
 }

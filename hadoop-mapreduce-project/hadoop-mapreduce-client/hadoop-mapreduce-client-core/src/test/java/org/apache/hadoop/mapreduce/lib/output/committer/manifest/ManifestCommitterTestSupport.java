@@ -44,7 +44,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestS
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -233,40 +232,6 @@ public final class ManifestCommitterTestSupport {
         .describedAs("type of " + entry)
         .isEqualTo(type);
   }
-
-
-  /**
-   * Enable Trash in a filesystem configuration; needed
-   * for cleanup to fall back to trash.
-   * @param conf configuration to patch
-   * @return the patched configuration.
-   */
-  public static Configuration enableTrash(Configuration conf) {
-    conf.setInt(FS_TRASH_INTERVAL_KEY, 10);
-    return conf;
-  }
-
-  /**
-   * Create a task attempt for a Job. This is based on the code
-   * run in the MR AM, creating a task (0) for the job, then a task
-   * attempt (0).
-   * @param jobId job ID
-   * @param jContext job context
-   * @return the task attempt.
-   */
-/*
-  public static TaskAttemptContext taskAttemptForJob(JobId jobId,
-      JobContext jContext) {
-    org.apache.hadoop.mapreduce.v2.api.records.TaskId taskID =
-        MRBuilderUtils.newTaskId(jobId, 0,
-            org.apache.hadoop.mapreduce.v2.api.records.TaskType.MAP);
-    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
-        MRBuilderUtils.newTaskAttemptId(taskID, 0);
-    return new TaskAttemptContextImpl(
-        jContext.getConfiguration(),
-        TypeConverter.fromYarn(attemptID));
-  }
-*/
 
   /**
    * Closeable which can be used to safely close writers in

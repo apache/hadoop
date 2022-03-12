@@ -1011,7 +1011,7 @@ public abstract class AbstractManifestCommitterTest
     StageConfig stageConfig = getJobStageConfig();
     CleanupJobStage.Result result = new CleanupJobStage(stageConfig)
         .apply(new CleanupJobStage.Arguments(OP_STAGE_JOB_CLEANUP,
-            enabled, deleteTaskAttemptDirsInParallel, suppressExceptions, moveToTrash));
+            enabled, deleteTaskAttemptDirsInParallel, suppressExceptions));
     assertCleanupResult(result, outcome, expectedDirsDeleted);
     return result;
   }

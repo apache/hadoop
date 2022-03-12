@@ -129,33 +129,19 @@ public final class ManifestCommitterConstants {
   public static final String OPT_PREFIX = "mapreduce.manifest.committer.";
 
   /**
-   * Rather than delete in cleanup, should the working directory
-   * be moved to the trash directory?
-   * Potentially faster on some stores.
-   * Value: {@value}.
-   */
-  public static final String OPT_CLEANUP_MOVE_TO_TRASH =
-      OPT_PREFIX + "cleanup.move.to.trash";
-
-  /**
-   * Default value:  {@value}.
-   */
-  public static final boolean OPT_CLEANUP_MOVE_TO_TRASH_DEFAULT = false;
-
-  /**
    * Should dir cleanup do parallel deletion of task attempt dirs
    * before trying to delete the toplevel dirs.
    * For GCS this may deliver speedup, while on ABFS it may avoid
    * timeouts in certain deployments.
    * Value: {@value}.
    */
-  public static final String OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS =
-      OPT_PREFIX + "cleanup.parallel.delete.attempt.directories";
+  public static final String OPT_CLEANUP_PARALLEL_DELETE =
+      OPT_PREFIX + "cleanup.parallel.delete";
 
   /**
    * Default value:  {@value}.
    */
-  public static final boolean OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS_DEFAULT = true;
+  public static final boolean OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT = true;
 
   /**
    * Threads to use for IO.
