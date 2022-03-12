@@ -1222,7 +1222,6 @@ public class ViewFileSystem extends FileSystem {
   public Collection<FileStatus> getTrashRoots(boolean allUsers) {
     // A map from targetFSPath -> FileStatus.
     // FileStatus can be from targetFS or viewFS.
-
     HashMap<Path, FileStatus> trashRoots = new HashMap<>();
     for (FileSystem fs : getChildFileSystems()) {
       for (FileStatus trash : fs.getTrashRoots(allUsers)) {

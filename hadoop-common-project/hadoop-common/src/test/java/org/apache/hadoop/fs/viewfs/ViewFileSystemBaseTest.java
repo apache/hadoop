@@ -1129,12 +1129,11 @@ abstract public class ViewFileSystemBaseTest {
         new Path("/data/" + TRASH_PREFIX + "/" + ugi.getShortUserName()));
     Assert.assertEquals(dataTrashRoot, fsView2.getTrashRoot(dataTestPath));
 
-    // Case 2: path p not found in mount table, fall back to the default FS
-    // Return a trash root in mount point "/"
+    // Case 2: path p not found in mount table.
+    // Return a trash root in fallback FS.
     Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
     Path expectedTrash =
         fsView2.makeQualified(getTrashRootInFallBackFS());
-
     Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(nonExistentPath));
 
     // Case 3: turn off the CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT flag.
