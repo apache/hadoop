@@ -48,10 +48,6 @@ public abstract class DefaultAuditLogger extends HdfsAuditLogger {
 
   protected volatile boolean isCallerContextEnabled;
 
-  /** The maximum bytes a caller context string can have. */
-  protected int callerContextMaxLen;
-  protected int callerSignatureMaxLen;
-
   /** adds a tracking ID for all audit log events. */
   protected boolean logTokenTrackingId;
 
