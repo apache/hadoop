@@ -1191,10 +1191,10 @@ public class ViewFileSystem extends FileSystem {
       }
 
       Path targetFsUserHome = res.targetFileSystem.getHomeDirectory();
-      if (targetFSTrashRootPath.startsWith(mountTargetPath) && !(
-          mountTargetPath.equals(ROOT_PATH.toString())
-              && !res.resolvedPath.equals(ROOT_PATH.toString()) && (
-              targetFsUserHome != null && targetFSTrashRootPath.startsWith(
+      if (targetFSTrashRootPath.startsWith(mountTargetPath) &&
+          !(mountTargetPath.equals(ROOT_PATH.toString()) &&
+              !res.resolvedPath.equals(ROOT_PATH.toString()) &&
+              (targetFsUserHome != null && targetFSTrashRootPath.startsWith(
                   targetFsUserHome.toUri().getPath())))) {
         String relativeTrashRoot =
             targetFSTrashRootPath.substring(mountTargetPath.length());
