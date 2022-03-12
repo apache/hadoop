@@ -1104,6 +1104,9 @@ abstract public class ViewFileSystemBaseTest {
     Assert.assertTrue("", fsView.getTrashRoots(true).size() > 0);
   }
 
+  private String getTrashRootForPathInFallBackFS() {
+    return fsTarget.getHomeDirectory().toUri().getPath() + "/" + TRASH_PREFIX;
+  }
   /**
    * Test TRASH_FORCE_INSIDE_MOUNT_POINT feature for getTrashRoot.
    */
@@ -1125,11 +1128,17 @@ abstract public class ViewFileSystemBaseTest {
     // Case 2: path p not found in mount table, fall back to the default FS
     // Return a trash root in mount point "/"
     Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
-    Path rootTrashRoot = fsView2.makeQualified(
-        new Path("/" + TRASH_PREFIX + "/" + ugi.getShortUserName()));
-    Path viewFSUserHomeTrashRoot = fsView2.makeQualified(rootTrashRoot);
-    Assert.assertEquals(viewFSUserHomeTrashRoot,
-        fsView2.getTrashRoot(nonExistentPath));
+    Path expectedTrash;
+    if (targetTestRoot.toUri().getPath().equals("/")) {
+      expectedTrash =
+          fsView2.makeQualified(new Path(fsTarget.getHomeDirectory().toUri().getPath(),
+              TRASH_PREFIX));
+    } else {
+      expectedTrash =
+          fsView2.makeQualified(new Path("/" + TRASH_PREFIX + "/" + ugi.getShortUserName()));
+    }
+
+    Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(nonExistentPath));
 
     // Case 3: turn off the CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT flag.
     // Return a trash root in user home dir.
