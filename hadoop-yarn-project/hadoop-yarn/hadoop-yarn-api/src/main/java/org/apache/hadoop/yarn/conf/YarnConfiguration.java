@@ -4423,6 +4423,12 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
       30 * 60 * 1000;
 
+  public static final String RM_NODE_LABELS_PROVIDER_UPDATE_NEWLY_REGISTERED_INTERVAL_MS =
+      RM_NODE_LABELS_PROVIDER_PREFIX + "update-newly-registered-nodes-interval-ms";
+
+  public static final long DEFAULT_RM_NODE_LABELS_PROVIDER_UPDATE_NEWLY_REGISTERED_INTERVAL_MS =
+      30 * 1000;
+
   @Private
   /**
    * This is a private feature that isn't supposed to be used by end-users.
