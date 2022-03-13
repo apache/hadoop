@@ -465,7 +465,7 @@ public class ParentQueue extends AbstractCSQueue {
         "numChildQueue= " + childQueues.size() + ", " +
         getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
-        "usedResources=" + usageTracker.getQueueUsage().getUsed() +
+        "usedResources=" + usageTracker.getQueueUsage().getUsed() + ", " +
         "usedCapacity=" + getUsedCapacity() + ", " +
         "numApps=" + getNumApplications() + ", " +
         "numContainers=" + getNumContainers();
@@ -1148,7 +1148,7 @@ public class ParentQueue extends AbstractCSQueue {
     StringBuilder sb = new StringBuilder();
     for (CSQueue q : childQueues) {
       sb.append(q.getQueuePath() + 
-          "usedCapacity=(" + q.getUsedCapacity() + "), " + 
+          " usedCapacity=(" + q.getUsedCapacity() + "), " +
           " label=("
           + StringUtils.join(q.getAccessibleNodeLabels().iterator(), ",") 
           + ")");
