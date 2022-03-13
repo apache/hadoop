@@ -317,6 +317,8 @@ public class DatanodeManager {
     final int configuredBlockInvalidateLimit = conf.getInt(
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY,
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
+    // Block invalidate limit also has some dependency on heartbeat interval.
+    // Check setBlockInvalidateLimit().
     setBlockInvalidateLimit(configuredBlockInvalidateLimit);
     this.checkIpHostnameInRegistration = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY,
@@ -2080,25 +2082,22 @@ public class DatanodeManager {
     this.heartbeatRecheckInterval = recheckInterval;
     this.heartbeatExpireInterval = 2L * recheckInterval + 10 * 1000
         * intervalSeconds;
-    this.blockInvalidateLimit = getBlockInvalidateLimit(blockInvalidateLimit, intervalSeconds);
+    this.blockInvalidateLimit = getBlockInvalidateLimit(blockInvalidateLimit);
   }
 
-  private int getBlockInvalidateLimitFromHBInterval(long heartbeatIntervalSec) {
-    return 20 * (int) heartbeatIntervalSec;
+  private int getBlockInvalidateLimitFromHBInterval() {
+    return 20 * (int) heartbeatIntervalSeconds;
   }
 
-  private int getBlockInvalidateLimit(int blockInvalidateLimit, long heartbeatIntervalSec) {
-    return Math.max(getBlockInvalidateLimitFromHBInterval(heartbeatIntervalSec),
-        blockInvalidateLimit);
+  private int getBlockInvalidateLimit(int blockInvalidateLimit) {
+    return Math.max(getBlockInvalidateLimitFromHBInterval(), blockInvalidateLimit);
   }
 
   public void setBlockInvalidateLimit(int configuredBlockInvalidateLimit) {
-    final int countedBlockInvalidateLimit =
-        getBlockInvalidateLimitFromHBInterval(heartbeatIntervalSeconds);
+    final int countedBlockInvalidateLimit = getBlockInvalidateLimitFromHBInterval();
     // Effected block invalidate limit is the bigger value between
     // value configured in hdfs-site.xml, and 20 * HB interval.
-    this.blockInvalidateLimit =
-        getBlockInvalidateLimit(configuredBlockInvalidateLimit, heartbeatIntervalSeconds);
+    this.blockInvalidateLimit = getBlockInvalidateLimit(configuredBlockInvalidateLimit);
     LOG.info("{} : configured={}, counted={}, effected={}",
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY, configuredBlockInvalidateLimit,
         countedBlockInvalidateLimit, this.blockInvalidateLimit);
