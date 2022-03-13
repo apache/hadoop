@@ -24,7 +24,6 @@
 #include <string>
 
 #include "hdfs-find.h"
-#include "internal/get-content-summary-state.h"
 #include "tools_common.h"
 
 namespace hdfs::tools {
@@ -32,12 +31,22 @@ Find::Find(const int argc, char **argv) : HdfsTool(argc, argv) {}
 
 bool Find::Initialize() {
   auto add_options = opt_desc_.add_options();
-  add_options("help,h",
-              "Displays sizes of files and directories contained in the given "
-              "PATH or the length of a file in case PATH is just a file");
-  add_options("recursive,R", "Operate on files and directories recursively");
+  add_options(
+      "help,h",
+      "Finds all files recursively starting from the specified PATH and prints "
+      "their file paths. This hdfs_find tool mimics the POSIX find.");
+  add_options(
+      "name,n",
+      "If provided, all results will be matching the NAME pattern otherwise, "
+      "the implicit '*' will be used NAME allows wild-cards");
+  add_options(
+      "max-depth,m",
+      "If provided, the maximum depth to recurse after the end of the path is "
+      "reached will be limited by MAX_DEPTH otherwise, the maximum depth to "
+      "recurse is unbound MAX_DEPTH can be set to 0 for pure globbing and "
+      "ignoring the NAME option (no recursion after the end of the path)");
   add_options("path", po::value<std::string>(),
-              "The path indicating the filesystem that needs to be find-ed");
+              "The path where we want to start the find operation");
 
   // We allow only one positional argument to be passed to this tool. An
   // exception is thrown if multiple arguments are passed.
@@ -54,19 +63,42 @@ bool Find::Initialize() {
 
 std::string Find::GetDescription() const {
   std::stringstream desc;
-  desc << "Usage: hdfs_du [OPTION] PATH" << std::endl
+  desc << "Usage: hdfs_find [OPTION] PATH" << std::endl
        << std::endl
-       << "Displays sizes of files and directories contained in the given PATH"
+       << "Finds all files recursively starting from the" << std::endl
+       << "specified PATH and prints their file paths." << std::endl
+       << "This hdfs_find tool mimics the POSIX find." << std::endl
        << std::endl
-       << "or the length of a file in case PATH is just a file" << std::endl
+       << "Both PATH and NAME can have wild-cards." << std::endl
        << std::endl
-       << "  -R        operate on files and directories recursively"
+       << "  -n NAME       if provided all results will be matching the NAME "
+          "pattern"
        << std::endl
-       << "  -h        display this help and exit" << std::endl
+       << "                otherwise, the implicit '*' will be used"
+       << std::endl
+       << "                NAME allows wild-cards" << std::endl
+       << std::endl
+       << "  -m MAX_DEPTH  if provided the maximum depth to recurse after the "
+          "end of"
+       << std::endl
+       << "                the path is reached will be limited by MAX_DEPTH"
+       << std::endl
+       << "                otherwise, the maximum depth to recurse is unbound"
+       << std::endl
+       << "                MAX_DEPTH can be set to 0 for pure globbing and "
+          "ignoring"
+       << std::endl
+       << "                the NAME option (no recursion after the end of the "
+          "path)"
+       << std::endl
+       << std::endl
+       << "  -h            display this help and exit" << std::endl
        << std::endl
        << "Examples:" << std::endl
-       << "hdfs_du hdfs://localhost.localdomain:8020/dir/file" << std::endl
-       << "hdfs_du -R /dir1/dir2" << std::endl;
+       << "hdfs_find hdfs://localhost.localdomain:8020/dir?/tree* -n "
+          "some?file*name"
+       << std::endl
+       << "hdfs_find / -n file_name -m 3" << std::endl;
   return desc.str();
 }
 
@@ -87,8 +119,11 @@ bool Find::Do() {
 
   if (opt_val_.count("path") > 0) {
     const auto path = opt_val_["path"].as<std::string>();
-    const auto recursive = opt_val_.count("recursive") > 0;
-    return HandlePath(path, recursive);
+    const auto name =
+        opt_val_.count("name") > 0 ? opt_val_["name"].as<std::string>() : "*";
+    const auto max_depth = opt_val_.count("max-depth") > 0
+                               ? opt_val_["max-depth"].as<u_int32_t>()
+                               : hdfs::FileSystem::GetDefaultFindMaxDepth();
   }
 
   return false;
@@ -99,105 +134,57 @@ bool Find::HandleHelp() const {
   return true;
 }
 
-bool Find::HandlePath(const std::string &path, const bool recursive) const {
-  // Building a URI object from the given path.
+bool Find::HandlePath(const std::string &path, const std::string &name,
+                      const uint32_t max_depth) const {
+  // Building a URI object from the given uri_path
   auto uri = hdfs::parse_path_or_exit(path);
 
   const auto fs = hdfs::doConnect(uri, true);
   if (!fs) {
-    std::cerr << "Could not connect to the file system." << std::endl;
+    std::cerr << "Could not connect the file system." << std::endl;
     return false;
   }
 
-  /*
-   * Wrap async FileSystem::GetContentSummary with promise to make it a blocking
-   * call.
-   */
-  const auto promise = std::make_shared<std::promise<hdfs::Status>>();
-  std::future future(promise->get_future());
-  auto handler = [promise](const hdfs::Status &s) { promise->set_value(s); };
+  const auto promise = std::make_shared<std::promise<void>>();
+  std::future<void> future(promise->get_future());
+  auto final_status = hdfs::Status::OK();
 
-  /*
-   * Allocating shared state, which includes: handler to be called, request
-   * counter, and a boolean to keep track if find is done.
+  /**
+   * Keep requesting more until we get the entire listing. Set the promise
+   * when we have the entire listing to stop.
+   *
+   * Find guarantees that the handler will only be called once at a time,
+   * so we do not need any locking here. It also guarantees that the handler
+   * will be only called once with has_more_results set to false.
    */
-  const auto state =
-      std::make_shared<GetContentSummaryState>(handler, 0, false);
-
-  /*
-   * Keep requesting more from Find until we process the entire listing. Call
-   * handler when Find is done and request counter is 0. Find guarantees that
-   * the handler will only be called once at a time so we do not need locking in
-   * handler_find.
-   */
-  auto handler_find = [fs, state](const hdfs::Status &status_find,
-                                  const std::vector<hdfs::StatInfo> &stat_infos,
-                                  const bool has_more_results) -> bool {
-    /*
-     * For each result returned by Find we call async GetContentSummary with the
-     * handler below. GetContentSummary DOES NOT guarantee that the handler will
-     * only be called once at a time, so we DO need locking in
-     * handler_get_content_summary.
-     */
-    auto handler_get_content_summary =
-        [state](const hdfs::Status &status_get_summary,
-                const hdfs::ContentSummary &si) {
-          std::lock_guard guard(state->lock);
-          std::cout << si.str_du() << std::endl;
-          // Decrement the counter once since we are done with this async call.
-          if (!status_get_summary.ok() && state->status.ok()) {
-            // We make sure we set state->status only on the first error.
-            state->status = status_get_summary;
-          }
-          state->request_counter--;
-          if (state->request_counter == 0 && state->find_is_done) {
-            state->handler(state->status); // exit
-          }
-        };
-
-    if (!stat_infos.empty() && state->status.ok()) {
-      for (hdfs::StatInfo const &s : stat_infos) {
-        /*
-         * Launch an asynchronous call to GetContentSummary for every returned
-         * result.
-         */
-        state->request_counter++;
-        fs->GetContentSummary(s.full_path, handler_get_content_summary);
+  auto handler = [promise,
+                  &final_status](const hdfs::Status &status,
+                                 const std::vector<hdfs::StatInfo> &stat_info,
+                                 const bool has_more_results) -> bool {
+    // Print result chunks as they arrive
+    if (!stat_info.empty()) {
+      for (hdfs::StatInfo const &info : stat_info) {
+        std::cout << info.str() << std::endl;
       }
     }
-
-    /*
-     * Lock this section because handler_get_content_summary might be accessing
-     * the same shared variables simultaneously.
-     */
-    std::lock_guard guard(state->lock);
-    if (!status_find.ok() && state->status.ok()) {
-      // We make sure we set state->status only on the first error.
-      state->status = status_find;
+    if (!status.ok() && final_status.ok()) {
+      // We make sure we set 'status' only on the first error.
+      final_status = status;
     }
-
     if (!has_more_results) {
-      state->find_is_done = true;
-      if (state->request_counter == 0) {
-        state->handler(state->status); // exit
-      }
-      return false;
+      promise->set_value(); // set promise
+      return false;         // request stop sending results
     }
-    return true;
+    return true; // request more results
   };
 
-  // Asynchronous call to Find.
-  if (!recursive) {
-    fs->GetListing(uri.get_path(), handler_find);
-  } else {
-    fs->Find(uri.get_path(), "*", hdfs::FileSystem::GetDefaultFindMaxDepth(),
-             handler_find);
-  }
+  // Asynchronous call to Find
+  fs->Find(uri.get_path(), name, max_depth, handler);
 
-  // Block until promise is set.
-  const auto status = future.get();
-  if (!status.ok()) {
-    std::cerr << "Error: " << status.ToString() << std::endl;
+  // block until promise is set
+  future.get();
+  if (!final_status.ok()) {
+    std::cerr << "Error: " << final_status.ToString() << std::endl;
     return false;
   }
   return true;

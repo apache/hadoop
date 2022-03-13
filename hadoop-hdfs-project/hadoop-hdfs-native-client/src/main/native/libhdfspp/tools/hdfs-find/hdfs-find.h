@@ -27,8 +27,8 @@
 
 namespace hdfs::tools {
 /**
- * {@class Find} is an {@class HdfsTool} that displays the size of the directories
- * and files.
+ * {@class Find} is an {@class HdfsTool} that displays the size of the
+ * directories and files.
  */
 class Find : public HdfsTool {
 public:
@@ -74,13 +74,12 @@ protected:
    * Handle the path argument that's passed to this tool.
    *
    * @param path The path to the directory for which we need du info.
-   * @param recursive A boolean indicating whether du needs to be
-   * performed recursively for the given path.
    *
    * @return A boolean indicating the result of this operation.
    */
   [[nodiscard]] virtual bool HandlePath(const std::string &path,
-                                        bool recursive) const;
+                                        const std::string &name,
+                                        uint32_t max_depth) const;
 
 private:
   /**
