@@ -2089,8 +2089,8 @@ public class DatanodeManager {
     return 20 * (int) heartbeatIntervalSeconds;
   }
 
-  private int getBlockInvalidateLimit(int blockInvalidateLimit) {
-    return Math.max(getBlockInvalidateLimitFromHBInterval(), blockInvalidateLimit);
+  private int getBlockInvalidateLimit(int configuredBlockInvalidateLimit) {
+    return Math.max(getBlockInvalidateLimitFromHBInterval(), configuredBlockInvalidateLimit);
   }
 
   public void setBlockInvalidateLimit(int configuredBlockInvalidateLimit) {
