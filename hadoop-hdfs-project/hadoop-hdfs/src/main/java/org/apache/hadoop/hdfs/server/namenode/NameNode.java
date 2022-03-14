@@ -2444,17 +2444,17 @@ public class NameNode extends ReconfigurableBase implements
     try {
       if (newVal == null) {
         datanodeManager.setBlockInvalidateLimit(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
-        return String.valueOf(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
       } else {
         datanodeManager.setBlockInvalidateLimit(Integer.parseInt(newVal));
-        return String.valueOf(datanodeManager.getBlockInvalidateLimit());
       }
+      final String updatedBlockInvalidateLimit =
+          String.valueOf(datanodeManager.getBlockInvalidateLimit());
+      LOG.info("RECONFIGURE* changed blockInvalidateLimit to {}", updatedBlockInvalidateLimit);
+      return updatedBlockInvalidateLimit;
     } catch (NumberFormatException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     } finally {
       namesystem.writeUnlock();
-      LOG.info("RECONFIGURE* changed blockInvalidateLimit to {}",
-          datanodeManager.getBlockInvalidateLimit());
     }
   }
 
