@@ -1235,9 +1235,19 @@ public class ViewFileSystem extends FileSystem {
       return trashRoots.values();
     }
 
-    // Get trash roots in TRASH_PREFIX dir inside mount points.
+    // Get trash roots in TRASH_PREFIX dir inside mount points and fallback FS.
+    List<InodeTree.MountPoint<FileSystem>> mountPoints =
+        fsState.getMountPoints();
+    // If we have a fallback FS, add a mount point for it as <"", fallback FS>.
+    // The source path of a mount point shall not end with '/', thus for
+    // fallback fs, we set its mount point src as "".
+    if (fsState.getRootFallbackLink() != null) {
+      mountPoints.add(new InodeTree.MountPoint<>("",
+          fsState.getRootFallbackLink()));
+    }
+
     try {
-      for (InodeTree.MountPoint<FileSystem> mountPoint : fsState.getMountPoints()) {
+      for (InodeTree.MountPoint<FileSystem> mountPoint : mountPoints) {
 
         Path trashRoot =
             makeQualified(new Path(mountPoint.src + "/" + TRASH_PREFIX));
@@ -1270,7 +1280,7 @@ public class ViewFileSystem extends FileSystem {
         }
       }
     } catch (IOException e) {
-      LOG.warn("Exception in get all trash roots", e);
+      LOG.warn("Exception in get all trash roots for mount points", e);
     }
 
     return trashRoots.values();

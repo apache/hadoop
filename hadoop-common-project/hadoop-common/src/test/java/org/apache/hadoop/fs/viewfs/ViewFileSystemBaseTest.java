@@ -1228,6 +1228,16 @@ abstract public class ViewFileSystemBaseTest {
     FileSystem fsView4 = FileSystem.get(FsConstants.VIEWFS_URI, conf4);
     int trashRootsNum4 = fsView4.getTrashRoots(true).size();
     Assert.assertEquals(afterTrashRootsNum2 + 2, trashRootsNum4);
+
+    // Case 4: test trash roots in fallback FS
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user10"));
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user11"));
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user12"));
+    Configuration conf5 = new Configuration(conf2);
+    ConfigUtil.addLinkFallback(conf5, targetTestRoot.toUri());
+    FileSystem fsView5 = FileSystem.get(FsConstants.VIEWFS_URI, conf5);
+    int trashRootsNum5 = fsView5.getTrashRoots(true).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 3, trashRootsNum5);
   }
 
   /**
@@ -1254,6 +1264,14 @@ abstract public class ViewFileSystemBaseTest {
     int afterTrashRootsNum2 = fsView2.getTrashRoots(false).size();
     Assert.assertEquals(beforeTrashRootNum, afterTrashRootsNum);
     Assert.assertEquals(beforeTrashRootNum2 + 2, afterTrashRootsNum2);
+
+    // Test trash roots in fallback FS
+    Configuration conf3 = new Configuration(conf2);
+    fsTarget.mkdirs(new Path(targetTestRoot, TRASH_PREFIX + "/" + currentUser));
+    ConfigUtil.addLinkFallback(conf3, targetTestRoot.toUri());
+    FileSystem fsView3 = FileSystem.get(FsConstants.VIEWFS_URI, conf3);
+    int trashRootsNum3 = fsView3.getTrashRoots(false).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 1, trashRootsNum3);
   }
 
   @Test(expected = NotInMountpointException.class)
