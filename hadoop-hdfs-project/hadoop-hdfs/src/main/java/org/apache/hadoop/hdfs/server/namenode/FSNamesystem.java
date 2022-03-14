@@ -1948,14 +1948,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
       minimumBlockSize, long timeInterval) throws IOException {
-    if (isGetBlocksCheckOperationEnabled) {
-      checkOperation(OperationCategory.READ);
-    }
+    OperationCategory checkOp =
+        isGetBlocksCheckOperationEnabled ? OperationCategory.READ :
+            OperationCategory.UNCHECKED;
+    checkOperation(checkOp);
     readLock();
     try {
-      if (isGetBlocksCheckOperationEnabled) {
-        checkOperation(OperationCategory.READ);
-      }
+      checkOperation(checkOp);
       return getBlockManager().getBlocksWithLocations(datanode, size,
           minimumBlockSize, timeInterval);
     } finally {
