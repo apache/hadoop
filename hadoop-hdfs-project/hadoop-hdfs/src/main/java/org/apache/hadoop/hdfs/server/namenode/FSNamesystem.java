@@ -505,6 +505,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final int snapshotDiffReportLimit;
   private final int blockDeletionIncrement;
 
+  /**
+   * Whether enable checkOperation when call getBlocks.
+   * It is enabled  by default.
+   */
+  private final boolean isGetBlocksCheckOperationEnabled;
+
   /** Interval between each check of lease to release. */
   private final long leaseRecheckIntervalMs;
   /** Maximum time the lock is hold to release lease. */
@@ -1066,6 +1072,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Preconditions.checkArgument(blockDeletionIncrement > 0,
           DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY +
               " must be a positive integer.");
+      this.isGetBlocksCheckOperationEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+          DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
+
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -1938,10 +1948,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
       minimumBlockSize, long timeInterval) throws IOException {
-    checkOperation(OperationCategory.READ);
+    if (isGetBlocksCheckOperationEnabled) {
+      checkOperation(OperationCategory.READ);
+    }
     readLock();
     try {
-      checkOperation(OperationCategory.READ);
+      if (isGetBlocksCheckOperationEnabled) {
+        checkOperation(OperationCategory.READ);
+      }
       return getBlockManager().getBlocksWithLocations(datanode, size,
           minimumBlockSize, timeInterval);
     } finally {

@@ -4120,6 +4120,14 @@
   </description>
 </property>
 <property>
+  <name>dfs.namenode.get-blocks.check.operation</name>
+  <value>true</value>
+  <description>
+    Whether enable checkOperation when call getBlocks.
+    It is enabled (true) by default.
+  </description>
+</property>
+<property>
   <name>dfs.balancer.dispatcherThreads</name>
   <value>200</value>
   <description>
