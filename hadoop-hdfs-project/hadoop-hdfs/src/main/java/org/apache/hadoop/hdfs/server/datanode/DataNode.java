@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
@@ -149,6 +150,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.StorageLocationChecker;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.BlockPoolSlice;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
@@ -341,7 +344,7 @@ public class DataNode extends ReconfigurableBase
               DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
               DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
               DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY,
-              DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY));
+              DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY,FS_GETSPACEUSED_CLASSNAME));
 
   public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
 
@@ -673,11 +676,28 @@ public class DataNode extends ReconfigurableBase
     case DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY:
     case DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY:
       return reconfSlowDiskParameters(property, newVal);
+    case FS_GETSPACEUSED_CLASSNAME:
+      reconfSpaceUsedKlass();
+      return newVal;
     default:
       break;
     }
     throw new ReconfigurationException(
         property, newVal, getConf().get(property));
+  }
+
+  private void reconfSpaceUsedKlass(){
+    List<FsVolumeImpl> volumeList = data.getVolumeList();
+    for (FsVolumeImpl fsVolume : volumeList) {
+      Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
+      for (Entry<String, BlockPoolSlice> entry : blockPoolSlices.entrySet()) {
+        try {
+          entry.getValue().refreshSpaceUsedKlass(getNewConf());
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }
   }
 
   private String reconfDataXceiverParameters(String property, String newVal)

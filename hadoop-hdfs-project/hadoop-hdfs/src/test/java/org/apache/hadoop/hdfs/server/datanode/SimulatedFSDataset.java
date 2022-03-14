@@ -42,6 +42,7 @@ import javax.management.StandardMBean;
 
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
 import org.apache.hadoop.thirdparty.com.google.common.math.LongMath;
 import org.apache.commons.lang3.ArrayUtils;
@@ -1603,6 +1604,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public MountVolumeMap getMountVolumeMap() {
+    return null;
+  }
+
+  @Override
+  public List<FsVolumeImpl> getVolumeList() {
     return null;
   }
 }

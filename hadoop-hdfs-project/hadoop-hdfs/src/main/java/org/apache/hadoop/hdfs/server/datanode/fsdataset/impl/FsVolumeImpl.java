@@ -552,6 +552,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return reserved != null ? reserved.getReserved() : 0;
   }
 
+  public Map<String, BlockPoolSlice> getBlockPoolSlices() {
+    return bpSlices;
+  }
+
   @VisibleForTesting
   BlockPoolSlice getBlockPoolSlice(String bpid) throws IOException {
     BlockPoolSlice bp = bpSlices.get(bpid);

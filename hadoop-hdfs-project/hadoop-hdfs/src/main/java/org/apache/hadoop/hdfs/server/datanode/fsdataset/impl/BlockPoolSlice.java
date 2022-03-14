@@ -84,7 +84,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
  *
  * This class is synchronized by {@link FsVolumeImpl}.
  */
-class BlockPoolSlice {
+public class BlockPoolSlice {
   static final Logger LOG = LoggerFactory.getLogger(BlockPoolSlice.class);
 
   private final String bpid;
@@ -115,6 +115,7 @@ class BlockPoolSlice {
   private final Timer timer;
   private final int maxDataLength;
   private final FileIoProvider fileIoProvider;
+  private final File bpDir;
 
   private static ForkJoinPool addReplicaThreadPool = null;
   private static final int VOLUMES_REPLICA_ADD_THREADPOOL_SIZE = Runtime
@@ -128,7 +129,7 @@ class BlockPoolSlice {
   };
 
   // TODO:FEDERATION scalability issue - a thread per DU is needed
-  private final GetSpaceUsed dfsUsage;
+  private volatile GetSpaceUsed dfsUsage;
 
   /**
    * Create a blook pool slice
@@ -141,6 +142,7 @@ class BlockPoolSlice {
    */
   BlockPoolSlice(String bpid, FsVolumeImpl volume, File bpDir,
       Configuration conf, Timer timer) throws IOException {
+    this.bpDir = bpDir;
     this.bpid = bpid;
     this.volume = volume;
     this.fileIoProvider = volume.getFileIoProvider();
@@ -230,6 +232,15 @@ class BlockPoolSlice {
     };
     ShutdownHookManager.get().addShutdownHook(shutdownHook,
         SHUTDOWN_HOOK_PRIORITY);
+  }
+
+  public void refreshSpaceUsedKlass(Configuration conf) throws IOException {
+    this.dfsUsage = new FSCachingGetSpaceUsed.Builder().setBpid(bpid)
+            .setVolume(volume)
+            .setPath(bpDir)
+            .setConf(conf)
+            .setInitialUsed(loadDfsUsed())
+            .build();
   }
 
   private synchronized static void initializeAddReplicaPool(Configuration conf,
