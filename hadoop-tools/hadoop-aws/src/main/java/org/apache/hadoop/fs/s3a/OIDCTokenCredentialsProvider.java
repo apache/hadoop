@@ -21,6 +21,7 @@ public class OIDCTokenCredentialsProvider implements AWSCredentialsProvider {
     public static final String NAME
             = "org.apache.hadoop.fs.s3a.OIDCTokenCredentialsProvider";
 
+    //these are the parameters to document and to pass along with the class
     //usually from import static org.apache.hadoop.fs.s3a.Constants.*;
     public static final String JWT_PATH = "fs.s3a.jwt.path";
     public static final String ROLE_ARN = "fs.s3a.role.arn";
