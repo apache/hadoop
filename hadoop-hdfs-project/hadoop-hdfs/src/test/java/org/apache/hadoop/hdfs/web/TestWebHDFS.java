@@ -526,7 +526,7 @@ public class TestWebHDFS {
   @Test
   public void testWebHdfsCreateWithInvalidPath() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     // A path name include duplicated slashes.
     String path = "//tmp//file";
     assertResponse(path);
