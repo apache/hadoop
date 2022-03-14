@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
@@ -58,7 +59,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_FILES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadAndPrintManifest;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadAndPrintSuccessData;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateGeneratedFiles;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.PRINCIPAL;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
@@ -139,11 +141,6 @@ public class TestJobThroughManifestCommitter
    */
   private StageConfig ta11Config;
 
-  /**
-   * Job config has no task attempt information.
-   */
-  private StageConfig jobStageConfig;
-
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -160,7 +157,7 @@ public class TestJobThroughManifestCommitter
         jobId, 1);
 
     // config for job attempt 1, task 00
-    jobStageConfig = createStageConfigForJob(JOB1, destDir).build();
+    setJobStageConfig(createStageConfigForJob(JOB1, destDir).build());
     ta00Config = createStageConfig(JOB1, TASK0, TA0, destDir).build();
     ta01Config = createStageConfig(JOB1, TASK0, TA1, destDir).build();
     ta10Config = createStageConfig(JOB1, TASK1, TA0, destDir).build();
@@ -221,7 +218,7 @@ public class TestJobThroughManifestCommitter
     describe("Set up a job");
     verifyPath("Job attempt dir",
         dirs.getJobAttemptDir(),
-        new SetupJobStage(jobStageConfig).apply(true));
+        new SetupJobStage(getJobStageConfig()).apply(true));
   }
 
   /**
@@ -237,7 +234,7 @@ public class TestJobThroughManifestCommitter
     describe("a second creation of a job attempt must fail");
     verifyJobSetupCompleted();
     intercept(FileAlreadyExistsException.class, "", () ->
-        new SetupJobStage(jobStageConfig).apply(true));
+        new SetupJobStage(getJobStageConfig()).apply(true));
     // job is still there
     assertPathExists("Job attempt dir", dirs.getJobAttemptDir());
   }
@@ -446,7 +443,7 @@ public class TestJobThroughManifestCommitter
   public void test_0400_loadManifests() throws Throwable {
     describe("Load all manifests; committed must be TA01 and TA10");
     LoadManifestsStage.Result result
-        = new LoadManifestsStage(jobStageConfig).apply(true);
+        = new LoadManifestsStage(getJobStageConfig()).apply(true);
     String summary = result.getSummary().toString();
     LOG.info("Manifest summary {}", summary);
     List<TaskManifest> manifests = result.getManifests();
@@ -463,7 +460,7 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0410_commitJob() throws Throwable {
     describe("Commit the job");
-    CommitJobStage stage = new CommitJobStage(jobStageConfig);
+    CommitJobStage stage = new CommitJobStage(getJobStageConfig());
     stage.apply(new CommitJobStage.Arguments(true, false, null, DISABLED));
   }
 
@@ -477,18 +474,17 @@ public class TestJobThroughManifestCommitter
     describe("Validate the output of the job through the validation"
         + " stage");
 
+
     // load in the success data.
-    ManifestSuccessData successData = loadAndPrintManifest(
+    ManifestSuccessData successData = loadAndPrintSuccessData(
         getFileSystem(),
-        ta00Config.getJobSuccessMarkerPath());
-
-
+        getJobStageConfig().getJobSuccessMarkerPath());
 
     // load manifests stage will load all the task manifests again
-    List<TaskManifest> manifests = new LoadManifestsStage(jobStageConfig)
+    List<TaskManifest> manifests = new LoadManifestsStage(getJobStageConfig())
         .apply(true).getManifests();
     // Now verify their files exist, returning the list of renamed files.
-    List<String> committedFiles = new ValidateRenamedFilesStage(jobStageConfig)
+    List<String> committedFiles = new ValidateRenamedFilesStage(getJobStageConfig())
         .apply(manifests)
         .stream().map(FileEntry::getDest)
         .collect(Collectors.toList());
@@ -510,14 +506,14 @@ public class TestJobThroughManifestCommitter
 
     // validation will now fail
     intercept(OutputValidationException.class, ".missing", () ->
-        new ValidateRenamedFilesStage(jobStageConfig)
+        new ValidateRenamedFilesStage(getJobStageConfig())
             .apply(manifests));
 
     // restore the name, but change the size
     entry.setDest(oldName);
     entry.setSize(128_000_000);
     intercept(OutputValidationException.class, () ->
-        new ValidateRenamedFilesStage(jobStageConfig)
+        new ValidateRenamedFilesStage(getJobStageConfig())
             .apply(manifests));
   }
 
@@ -526,7 +522,7 @@ public class TestJobThroughManifestCommitter
     // load in the success data.
     ManifestSuccessData successData = ManifestSuccessData.load(
         getFileSystem(),
-        ta00Config.getJobSuccessMarkerPath());
+        getJobStageConfig().getJobSuccessMarkerPath());
     String json = successData.toJson();
     LOG.info("Success data is {}", json);
     Assertions.assertThat(successData)
@@ -561,7 +557,20 @@ public class TestJobThroughManifestCommitter
         COMMITTER_BYTES_COMMITTED_COUNT, totalFiles * 2);
   }
 
-  //@Test
+  @Test
+  public void test_440_validateSuccessFiles() throws Throwable {
+
+    // load in the success data.
+    final FileSystem fs = getFileSystem();
+    ManifestSuccessData successData = loadAndPrintSuccessData(
+        fs,
+        getJobStageConfig().getJobSuccessMarkerPath());
+    validateGeneratedFiles(fs,
+        getJobStageConfig().getDestinationDir(),
+        successData, false);
+  }
+
+  @Test
   public void test_0900_cleanupJob() throws Throwable {
     describe("Cleanup job");
     CleanupJobStage.Arguments arguments = new CleanupJobStage.Arguments(
@@ -569,12 +578,12 @@ public class TestJobThroughManifestCommitter
     // the first run will list the three task attempt dirs and delete each
     // one before the toplevel dir.
     CleanupJobStage.Result result = new CleanupJobStage(
-        jobStageConfig).apply(arguments);
+        getJobStageConfig()).apply(arguments);
     assertCleanupResult(result, CleanupJobStage.Outcome.PARALLEL_DELETE, 1 + 3);
     assertPathDoesNotExist("Job attempt dir", result.getDirectory());
 
     // not an error if we retry and the dir isn't there
-    result = new CleanupJobStage(jobStageConfig).apply(arguments);
+    result = new CleanupJobStage(getJobStageConfig()).apply(arguments);
     assertCleanupResult(result, CleanupJobStage.Outcome.NOTHING_TO_CLEAN_UP, 0);
   }
 

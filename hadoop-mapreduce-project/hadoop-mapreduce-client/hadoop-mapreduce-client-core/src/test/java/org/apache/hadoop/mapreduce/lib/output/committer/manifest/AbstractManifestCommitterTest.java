@@ -1005,7 +1005,6 @@ public abstract class AbstractManifestCommitterTest
       final boolean enabled,
       final boolean deleteTaskAttemptDirsInParallel,
       final boolean suppressExceptions,
-      final boolean moveToTrash,
       final CleanupJobStage.Outcome outcome,
       final int expectedDirsDeleted) throws IOException {
     StageConfig stageConfig = getJobStageConfig();

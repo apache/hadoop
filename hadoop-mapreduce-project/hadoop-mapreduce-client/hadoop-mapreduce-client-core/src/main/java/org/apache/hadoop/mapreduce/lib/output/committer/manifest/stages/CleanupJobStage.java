@@ -45,8 +45,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 
 /**
  * Clean up a job's temporary directory through parallel delete,
- * base _temporary delete and as a fallback, rename to trash.
- * Returns: the outcome of the overall operation and any move to trash.
+ * base _temporary delete.
+ * Returns: the outcome of the overall operation
  * The result is detailed purely for the benefit of tests, which need
  * to make assertions about error handling and fallbacks.
  *
@@ -145,62 +145,63 @@ public class CleanupJobStage extends
     IOException exception;
 
 
-      // to delete.
-      LOG.info("{}: Deleting job directory {}", getName(), baseDir);
+    // to delete.
+    LOG.info("{}: Deleting job directory {}", getName(), baseDir);
 
-      if (args.deleteTaskAttemptDirsInParallel) {
-        // Attempt to do a parallel delete of task attempt dirs;
-        // don't overreact if a delete fails, but stop trying
-        // to delete the others, and fall back to deleting the
-        // job dir.
-        Path taskSubDir
-            = getStageConfig().getJobAttemptTaskSubDir();
-        try (DurationInfo info = new DurationInfo(LOG,
-            "parallel deletion of task attempts in %s",
-            taskSubDir)) {
-          RemoteIterator<FileStatus> dirs =
-              RemoteIterators.filteringRemoteIterator(
-                  listStatusIterator(taskSubDir),
-                  FileStatus::isDirectory);
-          TaskPool.foreach(dirs)
-              .executeWith(getIOProcessors())
-              .stopOnFailure()
-              .suppressExceptions(false)
-              .run(this::rmTaskAttemptDir);
-          getIOStatistics().aggregate((retrieveIOStatistics(dirs)));
+    if (args.deleteTaskAttemptDirsInParallel) {
+      // Attempt to do a parallel delete of task attempt dirs;
+      // don't overreact if a delete fails, but stop trying
+      // to delete the others, and fall back to deleting the
+      // job dir.
+      Path taskSubDir
+          = getStageConfig().getJobAttemptTaskSubDir();
+      try (DurationInfo info = new DurationInfo(LOG,
+          "parallel deletion of task attempts in %s",
+          taskSubDir)) {
+        RemoteIterator<FileStatus> dirs =
+            RemoteIterators.filteringRemoteIterator(
+                listStatusIterator(taskSubDir),
+                FileStatus::isDirectory);
+        TaskPool.foreach(dirs)
+            .executeWith(getIOProcessors())
+            .stopOnFailure()
+            .suppressExceptions(false)
+            .run(this::rmTaskAttemptDir);
+        getIOStatistics().aggregate((retrieveIOStatistics(dirs)));
 
-          if (getLastDeleteException() != null) {
-            // one of the task attempts failed.
-            throw getLastDeleteException();
-          }
-          // success: record this as the outcome.
-          outcome = Outcome.PARALLEL_DELETE;
-        } catch (FileNotFoundException ex) {
-          // not a problem if there's no dir to list.
-          LOG.debug("{}: Task attempt dir {} not found", getName(), taskSubDir);
-          outcome = Outcome.DELETED;
-        } catch (IOException ex) {
-          // failure. Log and continue
-          LOG.info("{}: Exception while listing/deleting task attempts under {}; continuing",
-              getName(),
-              taskSubDir, ex);
-          // not overreacting here as the base delete will still get executing
-          outcome = Outcome.DELETED;
+        if (getLastDeleteException() != null) {
+          // one of the task attempts failed.
+          throw getLastDeleteException();
         }
+        // success: record this as the outcome.
+        outcome = Outcome.PARALLEL_DELETE;
+      } catch (FileNotFoundException ex) {
+        // not a problem if there's no dir to list.
+        LOG.debug("{}: Task attempt dir {} not found", getName(), taskSubDir);
+        outcome = Outcome.DELETED;
+      } catch (IOException ex) {
+        // failure. Log and continue
+        LOG.info(
+            "{}: Exception while listing/deleting task attempts under {}; continuing",
+            getName(),
+            taskSubDir, ex);
+        // not overreacting here as the base delete will still get executing
+        outcome = Outcome.DELETED;
       }
-      // Now the top-level deletion; exception gets saved
-      exception = deleteOneDir(baseDir);
-      if (exception != null) {
-        // failure, report and continue
-        // assume failure.
-        outcome = Outcome.FAILURE;
-      } else {
-        // if the outcome isn't already recorded as parallel delete,
-        // mark is a simple delete.
-        if (outcome == null) {
-          outcome = Outcome.DELETED;
-        }
+    }
+    // Now the top-level deletion; exception gets saved
+    exception = deleteOneDir(baseDir);
+    if (exception != null) {
+      // failure, report and continue
+      // assume failure.
+      outcome = Outcome.FAILURE;
+    } else {
+      // if the outcome isn't already recorded as parallel delete,
+      // mark is a simple delete.
+      if (outcome == null) {
+        outcome = Outcome.DELETED;
       }
+    }
 
     Result result = new Result(
         outcome,
@@ -294,7 +295,7 @@ public class CleanupJobStage extends
      * @param statisticName stage name to report
      * @param enabled is the stage enabled?
      * @param deleteTaskAttemptDirsInParallel delete task attempt dirs in
- *        parallel?
+     *        parallel?
      * @param suppressExceptions suppress exceptions?
      */
     public Arguments(
@@ -379,11 +380,10 @@ public class CleanupJobStage extends
     NOTHING_TO_CLEAN_UP("Nothing to clean up", true),
     PARALLEL_DELETE("Parallel Delete of Task Attempt Directories", true),
     DELETED("Delete of job directory", true),
-    RENAMED_TO_TRASH("Renamed under trash", true),
-    FAILURE("Delete failed, as did any attempt to move to trash", false),
-    MOVE_TO_TRASH_FAILED("cleanup was set to move to trash; this failed", false);
+    FAILURE("Delete failed", false);
 
     private final String description;
+
     private final boolean success;
 
     Outcome(String description, boolean success) {
@@ -398,10 +398,18 @@ public class CleanupJobStage extends
           "}";
     }
 
+    /**
+     * description.
+     * @return text for logging
+     */
     public String getDescription() {
       return description;
     }
 
+    /**
+     * Was this a success?
+     * @return true if this outcome is good.
+     */
     public boolean isSuccess() {
       return success;
     }
@@ -429,11 +437,6 @@ public class CleanupJobStage extends
 
     /**
      * Any IOE raised.
-     * This MUST be non-null on a failure.
-     * It SHALL be non-null if delete failed
-     * but the cleanup successfully executed
-     * the move to trash.
-     * Here it will be the exception from the delete.
      */
     private final IOException exception;
 

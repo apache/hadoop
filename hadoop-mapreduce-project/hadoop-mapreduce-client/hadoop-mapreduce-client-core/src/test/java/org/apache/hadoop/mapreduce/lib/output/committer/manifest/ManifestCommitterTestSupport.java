@@ -24,19 +24,25 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
@@ -135,7 +141,7 @@ public final class ManifestCommitterTestSupport {
       final String jobId) throws IOException {
     Path successPath = new Path(outputDir, SUCCESS_MARKER);
     ManifestSuccessData successData
-        = loadAndPrintManifest(fs, successPath);
+        = loadAndPrintSuccessData(fs, successPath);
     assertThat(successData.getCommitter())
         .describedAs("Committer field")
         .isEqualTo(MANIFEST_COMMITTER_CLASSNAME);
@@ -153,12 +159,13 @@ public final class ManifestCommitterTestSupport {
   /**
    * Load in and print a success data manifest.
    * @param fs filesystem
-   * @param successPath full path sto success file.
+   * @param successPath full path to success file.
    * @return the success data
    * @throws IOException IO failure
    */
-  public static ManifestSuccessData loadAndPrintManifest(FileSystem fs, Path successPath)
-      throws IOException {
+  public static ManifestSuccessData loadAndPrintSuccessData(
+      FileSystem fs,
+      Path successPath) throws IOException {
     LOG.info("Manifest {}", successPath);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintStream ps = new PrintStream(baos);
@@ -166,6 +173,61 @@ public final class ManifestCommitterTestSupport {
     ManifestSuccessData successData = showManifest.loadAndPrintManifest(fs, successPath);
     LOG.info("{}", baos);
     return successData;
+  }
+
+  /**
+   * Validate all generated files from the manifest.
+   * All files in the manifest must exist.
+   * If the exclusive flag is set, only those must exist
+   * (ignoring all temp files and everything in the _temporary
+   * dir)
+   * @param fs filesystem
+   * @param destDir dest dir to scan
+   * @param successData manifest
+   * @param exclusive expect exclusive and complete data.
+   * @return the files and their status
+   * @throws IOException IO failure.
+   */
+  public static Map<Path, LocatedFileStatus> validateGeneratedFiles(
+      FileSystem fs,
+      Path destDir,
+      ManifestSuccessData successData,
+      boolean exclusive) throws IOException {
+    Map<Path, LocatedFileStatus> map = new HashMap<>();
+    RemoteIterators.foreach(fs.listFiles(destDir, true),
+        e -> {
+          if (!e.getPath().getName().startsWith("_")) {
+            map.put(e.getPath(), e);
+          }
+        });
+    // map has all files other than temp ones and the success marker
+    // what do we expect
+    final List<Path> expected = filesInManifest(successData);
+
+    // all of those must be found
+    Assertions.assertThat(map.keySet())
+        .describedAs("Files in FS compared to manifest")
+        .containsAll(expected);
+
+    // and if exclusive, that too
+    if (exclusive) {
+      Assertions.assertThat(map.keySet())
+          .describedAs("Files in FS compared to manifest")
+          .containsExactlyInAnyOrderElementsOf(expected);
+    }
+    return map;
+  }
+
+  /**
+   * Given a manifest, get the list of filenames
+   * and convert to paths.
+   * @param successData data
+   * @return the paths.
+   */
+  public static List<Path> filesInManifest(ManifestSuccessData successData) {
+    return successData.getFilenames().stream()
+        .map(AbstractManifestData::unmarshallPath)
+        .collect(Collectors.toList());
   }
 
   /**

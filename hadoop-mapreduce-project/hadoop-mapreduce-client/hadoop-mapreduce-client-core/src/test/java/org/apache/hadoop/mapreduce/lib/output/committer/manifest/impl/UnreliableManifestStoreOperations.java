@@ -126,11 +126,6 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   private boolean renameToFailWithException = true;
 
   /**
-   * Is trash disabled on this FS?
-   */
-  private boolean trashDisabled;
-
-  /**
    * Constructor.
    * @param wrappedOperations operations to wrap.
    */
@@ -230,14 +225,6 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    */
   public void addSaveToFail(Path path) {
     saveToFail.add(requireNonNull(path));
-  }
-
-  public boolean isTrashDisabled() {
-    return trashDisabled;
-  }
-
-  public void setTrashDisabled(boolean trashDisabled) {
-    this.trashDisabled = trashDisabled;
   }
 
   /**
@@ -351,11 +338,6 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
       final boolean overwrite) throws IOException {
     maybeRaiseIOE("save", path, saveToFail);
     wrappedOperations.save(manifestData, path, overwrite);
-  }
-
-  @Override
-  public boolean isTrashEnabled(Path path) {
-    return !trashDisabled;
   }
 
   @Override

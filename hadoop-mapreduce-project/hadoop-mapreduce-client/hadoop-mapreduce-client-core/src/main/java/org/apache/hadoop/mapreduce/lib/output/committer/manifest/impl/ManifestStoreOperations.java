@@ -168,18 +168,14 @@ public abstract class ManifestStoreOperations implements Closeable {
       boolean overwrite) throws IOException;
 
   /**
-   * Is trash enabled for the given store.
-   * @param path path to move, assumed to be _temporary
-   * @return true iff trash is enabled.
-   */
-  public abstract boolean isTrashEnabled(Path path);
-
-  /**
    * Make an msync() call; swallow when unsupported.
    * @param path path
    * @throws IOException IO failure
    */
-  public abstract void msync(Path path) throws IOException;
+  public void msync(Path path) throws IOException {
+
+  }
+
 
   /**
    * Extract an etag from a status if the conditions are met.

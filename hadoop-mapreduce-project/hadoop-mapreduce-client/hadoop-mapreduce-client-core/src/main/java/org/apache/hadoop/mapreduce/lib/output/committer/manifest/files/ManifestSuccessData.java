@@ -24,7 +24,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
@@ -370,6 +372,28 @@ public class ManifestSuccessData
    */
   public List<String> getFilenames() {
     return filenames;
+  }
+
+  /**
+   * Get the list of filenames as paths.
+   * @return the paths.
+   */
+  @JsonIgnore
+  public List<Path> getFilenamePaths() {
+    return getFilenames().stream()
+        .map(AbstractManifestData::unmarshallPath)
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Set the list of filename paths.
+   */
+  @JsonIgnore
+  public void setFilenamePaths(List<Path> paths) {
+    setFilenames(new ArrayList<>(
+        paths.stream()
+            .map(AbstractManifestData::marshallPath)
+            .collect(Collectors.toList())));
   }
 
   public void setFilenames(ArrayList<String> filenames) {

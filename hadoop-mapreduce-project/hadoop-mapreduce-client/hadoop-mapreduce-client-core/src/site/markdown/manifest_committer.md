@@ -68,19 +68,16 @@ Users can declare a new committer factory for abfs:// and gcs:// URLs.
 A suitably configured spark deployment will pick up the new committer.
 
 Directory performance issues in job cleanup can be addressed by two options
-1. The committer can be configured to move the temporary directory under `~/.trash`
-in the cluster FS. This may benefit azure, but will not benefit GCS.
 1. The committer will parallelize deletion of task attempt directories before
    deleting the `_temporary` directory.
-   This is highly beneficial on GCS; may or may not be beneficial on ABFS.
-   (More specifically: use it if you are using OAuth to authenticate).
+1. Cleanup can be disabled. .
 
-Suitably configured MR and Spark deployments will pick up the new committer.
-
-The committer can be used with any filesystem client which has a "real" file rename where
-only one process may rename a file, and if it exists, then the caller is notified.
-
-
+The committer can be used with any filesystem client which has a "real" file rename()
+operation.
+It has been optimised for remote object stores where listing and file probes
+are expensive -the design is less likely to offer such signifcant speedup
+on HDFS -though the parallel renaming operations will speed up jobs
+there compared to the classic v1 algorithm.
 
 # <a name="how"></a> How it works
 
@@ -183,7 +180,6 @@ Here are the main configuration options of the committer.
 | `mapreduce.manifest.committer.delete.target.files` | Delete target files? | `false` |
 | `mapreduce.manifest.committer.io.threads` | Thread count for parallel operations | `64` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
-| `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete` | Delete temporary directories in parallel | `true` |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |

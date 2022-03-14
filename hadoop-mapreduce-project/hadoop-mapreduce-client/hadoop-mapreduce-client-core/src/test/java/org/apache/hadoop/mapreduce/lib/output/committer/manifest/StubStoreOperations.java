@@ -79,17 +79,6 @@ public class StubStoreOperations extends ManifestStoreOperations {
   }
 
   @Override
-  public boolean isTrashEnabled(Path path) {
-    return true;
-  }
-
-  @Override
-  public void msync(Path path) throws IOException {
-
-  }
-
-
-  @Override
   public void close() throws IOException {
 
   }

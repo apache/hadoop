@@ -96,7 +96,7 @@ public class RenameFilesStage extends
    */
   @Override
   protected ManifestSuccessData executeStage(
-      Pair<List<TaskManifest>,Set<Path>> args)
+      Pair<List<TaskManifest>, Set<Path>> args)
       throws IOException {
 
     final List<TaskManifest> taskManifests = args.getLeft();
@@ -129,10 +129,10 @@ public class RenameFilesStage extends
 
     // Add a subset of the destination files to the success file;
     // enough for simple testing
-    success.getFilenames().addAll(
+    success.setFilenamePaths(
         committed
             .subList(0, Math.min(committed.size(), SUCCESS_MARKER_FILE_LIMIT))
-            .stream().map(FileEntry::getDest)
+            .stream().map(FileEntry::getDestPath)
             .collect(Collectors.toList()));
 
     success.setSuccess(true);

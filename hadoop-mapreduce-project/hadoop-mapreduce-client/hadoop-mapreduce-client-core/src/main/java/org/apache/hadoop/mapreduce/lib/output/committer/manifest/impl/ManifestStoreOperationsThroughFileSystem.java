@@ -36,17 +36,12 @@ import org.apache.hadoop.util.JsonSerialization;
 
 /**
  * Implementation of manifest store operations through the filesystem API.
- * {@link #moveToTrash(String, Path)} uses the normal Trash classes.
- * resilient commit is not available.
  * This class is subclassed in the ABFS module, which does add the resilient
  * commit method.
  */
 @InterfaceAudience.LimitedPrivate("mapreduce, object-stores")
 @InterfaceStability.Unstable
 public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOperations {
-
-  private static final Logger LOG = LoggerFactory.getLogger(
-      ManifestStoreOperationsThroughFileSystem.class);
 
   /**
    * Filesystem; set in {@link #bindToFileSystem(FileSystem, Path)}.
@@ -145,18 +140,6 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
       final Path path,
       final boolean overwrite) throws IOException {
     manifestData.save(fileSystem, path, overwrite);
-  }
-
-  @Override
-  public boolean isTrashEnabled(Path path) {
-    try {
-      return fileSystem.getServerDefaults(path).getTrashInterval() > 0;
-    } catch (IOException e) {
-      // catch and downgrade to false.
-      // trash is clealy broken.
-      LOG.info("getServerDefaults({}) failed", path, e);
-      return false;
-    }
   }
 
   /**

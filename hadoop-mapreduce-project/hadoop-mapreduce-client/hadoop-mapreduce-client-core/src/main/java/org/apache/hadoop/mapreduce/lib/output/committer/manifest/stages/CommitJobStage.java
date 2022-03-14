@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -100,7 +99,9 @@ public class CommitJobStage extends
     ManifestSuccessData successData;
     successData = new RenameFilesStage(stageConfig).apply(
         Pair.of(manifests, dirStageResults.getCreatedDirectories()));
-    LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
+    }
     // update the counter of bytes committed and files.
     // use setCounter so as to ignore any values accumulated when
     // aggregating tasks.
