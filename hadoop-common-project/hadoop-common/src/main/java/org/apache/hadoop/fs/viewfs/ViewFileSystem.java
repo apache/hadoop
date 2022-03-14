@@ -227,6 +227,14 @@ public class ViewFileSystem extends FileSystem {
       return mountedOnPath;
     }
 
+    public URI[] getTargetFileSystemURIs() {
+      URI[] targetUris = new URI[targetFileSystemPaths.length];
+      for (int i = 0; i < targetFileSystemPaths.length; i++) {
+        targetUris[i] = URI.create(targetFileSystemPaths[i]);
+      }
+      return targetUris;
+    }
+
     public String[] getTargetFileSystemPaths() {
       return targetFileSystemPaths;
     }

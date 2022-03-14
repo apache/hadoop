@@ -175,7 +175,7 @@ abstract public class ViewFileSystemBaseTest {
     MountPoint[] mountPoints = viewfs.getMountPoints();
     for (MountPoint mountPoint : mountPoints) {
       LOG.info("MountPoint: " + mountPoint.getMountedOnPath() + " => "
-          + mountPoint.getTargetFileSystemPaths()[0]);
+          + mountPoint.getTargetFileSystemURIs()[0]);
     }
     Assert.assertEquals(getExpectedMountPoints(), mountPoints.length); 
   }

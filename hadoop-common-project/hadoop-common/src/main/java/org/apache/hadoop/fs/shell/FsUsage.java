@@ -140,12 +140,12 @@ class FsUsage extends FsCommand {
           FsStatus fsStatus = entry.getValue();
 
           // Add the viewfs mount point status to report
-          String[] mountPointFileSystemURIs =
-              viewFsMountPoint.getTargetFileSystemPaths();
+          URI[] mountPointFileSystemURIs =
+              viewFsMountPoint.getTargetFileSystemURIs();
           // Since LinkMerge is not supported yet, we
           // should ideally see mountPointFileSystemURIs
           // array with only one element.
-          addToUsagesTable(URI.create(mountPointFileSystemURIs[0]),
+          addToUsagesTable(mountPointFileSystemURIs[0],
               fsStatus, viewFsMountPoint.getMountedOnPath().toString());
         }
       } else {

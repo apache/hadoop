@@ -256,8 +256,7 @@ public class Nfs3Utils {
         String mountedPath = mount.getMountedOnPath().toString();
         if (exportPath.startsWith(mountedPath)) {
           String subpath = exportPath.substring(mountedPath.length());
-          fsURI = URI.create(mount.getTargetFileSystemPaths()[0])
-              .resolve(subpath);
+          fsURI = mount.getTargetFileSystemURIs()[0].resolve(subpath);
           break;
         }
       }
