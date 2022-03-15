@@ -231,7 +231,7 @@ Caveats
   `mapreduce.manifest.committer.io.rate` can help avoid this.
 
 
-## <a name="deleting"></a> Optional: deleting target files in Job Commit 
+## <a name="deleting"></a> Optional: deleting target files in Job Commit
 
 The classic `FileOutputCommitter` deletes files at the destination paths
 before renaming the job's files into place.
@@ -240,7 +240,7 @@ This is optional in the manifest committers, set in the option
 `mapreduce.manifest.committer.delete.target.files` with a default value of `false`.
 
 This increases performance and is safe to use when all files created by a job
-have unique filenames. 
+have unique filenames.
 
 Apache Spark does generate unique filenames for ORC and Parquet since
 [SPARK-8406](https://issues.apache.org/jira/browse/SPARK-8406)
@@ -583,7 +583,7 @@ For this to work, a number of conditions must be met:
 * When using spark, unique job IDs must be set. This meangs the Spark distribution
   MUST contain the patches for
   [SPARK-33402](https://issues.apache.org/jira/browse/SPARK-33402)
-  and 
+  and
   [SPARK-33230](https://issues.apache.org/jira/browse/SPARK-33230).
 * Cleanup of the `_temporary` directory must be disabled by setting
   `mapreduce.fileoutputcommitter.cleanup.skipped` to `true`.
