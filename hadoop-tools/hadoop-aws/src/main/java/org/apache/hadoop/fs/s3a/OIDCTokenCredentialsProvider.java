@@ -76,7 +76,7 @@ public class OIDCTokenCredentialsProvider implements AWSCredentialsProvider {
                   lookupIOE);
       }
 
-      LOG.debug("jwtPath {} roleARN {}", jwtPath, roleARN);
+      LOG.debug("jwtPath {} roleARN {} sessionName {}", jwtPath, roleARN, sessionName);
 
       if (!StringUtils.isEmpty(jwtPath) && !StringUtils.isEmpty(roleARN)) {
           final AWSCredentialsProvider credentialsProvider =
@@ -95,6 +95,9 @@ public class OIDCTokenCredentialsProvider implements AWSCredentialsProvider {
 
   @Override
   public String toString() {
-        return getClass().getSimpleName();
-    }
+      return String.format("%s " +
+                  "jwtPath {%s} roleARN {%s} sessionName {%s}",
+              getClass().getSimpleName(),
+              jwtPath, roleARN, sessionName);
+  }
 }
