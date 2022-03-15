@@ -61,6 +61,20 @@ public class RemoteLocation extends RemoteLocationContext {
     this.srcPath = sPath;
   }
 
+  /**
+   * Use the Ns and Nn of a remote location
+   * and another path to create a new remote location pointing.
+   *
+   * @param remoteLocation A remoteLocation.
+   * @param path Path in the destination namespace.
+   */
+  public RemoteLocation(RemoteLocation remoteLocation, String path) {
+    this.nameserviceId = remoteLocation.nameserviceId;
+    this.namenodeId = remoteLocation.namenodeId;
+    this.dstPath = path;
+    this.srcPath = path;
+  }
+
   @Override
   public String getNameserviceId() {
     String ret = this.nameserviceId;

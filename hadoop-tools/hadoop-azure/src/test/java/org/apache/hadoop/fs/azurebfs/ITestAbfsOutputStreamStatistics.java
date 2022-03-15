@@ -20,18 +20,30 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamStatisticsImpl;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 
 /**
  * Test AbfsOutputStream statistics.
  */
 public class ITestAbfsOutputStreamStatistics
     extends AbstractAbfsIntegrationTest {
+
   private static final int OPERATIONS = 10;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ITestAbfsOutputStreamStatistics.class);
 
   public ITestAbfsOutputStreamStatistics() throws Exception {
   }
@@ -216,6 +228,34 @@ public class ITestAbfsOutputStreamStatistics
       assertEquals("Mismatch in write current buffer operations",
           OPERATIONS,
           abfsOutputStreamStatistics.getWriteCurrentBufferOperations());
+    }
+  }
+
+  /**
+   * Test to check correct value of time spent on a PUT request in
+   * AbfsOutputStream.
+   */
+  @Test
+  public void testAbfsOutputStreamDurationTrackerPutRequest() throws IOException {
+    describe("Testing to check if DurationTracker for PUT request is working "
+        + "correctly.");
+    AzureBlobFileSystem fs = getFileSystem();
+    Path pathForPutRequest = path(getMethodName());
+
+    try(AbfsOutputStream outputStream =
+        createAbfsOutputStreamWithFlushEnabled(fs, pathForPutRequest)) {
+      outputStream.write('a');
+      outputStream.hflush();
+
+      IOStatistics ioStatistics = extractStatistics(fs);
+      LOG.info("AbfsOutputStreamStats info: {}",
+          ioStatisticsToPrettyString(ioStatistics));
+      Assertions.assertThat(
+          lookupMeanStatistic(ioStatistics,
+              AbfsStatistic.HTTP_PUT_REQUEST.getStatName()
+                  + StoreStatisticNames.SUFFIX_MEAN).mean())
+          .describedAs("Mismatch in timeSpentOnPutRequest DurationTracker")
+          .isGreaterThan(0.0);
     }
   }
 

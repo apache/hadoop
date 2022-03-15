@@ -23,9 +23,9 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRuleResult;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRuleResultType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleResult;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleResultType;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule;

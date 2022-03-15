@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.service.component;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -829,6 +829,11 @@ public class Component implements EventHandler<ComponentEvent> {
                     : yarnServiceConstraint.getMaxCardinality().intValue(),
                 targetExpressions.toArray(new TargetExpression[0])).build();
             break;
+          }
+          if (constraint == null) {
+            LOG.info("[COMPONENT {}] Placement constraint: null ",
+                componentSpec.getName());
+            continue;
           }
           // The default AND-ed final composite constraint
           if (finalConstraint != null) {

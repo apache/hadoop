@@ -242,12 +242,14 @@ public class QuotaUsage {
 
   /**
    * Output format:
-   * |----12----| |------15-----| |------15-----| |------15-----|
-   *        QUOTA       REM_QUOTA     SPACE_QUOTA REM_SPACE_QUOTA
-   * |----12----| |----12----| |-------18-------|
-   *    DIR_COUNT   FILE_COUNT       CONTENT_SIZE
+   * |-----14-----| |-------18------| |-----14-----| |-------18------|
+   *      SSD_QUOTA     REM_SSD_QUOTA     DISK_QUOTA    REM_DISK_QUOTA
+   * |-----14-----| |-------18------| |-----14-----| |-------18------|
+   *  ARCHIVE_QUOTA REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA
+   * |-----14-----| |-------18------| |-------18------|
+   *   NVDIMM_QUOTA  REM_NVDIMM_QUOTA PATHNAME
    */
-  private static final String STORAGE_TYPE_SUMMARY_FORMAT = "%13s %17s ";
+  private static final String STORAGE_TYPE_SUMMARY_FORMAT = "%14s %18s ";
 
   /** Return the header of the output.
    * @return the header of the output

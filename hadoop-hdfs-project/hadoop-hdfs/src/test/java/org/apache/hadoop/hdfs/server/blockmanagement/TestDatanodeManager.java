@@ -392,7 +392,8 @@ public class TestDatanodeManager {
       storageTypesList.add(StorageType.PROVIDED);
     }
 
-    StorageType[] storageTypes= storageTypesList.toArray(new StorageType[0]);
+    StorageType[] storageTypes = storageTypesList.toArray(
+        StorageType.EMPTY_ARRAY);
 
     for (int i = 0; i < totalDNs; i++) {
       // register new datanode
@@ -694,7 +695,8 @@ public class TestDatanodeManager {
     List<StorageType> storageTypesList =
         new ArrayList<>(Arrays.asList(StorageType.ARCHIVE, StorageType.DISK,
             StorageType.SSD, StorageType.DEFAULT, StorageType.SSD));
-    StorageType[] storageTypes = storageTypesList.toArray(new StorageType[0]);
+    StorageType[] storageTypes = storageTypesList.toArray(
+        StorageType.EMPTY_ARRAY);
 
     for (int i = 0; i < totalDNs; i++) {
       // Register new datanode.
@@ -779,7 +781,8 @@ public class TestDatanodeManager {
     List<StorageType> storageTypesList =
         new ArrayList<>(Arrays.asList(StorageType.DISK, StorageType.DISK,
             StorageType.DEFAULT, StorageType.SSD, StorageType.SSD));
-    StorageType[] storageTypes = storageTypesList.toArray(new StorageType[0]);
+    StorageType[] storageTypes = storageTypesList.toArray(
+        StorageType.EMPTY_ARRAY);
 
     for (int i = 0; i < totalDNs; i++) {
       // Register new datanode.

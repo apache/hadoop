@@ -69,7 +69,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
@@ -80,7 +79,6 @@ import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
-import org.apache.hadoop.fs.PathOperationException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
@@ -2502,20 +2500,6 @@ public class TestDistributedFileSystem {
   }
 
   @Test
-  public void testCopyBetweenFsEqualPath() throws Exception {
-    Configuration conf = getTestConfiguration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
-      cluster.waitActive();
-      final DistributedFileSystem dfs = cluster.getFileSystem();
-      Path filePath = new Path("/dir/file");
-      dfs.create(filePath).close();
-      FileStatus fstatus = dfs.getFileStatus(filePath);
-      LambdaTestUtils.intercept(PathOperationException.class,
-          () -> FileUtil.copy(dfs, fstatus, dfs, filePath, false, true, conf));
-    }
-  }
-
-  @Test
   public void testNameNodeCreateSnapshotTrashRootOnStartup()
       throws Exception {
     // Start NN with dfs.namenode.snapshot.trashroot.enabled=false
@@ -2524,7 +2508,7 @@ public class TestDistributedFileSystem {
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
-      final DistributedFileSystem dfs = cluster.getFileSystem();
+      DistributedFileSystem dfs = cluster.getFileSystem();
       final Path testDir = new Path("/disallowss/test2/");
       final Path file0path = new Path(testDir, "file-0");
       dfs.create(file0path).close();
@@ -2535,7 +2519,20 @@ public class TestDistributedFileSystem {
       // Set dfs.namenode.snapshot.trashroot.enabled=true
       conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
       cluster.setNameNodeConf(0, conf);
+      cluster.shutdown();
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
       cluster.restartNameNode(0);
+      dfs = cluster.getFileSystem();
+      assertTrue(cluster.getNameNode().isInSafeMode());
+      // Check .Trash existence, won't be created now
+      assertFalse(dfs.exists(trashRoot));
+      // Start a datanode
+      cluster.startDataNodes(conf, 1, true, null, null);
+      // Wait long enough for safemode check to retire
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException ignored) {}
       // Check .Trash existence, should be created now
       assertTrue(dfs.exists(trashRoot));
       // Check permission
@@ -2553,4 +2550,6 @@ public class TestDistributedFileSystem {
       }
     }
   }
+
+
 }

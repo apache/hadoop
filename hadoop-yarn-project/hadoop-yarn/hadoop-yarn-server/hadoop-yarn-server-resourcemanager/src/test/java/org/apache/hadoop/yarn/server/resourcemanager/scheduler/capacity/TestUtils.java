@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -50,6 +48,8 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
@@ -447,7 +447,14 @@ public class TestUtils {
   public static void applyResourceCommitRequest(Resource clusterResource,
       CSAssignment csAssignment,
       final Map<NodeId, FiCaSchedulerNode> nodes,
-      final Map<ApplicationAttemptId, FiCaSchedulerApp> apps)
+      final Map<ApplicationAttemptId, FiCaSchedulerApp> apps) throws IOException {
+    applyResourceCommitRequest(clusterResource, csAssignment, nodes, apps, null);
+  }
+
+  public static void applyResourceCommitRequest(Resource clusterResource,
+      CSAssignment csAssignment,
+      final Map<NodeId, FiCaSchedulerNode> nodes,
+      final Map<ApplicationAttemptId, FiCaSchedulerApp> apps, CapacitySchedulerConfiguration csConf)
       throws IOException {
     CapacityScheduler cs = new CapacityScheduler() {
       @Override
@@ -461,7 +468,7 @@ public class TestUtils {
         return apps.get(applicationAttemptId);
       }
     };
-
+    cs.setAsyncSchedulingConf(new CapacityScheduler.AsyncSchedulingConfiguration(csConf, cs));
     cs.setResourceCalculator(new DefaultResourceCalculator());
 
     cs.submitResourceCommitRequest(clusterResource,

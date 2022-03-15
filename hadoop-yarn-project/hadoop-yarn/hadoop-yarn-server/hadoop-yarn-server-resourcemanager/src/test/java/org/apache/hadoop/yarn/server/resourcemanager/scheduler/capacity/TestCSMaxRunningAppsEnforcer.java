@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.util.ControlledClock;
@@ -70,8 +71,9 @@ public class TestCSMaxRunningAppsEnforcer {
     when(scheduler.getResourceCalculator()).thenReturn(
         new DefaultResourceCalculator());
     when(scheduler.getRMContext()).thenReturn(rmContext);
+    Resource clusterResource = Resource.newInstance(16384, 8);
     when(scheduler.getClusterResource())
-        .thenReturn(Resource.newInstance(16384, 8));
+        .thenReturn(clusterResource);
     when(scheduler.getMinimumAllocation())
         .thenReturn(Resource.newInstance(1024, 1));
     when(scheduler.getMinimumResourceCapability())
@@ -84,11 +86,19 @@ public class TestCSMaxRunningAppsEnforcer {
     AppPriorityACLsManager appPriorityACLManager =
         mock(AppPriorityACLsManager.class);
     when(rmContext.getNodeLabelManager()).thenReturn(labelManager);
-    when(labelManager.getResourceByLabel(anyString(), any(Resource.class)))
-        .thenReturn(Resource.newInstance(16384, 8));
+    when(labelManager.getResourceByLabel(any(), any(Resource.class)))
+        .thenReturn(clusterResource);
+    PreemptionManager preemptionManager = mock(PreemptionManager.class);
+    when(preemptionManager.getKillableResource(any(), anyString()))
+        .thenReturn(Resource.newInstance(0, 0));
+    when(scheduler.getPreemptionManager()).thenReturn(preemptionManager);
+    when(scheduler.getActivitiesManager()).thenReturn(activitiesManager);
     queueManager = new CapacitySchedulerQueueManager(csConfig, labelManager,
         appPriorityACLManager);
     queueManager.setCapacitySchedulerContext(scheduler);
+    when(scheduler.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(scheduler);
+    when(scheduler.getQueueContext()).thenReturn(queueContext);
     queueManager.initializeQueues(csConfig);
   }
 
@@ -133,7 +143,7 @@ public class TestCSMaxRunningAppsEnforcer {
   }
 
   private void removeApp(FiCaSchedulerApp attempt) {
-    LeafQueue queue = attempt.getCSLeafQueue();
+    AbstractLeafQueue queue = attempt.getCSLeafQueue();
     queue.finishApplicationAttempt(attempt, queue.getQueuePath());
     maxAppsEnforcer.untrackApp(attempt);
     maxAppsEnforcer.updateRunnabilityOnAppRemoval(attempt);

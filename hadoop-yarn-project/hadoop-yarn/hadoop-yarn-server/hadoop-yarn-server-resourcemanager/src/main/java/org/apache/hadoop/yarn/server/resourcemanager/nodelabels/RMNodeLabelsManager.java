@@ -275,7 +275,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       Map<String, Host> before = cloneNodeMap(ImmutableSet.of(nodeId));
       Node nm = getNMInNodeSet(nodeId);
       if (null != nm) {
-        if (null == nm.labels) {
+        if (isNodeLabelExplicit(nm.nodeId)) {
           // When node deactivated, remove the nm from node collection if no
           // labels explicitly set for this particular nm
 

@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferServer;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -251,55 +250,33 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
       clientConf.set(HADOOP_RPC_PROTECTION, "privacy");
       FileSystem fsPrivacy = FileSystem.get(uriPrivacyPort, clientConf);
       doTest(fsPrivacy, PATH1);
-      for (int i = 0; i < 2; i++) {
-        DataNode dn = dataNodes.get(i);
-        SaslDataTransferClient saslClient = dn.getSaslClient();
-        String qop = null;
-        // It may take some time for the qop to populate
-        // to all DNs, check in a loop.
-        for (int trial = 0; trial < 10; trial++) {
-          qop = saslClient.getTargetQOP();
-          if (qop != null) {
-            break;
-          }
-          Thread.sleep(100);
-        }
-        assertEquals("auth", qop);
-      }
+      long count = dataNodes.stream()
+          .map(dn -> dn.getSaslClient().getTargetQOP())
+          .filter("auth"::equals)
+          .count();
+      // For each datanode pipeline, targetQOPs of sasl clients in the first two
+      // datanodes become equal to auth.
+      // Note that it is not necessarily the case for all datanodes,
+      // since a datanode may be always at the last position in pipelines.
+      assertTrue("At least two qops should be auth", count >= 2);
 
       clientConf.set(HADOOP_RPC_PROTECTION, "integrity");
       FileSystem fsIntegrity = FileSystem.get(uriIntegrityPort, clientConf);
       doTest(fsIntegrity, PATH2);
-      for (int i = 0; i < 2; i++) {
-        DataNode dn = dataNodes.get(i);
-        SaslDataTransferClient saslClient = dn.getSaslClient();
-        String qop = null;
-        for (int trial = 0; trial < 10; trial++) {
-          qop = saslClient.getTargetQOP();
-          if (qop != null) {
-            break;
-          }
-          Thread.sleep(100);
-        }
-        assertEquals("auth", qop);
-      }
+      count = dataNodes.stream()
+          .map(dn -> dn.getSaslClient().getTargetQOP())
+          .filter("auth"::equals)
+          .count();
+      assertTrue("At least two qops should be auth", count >= 2);
 
       clientConf.set(HADOOP_RPC_PROTECTION, "authentication");
       FileSystem fsAuth = FileSystem.get(uriAuthPort, clientConf);
       doTest(fsAuth, PATH3);
-      for (int i = 0; i < 3; i++) {
-        DataNode dn = dataNodes.get(i);
-        SaslDataTransferServer saslServer = dn.getSaslServer();
-        String qop = null;
-        for (int trial = 0; trial < 10; trial++) {
-          qop = saslServer.getNegotiatedQOP();
-          if (qop != null) {
-            break;
-          }
-          Thread.sleep(100);
-        }
-        assertEquals("auth", qop);
-      }
+      count = dataNodes.stream()
+          .map(dn -> dn.getSaslServer().getNegotiatedQOP())
+          .filter("auth"::equals)
+          .count();
+      assertEquals("All qops should be auth", 3, count);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

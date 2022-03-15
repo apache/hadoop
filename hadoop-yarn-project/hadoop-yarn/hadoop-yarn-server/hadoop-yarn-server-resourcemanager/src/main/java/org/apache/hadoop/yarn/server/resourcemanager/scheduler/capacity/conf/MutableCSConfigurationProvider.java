@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,10 +68,18 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     this.rmContext = rmContext;
   }
 
+  // Unit test can overwrite this method
+  protected Configuration getInitSchedulerConfig() {
+    Configuration initialSchedConf = new Configuration(false);
+    initialSchedConf.
+        addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
+    return initialSchedConf;
+  }
+
   @Override
   public void init(Configuration config) throws IOException {
     this.confStore = YarnConfigurationStoreFactory.getStore(config);
-    Configuration initialSchedConf = new Configuration(false);
+    Configuration initialSchedConf = getInitSchedulerConfig();
     initialSchedConf.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
     this.schedConf = new Configuration(false);
     // We need to explicitly set the key-values in schedConf, otherwise
@@ -231,7 +239,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     String childQueuesKey = CapacitySchedulerConfiguration.PREFIX +
         parentQueue + CapacitySchedulerConfiguration.DOT +
         CapacitySchedulerConfiguration.QUEUES;
-    return new ArrayList<>(conf.getStringCollection(childQueuesKey));
+    return new ArrayList<>(conf.getTrimmedStringCollection(childQueuesKey));
   }
 
   private Map<String, String> constructKeyValueConfUpdate(

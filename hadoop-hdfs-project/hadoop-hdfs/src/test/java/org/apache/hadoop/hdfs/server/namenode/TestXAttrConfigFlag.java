@@ -48,7 +48,7 @@ public class TestXAttrConfigFlag {
 
   @After
   public void shutdown() throws Exception {
-    IOUtils.cleanup(null, fs);
+    IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;

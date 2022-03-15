@@ -76,6 +76,8 @@ import org.apache.hadoop.yarn.util.Records;
  *     SampleContainerLogAggregationPolicy: sample logs of successful worker
  *         containers, in addition to application master and failed/killed
  *         containers.
+ *     LimitSizeContainerLogAggregationPolicy: skip aggregation for killed
+ *         containers whose log size exceeds the limit of container log size.
  *     If it isn't specified, it will use the cluster-wide default policy
  *     defined by configuration yarn.nodemanager.log-aggregation.policy.class.
  *     The default value of yarn.nodemanager.log-aggregation.policy.class is

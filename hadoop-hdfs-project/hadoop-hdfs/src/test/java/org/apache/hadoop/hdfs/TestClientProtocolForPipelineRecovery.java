@@ -19,12 +19,14 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.function.Supplier;
@@ -39,6 +41,8 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -237,6 +241,51 @@ public class TestClientProtocolForPipelineRecovery {
         }
       }
       Assert.assertTrue(contains);
+    } finally {
+      DataNodeFaultInjector.set(oldDnInjector);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test to ensure heartbeats continue during a flush in case of
+   * delayed acks.
+   */
+  @Test
+  public void testHeartbeatDuringFlush() throws Exception {
+    // Delay sending acks
+    DataNodeFaultInjector dnFaultInjector = new DataNodeFaultInjector() {
+      @Override
+      public void delaySendingAckToUpstream(final String upstreamAddr)
+          throws IOException {
+        try {
+          Thread.sleep(3500); // delay longer than socket timeout
+        } catch (InterruptedException ie) {
+          throw new IOException("Interrupted while sleeping");
+        }
+      }
+    };
+    DataNodeFaultInjector oldDnInjector = DataNodeFaultInjector.get();
+
+    // Setting the timeout to be 3 seconds. Heartbeat packet
+    // should be sent every 1.5 seconds if there is no data traffic.
+    Configuration conf = new HdfsConfiguration();
+    conf.set(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, "3000");
+    MiniDFSCluster cluster = null;
+
+    try {
+      int numDataNodes = 1;
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(numDataNodes).build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      FSDataOutputStream out = fs.create(new Path("delayedack.dat"), (short)2);
+      out.write(0x31);
+      out.hflush();
+      DataNodeFaultInjector.set(dnFaultInjector); // cause ack delay
+      out.close();
     } finally {
       DataNodeFaultInjector.set(oldDnInjector);
       if (cluster != null) {
@@ -753,6 +802,148 @@ public class TestClientProtocolForPipelineRecovery {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testAddingDatanodeDuringClosing() throws Exception {
+    DataNodeFaultInjector dnFaultInjector = new DataNodeFaultInjector() {
+      @Override
+      public void delayAckLastPacket() throws IOException {
+        try {
+          // Makes the PIPELINE_CLOSE stage longer.
+          Thread.sleep(5000);
+        } catch (InterruptedException ie) {
+          throw new IOException("Interrupted while sleeping");
+        }
+      }
+    };
+    DataNodeFaultInjector oldDnInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector.set(dnFaultInjector);
+
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
+      cluster.waitActive();
+      FileSystem fileSys = cluster.getFileSystem();
+
+      Path file = new Path("/testAddingDatanodeDuringClosing");
+      FSDataOutputStream out = fileSys.create(file);
+      byte[] buffer = new byte[128 * 1024];
+      out.write(buffer);
+      // Wait for the pipeline to be built successfully.
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          if (((DFSOutputStream) out.getWrappedStream()).getStreamer()
+              .getNodes() != null) {
+            return true;
+          }
+          return false;
+        }
+      }, 100, 3000);
+
+      // Get three datanodes on the pipeline.
+      DatanodeInfo[] pipeline =
+          ((DFSOutputStream) out.getWrappedStream()).getStreamer().getNodes();
+      DataNode[] dataNodes = new DataNode[3];
+      int i = 0;
+      for (DatanodeInfo info : pipeline) {
+        for (DataNode dn : cluster.getDataNodes()) {
+          if (dn.getDatanodeUuid().equals(info.getDatanodeUuid())) {
+            dataNodes[i++] = dn;
+            break;
+          }
+        }
+      }
+
+      // Shutdown the first datanode. According to the default replacement
+      // strategy, no datanode will be added to existing pipeline.
+      dataNodes[0].shutdown();
+
+      // Shutdown the second datanode when the pipeline is closing.
+      new Thread(() -> {
+        try {
+          GenericTestUtils.waitFor(new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+              if (((DFSOutputStream) out.getWrappedStream()).getStreamer()
+                  .getStage() == BlockConstructionStage.PIPELINE_CLOSE) {
+                return true;
+              }
+              return false;
+            }
+          }, 100, 10000);
+        } catch (TimeoutException | InterruptedException e) {
+          e.printStackTrace();
+        }
+        dataNodes[1].shutdown();
+      }).start();
+      out.close();
+      // Shutdown the third datanode.
+      dataNodes[2].shutdown();
+      // Check if we can read the file successfully.
+      DFSTestUtil.readFile(fileSys, file);
+    } catch (BlockMissingException e) {
+      fail("The file can not be read! " + e);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      DataNodeFaultInjector.set(oldDnInjector);
+    }
+  }
+
+  @Test
+  public void testPipelineRecoveryWithSlowNode() throws Exception {
+    final int oneWriteSize = 5000;
+
+    final int threshold = 3;
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY, threshold);
+
+    // Need 4 datanodes to verify the replaceDatanode during pipeline recovery
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
+    DataNodeFaultInjector old = DataNodeFaultInjector.get();
+
+    try {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path fileName = new Path("/f");
+      FSDataOutputStream o = fs.create(fileName);
+      // Flush to get the pipeline created.
+      o.writeBytes("hello");
+      o.hflush();
+      DFSOutputStream dfsO = (DFSOutputStream) o.getWrappedStream();
+      final DatanodeInfo[] pipeline = dfsO.getStreamer().getNodes();
+      final String lastDn = pipeline[2].getXferAddr(false);
+
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        @Override
+        public void markSlow(String mirrorAddr, int[] replies) {
+          if (!lastDn.equals(mirrorAddr)) {
+            // Only fail for last DN
+            return;
+          }
+          assert(replies.length == 2);
+          replies[1] = PipelineAck.setSLOWForHeader(replies[1], PipelineAck.SLOW.SLOW);
+        }
+      });
+
+      int count = 0;
+      Random r = new Random();
+      byte[] b = new byte[oneWriteSize];
+      while (count < threshold) {
+        r.nextBytes(b);
+        o.write(b);
+        count++;
+        o.hflush();
+      }
+      Assert.assertNotEquals(lastDn, dfsO.getStreamer().getNodes()[2].getXferAddr(false));
+    } finally {
+      DataNodeFaultInjector.set(old);
+      cluster.shutdown();
     }
   }
 }

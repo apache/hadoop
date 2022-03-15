@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.fs.StorageStatistics.CommonStatisticNames;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 
 /**
  * Statistic which are collected in Abfs.
@@ -73,10 +78,44 @@ public enum AbfsStatistic {
   READ_THROTTLES("read_throttles",
       "Total number of times a read operation is throttled."),
   WRITE_THROTTLES("write_throttles",
-      "Total number of times a write operation is throttled.");
+      "Total number of times a write operation is throttled."),
+  SERVER_UNAVAILABLE("server_unavailable",
+      "Total number of times HTTP 503 status code is received in response."),
+
+  // HTTP Duration Trackers
+  HTTP_HEAD_REQUEST(StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
+      "Time taken to complete a HEAD request",
+      AbfsHttpConstants.HTTP_METHOD_HEAD),
+  HTTP_GET_REQUEST(StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
+      "Time taken to complete a GET request",
+      AbfsHttpConstants.HTTP_METHOD_GET),
+  HTTP_DELETE_REQUEST(StoreStatisticNames.ACTION_HTTP_DELETE_REQUEST,
+      "Time taken to complete a DELETE request",
+      AbfsHttpConstants.HTTP_METHOD_DELETE),
+  HTTP_PUT_REQUEST(StoreStatisticNames.ACTION_HTTP_PUT_REQUEST,
+      "Time taken to complete a PUT request",
+      AbfsHttpConstants.HTTP_METHOD_PUT),
+  HTTP_PATCH_REQUEST(StoreStatisticNames.ACTION_HTTP_PATCH_REQUEST,
+      "Time taken to complete a PATCH request",
+      AbfsHttpConstants.HTTP_METHOD_PATCH),
+  HTTP_POST_REQUEST(StoreStatisticNames.ACTION_HTTP_POST_REQUEST,
+      "Time taken to complete a POST request",
+      AbfsHttpConstants.HTTP_METHOD_POST);
 
   private String statName;
   private String statDescription;
+
+  //For http call stats only.
+  private String httpCall;
+  private static final Map<String, String> HTTP_CALL_TO_NAME_MAP = new HashMap<>();
+
+  static {
+    for (AbfsStatistic statistic : values()) {
+      if (statistic.getHttpCall() != null) {
+        HTTP_CALL_TO_NAME_MAP.put(statistic.getHttpCall(), statistic.getStatName());
+      }
+    }
+  }
 
   /**
    * Constructor of AbfsStatistic to set statistic name and description.
@@ -87,6 +126,19 @@ public enum AbfsStatistic {
   AbfsStatistic(String statName, String statDescription) {
     this.statName = statName;
     this.statDescription = statDescription;
+  }
+
+  /**
+   * Constructor for AbfsStatistic for HTTP durationTrackers.
+   *
+   * @param statName        Name of the statistic.
+   * @param statDescription Description of the statistic.
+   * @param httpCall        HTTP call associated with the stat name.
+   */
+  AbfsStatistic(String statName, String statDescription, String httpCall) {
+    this.statName = statName;
+    this.statDescription = statDescription;
+    this.httpCall = httpCall;
   }
 
   /**
@@ -105,5 +157,24 @@ public enum AbfsStatistic {
    */
   public String getStatDescription() {
     return statDescription;
+  }
+
+  /**
+   * Getter for http call for HTTP duration trackers.
+   *
+   * @return http call of a statistic.
+   */
+  public String getHttpCall() {
+    return httpCall;
+  }
+
+  /**
+   * Get the statistic name using the http call name.
+   *
+   * @param httpCall The HTTP call used to get the statistic name.
+   * @return Statistic name.
+   */
+  public static String getStatNameFromHttpCall(String httpCall) {
+    return HTTP_CALL_TO_NAME_MAP.get(httpCall);
   }
 }

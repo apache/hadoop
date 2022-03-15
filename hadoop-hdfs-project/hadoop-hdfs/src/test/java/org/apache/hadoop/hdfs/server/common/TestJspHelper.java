@@ -457,6 +457,25 @@ public class TestJspHelper {
         out.reset();
         in.reset();
       }
+      out = new DataOutputBuffer();
+      out.writeByte(100);
+      in.reset(out.getData(), out.getLength());
+      try {
+        HdfsServerConstants.ReplicaState.read(in);
+        fail("Should not have reached here");
+      } catch (IndexOutOfBoundsException e) {
+        assertEquals(e.getMessage(),
+            "Index Expected range: [0, 4]. Actual value: 100");
+      }
+      out.reset();
+      in.reset();
+      try {
+        HdfsServerConstants.ReplicaState.getState(200);
+        fail("Should not have reached here");
+      } catch (IndexOutOfBoundsException e) {
+        assertEquals(e.getMessage(),
+            "Index Expected range: [0, 4]. Actual value: 200");
+      }
     } catch (Exception ex) {
       fail("testReadWrite ex error ReplicaState");
     }

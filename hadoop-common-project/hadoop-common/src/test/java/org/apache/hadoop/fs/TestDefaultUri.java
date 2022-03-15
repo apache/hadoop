@@ -18,9 +18,7 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.net.URI;
@@ -40,32 +38,32 @@ public class TestDefaultUri {
   public void tetGetDefaultUri() {
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://nn_host");
     URI uri = FileSystem.getDefaultUri(conf);
-    assertThat(uri.getScheme(), is("hdfs"));
-    assertThat(uri.getAuthority(), is("nn_host"));
+    assertThat(uri.getScheme()).isEqualTo("hdfs");
+    assertThat(uri.getAuthority()).isEqualTo("nn_host");
   }
 
   @Test
   public void tetGetDefaultUriWithPort() {
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://nn_host:5432");
     URI uri = FileSystem.getDefaultUri(conf);
-    assertThat(uri.getScheme(), is("hdfs"));
-    assertThat(uri.getAuthority(), is("nn_host:5432"));
+    assertThat(uri.getScheme()).isEqualTo("hdfs");
+    assertThat(uri.getAuthority()).isEqualTo("nn_host:5432");
   }
 
   @Test
   public void tetGetDefaultUriTrailingSlash() {
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://nn_host/");
     URI uri = FileSystem.getDefaultUri(conf);
-    assertThat(uri.getScheme(), is("hdfs"));
-    assertThat(uri.getAuthority(), is("nn_host"));
+    assertThat(uri.getScheme()).isEqualTo("hdfs");
+    assertThat(uri.getAuthority()).isEqualTo("nn_host");
   }
 
   @Test
   public void tetGetDefaultUriNoScheme() {
     conf.set(FS_DEFAULT_NAME_KEY, "nn_host");
     URI uri = FileSystem.getDefaultUri(conf);
-    assertThat(uri.getScheme(), is("hdfs"));
-    assertThat(uri.getAuthority(), is("nn_host"));
+    assertThat(uri.getScheme()).isEqualTo("hdfs");
+    assertThat(uri.getAuthority()).isEqualTo("nn_host");
   }
 
   @Test
@@ -81,7 +79,7 @@ public class TestDefaultUri {
   public void tetFsGet() throws IOException {
     conf.set(FS_DEFAULT_NAME_KEY, "file:///");
     FileSystem fs = FileSystem.get(conf);
-    assertThat(fs, instanceOf(LocalFileSystem.class));
+    assertThat(fs).isInstanceOf(LocalFileSystem.class);
   }
 
   @Test

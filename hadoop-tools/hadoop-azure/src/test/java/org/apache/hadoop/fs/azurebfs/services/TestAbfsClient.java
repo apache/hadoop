@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.junit.Test;
@@ -102,7 +102,7 @@ public final class TestAbfsClient {
   }
 
   private String getUserAgentString(AbfsConfiguration config,
-      boolean includeSSLProvider) throws MalformedURLException {
+      boolean includeSSLProvider) throws IOException {
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().build();
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
         config, (AccessTokenProvider) null, abfsClientContext);
@@ -249,8 +249,7 @@ public final class TestAbfsClient {
 
   public static AbfsClient createTestClientFromCurrentContext(
       AbfsClient baseAbfsClientInstance,
-      AbfsConfiguration abfsConfig)
-      throws AzureBlobFileSystemException {
+      AbfsConfiguration abfsConfig) throws IOException {
     AuthType currentAuthType = abfsConfig.getAuthType(
         abfsConfig.getAccountName());
 
@@ -350,5 +349,50 @@ public final class TestAbfsClient {
         field.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
     field.set(client, fieldObject);
     return client;
+  }
+
+  /**
+   * Test helper method to access private createRequestUrl method.
+   * @param client test AbfsClient instace
+   * @param path path to generate Url
+   * @return return store path url
+   * @throws AzureBlobFileSystemException
+   */
+  public static URL getTestUrl(AbfsClient client, String path) throws
+      AzureBlobFileSystemException {
+    final AbfsUriQueryBuilder abfsUriQueryBuilder
+        = client.createDefaultUriQueryBuilder();
+    return client.createRequestUrl(path, abfsUriQueryBuilder.toString());
+  }
+
+  /**
+   * Test helper method to access private createDefaultHeaders method.
+   * @param client test AbfsClient instance
+   * @return List of AbfsHttpHeaders
+   */
+  public static List<AbfsHttpHeader> getTestRequestHeaders(AbfsClient client) {
+    return client.createDefaultHeaders();
+  }
+
+  /**
+   * Test helper method to create an AbfsRestOperation instance.
+   * @param type RestOpType
+   * @param client AbfsClient
+   * @param method HttpMethod
+   * @param url Test path url
+   * @param requestHeaders request headers
+   * @return instance of AbfsRestOperation
+   */
+  public static AbfsRestOperation getRestOp(AbfsRestOperationType type,
+      AbfsClient client,
+      String method,
+      URL url,
+      List<AbfsHttpHeader> requestHeaders) {
+    return new AbfsRestOperation(
+        type,
+        client,
+        method,
+        url,
+        requestHeaders);
   }
 }

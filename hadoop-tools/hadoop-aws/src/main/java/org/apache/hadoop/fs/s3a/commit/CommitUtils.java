@@ -125,5 +125,29 @@ public final class CommitUtils {
     }
   }
 
+  /**
+   * Extract the job ID from a configuration.
+   * @param conf configuration
+   * @return a job ID or null.
+   */
+  public static String extractJobID(Configuration conf) {
+
+    String jobUUID = conf.getTrimmed(FS_S3A_COMMITTER_UUID, "");
+
+    if (!jobUUID.isEmpty()) {
+      return jobUUID;
+    }
+    // there is no job UUID.
+    // look for one from spark
+    jobUUID = conf.getTrimmed(SPARK_WRITE_UUID, "");
+    if (!jobUUID.isEmpty()) {
+      return jobUUID;
+    }
+    jobUUID = conf.getTrimmed(MR_JOB_ID, "");
+    if (!jobUUID.isEmpty()) {
+      return jobUUID;
+    }
+    return null;
+  }
 
 }

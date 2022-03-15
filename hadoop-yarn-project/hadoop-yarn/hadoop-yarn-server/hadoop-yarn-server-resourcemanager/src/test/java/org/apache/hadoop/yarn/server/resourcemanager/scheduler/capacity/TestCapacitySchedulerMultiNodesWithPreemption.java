@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -52,8 +53,7 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class TestCapacitySchedulerMultiNodesWithPreemption
-    extends CapacitySchedulerTestBase {
+public class TestCapacitySchedulerMultiNodesWithPreemption {
 
   private static final Log LOG = LogFactory
       .getLog(TestCapacitySchedulerMultiNodesWithPreemption.class);
@@ -111,6 +111,7 @@ public class TestCapacitySchedulerMultiNodesWithPreemption
     conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
         ProportionalCapacityPreemptionPolicy.class.getCanonicalName());
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
+    conf.setLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 60000);
   }
 
   @Test(timeout=60000)

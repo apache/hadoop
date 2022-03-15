@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.yarn.api.resource;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
-
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;

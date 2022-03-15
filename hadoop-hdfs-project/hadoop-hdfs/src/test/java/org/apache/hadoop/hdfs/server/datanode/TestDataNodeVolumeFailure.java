@@ -215,6 +215,10 @@ public class TestDataNodeVolumeFailure {
     BlockManagerTestUtil.checkHeartbeat(bm);
     // NN now should have latest volume failure
     assertEquals(1, cluster.getNamesystem().getVolumeFailuresTotal());
+    // assert failedStorageLocations
+    assertTrue(dn.getFSDataset().getVolumeFailureSummary()
+        .getFailedStorageLocations()[0]
+        .contains("[DISK]"));
 
     // verify number of blocks and files...
     verify(filename, filesize);

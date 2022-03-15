@@ -19,13 +19,10 @@
 package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.AmazonS3;
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +33,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.FailureInjectionPolicy;
-import org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -53,51 +49,16 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 
 /**
  * Base test suite for committer operations.
- *
- * By default, these tests enable the inconsistent committer, with
- * a delay of {@link #CONSISTENCY_DELAY}; they may also have throttling
- * enabled/disabled.
- *
- * <b>Important:</b> all filesystem probes will have to wait for
- * the FS inconsistency delays and handle things like throttle exceptions,
- * or disable throttling and fault injection before the probe.
  *
  */
 public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractCommitITest.class);
-
-  protected static final int CONSISTENCY_DELAY = 500;
-  protected static final int CONSISTENCY_PROBE_INTERVAL = 500;
-  protected static final int CONSISTENCY_WAIT = CONSISTENCY_DELAY * 2;
-
-  private InconsistentAmazonS3Client inconsistentClient;
-
-
-  /**
-   * Should the inconsistent S3A client be used?
-   * Default value: true.
-   * @return true for inconsistent listing
-   */
-  public boolean useInconsistentClient() {
-    return true;
-  }
-
-  /**
-   * switch to an inconsistent path if in inconsistent mode.
-   * {@inheritDoc}
-   */
-  @Override
-  protected Path path(String filepath) throws IOException {
-    return useInconsistentClient() ?
-           super.path(FailureInjectionPolicy.DEFAULT_DELAY_KEY_SUBSTRING
-               + "/" + filepath)
-           : super.path(filepath);
-  }
 
   /**
    * Creates a configuration for commit operations: commit is enabled in the FS
@@ -116,13 +77,10 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
         FAST_UPLOAD_BUFFER);
 
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+    conf.setBoolean(MAGIC_COMMITTER_ENABLED, DEFAULT_MAGIC_COMMITTER_ENABLED);
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_ARRAY);
-    if (useInconsistentClient()) {
-      enableInconsistentS3Client(conf, CONSISTENCY_DELAY);
-    }
     return conf;
   }
 
@@ -151,7 +109,6 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   /**
    * Clean up a directory.
-   * Waits for consistency if needed
    * @param dir directory
    * @param conf configuration
    * @throws IOException failure
@@ -160,28 +117,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     if (dir != null) {
       describe("deleting %s", dir);
       FileSystem fs = dir.getFileSystem(conf);
-      waitForConsistency();
       fs.delete(dir, true);
-      waitForConsistency();
-    }
-  }
-
-  /**
-   * Setup will use inconsistent client if {@link #useInconsistentClient()}
-   * is true.
-   * @throws Exception failure.
-   */
-  @Override
-  public void setup() throws Exception {
-    super.setup();
-    if (useInconsistentClient()) {
-      AmazonS3 client = getFileSystem()
-          .getAmazonS3ClientForTesting("fault injection");
-      Assert.assertTrue(
-          "AWS client is not inconsistent, even though the test requirees it "
-          + client,
-          client instanceof InconsistentAmazonS3Client);
-      inconsistentClient = (InconsistentAmazonS3Client) client;
     }
   }
 
@@ -205,80 +141,6 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   }
 
   /**
-   * Teardown waits for the consistency delay and resets failure count, so
-   * FS is stable, before the superclass teardown is called. This
-   * should clean things up better.
-   * @throws Exception failure.
-   */
-  @Override
-  public void teardown() throws Exception {
-    Thread.currentThread().setName("teardown");
-    LOG.info("AbstractCommitITest::teardown");
-    waitForConsistency();
-    // make sure there are no failures any more
-    resetFailures();
-    super.teardown();
-  }
-
-  /**
-   * Wait a multiple of the inconsistency delay for things to stabilize;
-   * no-op if the consistent client is used.
-   * @throws InterruptedIOException if the sleep is interrupted
-   */
-  protected void waitForConsistency() throws InterruptedIOException {
-    if (useInconsistentClient() && inconsistentClient != null) {
-      try {
-        Thread.sleep(2* inconsistentClient.getDelayKeyMsec());
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException)
-            (new InterruptedIOException("while waiting for consistency: " + e)
-                .initCause(e));
-      }
-    }
-  }
-
-  /**
-   * Set the throttling factor on requests.
-   * @param p probability of a throttling occurring: 0-1.0
-   */
-  protected void setThrottling(float p) {
-    if (inconsistentClient != null) {
-      inconsistentClient.setThrottleProbability(p);
-    }
-  }
-
-  /**
-   * Set the throttling factor on requests and number of calls to throttle.
-   * @param p probability of a throttling occurring: 0-1.0
-   * @param limit limit to number of calls which fail
-   */
-  protected void setThrottling(float p, int limit) {
-    if (inconsistentClient != null) {
-      inconsistentClient.setThrottleProbability(p);
-    }
-    setFailureLimit(limit);
-  }
-
-  /**
-   * Turn off throttling.
-   */
-  protected void resetFailures() {
-    if (inconsistentClient != null) {
-      setThrottling(0, 0);
-    }
-  }
-
-  /**
-   * Set failure limit.
-   * @param limit limit to number of calls which fail
-   */
-  private void setFailureLimit(int limit) {
-    if (inconsistentClient != null) {
-      inconsistentClient.setFailureLimit(limit);
-    }
-  }
-
-  /**
    * Abort all multipart uploads under a path.
    * @param path path for uploads to abort; may be null
    * @return a count of aborts
@@ -288,10 +150,13 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs != null && path != null) {
       String key = fs.pathToKey(path);
-      WriteOperationHelper writeOps = fs.getWriteOperationHelper();
-      int count = writeOps.abortMultipartUploadsUnderPath(key);
-      if (count > 0) {
-        log().info("Multipart uploads deleted: {}", count);
+      int count = 0;
+      try (AuditSpan span = span()) {
+        WriteOperationHelper writeOps = fs.getWriteOperationHelper();
+        count = writeOps.abortMultipartUploadsUnderPath(key);
+        if (count > 0) {
+          log().info("Multipart uploads deleted: {}", count);
+        }
       }
       return count;
     } else {
@@ -460,6 +325,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         commitDetails);
     LOG.info("Committer statistics: \n{}",
         successData.dumpMetrics("  ", " = ", "\n"));
+    LOG.info("Job IOStatistics: \n{}",
+        ioStatisticsToString(successData.getIOStatistics()));
     LOG.info("Diagnostics\n{}",
         successData.dumpDiagnostics("  ", " = ", "\n"));
     if (!committerName.isEmpty()) {
@@ -486,7 +353,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @throws IOException failure to find/load the file
    * @throws AssertionError file is 0-bytes long,
    */
-  public static SuccessData loadSuccessFile(final S3AFileSystem fs,
+  public static SuccessData loadSuccessFile(final FileSystem fs,
       final Path outputPath, final String origin) throws IOException {
     ContractTestUtils.assertPathExists(fs,
         "Output directory " + outputPath
@@ -505,7 +372,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
             + success + " from " + origin
             + "; an S3A committer was not used",
         status.getLen() > 0);
-    LOG.info("Loading committer success file {}", success);
+    String body = ContractTestUtils.readUTF8(fs, success, -1);
+    LOG.info("Loading committer success file {}. Actual contents=\n{}", success,
+        body);
     return SuccessData.load(fs, success);
   }
 }

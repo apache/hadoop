@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.util.function.Function;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -42,7 +43,7 @@ public class TestViewFsConfig {
     new InodeTree<Foo>(conf, null, null, false) {
 
       @Override
-      protected Foo getTargetFileSystem(final URI uri) {
+      protected Function<URI, Foo> initAndGetTargetFs() {
         return null;
       }
 

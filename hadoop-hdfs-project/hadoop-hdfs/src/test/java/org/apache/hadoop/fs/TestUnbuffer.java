@@ -87,7 +87,7 @@ public class TestUnbuffer {
       Assert.assertEquals(b, b2);
     } finally {
       if (stream != null) {
-        IOUtils.cleanup(null, stream);
+        IOUtils.cleanupWithLogger(null, stream);
       }
       if (cluster != null) {
         cluster.shutdown();
@@ -122,7 +122,7 @@ public class TestUnbuffer {
       }
     } finally {
       for (FSDataInputStream stream : streams) {
-        IOUtils.cleanup(null, stream);
+        IOUtils.cleanupWithLogger(null, stream);
       }
       if (cluster != null) {
         cluster.shutdown();

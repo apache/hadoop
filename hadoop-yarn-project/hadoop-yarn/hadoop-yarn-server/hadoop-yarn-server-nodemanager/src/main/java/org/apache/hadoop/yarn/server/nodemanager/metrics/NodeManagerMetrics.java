@@ -30,7 +30,7 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 @Metrics(about="Metrics for node manager", context="yarn")
 public class NodeManagerMetrics {
@@ -98,6 +98,10 @@ public class NodeManagerMetrics {
   MutableGaugeInt nodeUsedVMemGB;
   @Metric("Current CPU utilization")
   MutableGaugeFloat nodeCpuUtilization;
+  @Metric("Current GPU utilization")
+  MutableGaugeFloat nodeGpuUtilization;
+  @Metric("Current running apps")
+  MutableGaugeInt applicationsRunning;
 
   @Metric("Missed localization requests in bytes")
       MutableCounterLong localizedCacheMissBytes;
@@ -183,6 +187,14 @@ public class NodeManagerMetrics {
 
   public void endReInitingContainer() {
     containersReIniting.decr();
+  }
+
+  public void runningApplication() {
+    applicationsRunning.incr();
+  }
+
+  public void endRunningApplication() {
+    applicationsRunning.decr();
   }
 
   public void pausedContainer() {
@@ -426,6 +438,14 @@ public class NodeManagerMetrics {
 
   public void setNodeCpuUtilization(float cpuUtilization) {
     this.nodeCpuUtilization.set(cpuUtilization);
+  }
+
+  public void setNodeGpuUtilization(float nodeGpuUtilization) {
+    this.nodeGpuUtilization.set(nodeGpuUtilization);
+  }
+
+  public float getNodeGpuUtilization() {
+    return nodeGpuUtilization.value();
   }
 
   private void updateLocalizationHitRatios() {

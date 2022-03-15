@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -100,10 +100,12 @@ public class FairOrderingPolicy<S extends SchedulableEntity> extends AbstractCom
   private double getMagnitude(SchedulableEntity r) {
     double mag = r.getSchedulingResourceUsage().getCachedUsed(
       CommonNodeLabelsManager.ANY).getMemorySize();
-    if (sizeBasedWeight) {
+    if (sizeBasedWeight && mag != 0) {
       double weight = Math.log1p(r.getSchedulingResourceUsage().getCachedDemand(
         CommonNodeLabelsManager.ANY).getMemorySize()) / Math.log(2);
-      mag = mag / weight;
+      if (weight != 0) {
+        mag = mag / weight;
+      }
     }
     return mag;
   }

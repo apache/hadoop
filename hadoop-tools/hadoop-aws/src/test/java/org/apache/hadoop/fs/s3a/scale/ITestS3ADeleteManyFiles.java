@@ -38,8 +38,8 @@ import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
-import static org.apache.hadoop.fs.s3a.impl.ITestPartialRenamesDeletes.createFiles;
-import static org.apache.hadoop.fs.s3a.impl.ITestPartialRenamesDeletes.filenameOfIndex;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
+import static org.apache.hadoop.test.GenericTestUtils.filenameOfIndex;
 
 /**
  * Test some scalable operations related to file renaming and deletion.
@@ -77,7 +77,6 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
    * set too low. Alternatively, consider reducing the
    * <code>scale.test.operation.count</code> parameter in
    * <code>getOperationCount()</code>.
-   * If it is slow: look at the size of any S3Guard Table used.
    * @see #getOperationCount()
    */
   @Test

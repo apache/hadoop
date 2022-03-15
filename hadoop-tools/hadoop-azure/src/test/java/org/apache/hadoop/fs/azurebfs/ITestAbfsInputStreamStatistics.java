@@ -31,7 +31,13 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.io.IOUtils;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 
 public class ITestAbfsInputStreamStatistics
     extends AbstractAbfsIntegrationTest {
@@ -62,7 +68,8 @@ public class ITestAbfsInputStreamStatistics
     try {
 
       outputStream = createAbfsOutputStreamWithFlushEnabled(fs, initValuesPath);
-      inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics());
+      inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics(),
+          getTestTracingContext(fs, false));
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) inputStream.getStreamStatistics();
@@ -106,7 +113,8 @@ public class ITestAbfsInputStreamStatistics
       //Writing a default buffer in a file.
       out.write(defBuffer);
       out.hflush();
-      in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics(),
+          getTestTracingContext(fs, false));
 
       /*
        * Writing 1MB buffer to the file, this would make the fCursor(Current
@@ -121,6 +129,7 @@ public class ITestAbfsInputStreamStatistics
        */
       for (int i = 0; i < OPERATIONS; i++) {
         in.seek(0);
+        in.read();
         in.seek(ONE_MB);
       }
 
@@ -139,10 +148,9 @@ public class ITestAbfsInputStreamStatistics
        * forwardSeekOps - Since we are doing a forward seek inside a loop
        * for OPERATION times, total forward seeks would be OPERATIONS.
        *
-       * bytesBackwardsOnSeek - Since we are doing backward seeks from end of
-       * file in a ONE_MB file each time, this would mean the bytes from
-       * backward seek would be OPERATIONS * ONE_MB. Since this is backward
-       * seek this value is expected be to be negative.
+       * negativeBytesBackwardsOnSeek - Since we are doing backward seeks from
+       * end of file in a ONE_MB file each time, this would mean the bytes from
+       * backward seek would be OPERATIONS * ONE_MB.
        *
        * bytesSkippedOnSeek - Since, we move from start to end in seek, but
        * our fCursor(position of cursor) always remain at end of file, this
@@ -150,7 +158,7 @@ public class ITestAbfsInputStreamStatistics
        * are in buffer.
        *
        * seekInBuffer - Since all seeks were in buffer, the seekInBuffer
-       * would be equal to 2 * OPERATIONS.
+       * would be equal to OPERATIONS.
        *
        */
       assertEquals("Mismatch in seekOps value", 2 * OPERATIONS,
@@ -160,10 +168,10 @@ public class ITestAbfsInputStreamStatistics
       assertEquals("Mismatch in forwardSeekOps value", OPERATIONS,
           stats.getForwardSeekOperations());
       assertEquals("Mismatch in bytesBackwardsOnSeek value",
-          -1 * OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek());
+          OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in bytesSkippedOnSeek value",
           0, stats.getBytesSkippedOnSeek());
-      assertEquals("Mismatch in seekInBuffer value", 2 * OPERATIONS,
+      assertEquals("Mismatch in seekInBuffer value", OPERATIONS,
           stats.getSeekInBuffer());
 
       in.close();
@@ -197,7 +205,8 @@ public class ITestAbfsInputStreamStatistics
        */
       out.write(defBuffer);
       out.hflush();
-      in = abfss.openFileForRead(readStatPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(readStatPath, fs.getFsStatistics(),
+          getTestTracingContext(fs, false));
 
       /*
        * Doing file read 10 times.
@@ -255,6 +264,7 @@ public class ITestAbfsInputStreamStatistics
             .withReadBufferSize(getConfiguration().getReadBufferSize())
             .withReadAheadQueueDepth(getConfiguration().getReadAheadQueueDepth())
             .withStreamStatistics(null)
+            .withReadAheadRange(getConfiguration().getReadAheadRange())
             .build();
 
     AbfsOutputStream out = null;
@@ -268,14 +278,15 @@ public class ITestAbfsInputStreamStatistics
       out.hflush();
 
       // AbfsRestOperation Instance required for eTag.
-      AbfsRestOperation abfsRestOperation =
-          fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false);
+      AbfsRestOperation abfsRestOperation = fs.getAbfsClient()
+          .getPathStatus(nullStatFilePath.toUri().getPath(), false,
+              getTestTracingContext(fs, false));
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,
-          nullStatFilePath.toUri().getPath(), ONE_KB,
-          abfsInputStreamContext,
-          abfsRestOperation.getResult().getResponseHeader("ETag"));
+          nullStatFilePath.toUri().getPath(), ONE_KB, abfsInputStreamContext,
+          abfsRestOperation.getResult().getResponseHeader("ETag"),
+          getTestTracingContext(fs, false));
 
       // Verifying that AbfsInputStream Operations works with null statistics.
       assertNotEquals("AbfsInputStream read() with null statistics should "
@@ -318,7 +329,8 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.close();
 
-      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics(),
+          getTestTracingContext(fs, false));
 
       /*
        * Reading 1KB after each i * KB positions. Hence the reads are from 0
@@ -363,6 +375,42 @@ public class ITestAbfsInputStreamStatistics
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
+    }
+  }
+
+  /**
+   * Testing time taken by AbfsInputStream to complete a GET request.
+   */
+  @Test
+  public void testActionHttpGetRequest() throws IOException {
+    describe("Test to check the correct value of Time taken by http get "
+        + "request in AbfsInputStream");
+    AzureBlobFileSystem fs = getFileSystem();
+    AzureBlobFileSystemStore abfss = fs.getAbfsStore();
+    Path actionHttpGetRequestPath = path(getMethodName());
+    AbfsInputStream abfsInputStream = null;
+    AbfsOutputStream abfsOutputStream = null;
+    try {
+      abfsOutputStream = createAbfsOutputStreamWithFlushEnabled(fs,
+          actionHttpGetRequestPath);
+      abfsOutputStream.write('a');
+      abfsOutputStream.hflush();
+
+      abfsInputStream =
+          abfss.openFileForRead(actionHttpGetRequestPath,
+              fs.getFsStatistics(), getTestTracingContext(fs, false));
+      abfsInputStream.read();
+      IOStatistics ioStatistics = extractStatistics(fs);
+      LOG.info("AbfsInputStreamStats info: {}",
+          ioStatisticsToPrettyString(ioStatistics));
+      Assertions.assertThat(
+          lookupMeanStatistic(ioStatistics,
+              AbfsStatistic.HTTP_GET_REQUEST.getStatName()
+                  + StoreStatisticNames.SUFFIX_MEAN).mean())
+          .describedAs("Mismatch in time taken by a GET request")
+          .isGreaterThan(0.0);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, abfsInputStream, abfsOutputStream);
     }
   }
 

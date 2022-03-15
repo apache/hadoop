@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,18 +40,17 @@ public class PlanQueue extends AbstractManagedParentQueue {
 
   private int maxAppsForReservation;
   private int maxAppsPerUserForReservation;
-  private int userLimit;
+  private float userLimit;
   private float userLimitFactor;
-  protected CapacitySchedulerContext schedulerContext;
   private boolean showReservationsAsQueues;
 
-  public PlanQueue(CapacitySchedulerContext cs, String queueName,
+  public PlanQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       CSQueue parent, CSQueue old) throws IOException {
-    super(cs, queueName, parent, old);
+    super(queueContext, queueName, parent, old);
+    updateAbsoluteCapacities();
 
-    this.schedulerContext = cs;
     // Set the reservation queue attributes for the Plan
-    CapacitySchedulerConfiguration conf = cs.getConfiguration();
+    CapacitySchedulerConfiguration conf = queueContext.getConfiguration();
     String queuePath = super.getQueuePath();
     int maxAppsForReservation = conf.getMaximumApplicationsPerQueue(queuePath);
     showReservationsAsQueues = conf.getShowReservationAsQueues(queuePath);
@@ -59,12 +60,16 @@ public class PlanQueue extends AbstractManagedParentQueue {
               DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * super
               .getAbsoluteCapacity());
     }
-    int userLimit = conf.getUserLimit(queuePath);
-    float userLimitFactor = conf.getUserLimitFactor(queuePath);
-    int maxAppsPerUserForReservation =
-        (int) (maxAppsForReservation * (userLimit / 100.0f) * userLimitFactor);
-    updateQuotas(userLimit, userLimitFactor, maxAppsForReservation,
-        maxAppsPerUserForReservation);
+    float configuredUserLimit = conf.getUserLimit(queuePath);
+    float configuredUserLimitFactor = conf.getUserLimitFactor(queuePath);
+    int configuredMaxAppsPerUserForReservation =
+        (int) (maxAppsForReservation * (configuredUserLimit / 100.0f) *
+            configuredUserLimitFactor);
+    if (configuredUserLimitFactor == -1) {
+      configuredMaxAppsPerUserForReservation = maxAppsForReservation;
+    }
+    updateQuotas(configuredUserLimit, configuredUserLimitFactor,
+        maxAppsForReservation, configuredMaxAppsPerUserForReservation);
 
     StringBuffer queueInfo = new StringBuffer();
     queueInfo.append("Created Plan Queue: ").append(queueName)
@@ -72,9 +77,10 @@ public class PlanQueue extends AbstractManagedParentQueue {
         .append("]\nwith max capacity: [").append(super.getMaximumCapacity())
         .append("\nwith max reservation apps: [").append(maxAppsForReservation)
         .append("]\nwith max reservation apps per user: [")
-        .append(maxAppsPerUserForReservation).append("]\nwith user limit: [")
-        .append(userLimit).append("]\nwith user limit factor: [")
-        .append(userLimitFactor).append("].");
+        .append(configuredMaxAppsPerUserForReservation)
+        .append("]\nwith user limit: [")
+        .append(configuredUserLimit).append("]\nwith user limit factor: [")
+        .append(configuredUserLimitFactor).append("].");
     LOG.info(queueInfo.toString());
   }
 
@@ -119,12 +125,29 @@ public class PlanQueue extends AbstractManagedParentQueue {
     }
   }
 
-  private void updateQuotas(int userLimit, float userLimitFactor,
-      int maxAppsForReservation, int maxAppsPerUserForReservation) {
-    this.userLimit = userLimit;
-    this.userLimitFactor = userLimitFactor;
-    this.maxAppsForReservation = maxAppsForReservation;
-    this.maxAppsPerUserForReservation = maxAppsPerUserForReservation;
+  public ReservationQueue initializeDefaultInternalQueue() throws IOException {
+    //initializing the "internal" default queue, for SLS compatibility
+    String defReservationId =
+        getQueueName() + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
+
+    ReservationQueue resQueue = new ReservationQueue(queueContext,
+        defReservationId, this);
+    try {
+      resQueue.initializeEntitlements();
+    } catch (SchedulerDynamicEditException e) {
+      throw new IllegalStateException(e);
+    }
+    childQueues.add(resQueue);
+
+    return resQueue;
+  }
+
+  private void updateQuotas(float newUserLimit, float newUserLimitFactor,
+      int newMaxAppsForReservation, int newMaxAppsPerUserForReservation) {
+    this.userLimit = newUserLimit;
+    this.userLimitFactor = newUserLimitFactor;
+    this.maxAppsForReservation = newMaxAppsForReservation;
+    this.maxAppsPerUserForReservation = newMaxAppsPerUserForReservation;
   }
 
   /**
@@ -151,7 +174,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
    *
    * @return userLimit
    */
-  public int getUserLimitForReservation() {
+  public float getUserLimitForReservation() {
     return userLimit;
   }
 

@@ -414,13 +414,13 @@ public class TestRouterQuota {
     QuotaUsage usage = client.getQuotaUsage("/type0");
     assertEquals(HdfsConstants.QUOTA_RESET, usage.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, usage.getSpaceQuota());
-    verifyTypeQuotaAndConsume(new long[] {-1, -1, -1, ssQuota * 2, -1, -1}, null,
-        usage);
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota * 2, -1, -1, -1},
+        null, usage);
     // Verify /type1 quota on NN1.
     usage = client.getQuotaUsage("/type1");
     assertEquals(HdfsConstants.QUOTA_RESET, usage.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, usage.getSpaceQuota());
-    verifyTypeQuotaAndConsume(new long[] {-1, -1, -1, ssQuota, -1, -1}, null,
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota, -1, -1, -1}, null,
         usage);
 
     FileSystem routerFs = routerContext.getFileSystem();
@@ -431,15 +431,15 @@ public class TestRouterQuota {
     assertEquals(2, u1.getFileAndDirectoryCount());
     assertEquals(HdfsConstants.QUOTA_RESET, u1.getSpaceQuota());
     assertEquals(fileSize * 3, u1.getSpaceConsumed());
-    verifyTypeQuotaAndConsume(new long[] {-1, -1, -1, ssQuota, -1, -1},
-        new long[] {0, 0, 0, fileSize * 3, 0, 0}, u1);
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota, -1, -1, -1},
+        new long[] {0, 0, fileSize * 3, 0, 0, 0}, u1);
     // Verify /type0 storage type quota usage on Router.
     assertEquals(HdfsConstants.QUOTA_RESET, u0.getQuota());
     assertEquals(4, u0.getFileAndDirectoryCount());
     assertEquals(HdfsConstants.QUOTA_RESET, u0.getSpaceQuota());
     assertEquals(fileSize * 3 * 2, u0.getSpaceConsumed());
-    verifyTypeQuotaAndConsume(new long[] {-1, -1, -1, ssQuota * 2, -1, -1},
-        new long[] {0, 0, 0, fileSize * 3 * 2, 0, 0}, u0);
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota * 2, -1, -1, -1},
+        new long[] {0, 0, fileSize * 3 * 2, 0, 0, 0}, u0);
   }
 
   @Test

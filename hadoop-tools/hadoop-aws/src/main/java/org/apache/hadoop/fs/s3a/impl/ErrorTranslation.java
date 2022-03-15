@@ -55,6 +55,18 @@ public class ErrorTranslation {
   }
 
   /**
+   * Does this exception indicate that a reference to an object
+   * returned a 404. Unknown bucket errors do not match this
+   * predicate.
+   * @param e exception.
+   * @return true if the status code and error code mean that the
+   * HEAD request returned 404 but the bucket was there.
+   */
+  public static boolean isObjectNotFound(AmazonServiceException e) {
+    return e.getStatusCode() == SC_404 && !isUnknownBucket(e);
+  }
+
+  /**
    * AWS error codes explicitly recognized and processes specially;
    * kept in their own class for isolation.
    */

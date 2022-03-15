@@ -54,7 +54,7 @@ public abstract class GetResourceProfileResponse {
       return true;
     }
 
-    if (other == null || !(other instanceof GetResourceProfileResponse)) {
+    if (!(other instanceof GetResourceProfileResponse)) {
       return false;
     }
     return this.getResource()

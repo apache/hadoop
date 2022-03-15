@@ -50,7 +50,7 @@ public class TestJob {
     when(client.getTaskReports(jobid, TaskType.REDUCE)).thenReturn(
         new TaskReport[0]);
     when(client.getTaskCompletionEvents(jobid, 0, 10)).thenReturn(
-        new TaskCompletionEvent[0]);
+        TaskCompletionEvent.EMPTY_ARRAY);
     Job job = Job.getInstance(cluster, status, new JobConf());
     Assert.assertNotNull(job.toString());
   }

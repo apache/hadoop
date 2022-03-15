@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentNavigableMap;
 
+import io.netty.channel.Channel;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -52,7 +53,6 @@ import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.jboss.netty.channel.Channel;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;

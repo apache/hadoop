@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +39,7 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.util.Sets;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

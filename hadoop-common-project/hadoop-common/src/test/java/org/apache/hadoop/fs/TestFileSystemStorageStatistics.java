@@ -25,12 +25,12 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -61,9 +61,7 @@ public class TestFileSystemStorageStatistics {
       new FileSystemStorageStatistics(FS_STORAGE_STATISTICS_NAME, statistics);
 
   @Rule
-  public final Timeout globalTimeout = new Timeout(10 * 1000);
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
+  public final Timeout globalTimeout = new Timeout(10, TimeUnit.SECONDS);
 
   @Before
   public void setup() {

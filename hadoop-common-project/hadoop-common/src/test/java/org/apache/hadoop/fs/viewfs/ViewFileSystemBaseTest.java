@@ -60,13 +60,17 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT;
+import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -74,8 +78,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
 
 /**
@@ -486,11 +488,13 @@ abstract public class ViewFileSystemBaseTest {
     Assert.assertEquals(targetBL.length, viewBL.length);
     int i = 0;
     for (BlockLocation vbl : viewBL) {
-      assertThat(vbl.toString(), equalTo(targetBL[i].toString()));
-      assertThat(vbl.getOffset(), equalTo(targetBL[i].getOffset()));
-      assertThat(vbl.getLength(), equalTo(targetBL[i].getLength()));
+      Assertions.assertThat(vbl.toString()).isEqualTo(targetBL[i].toString());
+      Assertions.assertThat(vbl.getOffset())
+          .isEqualTo(targetBL[i].getOffset());
+      Assertions.assertThat(vbl.getLength())
+          .isEqualTo(targetBL[i].getLength());
       i++;
-    } 
+    }
   }
 
   @Test
@@ -1025,7 +1029,7 @@ abstract public class ViewFileSystemBaseTest {
       if (e instanceof UnsupportedFileSystemException) {
         String msg = " Use " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
             " instead";
-        assertThat(e.getMessage(), containsString(msg));
+        GenericTestUtils.assertExceptionContains(msg, e);
       } else {
         fail("Unexpected exception: " + e.getMessage());
       }
@@ -1098,6 +1102,176 @@ abstract public class ViewFileSystemBaseTest {
     // Verify ViewFileSystem trash roots shows the ones from
     // target mounted FileSystem.
     Assert.assertTrue("", fsView.getTrashRoots(true).size() > 0);
+  }
+
+  // Default implementation of getTrashRoot for a fallback FS mounted at root:
+  // e.g., fallbackFS.uri.getPath = '/'
+  Path getTrashRootInFallBackFS() throws IOException {
+    return new Path(fsTarget.getHomeDirectory().toUri().getPath(),
+        TRASH_PREFIX);
+  }
+
+  /**
+   * Test TRASH_FORCE_INSIDE_MOUNT_POINT feature for getTrashRoot.
+   */
+  @Test
+  public void testTrashRootForceInsideMountPoint() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    Configuration conf2 = new Configuration(conf);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
+    ConfigUtil.addLinkFallback(conf2, targetTestRoot.toUri());
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+
+    // Case 1: path p in the /data mount point.
+    // Return a trash root within the /data mount point.
+    Path dataTestPath = new Path("/data/dir/file");
+    Path dataTrashRoot = fsView2.makeQualified(
+        new Path("/data/" + TRASH_PREFIX + "/" + ugi.getShortUserName()));
+    Assert.assertEquals(dataTrashRoot, fsView2.getTrashRoot(dataTestPath));
+
+    // Case 2: path p not found in mount table.
+    // Return a trash root in fallback FS.
+    Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
+    Path expectedTrash =
+        fsView2.makeQualified(getTrashRootInFallBackFS());
+    Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(nonExistentPath));
+
+    // Case 3: turn off the CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT flag.
+    // Return a trash root in user home dir.
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, false);
+    fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+    Path targetFSUserHomeTrashRoot = fsTarget.makeQualified(
+        new Path(fsTarget.getHomeDirectory(), TRASH_PREFIX));
+    Assert.assertEquals(targetFSUserHomeTrashRoot,
+        fsView2.getTrashRoot(dataTestPath));
+
+    // Case 4: viewFS without fallback. Expect exception for a nonExistent path
+    conf2 = new Configuration(conf);
+    fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+    try {
+      fsView2.getTrashRoot(nonExistentPath);
+    } catch (NotInMountpointException ignored) {
+    }
+  }
+
+  /**
+   * A mocked FileSystem which returns a deep trash dir.
+   */
+  static class DeepTrashRootMockFS extends MockFileSystem {
+    public static final Path TRASH =
+        new Path("/vol/very/deep/deep/trash/dir/.Trash");
+
+    @Override
+    public Path getTrashRoot(Path path) {
+      return TRASH;
+    }
+  }
+
+  /**
+   * Test getTrashRoot that is very deep inside a mount point.
+   */
+  @Test
+  public void testTrashRootDeepTrashDir() throws IOException {
+
+    Configuration conf2 = ViewFileSystemTestSetup.createConfig();
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
+    conf2.setClass("fs.mocktrashfs.impl", DeepTrashRootMockFS.class,
+        FileSystem.class);
+    ConfigUtil.addLink(conf2, "/mnt/datavol1",
+        URI.create("mocktrashfs://localhost/vol"));
+    Path testPath = new Path("/mnt/datavol1/projs/proj");
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+    Path expectedTrash = fsView2.makeQualified(
+        new Path("/mnt/datavol1/very/deep/deep/trash/dir/.Trash"));
+    Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(testPath));
+  }
+
+  /**
+   * Test getTrashRoots() for all users.
+   */
+  @Test
+  public void testTrashRootsAllUsers() throws IOException {
+    Configuration conf2 = new Configuration(conf);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+
+    // Case 1: verify correct trash roots from fsView and fsView2
+    int beforeTrashRootNum = fsView.getTrashRoots(true).size();
+    int beforeTrashRootNum2 = fsView2.getTrashRoots(true).size();
+    Assert.assertEquals(beforeTrashRootNum, beforeTrashRootNum2);
+
+    fsView.mkdirs(new Path("/data/" + TRASH_PREFIX + "/user1"));
+    fsView.mkdirs(new Path("/data/" + TRASH_PREFIX + "/user2"));
+    fsView.mkdirs(new Path("/user/" + TRASH_PREFIX + "/user3"));
+    fsView.mkdirs(new Path("/user/" + TRASH_PREFIX + "/user4"));
+    fsView.mkdirs(new Path("/user2/" + TRASH_PREFIX + "/user5"));
+    int afterTrashRootsNum = fsView.getTrashRoots(true).size();
+    int afterTrashRootsNum2 = fsView2.getTrashRoots(true).size();
+    Assert.assertEquals(beforeTrashRootNum, afterTrashRootsNum);
+    Assert.assertEquals(beforeTrashRootNum2 + 5, afterTrashRootsNum2);
+
+    // Case 2: per-user mount point
+    fsTarget.mkdirs(new Path(targetTestRoot, "Users/userA/.Trash/userA"));
+    Configuration conf3 = new Configuration(conf2);
+    ConfigUtil.addLink(conf3, "/Users/userA",
+        new Path(targetTestRoot, "Users/userA").toUri());
+    FileSystem fsView3 = FileSystem.get(FsConstants.VIEWFS_URI, conf3);
+    int trashRootsNum3 = fsView3.getTrashRoots(true).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 1, trashRootsNum3);
+
+    // Case 3: single /Users mount point for all users
+    fsTarget.mkdirs(new Path(targetTestRoot, "Users/.Trash/user1"));
+    fsTarget.mkdirs(new Path(targetTestRoot, "Users/.Trash/user2"));
+    Configuration conf4 = new Configuration(conf2);
+    ConfigUtil.addLink(conf4, "/Users",
+        new Path(targetTestRoot, "Users").toUri());
+    FileSystem fsView4 = FileSystem.get(FsConstants.VIEWFS_URI, conf4);
+    int trashRootsNum4 = fsView4.getTrashRoots(true).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 2, trashRootsNum4);
+
+    // Case 4: test trash roots in fallback FS
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user10"));
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user11"));
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user12"));
+    Configuration conf5 = new Configuration(conf2);
+    ConfigUtil.addLinkFallback(conf5, targetTestRoot.toUri());
+    FileSystem fsView5 = FileSystem.get(FsConstants.VIEWFS_URI, conf5);
+    int trashRootsNum5 = fsView5.getTrashRoots(true).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 3, trashRootsNum5);
+  }
+
+  /**
+   * Test getTrashRoots() for current user.
+   */
+  @Test
+  public void testTrashRootsCurrentUser() throws IOException {
+    String currentUser =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    Configuration conf2 = new Configuration(conf);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
+    FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
+
+    int beforeTrashRootNum = fsView.getTrashRoots(false).size();
+    int beforeTrashRootNum2 = fsView2.getTrashRoots(false).size();
+    Assert.assertEquals(beforeTrashRootNum, beforeTrashRootNum2);
+
+    fsView.mkdirs(new Path("/data/" + TRASH_PREFIX + "/" + currentUser));
+    fsView.mkdirs(new Path("/data/" + TRASH_PREFIX + "/user2"));
+    fsView.mkdirs(new Path("/user/" + TRASH_PREFIX + "/" + currentUser));
+    fsView.mkdirs(new Path("/user/" + TRASH_PREFIX + "/user4"));
+    fsView.mkdirs(new Path("/user2/" + TRASH_PREFIX + "/user5"));
+    int afterTrashRootsNum = fsView.getTrashRoots(false).size();
+    int afterTrashRootsNum2 = fsView2.getTrashRoots(false).size();
+    Assert.assertEquals(beforeTrashRootNum, afterTrashRootsNum);
+    Assert.assertEquals(beforeTrashRootNum2 + 2, afterTrashRootsNum2);
+
+    // Test trash roots in fallback FS
+    Configuration conf3 = new Configuration(conf2);
+    fsTarget.mkdirs(new Path(targetTestRoot, TRASH_PREFIX + "/" + currentUser));
+    ConfigUtil.addLinkFallback(conf3, targetTestRoot.toUri());
+    FileSystem fsView3 = FileSystem.get(FsConstants.VIEWFS_URI, conf3);
+    int trashRootsNum3 = fsView3.getTrashRoots(false).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 1, trashRootsNum3);
   }
 
   @Test(expected = NotInMountpointException.class)
@@ -1262,8 +1436,7 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a ViewFs mount link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("not a symbolic link"));
+      GenericTestUtils.assertExceptionContains("not a symbolic link", e);
     }
 
     try {
@@ -1272,8 +1445,7 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a non sym link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("not a symbolic link"));
+      GenericTestUtils.assertExceptionContains("not a symbolic link", e);
     }
 
     try {
@@ -1281,8 +1453,7 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a non existing link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("File does not exist:"));
+      GenericTestUtils.assertExceptionContains("File does not exist:", e);
     }
   }
 
@@ -1354,6 +1525,8 @@ abstract public class ViewFileSystemBaseTest {
     final int cacheSize = TestFileUtil.getCacheSize();
     ViewFileSystem viewFs = (ViewFileSystem) FileSystem
         .get(new URI("viewfs://" + clusterName + "/"), config);
+    viewFs.resolvePath(
+        new Path(String.format("viewfs://%s/%s", clusterName, "/user")));
     assertEquals(cacheSize + 1, TestFileUtil.getCacheSize());
     viewFs.close();
     assertEquals(cacheSize, TestFileUtil.getCacheSize());
@@ -1429,5 +1602,89 @@ abstract public class ViewFileSystemBaseTest {
           summaryBefore.getLength() + expected.length(),
           summaryAfter.getLength());
     }
+  }
+
+  @Test
+  public void testTargetFileSystemLazyInitialization() throws Exception {
+    final String clusterName = "cluster" + new Random().nextInt();
+    Configuration config = new Configuration(conf);
+    config.setBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
+    config.setClass("fs.mockfs.impl",
+        TestChRootedFileSystem.MockFileSystem.class, FileSystem.class);
+    ConfigUtil.addLink(config, clusterName, "/user",
+        URI.create("mockfs://mockauth1/mockpath"));
+    ConfigUtil.addLink(config, clusterName,
+        "/mock", URI.create("mockfs://mockauth/mockpath"));
+
+    final int cacheSize = TestFileUtil.getCacheSize();
+    ViewFileSystem viewFs = (ViewFileSystem) FileSystem
+        .get(new URI("viewfs://" + clusterName + "/"), config);
+
+    // As no inner file system instance has been initialized,
+    // cache size will remain the same
+    // cache is disabled for viewfs scheme, so the viewfs:// instance won't
+    // go in the cache even after the initialization
+    assertEquals(cacheSize, TestFileUtil.getCacheSize());
+
+    // This resolve path will initialize the file system corresponding
+    // to the mount table entry of the path "/user"
+    viewFs.resolvePath(
+        new Path(String.format("viewfs://%s/%s", clusterName, "/user")));
+
+    // Cache size will increase by 1.
+    assertEquals(cacheSize + 1, TestFileUtil.getCacheSize());
+    // This resolve path will initialize the file system corresponding
+    // to the mount table entry of the path "/mock"
+    viewFs.resolvePath(new Path(String.format("viewfs://%s/%s", clusterName,
+        "/mock")));
+    // One more file system instance will get initialized.
+    assertEquals(cacheSize + 2, TestFileUtil.getCacheSize());
+    viewFs.close();
+    // Initialized FileSystem instances will not be removed from cache as
+    // viewfs inner cache is disabled
+    assertEquals(cacheSize + 2, TestFileUtil.getCacheSize());
+  }
+
+  @Test
+  public void testTargetFileSystemLazyInitializationForChecksumMethods()
+      throws Exception {
+    final String clusterName = "cluster" + new Random().nextInt();
+    Configuration config = new Configuration(conf);
+    config.setBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
+    config.setClass("fs.othermockfs.impl",
+        TestChRootedFileSystem.MockFileSystem.class, FileSystem.class);
+    ConfigUtil.addLink(config, clusterName, "/user",
+        URI.create("othermockfs://mockauth1/mockpath"));
+    ConfigUtil.addLink(config, clusterName,
+        "/mock", URI.create("othermockfs://mockauth/mockpath"));
+
+    final int cacheSize = TestFileUtil.getCacheSize();
+    ViewFileSystem viewFs = (ViewFileSystem) FileSystem.get(
+        new URI("viewfs://" + clusterName + "/"), config);
+
+    // As no inner file system instance has been initialized,
+    // cache size will remain the same
+    // cache is disabled for viewfs scheme, so the viewfs:// instance won't
+    // go in the cache even after the initialization
+    assertEquals(cacheSize, TestFileUtil.getCacheSize());
+
+    // This is not going to initialize any filesystem instance
+    viewFs.setVerifyChecksum(true);
+
+    // Cache size will remain the same
+    assertEquals(cacheSize, TestFileUtil.getCacheSize());
+
+    // This resolve path will initialize the file system corresponding
+    // to the mount table entry of the path "/user"
+    viewFs.getFileChecksum(
+        new Path(String.format("viewfs://%s/%s", clusterName, "/user")));
+
+    // Cache size will increase by 1.
+    assertEquals(cacheSize + 1, TestFileUtil.getCacheSize());
+
+    viewFs.close();
+    // Initialized FileSystem instances will not be removed from cache as
+    // viewfs inner cache is disabled
+    assertEquals(cacheSize + 1, TestFileUtil.getCacheSize());
   }
 }

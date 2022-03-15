@@ -217,6 +217,39 @@ public class TestMutableCSConfigurationProvider {
 
   }
 
+  @Test
+  public void testAddRemoveQueueWithSpacesInConfig() throws Exception {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {" a   , b, c" });
+
+    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
+    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
+    final String c = CapacitySchedulerConfiguration.ROOT + ".c";
+    csConf.setCapacity(a, 0);
+    csConf.setCapacity(b, 50);
+    csConf.setCapacity(c, 50);
+
+    confProvider = new MutableCSConfigurationProvider(rmContext) {
+      @Override
+      protected Configuration getInitSchedulerConfig() {
+        return csConf;
+      }
+    };
+
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+    confProvider.init(conf);
+
+    SchedConfUpdateInfo update = new SchedConfUpdateInfo();
+    update.getRemoveQueueInfo().add("root.a");
+
+    confProvider.logAndApplyMutation(UserGroupInformation
+        .getCurrentUser(), update);
+  }
+
   private void writeConf(Configuration conf, String storePath)
       throws IOException {
     FileSystem fileSystem = FileSystem.get(new Configuration(conf));

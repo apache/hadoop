@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -206,7 +205,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
         new String[] {nonExistTargetPath.toUri().toString()}, conf);
     if (expectFsInitFailure) {
       LambdaTestUtils.intercept(IOException.class, () -> {
-        FileSystem.get(conf);
+        FileSystem fs = FileSystem.get(conf);
+        fs.resolvePath(new Path(userFolder));
       });
     } else {
       try (FileSystem fs = FileSystem.get(conf)) {
@@ -397,7 +397,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * Unset fs.viewfs.overload.scheme.target.hdfs.impl property.
    * So, OverloadScheme target fs initialization will fail.
    */
-  @Test(expected = UnsupportedFileSystemException.class, timeout = 30000)
+  @Test(expected = IOException.class, timeout = 30000)
   public void testInvalidOverloadSchemeTargetFS() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     String mountTableIfSet = conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH);
@@ -496,7 +496,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * When InnerCache disabled, all matching ViewFileSystemOverloadScheme
    * initialized scheme file systems would not use FileSystem cache.
    */
-  @Test(timeout = 3000)
+  @Test(timeout = 30000)
   public void testViewFsOverloadSchemeWithNoInnerCacheAndHdfsTargets()
       throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
@@ -523,7 +523,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * initialized scheme file systems should continue to take advantage of
    * FileSystem cache.
    */
-  @Test(timeout = 3000)
+  @Test(timeout = 30000)
   public void testViewFsOverloadSchemeWithNoInnerCacheAndLocalSchemeTargets()
       throws Exception {
     final Path localTragetPath = new Path(localTargetDir.toURI());
@@ -545,7 +545,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   /**
    * Tests the rename with nfly mount link.
    */
-  @Test(timeout = 3000)
+  @Test(timeout = 30000)
   public void testNflyRename() throws Exception {
     final Path hdfsTargetPath1 = new Path(defaultFSURI + HDFS_USER_FOLDER);
     final Path hdfsTargetPath2 = new Path(defaultFSURI + HDFS_USER_FOLDER + 1);
@@ -577,7 +577,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   /**
    * Tests the write and read contents with nfly mount link.
    */
-  @Test(timeout = 3000)
+  @Test(timeout = 30000)
   public void testNflyWriteRead() throws Exception {
     final Path hdfsTargetPath1 = new Path(defaultFSURI + HDFS_USER_FOLDER);
     final Path hdfsTargetPath2 = new Path(defaultFSURI + HDFS_USER_FOLDER + 1);
@@ -604,7 +604,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * target file. 3. Tests the read works with repairOnRead flag. 4. Tests that
    * previously deleted file fully recovered and exists.
    */
-  @Test(timeout = 3000)
+  @Test(timeout = 30000)
   public void testNflyRepair() throws Exception {
     final NflyFSystem.NflyKey repairKey = NflyFSystem.NflyKey.repairOnRead;
     final Path hdfsTargetPath1 = new Path(defaultFSURI + HDFS_USER_FOLDER);

@@ -75,6 +75,7 @@ public class CopyCommitter extends FileOutputCommitter {
   private boolean ignoreFailures = false;
   private boolean skipCrc = false;
   private int blocksPerChunk = 0;
+  private boolean updateRoot = false;
 
   /**
    * Create a output committer
@@ -100,6 +101,8 @@ public class CopyCommitter extends FileOutputCommitter {
     Configuration conf = jobContext.getConfiguration();
     syncFolder = conf.getBoolean(DistCpConstants.CONF_LABEL_SYNC_FOLDERS, false);
     overwrite = conf.getBoolean(DistCpConstants.CONF_LABEL_OVERWRITE, false);
+    updateRoot =
+        conf.getBoolean(CONF_LABEL_UPDATE_ROOT, false);
     targetPathExists = conf.getBoolean(
         DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, true);
     ignoreFailures = conf.getBoolean(
@@ -336,9 +339,12 @@ public class CopyCommitter extends FileOutputCommitter {
 
         Path targetFile = new Path(targetRoot.toString() + "/" + srcRelPath);
         //
-        // Skip the root folder when syncOrOverwrite is true.
+        // Skip the root folder when skipRoot is true.
         //
-        if (targetRoot.equals(targetFile) && syncOrOverwrite) continue;
+        boolean skipRoot = syncOrOverwrite && !updateRoot;
+        if (targetRoot.equals(targetFile) && skipRoot) {
+          continue;
+        }
 
         FileSystem targetFS = targetFile.getFileSystem(conf);
         DistCpUtils.preserve(targetFS, targetFile, srcFileStatus, attributes,
@@ -553,10 +559,6 @@ public class CopyCommitter extends FileOutputCommitter {
         conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
     List<Path> targets = new ArrayList<>(1);
     targets.add(targetFinalPath);
-    Path resultNonePath = Path.getPathWithoutSchemeAndAuthority(targetFinalPath)
-        .toString().startsWith(DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME)
-        ? DistCpConstants.RAW_NONE_PATH
-        : DistCpConstants.NONE_PATH;
     //
     // Set up options to be the same from the CopyListing.buildListing's
     // perspective, so to collect similar listings as when doing the copy
@@ -564,12 +566,15 @@ public class CopyCommitter extends FileOutputCommitter {
     // thread count is picked up from the job
     int threads = conf.getInt(DistCpConstants.CONF_LABEL_LISTSTATUS_THREADS,
         DistCpConstants.DEFAULT_LISTSTATUS_THREADS);
+    boolean useIterator =
+        conf.getBoolean(DistCpConstants.CONF_LABEL_USE_ITERATOR, false);
     LOG.info("Scanning destination directory {} with thread count: {}",
         targetFinalPath, threads);
-    DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
+    DistCpOptions options = new DistCpOptions.Builder(targets, targetFinalPath)
         .withOverwrite(overwrite)
         .withSyncFolder(syncFolder)
         .withNumListstatusThreads(threads)
+        .withUseIterator(useIterator)
         .build();
     DistCpContext distCpContext = new DistCpContext(options);
     distCpContext.setTargetPathExists(targetPathExists);

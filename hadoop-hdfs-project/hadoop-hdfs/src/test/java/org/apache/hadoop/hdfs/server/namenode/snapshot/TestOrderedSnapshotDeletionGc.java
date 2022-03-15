@@ -50,6 +50,7 @@ import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DF
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.TestOrderedSnapshotDeletion.assertMarkedAsDeleted;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.TestOrderedSnapshotDeletion.assertNotMarkedAsDeleted;
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.TestOrderedSnapshotDeletion.getDeletedSnapshotName;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -112,23 +113,32 @@ public class TestOrderedSnapshotDeletionGc {
     hdfs.deleteSnapshot(snapshottableDir, "s2");
     assertNotMarkedAsDeleted(s0path, cluster);
     assertNotMarkedAsDeleted(s1path, cluster);
-    assertMarkedAsDeleted(s2path, cluster);
+    assertMarkedAsDeleted(s2path, snapshottableDir, cluster);
+    final Path s2pathNew = new Path(s2path.getParent(),
+        getDeletedSnapshotName(hdfs, snapshottableDir, s2path.getName()));
+    Assert.assertFalse(exist(s2path, hdfs));
+    Assert.assertTrue(exist(s2pathNew, hdfs));
+    Assert.assertFalse(s2path.equals(s2pathNew));
 
     hdfs.deleteSnapshot(snapshottableDir, "s1");
     assertNotMarkedAsDeleted(s0path, cluster);
-    assertMarkedAsDeleted(s1path, cluster);
-    assertMarkedAsDeleted(s2path, cluster);
-
+    assertMarkedAsDeleted(s1path, snapshottableDir, cluster);
+    assertMarkedAsDeleted(s2path, snapshottableDir, cluster);
+    final Path s1pathNew = new Path(s1path.getParent(),
+        getDeletedSnapshotName(hdfs, snapshottableDir, s1path.getName()));
+    Assert.assertFalse(exist(s1path, hdfs));
+    Assert.assertTrue(exist(s1pathNew, hdfs));
+    Assert.assertFalse(s1path.equals(s1pathNew));
     // should not be gc'ed
     Thread.sleep(10*GC_PERIOD);
     assertNotMarkedAsDeleted(s0path, cluster);
-    assertMarkedAsDeleted(s1path, cluster);
-    assertMarkedAsDeleted(s2path, cluster);
+    assertMarkedAsDeleted(s1path, snapshottableDir, cluster);
+    assertMarkedAsDeleted(s2path, snapshottableDir, cluster);
 
     hdfs.deleteSnapshot(snapshottableDir, "s0");
     Assert.assertFalse(exist(s0path, hdfs));
 
-    waitForGc(Arrays.asList(s1path, s2path), hdfs);
+    waitForGc(Arrays.asList(s1pathNew, s2pathNew), hdfs);
     // total no of edit log records created for delete snapshot will be equal
     // to sum of no of user deleted snapshots and no of snapshots gc'ed with
     // snapshotDeletion gc thread

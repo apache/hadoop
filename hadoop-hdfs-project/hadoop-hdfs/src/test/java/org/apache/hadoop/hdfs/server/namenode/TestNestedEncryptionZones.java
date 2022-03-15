@@ -32,12 +32,13 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.File;
 
@@ -103,7 +104,8 @@ public class TestNestedEncryptionZones {
     // enable trash for testing
     conf.setLong(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(EncryptionZoneManager.class), Level.TRACE);
     fs = cluster.getFileSystem();
     setProvider();
 

@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 
@@ -48,5 +48,9 @@ public class BlockManagerFaultInjector {
 
   @VisibleForTesting
   public void removeBlockReportLease(DatanodeDescriptor node, long leaseId) {
+  }
+
+  @VisibleForTesting
+  public void mockAnException() {
   }
 }

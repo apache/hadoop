@@ -91,7 +91,7 @@ public class TestUniformSizeInputFormat {
       return size;
     }
     finally {
-      IOUtils.cleanup(null, fileSystem, outputStream);
+      IOUtils.cleanupWithLogger(null, fileSystem, outputStream);
     }
   }
 

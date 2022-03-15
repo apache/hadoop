@@ -68,7 +68,7 @@ public class ErrorReportAction implements BPServiceActorAction {
     if (this == obj) {
       return true;
     }
-    if (obj == null || !(obj instanceof ErrorReportAction)) {
+    if (!(obj instanceof ErrorReportAction)) {
       return false;
     }
     ErrorReportAction other = (ErrorReportAction) obj;

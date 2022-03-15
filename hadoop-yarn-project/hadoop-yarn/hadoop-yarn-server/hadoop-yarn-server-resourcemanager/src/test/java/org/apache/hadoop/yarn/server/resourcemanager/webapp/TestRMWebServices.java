@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.*;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -474,7 +475,7 @@ public class TestRMWebServices extends JerseyTestBase {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 31, clusterinfo.length());
+    assertEquals("incorrect number of elements", 35, clusterinfo.length());
     verifyClusterMetrics(
         clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),
@@ -1003,8 +1004,8 @@ public class TestRMWebServices extends JerseyTestBase {
     Assert.assertEquals(Status.BAD_REQUEST
             .getStatusCode(), response.getStatus());
     Assert.assertTrue(response.getEntity().toString()
-            .contains("Configuration change validation only supported by"
-                    +" MutableConfScheduler."));
+            .contains(String.format("Configuration change validation only supported by %s.",
+                MutableConfScheduler.class.getSimpleName())));
   }
 
   @Test
@@ -1027,7 +1028,7 @@ public class TestRMWebServices extends JerseyTestBase {
     Assert.assertEquals(Status.BAD_REQUEST
             .getStatusCode(), response.getStatus());
     Assert.assertTrue(response.getEntity().toString()
-            .contains("Illegal capacity of 0.5 for children of queue"));
+            .contains("IOException"));
   }
 
   @Test

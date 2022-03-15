@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileSystem;
 
 /**
  * Responsible to keep all the Azure Blob File System configurations keys in Hadoop configuration file.
@@ -55,7 +56,57 @@ public final class ConfigurationKeys {
   public static final String AZURE_WRITE_MAX_CONCURRENT_REQUESTS = "fs.azure.write.max.concurrent.requests";
   public static final String AZURE_WRITE_MAX_REQUESTS_TO_QUEUE = "fs.azure.write.max.requests.to.queue";
   public static final String AZURE_WRITE_BUFFER_SIZE = "fs.azure.write.request.size";
+
+  /**
+   * Maximum Number of blocks a single output stream can have
+   * active (uploading, or queued to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link FileSystemConfigurations#BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT}
+   */
+  public static final String FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS =
+      "fs.azure.block.upload.active.blocks";
+
+  /**
+   * Buffer directory path for uploading AbfsOutputStream data blocks.
+   * Value: {@value}
+   */
+  public static final String FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR =
+      "fs.azure.buffer.dir";
+
+  /**
+   * What data block buffer to use.
+   * <br>
+   * Options include: "disk"(Default), "array", and "bytebuffer".
+   * <br>
+   * Default is {@link FileSystemConfigurations#DATA_BLOCKS_BUFFER_DEFAULT}.
+   * Value: {@value}
+   */
+  public static final String DATA_BLOCKS_BUFFER =
+      "fs.azure.data.blocks.buffer";
+
+  /** If the data size written by Hadoop app is small, i.e. data size :
+   *  (a) before any of HFlush/HSync call is made or
+   *  (b) between 2 HFlush/Hsync API calls
+   *  is less than write buffer size, 2 separate calls, one for append and
+   *  another for flush are made.
+   *  By enabling the small write optimization, a single call will be made to
+   *  perform both append and flush operations and hence reduce request count.
+   */
+  public static final String AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = "fs.azure.write.enableappendwithflush";
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
+  public static final String AZURE_READ_SMALL_FILES_COMPLETELY = "fs.azure.read.smallfilescompletely";
+  public static final String AZURE_READ_OPTIMIZE_FOOTER_READ = "fs.azure.read.optimizefooterread";
+
+  /**
+   * Read ahead range parameter which can be set by user.
+   * Default value is {@link FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
+   * This might reduce number of calls to remote as next requested
+   * data could already be present in buffer {@value}.
+   */
+  public static final String AZURE_READ_AHEAD_RANGE = "fs.azure.readahead.range";
   public static final String AZURE_BLOCK_SIZE_PROPERTY_NAME = "fs.azure.block.size";
   public static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME = "fs.azure.block.location.impersonatedhost";
   public static final String AZURE_CONCURRENT_CONNECTION_VALUE_OUT = "fs.azure.concurrentRequestCount.out";
@@ -71,9 +122,19 @@ public final class ConfigurationKeys {
    *  overwritten only if there is a match on the eTag of existing file.
    */
   public static final String FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE = "fs.azure.enable.conditional.create.overwrite";
+  public static final String FS_AZURE_ENABLE_MKDIR_OVERWRITE = "fs.azure.enable.mkdir.overwrite";
   /** Provides a config to provide comma separated path prefixes on which Appendblob based files are created
    *  Default is empty. **/
   public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.directories";
+  /** Provides a config to provide comma separated path prefixes which support infinite leases.
+   *  Files under these paths will be leased when created or opened for writing and the lease will
+   *  be released when the file is closed. The lease may be broken with the breakLease method on
+   *  AzureBlobFileSystem. Default is empty.
+   * **/
+  public static final String FS_AZURE_INFINITE_LEASE_KEY = "fs.azure.infinite-lease.directories";
+  /** Provides a number of threads to use for lease operations for infinite lease directories.
+   *  Must be set to a minimum of 1 if infinite lease directories are to be used. Default is 0. **/
+  public static final String FS_AZURE_LEASE_THREADS = "fs.azure.lease.threads";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
@@ -87,6 +148,12 @@ public final class ConfigurationKeys {
    *  Default value of this config is true. **/
   public static final String FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH = "fs.azure.disable.outputstream.flush";
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
+  /**
+   * The client correlation ID provided over config that will be added to
+   * x-ms-client-request-Id header. Defaults to empty string if the length and
+   * character constraints are not satisfied. **/
+  public static final String FS_AZURE_CLIENT_CORRELATIONID = "fs.azure.client.correlationid";
+  public static final String FS_AZURE_TRACINGHEADER_FORMAT = "fs.azure.tracingheader.format";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
   public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
@@ -119,6 +186,10 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_SKIP_SUPER_USER_REPLACEMENT = "fs.azure.identity.transformer.skip.superuser.replacement";
   public static final String AZURE_KEY_ACCOUNT_KEYPROVIDER = "fs.azure.account.keyprovider";
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
+  /** Setting this true will make the driver use it's own RemoteIterator implementation */
+  public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
+  /** Server side encryption key */
+  public static final String FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY = "fs.azure.client-provided-encryption-key";
 
   /** End point of ABFS account: {@value}. */
   public static final String AZURE_ABFS_ENDPOINT = "fs.azure.abfs.endpoint";
@@ -168,6 +239,12 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_LOCAL_USER_SP_MAPPING_FILE_PATH = "fs.azure.identity.transformer.local.service.principal.mapping.file.path";
   /** Key for Local Group to Service Group file location. */
   public static final String FS_AZURE_LOCAL_GROUP_SG_MAPPING_FILE_PATH = "fs.azure.identity.transformer.local.service.group.mapping.file.path";
-
+  /**
+   * Optional config to enable a lock free pread which will bypass buffer in AbfsInputStream.
+   * This is not a config which can be set at cluster level. It can be used as
+   * an option on FutureDataInputStreamBuilder.
+   * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
+   */
+  public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
   private ConfigurationKeys() {}
 }

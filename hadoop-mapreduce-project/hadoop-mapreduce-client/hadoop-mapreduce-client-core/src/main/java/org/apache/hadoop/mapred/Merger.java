@@ -40,6 +40,7 @@ import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.CryptoUtils;
+import org.apache.hadoop.mapreduce.security.IntermediateEncryptedStream;
 import org.apache.hadoop.util.PriorityQueue;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
@@ -302,7 +303,7 @@ public class Merger {
         FSDataInputStream in = fs.open(file);
 
         in.seek(segmentOffset);
-        in = CryptoUtils.wrapIfNecessary(conf, in);
+        in = IntermediateEncryptedStream.wrapIfNecessary(conf, in, file);
         reader = new Reader<K, V>(conf, in,
             segmentLength - CryptoUtils.cryptoPadding(conf),
             codec, readsCounter);
@@ -730,7 +731,8 @@ public class Merger {
                                               approxOutputSize, conf);
 
           FSDataOutputStream out = fs.create(outputFile);
-          out = CryptoUtils.wrapIfNecessary(conf, out);
+          out = IntermediateEncryptedStream.wrapIfNecessary(conf, out,
+              outputFile);
           Writer<K, V> writer = new Writer<K, V>(conf, out, keyClass, valueClass,
               codec, writesCounter, true);
           writeFile(this, writer, reporter, conf);

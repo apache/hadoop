@@ -20,11 +20,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.log4j.Level;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 public class TestFsImageValidation {
   static final Logger LOG = LoggerFactory.getLogger(
@@ -32,9 +33,11 @@ public class TestFsImageValidation {
 
   static {
     final Level t = Level.TRACE;
-    FsImageValidation.Util.setLogLevel(FsImageValidation.class, t);
-    FsImageValidation.Util.setLogLevel(INodeReferenceValidation.class, t);
-    FsImageValidation.Util.setLogLevel(INode.class, t);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(FsImageValidation.class), t);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(INodeReferenceValidation.class), t);
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(INode.class), t);
   }
 
   /**

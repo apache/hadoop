@@ -199,7 +199,7 @@ public class DiskBalancerCLI extends Configured implements Tool {
           "Invalid or extra Arguments: " + Arrays
               .toString(Arrays.copyOfRange(cmdArgs, 2, cmdArgs.length)));
     }
-    return dispatch(cmd, opts);
+    return dispatch(cmd);
   }
 
   /**
@@ -469,10 +469,8 @@ public class DiskBalancerCLI extends Configured implements Tool {
    * Dispatches calls to the right command Handler classes.
    *
    * @param cmd  - CommandLine
-   * @param opts options of command line
-   * @param out  the output stream used for printing
    */
-  private int dispatch(CommandLine cmd, Options opts)
+  private int dispatch(CommandLine cmd)
       throws Exception {
     Command dbCmd = null;
     try {

@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.AddBlockFlag;
@@ -196,8 +196,9 @@ public abstract class BlockPlacementPolicy {
     if (moreThanOne.remove(cur)) {
       if (storages.size() == 1) {
         final DatanodeStorageInfo remaining = storages.get(0);
-        moreThanOne.remove(remaining);
-        exactlyOne.add(remaining);
+        if (moreThanOne.remove(remaining)) {
+          exactlyOne.add(remaining);
+        }
       }
     } else {
       exactlyOne.remove(cur);
@@ -261,4 +262,16 @@ public abstract class BlockPlacementPolicy {
       }
     }
   }
+
+  /**
+   * Updates the value used for excludeSlowNodesEnabled, which is set by
+   * {@code DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY}
+   * initially.
+   *
+   * @param enable true, we will filter out slow nodes
+   * when choosing targets for blocks, otherwise false not filter.
+   */
+  public abstract void setExcludeSlowNodesEnabled(boolean enable);
+
+  public abstract boolean getExcludeSlowNodesEnabled();
 }

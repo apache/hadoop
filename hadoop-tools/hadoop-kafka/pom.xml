@@ -39,10 +39,9 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <effort>Max</effort>
         </configuration>
@@ -97,6 +96,10 @@
         <exclusion>
           <groupId>org.xerial.snappy</groupId>
           <artifactId>snappy-java</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>net.jpountz.lz4</groupId>
+          <artifactId>lz4</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

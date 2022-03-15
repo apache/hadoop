@@ -25,11 +25,11 @@ import java.net.URLClassLoader;
 import java.util.HashMap;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -165,8 +165,8 @@ public class TestReflectionUtils {
     final String title = "title";
     ReflectionUtils.logThreadInfo(logger, title, 0L);
 
-    assertThat(logCapturer.getOutput(),
-        containsString("Process Thread Dump: " + title));
+    Assertions.assertThat(logCapturer.getOutput())
+        .contains("Process Thread Dump: " + title);
   }
 
   @Test

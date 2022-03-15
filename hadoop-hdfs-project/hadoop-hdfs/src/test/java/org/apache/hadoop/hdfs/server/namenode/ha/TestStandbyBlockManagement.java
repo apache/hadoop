@@ -29,8 +29,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.log4j.Level;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import static org.junit.Assert.assertEquals;
 
@@ -46,7 +46,7 @@ public class TestStandbyBlockManagement {
   private static final Path TEST_FILE_PATH = new Path(TEST_FILE);
 
   static {
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
 
   @Test(timeout=60000)

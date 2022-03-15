@@ -22,6 +22,7 @@ import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
@@ -124,18 +125,19 @@ public class TestRpcBase {
     return server;
   }
 
-  protected static TestRpcService getClient(InetSocketAddress serverAddr,
-                                     Configuration clientConf)
+  protected static TestRpcService getClient(InetSocketAddress serverAddr, Configuration clientConf)
       throws ServiceException {
-    try {
-      return RPC.getProxy(TestRpcService.class, 0, serverAddr, clientConf);
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+    return getClient(serverAddr, clientConf, null);
   }
 
   protected static TestRpcService getClient(InetSocketAddress serverAddr,
-      Configuration clientConf, final RetryPolicy connectionRetryPolicy)
+      Configuration clientConf, RetryPolicy connectionRetryPolicy) throws ServiceException {
+    return getClient(serverAddr, clientConf, connectionRetryPolicy, null);
+  }
+
+  protected static TestRpcService getClient(InetSocketAddress serverAddr,
+      Configuration clientConf, final RetryPolicy connectionRetryPolicy,
+      AtomicBoolean fallbackToSimpleAuth)
       throws ServiceException {
     try {
       return RPC.getProtocolProxy(
@@ -146,7 +148,7 @@ public class TestRpcBase {
           clientConf,
           NetUtils.getDefaultSocketFactory(clientConf),
           RPC.getRpcTimeout(clientConf),
-          connectionRetryPolicy, null).getProxy();
+          connectionRetryPolicy, fallbackToSimpleAuth).getProxy();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

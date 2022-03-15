@@ -20,10 +20,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 
 public class TestAbfsHttpOperation {
 
@@ -31,61 +34,79 @@ public class TestAbfsHttpOperation {
   public void testMaskingAndEncoding()
       throws MalformedURLException, UnsupportedEncodingException {
     testIfMaskAndEncodeSuccessful("Where sig is the only query param",
-        "http://www.testurl.net?sig=abcd", "http://www.testurl.net?sig=XXXX");
+        "http://www.testurl.net?sig=abcd", "http://www.testurl.net?sig=XXXXX");
 
-    testIfMaskAndEncodeSuccessful("Where sig is the first query param",
-        "http://www.testurl.net?sig=abcd&abc=xyz",
-        "http://www.testurl.net?sig=XXXX&abc=xyz");
+    testIfMaskAndEncodeSuccessful("Where oid is the only query param",
+        "http://www.testurl.net?saoid=abcdef",
+        "http://www.testurl.net?saoid=abcXXX");
+
+    testIfMaskAndEncodeSuccessful("Where sig is the first query param, oid is last",
+        "http://www.testurl.net?sig=abcd&abc=xyz&saoid=pqrs456",
+        "http://www.testurl.net?sig=XXXXX&abc=xyz&saoid=pqrsXXX");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig is neither first nor last query param",
-        "http://www.testurl.net?lmn=abc&sig=abcd&abc=xyz",
-        "http://www.testurl.net?lmn=abc&sig=XXXX&abc=xyz");
+        "Where sig/oid are neither first nor last query param",
+        "http://www.testurl.net?lmn=abc&sig=abcd&suoid=mnop789&abc=xyz",
+        "http://www.testurl.net?lmn=abc&sig=XXXXX&suoid=mnopXXX&abc=xyz");
 
-    testIfMaskAndEncodeSuccessful("Where sig is the last query param",
-        "http://www.testurl.net?abc=xyz&sig=abcd",
-        "http://www.testurl.net?abc=xyz&sig=XXXX");
+    testIfMaskAndEncodeSuccessful("Where sig is the last query param, oid is first",
+        "http://www.testurl.net?skoid=pqrs123&abc=xyz&sig=abcd",
+        "http://www.testurl.net?skoid=pqrsXXX&abc=xyz&sig=XXXXX");
 
-    testIfMaskAndEncodeSuccessful("Where sig query param is not present",
+    testIfMaskAndEncodeSuccessful("Where sig/oid query param are not present",
         "http://www.testurl.net?abc=xyz", "http://www.testurl.net?abc=xyz");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but mysig",
-        "http://www.testurl.net?abc=xyz&mysig=qwerty",
-        "http://www.testurl.net?abc=xyz&mysig=qwerty");
+        "Where sig/oid query param are not present but mysig and myoid",
+        "http://www.testurl.net?abc=xyz&mysig=qwerty&mysaoid=uvw",
+        "http://www.testurl.net?abc=xyz&mysig=qwerty&mysaoid=uvw");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but sigmy",
-        "http://www.testurl.net?abc=xyz&sigmy=qwerty",
-        "http://www.testurl.net?abc=xyz&sigmy=qwerty");
+        "Where sig/oid query param is not present but sigmy and oidmy",
+        "http://www.testurl.net?abc=xyz&sigmy=qwerty&skoidmy=uvw",
+        "http://www.testurl.net?abc=xyz&sigmy=qwerty&skoidmy=uvw");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but a " + "value sig",
-        "http://www.testurl.net?abc=xyz&mnop=sig",
-        "http://www.testurl.net?abc=xyz&mnop=sig");
+        "Where sig/oid query param is not present but values sig and oid",
+        "http://www.testurl.net?abc=xyz&mnop=sig&pqr=saoid",
+        "http://www.testurl.net?abc=xyz&mnop=sig&pqr=saoid");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but a " + "value ends with sig",
-        "http://www.testurl.net?abc=xyz&mnop=abcsig",
-        "http://www.testurl.net?abc=xyz&mnop=abcsig");
+        "Where sig/oid query param is not present but a value ends with sig/oid",
+        "http://www.testurl.net?abc=xyzsaoid&mnop=abcsig",
+        "http://www.testurl.net?abc=xyzsaoid&mnop=abcsig");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but a " + "value starts with sig",
-        "http://www.testurl.net?abc=xyz&mnop=sigabc",
-        "http://www.testurl.net?abc=xyz&mnop=sigabc");
+        "Where sig/oid query param is not present but a value starts with sig/oid",
+        "http://www.testurl.net?abc=saoidxyz&mnop=sigabc",
+        "http://www.testurl.net?abc=saoidxyz&mnop=sigabc");
+  }
+
+  @Test
+  public void testUrlWithNullValues()
+      throws MalformedURLException, UnsupportedEncodingException {
+    testIfMaskAndEncodeSuccessful("Where param to be masked has null value",
+        "http://www.testurl.net?abc=xyz&saoid=&mnop=abcsig",
+        "http://www.testurl.net?abc=xyz&saoid=&mnop=abcsig");
+    testIfMaskAndEncodeSuccessful("Where visible param has null value",
+        "http://www.testurl.net?abc=xyz&pqr=&mnop=abcd",
+        "http://www.testurl.net?abc=xyz&pqr=&mnop=abcd");
+    testIfMaskAndEncodeSuccessful("Where last param has null value",
+        "http://www.testurl.net?abc=xyz&pqr=&mnop=",
+        "http://www.testurl.net?abc=xyz&pqr=&mnop=");
   }
 
   private void testIfMaskAndEncodeSuccessful(final String scenario,
       final String url, final String expectedMaskedUrl)
-      throws UnsupportedEncodingException {
+      throws UnsupportedEncodingException, MalformedURLException {
 
-    Assertions.assertThat(AbfsHttpOperation.getSignatureMaskedUrl(url))
+    Assertions.assertThat(UriUtils.getMaskedUrl(new URL(url)))
         .describedAs(url + " (" + scenario + ") after masking should be: "
             + expectedMaskedUrl).isEqualTo(expectedMaskedUrl);
 
     final String expectedMaskedEncodedUrl = URLEncoder
         .encode(expectedMaskedUrl, "UTF-8");
-    Assertions.assertThat(AbfsHttpOperation.encodedUrlStr(expectedMaskedUrl))
+    Assertions.assertThat(UriUtils.encodedUrlStr(expectedMaskedUrl))
         .describedAs(
             url + " (" + scenario + ") after masking and encoding should "
                 + "be: " + expectedMaskedEncodedUrl)

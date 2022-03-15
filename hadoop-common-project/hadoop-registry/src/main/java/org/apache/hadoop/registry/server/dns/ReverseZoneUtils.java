@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.registry.server.dns;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;

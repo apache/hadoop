@@ -64,7 +64,6 @@ import java.nio.channels.ServerSocketChannel;
 import java.security.GeneralSecurityException;
 import java.util.Enumeration;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_DEFAULT;
@@ -77,8 +76,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_INTERNAL_PR
  */
 public class DatanodeHttpServer implements Closeable {
   static final Logger LOG = LoggerFactory.getLogger(DatanodeHttpServer.class);
-  private static final ConcurrentHashMap<Class<?>, Object> HANDLER_STATE
-      = new ConcurrentHashMap<Class<?>, Object>() {};
   // HttpServer threads are only used for the web UI and basic servlets, so
   // set them to the minimum possible
   private static final int HTTP_SELECTOR_THREADS = 1;
@@ -281,11 +278,10 @@ public class DatanodeHttpServer implements Closeable {
       try {
         Method initializeState = classes[i].getDeclaredMethod("initializeState",
             Configuration.class);
-        Constructor constructor =
+        Constructor<?> constructor =
             classes[i].getDeclaredConstructor(initializeState.getReturnType());
         handlers[i] = (ChannelHandler) constructor.newInstance(
-            HANDLER_STATE.getOrDefault(classes[i],
-            initializeState.invoke(null, configuration)));
+            initializeState.invoke(null, configuration));
       } catch (NoSuchMethodException | InvocationTargetException
           | IllegalAccessException | InstantiationException
           | IllegalArgumentException e) {

@@ -46,7 +46,7 @@ import java.util.function.Function;
 
 import org.apache.commons.compress.utils.Sets;
 import org.apache.commons.io.FileUtils;
-import org.apache.curator.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;

@@ -20,15 +20,14 @@ package org.apache.hadoop.net;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 /**
  * This class mainly test the MockDomainNameResolver comes working as expected.
@@ -36,9 +35,6 @@ import static org.junit.Assert.assertEquals;
 public class TestMockDomainNameResolver {
 
   private Configuration conf;
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setup() {
@@ -60,12 +56,10 @@ public class TestMockDomainNameResolver {
   }
 
   @Test
-  public void testMockDomainNameResolverCanNotBeCreated()
-      throws UnknownHostException {
+  public void testMockDomainNameResolverCanNotBeCreated() {
     DomainNameResolver resolver = DomainNameResolverFactory.newInstance(
         conf, CommonConfigurationKeys.HADOOP_DOMAINNAME_RESOLVER_IMPL);
-    exception.expect(UnknownHostException.class);
-    resolver.getAllByDomainName(
-        MockDomainNameResolver.UNKNOW_DOMAIN);
+    assertThrows(UnknownHostException.class, () ->
+        resolver.getAllByDomainName(MockDomainNameResolver.UNKNOW_DOMAIN));
   }
 }

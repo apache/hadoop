@@ -20,15 +20,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -69,6 +69,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.Records;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -1313,8 +1316,13 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
       Assert.assertEquals(0,
           queue.getQueueResourceUsage().getUsed().getVirtualCores());
     } else if (getSchedulerType() == SchedulerType.FAIR) {
-      FSLeafQueue queue = ((FairScheduler) scheduler).getQueueManager()
-          .getLeafQueue("root.default", false);
+      // The default queue is not auto created after YARN-7769 so
+      // user-as-default-queue option is used
+      Collection<FSLeafQueue> queues = ((FairScheduler) scheduler)
+          .getQueueManager().getLeafQueues();
+      Assert.assertEquals(1, queues.size());
+
+      FSLeafQueue queue = queues.iterator().next();
       Assert.assertEquals(0, queue.getResourceUsage().getMemorySize());
       Assert.assertEquals(0, queue.getResourceUsage().getVirtualCores());
     }

@@ -133,7 +133,7 @@ import org.jboss.netty.util.Timer;
 import org.eclipse.jetty.http.HttpHeader;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
@@ -1170,8 +1170,13 @@ public class ShuffleHandler extends AuxiliaryService {
         StringBuilder sb = new StringBuilder("shuffle for ");
         sb.append(jobId).append(" reducer ").append(reduce);
         sb.append(" length ").append(contentLength);
-        sb.append(" mappers: ").append(mapIds);
-        AUDITLOG.debug(sb.toString());
+        if (AUDITLOG.isTraceEnabled()) {
+          // For trace level logging, append the list of mappers
+          sb.append(" mappers: ").append(mapIds);
+          AUDITLOG.trace(sb.toString());
+        } else {
+          AUDITLOG.debug(sb.toString());
+        }
       }
     }
 

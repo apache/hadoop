@@ -22,6 +22,8 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.FileSystemException;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
@@ -39,8 +41,6 @@ import org.apache.hadoop.nfs.nfs3.response.WccAttr;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.security.IdMappingServiceProvider;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
 
 /**
  * Utility/helper methods related to NFS
@@ -147,16 +147,16 @@ public class Nfs3Utils {
     if (RpcProgramNfs3.LOG.isDebugEnabled()) {
       RpcProgramNfs3.LOG.debug(WRITE_RPC_END + xid);
     }
-    ChannelBuffer outBuf = XDR.writeMessageTcp(out, true);
-    channel.write(outBuf);
+    ByteBuf outBuf = XDR.writeMessageTcp(out, true);
+    channel.writeAndFlush(outBuf);
   }
   
   public static void writeChannelCommit(Channel channel, XDR out, int xid) {
     if (RpcProgramNfs3.LOG.isDebugEnabled()) {
       RpcProgramNfs3.LOG.debug("Commit done:" + xid);
     }
-    ChannelBuffer outBuf = XDR.writeMessageTcp(out, true);
-    channel.write(outBuf);
+    ByteBuf outBuf = XDR.writeMessageTcp(out, true);
+    channel.writeAndFlush(outBuf);
   }
 
   private static boolean isSet(int access, int bits) {

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.fedbalance;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -72,7 +72,7 @@ public class DistCpProcedure extends BalanceProcedure {
       LoggerFactory.getLogger(DistCpProcedure.class);
 
   /* Stages of this procedure. */
-  enum Stage {
+  public enum Stage {
     PRE_CHECK, INIT_DISTCP, DIFF_DISTCP, DISABLE_WRITE, FINAL_DISTCP, FINISH
   }
 
@@ -111,6 +111,14 @@ public class DistCpProcedure extends BalanceProcedure {
    */
   @VisibleForTesting
   static boolean enabledForTest = false;
+
+  public static void enableForTest() {
+    enabledForTest = true;
+  }
+
+  public static void disableForTest() {
+    enabledForTest = false;
+  }
 
   public DistCpProcedure() {
   }
@@ -155,7 +163,7 @@ public class DistCpProcedure extends BalanceProcedure {
       diffDistCp();
       return false;
     case DISABLE_WRITE:
-      disableWrite();
+      disableWrite(context);
       return false;
     case FINAL_DISTCP:
       finalDistCp();
@@ -238,21 +246,26 @@ public class DistCpProcedure extends BalanceProcedure {
   }
 
   /**
-   * Disable write either by making the mount entry readonly or cancelling the
-   * execute permission of the source path.
+   * Disable write by cancelling the execute permission of the source path.
+   * TODO: Disable the super user from writing.
+   * @param fbcontext the context.
+   * @throws IOException if can't disable write.
    */
-  void disableWrite() throws IOException {
-    if (useMountReadOnly) {
-      String mount = context.getMount();
-      MountTableProcedure.disableWrite(mount, conf);
-    } else {
-      // Save and cancel permission.
-      FileStatus status = srcFs.getFileStatus(src);
-      fPerm = status.getPermission();
-      acl = srcFs.getAclStatus(src);
-      srcFs.setPermission(src, FsPermission.createImmutable((short) 0));
-    }
+  protected void disableWrite(FedBalanceContext fbcontext) throws IOException {
+    // Save and cancel permission.
+    FileStatus status = srcFs.getFileStatus(src);
+    fPerm = status.getPermission();
+    acl = srcFs.getAclStatus(src);
+    srcFs.setPermission(src, FsPermission.createImmutable((short) 0));
     updateStage(Stage.FINAL_DISTCP);
+  }
+
+  /**
+   * Enable write.
+   * @throws IOException if can't enable write.
+   */
+  protected void enableWrite() throws IOException {
+    restorePermission();
   }
 
   /**
@@ -297,9 +310,7 @@ public class DistCpProcedure extends BalanceProcedure {
   }
 
   void finish() throws IOException {
-    if (!useMountReadOnly) {
-      restorePermission();
-    }
+    enableWrite();
     if (srcFs.exists(src)) {
       cleanupSnapshot(srcFs, src);
     }
@@ -314,7 +325,7 @@ public class DistCpProcedure extends BalanceProcedure {
   }
 
   @VisibleForTesting
-  void updateStage(Stage value) {
+  protected void updateStage(Stage value) {
     String oldStage = stage == null ? "null" : stage.name();
     String newStage = value == null ? "null" : value.name();
     LOG.info("Stage updated from {} to {}.", oldStage, newStage);

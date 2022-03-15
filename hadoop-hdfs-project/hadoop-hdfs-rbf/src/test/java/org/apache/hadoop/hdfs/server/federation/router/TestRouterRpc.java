@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFi
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST_STRING;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -99,6 +100,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -184,6 +186,7 @@ public class TestRouterRpc {
   private NamenodeProtocol routerNamenodeProtocol;
   /** NameNodeProtocol interface to the Namenode. */
   private NamenodeProtocol nnNamenodeProtocol;
+  private NamenodeProtocol nnNamenodeProtocol1;
 
   /** Filesystem interface to the Router. */
   private FileSystem routerFS;
@@ -365,6 +368,11 @@ public class TestRouterRpc {
     NamenodeContext nn0 = cluster.getNamenode(ns0, null);
     this.nnNamenodeProtocol = NameNodeProxies.createProxy(nn0.getConf(),
         nn0.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
+    // Namenode from the other namespace
+    String ns1 = cluster.getNameservices().get(1);
+    NamenodeContext nn1 = cluster.getNamenode(ns1, null);
+    this.nnNamenodeProtocol1 = NameNodeProxies.createProxy(nn1.getConf(),
+        nn1.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
   }
 
   protected String getNs() {
@@ -885,37 +893,40 @@ public class TestRouterRpc {
     resolver.addLocation(mountPoint, ns0, "/");
 
     FsPermission permission = new FsPermission("777");
-    routerProtocol.mkdirs(mountPoint, permission, false);
     routerProtocol.mkdirs(snapshotFolder, permission, false);
-    for (int i = 1; i <= 9; i++) {
-      String folderPath = snapshotFolder + "/subfolder" + i;
-      routerProtocol.mkdirs(folderPath, permission, false);
+    try {
+      for (int i = 1; i <= 9; i++) {
+        String folderPath = snapshotFolder + "/subfolder" + i;
+        routerProtocol.mkdirs(folderPath, permission, false);
+      }
+
+      LOG.info("Create the snapshot: {}", snapshotFolder);
+      routerProtocol.allowSnapshot(snapshotFolder);
+      String snapshotName =
+          routerProtocol.createSnapshot(snapshotFolder, "snap");
+      assertEquals(snapshotFolder + "/.snapshot/snap", snapshotName);
+      assertTrue(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
+
+      LOG.info("Rename the snapshot and check it changed");
+      routerProtocol.renameSnapshot(snapshotFolder, "snap", "newsnap");
+      assertFalse(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
+      assertTrue(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
+      LambdaTestUtils.intercept(SnapshotException.class,
+          "Cannot delete snapshot snap from path " + snapshotFolder + ":",
+          () -> routerFS.deleteSnapshot(new Path(snapshotFolder), "snap"));
+
+      LOG.info("Delete the snapshot and check it is not there");
+      routerProtocol.deleteSnapshot(snapshotFolder, "newsnap");
+      assertFalse(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
+    } finally {
+      // Cleanup
+      assertTrue(routerProtocol.delete(snapshotFolder, true));
+      assertTrue(resolver.removeLocation(mountPoint, ns0, "/"));
     }
-
-    LOG.info("Create the snapshot: {}", snapshotFolder);
-    routerProtocol.allowSnapshot(snapshotFolder);
-    String snapshotName = routerProtocol.createSnapshot(
-        snapshotFolder, "snap");
-    assertEquals(snapshotFolder + "/.snapshot/snap", snapshotName);
-    assertTrue(verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
-
-    LOG.info("Rename the snapshot and check it changed");
-    routerProtocol.renameSnapshot(snapshotFolder, "snap", "newsnap");
-    assertFalse(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
-    assertTrue(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
-    LambdaTestUtils.intercept(SnapshotException.class,
-        "Cannot delete snapshot snap from path " + snapshotFolder + ":",
-        () -> routerFS.deleteSnapshot(new Path(snapshotFolder), "snap"));
-
-    LOG.info("Delete the snapshot and check it is not there");
-    routerProtocol.deleteSnapshot(snapshotFolder, "newsnap");
-    assertFalse(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
-
-    // Cleanup
-    routerProtocol.delete(mountPoint, true);
   }
 
   @Test
@@ -1230,7 +1241,7 @@ public class TestRouterRpc {
         newRouterFile, clientName, null, null,
         status.getFileId(), null, null);
 
-    DatanodeInfo[] exclusions = new DatanodeInfo[0];
+    DatanodeInfo[] exclusions = DatanodeInfo.EMPTY_ARRAY;
     LocatedBlock newBlock = routerProtocol.getAdditionalDatanode(
         newRouterFile, status.getFileId(), block.getBlock(),
         block.getLocations(), block.getStorageIDs(), exclusions, 1, clientName);
@@ -1298,11 +1309,14 @@ public class TestRouterRpc {
       // Check with default namespace specified.
       NamespaceInfo rVersion = routerNamenodeProtocol.versionRequest();
       NamespaceInfo nnVersion = nnNamenodeProtocol.versionRequest();
+      NamespaceInfo nnVersion1 = nnNamenodeProtocol1.versionRequest();
       compareVersion(rVersion, nnVersion);
       // Check with default namespace unspecified.
       resolver.setDisableNamespace(true);
-      rVersion = routerNamenodeProtocol.versionRequest();
-      compareVersion(rVersion, nnVersion);
+      // Verify the NamespaceInfo is of nn0 or nn1
+      boolean isNN0 =
+          rVersion.getBlockPoolID().equals(nnVersion.getBlockPoolID());
+      compareVersion(rVersion, isNN0 ? nnVersion : nnVersion1);
     } finally {
       resolver.setDisableNamespace(false);
     }
@@ -1350,9 +1364,9 @@ public class TestRouterRpc {
 
     // Verify that checking that datanode works
     BlocksWithLocations routerBlockLocations =
-        routerNamenodeProtocol.getBlocks(dn0, 1024, 0);
+        routerNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
     BlocksWithLocations nnBlockLocations =
-        nnNamenodeProtocol.getBlocks(dn0, 1024, 0);
+        nnNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
     BlockWithLocations[] routerBlocks = routerBlockLocations.getBlocks();
     BlockWithLocations[] nnBlocks = nnBlockLocations.getBlocks();
     assertEquals(nnBlocks.length, routerBlocks.length);
@@ -1371,11 +1385,13 @@ public class TestRouterRpc {
       // Check with default namespace specified.
       long routerTransactionID = routerNamenodeProtocol.getTransactionID();
       long nnTransactionID = nnNamenodeProtocol.getTransactionID();
+      long nnTransactionID1 = nnNamenodeProtocol1.getTransactionID();
       assertEquals(nnTransactionID, routerTransactionID);
       // Check with default namespace unspecified.
       resolver.setDisableNamespace(true);
+      // Verify the transaction ID is of nn0 or nn1
       routerTransactionID = routerNamenodeProtocol.getTransactionID();
-      assertEquals(nnTransactionID, routerTransactionID);
+      assertThat(routerTransactionID).isIn(nnTransactionID, nnTransactionID1);
     } finally {
       resolver.setDisableNamespace(false);
     }
@@ -1745,6 +1761,14 @@ public class TestRouterRpc {
   }
 
   @Test
+  public void testNamenodeMetricsEnteringMaintenanceNodes() throws IOException {
+    final NamenodeBeanMetrics metrics =
+            router.getRouter().getNamenodeMetrics();
+
+    assertEquals("{}", metrics.getEnteringMaintenanceNodes());
+  }
+
+  @Test
   public void testCacheAdmin() throws Exception {
     DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
     // Verify cache directive commands.
@@ -1926,9 +1950,57 @@ public class TestRouterRpc {
     FsPermission permission = new FsPermission("755");
     routerProtocol.mkdirs(dirPath, permission, false);
 
-    // The audit log should contains "callerContext=clientContext,clientIp:"
-    assertTrue(auditlog.getOutput()
-        .contains("callerContext=clientContext,clientIp:"));
+    // The audit log should contains "callerContext=clientIp:...,clientContext"
+    final String logOutput = auditlog.getOutput();
+    assertTrue(logOutput.contains("callerContext=clientIp:"));
+    assertTrue(logOutput.contains(",clientContext"));
     assertTrue(verifyFileExists(routerFS, dirPath));
+  }
+
+  @Test
+  public void testSetBalancerBandwidth() throws Exception {
+    long defaultBandwidth =
+        DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT;
+    long newBandwidth = defaultBandwidth * 2;
+    routerProtocol.setBalancerBandwidth(newBandwidth);
+    ArrayList<DataNode> datanodes = cluster.getCluster().getDataNodes();
+    GenericTestUtils.waitFor(() ->  {
+      return datanodes.get(0).getBalancerBandwidth() == newBandwidth;
+    }, 100, 60 * 1000);
+  }
+
+  @Test
+  public void testAddClientIpPortToCallerContext() throws IOException {
+    GenericTestUtils.LogCapturer auditLog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+
+    // 1. ClientIp and ClientPort are not set on the client.
+    // Set client context.
+    CallerContext.setCurrent(
+        new CallerContext.Builder("clientContext").build());
+
+    // Create a directory via the router.
+    String dirPath = "/test";
+    routerProtocol.mkdirs(dirPath, new FsPermission("755"), false);
+
+    // The audit log should contains "clientIp:" and "clientPort:".
+    assertTrue(auditLog.getOutput().contains("clientIp:"));
+    assertTrue(auditLog.getOutput().contains("clientPort:"));
+    assertTrue(verifyFileExists(routerFS, dirPath));
+    auditLog.clearOutput();
+
+    // 2. ClientIp and ClientPort are set on the client.
+    // Reset client context.
+    CallerContext.setCurrent(
+        new CallerContext.Builder(
+            "clientContext,clientIp:1.1.1.1,clientPort:1234").build());
+
+    // Create a directory via the router.
+    routerProtocol.getFileInfo(dirPath);
+
+    // The audit log should not contain the original clientIp and clientPort
+    // set by client.
+    assertFalse(auditLog.getOutput().contains("clientIp:1.1.1.1"));
+    assertFalse(auditLog.getOutput().contains("clientPort:1234"));
   }
 }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.fedbalance.procedure;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -292,6 +292,7 @@ public class BalanceProcedureScheduler {
     for (BalanceJob job : jobs) {
       recoverQueue.add(job);
       jobSet.put(job, job);
+      LOG.info("Recover federation balance job {}.", job);
     }
   }
 

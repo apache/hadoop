@@ -806,7 +806,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     } catch (Throwable t) {
       LOG.error(t.toString());
     } finally {
-      IOUtils.closeQuietly(in);
+      org.apache.hadoop.io.IOUtils.closeStream(in);
     }
   }
 

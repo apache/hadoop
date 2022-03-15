@@ -109,6 +109,24 @@
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-json</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-core-asl</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-mapper-asl</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-jaxrs</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-xc</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.sun.jersey.contribs</groupId>
@@ -204,6 +222,15 @@
       <artifactId>zookeeper</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
@@ -256,6 +283,52 @@
      <dependency>
          <groupId>org.jsonschema2pojo</groupId>
          <artifactId>jsonschema2pojo-core</artifactId>
+         <exclusions>
+           <exclusion>
+             <groupId>joda-time</groupId>
+             <artifactId>joda-time</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.google.code.findbugs</groupId>
+             <artifactId>jsr305</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.fasterxml.jackson.core</groupId>
+             <artifactId>*</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.fasterxml.jackson.dataformat</groupId>
+             <artifactId>*</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>org.codehaus.jackson</groupId>
+             <artifactId>*</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.google.code.gson</groupId>
+             <artifactId>gson</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.google.code.findbugs</groupId>
+             <artifactId>annotations</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>org.scala-lang</groupId>
+             <artifactId>scala-library</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>org.jsonschema2pojo</groupId>
+             <artifactId>jsonschema2pojo-scalagen</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.google.code.javaparser</groupId>
+             <artifactId>javaparser</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>javax.validation</groupId>
+             <artifactId>validation-api</artifactId>
+           </exclusion>
+         </exclusions>
      </dependency>
      <dependency>
          <groupId>com.fasterxml.jackson.core</groupId>
@@ -265,6 +338,10 @@
          <groupId>com.fasterxml.jackson.dataformat</groupId>
          <artifactId>jackson-dataformat-yaml</artifactId>
      </dependency>
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -396,6 +473,8 @@
                  during build time -->
             <exclude>src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/placement/schema/MappingRulesDescription.java</exclude>
             <exclude>src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/placement/schema/Rule.java</exclude>
+            <exclude>src/test/resources/webapp/*.json</exclude>
+            <exclude>src/test/resources/webapp/*.xml</exclude>
           </excludes>
         </configuration>
       </plugin>

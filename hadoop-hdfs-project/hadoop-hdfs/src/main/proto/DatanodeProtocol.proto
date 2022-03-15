@@ -223,6 +223,7 @@ message HeartbeatResponseProto {
   optional RollingUpgradeStatusProto rollingUpgradeStatus = 3;
   optional RollingUpgradeStatusProto rollingUpgradeStatusV2 = 4;
   optional uint64 fullBlockReportLeaseId = 5 [ default = 0 ];
+  optional bool isSlownode = 6 [ default = false ];
 }
 
 /**
@@ -257,8 +258,9 @@ message BlockReportContextProto  {
   // bypass rate-limiting.
   optional uint64 leaseId = 4 [ default = 0 ];
 
+  // for compatibility, field number 5 should not be reused, see HDFS-13671.
   // True if the reported blocks are sorted by increasing block IDs
-  optional bool sorted = 5 [default = false];
+  // optional bool sorted = 5 [default = false];
 }
 
 /**

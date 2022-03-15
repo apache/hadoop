@@ -135,6 +135,17 @@
       <artifactId>dnsjava</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -163,10 +174,9 @@
     </resources>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${project.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
           <effort>Max</effort>
@@ -221,7 +231,6 @@
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-surefire-plugin</artifactId>
       <configuration>
-        <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
         <reuseForks>false</reuseForks>
         <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
         <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
@@ -260,7 +269,6 @@
         </excludes>
       </configuration>
     </plugin>
-
 
     </plugins>
   </build>

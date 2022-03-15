@@ -188,8 +188,7 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
           return true;
         }
 
-        if (obj == null
-            || !(obj instanceof AuthorizationComponent)) {
+        if (!(obj instanceof AuthorizationComponent)) {
             return false;
         }
 

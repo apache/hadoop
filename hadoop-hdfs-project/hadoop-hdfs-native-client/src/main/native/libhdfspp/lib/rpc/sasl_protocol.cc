@@ -20,6 +20,7 @@
 #include "rpc_connection.h"
 #include "common/logging.h"
 #include "common/optional_wrapper.h"
+#include "x-platform/syscall.h"
 
 #include "sasl_engine.h"
 #include "sasl_protocol.h"
@@ -97,20 +98,17 @@ void SaslProtocol::Authenticate(std::function<void(const Status & status, const 
     });
 } // authenticate() method
 
-AuthInfo::AuthMethod ParseMethod(const std::string & method)
-  {
-    if (0 == strcasecmp(method.c_str(), "SIMPLE")) {
-      return AuthInfo::kSimple;
-    }
-    else if (0 == strcasecmp(method.c_str(), "KERBEROS")) {
-      return AuthInfo::kKerberos;
-    }
-    else if (0 == strcasecmp(method.c_str(), "TOKEN")) {
-      return AuthInfo::kToken;
-    }
-    else {
-      return AuthInfo::kUnknownAuth;
-    }
+AuthInfo::AuthMethod ParseMethod(const std::string & method) {
+  if (XPlatform::Syscall::StringCompareIgnoreCase(method, "SIMPLE")) {
+    return AuthInfo::kSimple;
+  }
+  if (XPlatform::Syscall::StringCompareIgnoreCase(method, "KERBEROS")) {
+    return AuthInfo::kKerberos;
+  }
+  if (XPlatform::Syscall::StringCompareIgnoreCase(method, "TOKEN")) {
+    return AuthInfo::kToken;
+  }
+  return AuthInfo::kUnknownAuth;
 } // ParseMethod()
 
 // build_init_msg():

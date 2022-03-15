@@ -181,6 +181,7 @@ char *make_string(const char *fmt, ...) {
     int ret = vsnprintf(buf, buflen, fmt, vargs);
     va_end(vargs);
     if (ret < 0) {
+      free(buf);
       buf = NULL;
     }
   }

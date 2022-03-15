@@ -39,13 +39,12 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAbfsStreamStatistics.class);
 
-  private static final int LARGE_NUMBER_OF_OPS = 999999;
+  private static final int LARGE_NUMBER_OF_OPS = 99;
 
   /***
    * Testing {@code incrementReadOps()} in class {@code AbfsInputStream} and
    * {@code incrementWriteOps()} in class {@code AbfsOutputStream}.
    *
-   * @throws Exception
    */
   @Test
   public void testAbfsStreamOps() throws Exception {
@@ -53,8 +52,8 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         + "Abfs");
 
     final AzureBlobFileSystem fs = getFileSystem();
-    Path smallOperationsFile = new Path("testOneReadWriteOps");
-    Path largeOperationsFile = new Path("testLargeReadWriteOps");
+    Path smallOperationsFile = path("testOneReadWriteOps");
+    Path largeOperationsFile = path("testLargeReadWriteOps");
     FileSystem.Statistics statistics = fs.getFsStatistics();
     String testReadWriteOps = "test this";
     statistics.reset();

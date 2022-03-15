@@ -24,7 +24,7 @@ import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.BufferedInputStream;
 import java.io.DataInput;
@@ -107,7 +107,7 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -1100,6 +1100,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Provides a public wrapper over substituteVars in order to avoid compatibility issues.
+   * See HADOOP-18021 for further details.
+   *
+   * @param expr the literal value of a config key
+   * @return null if expr is null, otherwise the value resulting from expanding
+   * expr using the algorithm above.
+   * @throws IllegalArgumentException when more than
+   * {@link Configuration#MAX_SUBST} replacements are required
+   */
+  public String substituteCommonVariables(String expr) {
+    return substituteVars(expr);
+  }
+
+  /**
    * Attempts to repeatedly expand the value {@code expr} by replacing the
    * left-most substring of the form "${var}" in the following precedence order
    * <ol>
@@ -1120,6 +1134,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If a cycle is detected then the original expr is returned. Loops
    * involving multiple substitutions are not detected.
    *
+   * In order not to introduce breaking changes (as Oozie for example contains a method with the
+   * same name and same signature) do not make this method public, use substituteCommonVariables
+   * in this case.
+   *
    * @param expr the literal value of a config key
    * @return null if expr is null, otherwise the value resulting from expanding
    * expr using the algorithm above.
@@ -1139,36 +1157,37 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       final String var = eval.substring(varBounds[SUB_START_IDX],
           varBounds[SUB_END_IDX]);
       String val = null;
-      if (!restrictSystemProps) {
-        try {
-          if (var.startsWith("env.") && 4 < var.length()) {
-            String v = var.substring(4);
-            int i = 0;
-            for (; i < v.length(); i++) {
-              char c = v.charAt(i);
-              if (c == ':' && i < v.length() - 1 && v.charAt(i + 1) == '-') {
-                val = getenv(v.substring(0, i));
-                if (val == null || val.length() == 0) {
-                  val = v.substring(i + 2);
-                }
-                break;
-              } else if (c == '-') {
-                val = getenv(v.substring(0, i));
-                if (val == null) {
-                  val = v.substring(i + 1);
-                }
-                break;
+      try {
+        // evaluate system properties or environment variables even when
+        // the configuration is restricted -the restrictions are enforced
+        // in the getenv/getProperty calls
+        if (var.startsWith("env.") && 4 < var.length()) {
+          String v = var.substring(4);
+          int i = 0;
+          for (; i < v.length(); i++) {
+            char c = v.charAt(i);
+            if (c == ':' && i < v.length() - 1 && v.charAt(i + 1) == '-') {
+              val = getenv(v.substring(0, i));
+              if (val == null || val.length() == 0) {
+                val = v.substring(i + 2);
               }
+              break;
+            } else if (c == '-') {
+              val = getenv(v.substring(0, i));
+              if (val == null) {
+                val = v.substring(i + 1);
+              }
+              break;
             }
-            if (i == v.length()) {
-              val = getenv(v);
-            }
-          } else {
-            val = getProperty(var);
           }
-        } catch (SecurityException se) {
-          LOG.warn("Unexpected SecurityException in Configuration", se);
+          if (i == v.length()) {
+            val = getenv(v);
+          }
+        } else {
+          val = getProperty(var);
         }
+      } catch (SecurityException se) {
+        LOG.warn("Unexpected SecurityException in Configuration", se);
       }
       if (val == null) {
         val = getRaw(var);
@@ -1194,13 +1213,33 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     throw new IllegalStateException("Variable substitution depth too large: " 
                                     + MAX_SUBST + " " + expr);
   }
-  
+
+  /**
+   * Get the environment variable value if
+   * {@link #restrictSystemProps} does not block this.
+   * @param name environment variable name.
+   * @return the value or null if either it is unset or access forbidden.
+   */
   String getenv(String name) {
-    return System.getenv(name);
+    if (!restrictSystemProps) {
+      return System.getenv(name);
+    } else {
+      return null;
+    }
   }
 
+  /**
+   * Get a system property value if
+   * {@link #restrictSystemProps} does not block this.
+   * @param key property key
+   * @return the value or null if either it is unset or access forbidden.
+   */
   String getProperty(String key) {
-    return System.getProperty(key);
+    if (!restrictSystemProps) {
+      return System.getProperty(key);
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -2939,11 +2978,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     // methods that allow non-strings to be put into configurations are removed,
     // we could replace properties with a Map<String,String> and get rid of this
     // code.
-    Map<String,String> result = new HashMap<String,String>();
-    for(Map.Entry<Object,Object> item: getProps().entrySet()) {
-      if (item.getKey() instanceof String &&
-          item.getValue() instanceof String) {
+    Properties props = getProps();
+    Map<String, String> result = new HashMap<>();
+    synchronized (props) {
+      for (Map.Entry<Object, Object> item : props.entrySet()) {
+        if (item.getKey() instanceof String && item.getValue() instanceof String) {
           result.put((String) item.getKey(), (String) item.getValue());
+        }
       }
     }
     return result.entrySet().iterator();

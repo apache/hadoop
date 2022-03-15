@@ -25,8 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -36,17 +35,25 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 
 /**
  * Scale test which creates a huge file.
@@ -122,8 +129,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   @Test
   public void test_010_CreateHugeFile() throws IOException {
-    assertFalse("Please run this test sequentially to avoid timeouts" +
-        " and bandwidth problems", isParallelExecution());
+
     long filesizeMB = filesize / _1MB;
 
     // clean up from any previous attempts
@@ -163,14 +169,15 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     // there's lots of logging here, so that a tail -f on the output log
     // can give a view of what is happening.
     S3AFileSystem fs = getFileSystem();
-    StorageStatistics storageStatistics = fs.getStorageStatistics();
+    IOStatistics iostats = fs.getIOStatistics();
+
     String putRequests = Statistic.OBJECT_PUT_REQUESTS.getSymbol();
     String putBytes = Statistic.OBJECT_PUT_BYTES.getSymbol();
     Statistic putRequestsActive = Statistic.OBJECT_PUT_REQUESTS_ACTIVE;
     Statistic putBytesPending = Statistic.OBJECT_PUT_BYTES_PENDING;
 
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    S3AInstrumentation.OutputStreamStatistics streamStatistics;
+    BlockOutputStreamStatistics streamStatistics;
     long blocksPer10MB = blocksPerMB * 10;
     ProgressCallback progress = new ProgressCallback(timer);
     try (FSDataOutputStream out = fs.create(fileToCreate,
@@ -199,9 +206,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
               percentage,
               writtenMB,
               filesizeMB,
-              storageStatistics.getLong(putBytes),
+              iostats.counters().get(putBytes),
               gaugeValue(putBytesPending),
-              storageStatistics.getLong(putRequests),
+              iostats.counters().get(putRequests),
               gaugeValue(putRequestsActive),
               elapsedTime,
               writtenMB / elapsedTime));
@@ -221,20 +228,32 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
     bandwidth(timer, filesize);
     LOG.info("Statistics after stream closed: {}", streamStatistics);
-    long putRequestCount = storageStatistics.getLong(putRequests);
-    Long putByteCount = storageStatistics.getLong(putBytes);
+
+    LOG.info("IOStatistics after upload: {}",
+        demandStringifyIOStatistics(iostats));
+    long putRequestCount = lookupCounterStatistic(iostats, putRequests);
+    long putByteCount = lookupCounterStatistic(iostats, putBytes);
+    Assertions.assertThat(putRequestCount)
+        .describedAs("Put request count from filesystem stats %s",
+            iostats)
+        .isGreaterThan(0);
+    Assertions.assertThat(putByteCount)
+        .describedAs("%s count from filesystem stats %s",
+            putBytes, iostats)
+        .isGreaterThan(0);
     LOG.info("PUT {} bytes in {} operations; {} MB/operation",
         putByteCount, putRequestCount,
         putByteCount / (putRequestCount * _1MB));
     LOG.info("Time per PUT {} nS",
         toHuman(timer.nanosPerOperation(putRequestCount)));
-    assertEquals("active put requests in \n" + fs,
-        0, gaugeValue(putRequestsActive));
+    verifyStatisticGaugeValue(iostats, putRequestsActive.getSymbol(), 0);
+    verifyStatisticGaugeValue(iostats,
+        STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol(), 0);
     progress.verifyNoFailures(
         "Put file " + fileToCreate + " of size " + filesize);
     if (streamStatistics != null) {
       assertEquals("actively allocated blocks in " + streamStatistics,
-          0, streamStatistics.blocksActivelyAllocated());
+          0, streamStatistics.getBlocksActivelyAllocated());
     }
   }
 
@@ -364,7 +383,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   /**
    * This is the set of actions to perform when verifying the file actually
-   * was created. With the s3guard committer, the file doesn't come into
+   * was created. With the S3A committer, the file doesn't come into
    * existence; a different set of assertions must be checked.
    */
   @Test
@@ -384,7 +403,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_040_PositionedReadHugeFile() throws Throwable {
     assumeHugeFileExists();
     final String encryption = getConf().getTrimmed(
-        SERVER_SIDE_ENCRYPTION_ALGORITHM);
+        Constants.S3_ENCRYPTION_ALGORITHM);
     boolean encrypted = encryption != null;
     if (encrypted) {
       LOG.info("File is encrypted with algorithm {}", encryption);
@@ -541,12 +560,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
    */
   @Test
   public void test_900_dumpStats() {
-    StringBuilder sb = new StringBuilder();
-
-    getFileSystem().getStorageStatistics()
-        .forEach(kv -> sb.append(kv.toString()).append("\n"));
-
-    LOG.info("Statistics\n{}", sb);
+    LOG.info("Statistics\n{}", ioStatisticsSourceToString(getFileSystem()));
   }
 
   protected void deleteHugeFile() throws IOException {

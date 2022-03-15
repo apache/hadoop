@@ -102,6 +102,12 @@ public class QueueInfoPBImpl extends QueueInfo {
   }
 
   @Override
+  public String getQueuePath() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasQueuePath()) ? p.getQueuePath() : null;
+  }
+
+  @Override
   public QueueState getQueueState() {
     QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasState()) {
@@ -122,6 +128,30 @@ public class QueueInfoPBImpl extends QueueInfo {
   public void setCapacity(float capacity) {
     maybeInitBuilder();
     builder.setCapacity(capacity);
+  }
+
+  @Override
+  public float getWeight() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasWeight()) ? p.getWeight() : -1;
+  }
+
+  @Override
+  public void setWeight(float weight) {
+    maybeInitBuilder();
+    builder.setWeight(weight);
+  }
+
+  @Override
+  public int getMaxParallelApps() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasMaxParallelApps()) ? p.getMaxParallelApps() : -1;
+  }
+
+  @Override
+  public void setMaxParallelApps(int weight) {
+    maybeInitBuilder();
+    builder.setMaxParallelApps(weight);
   }
 
   @Override
@@ -152,6 +182,16 @@ public class QueueInfoPBImpl extends QueueInfo {
       return;
     }
     builder.setQueueName(queueName);
+  }
+
+  @Override
+  public void setQueuePath(String queuePath) {
+    maybeInitBuilder();
+    if (queuePath == null) {
+      builder.clearQueuePath();
+      return;
+    }
+    builder.setQueuePath(queuePath);
   }
 
   @Override

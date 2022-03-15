@@ -83,6 +83,7 @@ message ResourceUtilizationProto {
   optional int32 pmem = 1;
   optional int32 vmem = 2;
   optional float cpu = 3;
+  repeated StringFloatMapProto customResources = 4;
 }
 
 message ResourceOptionProto {
@@ -241,6 +242,11 @@ message LocalResourceProto {
 message StringLongMapProto {
   required string key  = 1;
   required int64 value = 2;
+}
+
+message StringFloatMapProto {
+  required string key  = 1;
+  required float value = 2;
 }
 
 message ApplicationResourceUsageReportProto {
@@ -609,6 +615,9 @@ message QueueInfoProto {
   optional bool preemptionDisabled = 11;
   repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
   optional bool intraQueuePreemptionDisabled = 13;
+  optional float weight = 14;
+  optional string queuePath = 15;
+  optional int32 maxParallelApps = 16;
 }
 
 message QueueConfigurationsProto {

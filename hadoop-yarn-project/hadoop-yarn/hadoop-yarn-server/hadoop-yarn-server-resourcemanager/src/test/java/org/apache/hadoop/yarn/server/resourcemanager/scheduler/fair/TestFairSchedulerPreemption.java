@@ -35,7 +35,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -53,6 +55,8 @@ import java.util.List;
 public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   private static final File ALLOC_FILE = new File(TEST_DIR, "test-queues");
   private static final int GB = 1024;
+  private static final String TC_DISABLE_AM_PREEMPTION_GLOBALLY =
+      "testDisableAMPreemptionGlobally";
 
   // Scheduler clock
   private final ControlledClock clock = new ControlledClock();
@@ -68,6 +72,9 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
   // Starving app that is expected to instigate preemption
   private FSAppAttempt starvingApp;
+
+  @Rule
+  public TestName testName = new TestName();
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters() {
@@ -95,6 +102,10 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     conf.setFloat(FairSchedulerConfiguration.PREEMPTION_THRESHOLD, 0f);
     conf.setInt(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 0);
     conf.setLong(FairSchedulerConfiguration.UPDATE_INTERVAL_MS, 60_000L);
+    String testMethod = testName.getMethodName();
+    if (testMethod.startsWith(TC_DISABLE_AM_PREEMPTION_GLOBALLY)) {
+      conf.setBoolean(FairSchedulerConfiguration.AM_PREEMPTION, false);
+    }
     setupCluster();
   }
 
@@ -417,13 +428,24 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
   @Test
   public void testDisableAMPreemption() {
+    testDisableAMPreemption(false);
+  }
+
+  @Test
+  public void testDisableAMPreemptionGlobally() {
+    testDisableAMPreemption(true);
+  }
+
+  private void testDisableAMPreemption(boolean global) {
     takeAllResources("root.preemptable.child-1");
     setNumAMContainersPerNode(2);
     RMContainer container = greedyApp.getLiveContainers().stream()
             .filter(rmContainer -> rmContainer.isAMContainer())
             .findFirst()
             .get();
-    greedyApp.setEnableAMPreemption(false);
+    if (!global) {
+      greedyApp.setEnableAMPreemption(false);
+    }
     assertFalse(greedyApp.canContainerBePreempted(container, null));
   }
 

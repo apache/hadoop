@@ -116,7 +116,7 @@ public final class CallerContext {
 
   /** The caller context builder. */
   public static final class Builder {
-    private static final String KEY_VALUE_SEPARATOR = ":";
+    public static final String KEY_VALUE_SEPARATOR = ":";
     /**
      * The illegal separators include '\t', '\n', '='.
      * User should not set illegal separator.
@@ -164,8 +164,6 @@ public final class CallerContext {
 
     /**
      * Whether the field is valid.
-     * The field should not contain '\t', '\n', '='.
-     * Because the context could be written to audit log.
      * @param field one of the fields in context.
      * @return true if the field is not null or empty.
      */
@@ -219,6 +217,26 @@ public final class CallerContext {
      * @return the builder.
      */
     public Builder append(String key, String value) {
+      if (isValid(key) && isValid(value)) {
+        if (sb.length() > 0) {
+          sb.append(fieldSeparator);
+        }
+        sb.append(key).append(KEY_VALUE_SEPARATOR).append(value);
+      }
+      return this;
+    }
+
+    /**
+     * Append new field which contains key and value to the context
+     * if the key("key:") is absent.
+     * @param key the key of field.
+     * @param value the value of field.
+     * @return the builder.
+     */
+    public Builder appendIfAbsent(String key, String value) {
+      if (sb.toString().contains(key + KEY_VALUE_SEPARATOR)) {
+        return this;
+      }
       if (isValid(key) && isValid(value)) {
         if (sb.length() > 0) {
           sb.append(fieldSeparator);

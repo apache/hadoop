@@ -117,6 +117,8 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     corruptReplicationOneBlocks.reset();
     lowRedundancyECBlockGroups.reset();
     corruptECBlockGroups.reset();
+    highestPriorityLowRedundancyReplicatedBlocks.reset();
+    highestPriorityLowRedundancyECBlocks.reset();
   }
 
   /** Return the total number of insufficient redundancy blocks. */

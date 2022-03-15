@@ -47,6 +47,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -54,6 +55,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,7 +64,6 @@ import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
-import org.apache.hadoop.hdfs.server.federation.fairness.AbstractRouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
@@ -83,7 +84,7 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -131,9 +132,12 @@ public class RouterRpcClient {
       Pattern.compile("\\tat (.*)\\.(.*)\\((.*):(\\d*)\\)");
 
   private static final String CLIENT_IP_STR = "clientIp";
+  private static final String CLIENT_PORT_STR = "clientPort";
 
   /** Fairness manager to control handlers assigned per NS. */
   private RouterRpcFairnessPolicyController routerRpcFairnessPolicyController;
+  private Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
+  private Map<String, LongAdder> acceptedPermitsPerNs = new ConcurrentHashMap<>();
 
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
@@ -261,6 +265,24 @@ public class RouterRpcClient {
   }
 
   /**
+   * Total number of idle sockets between the router and NNs.
+   *
+   * @return Number of namenode clients.
+   */
+  public int getNumIdleConnections() {
+    return this.connectionManager.getNumIdleConnections();
+  }
+
+  /**
+   * Total number of active sockets between the router and NNs.
+   *
+   * @return Number of recently active namenode clients.
+   */
+  public int getNumActiveConnectionsRecently() {
+    return this.connectionManager.getNumActiveConnectionsRecently();
+  }
+
+  /**
    * Total number of open connection pools to a NN. Each connection pool.
    * represents one user + one NN.
    *
@@ -301,6 +323,23 @@ public class RouterRpcClient {
     return JSON.toString(info);
   }
 
+  /**
+   * JSON representation of the rejected permits for each nameservice.
+   *
+   * @return String representation of the rejected permits for each nameservice.
+   */
+  public String getRejectedPermitsPerNsJSON() {
+    return JSON.toString(rejectedPermitsPerNs);
+  }
+
+  /**
+   * JSON representation of the accepted permits for each nameservice.
+   *
+   * @return String representation of the accepted permits for each nameservice.
+   */
+  public String getAcceptedPermitsPerNsJSON() {
+    return JSON.toString(acceptedPermitsPerNs);
+  }
   /**
    * Get ClientProtocol proxy client for a NameNode. Each combination of user +
    * NN must use a unique proxy client. Previously created clients are cached
@@ -427,7 +466,7 @@ public class RouterRpcClient {
           + router.getRouterId());
     }
 
-    appendClientIpToCallerContextIfAbsent();
+    addClientIpToCallerContext();
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -451,7 +490,10 @@ public class RouterRpcClient {
           namenodeResolver.updateActiveNamenode(nsId, address);
         }
         if (this.rpcMonitor != null) {
-          this.rpcMonitor.proxyOpComplete(true);
+          this.rpcMonitor.proxyOpComplete(true, nsId);
+        }
+        if (this.router.getRouterClientMetrics() != null) {
+          this.router.getRouterClientMetrics().incInvokedMethod(method);
         }
         return ret;
       } catch (IOException ioe) {
@@ -459,17 +501,17 @@ public class RouterRpcClient {
         if (ioe instanceof StandbyException) {
           // Fail over indicated by retry policy and/or NN
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpFailureStandby();
+            this.rpcMonitor.proxyOpFailureStandby(nsId);
           }
           failover = true;
         } else if (isUnavailableException(ioe)) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpFailureCommunicate();
+            this.rpcMonitor.proxyOpFailureCommunicate(nsId);
           }
           failover = true;
         } else if (ioe instanceof RemoteException) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpComplete(true);
+            this.rpcMonitor.proxyOpComplete(true, nsId);
           }
           RemoteException re = (RemoteException) ioe;
           ioe = re.unwrapRemoteException();
@@ -478,7 +520,7 @@ public class RouterRpcClient {
           throw ioe;
         } else if (ioe instanceof ConnectionNullException) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpFailureCommunicate();
+            this.rpcMonitor.proxyOpFailureCommunicate(nsId);
           }
           LOG.error("Get connection for {} {} error: {}", nsId, rpcAddress,
               ioe.getMessage());
@@ -488,7 +530,7 @@ public class RouterRpcClient {
           throw se;
         } else if (ioe instanceof NoNamenodesAvailableException) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpNoNamenodes();
+            this.rpcMonitor.proxyOpNoNamenodes(nsId);
           }
           LOG.error("Cannot get available namenode for {} {} error: {}",
               nsId, rpcAddress, ioe.getMessage());
@@ -498,8 +540,8 @@ public class RouterRpcClient {
           // Other communication error, this is a failure
           // Communication retries are handled by the retry policy
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpFailureCommunicate();
-            this.rpcMonitor.proxyOpComplete(false);
+            this.rpcMonitor.proxyOpFailureCommunicate(nsId);
+            this.rpcMonitor.proxyOpComplete(false, nsId);
           }
           throw ioe;
         }
@@ -510,7 +552,7 @@ public class RouterRpcClient {
       }
     }
     if (this.rpcMonitor != null) {
-      this.rpcMonitor.proxyOpComplete(false);
+      this.rpcMonitor.proxyOpComplete(false, null);
     }
 
     // All namenodes were unavailable or in standby
@@ -545,25 +587,33 @@ public class RouterRpcClient {
 
   /**
    * For tracking which is the actual client address.
-   * It adds trace info "clientIp:ip" to caller context if it's absent.
+   * It adds trace info "clientIp:ip" and "clientPort:port"
+   * in the caller context, removing the old values if they were
+   * already present.
    */
-  private void appendClientIpToCallerContextIfAbsent() {
-    String clientIpInfo = CLIENT_IP_STR + ":" + Server.getRemoteAddress();
-    final CallerContext ctx = CallerContext.getCurrent();
-    if (isClientIpInfoAbsent(clientIpInfo, ctx)) {
-      String origContext = ctx == null ? null : ctx.getContext();
-      byte[] origSignature = ctx == null ? null : ctx.getSignature();
-      CallerContext.setCurrent(
-          new CallerContext.Builder(origContext, contextFieldSeparator)
-              .append(clientIpInfo)
-              .setSignature(origSignature)
-              .build());
+  private void addClientIpToCallerContext() {
+    CallerContext ctx = CallerContext.getCurrent();
+    String origContext = ctx == null ? null : ctx.getContext();
+    byte[] origSignature = ctx == null ? null : ctx.getSignature();
+    CallerContext.Builder builder =
+        new CallerContext.Builder("", contextFieldSeparator)
+            .append(CLIENT_IP_STR, Server.getRemoteAddress())
+            .append(CLIENT_PORT_STR,
+                Integer.toString(Server.getRemotePort()))
+            .setSignature(origSignature);
+    // Append the original caller context
+    if (origContext != null) {
+      for (String part : origContext.split(contextFieldSeparator)) {
+        String[] keyValue =
+            part.split(CallerContext.Builder.KEY_VALUE_SEPARATOR, 2);
+        if (keyValue.length == 2) {
+          builder.appendIfAbsent(keyValue[0], keyValue[1]);
+        } else if (keyValue.length == 1) {
+          builder.append(keyValue[0]);
+        }
+      }
     }
-  }
-
-  private boolean isClientIpInfoAbsent(String clientIpInfo, CallerContext ctx){
-    return ctx == null || ctx.getContext() == null
-        || !ctx.getContext().contains(clientIpInfo);
+    CallerContext.setCurrent(builder.build());
   }
 
   /**
@@ -1111,25 +1161,17 @@ public class RouterRpcClient {
    * Invoke method in all locations and return success if any succeeds.
    *
    * @param <T> The type of the remote location.
-   * @param <R> The type of the remote method return.
    * @param locations List of remote locations to call concurrently.
    * @param method The remote method and parameters to invoke.
    * @return If the call succeeds in any location.
    * @throws IOException If any of the calls return an exception.
    */
-  public <T extends RemoteLocationContext, R> boolean invokeAll(
+  public <T extends RemoteLocationContext> boolean invokeAll(
       final Collection<T> locations, final RemoteMethod method)
-          throws IOException {
-    boolean anyResult = false;
+      throws IOException {
     Map<T, Boolean> results =
         invokeConcurrent(locations, method, false, false, Boolean.class);
-    for (Boolean value : results.values()) {
-      boolean result = value.booleanValue();
-      if (result) {
-        anyResult = true;
-      }
-    }
-    return anyResult;
+    return results.containsValue(true);
   }
 
   /**
@@ -1376,6 +1418,9 @@ public class RouterRpcClient {
     if (rpcMonitor != null) {
       rpcMonitor.proxyOp();
     }
+    if (this.router.getRouterClientMetrics() != null) {
+      this.router.getRouterClientMetrics().incInvokedConcurrent(m);
+    }
 
     acquirePermit(CONCURRENT_NS, ugi, method);
     try {
@@ -1521,19 +1566,22 @@ public class RouterRpcClient {
   private void acquirePermit(
       final String nsId, final UserGroupInformation ugi, final RemoteMethod m)
       throws IOException {
-    if (routerRpcFairnessPolicyController != null
-        && !routerRpcFairnessPolicyController.acquirePermit(nsId)) {
-      // Throw StandByException,
-      // Clients could fail over and try another router.
-      if (rpcMonitor != null) {
-        rpcMonitor.getRPCMetrics().incrProxyOpPermitRejected();
+    if (routerRpcFairnessPolicyController != null) {
+      if (!routerRpcFairnessPolicyController.acquirePermit(nsId)) {
+        // Throw StandByException,
+        // Clients could fail over and try another router.
+        if (rpcMonitor != null) {
+          rpcMonitor.getRPCMetrics().incrProxyOpPermitRejected();
+        }
+        incrRejectedPermitForNs(nsId);
+        LOG.debug("Permit denied for ugi: {} for method: {}",
+            ugi, m.getMethodName());
+        String msg =
+            "Router " + router.getRouterId() +
+                " is overloaded for NS: " + nsId;
+        throw new StandbyException(msg);
       }
-      LOG.debug("Permit denied for ugi: {} for method: {}",
-          ugi, m.getMethodName());
-      String msg =
-          "Router " + router.getRouterId() +
-              " is overloaded for NS: " + nsId;
-      throw new StandbyException(msg);
+      incrAcceptedPermitForNs(nsId);
     }
   }
 
@@ -1555,9 +1603,26 @@ public class RouterRpcClient {
   }
 
   @VisibleForTesting
-  public AbstractRouterRpcFairnessPolicyController
+  public RouterRpcFairnessPolicyController
       getRouterRpcFairnessPolicyController() {
-    return (AbstractRouterRpcFairnessPolicyController
-          )routerRpcFairnessPolicyController;
+    return routerRpcFairnessPolicyController;
+  }
+
+  private void incrRejectedPermitForNs(String ns) {
+    rejectedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
+  }
+
+  public Long getRejectedPermitForNs(String ns) {
+    return rejectedPermitsPerNs.containsKey(ns) ?
+        rejectedPermitsPerNs.get(ns).longValue() : 0L;
+  }
+
+  private void incrAcceptedPermitForNs(String ns) {
+    acceptedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
+  }
+
+  public Long getAcceptedPermitForNs(String ns) {
+    return acceptedPermitsPerNs.containsKey(ns) ?
+        acceptedPermitsPerNs.get(ns).longValue() : 0L;
   }
 }

@@ -87,7 +87,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -99,6 +98,7 @@ import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 import org.apache.hadoop.fs.StorageType;
+import org.slf4j.event.Level;
 
 /** Unit tests for block tokens */
 public class TestBlockToken {
@@ -107,11 +107,11 @@ public class TestBlockToken {
   private static final String ADDRESS = "0.0.0.0";
 
   static {
-    GenericTestUtils.setLogLevel(Client.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(Server.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(SaslRpcClient.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(SaslRpcServer.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(SaslInputStream.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(Client.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(SaslRpcClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(SaslRpcServer.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(SaslInputStream.LOG, Level.TRACE);
   }
 
   /**
@@ -391,7 +391,7 @@ public class TestBlockToken {
     DatanodeID fakeDnId = DFSTestUtil.getLocalDatanodeID(addr.getPort());
 
     ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
-    LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[0]);
+    LocatedBlock fakeBlock = new LocatedBlock(b, DatanodeInfo.EMPTY_ARRAY);
     fakeBlock.setBlockToken(token);
 
     // Create another RPC proxy with the same configuration - this will never

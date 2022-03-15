@@ -22,13 +22,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Test XOR encoding and decoding.
  */
 public class TestXORCoder extends TestErasureCoderBase {
 
   @Rule
-  public Timeout globalTimeout = new Timeout(300000);
+  public Timeout globalTimeout = new Timeout(300000, TimeUnit.MILLISECONDS);
 
   @Before
   public void setup() {

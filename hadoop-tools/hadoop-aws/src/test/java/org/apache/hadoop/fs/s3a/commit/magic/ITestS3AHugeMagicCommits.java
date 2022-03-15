@@ -26,7 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -81,17 +80,6 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   @Override
   public String getTestSuiteName() {
     return "ITestS3AHugeMagicCommits";
-  }
-
-  /**
-   * Create the scale IO conf with the committer enabled.
-   * @return the configuration to use for the test FS.
-   */
-  @Override
-  protected Configuration createScaleConfiguration() {
-    Configuration conf = super.createScaleConfiguration();
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
-    return conf;
   }
 
   @Override

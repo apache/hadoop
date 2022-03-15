@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,6 +45,9 @@ import java.util.Collection;
 import java.util.List;
 
 class FSDirSnapshotOp {
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FSDirSnapshotOp.class);
+
   /** Verify if the snapshot name is legal. */
   static void verifySnapshotName(FSDirectory fsd, String snapshotName,
       String path)
@@ -118,7 +123,7 @@ class FSDirSnapshotOp {
     }
     fsd.getEditLog().logCreateSnapshot(snapshotRoot, snapshotName,
         logRetryCache, now);
-
+    LOG.info("Created Snapshot for SnapshotRoot {}", snapshotRoot);
     return snapshotPath;
   }
 
@@ -141,6 +146,8 @@ class FSDirSnapshotOp {
     }
     fsd.getEditLog().logRenameSnapshot(path, snapshotOldName,
         snapshotNewName, logRetryCache, now);
+    LOG.info("Snapshot renamed from {} to {} for SnapshotRoot {}",
+        snapshotOldName, snapshotNewName, path);
   }
 
   static SnapshottableDirectoryStatus[] getSnapshottableDirListing(
@@ -271,6 +278,8 @@ class FSDirSnapshotOp {
     final INode.BlocksMapUpdateInfo collectedBlocks = deleteSnapshot(
         fsd, snapshotManager, iip, snapshotName, now, snapshotRoot,
         logRetryCache);
+    LOG.info("Snapshot {} deleted for SnapshotRoot {}",
+        snapshotName, snapshotName);
     return collectedBlocks;
   }
 

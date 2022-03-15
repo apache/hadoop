@@ -65,7 +65,7 @@ import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
@@ -230,7 +230,7 @@ public class TestStorageMover {
     }
 
     void shutdownCluster() throws Exception {
-      IOUtils.cleanup(null, dfs);
+      IOUtils.cleanupWithLogger(null, dfs);
       if (cluster != null) {
         cluster.shutdown();
       }

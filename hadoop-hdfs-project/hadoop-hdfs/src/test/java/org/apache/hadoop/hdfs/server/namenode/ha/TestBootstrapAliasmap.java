@@ -51,6 +51,9 @@ public class TestBootstrapAliasmap {
   public void setup() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster.setupNamenodeProvidedConfiguration(conf);
+    // use free port instead of default 50200 port
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
+            "127.0.0.1:" + NetUtils.getFreeSocketPort());
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1)
         .build();

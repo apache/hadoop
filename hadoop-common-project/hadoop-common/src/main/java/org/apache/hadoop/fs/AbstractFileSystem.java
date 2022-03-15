@@ -55,7 +55,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1353,7 +1353,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   
   @Override //Object
   public boolean equals(Object other) {
-    if (other == null || !(other instanceof AbstractFileSystem)) {
+    if (!(other instanceof AbstractFileSystem)) {
       return false;
     }
     return myUri.equals(((AbstractFileSystem) other).myUri);

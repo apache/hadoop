@@ -43,7 +43,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -72,10 +77,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
@@ -99,12 +100,11 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.DelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.io.Text;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -146,6 +146,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -153,7 +156,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 public class TestEncryptionZones {
-  static final Logger LOG = Logger.getLogger(TestEncryptionZones.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestEncryptionZones.class);
 
   protected Configuration conf;
   private FileSystemTestHelper fsHelper;
@@ -197,7 +200,8 @@ public class TestEncryptionZones {
         2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
-    Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(EncryptionZoneManager.class), Level.TRACE);
     fs = cluster.getFileSystem();
     fsWrapper = new FileSystemTestWrapper(fs);
     fcWrapper = new FileContextTestWrapper(
@@ -1184,6 +1188,30 @@ public class TestEncryptionZones {
     }
   }
 
+  @Test
+  public void testEncryptionZonesWithSnapshots() throws Exception {
+    final Path snapshottable = new Path("/zones");
+    fsWrapper.mkdir(snapshottable, FsPermission.getDirDefault(),
+        true);
+    dfsAdmin.allowSnapshot(snapshottable);
+    dfsAdmin.createEncryptionZone(snapshottable, TEST_KEY, NO_TRASH);
+    fs.createSnapshot(snapshottable, "snap1");
+    SnapshotDiffReport report =
+        fs.getSnapshotDiffReport(snapshottable, "snap1", "");
+    Assert.assertEquals(0, report.getDiffList().size());
+    report =
+        fs.getSnapshotDiffReport(snapshottable, "snap1", "");
+    System.out.println(report);
+    Assert.assertEquals(0, report.getDiffList().size());
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.restartNameNode(true);
+    report =
+        fs.getSnapshotDiffReport(snapshottable, "snap1", "");
+    Assert.assertEquals(0, report.getDiffList().size());
+  }
+
   private class AuthorizationExceptionInjector extends EncryptionFaultInjector {
     @Override
     public void ensureKeyIsInitialized() throws IOException {
@@ -1418,8 +1446,7 @@ public class TestEncryptionZones {
 
     Credentials creds = new Credentials();
     final Token<?> tokens[] = dfs.addDelegationTokens("JobTracker", creds);
-    DistributedFileSystem.LOG.debug("Delegation tokens: " +
-        Arrays.asList(tokens));
+    LOG.debug("Delegation tokens: " + Arrays.asList(tokens));
     Assert.assertEquals(2, tokens.length);
     Assert.assertEquals(tokens[1], testToken);
     Assert.assertEquals(2, creds.numberOfTokens());
@@ -1730,7 +1757,6 @@ public class TestEncryptionZones {
         true, fs.getFileStatus(rootDir).isEncrypted());
     assertEquals("File is encrypted",
         true, fs.getFileStatus(zoneFile).isEncrypted());
-    DFSTestUtil.verifyFilesNotEqual(fs, zoneFile, rawFile, len);
   }
 
   @Test

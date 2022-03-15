@@ -30,6 +30,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -65,7 +67,7 @@ class FsDatasetAsyncDiskService {
   // ThreadPool core pool size
   private static final int CORE_THREADS_PER_VOLUME = 1;
   // ThreadPool maximum pool size
-  private static final int MAXIMUM_THREADS_PER_VOLUME = 4;
+  private final int maxNumThreadsPerVolume;
   // ThreadPool keep-alive time for threads over core pool size
   private static final long THREADS_KEEP_ALIVE_SECONDS = 60; 
   
@@ -90,6 +92,12 @@ class FsDatasetAsyncDiskService {
     this.datanode = datanode;
     this.fsdatasetImpl = fsdatasetImpl;
     this.threadGroup = new ThreadGroup(getClass().getSimpleName());
+    maxNumThreadsPerVolume = datanode.getConf().getInt(
+      DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY,
+          DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_DEFAULT);
+    Preconditions.checkArgument(maxNumThreadsPerVolume > 0,
+        DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY +
+          " must be a positive integer.");
   }
 
   private void addExecutorForVolume(final FsVolumeImpl volume) {
@@ -110,7 +118,7 @@ class FsDatasetAsyncDiskService {
     };
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor(
-        CORE_THREADS_PER_VOLUME, MAXIMUM_THREADS_PER_VOLUME,
+        CORE_THREADS_PER_VOLUME, maxNumThreadsPerVolume,
         THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(), threadFactory);
 
@@ -167,18 +175,26 @@ class FsDatasetAsyncDiskService {
    * Execute the task sometime in the future, using ThreadPools.
    */
   synchronized void execute(FsVolumeImpl volume, Runnable task) {
-    if (executors == null) {
-      throw new RuntimeException("AsyncDiskService is already shutdown");
-    }
-    if (volume == null) {
-      throw new RuntimeException("A null volume does not have a executor");
-    }
-    ThreadPoolExecutor executor = executors.get(volume.getStorageID());
-    if (executor == null) {
-      throw new RuntimeException("Cannot find volume " + volume
-          + " for execution of task " + task);
-    } else {
-      executor.execute(task);
+    try {
+      if (executors == null) {
+        throw new RuntimeException("AsyncDiskService is already shutdown");
+      }
+      if (volume == null) {
+        throw new RuntimeException("A null volume does not have a executor");
+      }
+      ThreadPoolExecutor executor = executors.get(volume.getStorageID());
+      if (executor == null) {
+        throw new RuntimeException("Cannot find volume " + volume
+            + " for execution of task " + task);
+      } else {
+        executor.execute(task);
+      }
+    } catch (RuntimeException re) {
+      if (task instanceof ReplicaFileDeleteTask) {
+        IOUtils.cleanupWithLogger(null,
+            ((ReplicaFileDeleteTask) task).volumeRef);
+      }
+      throw re;
     }
   }
   
@@ -224,7 +240,8 @@ class FsDatasetAsyncDiskService {
   void deleteAsync(FsVolumeReference volumeRef, ReplicaInfo replicaToDelete,
       ExtendedBlock block, String trashDirectory) {
     LOG.info("Scheduling " + block.getLocalBlock()
-        + " replica " + replicaToDelete + " for deletion");
+        + " replica " + replicaToDelete + " on volume " +
+        replicaToDelete.getVolume() + " for deletion");
     ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(
         volumeRef, replicaToDelete, block, trashDirectory);
     execute(((FsVolumeImpl) volumeRef.getVolume()), deletionTask);
@@ -314,28 +331,31 @@ class FsDatasetAsyncDiskService {
 
     @Override
     public void run() {
-      final long blockLength = replicaToDelete.getBlockDataLength();
-      final long metaLength = replicaToDelete.getMetadataLength();
-      boolean result;
+      try {
+        final long blockLength = replicaToDelete.getBlockDataLength();
+        final long metaLength = replicaToDelete.getMetadataLength();
+        boolean result;
 
-      result = (trashDirectory == null) ? deleteFiles() : moveFiles();
+        result = (trashDirectory == null) ? deleteFiles() : moveFiles();
 
-      if (!result) {
-        LOG.warn("Unexpected error trying to "
-            + (trashDirectory == null ? "delete" : "move")
-            + " block " + block.getBlockPoolId() + " " + block.getLocalBlock()
-            + " at file " + replicaToDelete.getBlockURI() + ". Ignored.");
-      } else {
-        if(block.getLocalBlock().getNumBytes() != BlockCommand.NO_ACK){
-          datanode.notifyNamenodeDeletedBlock(block, volume.getStorageID());
+        if (!result) {
+          LOG.warn("Unexpected error trying to "
+              + (trashDirectory == null ? "delete" : "move")
+              + " block " + block.getBlockPoolId() + " " + block.getLocalBlock()
+              + " at file " + replicaToDelete.getBlockURI() + ". Ignored.");
+        } else {
+          if (block.getLocalBlock().getNumBytes() != BlockCommand.NO_ACK) {
+            datanode.notifyNamenodeDeletedBlock(block, volume.getStorageID());
+          }
+          volume.onBlockFileDeletion(block.getBlockPoolId(), blockLength);
+          volume.onMetaFileDeletion(block.getBlockPoolId(), metaLength);
+          LOG.info("Deleted " + block.getBlockPoolId() + " " +
+              block.getLocalBlock() + " URI " + replicaToDelete.getBlockURI());
         }
-        volume.onBlockFileDeletion(block.getBlockPoolId(), blockLength);
-        volume.onMetaFileDeletion(block.getBlockPoolId(), metaLength);
-        LOG.info("Deleted " + block.getBlockPoolId() + " "
-            + block.getLocalBlock() + " URI " + replicaToDelete.getBlockURI());
+        updateDeletedBlockId(block);
+      } finally {
+        IOUtils.cleanupWithLogger(null, this.volumeRef);
       }
-      updateDeletedBlockId(block);
-      IOUtils.cleanup(null, volumeRef);
     }
   }
   

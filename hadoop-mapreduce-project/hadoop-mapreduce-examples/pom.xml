@@ -74,6 +74,12 @@
        <artifactId>hadoop-hdfs</artifactId>
        <scope>test</scope>
        <type>test-jar</type>
+        <exclusions>
+            <exclusion>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm-commons</artifactId>
+            </exclusion>
+        </exclusions>
      </dependency>
      <dependency>
        <groupId>org.apache.hadoop</groupId>
@@ -138,10 +144,9 @@
     </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
          <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${mr.examples.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
           <effort>Max</effort>

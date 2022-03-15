@@ -28,16 +28,21 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RouterFederationRename.RouterRenameOption;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -50,6 +55,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -165,6 +172,7 @@ import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolServerSi
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
@@ -172,7 +180,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
@@ -238,6 +246,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /** DN type -> full DN report. */
   private final LoadingCache<DatanodeReportType, DatanodeInfo[]> dnCache;
 
+  /** Specify the option of router federation rename. */
+  private RouterRenameOption routerRenameOption;
+  /** Schedule the router federation rename jobs. */
+  private BalanceProcedureScheduler fedRenameScheduler;
   /**
    * Construct a router RPC server.
    *
@@ -397,6 +409,57 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
                 .forEach((key) -> this.dnCache.refresh(key)),
             0,
             dnCacheExpire, TimeUnit.MILLISECONDS);
+    initRouterFedRename();
+  }
+
+  /**
+   * Init the router federation rename environment. Each router has its own
+   * journal path.
+   * In HA mode the journal path is:
+   *   JOURNAL_BASE/nsId/namenodeId
+   * e.g.
+   *   /journal/router-namespace/host0
+   * In non-ha mode the journal path is based on ip and port:
+   *   JOURNAL_BASE/host_port
+   * e.g.
+   *   /journal/0.0.0.0_8888
+   */
+  private void initRouterFedRename() throws IOException {
+    routerRenameOption = RouterRenameOption.valueOf(
+        conf.get(DFS_ROUTER_FEDERATION_RENAME_OPTION,
+            DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT).toUpperCase());
+    switch (routerRenameOption) {
+    case DISTCP:
+      RouterFederationRename.checkConfiguration(conf);
+      Configuration sConf = new Configuration(conf);
+      URI journalUri;
+      try {
+        journalUri = new URI(sConf.get(SCHEDULER_JOURNAL_URI));
+      } catch (URISyntaxException | NullPointerException e) {
+        throw new IOException("Bad journal uri. Please check configuration for "
+            + SCHEDULER_JOURNAL_URI);
+      }
+      Path child;
+      String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+      String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+      InetSocketAddress listenAddress = this.rpcServer.getListenerAddress();
+      if (nsId == null || namenodeId == null) {
+        child = new Path(
+            listenAddress.getHostName() + "_" + listenAddress.getPort());
+      } else {
+        child = new Path(nsId, namenodeId);
+      }
+      String routerJournal = new Path(journalUri.toString(), child).toString();
+      sConf.set(SCHEDULER_JOURNAL_URI, routerJournal);
+      fedRenameScheduler = new BalanceProcedureScheduler(sConf);
+      fedRenameScheduler.init(true);
+      break;
+    case NONE:
+      fedRenameScheduler = null;
+      break;
+    default:
+      break;
+    }
   }
 
   @Override
@@ -432,7 +495,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (securityManager != null) {
       this.securityManager.stop();
     }
+    if (this.fedRenameScheduler != null) {
+      fedRenameScheduler.shutDown();
+    }
     super.serviceStop();
+  }
+
+  boolean isEnableRenameAcrossNamespace() {
+    return routerRenameOption != RouterRenameOption.NONE;
+  }
+
+  BalanceProcedureScheduler getFedRenameScheduler() {
+    return this.fedRenameScheduler;
   }
 
   /**
@@ -596,8 +670,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   /**
    * Invokes the method at default namespace, if default namespace is not
-   * available then at the first available namespace.
-   * If the namespace is unavailable, retry once with other namespace.
+   * available then at the other available namespaces.
+   * If the namespace is unavailable, retry with other namespaces.
    * @param <T> expected return type.
    * @param method the remote method.
    * @return the response received after invoking method.
@@ -606,28 +680,29 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   <T> T invokeAtAvailableNs(RemoteMethod method, Class<T> clazz)
       throws IOException {
     String nsId = subclusterResolver.getDefaultNamespace();
-    // If default Ns is not present return result from first namespace.
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    try {
-      if (!nsId.isEmpty()) {
+    // If no namespace is available, then throw this IOException.
+    IOException io = new IOException("No namespace available.");
+    // If default Ns is present return result from that namespace.
+    if (!nsId.isEmpty()) {
+      try {
         return rpcClient.invokeSingle(nsId, method, clazz);
+      } catch (IOException ioe) {
+        if (!clientProto.isUnavailableSubclusterException(ioe)) {
+          LOG.debug("{} exception cannot be retried",
+              ioe.getClass().getSimpleName());
+          throw ioe;
+        }
+        // Remove the already tried namespace.
+        nss.removeIf(n -> n.getNameserviceId().equals(nsId));
+        return invokeOnNs(method, clazz, io, nss);
       }
-      // If no namespace is available, throw IOException.
-      IOException io = new IOException("No namespace available.");
-      return invokeOnNs(method, clazz, io, nss);
-    } catch (IOException ioe) {
-      if (!clientProto.isUnavailableSubclusterException(ioe)) {
-        LOG.debug("{} exception cannot be retried",
-            ioe.getClass().getSimpleName());
-        throw ioe;
-      }
-      Set<FederationNamespaceInfo> nssWithoutFailed = getNameSpaceInfo(nsId);
-      return invokeOnNs(method, clazz, ioe, nssWithoutFailed);
     }
+    return invokeOnNs(method, clazz, io, nss);
   }
 
   /**
-   * Invoke the method on first available namespace,
+   * Invoke the method sequentially on available namespaces,
    * throw no namespace available exception, if no namespaces are available.
    * @param method the remote method.
    * @param clazz  Class for the return type.
@@ -641,24 +716,22 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (nss.isEmpty()) {
       throw ioe;
     }
-    String nsId = nss.iterator().next().getNameserviceId();
-    return rpcClient.invokeSingle(nsId, method, clazz);
-  }
-
-  /**
-   * Get set of namespace info's removing the already invoked namespaceinfo.
-   * @param nsId already invoked namespace id
-   * @return List of name spaces in the federation on
-   * removing the already invoked namespaceinfo.
-   */
-  private Set<FederationNamespaceInfo> getNameSpaceInfo(String nsId) {
-    Set<FederationNamespaceInfo> namespaceInfos = new HashSet<>();
-    for (FederationNamespaceInfo ns : namespaceInfos) {
-      if (!nsId.equals(ns.getNameserviceId())) {
-        namespaceInfos.add(ns);
+    for (FederationNamespaceInfo fnInfo : nss) {
+      String nsId = fnInfo.getNameserviceId();
+      LOG.debug("Invoking {} on namespace {}", method, nsId);
+      try {
+        return rpcClient.invokeSingle(nsId, method, clazz);
+      } catch (IOException e) {
+        LOG.debug("Failed to invoke {} on namespace {}", method, nsId, e);
+        // Ignore the exception and try on other namespace, if the tried
+        // namespace is unavailable, else throw the received exception.
+        if (!clientProto.isUnavailableSubclusterException(e)) {
+          throw e;
+        }
       }
     }
-    return namespaceInfos;
+    // Couldn't get a response from any of the namespace, throw ioe.
+    throw ioe;
   }
 
   @Override // ClientProtocol
@@ -1060,6 +1133,23 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    */
   public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
       DatanodeReportType type) throws IOException {
+    return getDatanodeStorageReportMap(type, true, -1);
+  }
+
+  /**
+   * Get the list of datanodes per subcluster.
+   *
+   * @param type Type of the datanodes to get.
+   * @param requireResponse If true an exception will be thrown if all calls do
+   *          not complete. If false exceptions are ignored and all data results
+   *          successfully received are returned.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return nsId to datanode list.
+   * @throws IOException If the method cannot be invoked remotely.
+   */
+  public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
+      DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
 
     Map<String, DatanodeStorageReport[]> ret = new LinkedHashMap<>();
     RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
@@ -1067,7 +1157,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, DatanodeStorageReport[]> results =
         rpcClient.invokeConcurrent(
-            nss, method, true, false, DatanodeStorageReport[].class);
+            nss, method, requireResponse, false, timeOutMs, DatanodeStorageReport[].class);
     for (Entry<FederationNamespaceInfo, DatanodeStorageReport[]> entry :
         results.entrySet()) {
       FederationNamespaceInfo ns = entry.getKey();
@@ -1490,8 +1580,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
-      long minBlockSize) throws IOException {
-    return nnProto.getBlocks(datanode, size, minBlockSize);
+      long minBlockSize, long hotBlockTimeInterval) throws IOException {
+    return nnProto.getBlocks(datanode, size, minBlockSize,
+            hotBlockTimeInterval);
   }
 
   @Override // NamenodeProtocol
@@ -1886,6 +1977,17 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
     return routerProto.getGroupsForUser(user);
+  }
+
+  public int getRouterFederationRenameCount() {
+    return clientProto.getRouterFederationRenameCount();
+  }
+
+  public int getSchedulerJobCount() {
+    if (fedRenameScheduler == null) {
+      return 0;
+    }
+    return fedRenameScheduler.getAllJobs().size();
   }
 
   /**

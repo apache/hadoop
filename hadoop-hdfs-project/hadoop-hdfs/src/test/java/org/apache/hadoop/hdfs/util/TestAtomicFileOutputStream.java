@@ -142,7 +142,7 @@ public class TestAtomicFileOutputStream {
         fos = null;
       }
     } finally {
-      IOUtils.cleanup(null, fos);
+      IOUtils.cleanupWithLogger(null, fos);
       FileUtil.setWritable(TEST_DIR, true);
     }
   }

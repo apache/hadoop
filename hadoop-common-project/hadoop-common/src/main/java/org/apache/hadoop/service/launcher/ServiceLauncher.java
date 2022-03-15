@@ -26,8 +26,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +36,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitCodeProvider;
@@ -591,6 +592,7 @@ public class ServiceLauncher<S extends Service>
     }
     String name = getServiceName();
     LOG.debug("Launched service {}", name);
+    CommonAuditContext.noteEntryPoint(service);
     LaunchableService launchableService = null;
 
     if (service instanceof LaunchableService) {

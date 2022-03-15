@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 
@@ -293,7 +294,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   private Resource convertPreemptedSecondsToResource(QueueMetrics qm) {
-    QueueMetricsCustomResource customValues = qm
+    CustomResourceMetricValue customValues = qm
         .getAggregatedPreemptedSecondsResources();
     MutableCounterLong vcoreSeconds = qm
         .getAggregateVcoreSecondsPreempted();

@@ -138,8 +138,8 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
       try {
         // check and renew TGT to handle potential expiration
         UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
-        LOG.debug("No delegation token found for url={}, token={}, "
-            + "authenticating with {}", url, token, authenticator.getClass());
+        LOG.debug("No delegation token found for url={}, "
+            + "authenticating with {}", url, authenticator.getClass());
         authenticator.authenticate(url, token);
       } catch (IOException ex) {
         throw NetUtils.wrapException(url.getHost(), url.getPort(),

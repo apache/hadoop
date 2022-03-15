@@ -23,6 +23,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Time;
+import org.apache.zookeeper.server.ServerCnxn;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -127,11 +128,11 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
     // Mockito errors if the HM calls the proxy in the middle of
     // setting up the mock.
     cluster.start();
-    
+
     long st = Time.now();
     while (Time.now() - st < runFor) {
       cluster.getTestContext().checkException();
-      serverFactory.closeAll();
+      serverFactory.closeAll(ServerCnxn.DisconnectReason.SERVER_SHUTDOWN);
       Thread.sleep(50);
     }
   }

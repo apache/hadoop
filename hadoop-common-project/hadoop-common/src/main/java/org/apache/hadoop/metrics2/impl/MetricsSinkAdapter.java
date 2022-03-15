@@ -22,7 +22,7 @@ import java.io.Closeable;
 import java.util.Random;
 import java.util.concurrent.*;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.util.Preconditions.*;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;

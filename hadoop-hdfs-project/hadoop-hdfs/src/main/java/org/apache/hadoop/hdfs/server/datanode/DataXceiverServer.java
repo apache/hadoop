@@ -27,16 +27,16 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.PeerServer;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 
@@ -68,8 +68,7 @@ class DataXceiverServer implements Runnable {
    * Enforcing the limit is required in order to avoid data-node
    * running out of memory.
    */
-  int maxXceiverCount =
-    DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
+  volatile int maxXceiverCount;
 
   /**
    * A manager to make sure that cluster balancing does not take too much
@@ -248,10 +247,10 @@ class DataXceiverServer implements Runnable {
           LOG.warn("{}:DataXceiverServer", datanode.getDisplayName(), ace);
         }
       } catch (IOException ie) {
-        IOUtils.closeQuietly(peer);
+        IOUtils.closeStream(peer);
         LOG.warn("{}:DataXceiverServer", datanode.getDisplayName(), ie);
       } catch (OutOfMemoryError ie) {
-        IOUtils.closeQuietly(peer);
+        IOUtils.closeStream(peer);
         // DataNode can run out of memory if there is too many transfers.
         // Log the event, Sleep for 30 seconds, other transfers may complete by
         // then.
@@ -334,7 +333,7 @@ class DataXceiverServer implements Runnable {
       peers.remove(peer);
       peersXceiver.remove(peer);
       datanode.metrics.decrDataNodeActiveXceiversCount();
-      IOUtils.closeQuietly(peer);
+      IOUtils.closeStream(peer);
       if (peers.isEmpty()) {
         this.noPeers.signalAll();
       }
@@ -396,7 +395,7 @@ class DataXceiverServer implements Runnable {
     LOG.info("Closing all peers.");
     lock.lock();
     try {
-      peers.keySet().forEach(p -> IOUtils.closeQuietly(p));
+      peers.keySet().forEach(IOUtils::closeStream);
       peers.clear();
       peersXceiver.clear();
       datanode.metrics.setDataNodeActiveXceiversCount(0);
@@ -513,5 +512,16 @@ class DataXceiverServer implements Runnable {
   @VisibleForTesting
   void setMaxReconfigureWaitTime(int max) {
     this.maxReconfigureWaitTime = max;
+  }
+
+  public void setMaxXceiverCount(int xceiverCount) {
+    Preconditions.checkArgument(xceiverCount > 0,
+        "dfs.datanode.max.transfer.threads should be larger than 0");
+    maxXceiverCount = xceiverCount;
+  }
+
+  @VisibleForTesting
+  public int getMaxXceiverCount() {
+    return maxXceiverCount;
   }
 }

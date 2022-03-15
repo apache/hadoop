@@ -615,24 +615,10 @@ characters can be configured in the Hadoop configuration.
 
 **Consistency**
 
-* Assume the usual S3 consistency model applies.
+Since November 2020, AWS S3 has been fully consistent.
+This also applies to S3 Select.
+We do not know what happens if an object is overwritten while a query is active.
 
-* When enabled, S3Guard's DynamoDB table will declare whether or not
-a newly deleted file is visible: if it is marked as deleted, the
-select request will be rejected with a `FileNotFoundException`.
-
-* When an existing S3-hosted object is changed, the S3 select operation
-may return the results of a SELECT call as applied to either the old
-or new version.
-
-* We don't know whether you can get partially consistent reads, or whether
-an extended read ever picks up a later value.
-
-* The AWS S3 load balancers can briefly cache 404/Not-Found entries
-from a failed HEAD/GET request against a nonexistent file; this cached
-entry can briefly create create inconsistency, despite the
-AWS "Create is consistent" model. There is no attempt to detect or recover from
-this.
 
 **Concurrency**
 

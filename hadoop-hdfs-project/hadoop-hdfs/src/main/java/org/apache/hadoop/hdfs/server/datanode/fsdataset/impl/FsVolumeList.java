@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeDiskMetrics;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
@@ -65,15 +68,18 @@ class FsVolumeList {
 
   private final boolean enableSameDiskTiering;
   private final MountVolumeMap mountVolumeMap;
+  private Map<URI, Double> capacityRatioMap;
+  private final DataNodeDiskMetrics diskMetrics;
 
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
       BlockScanner blockScanner,
       VolumeChoosingPolicy<FsVolumeImpl> blockChooser,
-      Configuration config) {
+      Configuration config, DataNodeDiskMetrics dataNodeDiskMetrics) {
     this.blockChooser = blockChooser;
     this.blockScanner = blockScanner;
     this.checkDirsLock = new AutoCloseableLock();
     this.checkDirsLockCondition = checkDirsLock.newCondition();
+    this.diskMetrics = dataNodeDiskMetrics;
     for (VolumeFailureInfo volumeFailureInfo: initialVolumeFailureInfos) {
       volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
           volumeFailureInfo);
@@ -82,6 +88,7 @@ class FsVolumeList {
         DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
         DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     mountVolumeMap = new MountVolumeMap(config);
+    initializeCapacityRatio(config);
   }
 
   MountVolumeMap getMountVolumeMap() {
@@ -97,6 +104,15 @@ class FsVolumeList {
 
   private FsVolumeReference chooseVolume(List<FsVolumeImpl> list,
       long blockSize, String storageId) throws IOException {
+
+    // Exclude slow disks when choosing volume.
+    if (diskMetrics != null) {
+      List<String> slowDisksToExclude = diskMetrics.getSlowDisksToExclude();
+      list = list.stream()
+          .filter(volume -> !slowDisksToExclude.contains(volume.getBaseURI().getPath()))
+          .collect(Collectors.toList());
+    }
+
     while (true) {
       FsVolumeImpl volume = blockChooser.chooseVolume(list, blockSize,
           storageId);
@@ -108,6 +124,44 @@ class FsVolumeList {
         // is empty, indicating that all volumes are closed.
         list.remove(volume);
       }
+    }
+  }
+
+  /**
+   * Get volume by disk mount to place a block.
+   * This is useful for same disk tiering.
+   *
+   * @param storageType The desired {@link StorageType}
+   * @param mount Disk mount of the volume
+   * @param blockSize Free space needed on the volume
+   * @return
+   * @throws IOException
+   */
+  FsVolumeReference getVolumeByMount(StorageType storageType,
+      String mount, long blockSize) throws IOException {
+    if (!enableSameDiskTiering) {
+      return null;
+    }
+    FsVolumeReference volume = mountVolumeMap
+        .getVolumeRefByMountAndStorageType(mount, storageType);
+    // Check if volume has enough capacity
+    if (volume != null && volume.getVolume().getAvailable() > blockSize) {
+      return volume;
+    }
+    return null;
+  }
+
+  private void initializeCapacityRatio(Configuration config) {
+    if (capacityRatioMap == null) {
+      String capacityRatioConfig = config.get(
+          DFSConfigKeys
+              .DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE,
+          DFSConfigKeys
+              .DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE_DEFAULT
+      );
+
+      this.capacityRatioMap = StorageLocation
+          .parseCapacityRatio(capacityRatioConfig);
     }
   }
 
@@ -291,6 +345,28 @@ class FsVolumeList {
     FsDatasetImpl.LOG.info("Volume reference is released.");
   }
 
+  /**
+   * Wait for the reference of the volume removed from a previous
+   * {@link #removeVolume(FsVolumeImpl)} call to be released.
+   *
+   * @param sleepMillis interval to recheck.
+   */
+  void waitVolumeRemoved(int sleepMillis, Object condition) {
+    while (!checkVolumesRemoved()) {
+      if (FsDatasetImpl.LOG.isDebugEnabled()) {
+        FsDatasetImpl.LOG.debug("Waiting for volume reference to be released.");
+      }
+      try {
+        condition.wait(sleepMillis);
+      } catch (InterruptedException e) {
+        FsDatasetImpl.LOG.info("Thread interrupted when waiting for "
+            + "volume reference to be released.");
+        Thread.currentThread().interrupt();
+      }
+    }
+    FsDatasetImpl.LOG.info("Volume reference is released.");
+  }
+
   @Override
   public String toString() {
     return volumes.toString();
@@ -301,18 +377,22 @@ class FsVolumeList {
    *
    * @param ref       a reference to the new FsVolumeImpl instance.
    */
-  void addVolume(FsVolumeReference ref) {
+  void addVolume(FsVolumeReference ref) throws IOException {
     FsVolumeImpl volume = (FsVolumeImpl) ref.getVolume();
     volumes.add(volume);
     if (isSameDiskTieringApplied(volume)) {
       mountVolumeMap.addVolume(volume);
+      URI uri = volume.getStorageLocation().getUri();
+      if (capacityRatioMap.containsKey(uri)) {
+        mountVolumeMap.setCapacityRatio(volume, capacityRatioMap.get(uri));
+      }
     }
     if (blockScanner != null) {
       blockScanner.addVolumeScanner(ref);
     } else {
       // If the volume is not put into a volume scanner, it does not need to
       // hold the reference.
-      IOUtils.cleanup(null, ref);
+      IOUtils.cleanupWithLogger(null, ref);
     }
     // If the volume is used to replace a failed volume, it needs to reset the
     // volume failure info for this volume.
@@ -354,9 +434,8 @@ class FsVolumeList {
    * Check if same disk tiering is applied to the volume.
    */
   private boolean isSameDiskTieringApplied(FsVolumeImpl target) {
-    return enableSameDiskTiering &&
-        (target.getStorageType() == StorageType.DISK
-            || target.getStorageType() == StorageType.ARCHIVE);
+    return enableSameDiskTiering
+        && StorageType.allowSameDiskTiering(target.getStorageType());
   }
 
   /**

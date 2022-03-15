@@ -18,14 +18,10 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import javax.annotation.Nullable;
-
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -34,47 +30,49 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
-import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
-import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.util.functional.RemoteIterators;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 
-import java.io.FileNotFoundException;
+import java.io.Closeable;
 import java.io.IOException;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.StringJoiner;
 
-import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.Constants.S3N_FOLDER_SUFFIX;
+import static org.apache.hadoop.fs.s3a.Invoker.onceInTheFuture;
 import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createFileStatus;
 import static org.apache.hadoop.fs.s3a.S3AUtils.maybeAddTrailingSlash;
 import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.s3a.S3AUtils.stringify;
-import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.pathToKey;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
+import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromArray;
+import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromSingleton;
 
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.
+ *
+ * Spans passed in are attached to the listing iterators returned, but are not
+ * closed at the end of the iteration. This is because the same span
  */
 @InterfaceAudience.Private
 public class Listing extends AbstractStoreOperation {
 
   private static final Logger LOG = S3AFileSystem.LOG;
+  private final boolean isCSEEnabled;
 
   static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
       new AcceptAllButS3nDirs();
@@ -82,9 +80,10 @@ public class Listing extends AbstractStoreOperation {
   private final ListingOperationCallbacks listingOperationCallbacks;
 
   public Listing(ListingOperationCallbacks listingOperationCallbacks,
-                 StoreContext storeContext) {
+      StoreContext storeContext) {
     super(storeContext);
     this.listingOperationCallbacks = listingOperationCallbacks;
+    this.isCSEEnabled = storeContext.isCSEEnabled();
   }
 
   /**
@@ -96,11 +95,14 @@ public class Listing extends AbstractStoreOperation {
    * @param acceptor the file status acceptor
    * @return the file status iterator
    */
-  ProvidedFileStatusIterator createProvidedFileStatusIterator(
+  RemoteIterator<S3AFileStatus> createProvidedFileStatusIterator(
       S3AFileStatus[] fileStatuses,
       PathFilter filter,
       FileStatusAcceptor acceptor) {
-    return new ProvidedFileStatusIterator(fileStatuses, filter, acceptor);
+    return filteringRemoteIterator(
+        remoteIteratorFromArray(fileStatuses),
+        status ->
+            filter.accept(status.getPath()) && acceptor.accept(status));
   }
 
   /**
@@ -109,32 +111,11 @@ public class Listing extends AbstractStoreOperation {
    * @return the file status iterator.
    */
   @VisibleForTesting
-  public static ProvidedFileStatusIterator toProvidedFileStatusIterator(
+  public static RemoteIterator<S3AFileStatus> toProvidedFileStatusIterator(
           S3AFileStatus[] fileStatuses) {
-    return new ProvidedFileStatusIterator(fileStatuses,
-            ACCEPT_ALL,
-            Listing.ACCEPT_ALL_BUT_S3N);
-  }
-
-  /**
-   * Create a FileStatus iterator against a path, with a given list object
-   * request.
-   *
-   * @param listPath path of the listing
-   * @param request initial request to make
-   * @param filter the filter on which paths to accept
-   * @param acceptor the class/predicate to decide which entries to accept
-   * in the listing based on the full file status.
-   * @return the iterator
-   * @throws IOException IO Problems
-   */
-  public FileStatusListingIterator createFileStatusListingIterator(
-      Path listPath,
-      S3ListRequest request,
-      PathFilter filter,
-      Listing.FileStatusAcceptor acceptor) throws IOException {
-    return createFileStatusListingIterator(listPath, request, filter, acceptor,
-        null);
+    return filteringRemoteIterator(
+        remoteIteratorFromArray(fileStatuses),
+        Listing.ACCEPT_ALL_BUT_S3N::accept);
   }
 
   /**
@@ -145,8 +126,7 @@ public class Listing extends AbstractStoreOperation {
    * @param filter the filter on which paths to accept
    * @param acceptor the class/predicate to decide which entries to accept
    * in the listing based on the full file status.
-   * @param providedStatus the provided list of file status, which may contain
-   *                       items that are not listed from source.
+   * @param span audit span for this iterator
    * @return the iterator
    * @throws IOException IO Problems
    */
@@ -155,13 +135,12 @@ public class Listing extends AbstractStoreOperation {
       Path listPath,
       S3ListRequest request,
       PathFilter filter,
-      Listing.FileStatusAcceptor acceptor,
-      RemoteIterator<S3AFileStatus> providedStatus) throws IOException {
+      FileStatusAcceptor acceptor,
+      AuditSpan span) throws IOException {
     return new FileStatusListingIterator(
-        createObjectListingIterator(listPath, request),
+        createObjectListingIterator(listPath, request, span),
         filter,
-        acceptor,
-        providedStatus);
+        acceptor);
   }
 
   /**
@@ -169,14 +148,16 @@ public class Listing extends AbstractStoreOperation {
    * list object request.
    * @param listPath path of the listing
    * @param request initial request to make
+   * @param span audit span for this iterator
    * @return the iterator
    * @throws IOException IO Problems
    */
   @Retries.RetryRaw
-  public ObjectListingIterator createObjectListingIterator(
+  private ObjectListingIterator createObjectListingIterator(
       final Path listPath,
-      final S3ListRequest request) throws IOException {
-    return new ObjectListingIterator(listPath, request);
+      final S3ListRequest request,
+      final AuditSpan span) throws IOException {
+    return new ObjectListingIterator(listPath, request, span);
   }
 
   /**
@@ -185,43 +166,36 @@ public class Listing extends AbstractStoreOperation {
    * @return a new remote iterator
    */
   @VisibleForTesting
-  public LocatedFileStatusIterator createLocatedFileStatusIterator(
+  public RemoteIterator<S3ALocatedFileStatus> createLocatedFileStatusIterator(
       RemoteIterator<S3AFileStatus> statusIterator) {
-    return new LocatedFileStatusIterator(statusIterator);
+    return RemoteIterators.mappingRemoteIterator(
+        statusIterator,
+        listingOperationCallbacks::toLocatedFileStatus);
   }
 
   /**
-   * Create an located status iterator that wraps another to filter out a set
-   * of recently deleted items.
-   * @param iterator an iterator over the remote located status entries.
-   * @param tombstones set of paths that are recently deleted and should be
-   *                   filtered.
-   * @return a new remote iterator.
+   * Create a remote iterator from a single status entry.
+   * @param status status
+   * @return iterator.
    */
-  @VisibleForTesting
-  TombstoneReconcilingIterator createTombstoneReconcilingIterator(
-      RemoteIterator<S3ALocatedFileStatus> iterator, Set<Path> tombstones) {
-    return new TombstoneReconcilingIterator(iterator, tombstones);
+  public RemoteIterator<S3ALocatedFileStatus> createSingleStatusIterator(
+      S3ALocatedFileStatus status) {
+    return remoteIteratorFromSingleton(status);
   }
-
 
   /**
    * List files under a path assuming the path to be a directory.
    * @param path input path.
    * @param recursive recursive listing?
    * @param acceptor file status filter
-   * @param collectTombstones should tombstones be collected from S3Guard?
-   * @param forceNonAuthoritativeMS forces metadata store to act like non
-   *                                authoritative. This is useful when
-   *                                listFiles output is used by import tool.
+   * @param span audit span for this iterator
    * @return an iterator over listing.
    * @throws IOException any exception.
    */
   public RemoteIterator<S3ALocatedFileStatus> getListFilesAssumingDir(
-          Path path,
-          boolean recursive, Listing.FileStatusAcceptor acceptor,
-          boolean collectTombstones,
-          boolean forceNonAuthoritativeMS) throws IOException {
+      Path path,
+      boolean recursive, FileStatusAcceptor acceptor,
+      AuditSpan span) throws IOException {
 
     String key = maybeAddTrailingSlash(pathToKey(path));
     String delimiter = recursive ? null : "/";
@@ -231,170 +205,73 @@ public class Listing extends AbstractStoreOperation {
       LOG.debug("Requesting all entries under {} with delimiter '{}'",
           key, delimiter);
     }
-    final RemoteIterator<S3AFileStatus> cachedFilesIterator;
-    final Set<Path> tombstones;
-    boolean allowAuthoritative = listingOperationCallbacks
-            .allowAuthoritative(path);
-    if (recursive) {
-      final PathMetadata pm = getStoreContext()
-              .getMetadataStore()
-              .get(path, true);
-      if (pm != null) {
-        if (pm.isDeleted()) {
-          OffsetDateTime deletedAt = OffsetDateTime
-                  .ofInstant(Instant.ofEpochMilli(
-                          pm.getFileStatus().getModificationTime()),
-                          ZoneOffset.UTC);
-          throw new FileNotFoundException("Path " + path + " is recorded as " +
-                  "deleted by S3Guard at " + deletedAt);
-        }
-      }
-      MetadataStoreListFilesIterator metadataStoreListFilesIterator =
-              new MetadataStoreListFilesIterator(
-                      getStoreContext().getMetadataStore(),
-                      pm,
-                      allowAuthoritative);
-      tombstones = metadataStoreListFilesIterator.listTombstones();
-      // if all of the below is true
-      //  - authoritative access is allowed for this metadatastore
-      //  for this directory,
-      //  - all the directory listings are authoritative on the client
-      //  - the caller does not force non-authoritative access
-      // return the listing without any further s3 access
-      if (!forceNonAuthoritativeMS &&
-              allowAuthoritative &&
-              metadataStoreListFilesIterator.isRecursivelyAuthoritative()) {
-        S3AFileStatus[] statuses = S3AUtils.iteratorToStatuses(
-                metadataStoreListFilesIterator, tombstones);
-        cachedFilesIterator = createProvidedFileStatusIterator(
-                statuses, ACCEPT_ALL, acceptor);
-        return createLocatedFileStatusIterator(cachedFilesIterator);
-      }
-      cachedFilesIterator = metadataStoreListFilesIterator;
-    } else {
-      DirListingMetadata meta =
-              S3Guard.listChildrenWithTtl(
-                      getStoreContext().getMetadataStore(),
-                      path,
-                      listingOperationCallbacks.getUpdatedTtlTimeProvider(),
-                      allowAuthoritative);
-      if (meta != null) {
-        tombstones = meta.listTombstones();
-      } else {
-        tombstones = null;
-      }
-      cachedFilesIterator = createProvidedFileStatusIterator(
-              S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
-      if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
-        // metadata listing is authoritative, so return it directly
-        return createLocatedFileStatusIterator(cachedFilesIterator);
-      }
-    }
-    return createTombstoneReconcilingIterator(
-            createLocatedFileStatusIterator(
-                    createFileStatusListingIterator(path,
-                                    listingOperationCallbacks
-                                    .createListObjectsRequest(key, delimiter),
-                            ACCEPT_ALL,
-                            acceptor,
-                            cachedFilesIterator)),
-            collectTombstones ? tombstones : null);
+    return createLocatedFileStatusIterator(
+        createFileStatusListingIterator(path,
+            listingOperationCallbacks
+                .createListObjectsRequest(key,
+                    delimiter,
+                    span),
+            ACCEPT_ALL,
+            acceptor,
+            span));
   }
 
   /**
    * Generate list located status for a directory.
-   * Also performing tombstone reconciliation for guarded directories.
    * @param dir directory to check.
    * @param filter a path filter.
+   * @param span audit span for this iterator
    * @return an iterator that traverses statuses of the given dir.
    * @throws IOException in case of failure.
    */
   public RemoteIterator<S3ALocatedFileStatus> getLocatedFileStatusIteratorForDir(
-          Path dir, PathFilter filter) throws IOException {
+          Path dir, PathFilter filter, AuditSpan span) throws IOException {
+    span.activate();
     final String key = maybeAddTrailingSlash(pathToKey(dir));
-    final Listing.FileStatusAcceptor acceptor =
-            new Listing.AcceptAllButSelfAndS3nDirs(dir);
-    boolean allowAuthoritative = listingOperationCallbacks
-            .allowAuthoritative(dir);
-    DirListingMetadata meta =
-            S3Guard.listChildrenWithTtl(getStoreContext().getMetadataStore(),
-                    dir,
-                    listingOperationCallbacks
-                            .getUpdatedTtlTimeProvider(),
-                    allowAuthoritative);
-    Set<Path> tombstones = meta != null
-            ? meta.listTombstones()
-            : null;
-    final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
-            createProvidedFileStatusIterator(
-                    S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-    return (allowAuthoritative && meta != null
-            && meta.isAuthoritative())
-            ? createLocatedFileStatusIterator(
-            cachedFileStatusIterator)
-            : createTombstoneReconcilingIterator(
-            createLocatedFileStatusIterator(
-                    createFileStatusListingIterator(dir,
-                            listingOperationCallbacks
-                                    .createListObjectsRequest(key, "/"),
-                            filter,
-                            acceptor,
-                            cachedFileStatusIterator)),
-            tombstones);
+
+    return createLocatedFileStatusIterator(
+        createFileStatusListingIterator(dir,
+            listingOperationCallbacks
+                .createListObjectsRequest(key, "/", span),
+            filter,
+            new AcceptAllButSelfAndS3nDirs(dir),
+            span));
   }
 
   /**
    * Calculate list of file statuses assuming path
    * to be a non-empty directory.
    * @param path input path.
-   * @return Triple of file statuses, metaData, auth flag.
+   * @param span audit span for this iterator
+   * @return iterator of file statuses.
    * @throws IOException Any IO problems.
    */
-  public Triple<RemoteIterator<S3AFileStatus>, DirListingMetadata, Boolean>
-        getFileStatusesAssumingNonEmptyDir(Path path)
+  @Retries.RetryRaw
+  public RemoteIterator<S3AFileStatus>
+        getFileStatusesAssumingNonEmptyDir(Path path, final AuditSpan span)
           throws IOException {
     String key = pathToKey(path);
-    List<S3AFileStatus> result;
     if (!key.isEmpty()) {
       key = key + '/';
     }
 
-    boolean allowAuthoritative = listingOperationCallbacks
-            .allowAuthoritative(path);
-    DirListingMetadata dirMeta =
-            S3Guard.listChildrenWithTtl(
-                    getStoreContext().getMetadataStore(),
-                    path,
-                    listingOperationCallbacks.getUpdatedTtlTimeProvider(),
-                    allowAuthoritative);
-    // In auth mode return directly with auth flag.
-    if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
-      ProvidedFileStatusIterator mfsItr = createProvidedFileStatusIterator(
-              S3Guard.dirMetaToStatuses(dirMeta),
-              ACCEPT_ALL,
-              Listing.ACCEPT_ALL_BUT_S3N);
-      return Triple.of(mfsItr,
-              dirMeta, Boolean.TRUE);
-    }
-
-    S3ListRequest request = createListObjectsRequest(key, "/");
+    S3ListRequest request = createListObjectsRequest(key, "/", span);
     LOG.debug("listStatus: doing listObjects for directory {}", key);
 
-    FileStatusListingIterator filesItr = createFileStatusListingIterator(
-            path,
-            request,
-            ACCEPT_ALL,
-            new Listing.AcceptAllButSelfAndS3nDirs(path));
-
     // return the results obtained from s3.
-    return Triple.of(
-            filesItr,
-            dirMeta,
-            Boolean.FALSE);
+    return createFileStatusListingIterator(
+        path,
+        request,
+        ACCEPT_ALL,
+        new AcceptAllButSelfAndS3nDirs(path),
+        span);
   }
 
-  public S3ListRequest createListObjectsRequest(String key, String delimiter) {
-    return listingOperationCallbacks.createListObjectsRequest(key, delimiter);
+  public S3ListRequest createListObjectsRequest(String key,
+      String delimiter,
+      final AuditSpan span) {
+    return listingOperationCallbacks.createListObjectsRequest(key, delimiter,
+        span);
   }
 
   /**
@@ -430,105 +307,6 @@ public class Listing extends AbstractStoreOperation {
   }
 
   /**
-   * A remote iterator which only iterates over a single `LocatedFileStatus`
-   * value.
-   *
-   * If the status value is null, the iterator declares that it has no data.
-   * This iterator is used to handle {@link S3AFileSystem#listStatus(Path)}
-   * calls where the path handed in refers to a file, not a directory:
-   * this is the iterator returned.
-   */
-  static final class SingleStatusRemoteIterator
-      implements RemoteIterator<S3ALocatedFileStatus> {
-
-    /**
-     * The status to return; set to null after the first iteration.
-     */
-    private S3ALocatedFileStatus status;
-
-    /**
-     * Constructor.
-     * @param status status value: may be null, in which case
-     * the iterator is empty.
-     */
-    SingleStatusRemoteIterator(S3ALocatedFileStatus status) {
-      this.status = status;
-    }
-
-    /**
-     * {@inheritDoc}
-     * @return true if there is a file status to return: this is always false
-     * for the second iteration, and may be false for the first.
-     * @throws IOException never
-     */
-    @Override
-    public boolean hasNext() throws IOException {
-      return status != null;
-    }
-
-    /**
-     * {@inheritDoc}
-     * @return the non-null status element passed in when the instance was
-     * constructed, if it ha not already been retrieved.
-     * @throws IOException never
-     * @throws NoSuchElementException if this is the second call, or it is
-     * the first call and a null {@link LocatedFileStatus} entry was passed
-     * to the constructor.
-     */
-    @Override
-    public S3ALocatedFileStatus next() throws IOException {
-      if (hasNext()) {
-        S3ALocatedFileStatus s = this.status;
-        status = null;
-        return s;
-      } else {
-        throw new NoSuchElementException();
-      }
-    }
-  }
-
-  /**
-   * This wraps up a provided non-null list of file status as a remote iterator.
-   *
-   * It firstly filters the provided list and later {@link #next} call will get
-   * from the filtered list. This suffers from scalability issues if the
-   * provided list is too large.
-   *
-   * There is no remote data to fetch.
-   */
-  static class ProvidedFileStatusIterator
-      implements RemoteIterator<S3AFileStatus> {
-    private final ArrayList<S3AFileStatus> filteredStatusList;
-    private int index = 0;
-
-    ProvidedFileStatusIterator(S3AFileStatus[] fileStatuses, PathFilter filter,
-        FileStatusAcceptor acceptor) {
-      Preconditions.checkArgument(fileStatuses != null, "Null status list!");
-
-      filteredStatusList = new ArrayList<>(fileStatuses.length);
-      for (S3AFileStatus status : fileStatuses) {
-        if (filter.accept(status.getPath()) && acceptor.accept(status)) {
-          filteredStatusList.add(status);
-        }
-      }
-      filteredStatusList.trimToSize();
-    }
-
-    @Override
-    public boolean hasNext() throws IOException {
-      return index < filteredStatusList.size();
-    }
-
-    @Override
-    public S3AFileStatus next() throws IOException {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      return filteredStatusList.get(index++);
-    }
-  }
-
-  /**
    * Wraps up object listing into a remote iterator which will ask for more
    * listing data if needed.
    *
@@ -555,7 +333,7 @@ public class Listing extends AbstractStoreOperation {
    * Thread safety: None.
    */
   class FileStatusListingIterator
-      implements RemoteIterator<S3AFileStatus> {
+      implements RemoteIterator<S3AFileStatus>, IOStatisticsSource {
 
     /** Source of objects. */
     private final ObjectListingIterator source;
@@ -568,8 +346,6 @@ public class Listing extends AbstractStoreOperation {
     /** Iterator over the current set of results. */
     private ListIterator<S3AFileStatus> statusBatchIterator;
 
-    private final Map<Path, S3AFileStatus> providedStatus;
-    private Iterator<S3AFileStatus> providedStatusIterator;
 
     /**
      * Create an iterator over file status entries.
@@ -577,27 +353,17 @@ public class Listing extends AbstractStoreOperation {
      * @param filter the filter on which paths to accept
      * @param acceptor the class/predicate to decide which entries to accept
      * in the listing based on the full file status.
-     * @param providedStatus the provided list of file status, which may contain
-     *                       items that are not listed from source.
      * @throws IOException IO Problems
      */
     @Retries.RetryTranslated
     FileStatusListingIterator(ObjectListingIterator source,
         PathFilter filter,
-        FileStatusAcceptor acceptor,
-        @Nullable RemoteIterator<S3AFileStatus> providedStatus)
+        FileStatusAcceptor acceptor)
         throws IOException {
       this.source = source;
       this.filter = filter;
       this.acceptor = acceptor;
-      this.providedStatus = new HashMap<>();
-      for (; providedStatus != null && providedStatus.hasNext();) {
-        final S3AFileStatus status = providedStatus.next();
-        Path path = status.getPath();
-        if (filter.accept(path) && acceptor.accept(status)) {
-          this.providedStatus.put(path, status);
-        }
-      }
+
       // build the first set of results. This will not trigger any
       // remote IO, assuming the source iterator is in its initial
       // iteration
@@ -612,26 +378,17 @@ public class Listing extends AbstractStoreOperation {
      * Lastly, return true if the {@code providedStatusIterator}
      * has left items.
      * @return true if a call to {@link #next()} will succeed.
-     * @throws IOException
+     * @throws IOException IO Problems
      */
     @Override
     @Retries.RetryTranslated
     public boolean hasNext() throws IOException {
-      return sourceHasNext() || providedStatusIterator.hasNext();
+      return sourceHasNext();
     }
 
     @Retries.RetryTranslated
     private boolean sourceHasNext() throws IOException {
-      if (statusBatchIterator.hasNext() || requestNextBatch()) {
-        return true;
-      } else {
-        // turn to file status that are only in provided list
-        if (providedStatusIterator == null) {
-          LOG.debug("Start iterating the provided status.");
-          providedStatusIterator = providedStatus.values().iterator();
-        }
-        return false;
-      }
+      return statusBatchIterator.hasNext() || requestNextBatch();
     }
 
     @Override
@@ -640,25 +397,8 @@ public class Listing extends AbstractStoreOperation {
       final S3AFileStatus status;
       if (sourceHasNext()) {
         status = statusBatchIterator.next();
-        // We remove from provided map the file status listed by S3 so that
-        // this does not return duplicate items.
-
-        // The provided status is returned as it is assumed to have the better
-        // metadata (i.e. the eTag and versionId from S3Guard)
-        S3AFileStatus provided = providedStatus.remove(status.getPath());
-        if (provided != null) {
-          LOG.debug(
-              "Removed and returned the status from provided file status {}",
-              status);
-          return provided;
-        }
       } else {
-        if (providedStatusIterator.hasNext()) {
-          status = providedStatusIterator.next();
-          LOG.debug("Returning provided file status {}", status);
-        } else {
-          throw new NoSuchElementException();
-        }
+        throw new NoSuchElementException();
       }
       return status;
     }
@@ -715,7 +455,7 @@ public class Listing extends AbstractStoreOperation {
           S3AFileStatus status = createFileStatus(keyPath, summary,
                   listingOperationCallbacks.getDefaultBlockSize(keyPath),
                   getStoreContext().getUsername(),
-              summary.getETag(), null);
+              summary.getETag(), null, isCSEEnabled);
           LOG.debug("Adding: {}", status);
           stats.add(status);
           added++;
@@ -758,6 +498,23 @@ public class Listing extends AbstractStoreOperation {
     public int getBatchSize() {
       return batchSize;
     }
+
+    /**
+     * Return any IOStatistics provided by the underlying stream.
+     * @return IO stats from the inner stream.
+     */
+    @Override
+    public IOStatistics getIOStatistics() {
+      return source.getIOStatistics();
+    }
+
+    @Override
+    public String toString() {
+      return new StringJoiner(", ",
+          FileStatusListingIterator.class.getSimpleName() + "[", "]")
+          .add(source.toString())
+          .toString();
+    }
   }
 
   /**
@@ -780,10 +537,13 @@ public class Listing extends AbstractStoreOperation {
    *
    * Thread safety: none.
    */
-  class ObjectListingIterator implements RemoteIterator<S3ListResult> {
+  class ObjectListingIterator implements RemoteIterator<S3ListResult>,
+      IOStatisticsSource, Closeable {
 
     /** The path listed. */
     private final Path listPath;
+
+    private final AuditSpan span;
 
     /** The most recent listing results. */
     private S3ListResult objects;
@@ -805,6 +565,8 @@ public class Listing extends AbstractStoreOperation {
      */
     private int maxKeys;
 
+    private final IOStatisticsStore iostats;
+
     /**
      * Future to store current batch listing result.
      */
@@ -820,18 +582,25 @@ public class Listing extends AbstractStoreOperation {
      * initial set of results/fail if there was a problem talking to the bucket.
      * @param listPath path of the listing
      * @param request initial request to make
+     * @param span audit span for this iterator.
      * @throws IOException if listObjects raises one.
      */
     @Retries.RetryRaw
     ObjectListingIterator(
         Path listPath,
-        S3ListRequest request) throws IOException {
+        S3ListRequest request,
+        AuditSpan span) throws IOException {
       this.listPath = listPath;
       this.maxKeys = listingOperationCallbacks.getMaxKeys();
-      this.s3ListResultFuture = listingOperationCallbacks
-              .listObjectsAsync(request);
       this.request = request;
       this.objectsPrev = null;
+      this.iostats = iostatisticsStore()
+          .withDurationTracking(OBJECT_LIST_REQUEST)
+          .withDurationTracking(OBJECT_CONTINUE_LIST_REQUEST)
+          .build();
+      this.span = span;
+      this.s3ListResultFuture = listingOperationCallbacks
+          .listObjectsAsync(request, iostats, span);
     }
 
     /**
@@ -862,24 +631,20 @@ public class Listing extends AbstractStoreOperation {
         // clear the firstListing flag for future calls.
         firstListing = false;
         // Calculating the result of last async list call.
-        objects = awaitFuture(s3ListResultFuture);
+        objects = onceInTheFuture("listObjects()", listPath.toString(), s3ListResultFuture);
         fetchNextBatchAsyncIfPresent();
       } else {
-        try {
-          if (objectsPrev!= null && !objectsPrev.isTruncated()) {
-            // nothing more to request: fail.
-            throw new NoSuchElementException("No more results in listing of "
-                    + listPath);
-          }
-          // Calculating the result of last async list call.
-          objects = awaitFuture(s3ListResultFuture);
-          // Requesting next batch of results.
-          fetchNextBatchAsyncIfPresent();
-          listingCount++;
-          LOG.debug("New listing status: {}", this);
-        } catch (AmazonClientException e) {
-          throw translateException("listObjects()", listPath, e);
+        if (objectsPrev!= null && !objectsPrev.isTruncated()) {
+          // nothing more to request: fail.
+          throw new NoSuchElementException("No more results in listing of "
+              + listPath);
         }
+        // Calculating the result of last async list call.
+        objects = onceInTheFuture("listObjects()", listPath.toString(), s3ListResultFuture);
+        // Requesting next batch of results.
+        fetchNextBatchAsyncIfPresent();
+        listingCount++;
+        LOG.debug("New listing status: {}", this);
       }
       // Storing the current result to be used by hasNext() call.
       objectsPrev = objects;
@@ -888,14 +653,13 @@ public class Listing extends AbstractStoreOperation {
 
     /**
      * If there are more listings present, call for next batch async.
-     * @throws IOException
      */
-    private void fetchNextBatchAsyncIfPresent() throws IOException {
+    private void fetchNextBatchAsyncIfPresent() {
       if (objects.isTruncated()) {
         LOG.debug("[{}], Requesting next {} objects under {}",
                 listingCount, maxKeys, listPath);
         s3ListResultFuture = listingOperationCallbacks
-                .continueListObjectsAsync(request, objects);
+                .continueListObjectsAsync(request, objects, iostats, span);
       }
     }
 
@@ -903,7 +667,13 @@ public class Listing extends AbstractStoreOperation {
     public String toString() {
       return "Object listing iterator against " + listPath
           + "; listing count "+ listingCount
-          + "; isTruncated=" + objects.isTruncated();
+          + "; isTruncated=" + objects.isTruncated()
+          + "; " + iostats;
+    }
+
+    @Override
+    public IOStatistics getIOStatistics() {
+      return iostats;
     }
 
     /**
@@ -920,6 +690,14 @@ public class Listing extends AbstractStoreOperation {
      */
     public int getListingCount() {
       return listingCount;
+    }
+
+    /**
+     * Close, if actually called, will close the span
+     * this listing was created with.
+     */
+    @Override
+    public void close() {
     }
   }
 
@@ -946,7 +724,7 @@ public class Listing extends AbstractStoreOperation {
     public boolean accept(Path keyPath, S3ObjectSummary summary) {
       return !keyPath.equals(qualifiedPath)
           && !summary.getKey().endsWith(S3N_FOLDER_SUFFIX)
-          && !objectRepresentsDirectory(summary.getKey(), summary.getSize());
+          && !objectRepresentsDirectory(summary.getKey());
     }
 
     /**
@@ -963,89 +741,6 @@ public class Listing extends AbstractStoreOperation {
     @Override
     public boolean accept(FileStatus status) {
       return (status != null) && status.isFile();
-    }
-  }
-
-  /**
-   * Take a remote iterator over a set of {@link FileStatus} instances and
-   * return a remote iterator of {@link LocatedFileStatus} instances.
-   */
-  class LocatedFileStatusIterator
-      implements RemoteIterator<S3ALocatedFileStatus> {
-    private final RemoteIterator<S3AFileStatus> statusIterator;
-
-    /**
-     * Constructor.
-     * @param statusIterator an iterator over the remote status entries
-     */
-    LocatedFileStatusIterator(RemoteIterator<S3AFileStatus> statusIterator) {
-      this.statusIterator = statusIterator;
-    }
-
-    @Override
-    public boolean hasNext() throws IOException {
-      return statusIterator.hasNext();
-    }
-
-    @Override
-    public S3ALocatedFileStatus next() throws IOException {
-      return listingOperationCallbacks
-              .toLocatedFileStatus(statusIterator.next());
-    }
-  }
-
-  /**
-   * Wraps another iterator and filters out files that appear in the provided
-   * set of tombstones.  Will read ahead in the iterator when necessary to
-   * ensure that emptiness is detected early enough if only deleted objects
-   * remain in the source iterator.
-   */
-  static class TombstoneReconcilingIterator implements
-      RemoteIterator<S3ALocatedFileStatus> {
-    private S3ALocatedFileStatus next = null;
-    private final RemoteIterator<S3ALocatedFileStatus> iterator;
-    private final Set<Path> tombstones;
-
-    /**
-     * @param iterator Source iterator to filter
-     * @param tombstones set of tombstone markers to filter out of results
-     */
-    TombstoneReconcilingIterator(RemoteIterator<S3ALocatedFileStatus>
-        iterator, Set<Path> tombstones) {
-      this.iterator = iterator;
-      if (tombstones != null) {
-        this.tombstones = tombstones;
-      } else {
-        this.tombstones = Collections.emptySet();
-      }
-    }
-
-    private boolean fetch() throws IOException {
-      while (next == null && iterator.hasNext()) {
-        S3ALocatedFileStatus candidate = iterator.next();
-        if (!tombstones.contains(candidate.getPath())) {
-          next = candidate;
-          return true;
-        }
-      }
-      return false;
-    }
-
-    public boolean hasNext() throws IOException {
-      if (next != null) {
-        return true;
-      }
-      return fetch();
-    }
-
-    public S3ALocatedFileStatus next() throws IOException {
-      if (hasNext()) {
-        S3ALocatedFileStatus result = next;
-        next = null;
-        fetch();
-        return result;
-      }
-      throw new NoSuchElementException();
     }
   }
 
@@ -1115,6 +810,12 @@ public class Listing extends AbstractStoreOperation {
     public boolean accept(FileStatus status) {
       return (status != null) && !status.getPath().equals(qualifiedPath);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
+      RemoteIterator<? extends LocatedFileStatus> iterator) {
+    return (RemoteIterator < LocatedFileStatus >) iterator;
   }
 
 }

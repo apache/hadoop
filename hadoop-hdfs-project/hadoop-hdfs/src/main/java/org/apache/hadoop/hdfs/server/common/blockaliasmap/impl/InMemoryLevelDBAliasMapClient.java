@@ -129,7 +129,7 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
     }
   }
 
-  class LevelDbWriter extends BlockAliasMap.Writer<FileRegion> {
+  static class LevelDbWriter extends BlockAliasMap.Writer<FileRegion> {
 
     private InMemoryAliasMapProtocol aliasMap;
 

@@ -76,7 +76,7 @@ public class TestDistCpProcedure {
 
   @BeforeClass
   public static void beforeClass() throws IOException {
-    DistCpProcedure.enabledForTest = true;
+    DistCpProcedure.enableForTest();
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -92,13 +92,13 @@ public class TestDistCpProcedure {
 
   @AfterClass
   public static void afterClass() {
-    DistCpProcedure.enabledForTest = false;
+    DistCpProcedure.disableForTest();
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 90000)
   public void testSuccessfulDistCpProcedure() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -281,7 +281,7 @@ public class TestDistCpProcedure {
     FedBalanceContext context = buildContext(src, dst, MOUNT);
     DistCpProcedure dcProcedure =
         new DistCpProcedure("distcp-procedure", null, 1000, context);
-    dcProcedure.disableWrite();
+    dcProcedure.disableWrite(context);
     dcProcedure.finish();
 
     // Verify path and permission.
@@ -317,7 +317,8 @@ public class TestDistCpProcedure {
     dcp[0] = serializeProcedure(dcp[0]);
     executeProcedure(dcp[0], Stage.DISABLE_WRITE, () -> dcp[0].diffDistCp());
     dcp[0] = serializeProcedure(dcp[0]);
-    executeProcedure(dcp[0], Stage.FINAL_DISTCP, () -> dcp[0].disableWrite());
+    executeProcedure(dcp[0], Stage.FINAL_DISTCP,
+        () -> dcp[0].disableWrite(context));
     dcp[0] = serializeProcedure(dcp[0]);
     OutputStream out = fs.append(new Path(src, "b/c"));
     executeProcedure(dcp[0], Stage.FINISH, () -> dcp[0].finalDistCp());
@@ -372,7 +373,7 @@ public class TestDistCpProcedure {
         new DistCpProcedure("distcp-procedure", null, 1000, context);
     assertNotEquals(0, fs.getFileStatus(src).getPermission().toShort());
     executeProcedure(dcProcedure, Stage.FINAL_DISTCP,
-        () -> dcProcedure.disableWrite());
+        () -> dcProcedure.disableWrite(context));
     assertEquals(0, fs.getFileStatus(src).getPermission().toShort());
     cleanup(fs, new Path(testRoot));
   }
@@ -388,7 +389,7 @@ public class TestDistCpProcedure {
         .setDiffThreshold(diffThreshold).build();
   }
 
-  interface Call {
+  protected interface Call {
     void execute() throws IOException, RetryException;
   }
 
@@ -399,8 +400,8 @@ public class TestDistCpProcedure {
    * @param target the target stage.
    * @param call the function executing the procedure.
    */
-  private static void executeProcedure(DistCpProcedure procedure, Stage target,
-      Call call) throws IOException {
+  protected static void executeProcedure(DistCpProcedure procedure,
+      Stage target, Call call) throws IOException {
     Stage stage = Stage.PRE_CHECK;
     procedure.updateStage(stage);
     while (stage != target) {

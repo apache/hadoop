@@ -99,6 +99,8 @@ inline void simple_memcpy(void * dest, const void * src, size_t len) {
 inline uint32_t bswap(uint32_t val) {
 #ifdef __aarch64__
   __asm__("rev %w[dst], %w[src]" : [dst]"=r"(val) : [src]"r"(val));
+#elif defined(__ppc64__)||(__PPC64__)||(__powerpc64__)
+  return  __builtin_bswap32(val);
 #else
   __asm__("bswap %0" : "=r" (val) : "0" (val));
 #endif
@@ -108,6 +110,8 @@ inline uint32_t bswap(uint32_t val) {
 inline uint64_t bswap64(uint64_t val) {
 #ifdef __aarch64__
   __asm__("rev %[dst], %[src]" : [dst]"=r"(val) : [src]"r"(val));
+#elif defined(__ppc64__)||(__PPC64__)||(__powerpc64__)
+  return __builtin_bswap64(val);
 #else
 #ifdef __X64
   __asm__("bswapq %0" : "=r" (val) : "0" (val));

@@ -139,6 +139,8 @@ public class TestMetaSave {
     nnRpc.delete("/filestatus0", true);
     nnRpc.delete("/filestatus1", true);
 
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
     nnRpc.metaSave("metasaveAfterDelete.out.txt");
 
     // Verification
@@ -212,7 +214,7 @@ public class TestMetaSave {
         line = rdr.readLine();
       }
     } finally {
-      IOUtils.cleanup(null, rdr, isr, fis);
+      IOUtils.cleanupWithLogger(null, rdr, isr, fis);
     }
   }
 
@@ -271,7 +273,7 @@ public class TestMetaSave {
         line = rdr.readLine();
       }
     } finally {
-      IOUtils.cleanup(null, rdr, isr, fis);
+      IOUtils.cleanupWithLogger(null, rdr, isr, fis);
     }
   }
 

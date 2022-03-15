@@ -45,8 +45,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
 
 /**
@@ -324,7 +324,15 @@ public class EditLogFileInputStream extends EditLogInputStream {
   
   @Override
   public String toString() {
-    return getName();
+    return "EditLogFileInputStream{" +
+            "log=" + log.getName() +
+            ", firstTxId=" + firstTxId +
+            ", lastTxId=" + lastTxId +
+            ", isInProgress=" + isInProgress +
+            ", maxOpSize=" + maxOpSize +
+            ", state=" + state +
+            ", logVersion=" + logVersion +
+            '}';
   }
 
   /**

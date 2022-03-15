@@ -23,9 +23,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
+import org.apache.hadoop.util.Sets;
 
 public class DummyGroupMapping implements GroupMappingServiceProvider {
 

@@ -24,7 +24,9 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
@@ -35,6 +37,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.TimeZone;
+import java.util.Locale;
 
 public class TestHistoryViewerPrinter {
 
@@ -42,6 +45,18 @@ public class TestHistoryViewerPrinter {
       LoggerFactory.getLogger(TestHistoryViewerPrinter.class);
 
   private final String LINE_SEPARATOR = System.lineSeparator();
+
+  private static final Locale DEFAULT_LOCALE = Locale.getDefault();
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    Locale.setDefault(Locale.ENGLISH);
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception {
+    Locale.setDefault(DEFAULT_LOCALE);
+  }
 
   @Test
   public void testHumanPrinter() throws Exception {

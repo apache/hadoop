@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Assert;
 import org.junit.Before;
@@ -163,6 +163,40 @@ public class TestInvoker extends Assert {
         ex);
   }
 
+  @Test
+  public void testExceptionsWithTranslatableMessage() throws Exception {
+    SdkBaseException xmlParsing = new SdkBaseException(EOF_MESSAGE_IN_XML_PARSER);
+    SdkBaseException differentLength = new SdkBaseException(EOF_READ_DIFFERENT_LENGTH);
+
+    verifyTranslated(EOFException.class, xmlParsing);
+    verifyTranslated(EOFException.class, differentLength);
+  }
+
+
+  @Test
+  public void testSdkDifferentLengthExceptionIsTranslatable() throws Throwable {
+    final AtomicInteger counter = new AtomicInteger(0);
+    invoker.retry("test", null, false, () -> {
+      if (counter.incrementAndGet() < ACTIVE_RETRY_LIMIT) {
+        throw new SdkClientException(EOF_READ_DIFFERENT_LENGTH);
+      }
+    });
+
+    assertEquals(ACTIVE_RETRY_LIMIT, counter.get());
+  }
+
+  @Test
+  public void testSdkXmlParsingExceptionIsTranslatable() throws Throwable {
+    final AtomicInteger counter = new AtomicInteger(0);
+    invoker.retry("test", null, false, () -> {
+      if (counter.incrementAndGet() < ACTIVE_RETRY_LIMIT) {
+        throw new SdkClientException(EOF_MESSAGE_IN_XML_PARSER);
+      }
+    });
+
+    assertEquals(ACTIVE_RETRY_LIMIT, counter.get());
+  }
+
   @Test(expected = org.apache.hadoop.net.ConnectTimeoutException.class)
   public void testExtractConnectTimeoutException() throws Throwable {
     throw extractException("", "",
@@ -224,14 +258,6 @@ public class TestInvoker extends Assert {
         policy, RetryPolicy.RetryAction.RETRY,
         ex, retries, false);
   }
-
-  @Test
-  public void testRetryThrottledDDB() throws Throwable {
-    assertRetryAction("Expected retry on connection timeout",
-        RETRY_POLICY, RetryPolicy.RetryAction.RETRY,
-        new ProvisionedThroughputExceededException("IOPs"), 1, false);
-  }
-
 
   protected AmazonServiceException newThrottledException() {
     return serviceException(
@@ -408,33 +434,6 @@ public class TestInvoker extends Assert {
     int d = 0;
     assertOptionalUnset("quietly",
         quietlyEval("", "", () -> 3 / d));
-  }
-
-  @Test
-  public void testDynamoDBThrottleConversion() throws Throwable {
-    ProvisionedThroughputExceededException exceededException =
-        new ProvisionedThroughputExceededException("iops");
-    AWSServiceThrottledException ddb = verifyTranslated(
-        AWSServiceThrottledException.class, exceededException);
-    assertTrue(isThrottleException(exceededException));
-    assertTrue(isThrottleException(ddb));
-    assertRetryAction("Expected throttling retry",
-        RETRY_POLICY,
-        RetryPolicy.RetryAction.RETRY,
-        ddb, SAFE_RETRY_COUNT, false);
-    // and briefly attempt an operation
-    CatchCallback catcher = new CatchCallback();
-    AtomicBoolean invoked = new AtomicBoolean(false);
-    invoker.retry("test", null, false, catcher,
-        () -> {
-          if (!invoked.getAndSet(true)) {
-            throw exceededException;
-          }
-        });
-    // to verify that the ex was translated by the time it
-    // got to the callback
-    verifyExceptionClass(AWSServiceThrottledException.class,
-        catcher.lastException);
   }
 
   /**

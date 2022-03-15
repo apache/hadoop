@@ -24,11 +24,11 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager.FixedLengthManager;
 import org.apache.hadoop.hdfs.util.ByteArrayManager.ManagerMap;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TestByteArrayManager {
   static {
     GenericTestUtils.setLogLevel(
-        LoggerFactory.getLogger(ByteArrayManager.class), Level.ALL);
+        LoggerFactory.getLogger(ByteArrayManager.class), Level.TRACE);
   }
 
   static final Logger LOG = LoggerFactory.getLogger(TestByteArrayManager.class);
@@ -559,8 +559,8 @@ public class TestByteArrayManager {
   }
   
   public static void main(String[] args) throws Exception {
-    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(ByteArrayManager.class),
-                                 Level.OFF);
+    GenericTestUtils.disableLog(
+        LoggerFactory.getLogger(ByteArrayManager.class));
     final int arrayLength = 64 * 1024; //64k
     final int nThreads = 512;
     final int nAllocations = 1 << 15;

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.test;
 
-import org.junit.internal.AssumptionViolatedException;
+import org.junit.AssumptionViolatedException;
 
 /**
  * JUnit assumptions for the environment (OS).

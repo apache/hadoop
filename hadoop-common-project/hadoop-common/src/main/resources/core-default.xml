@@ -50,11 +50,20 @@
 
   <property>
     <name>hadoop.http.idle_timeout.ms</name>
-    <value>1000</value>
+    <value>60000</value>
     <description>
       NN/JN/DN Server connection timeout in milliseconds.
     </description>
   </property>
+
+<property>
+  <name>hadoop.http.metrics.enabled</name>
+  <value>true</value>
+  <description>
+    If true, set Jetty's StatisticsHandler to HTTP server to collect
+    HTTP layer metrics and register them to Hadoop metrics system.
+  </description>
+</property>
 
 <!--- security properties -->
 
@@ -69,7 +78,7 @@
   <value>false</value>
   <description>
     Indicates if administrator ACLs are required to access
-    instrumentation servlets (JMX, METRICS, CONF, STACKS).
+    instrumentation servlets (JMX, METRICS, CONF, STACKS, PROF).
   </description>
 </property>
 
@@ -667,6 +676,8 @@
       ssl.keystore.pass$
       fs.s3a.server-side-encryption.key
       fs.s3a.*.server-side-encryption.key
+      fs.s3a.encryption.algorithm
+      fs.s3a.encryption.key
       fs.s3a.secret.key
       fs.s3a.*.secret.key
       fs.s3a.session.key
@@ -676,6 +687,9 @@
       fs.azure.account.key.*
       fs.azure.oauth2.*
       fs.adl.oauth2.*
+      fs.gs.encryption.*
+      fs.gs.proxy.*
+      fs.gs.auth.*
       credential$
       oauth.*secret
       oauth.*password
@@ -688,6 +702,27 @@
       private credentials should not be logged.
   </description>
 </property>
+
+  <property>
+    <name>hadoop.security.token.service.use_ip</name>
+    <value>true</value>
+    <description>
+      Controls whether tokens always use IP addresses.
+      DNS changes will not be detected if this option is enabled.
+      Existing client connections that break will always reconnect
+      to the IP of the original host. New clients will connect
+      to the host's new IP but fail to locate a token.
+      Disabling this option will allow existing and new clients
+      to detect an IP change and continue to locate the new host's token.
+
+      In secure multi-homed environments, this parameter will need to
+      be set to false on both cluster servers and clients (see HADOOP-7733).
+      If it is not set correctly, the symptom will be inability to
+      submit an application to YARN from an external client
+      (with error "client host not a member of the Hadoop cluster"),
+      or even from an in-cluster client if server failover occurs.
+    </description>
+  </property>
 
 <property>
   <name>hadoop.workaround.non.threadsafe.getpwuid</name>
@@ -1063,6 +1098,15 @@
 </property>
 
 <property>
+  <name>fs.viewfs.overload.scheme.target.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <description>The GoogleHadoopFS/Google Cloud Storage file system for view
+   file system overload scheme when child file system and ViewFSOverloadScheme's
+   schemes are gs.
+  </description>
+</property>
+
+<property>
   <name>fs.viewfs.overload.scheme.target.https.impl</name>
   <value>org.apache.hadoop.fs.http.HttpsFileSystem</value>
   <description>The HttpsFileSystem for view file system overload scheme
@@ -1185,7 +1229,7 @@
     com.amazonaws.auth.AWSCredentialsProvider.
 
     When S3A delegation tokens are not enabled, this list will be used
-    to directly authenticate with S3 and DynamoDB services.
+    to directly authenticate with S3 and other AWS services.
     When S3A Delegation tokens are enabled, depending upon the delegation
     token binding it may be used
     to communicate wih the STS endpoint to request session/role
@@ -1315,12 +1359,6 @@
 </property>
 
 <property>
-  <name>fs.s3a.delegation.tokens.enabled</name>
-  <value>false</value>
-  <description></description>
-</property>
-
-<property>
   <name>fs.s3a.delegation.token.binding</name>
   <value></value>
   <description>
@@ -1339,7 +1377,7 @@
 
 <property>
   <name>fs.s3a.connection.maximum</name>
-  <value>48</value>
+  <value>96</value>
   <description>Controls the maximum number of simultaneous connections to S3.
     This must be bigger than the value of fs.s3a.threads.max so as to stop
     threads being blocked waiting for new HTTPS connections.
@@ -1508,7 +1546,9 @@
   <name>fs.s3a.acl.default</name>
   <description>Set a canned ACL for newly created and copied objects. Value may be Private,
       PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead,
-      or BucketOwnerFullControl.</description>
+      or BucketOwnerFullControl.
+    If set, caller IAM role must have "s3:PutObjectAcl" permission on the bucket.
+  </description>
 </property>
 
 <property>
@@ -1534,20 +1574,22 @@
 </property>
 
 <property>
-  <name>fs.s3a.server-side-encryption-algorithm</name>
-  <description>Specify a server-side encryption algorithm for s3a: file system.
-    Unset by default.  It supports the following values: 'AES256' (for SSE-S3),
-    'SSE-KMS' and 'SSE-C'.
+  <name>fs.s3a.encryption.algorithm</name>
+  <description>Specify a server-side encryption or client-side
+    encryption algorithm for s3a: file system. Unset by default. It supports the
+    following values: 'AES256' (for SSE-S3), 'SSE-KMS', 'SSE-C', and 'CSE-KMS'
   </description>
 </property>
 
 <property>
-  <name>fs.s3a.server-side-encryption.key</name>
-  <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
-    has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
-    should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
-    you'll be using your default's S3 KMS key, otherwise you should set this property to
-    the specific KMS key id.
+  <name>fs.s3a.encryption.key</name>
+  <description>Specific encryption key to use if fs.s3a.encryption.algorithm
+    has been set to 'SSE-KMS', 'SSE-C' or 'CSE-KMS'. In the case of SSE-C
+    , the value of this property should be the Base64 encoded key. If you are
+    using SSE-KMS and leave this property empty, you'll be using your default's
+    S3 KMS key, otherwise you should set this property to the specific KMS key
+    id. In case of 'CSE-KMS' this value needs to be the AWS-KMS Key ID
+    generated from AWS console.
   </description>
 </property>
 
@@ -1555,6 +1597,14 @@
   <name>fs.s3a.signing-algorithm</name>
   <description>Override the default signing algorithm so legacy
     implementations can still be used</description>
+</property>
+
+<property>
+  <name>fs.s3a.accesspoint.required</name>
+  <value>false</value>
+  <description>Require that all S3 access is made through Access Points and not through
+  buckets directly. If enabled, use per-bucket overrides to allow bucket access to a specific set
+  of buckets.</description>
 </property>
 
 <property>
@@ -1567,9 +1617,12 @@
 
 <property>
   <name>fs.s3a.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/s3a</value>
+  <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a</value>
   <description>Comma separated list of directories that will be used to buffer file
-    uploads to.</description>
+    uploads to.
+    Yarn container path will be used as default value on yarn applications,
+    otherwise fall back to hadoop.tmp.dir
+  </description>
 </property>
 
 <property>
@@ -1637,171 +1690,9 @@
 </property>
 
 <property>
-    <name>fs.s3a.metadatastore.authoritative</name>
-    <value>false</value>
-    <description>
-        When true, allow MetadataStore implementations to act as source of
-        truth for getting file status and directory listings.  Even if this
-        is set to true, MetadataStore implementations may choose not to
-        return authoritative results.  If the configured MetadataStore does
-        not support being authoritative, this setting will have no effect.
-    </description>
-</property>
-
-<property>
-    <name>fs.s3a.metadatastore.metadata.ttl</name>
-    <value>15m</value>
-    <description>
-        This value sets how long an entry in a MetadataStore is valid.
-    </description>
-</property>
-
-<property>
-    <name>fs.s3a.metadatastore.impl</name>
-    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
-    <description>
-        Fully-qualified name of the class that implements the MetadataStore
-        to be used by s3a.  The default class, NullMetadataStore, has no
-        effect: s3a will continue to treat the backing S3 service as the one
-        and only source of truth for file and directory metadata.
-    </description>
-</property>
-
-<property>
-  <name>fs.s3a.metadatastore.fail.on.write.error</name>
-  <value>true</value>
-  <description>
-    When true (default), FileSystem write operations generate
-    org.apache.hadoop.fs.s3a.MetadataPersistenceException if the metadata
-    cannot be saved to the metadata store.  When false, failures to save to
-    metadata store are logged at ERROR level, but the overall FileSystem
-    write operation succeeds.
-  </description>
-</property>
-
-<property>
-    <name>fs.s3a.s3guard.cli.prune.age</name>
-    <value>86400000</value>
-    <description>
-        Default age (in milliseconds) after which to prune metadata from the
-        metadatastore when the prune command is run.  Can be overridden on the
-        command-line.
-    </description>
-</property>
-
-
-<property>
   <name>fs.s3a.impl</name>
   <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
   <description>The implementation class of the S3A Filesystem</description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.region</name>
-  <value></value>
-  <description>
-    AWS DynamoDB region to connect to. An up-to-date list is
-    provided in the AWS Documentation: regions and endpoints. Without this
-    property, the S3Guard will operate table in the associated S3 bucket region.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table</name>
-  <value></value>
-  <description>
-    The DynamoDB table name to operate. Without this property, the respective
-    S3 bucket name will be used.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.create</name>
-  <value>false</value>
-  <description>
-    If true, the S3A client will create the table if it does not already exist.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-  <value>0</value>
-  <description>
-    Provisioned throughput requirements for read operations in terms of capacity
-    units for the DynamoDB table. This config value will only be used when
-    creating a new DynamoDB table.
-    If set to 0 (the default), new tables are created with "per-request" capacity.
-    If a positive integer is provided for this and the write capacity, then
-    a table with "provisioned capacity" will be created.
-    You can change the capacity of an existing provisioned-capacity table
-    through the "s3guard set-capacity" command.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-  <value>0</value>
-  <description>
-    Provisioned throughput requirements for write operations in terms of
-    capacity units for the DynamoDB table.
-    If set to 0 (the default), new tables are created with "per-request" capacity.
-    Refer to related configuration option fs.s3a.s3guard.ddb.table.capacity.read
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.sse.enabled</name>
-  <value>false</value>
-  <description>
-    Whether server-side encryption (SSE) is enabled or disabled on the table.
-    By default it's disabled, meaning SSE is set to AWS owned CMK.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.table.sse.cmk</name>
-  <value/>
-  <description>
-    The KMS Customer Master Key (CMK) used for the KMS encryption on the table.
-    To specify a CMK, this config value can be its key ID, Amazon Resource Name
-    (ARN), alias name, or alias ARN. Users only need to provide this config if
-    the key is different from the default DynamoDB KMS Master Key, which is
-    alias/aws/dynamodb.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.max.retries</name>
-  <value>9</value>
-    <description>
-      Max retries on throttled/incompleted DynamoDB operations
-      before giving up and throwing an IOException.
-      Each retry is delayed with an exponential
-      backoff timer which starts at 100 milliseconds and approximately
-      doubles each time.  The minimum wait before throwing an exception is
-      sum(100, 200, 400, 800, .. 100*2^N-1 ) == 100 * ((2^N)-1)
-    </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.throttle.retry.interval</name>
-  <value>100ms</value>
-    <description>
-      Initial interval to retry after a request is throttled events;
-      the back-off policy is exponential until the number of retries of
-      fs.s3a.s3guard.ddb.max.retries is reached.
-    </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.ddb.background.sleep</name>
-  <value>25ms</value>
-  <description>
-    Length (in milliseconds) of pause between each batch of deletes when
-    pruning metadata.  Prevents prune operations (which can typically be low
-    priority background operations) from overly interfering with other I/O
-    operations.
-  </description>
 </property>
 
 <property>
@@ -1809,7 +1700,7 @@
   <value>7</value>
   <description>
     Number of times to retry any repeatable S3 client request on failure,
-    excluding throttling requests and S3Guard inconsistency resolution.
+    excluding throttling requests.
   </description>
 </property>
 
@@ -1818,7 +1709,7 @@
   <value>500ms</value>
   <description>
     Initial retry interval when retrying operations for any reason other
-    than S3 throttle errors and S3Guard inconsistency resolution.
+    than S3 throttle errors.
   </description>
 </property>
 
@@ -1842,27 +1733,6 @@
 </property>
 
 <property>
-  <name>fs.s3a.s3guard.consistency.retry.limit</name>
-  <value>7</value>
-  <description>
-    Number of times to retry attempts to read/open/copy files when
-    S3Guard believes a specific version of the file to be available,
-    but the S3 request does not find any version of a file, or a different
-    version.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.consistency.retry.interval</name>
-  <value>2s</value>
-  <description>
-    Initial interval between attempts to retry operations while waiting for S3
-    to become consistent with the S3Guard data.
-    An exponential back-off is used here: every failure doubles the delay.
-  </description>
-</property>
-
-<property>
   <name>fs.s3a.committer.name</name>
   <value>file</value>
   <description>
@@ -1873,11 +1743,9 @@
 
 <property>
   <name>fs.s3a.committer.magic.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
-    Enable support in the filesystem for the S3 "Magic" committer.
-    When working with AWS S3, S3Guard must be enabled for the destination
-    bucket, as consistent metadata listings are required.
+    Enable support in the S3A filesystem for the "Magic" committer.
   </description>
 </property>
 
@@ -2151,7 +2019,27 @@
   </description>
 </property>
 
-<!-- Azure file system properties -->
+<property>
+  <name>fs.s3a.downgrade.syncable.exceptions</name>
+  <value>true</value>
+  <description>
+    Warn but continue when applications use Syncable.hsync when writing
+    to S3A.
+  </description>
+</property>
+
+<!--
+The switch to turn S3A auditing on or off.
+-->
+<property>
+  <name>fs.s3a.audit.enabled</name>
+  <value>true</value>
+  <description>
+    Should auditing of S3A requests be enabled?
+  </description>
+</property>
+
+  <!-- Azure file system properties -->
 <property>
   <name>fs.AbstractFileSystem.wasb.impl</name>
   <value>org.apache.hadoop.fs.azure.Wasb</value>
@@ -2257,6 +2145,20 @@
     This setting provides better performance compared to blob-specific saskeys.
   </description>
 </property>
+
+  <property>
+    <name>fs.azure.buffer.dir</name>
+    <value>${hadoop.tmp.dir}/abfs</value>
+    <description>Directory path for buffer files needed to upload data blocks
+      in AbfsOutputStream.</description>
+  </property>
+
+<property>
+  <name>fs.AbstractFileSystem.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <description>The AbstractFileSystem for gs: uris.</description>
+</property>
+
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
@@ -2385,9 +2287,10 @@
 
 <property>
   <name>ipc.client.rpc-timeout.ms</name>
-  <value>0</value>
+  <value>120000</value>
   <description>Timeout on waiting response from server, in milliseconds.
-  If ipc.client.ping is set to true and this rpc-timeout is greater than
+  If this rpc-timeout is 0, it means no timeout. If this rpc-timeout is greater
+  than 0, and ipc.client.ping is set to true, and this rpc-timeout is greater than
   the value of ipc.ping.interval, the effective value of the rpc-timeout is
   rounded up to multiple of ipc.ping.interval.
   </description>
@@ -2408,6 +2311,14 @@
      various services. If this value is set to true then we log requests that
      fall into 99th percentile as well as increment RpcSlowCalls counter.
     </description>
+</property>
+
+<property>
+  <name>ipc.server.purge.interval</name>
+  <value>15</value>
+  <description>Define how often calls are cleaned up in the server.
+    The default is 15 minutes. The unit is minutes.
+  </description>
 </property>
 
 <property>
@@ -2457,12 +2368,38 @@
 </property>
 
 <property>
+  <name>ipc.backoff.enable</name>
+  <value>false</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].backoff.enable" is not defined.
+    It determines whether or not to enable client backoff when
+    a queue is full.
+  </description>
+</property>
+
+<property>
   <name>ipc.[port_number].callqueue.impl</name>
   <value>java.util.concurrent.LinkedBlockingQueue</value>
   <description>The fully qualified name of a class to use as the implementation
     of a call queue. The default implementation is
     java.util.concurrent.LinkedBlockingQueue (FIFO queue).
     Use org.apache.hadoop.ipc.FairCallQueue for the Fair Call Queue.
+  </description>
+</property>
+
+<property>
+  <name>ipc.callqueue.impl</name>
+  <value>java.util.concurrent.LinkedBlockingQueue</value>
+  <description>
+    The fully qualified name of a class to use as the implementation
+    of a call queue. The default implementation is
+    java.util.concurrent.LinkedBlockingQueue (FIFO queue).
+    Use org.apache.hadoop.ipc.FairCallQueue for the Fair Call Queue.
+    This config is fallback config for ipc.[port_number].callqueue.impl.
+    If call queue is not defined at port level, this default
+    config is used and hence, this is fallback config to
+    config with port.
   </description>
 </property>
 
@@ -2476,6 +2413,24 @@
     org.apache.hadoop.ipc.DecayRpcScheduler. Use
     org.apache.hadoop.ipc.DecayRpcScheduler in conjunction with the Fair Call
     Queue.
+  </description>
+</property>
+
+<property>
+  <name>ipc.scheduler.impl</name>
+  <value>org.apache.hadoop.ipc.DefaultRpcScheduler</value>
+  <description>
+    The fully qualified name of a class to use as the
+    implementation of the scheduler. The default implementation is
+    org.apache.hadoop.ipc.DefaultRpcScheduler (no-op scheduler) when
+    not using FairCallQueue. If using FairCallQueue, defaults to
+    org.apache.hadoop.ipc.DecayRpcScheduler. Use
+    org.apache.hadoop.ipc.DecayRpcScheduler in conjunction
+    with the Fair Call Queue.
+    This config is fallback config for ipc.[port_number].scheduler.impl.
+    If scheduler queue is not defined at port level, this default
+    config is used and hence, this is fallback config to
+    config with port.
   </description>
 </property>
 
@@ -2506,9 +2461,33 @@
 </property>
 
 <property>
+  <name>ipc.identity-provider.impl</name>
+  <value>org.apache.hadoop.ipc.UserIdentityProvider</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].identity-provider.impl" is not defined.
+    The identity provider mapping user requests to their identity.
+    This property applies to DecayRpcScheduler.
+  </description>
+</property>
+
+<property>
   <name>ipc.[port_number].cost-provider.impl</name>
   <value>org.apache.hadoop.ipc.DefaultCostProvider</value>
   <description>The cost provider mapping user requests to their cost. To
+    enable determination of cost based on processing time, use
+    org.apache.hadoop.ipc.WeightedTimeCostProvider.
+    This property applies to DecayRpcScheduler.
+  </description>
+</property>
+
+<property>
+  <name>ipc.cost-provider.impl</name>
+  <value>org.apache.hadoop.ipc.DefaultCostProvider</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].cost-provider.impl" is not defined.
+    The cost provider mapping user requests to their cost. To
     enable determination of cost based on processing time, use
     org.apache.hadoop.ipc.WeightedTimeCostProvider.
     This property applies to DecayRpcScheduler.
@@ -2847,7 +2826,7 @@
   <value>${user.home}/hadoop-http-auth-signature-secret</value>
   <description>
     The signature secret for signing the authentication tokens.
-    The same secret should be used for RM/NM/NN/DN configurations.
+    A different secret should be used for each service.
   </description>
 </property>
 
@@ -3089,14 +3068,6 @@
 </property>
 
 <property>
-  <name>hadoop.ssl.enabled</name>
-  <value>false</value>
-  <description>
-    Deprecated. Use dfs.http.policy and yarn.http.policy instead.
-  </description>
-</property>
-
-<property>
   <name>hadoop.ssl.enabled.protocols</name>
   <value>TLSv1.2</value>
   <description>
@@ -3269,6 +3240,21 @@
     to a comma-separated list of the granularity in seconds, the
     50/75/90/95/99th percentile latency for rpc queue/processing time in
     milliseconds are added to rpc metrics.
+  </description>
+</property>
+
+<property>
+  <name>rpc.metrics.timeunit</name>
+  <value>MILLISECONDS</value>
+  <description>
+    This property is used to configure timeunit for various RPC Metrics
+    e.g rpcQueueTime, rpcLockWaitTime, rpcProcessingTime,
+    deferredRpcProcessingTime. In the absence of this property,
+    default timeunit used is milliseconds.
+    The value of this property should match to any one value of enum:
+    java.util.concurrent.TimeUnit.
+    Some of the valid values: NANOSECONDS, MICROSECONDS, MILLISECONDS,
+    SECONDS etc.
   </description>
 </property>
 

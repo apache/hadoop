@@ -65,6 +65,8 @@ rpc
 ---
 
 Each metrics record contains tags such as Hostname and port (number to which server is bound) as additional information along with metrics.
+`rpc.metrics.timeunit` config can be used to configure timeunit for RPC metrics.
+The default timeunit used for RPC metrics is milliseconds (as per the below description).
 
 | Name | Description |
 |:---- |:---- |
@@ -81,6 +83,7 @@ Each metrics record contains tags such as Hostname and port (number to which ser
 | `RpcAuthorizationFailures` | Total number of authorization failures |
 | `RpcAuthorizationSuccesses` | Total number of authorization successes |
 | `NumOpenConnections` | Current number of open connections |
+| `NumInProcessHandler` | Current number of handlers on working |
 | `CallQueueLength` | Current length of the call queue |
 | `numDroppedConnections` | Total number of dropped connections |
 | `rpcQueueTime`*num*`sNumOps` | Shows total number of RPC calls (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
@@ -228,6 +231,7 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `EditLogTailIntervalNumOps` | Total number of intervals between edit log tailings by standby NameNode |
 | `EditLogTailIntervalAvgTime` | Average time of intervals between edit log tailings by standby NameNode in milliseconds |
 | `EditLogTailInterval`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of time between edit log tailings by standby NameNode in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `PendingEditsCount` | Current number of pending edits |
 
 FSNamesystem
 ------------
@@ -282,6 +286,8 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `HAState` | (HA-only) Current state of the NameNode: initializing or active or standby or stopping state |
 | `FSState` | Current state of the file system: Safemode or Operational |
 | `LockQueueLength` | Number of threads waiting to acquire FSNameSystem lock |
+| `ReadLockLongHoldCount` | The number of time the read lock has been held for longer than the threshold |
+| `WriteLockLongHoldCount` | The number of time the write lock has been held for longer than the threshold |
 | `TotalSyncCount` | Total number of sync operations performed by edit log |
 | `TotalSyncTimes` | Total number of milliseconds spent by various edit logs in sync operation|
 | `NameDirSize` | NameNode name directories size in bytes |
@@ -449,6 +455,7 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `BlocksDeletedInPendingIBR` | Number of blocks at deleted status in pending incremental block report (IBR) |
 | `EcReconstructionTasks` | Total number of erasure coding reconstruction tasks |
 | `EcFailedReconstructionTasks` | Total number of erasure coding failed reconstruction tasks |
+| `EcInvalidReconstructionTasks` | Total number of erasure coding invalidated reconstruction tasks |
 | `EcDecodingTimeNanos` | Total number of nanoseconds spent by decoding tasks |
 | `EcReconstructionBytesRead` | Total number of bytes read by erasure coding worker |
 | `EcReconstructionBytesWritten` | Total number of bytes written by erasure coding worker |
@@ -469,6 +476,10 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `CheckAndUpdateOpAvgTime` | Average time of check and update operations in milliseconds |
 | `UpdateReplicaUnderRecoveryOpNumOps` | Total number of update replica under recovery operations |
 | `UpdateReplicaUnderRecoveryOpAvgTime` | Average time of update replica under recovery operations in milliseconds |
+| `PacketsReceived` | Total number of packets received by Datanode (excluding heartbeat packet from client) |
+| `PacketsSlowWriteToMirror` | Total number of packets whose write to other Datanodes in the pipeline takes more than a certain time (300ms by default) |
+| `PacketsSlowWriteToDisk` | Total number of packets whose write to disk takes more than a certain time (300ms by default) |
+| `PacketsSlowWriteToOsCache` | Total number of packets whose write to os cache takes more than a certain time (300ms by default) |
 
 FsVolume
 --------
@@ -502,6 +513,12 @@ contains tags such as Hostname as additional information along with metrics.
 | `WriteIoRateNumOps` | The number of file write io operations within an interval time of metric |
 | `WriteIoRateAvgTime` | Mean time of file write io operations in milliseconds |
 | `WriteIoLatency`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of file write io operations latency in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `TransferIoRateNumOps` | The number of file transfer io operations within an interval time of metric |
+| `TransferIoRateAvgTime` | Mean time of file transfer io operations in milliseconds |
+| `TransferIoLatency`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of file transfer io operations latency in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `NativeCopyIoRateNumOps` | The number of file nativeCopy io operations within an interval time of metric |
+| `NativeCopyIoRateAvgTime` | Mean time of file nativeCopy io operations in milliseconds |
+| `NativeCopyIoLatency`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of file nativeCopy io operations latency in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
 | `TotalFileIoErrors` | Total number (monotonically increasing) of file io error operations |
 | `FileIoErrorRateNumOps` | The number of file io error operations within an interval time of metric |
 | `FileIoErrorRateAvgTime` | It measures the mean time in milliseconds from the start of an operation to hitting a failure |
@@ -521,9 +538,12 @@ RBFMetrics shows the metrics which are the aggregated values of sub-clusters' in
 | `NumInMaintenanceLiveDataNodes` | Number of live Datanodes which are in maintenance state |
 | `NumInMaintenanceDeadDataNodes` | Number of dead Datanodes which are in maintenance state |
 | `NumEnteringMaintenanceDataNodes` | Number of Datanodes that are entering the maintenance state |
-| `TotalCapacity` | Current raw capacity of DataNodes in bytes |
-| `UsedCapacity` | Current used capacity across all DataNodes in bytes |
-| `RemainingCapacity` | Current remaining capacity in bytes |
+| `TotalCapacity` | Current raw capacity of DataNodes in bytes (long primitive, may overflow) |
+| `UsedCapacity` | Current used capacity across all DataNodes in bytes (long primitive, may overflow) |
+| `RemainingCapacity` | Current remaining capacity in bytes (long primitive, may overflow) |
+| `TotalCapacityBigInt` | Current raw capacity of DataNodes in bytes (using BigInteger) |
+| `UsedCapacityBigInt` | Current used capacity across all DataNodes in bytes (using BigInteger) |
+| `RemainingCapacityBigInt` | Current remaining capacity in bytes (using BigInteger) |
 | `NumOfMissingBlocks` | Current number of missing blocks |
 | `NumLiveNodes` | Number of datanodes which are currently live |
 | `NumDeadNodes` | Number of datanodes which are currently dead |
@@ -556,9 +576,9 @@ RouterRPCMetrics shows the statistics of the Router component in Router-based fe
 | `RouterFailureLocked` | Number of failed requests due to locked path |
 | `RouterFailureSafemode` | Number of failed requests due to safe mode |
 | `ProcessingNumOps` | Number of operations the Router processed internally within an interval time of metric |
-| `ProcessingAvgTime` | Average time for the Router to process operations in nanoseconds |
+| `ProcessingAvgTime` | Average time for the Router to process operations in milliseconds |
 | `ProxyNumOps` | Number of times of that the Router to proxy operations to the Namenodes within an interval time of metric |
-| `ProxyAvgTime` | Average time for the Router to proxy operations to the Namenodes in nanoseconds |
+| `ProxyAvgTime` | Average time for the Router to proxy operations to the Namenodes in milliseconds |
 
 StateStoreMetrics
 -----------------

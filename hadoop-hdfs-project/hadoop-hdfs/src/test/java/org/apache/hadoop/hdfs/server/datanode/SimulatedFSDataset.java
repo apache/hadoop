@@ -40,6 +40,9 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
+import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
 import org.apache.hadoop.thirdparty.com.google.common.math.LongMath;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -47,7 +50,6 @@ import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImplTestUtils;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -161,7 +163,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   static final byte[] nullCrcFileData;
 
-  private final AutoCloseableLock datasetLock;
+  private final DataNodeLockManager datasetLockManager;
   private final FileIoProvider fileIoProvider;
 
   static {
@@ -414,6 +416,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
         }
       } while (deadLine > System.currentTimeMillis());
       throw new IOException("Minimum length was not achieved within timeout");
+    }
+
+    @Override
+    public FsVolumeSpi getVolume() {
+      return getStorage(theBlock).getVolume();
     }
   }
 
@@ -701,6 +708,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   public SimulatedFSDataset(DataNode datanode, DataStorage storage, Configuration conf) {
     this.datanode = datanode;
+    this.datasetLockManager = datanode == null ? new DataSetLockManager() :
+        datanode.getDataSetLockManager();
     int storageCount;
     if (storage != null && storage.getNumStorageDirs() > 0) {
       storageCount = storage.getNumStorageDirs();
@@ -715,9 +724,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     registerMBean(datanodeUuid);
     this.fileIoProvider = new FileIoProvider(conf, datanode);
-
-    this.datasetLock = new AutoCloseableLock();
-
     this.storages = new ArrayList<>();
     for (int i = 0; i < storageCount; i++) {
       this.storages.add(new SimulatedStorage(
@@ -1515,7 +1521,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public List<ReplicaInfo> getSortedFinalizedBlocks(String bpid) {
+  public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
     throw new UnsupportedOperationException();
   }
 
@@ -1581,14 +1587,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public AutoCloseableLock acquireDatasetLock() {
-    return datasetLock.acquire();
-  }
-
-  @Override
-  public AutoCloseableLock acquireDatasetReadLock() {
-    // No RW lock implementation in simulated dataset currently.
-    return datasetLock.acquire();
+  public DataNodeLockManager<AutoCloseDataSetLock> acquireDatasetLockManager() {
+    return null;
   }
 
   @Override
@@ -1599,6 +1599,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       replicas.addAll(s.getBlockMap(bpid).values());
     }
     return Collections.unmodifiableSet(replicas);
+  }
+
+  @Override
+  public MountVolumeMap getMountVolumeMap() {
+    return null;
   }
 }
 

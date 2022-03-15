@@ -125,9 +125,8 @@ public class TestAppRunnability extends FairSchedulerTestBase {
         new AppAttemptAddedSchedulerEvent(createAppAttemptId(1, 1), false);
     scheduler.handle(attemptAddedEvent);
 
-    // Scheduler should have two queues (the default and the one created for
-    // user1)
-    assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
+    // Scheduler should have one queue (the one created for user1)
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
 
     // That queue should have one app
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
@@ -174,6 +173,7 @@ public class TestAppRunnability extends FairSchedulerTestBase {
 
     AllocationFileWriter.create()
         .addQueue(new AllocationFileQueue.Builder("jerry").build())
+        .addQueue(new AllocationFileQueue.Builder("default").build())
         .writeToFile(ALLOC_FILE);
 
     // Restarting resource manager since the file location and content is

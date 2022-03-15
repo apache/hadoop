@@ -68,7 +68,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
 
     @Override
     public boolean equals(Object e) {
-      if (e == null || !(e instanceof PurgeElement)) {
+      if (!(e instanceof PurgeElement)) {
         return false;
       }
       if (e == this) {

@@ -26,9 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
 import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
@@ -53,7 +53,7 @@ public class BulkDeleteRetryHandler extends AbstractStoreOperation {
    */
   public static final String XML_PARSE_BROKEN = "Failed to parse XML document";
 
-  private final S3AInstrumentation instrumentation;
+  private final S3AStatisticsContext instrumentation;
 
   private final S3AStorageStatistics storageStatistics;
 
@@ -84,7 +84,6 @@ public class BulkDeleteRetryHandler extends AbstractStoreOperation {
    */
   protected void incrementStatistic(Statistic statistic, long count) {
     instrumentation.incrementCounter(statistic, count);
-    storageStatistics.incrementCounter(statistic, count);
   }
 
   /**

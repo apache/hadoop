@@ -27,17 +27,17 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +57,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  * <code>KeyProvider</code> implementations must be thread safe.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
+@InterfaceStability.Stable
 public abstract class KeyProvider implements Closeable {
   public static final String DEFAULT_CIPHER_NAME =
       CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY;
@@ -135,20 +135,14 @@ public abstract class KeyProvider implements Closeable {
         return false;
       }
       final KeyVersion kv = (KeyVersion) rhs;
-      return new EqualsBuilder().
-          append(name, kv.name).
-          append(versionName, kv.versionName).
-          append(material, kv.material).
-          isEquals();
+      return Objects.equals(name, kv.name)
+          && Objects.equals(versionName, kv.versionName)
+          && Arrays.equals(material, kv.material);
     }
 
     @Override
     public int hashCode() {
-      return new HashCodeBuilder().
-          append(name).
-          append(versionName).
-          append(material).
-          toHashCode();
+      return Objects.hash(name, versionName, Arrays.hashCode(material));
     }
   }
 

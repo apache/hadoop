@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -30,8 +31,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.s3.model.MultipartUpload;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,11 +44,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.audit.AuditConstants;
+import org.apache.hadoop.fs.audit.CommonAuditContext;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
@@ -56,10 +65,13 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 
 import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY_SECONDS;
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
+import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
@@ -67,6 +79,7 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NO_SP
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 
 /**
  * Abstract base class for S3A committers; allows for any commonality
@@ -94,7 +107,8 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_W
  * created by a few tasks, <i>and</i> the HTTP connection pool in the S3A
  * committer was large enough for more all the parallel POST requests.
  */
-public abstract class AbstractS3ACommitter extends PathOutputCommitter {
+public abstract class AbstractS3ACommitter extends PathOutputCommitter
+    implements IOStatisticsSource {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractS3ACommitter.class);
@@ -121,6 +135,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * Source of the {@link #uuid} value.
    */
   private final JobUUIDSource uuidSource;
+
+  private final CommonAuditContext commonAuditContext;
 
   /**
    * Has this instance been used for job setup?
@@ -166,6 +182,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   /** Should a job marker be created? */
   private final boolean createJobMarker;
 
+  private final CommitterStatistics committerStatistics;
+
+  /**
+   * Source of Audit spans.
+   */
+  private final AuditSpanSource auditSpanSource;
+
   /**
    * Create a committer.
    * This constructor binds the destination directory and configuration, but
@@ -194,10 +217,19 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     LOG.debug("{} instantiated for job \"{}\" ID {} with destination {}",
         role, jobName(context), jobIdString(context), outputPath);
     S3AFileSystem fs = getDestS3AFS();
+    // set this thread's context with the job ID.
+    // audit spans created in this thread will pick
+    // up this value.
+    this.commonAuditContext = currentAuditContext();
+    updateCommonContext();
+    // the filesystem is the span source, always.
+    auditSpanSource = fs.getAuditSpanSource();
     this.createJobMarker = context.getConfiguration().getBoolean(
         CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
         DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
-    this.commitOperations = new CommitOperations(fs);
+    // the statistics are shared between this committer and its operations.
+    this.committerStatistics = fs.newCommitterStatistics();
+    this.commitOperations = new CommitOperations(fs, committerStatistics);
   }
 
   /**
@@ -409,7 +441,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     return false;
   }
   /**
-   * Task recovery considered unsupported: Warn and fail.
+   * Task recovery considered Unsupported: Warn and fail.
    * @param taskContext Context of the task whose output is being recovered
    * @throws IOException always.
    */
@@ -425,7 +457,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * if the job requires a success marker on a successful job,
    * create the file {@link CommitConstants#_SUCCESS}.
    *
-   * While the classic committers create a 0-byte file, the S3Guard committers
+   * While the classic committers create a 0-byte file, the S3A committers
    * PUT up a the contents of a {@link SuccessData} file.
    * @param context job context
    * @param pending the pending commits
@@ -437,21 +469,28 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     // The list of committed objects in pending is size limited in
     // ActiveCommit.uploadCommitted.
     filenames.addAll(pending.committedObjects);
-    maybeCreateSuccessMarker(context, filenames);
+    // load in all the pending statistics
+    IOStatisticsSnapshot snapshot = new IOStatisticsSnapshot(
+        pending.getIOStatistics());
+    snapshot.aggregate(getIOStatistics());
+
+    maybeCreateSuccessMarker(context, filenames, snapshot);
   }
 
   /**
    * if the job requires a success marker on a successful job,
    * create the file {@link CommitConstants#_SUCCESS}.
    *
-   * While the classic committers create a 0-byte file, the S3Guard committers
+   * While the classic committers create a 0-byte file, the S3A committers
    * PUT up a the contents of a {@link SuccessData} file.
    * @param context job context
    * @param filenames list of filenames.
+   * @param ioStatistics any IO Statistics to include
    * @throws IOException IO failure
    */
   protected void maybeCreateSuccessMarker(JobContext context,
-      List<String> filenames)
+      List<String> filenames,
+      final IOStatisticsSnapshot ioStatistics)
       throws IOException {
     if (createJobMarker) {
       // create a success data structure and then save it
@@ -465,6 +504,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       successData.setTimestamp(now.getTime());
       successData.setDate(now.toString());
       successData.setFilenames(filenames);
+      successData.getIOStatistics().aggregate(ioStatistics);
       commitOperations.createSuccessMarker(getOutputPath(), successData, true);
     }
   }
@@ -516,6 +556,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   @Override
   public void setupTask(TaskAttemptContext context) throws IOException {
     TaskAttemptID attemptID = context.getTaskAttemptID();
+    updateCommonContext();
+
     try (DurationInfo d = new DurationInfo(LOG, "Setup Task %s",
         attemptID)) {
       // reject attempts to set up the task where the output won't be
@@ -644,6 +686,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
             activeCommit.uploadCommitted(
                 commit.getDestinationKey(), commit.getLength());
           });
+      activeCommit.pendingsetCommitted(pendingSet.getIOStatistics());
     }
   }
 
@@ -728,8 +771,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   protected void commitJobInternal(JobContext context,
       ActiveCommit pending)
       throws IOException {
-
-    commitPendingUploads(context, pending);
+    trackDurationOfInvocation(committerStatistics,
+        COMMITTER_COMMIT_JOB.getSymbol(),
+        () -> commitPendingUploads(context, pending));
   }
 
   @Override
@@ -788,8 +832,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       try {
         pending = ops.listPendingUploadsUnderPath(dest);
       } catch (IOException e) {
-        // raised if the listPendingUploads call failed.
-        maybeIgnore(suppressExceptions, "aborting pending uploads", e);
+        // Swallow any errors given this is best effort
+        LOG.debug("Failed to list pending uploads under {}", dest, e);
         return;
       }
       if (!pending.isEmpty()) {
@@ -860,6 +904,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       jobCompleted(false);
       abortJobInternal(context, true);
       throw e;
+    } finally {
+      resetCommonContext();
     }
   }
 
@@ -902,6 +948,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     } finally {
       destroyThreadPool();
       cleanupStagingDirs();
+      resetCommonContext();
     }
   }
 
@@ -926,11 +973,11 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   protected void maybeIgnore(
       boolean suppress,
       String action,
-      Invoker.VoidOperation operation) throws IOException {
+      InvocationRaisingIOE operation) throws IOException {
     if (suppress) {
       ignoreIOExceptions(LOG, action, "", operation);
     } else {
-      operation.execute();
+      operation.apply();
     }
   }
 
@@ -1175,6 +1222,11 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     }
   }
 
+  @Override
+  public IOStatistics getIOStatistics() {
+    return committerStatistics.getIOStatistics();
+  }
+
   /**
    * Scan for active uploads and list them along with a warning message.
    * Errors are ignored.
@@ -1336,6 +1388,43 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
+   * Add jobID to current context.
+   */
+  protected final void updateCommonContext() {
+    currentAuditContext().put(AuditConstants.PARAM_JOB_ID, uuid);
+  }
+
+  /**
+   * Remove JobID from the current thread's context.
+   */
+  protected final void resetCommonContext() {
+    currentAuditContext().remove(AuditConstants.PARAM_JOB_ID);
+  }
+
+  protected AuditSpanSource getAuditSpanSource() {
+    return auditSpanSource;
+  }
+
+  /**
+   * Start an operation; retrieve an audit span.
+   *
+   * All operation names <i>SHOULD</i> come from
+   * {@code StoreStatisticNames} or
+   * {@code StreamStatisticNames}.
+   * @param name operation name.
+   * @param path1 first path of operation
+   * @param path2 second path of operation
+   * @return a span for the audit
+   * @throws IOException failure
+   */
+  protected AuditSpan startOperation(String name,
+      @Nullable String path1,
+      @Nullable String path2)
+      throws IOException {
+    return getAuditSpanSource().createSpan(name, path1, path2);
+  }
+
+  /**
    * State of the active commit operation.
    *
    * It contains a list of all pendingset files to load as the source
@@ -1386,6 +1475,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     private long committedBytes;
 
     /**
+     * Aggregate statistics of all supplied by
+     * committed uploads.
+     */
+    private final IOStatisticsSnapshot ioStatistics =
+        new IOStatisticsSnapshot();
+
+    /**
      * Construct from a source FS and list of files.
      * @param sourceFS filesystem containing the list of pending files
      * @param sourceFiles .pendingset files to load and commit.
@@ -1433,13 +1529,27 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
      * @param key key of the committed object.
      * @param size size in bytes.
      */
-    public synchronized void uploadCommitted(String key, long size) {
+    public synchronized void uploadCommitted(String key,
+        long size) {
       if (committedObjects.size() < SUCCESS_MARKER_FILE_LIMIT) {
         committedObjects.add(
             key.startsWith("/") ? key : ("/" + key));
       }
       committedObjectCount++;
       committedBytes += size;
+    }
+
+    /**
+     * Callback when a pendingset has been committed,
+     * including any source statistics.
+     * @param sourceStatistics any source statistics
+     */
+    public void pendingsetCommitted(final IOStatistics sourceStatistics) {
+      ioStatistics.aggregate(sourceStatistics);
+    }
+
+    public IOStatisticsSnapshot getIOStatistics() {
+      return ioStatistics;
     }
 
     public synchronized List<String> getCommittedObjects() {

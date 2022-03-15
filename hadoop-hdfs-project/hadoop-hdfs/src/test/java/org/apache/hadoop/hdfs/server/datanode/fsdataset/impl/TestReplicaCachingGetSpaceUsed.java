@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_KEY;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -112,6 +113,8 @@ public class TestReplicaCachingGetSpaceUsed {
 
   @Test
   public void testReplicaCachingGetSpaceUsedByRBWReplica() throws Exception {
+ // This test cannot pass on Windows
+    assumeNotWindows();
     FSDataOutputStream os =
         fs.create(new Path("/testReplicaCachingGetSpaceUsedByRBWReplica"));
     byte[] bytes = new byte[20480];

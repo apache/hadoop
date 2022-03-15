@@ -471,4 +471,22 @@ public class TestAccessControlList {
         + " is incorrectly granted the access-control!!",
         acl.isUserAllowed(ugi));
   }
+
+  @Test
+  public void testUseRealUserAclsForProxiedUser() {
+    String realUser = "realUser";
+    AccessControlList acl = new AccessControlList(realUser);
+    UserGroupInformation realUserUgi =
+        UserGroupInformation.createRemoteUser(realUser);
+    UserGroupInformation user1 =
+        UserGroupInformation.createProxyUserForTesting("regularJane",
+            realUserUgi, new String [] {"group1"});
+    assertFalse("User " + user1 + " should not have been granted access.",
+        acl.isUserAllowed(user1));
+
+    acl = new AccessControlList(AccessControlList.USE_REAL_ACLS + realUser);
+
+    assertTrue("User " + user1 + " should have access but was denied.",
+        acl.isUserAllowed(user1));
+  }
 }

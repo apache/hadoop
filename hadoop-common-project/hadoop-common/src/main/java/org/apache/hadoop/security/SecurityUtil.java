@@ -57,7 +57,7 @@ import org.xbill.DNS.Name;
 import org.xbill.DNS.ResolverConfig;
 
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
 /**
@@ -608,11 +608,8 @@ public final class SecurityUtil {
     private List<String> searchDomains = new ArrayList<>();
     {
       ResolverConfig resolverConfig = ResolverConfig.getCurrentConfig();
-      Name[] names = resolverConfig.searchPath();
-      if (names != null) {
-        for (Name name : names) {
-          searchDomains.add(name.toString());
-        }
+      for (Name name : resolverConfig.searchPath()) {
+        searchDomains.add(name.toString());
       }
     }
 

@@ -20,27 +20,42 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
+import org.apache.hadoop.fs.store.DataBlocks;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.anyLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 
 public final class TestAbfsOutputStream {
 
@@ -52,12 +67,26 @@ public final class TestAbfsOutputStream {
   private final String accountKey1 = globalKey + "." + accountName1;
   private final String accountValue1 = "one";
 
-  private AbfsOutputStreamContext populateAbfsOutputStreamContext(int writeBufferSize,
-            boolean isFlushEnabled,
-            boolean disableOutputStreamFlush,
-            boolean isAppendBlob) throws IOException, IllegalAccessException {
+  private AbfsOutputStreamContext populateAbfsOutputStreamContext(
+      int writeBufferSize,
+      boolean isFlushEnabled,
+      boolean disableOutputStreamFlush,
+      boolean isAppendBlob,
+      AbfsClient client,
+      String path,
+      TracingContext tracingContext,
+      ExecutorService executorService) throws IOException,
+      IllegalAccessException {
     AbfsConfiguration abfsConf = new AbfsConfiguration(new Configuration(),
         accountName1);
+    String blockFactoryName =
+        abfsConf.getRawConfiguration().getTrimmed(DATA_BLOCKS_BUFFER,
+        DATA_BLOCKS_BUFFER_DEFAULT);
+    DataBlocks.BlockFactory blockFactory =
+        DataBlocks.createFactory(FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR,
+            abfsConf.getRawConfiguration(),
+        blockFactoryName);
+
     return new AbfsOutputStreamContext(2)
             .withWriteBufferSize(writeBufferSize)
             .enableFlush(isFlushEnabled)
@@ -66,6 +95,11 @@ public final class TestAbfsOutputStream {
             .withAppendBlob(isAppendBlob)
             .withWriteMaxConcurrentRequestCount(abfsConf.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConf.getMaxWriteRequestsToQueue())
+            .withClient(client)
+            .withPath(path)
+            .withTracingContext(tracingContext)
+            .withExecutorService(executorService)
+            .withBlockFactory(blockFactory)
             .build();
   }
 
@@ -83,22 +117,28 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any())).thenReturn(op);
+    when(client.append(anyString(), any(byte[].class),
+        any(AppendRequestParameters.class), any(), any(TracingContext.class)))
+        .thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(),
+        isNull(), any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            PATH,
+            new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
+                FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(),
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
     out.write(b);
     out.hsync();
-    ArgumentCaptor<String> acString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Integer> acBufferOffset = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<Integer> acBufferLength = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
-    ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
-    ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
-
 
     final byte[] b1 = new byte[2*WRITE_SIZE];
     new Random().nextBytes(b1);
@@ -108,13 +148,19 @@ public final class TestAbfsOutputStream {
 
     out.hsync();
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
-    assertThat(Arrays.asList(PATH, PATH)).describedAs("Path of the requests").isEqualTo(acString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(WRITE_SIZE))).describedAs("Write Position").isEqualTo(acLong.getAllValues());
-    assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(WRITE_SIZE, 2*WRITE_SIZE)).describedAs("Buffer length").isEqualTo(acBufferLength.getAllValues());
+    AppendRequestParameters firstReqParameters = new AppendRequestParameters(
+        0, 0, WRITE_SIZE, APPEND_MODE, false, null);
+    AppendRequestParameters secondReqParameters = new AppendRequestParameters(
+        WRITE_SIZE, 0, 2 * WRITE_SIZE, APPEND_MODE, false, null);
 
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(),
+        any(TracingContext.class));
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(), any(TracingContext.class));
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any(), any(TracingContext.class));
   }
 
   /**
@@ -130,12 +176,24 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
+    TracingContext tracingContext = new TracingContext("test-corr-id",
+        "test-fs-id", FSOperationType.WRITE,
+        TracingHeaderFormat.ALL_ID_FORMAT, null);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any())).thenReturn(op);
+    when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any(), any(TracingContext.class))).thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull(), any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            PATH,
+            tracingContext,
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
 
@@ -144,33 +202,34 @@ public final class TestAbfsOutputStream {
     }
     out.close();
 
-    ArgumentCaptor<String> acString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Integer> acBufferOffset = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<Integer> acBufferLength = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
-    ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
-    ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    AppendRequestParameters firstReqParameters = new AppendRequestParameters(
+        0, 0, BUFFER_SIZE, APPEND_MODE, false, null);
+    AppendRequestParameters secondReqParameters = new AppendRequestParameters(
+        BUFFER_SIZE, 0, 5*WRITE_SIZE-BUFFER_SIZE, APPEND_MODE, false, null);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
-    assertThat(Arrays.asList(PATH, PATH)).describedAs("Path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(new HashSet<Long>(
-               acLong.getAllValues()));
-    assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(new HashSet<Integer>(Arrays.asList(BUFFER_SIZE, 5*WRITE_SIZE-BUFFER_SIZE))).describedAs("Buffer Length").isEqualTo(new HashSet<Integer>(
-               acBufferLength.getAllValues()));
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(),
+        any(TracingContext.class));
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(),
+        any(TracingContext.class));
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any(),
+        any(TracingContext.class));
 
-    ArgumentCaptor<String> acFlushString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acFlushLong = ArgumentCaptor.forClass(Long.class);
+    ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
+    ArgumentCaptor<TracingContext> acTracingContext = ArgumentCaptor
+        .forClass(TracingContext.class);
     ArgumentCaptor<Boolean> acFlushRetainUnCommittedData = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
-                                   acFlushSASToken.capture());
-    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(5*WRITE_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
+    verify(client, times(1)).flush(acFlushPath.capture(), acFlushPosition.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
+        acFlushSASToken.capture(), isNull(), acTracingContext.capture());
+    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
+    assertThat(Arrays.asList(Long.valueOf(5*WRITE_SIZE))).describedAs("position").isEqualTo(acFlushPosition.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
     assertThat(Arrays.asList(true)).describedAs("Close flag").isEqualTo(acFlushClose.getAllValues());
   }
@@ -189,14 +248,26 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
+    TracingContext tracingContext = new TracingContext(
+        abfsConf.getClientCorrelationId(), "test-fs-id",
+        FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(), null);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any())).thenReturn(op);
+    when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any(), any(TracingContext.class))).thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull(), any(TracingContext.class))).thenReturn(op);
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            PATH,
+            tracingContext,
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -205,35 +276,33 @@ public final class TestAbfsOutputStream {
     }
     out.close();
 
-    ArgumentCaptor<String> acString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Integer> acBufferOffset = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<Integer> acBufferLength = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
-    ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
-    ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    AppendRequestParameters firstReqParameters = new AppendRequestParameters(
+        0, 0, BUFFER_SIZE, APPEND_MODE, false, null);
+    AppendRequestParameters secondReqParameters = new AppendRequestParameters(
+        BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, false, null);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
-    assertThat(Arrays.asList(PATH, PATH)).describedAs("path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(new HashSet<Long>(
-               acLong.getAllValues()));
-    assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(), any(TracingContext.class));
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(), any(TracingContext.class));
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any(), any(TracingContext.class));
 
-    ArgumentCaptor<String> acFlushString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acFlushLong = ArgumentCaptor.forClass(Long.class);
+    ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
+    ArgumentCaptor<TracingContext> acTracingContext = ArgumentCaptor
+        .forClass(TracingContext.class);
     ArgumentCaptor<Boolean> acFlushRetainUnCommittedData = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
-                                   acFlushSASToken.capture());
-    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
+    verify(client, times(1)).flush(acFlushPath.capture(), acFlushPosition.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
+        acFlushSASToken.capture(), isNull(), acTracingContext.capture());
+    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
+    assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushPosition.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
     assertThat(Arrays.asList(true)).describedAs("Close flag").isEqualTo(acFlushClose.getAllValues());
-
   }
 
   /**
@@ -252,12 +321,26 @@ public final class TestAbfsOutputStream {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any())).thenReturn(op);
+    when(client.append(anyString(), any(byte[].class),
+        any(AppendRequestParameters.class), any(), any(TracingContext.class)))
+        .thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(),
+        any(), isNull(), any(TracingContext.class))).thenReturn(op);
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            PATH,
+            new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
+                FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(),
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -266,22 +349,18 @@ public final class TestAbfsOutputStream {
     }
     Thread.sleep(1000);
 
-    ArgumentCaptor<String> acString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Integer> acBufferOffset = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<Integer> acBufferLength = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
-    ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
-    ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    AppendRequestParameters firstReqParameters = new AppendRequestParameters(
+        0, 0, BUFFER_SIZE, APPEND_MODE, false, null);
+    AppendRequestParameters secondReqParameters = new AppendRequestParameters(
+        BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, false, null);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
-    assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position in file").isEqualTo(
-               new HashSet<Long>(acLong.getAllValues()));
-    assertThat(Arrays.asList(0, 0)).describedAs("buffer offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("buffer length").isEqualTo(acBufferLength.getAllValues());
-
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(), any(TracingContext.class));
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(), any(TracingContext.class));
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any(), any(TracingContext.class));
   }
 
   /**
@@ -299,10 +378,24 @@ public final class TestAbfsOutputStream {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any())).thenReturn(op);
+    when(client.append(anyString(), any(byte[].class),
+        any(AppendRequestParameters.class), any(), any(TracingContext.class)))
+        .thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(),
+        isNull(), any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, true));
+    AbfsOutputStream out = new AbfsOutputStream(
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            true,
+            client,
+            PATH,
+            new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
+                FSOperationType.OPEN, abfsConf.getTracingHeaderFormat(),
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -311,22 +404,18 @@ public final class TestAbfsOutputStream {
     }
     Thread.sleep(1000);
 
-    ArgumentCaptor<String> acString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Integer> acBufferOffset = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<Integer> acBufferLength = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
-    ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
-    ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    AppendRequestParameters firstReqParameters = new AppendRequestParameters(
+        0, 0, BUFFER_SIZE, APPEND_MODE, true, null);
+    AppendRequestParameters secondReqParameters = new AppendRequestParameters(
+        BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, true, null);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
-    assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE))).describedAs("File Position").isEqualTo(acLong.getAllValues());
-    assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
-    assertThat(Arrays.asList(true, true)).describedAs("is AppendBlob Append").isEqualTo(acAppendBlobAppend.getAllValues());
-
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(), any(TracingContext.class));
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(), any(TracingContext.class));
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any(), any(TracingContext.class));
   }
 
   /**
@@ -337,17 +426,35 @@ public final class TestAbfsOutputStream {
 
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
+    when(op.getSasToken()).thenReturn("");
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
+    TracingContext tracingContext = new TracingContext(
+        abfsConf.getClientCorrelationId(), "test-fs-id",
+        FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(), null);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any())).thenReturn(op);
+    when(client.append(anyString(), any(byte[].class),
+        any(AppendRequestParameters.class), any(), any(TracingContext.class)))
+        .thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(),
+        isNull(), any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            PATH,
+            new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
+                FSOperationType.OPEN, abfsConf.getTracingHeaderFormat(),
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -356,35 +463,33 @@ public final class TestAbfsOutputStream {
     }
     out.hflush();
 
-    ArgumentCaptor<String> acString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Integer> acBufferOffset = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<Integer> acBufferLength = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
-    ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
-    ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    AppendRequestParameters firstReqParameters = new AppendRequestParameters(
+        0, 0, BUFFER_SIZE, APPEND_MODE, false, null);
+    AppendRequestParameters secondReqParameters = new AppendRequestParameters(
+        BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, false, null);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
-    assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("File Position").isEqualTo(
-               new HashSet<Long>(acLong.getAllValues()));
-    assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(), any(TracingContext.class));
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(), any(TracingContext.class));
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any(), any(TracingContext.class));
 
-    ArgumentCaptor<String> acFlushString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acFlushLong = ArgumentCaptor.forClass(Long.class);
+    ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
+    ArgumentCaptor<TracingContext> acTracingContext = ArgumentCaptor
+        .forClass(TracingContext.class);
     ArgumentCaptor<Boolean> acFlushRetainUnCommittedData = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
-                                   acFlushSASToken.capture());
-    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
-    assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
+    verify(client, times(1)).flush(acFlushPath.capture(), acFlushPosition.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
+        acFlushSASToken.capture(), isNull(), acTracingContext.capture());
+    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
+    assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushPosition.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("Close flag").isEqualTo(acFlushClose.getAllValues());
-
   }
 
   /**
@@ -401,10 +506,24 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any())).thenReturn(op);
+    when(client.append(anyString(), any(byte[].class),
+        any(AppendRequestParameters.class), any(), any(TracingContext.class)))
+        .thenReturn(op);
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(),
+        isNull(), any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            PATH,
+            new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
+                FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(),
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -415,21 +534,34 @@ public final class TestAbfsOutputStream {
     out.flush();
     Thread.sleep(1000);
 
-    ArgumentCaptor<String> acString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Integer> acBufferOffset = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<Integer> acBufferLength = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
-    ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
-    ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    AppendRequestParameters firstReqParameters = new AppendRequestParameters(
+        0, 0, BUFFER_SIZE, APPEND_MODE, false, null);
+    AppendRequestParameters secondReqParameters = new AppendRequestParameters(
+        BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, false, null);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
-    assertThat(Arrays.asList(PATH, PATH)).describedAs("path").isEqualTo(acString.getAllValues());
-    assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(
-               new HashSet<Long>(acLong.getAllValues()));
-    assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(Arrays.asList(BUFFER_SIZE, BUFFER_SIZE)).describedAs("Buffer Length").isEqualTo(acBufferLength.getAllValues());
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(), any(TracingContext.class));
+    verify(client, times(1)).append(
+        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(), any(TracingContext.class));
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any(), any(TracingContext.class));
+  }
 
+  /**
+   * Method to create an executor Service for AbfsOutputStream.
+   * @param abfsConf Configuration.
+   * @return ExecutorService.
+   */
+  private ExecutorService createExecutorService(
+      AbfsConfiguration abfsConf) {
+    ExecutorService executorService =
+        new SemaphoredDelegatingExecutor(BlockingThreadPoolExecutorService.newInstance(
+            abfsConf.getWriteMaxConcurrentRequestCount(),
+            abfsConf.getMaxWriteRequestsToQueue(),
+            10L, TimeUnit.SECONDS,
+            "abfs-test-bounded"),
+            BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT, true);
+    return executorService;
   }
 }

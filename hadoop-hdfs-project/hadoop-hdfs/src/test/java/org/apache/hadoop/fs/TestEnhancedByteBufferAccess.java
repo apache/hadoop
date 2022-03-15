@@ -71,7 +71,7 @@ import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import java.util.function.Supplier;
 
 /**
@@ -841,7 +841,7 @@ public class TestEnhancedByteBufferAccess {
       if (buf2 != null) {
         fsIn2.releaseBuffer(buf2);
       }
-      IOUtils.cleanup(null, fsIn, fsIn2);
+      IOUtils.cleanupWithLogger(null, fsIn, fsIn2);
       if (cluster != null) {
         cluster.shutdown();
       }

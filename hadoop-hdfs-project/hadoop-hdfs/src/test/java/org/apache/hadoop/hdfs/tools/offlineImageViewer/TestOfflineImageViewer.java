@@ -17,38 +17,15 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
-import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
-import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
-import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
-import static org.apache.hadoop.fs.permission.AclEntryType.USER;
-import static org.apache.hadoop.fs.permission.FsAction.ALL;
-import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
-import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
-import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_NAME;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_CELL_SIZE;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_NAME;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_STATE;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_OPTION;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -74,23 +51,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -105,27 +72,39 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.slf4j.event.Level;
+import org.apache.hadoop.util.Lists;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -135,9 +114,29 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
+import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
+import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
+import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.fs.permission.FsAction.ALL;
+import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
+import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_CELL_SIZE;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_STATE;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_OPTION;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestOfflineImageViewer {
   private static final Logger LOG =
@@ -153,6 +152,7 @@ public class TestOfflineImageViewer {
   private static final long FILE_NODE_ID_3 = 16394;
   private static final long DIR_NODE_ID = 16391;
   private static final long SAMPLE_TIMESTAMP = 946684800000L;
+  private static TimeZone defaultTimeZone = null;
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
@@ -165,6 +165,8 @@ public class TestOfflineImageViewer {
   // multiple tests.
   @BeforeClass
   public static void createOriginalFSImage() throws IOException {
+    defaultTimeZone = TimeZone.getDefault();
+    TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
     File[] nnDirs = MiniDFSCluster.getNameNodeDirectory(
         MiniDFSCluster.getBaseDirectory(), 0, 0);
     tempDir = nnDirs[0];
@@ -369,6 +371,9 @@ public class TestOfflineImageViewer {
     FileUtils.deleteQuietly(tempDir);
     if (originalFsimage != null && originalFsimage.exists()) {
       originalFsimage.delete();
+    }
+    if (defaultTimeZone != null) {
+      TimeZone.setDefault(defaultTimeZone);
     }
   }
 
@@ -1115,17 +1120,17 @@ public class TestOfflineImageViewer {
     LOG.info("Creating reverseImage.xml=" + reverseImageXml.getAbsolutePath() +
         ", reverseImage=" + reverseImage.getAbsolutePath() +
         ", reverseImage2Xml=" + reverseImage2Xml.getAbsolutePath());
-    if (OfflineImageViewerPB.run(new String[] { "-p", "XML",
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
          "-i", originalFsimage.getAbsolutePath(),
          "-o", reverseImageXml.getAbsolutePath() }) != 0) {
       throw new IOException("oiv returned failure creating first XML file.");
     }
-    if (OfflineImageViewerPB.run(new String[] { "-p", "ReverseXML",
+    if (OfflineImageViewerPB.run(new String[] {"-p", "ReverseXML",
           "-i", reverseImageXml.getAbsolutePath(),
           "-o", reverseImage.getAbsolutePath() }) != 0) {
       throw new IOException("oiv returned failure recreating fsimage file.");
     }
-    if (OfflineImageViewerPB.run(new String[] { "-p", "XML",
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
         "-i", reverseImage.getAbsolutePath(),
         "-o", reverseImage2Xml.getAbsolutePath() }) != 0) {
       throw new IOException("oiv returned failure creating second " +
@@ -1134,7 +1139,7 @@ public class TestOfflineImageViewer {
     // The XML file we wrote based on the re-created fsimage should be the
     // same as the one we dumped from the original fsimage.
     Assert.assertEquals("",
-      GenericTestUtils.getFilesDiff(reverseImageXml, reverseImage2Xml));
+        GenericTestUtils.getFilesDiff(reverseImageXml, reverseImage2Xml));
   }
 
   /**
@@ -1167,6 +1172,40 @@ public class TestOfflineImageViewer {
     } catch (Throwable t) {
       GenericTestUtils.assertExceptionContains("Layout version mismatch.", t);
     }
+  }
+
+  /**
+   * Tests that the ReverseXML processor doesn't accept XML files without the SnapshotDiffSection.
+   */
+  @Test
+  public void testReverseXmlWithoutSnapshotDiffSection() throws Throwable {
+    File imageWSDS = new File(tempDir, "imageWithoutSnapshotDiffSection.xml");
+    try(PrintWriter writer = new PrintWriter(imageWSDS, "UTF-8")) {
+      writer.println("<?xml version=\"1.0\"?>");
+      writer.println("<fsimage>");
+      writer.println("<version>");
+      writer.println("<layoutVersion>-67</layoutVersion>");
+      writer.println("<onDiskVersion>1</onDiskVersion>");
+      writer.println("<oivRevision>545bbef596c06af1c3c8dca1ce29096a64608478</oivRevision>");
+      writer.println("</version>");
+      writer.println("<FileUnderConstructionSection></FileUnderConstructionSection>");
+      writer.println("<ErasureCodingSection></ErasureCodingSection>");
+      writer.println("<INodeSection><lastInodeId>91488</lastInodeId><numInodes>0</numInodes>" +
+              "</INodeSection>");
+      writer.println("<SecretManagerSection><currentId>90</currentId><tokenSequenceNumber>35" +
+              "</tokenSequenceNumber><numDelegationKeys>0</numDelegationKeys><numTokens>0" +
+              "</numTokens></SecretManagerSection>");
+      writer.println("<INodeReferenceSection></INodeReferenceSection>");
+      writer.println("<SnapshotSection><snapshotCounter>0</snapshotCounter><numSnapshots>0" +
+              "</numSnapshots></SnapshotSection>");
+      writer.println("<NameSection><namespaceId>326384987</namespaceId></NameSection>");
+      writer.println("<CacheManagerSection><nextDirectiveId>1</nextDirectiveId><numPools>0" +
+              "</numPools><numDirectives>0</numDirectives></CacheManagerSection>");
+      writer.println("<INodeDirectorySection></INodeDirectorySection>");
+      writer.println("</fsimage>");
+    }
+      OfflineImageReconstructor.run(imageWSDS.getAbsolutePath(),
+              imageWSDS.getAbsolutePath() + ".out");
   }
 
   @Test

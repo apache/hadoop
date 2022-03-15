@@ -86,6 +86,8 @@ public final class DistCpConstants {
   public static final String CONF_LABEL_SPLIT_RATIO =
       "distcp.dynamic.split.ratio";
   public static final String CONF_LABEL_DIRECT_WRITE = "distcp.direct.write";
+  public static final String CONF_LABEL_UPDATE_ROOT =
+          "distcp.update.root.attributes";
 
   /* Total bytes to be copied. Updated by copylisting. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED = "mapred.total.bytes.expected";
@@ -139,6 +141,7 @@ public final class DistCpConstants {
   public static final String CONF_LABEL_BLOCKS_PER_CHUNK =
       "distcp.blocks.per.chunk";
 
+  public static final String CONF_LABEL_USE_ITERATOR = "distcp.use.iterator";
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
    */

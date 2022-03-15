@@ -27,16 +27,16 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the behavior of the default retry policy.
  */
 public class TestDefaultRetryPolicy {
   @Rule
-  public Timeout timeout = new Timeout(30000);
+  public Timeout timeout = new Timeout(30000, TimeUnit.MILLISECONDS);
 
   /** Verify FAIL < RETRY < FAILOVER_AND_RETRY. */
   @Test
@@ -65,8 +65,8 @@ public class TestDefaultRetryPolicy {
         null);
     RetryPolicy.RetryAction action = policy.shouldRetry(
         new RetriableException("Dummy exception"), 0, 0, true);
-    assertThat(action.action,
-        is(RetryPolicy.RetryAction.RetryDecision.RETRY));
+    assertThat(action.action)
+        .isEqualTo(RetryPolicy.RetryAction.RetryDecision.RETRY);
   }
 
   /**
@@ -87,8 +87,8 @@ public class TestDefaultRetryPolicy {
     RetryPolicy.RetryAction action = policy.shouldRetry(
         new RemoteException(RetriableException.class.getName(),
             "Dummy exception"), 0, 0, true);
-    assertThat(action.action,
-        is(RetryPolicy.RetryAction.RetryDecision.RETRY));
+    assertThat(action.action)
+        .isEqualTo(RetryPolicy.RetryAction.RetryDecision.RETRY);
   }
 
   /**
@@ -107,7 +107,7 @@ public class TestDefaultRetryPolicy {
         null);
     RetryPolicy.RetryAction action = policy.shouldRetry(
         new RetriableException("Dummy exception"), 0, 0, true);
-    assertThat(action.action,
-        is(RetryPolicy.RetryAction.RetryDecision.FAIL));
+    assertThat(action.action).isEqualTo(
+        RetryPolicy.RetryAction.RetryDecision.FAIL);
   }
 }

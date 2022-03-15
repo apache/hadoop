@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <EDITS>
-  <EDITS_VERSION>-64</EDITS_VERSION>
+  <EDITS_VERSION>-67</EDITS_VERSION>
   <RECORD>
     <OPCODE>OP_START_LOG_SEGMENT</OPCODE>
     <DATA>

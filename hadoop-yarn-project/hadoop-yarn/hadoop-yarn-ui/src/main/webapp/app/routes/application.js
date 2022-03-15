@@ -21,7 +21,7 @@ import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
   model() {
-    return Ember.RSVP.hash({
+    let promises = {
       clusterInfo: this.store.findAll('ClusterInfo', {reload: true}).catch(function() {
         return null;
       }),
@@ -30,11 +30,15 @@ export default AbstractRoute.extend({
       }),
       jhsHealth: this.store.queryRecord('jhs-health', {}).catch(function() {
         return null;
-      }),
-      timelineHealth: this.store.queryRecord('timeline-health', {}).catch(function() {
-        return null;
       })
-    });
+    };
+
+    if (ENV.timelineServiceEnabled) {
+      promises.timelineHealth = this.store.queryRecord('timeline-health', {}).catch(function() {
+        return null;
+      });
+    }
+    return Ember.RSVP.hash(promises);
   },
 
   actions: {
@@ -62,7 +66,9 @@ export default AbstractRoute.extend({
   unloadAll: function() {
     this.store.unloadAll('ClusterInfo');
     this.store.unloadAll('cluster-user-info');
-    this.store.unloadAll('timeline-health');
+    if (ENV.timelineServiceEnabled) {
+      this.store.unloadAll('timeline-health');
+    }
     this.store.unloadAll('jhs-health');
   },
 });

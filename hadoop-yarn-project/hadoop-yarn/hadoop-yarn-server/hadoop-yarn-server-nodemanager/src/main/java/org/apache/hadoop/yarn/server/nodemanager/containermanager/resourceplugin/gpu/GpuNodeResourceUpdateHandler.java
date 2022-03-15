@@ -26,12 +26,14 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.NodeResourceUpdaterPlugin;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.PerGpuDeviceInformation;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 
@@ -75,5 +77,50 @@ public class GpuNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
     }
 
     res.setResourceValue(GPU_URI, nUsableGpus);
+  }
+
+  /**
+   *
+   * @return The average physical GPUs used in this node.
+   *
+   * For example:
+   * Node with total 4 GPUs
+   * Physical used 2.4 GPUs
+   * Will return 2.4/4 = 0.6f
+   *
+   * @throws Exception when any error happens
+   */
+  public float getAvgNodeGpuUtilization() throws Exception{
+    List<PerGpuDeviceInformation> gpuList =
+        gpuDiscoverer.getGpuDeviceInformation().getGpus();
+    Float avgGpuUtilization = 0F;
+    if (gpuList != null &&
+        gpuList.size() != 0) {
+
+      avgGpuUtilization = getTotalNodeGpuUtilization() / gpuList.size();
+    }
+    return avgGpuUtilization;
+  }
+
+  /**
+   *
+   * @return The total physical GPUs used in this node.
+   *
+   * For example:
+   * Node with total 4 GPUs
+   * Physical used 2.4 GPUs
+   * Will return 2.4f
+   *
+   * @throws Exception when any error happens
+   */
+  public float getTotalNodeGpuUtilization() throws Exception{
+    List<PerGpuDeviceInformation> gpuList =
+        gpuDiscoverer.getGpuDeviceInformation().getGpus();
+    Float totalGpuUtilization = gpuList
+        .stream()
+        .map(g -> g.getGpuUtilizations().getOverallGpuUtilization())
+        .collect(Collectors.summingDouble(Float::floatValue))
+        .floatValue();
+    return totalGpuUtilization;
   }
 }

@@ -54,7 +54,7 @@ public final class ContainerRuntimeContext {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj == null || !(obj instanceof Attribute)){
+      if (!(obj instanceof Attribute)){
         return false;
       }
 

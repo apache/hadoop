@@ -19,11 +19,13 @@
 package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
@@ -41,7 +43,8 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.store.audit.AuditSpanSource;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 /**
  * Operations to update the store.
@@ -52,23 +55,23 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
  * use `WriteOperationHelper` directly.
  * @since Hadoop 3.3.0
  */
-public interface WriteOperations {
+public interface WriteOperations extends AuditSpanSource, Closeable {
 
   /**
    * Execute a function with retry processing.
+   * @param <T> type of return value
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
    * @param idempotent does the operation have semantics
    * which mean that it can be retried even if was already executed?
    * @param operation operation to execute
-   * @param <T> type of return value
    * @return the result of the call
    * @throws IOException any IOE raised, or translated exception
    */
   <T> T retry(String action,
       String path,
       boolean idempotent,
-      Invoker.Operation<T> operation)
+      CallableRaisingIOE<T> operation)
       throws IOException;
 
   /**
@@ -76,10 +79,13 @@ public interface WriteOperations {
    * @param destKey destination key
    * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
+   * @param headers optional map of custom headers.
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
-      InputStream inputStream, long length);
+      InputStream inputStream,
+      long length,
+      @Nullable Map<String, String> headers);
 
   /**
    * Create a {@link PutObjectRequest} request to upload a file.
@@ -149,13 +155,14 @@ public interface WriteOperations {
    * Abort a multipart upload operation.
    * @param destKey destination key of the upload
    * @param uploadId multipart operation Id
+   * @param shouldRetry should failures trigger a retry?
    * @param retrying callback invoked on every retry
    * @throws IOException failure to abort
    * @throws FileNotFoundException if the abort ID is unknown
    */
   @Retries.RetryTranslated
   void abortMultipartUpload(String destKey, String uploadId,
-      Invoker.Retried retrying)
+      boolean shouldRetry, Invoker.Retried retrying)
       throws IOException;
 
   /**
@@ -176,6 +183,16 @@ public interface WriteOperations {
    */
   @Retries.RetryTranslated
   int abortMultipartUploadsUnderPath(String prefix)
+      throws IOException;
+
+  /**
+   * Abort multipart uploads under a path: limited to the first
+   * few hundred.
+   * @param prefix prefix for uploads to abort
+   * @return a count of aborts
+   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   */
+  List<MultipartUpload> listMultipartUploads(String prefix)
       throws IOException;
 
   /**
@@ -204,7 +221,7 @@ public interface WriteOperations {
    * @param sourceFile optional source file.
    * @param offset offset in file to start reading.
    * @return the request.
-   * @throws IllegalArgumentException if the parameters are invalid -including
+   * @throws IllegalArgumentException if the parameters are invalid
    * @throws PathIOException if the part number is out of range.
    */
   UploadPartRequest newUploadPartRequest(
@@ -214,7 +231,7 @@ public interface WriteOperations {
       int size,
       InputStream uploadStream,
       File sourceFile,
-      Long offset) throws PathIOException;
+      Long offset) throws IOException;
 
   /**
    * PUT an object directly (i.e. not via the transfer manager).
@@ -243,11 +260,9 @@ public interface WriteOperations {
    * Relies on retry code in filesystem
    * @throws IOException on problems
    * @param destKey destination key
-   * @param operationState operational state for a bulk update
    */
   @Retries.OnceTranslated
-  void revertCommit(String destKey,
-      @Nullable BulkOperationState operationState) throws IOException;
+  void revertCommit(String destKey) throws IOException;
 
   /**
    * This completes a multipart upload to the destination key via
@@ -258,7 +273,6 @@ public interface WriteOperations {
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
    * @param length length of the upload
-   * @param operationState operational state for a bulk update
    * @return the result of the operation.
    * @throws IOException if problems arose which could not be retried, or
    * the retry count was exceeded
@@ -268,28 +282,8 @@ public interface WriteOperations {
       String destKey,
       String uploadId,
       List<PartETag> partETags,
-      long length,
-      @Nullable BulkOperationState operationState)
+      long length)
       throws IOException;
-
-  /**
-   * Initiate a commit operation through any metastore.
-   * @param path path under which the writes will all take place.
-   * @return an possibly null operation state from the metastore.
-   * @throws IOException failure to instantiate.
-   */
-  BulkOperationState initiateCommitOperation(
-      Path path) throws IOException;
-
-  /**
-   * Initiate a commit operation through any metastore.
-   * @param path path under which the writes will all take place.
-   * @param operationType operation to initiate
-   * @return an possibly null operation state from the metastore.
-   * @throws IOException failure to instantiate.
-   */
-  BulkOperationState initiateOperation(Path path,
-      BulkOperationState.OperationType operationType) throws IOException;
 
   /**
    * Upload part of a multi-partition file.
@@ -332,4 +326,10 @@ public interface WriteOperations {
       SelectObjectContentRequest request,
       String action)
       throws IOException;
+
+  /**
+   * Increment the write operation counter
+   * of the filesystem.
+   */
+  void incrementWriteOperations();
 }

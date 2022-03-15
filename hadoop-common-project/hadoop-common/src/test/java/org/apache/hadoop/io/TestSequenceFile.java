@@ -30,6 +30,7 @@ import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -727,6 +728,31 @@ public class TestSequenceFile {
       assertTrue(e.getMessage().startsWith(
         "Could not find a deserializer for the Key class: '" +
             RandomDatum.class.getName() + "'."));
+    }
+  }
+
+  @Test
+  public void testSequenceFileWriter() throws Exception {
+    Configuration conf = new Configuration();
+    // This test only works with Raw File System and not Local File System
+    FileSystem fs = FileSystem.getLocal(conf).getRaw();
+    Path p = new Path(GenericTestUtils
+      .getTempPath("testSequenceFileWriter.seq"));
+    try(SequenceFile.Writer writer = SequenceFile.createWriter(
+            fs, conf, p, LongWritable.class, Text.class)) {
+      Assertions.assertThat(writer.hasCapability
+        (StreamCapabilities.HSYNC)).isEqualTo(true);
+      Assertions.assertThat(writer.hasCapability(
+        StreamCapabilities.HFLUSH)).isEqualTo(true);
+      LongWritable key = new LongWritable();
+      key.set(1);
+      Text value = new Text();
+      value.set("somevalue");
+      writer.append(key, value);
+      writer.flush();
+      writer.hflush();
+      writer.hsync();
+      Assertions.assertThat(fs.getFileStatus(p).getLen()).isGreaterThan(0);
     }
   }
 

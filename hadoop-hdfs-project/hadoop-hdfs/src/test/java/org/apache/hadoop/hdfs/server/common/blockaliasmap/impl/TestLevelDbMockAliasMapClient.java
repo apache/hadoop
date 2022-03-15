@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hdfs.server.common.blockaliasmap.impl;
 
-import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -26,12 +25,14 @@ import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.iq80.leveldb.DBException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.mockito.Mockito.doThrow;
@@ -60,7 +61,9 @@ public class TestLevelDbMockAliasMapClient {
 
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
         "localhost:" + port);
-    tempDir = Files.createTempDir();
+    File testDir = GenericTestUtils.getTestDir();
+    tempDir = Files
+        .createTempDirectory(testDir.toPath(), "test").toFile();
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
         tempDir.getAbsolutePath());
     levelDBAliasMapServer.setConf(conf);

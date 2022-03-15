@@ -17,10 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.federation;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RouterFederationRename.RouterRenameOption;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
 
 /**
  * Constructs a router configuration with individual features enabled/disabled.
@@ -38,7 +44,9 @@ public class RouterConfigBuilder {
   private boolean enableMetrics = false;
   private boolean enableQuota = false;
   private boolean enableSafemode = false;
+  private RouterRenameOption routerRenameOption = RouterRenameOption.NONE;
   private boolean enableCacheRefresh;
+  private Map<String, String> innerMap = new HashMap<>();
 
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
@@ -95,6 +103,11 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder routerRenameOption(RouterRenameOption option) {
+    this.routerRenameOption = option;
+    return this;
+  }
+
   public RouterConfigBuilder quota(boolean enable) {
     this.enableQuota = enable;
     return this;
@@ -138,6 +151,10 @@ public class RouterConfigBuilder {
     return this.metrics(true);
   }
 
+  public RouterConfigBuilder routerRenameOption() {
+    return this.routerRenameOption(RouterRenameOption.DISTCP);
+  }
+
   public RouterConfigBuilder quota() {
     return this.quota(true);
   }
@@ -148,6 +165,13 @@ public class RouterConfigBuilder {
 
   public RouterConfigBuilder refreshCache() {
     return this.refreshCache(true);
+  }
+
+  public RouterConfigBuilder set(String key, String value) {
+    if (key != null && value != null) {
+      innerMap.put(key, value);
+    }
+    return this;
   }
 
   public Configuration build() {
@@ -183,6 +207,10 @@ public class RouterConfigBuilder {
         this.enableSafemode);
     conf.setBoolean(RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE,
         this.enableCacheRefresh);
+    conf.set(DFS_ROUTER_FEDERATION_RENAME_OPTION, routerRenameOption.name());
+    for (Map.Entry<String, String> kv : innerMap.entrySet()) {
+      conf.set(kv.getKey(), kv.getValue());
+    }
     return conf;
   }
 }

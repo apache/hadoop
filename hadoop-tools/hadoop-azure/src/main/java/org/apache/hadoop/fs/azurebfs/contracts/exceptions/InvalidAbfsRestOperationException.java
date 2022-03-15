@@ -24,7 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 
 /**
- * Exception to wrap invalid Azure service error responses.
+ * Exception to wrap invalid Azure service error responses and exceptions
+ * raised on network IO.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -34,7 +35,9 @@ public class InvalidAbfsRestOperationException extends AbfsRestOperationExceptio
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
         AzureServiceErrorCode.UNKNOWN.getErrorCode(),
-        "InvalidAbfsRestOperationException",
+        innerException != null
+            ? innerException.toString()
+            : "InvalidAbfsRestOperationException",
         innerException);
   }
 }

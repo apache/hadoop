@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
@@ -36,6 +38,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertFalse;
 public class TestClusterMapReduceTestCase extends ClusterMapReduceTestCase {
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    setupClassBase(TestClusterMapReduceTestCase.class);
+  }
+
   public void _testMapReduce(boolean restart) throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(), "text.txt"));
     Writer wr = new OutputStreamWriter(os);
@@ -88,7 +96,6 @@ public class TestClusterMapReduceTestCase extends ClusterMapReduceTestCase {
       reader.close();
       assertEquals(4, counter);
     }
-
   }
 
   @Test

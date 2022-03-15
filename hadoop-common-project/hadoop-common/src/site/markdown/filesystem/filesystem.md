@@ -116,6 +116,36 @@ for both files and directories, MUST always return `true` to the `isEncrypted()`
 predicate. This can be done by setting the `encrypted` flag to true when creating
 the `FileStatus` instance.
 
+
+### `msync()`
+
+Synchronize metadata state of the client with the latest state of the metadata
+service of the FileSystem.
+
+In highly available FileSystems standby service can be used as a read-only
+metadata replica. This call is essential to guarantee consistency of
+reads from the standby replica and to avoid stale reads.
+
+It is currently only implemented for HDFS and others will just throw
+`UnsupportedOperationException`.
+
+#### Preconditions
+
+
+#### Postconditions
+
+This call internally records the state of the metadata service at the time of
+the call. This guarantees consistency of subsequent reads from any metadata
+replica. It assures the client will never access the state of the metadata that
+preceded the recorded state.
+
+#### HDFS implementation notes
+
+HDFS supports `msync()` in HA mode by calling the Active NameNode and requesting
+its latest journal transaction ID. For more details see HDFS documentation
+[Consistent Reads from HDFS Observer NameNode](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html)
+
+
 ### `Path getHomeDirectory()`
 
 The function `getHomeDirectory` returns the home directory for the FileSystem
@@ -634,10 +664,14 @@ For instance, HDFS may raise an `InvalidPathException`.
 
     result = FSDataOutputStream
 
-The updated (valid) FileSystem must contains all the parent directories of the path, as created by `mkdirs(parent(p))`.
+A zero byte file MUST exist at the end of the specified path, visible to all.
+
+The updated (valid) FileSystem MUST contain all the parent directories of the path, as created by `mkdirs(parent(p))`.
 
 The result is `FSDataOutputStream`, which through its operations may generate new filesystem states with updated values of
 `FS.Files[p]`
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -647,10 +681,18 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* S3A, Swift and potentially other Object Stores do not currently change the FS state
+* S3A, Swift and potentially other Object Stores do not currently change the `FS` state
 until the output stream `close()` operation is completed.
-This MAY be a bug, as it allows >1 client to create a file with `overwrite==false`,
- and potentially confuse file/directory logic
+This is a significant difference between the behavior of object stores
+and that of filesystems, as it allows &gt;1 client to create a file with `overwrite=false`,
+and potentially confuse file/directory logic. In particular, using `create()` to acquire
+an exclusive lock on a file (whoever creates the file without an error is considered
+the holder of the lock) may not not a safe algorithm to use when working with object stores.
+
+* Object stores may create an empty file as a marker when a file is created.
+However, object stores with `overwrite=true` semantics may not implement this atomically,
+so creating files with `overwrite=false` cannot be used as an implicit exclusion
+mechanism between processes.
 
 * The Local FileSystem raises a `FileNotFoundException` when trying to create a file over
 a directory, hence it is listed as an exception that MAY be raised when
@@ -661,6 +703,8 @@ this precondition fails.
 ### `FSDataOutputStreamBuilder createFile(Path p)`
 
 Make a `FSDataOutputStreamBuilder` to specify the parameters to create a file.
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -687,16 +731,20 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
 #### Postconditions
 
-    FS
+    FS' = FS
     result = FSDataOutputStream
 
 Return: `FSDataOutputStream`, which can update the entry `FS.Files[p]`
 by appending data to the existing list.
 
+The behavior of the returned stream is covered in [Output](outputstream.html).
+
 ### `FSDataOutputStreamBuilder appendFile(Path p)`
 
 Make a `FSDataOutputStreamBuilder` to specify the parameters to append to an
 existing file.
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -1116,7 +1164,7 @@ deletion, preventing the stores' use as drop-in replacements for HDFS.
 
 ### `boolean rename(Path src, Path d)`
 
-In terms of its specification, `rename()` is one of the most complex operations within a filesystem .
+In terms of its specification, `rename()` is one of the most complex operations within a filesystem.
 
 In terms of its implementation, it is the one with the most ambiguity regarding when to return false
 versus raising an exception.
@@ -1138,7 +1186,6 @@ has been calculated.
 Source `src` must exist:
 
     exists(FS, src) else raise FileNotFoundException
-
 
 `dest` cannot be a descendant of `src`:
 
@@ -1193,7 +1240,7 @@ Renaming a file where the destination is a directory moves the file as a child
         FS' where:
             not exists(FS', src)
             and exists(FS', dest)
-            and data(FS', dest) == data (FS, dest)
+            and data(FS', dest) == data (FS, source)
         result = True
 
 
@@ -1234,6 +1281,15 @@ The outcome is as a normal rename, with the additional (implicit) feature
 that the parent directories of the destination also exist.
 
     exists(FS', parent(dest))
+
+*S3A FileSystem*
+
+The outcome is as a normal rename, with the additional (implicit) feature that
+the parent directories of the destination then exist:
+`exists(FS', parent(dest))`
+
+There is a check for and rejection if the `parent(dest)` is a file, but
+no checks for any other ancestors.
 
 *Other Filesystems (including Swift) *
 
@@ -1361,6 +1417,112 @@ to complete before they can proceed with further file updates.
 If an input stream is open when truncate() occurs, the outcome of read
 operations related to the part of the file being truncated is undefined.
 
+
+
+### `boolean copyFromLocalFile(boolean delSrc, boolean overwrite, Path src, Path dst)`
+
+The source file or directory at `src` is on the local disk and is copied into the file system at
+destination `dst`. If the source must be deleted after the move then `delSrc` flag must be
+set to TRUE. If destination already exists, and the destination contents must be overwritten
+then `overwrite` flag must be set to TRUE.
+
+#### Preconditions
+Source and destination must be different
+```python
+if src = dest : raise FileExistsException
+```
+
+Destination and source must not be descendants one another
+```python
+if isDescendant(src, dest) or isDescendant(dest, src) : raise IOException
+```
+
+The source file or directory must exist locally:
+```python
+if not exists(LocalFS, src) : raise FileNotFoundException
+```
+
+Directories cannot be copied into files regardless to what the overwrite flag is set to:
+
+```python
+if isDir(LocalFS, src) and isFile(FS, dst) : raise PathExistsException
+```
+
+For all cases, except the one for which the above precondition throws, the overwrite flag must be
+set to TRUE for the operation to succeed if destination exists. This will also overwrite any files
+ / directories at the destination:
+
+```python
+if exists(FS, dst) and not overwrite : raise PathExistsException
+```
+
+#### Determining the final name of the copy
+Given a base path on the source `base` and a child path `child` where `base` is in
+`ancestors(child) + child`:
+
+```python
+def final_name(base, child, dest):
+    is base = child:
+        return dest
+    else:
+        return dest + childElements(base, child)
+```
+
+#### Outcome where source is a file `isFile(LocalFS, src)`
+For a file, data at destination becomes that of the source. All ancestors are directories.
+```python
+if isFile(LocalFS, src) and (not exists(FS, dest) or (exists(FS, dest) and overwrite)):
+    FS' = FS where:
+        FS'.Files[dest] = LocalFS.Files[src]
+        FS'.Directories = FS.Directories + ancestors(FS, dest)
+    LocalFS' = LocalFS where
+        not delSrc or (delSrc = true and delete(LocalFS, src, false))
+else if isFile(LocalFS, src) and isDir(FS, dest):
+    FS' = FS where:
+        let d = final_name(src, dest)
+        FS'.Files[d] = LocalFS.Files[src]
+    LocalFS' = LocalFS where:
+        not delSrc or (delSrc = true and delete(LocalFS, src, false))
+```
+There are no expectations that the file changes are atomic for both local `LocalFS` and remote `FS`.
+
+#### Outcome where source is a directory `isDir(LocalFS, src)`
+```python
+if isDir(LocalFS, src) and (isFile(FS, dest) or isFile(FS, dest + childElements(src))):
+    raise FileAlreadyExistsException
+else if isDir(LocalFS, src):
+    if exists(FS, dest):
+        dest' = dest + childElements(src)
+        if exists(FS, dest') and not overwrite:
+            raise PathExistsException
+    else:
+        dest' = dest
+
+    FS' = FS where:
+        forall c in descendants(LocalFS, src):
+            not exists(FS', final_name(c)) or overwrite
+        and forall c in descendants(LocalFS, src) where isDir(LocalFS, c):
+            FS'.Directories = FS'.Directories + (dest' + childElements(src, c))
+        and forall c in descendants(LocalFS, src) where isFile(LocalFS, c):
+            FS'.Files[final_name(c, dest')] = LocalFS.Files[c]
+    LocalFS' = LocalFS where
+        not delSrc or (delSrc = true and delete(LocalFS, src, true))
+```
+There are no expectations of operation isolation / atomicity.
+This means files can change in source or destination while the operation is executing.
+No guarantees are made for the final state of the file or directory after a copy other than it is
+best effort. E.g.: when copying a directory, one file can be moved from source to destination but
+there's nothing stopping the new file at destination being updated while the copy operation is still
+in place.
+
+#### Implementation
+
+The default HDFS implementation, is to recurse through each file and folder, found at `src`, and
+copy them sequentially to their final destination (relative to `dst`).
+
+Object store based file systems should be mindful of what limitations arise from the above
+implementation and could take advantage of parallel uploads and possible re-ordering of files copied
+into the store to maximize throughput.
 
 
 ## <a name="RemoteIterator"></a> interface `RemoteIterator`
@@ -1535,4 +1697,93 @@ hsync        | HSYNC      | Syncable         | Flush out the data in client's us
 in:readahead | READAHEAD  | CanSetReadahead  | Set the readahead on the input stream.
 dropbehind   | DROPBEHIND | CanSetDropBehind | Drop the cache.
 in:unbuffer  | UNBUFFER   | CanUnbuffer      | Reduce the buffering on the input stream.
+
+## <a name="etagsource"></a> Etag probes through the interface `EtagSource`
+
+FileSystem implementations MAY support querying HTTP etags from `FileStatus`
+entries. If so, the requirements are as follows
+
+### Etag support MUST BE across all list/`getFileStatus()` calls.
+
+That is: when adding etag support, all operations which return `FileStatus` or `ListLocatedStatus`
+entries MUST return subclasses which are instances of `EtagSource`.
+
+### FileStatus instances MUST have etags whenever the remote store provides them.
+
+To support etags, they MUST BE to be provided in both `getFileStatus()`
+and list calls.
+
+Implementors note: the core APIs which MUST BE overridden to achieve this are as follows:
+
+```java
+FileStatus getFileStatus(Path)
+FileStatus[] listStatus(Path)
+RemoteIterator<FileStatus> listStatusIterator(Path)
+RemoteIterator<LocatedFileStatus> listFiles([Path, boolean)
+```
+
+
+### Etags of files MUST BE Consistent across all list/getFileStatus operations.
+
+The value of `EtagSource.getEtag()` MUST be the same for list* queries which return etags for calls of `getFileStatus()` for the specific object.
+
+```java
+((EtagSource)getFileStatus(path)).getEtag() == ((EtagSource)listStatus(path)[0]).getEtag()
+```
+
+Similarly, the same value MUST BE returned for `listFiles()`, `listStatusIncremental()` of the path and
+when listing the parent path, of all files in the listing.
+
+### Etags MUST BE different for different file contents.
+
+Two different arrays of data written to the same path MUST have different etag values when probed.
+This is a requirement of the HTTP specification.
+
+### Etags of files SHOULD BE preserved across rename operations
+
+After a file is renamed, the value of `((EtagSource)getFileStatus(dest)).getEtag()`
+SHOULD be the same as the value of `((EtagSource)getFileStatus(source)).getEtag()`
+was before the rename took place.
+
+This is an implementation detail of the store; it does not hold for AWS S3.
+
+If and only if the store consistently meets this requirement, the filesystem SHOULD
+declare in `hasPathCapability()` that it supports
+`fs.capability.etags.preserved.in.rename`
+
+### Directories MAY have etags
+
+Directory entries MAY return etags in listing/probe operations; these entries MAY be preserved across renames.
+
+Equally, directory entries MAY NOT provide such entries, MAY NOT preserve them acrosss renames,
+and MAY NOT guarantee consistency over time.
+
+Note: special mention of the root path "/".
+As that isn't a real "directory", nobody should expect it to have an etag.
+
+### All etag-aware `FileStatus` subclass MUST BE `Serializable`; MAY BE `Writable`
+
+The base `FileStatus` class implements `Serializable` and  `Writable` and marshalls its fields appropriately.
+
+Subclasses MUST support java serialization (Some Apache Spark applications use it), preserving the etag.
+This is a matter of making the etag field non-static and adding a `serialVersionUID`.
+
+The `Writable` support was used for marshalling status data over Hadoop IPC calls;
+in Hadoop 3 that is implemented through `org/apache/hadoop/fs/protocolPB/PBHelper.java`and the methods deprecated.
+Subclasses MAY override the deprecated methods to add etag marshalling.
+However -but there is no expectation of this and such marshalling is unlikely to ever take place.
+
+### Appropriate etag Path Capabilities SHOULD BE declared
+
+1. `hasPathCapability(path, "fs.capability.etags.available")` MUST return true iff
+    the filesystem returns valid (non-empty etags) on file status/listing operations.
+2. `hasPathCapability(path, "fs.capability.etags.consistent.across.rename")` MUST return
+   true if and only if etags are preserved across renames.
+
+### Non-requirements of etag support
+
+* There is no requirement/expectation that `FileSystem.getFileChecksum(Path)` returns
+  a checksum value related to the etag of an object, if any value is returned.
+* If the same data is uploaded to the twice to the same or a different path,
+  the etag of the second upload MAY NOT match that of the first upload.
 

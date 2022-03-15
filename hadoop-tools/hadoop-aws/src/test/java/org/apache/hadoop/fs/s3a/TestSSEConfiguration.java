@@ -86,14 +86,14 @@ public class TestSSEConfiguration extends Assert {
   public void testSSEEmptyKey() {
     // test the internal logic of the test setup code
     Configuration c = buildConf(SSE_C.getMethod(), "");
-    assertEquals("", getServerSideEncryptionKey(BUCKET, c));
+    assertEquals("", getS3EncryptionKey(BUCKET, c));
   }
 
   @Test
   public void testSSEKeyNull() throws Throwable {
     // test the internal logic of the test setup code
     final Configuration c = buildConf(SSE_C.getMethod(), null);
-    assertEquals("", getServerSideEncryptionKey(BUCKET, c));
+    assertEquals("", getS3EncryptionKey(BUCKET, c));
 
     intercept(IOException.class, SSE_C_NO_KEY_ERROR,
         () -> getEncryptionAlgorithm(BUCKET, c));
@@ -104,12 +104,12 @@ public class TestSSEConfiguration extends Assert {
     // set up conf to have a cred provider
     final Configuration conf = confWithProvider();
     String key = "provisioned";
-    setProviderOption(conf, SERVER_SIDE_ENCRYPTION_KEY, key);
+    setProviderOption(conf, Constants.S3_ENCRYPTION_KEY, key);
     // let's set the password in config and ensure that it uses the credential
     // provider provisioned value instead.
-    conf.set(SERVER_SIDE_ENCRYPTION_KEY, "keyInConfObject");
+    conf.set(Constants.S3_ENCRYPTION_KEY, "keyInConfObject");
 
-    String sseKey = getServerSideEncryptionKey(BUCKET, conf);
+    String sseKey = getS3EncryptionKey(BUCKET, conf);
     assertNotNull("Proxy password should not retrun null.", sseKey);
     assertEquals("Proxy password override did NOT work.", key, sseKey);
   }
@@ -178,17 +178,20 @@ public class TestSSEConfiguration extends Assert {
    * @param key key, may be null
    * @return the new config.
    */
+  @SuppressWarnings("deprecation")
   private Configuration buildConf(String algorithm, String key) {
     Configuration conf = emptyConf();
     if (algorithm != null) {
-      conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM, algorithm);
+      conf.set(Constants.S3_ENCRYPTION_ALGORITHM, algorithm);
     } else {
       conf.unset(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+      conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     }
     if (key != null) {
-      conf.set(SERVER_SIDE_ENCRYPTION_KEY, key);
+      conf.set(Constants.S3_ENCRYPTION_KEY, key);
     } else {
       conf.unset(SERVER_SIDE_ENCRYPTION_KEY);
+      conf.unset(Constants.S3_ENCRYPTION_KEY);
     }
     return conf;
   }

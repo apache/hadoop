@@ -22,6 +22,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -123,6 +124,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.util.Clock;
@@ -130,7 +132,7 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
@@ -161,6 +163,7 @@ public class FederationClientInterceptor
   private RouterMetrics routerMetrics;
   private ThreadPoolExecutor executorService;
   private final Clock clock = new MonotonicClock();
+  private boolean returnPartialReport;
 
   @Override
   public void init(String userName) {
@@ -196,6 +199,10 @@ public class FederationClientInterceptor
     clientRMProxies =
         new ConcurrentHashMap<SubClusterId, ApplicationClientProtocol>();
     routerMetrics = RouterMetrics.getMetrics();
+
+    returnPartialReport = conf.getBoolean(
+        YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
   }
 
   @Override
@@ -293,6 +300,9 @@ public class FederationClientInterceptor
 
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
+        RouterAuditLogger.logSuccess(user.getShortUserName(),
+            RouterAuditLogger.AuditConstants.GET_NEW_APP,
+            "RouterClientRMService", response.getApplicationId());
         return response;
       } else {
         // Empty response from the ResourceManager.
@@ -304,7 +314,9 @@ public class FederationClientInterceptor
 
     routerMetrics.incrAppsFailedCreated();
     String errMsg = "Fail to create a new application.";
-    LOG.error(errMsg);
+    RouterAuditLogger.logFailure(user.getShortUserName(),
+        RouterAuditLogger.AuditConstants.GET_NEW_APP, "UNKNOWN",
+        "RouterClientRMService", errMsg);
     throw new YarnException(errMsg);
   }
 
@@ -383,9 +395,13 @@ public class FederationClientInterceptor
         || request.getApplicationSubmissionContext()
             .getApplicationId() == null) {
       routerMetrics.incrAppsFailedSubmitted();
-      RouterServerUtil
-          .logAndThrowException("Missing submitApplication request or "
-              + "applicationSubmissionContex information.", null);
+      String errMsg =
+          "Missing submitApplication request or applicationSubmissionContext "
+              + "information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(),
+          RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
+          "RouterClientRMService", errMsg);
+      throw new YarnException(errMsg);
     }
 
     ApplicationId applicationId =
@@ -413,7 +429,10 @@ public class FederationClientInterceptor
           routerMetrics.incrAppsFailedSubmitted();
           String message = "Unable to insert the ApplicationId " + applicationId
               + " into the FederationStateStore";
-          RouterServerUtil.logAndThrowException(message, e);
+          RouterAuditLogger.logFailure(user.getShortUserName(),
+              RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
+              "RouterClientRMService", message, applicationId, subClusterId);
+          throw new YarnException(message, e);
         }
       } else {
         try {
@@ -430,7 +449,10 @@ public class FederationClientInterceptor
                 + " already submitted on SubCluster " + subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
-            RouterServerUtil.logAndThrowException(message, e);
+            RouterAuditLogger.logFailure(user.getShortUserName(),
+                RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
+                "RouterClientRMService", message, applicationId, subClusterId);
+            throw new YarnException(message, e);
           }
         }
       }
@@ -452,6 +474,9 @@ public class FederationClientInterceptor
             + " with appId " + applicationId + " submitted on " + subClusterId);
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
+        RouterAuditLogger.logSuccess(user.getShortUserName(),
+            RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP,
+            "RouterClientRMService", applicationId, subClusterId);
         return response;
       } else {
         // Empty response from the ResourceManager.
@@ -464,7 +489,9 @@ public class FederationClientInterceptor
     String errMsg = "Application "
         + request.getApplicationSubmissionContext().getApplicationName()
         + " with appId " + applicationId + " failed to be submitted.";
-    LOG.error(errMsg);
+    RouterAuditLogger.logFailure(user.getShortUserName(),
+        RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
+        "RouterClientRMService", errMsg, applicationId);
     throw new YarnException(errMsg);
   }
 
@@ -492,8 +519,11 @@ public class FederationClientInterceptor
 
     if (request == null || request.getApplicationId() == null) {
       routerMetrics.incrAppsFailedKilled();
-      RouterServerUtil.logAndThrowException(
-          "Missing forceKillApplication request or ApplicationId.", null);
+      String message = "Missing forceKillApplication request or ApplicationId.";
+      RouterAuditLogger.logFailure(user.getShortUserName(),
+          RouterAuditLogger.AuditConstants.FORCE_KILL_APP, "UNKNOWN",
+          "RouterClientRMService", message);
+      throw new YarnException(message);
     }
     ApplicationId applicationId = request.getApplicationId();
     SubClusterId subClusterId = null;
@@ -503,8 +533,12 @@ public class FederationClientInterceptor
           .getApplicationHomeSubCluster(request.getApplicationId());
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedKilled();
-      RouterServerUtil.logAndThrowException("Application " + applicationId
-          + " does not exist in FederationStateStore", e);
+      String msg = "Application " + applicationId
+          + " does not exist in FederationStateStore";
+      RouterAuditLogger.logFailure(user.getShortUserName(),
+          RouterAuditLogger.AuditConstants.FORCE_KILL_APP, "UNKNOWN",
+          "RouterClientRMService", msg, applicationId);
+      throw new YarnException(msg, e);
     }
 
     ApplicationClientProtocol clientRMProxy =
@@ -517,9 +551,10 @@ public class FederationClientInterceptor
       response = clientRMProxy.forceKillApplication(request);
     } catch (Exception e) {
       routerMetrics.incrAppsFailedKilled();
-      LOG.error("Unable to kill the application report for "
-          + request.getApplicationId() + "to SubCluster "
-          + subClusterId.getId(), e);
+      RouterAuditLogger.logFailure(user.getShortUserName(),
+          RouterAuditLogger.AuditConstants.FORCE_KILL_APP, "UNKNOWN",
+          "RouterClientRMService", "Unable to kill the application report",
+          applicationId, subClusterId);
       throw e;
     }
 
@@ -530,6 +565,9 @@ public class FederationClientInterceptor
 
     long stopTime = clock.getTime();
     routerMetrics.succeededAppsKilled(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(),
+        RouterAuditLogger.AuditConstants.FORCE_KILL_APP,
+        "RouterClientRMService", applicationId);
     return response;
   }
 
@@ -557,9 +595,12 @@ public class FederationClientInterceptor
 
     if (request == null || request.getApplicationId() == null) {
       routerMetrics.incrAppsFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing getApplicationReport request or applicationId information.",
-          null);
+      String errMsg =
+          "Missing getApplicationReport request or applicationId information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(),
+          RouterAuditLogger.AuditConstants.GET_APP_REPORT, "UNKNOWN",
+          "RouterClientRMService", errMsg);
+      throw new YarnException(errMsg);
     }
 
     SubClusterId subClusterId = null;
@@ -569,9 +610,12 @@ public class FederationClientInterceptor
           .getApplicationHomeSubCluster(request.getApplicationId());
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedRetrieved();
-      RouterServerUtil
-          .logAndThrowException("Application " + request.getApplicationId()
-              + " does not exist in FederationStateStore", e);
+      String errMsg = "Application " + request.getApplicationId()
+          + " does not exist in FederationStateStore";
+      RouterAuditLogger.logFailure(user.getShortUserName(),
+          RouterAuditLogger.AuditConstants.GET_APP_REPORT, "UNKNOWN",
+          "RouterClientRMService", errMsg, request.getApplicationId());
+      throw new YarnException(errMsg, e);
     }
 
     ApplicationClientProtocol clientRMProxy =
@@ -582,9 +626,12 @@ public class FederationClientInterceptor
       response = clientRMProxy.getApplicationReport(request);
     } catch (Exception e) {
       routerMetrics.incrAppsFailedRetrieved();
-      LOG.error("Unable to get the application report for "
-          + request.getApplicationId() + "to SubCluster "
-          + subClusterId.getId(), e);
+      String errMsg = "Unable to get the application report for " + request
+          .getApplicationId() + "to SubCluster " + subClusterId.getId();
+      RouterAuditLogger.logFailure(user.getShortUserName(),
+          RouterAuditLogger.AuditConstants.GET_APP_REPORT, "UNKNOWN",
+          "RouterClientRMService", errMsg, request.getApplicationId(),
+          subClusterId);
       throw e;
     }
 
@@ -596,26 +643,85 @@ public class FederationClientInterceptor
 
     long stopTime = clock.getTime();
     routerMetrics.succeededAppsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(),
+        RouterAuditLogger.AuditConstants.GET_APP_REPORT,
+        "RouterClientRMService", request.getApplicationId());
     return response;
   }
 
+  /**
+   * The Yarn Router will forward the request to all the Yarn RMs in parallel,
+   * after that it will group all the ApplicationReports by the ApplicationId.
+   *
+   * Possible failure:
+   *
+   * Client: identical behavior as {@code ClientRMService}.
+   *
+   * Router: the Client will timeout and resubmit the request.
+   *
+   * ResourceManager: the Router calls each Yarn RM in parallel. In case a
+   * Yarn RM fails, a single call will timeout. However the Router will
+   * merge the ApplicationReports it got, and provides a partial list to
+   * the client.
+   *
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
   @Override
   public GetApplicationsResponse getApplications(GetApplicationsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      routerMetrics.incrMultipleAppsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing getApplications request.",
+          null);
+    }
+    long startTime = clock.getTime();
+    Map<SubClusterId, SubClusterInfo> subclusters =
+        federationFacade.getSubClusters(true);
+    ClientMethod remoteMethod = new ClientMethod("getApplications",
+        new Class[] {GetApplicationsRequest.class}, new Object[] {request});
+    Map<SubClusterId, GetApplicationsResponse> applications;
+
+    try {
+      applications = invokeConcurrent(subclusters.keySet(), remoteMethod,
+          GetApplicationsResponse.class);
+
+    } catch (Exception ex) {
+      routerMetrics.incrMultipleAppsFailedRetrieved();
+      LOG.error("Unable to get applications due to exception.", ex);
+      throw ex;
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
+    // Merge the Application Reports
+    return RouterYarnClientUtils.mergeApplications(applications.values(),
+        returnPartialReport);
   }
 
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
+    long startTime = clock.getTime();
     Map<SubClusterId, SubClusterInfo> subclusters =
         federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
-    ArrayList<SubClusterId> clusterList = new ArrayList<>(subclusters.keySet());
-    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics =
-        invokeConcurrent(clusterList, remoteMethod,
-            GetClusterMetricsResponse.class);
+    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics;
+
+    try {
+      clusterMetrics = invokeConcurrent(subclusters.keySet(), remoteMethod,
+          GetClusterMetricsResponse.class);
+
+    } catch (Exception ex) {
+      routerMetrics.incrGetClusterMetricsFailedRetrieved();
+      LOG.error("Unable to get cluster metrics due to exception.", ex);
+      throw ex;
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetClusterMetricsRetrieved(stopTime - startTime);
     return RouterYarnClientUtils.merge(clusterMetrics.values());
   }
 
@@ -674,6 +780,12 @@ public class FederationClientInterceptor
       throw new YarnException(e);
     }
     return results;
+  }
+
+  <R> Map<SubClusterId, R> invokeConcurrent(Collection<SubClusterId> clusterIds,
+      ClientMethod request, Class<R> clazz) throws YarnException, IOException {
+    ArrayList<SubClusterId> clusterIdList = new ArrayList<>(clusterIds);
+    return invokeConcurrent(clusterIdList, request, clazz);
   }
 
   @Override
@@ -749,11 +861,79 @@ public class FederationClientInterceptor
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * The YARN Router will forward to the respective YARN RM in which the AM is
+   * running.
+   *
+   * Possible failure:
+   *
+   * Client: identical behavior as {@code ClientRMService}.
+   *
+   * Router: the Client will timeout and resubmit the request.
+   *
+   * ResourceManager: the Router will timeout and the call will fail.
+   *
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
   @Override
   public GetApplicationAttemptReportResponse getApplicationAttemptReport(
       GetApplicationAttemptReportRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    long startTime = clock.getTime();
+
+    if (request == null || request.getApplicationAttemptId() == null
+            || request.getApplicationAttemptId().getApplicationId() == null) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+              "Missing getApplicationAttemptReport " +
+                      "request or applicationId " +
+                      "or applicationAttemptId information.",
+              null);
+    }
+
+    SubClusterId subClusterId = null;
+
+    try {
+      subClusterId = federationFacade
+              .getApplicationHomeSubCluster(
+                      request.getApplicationAttemptId().getApplicationId());
+    } catch (YarnException e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil
+              .logAndThrowException("ApplicationAttempt " +
+                      request.getApplicationAttemptId() +
+                      "belongs to Application " +
+                      request.getApplicationAttemptId().getApplicationId() +
+                      " does not exist in FederationStateStore", e);
+    }
+
+    ApplicationClientProtocol clientRMProxy =
+            getClientRMProxyForSubCluster(subClusterId);
+
+    GetApplicationAttemptReportResponse response = null;
+    try {
+      response = clientRMProxy.getApplicationAttemptReport(request);
+    } catch (Exception e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      LOG.error("Unable to get the applicationAttempt report for "
+              + request.getApplicationAttemptId() + "to SubCluster "
+              + subClusterId.getId(), e);
+      throw e;
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the report of "
+              + "the applicationAttempt "
+              + request.getApplicationAttemptId() + " to SubCluster "
+              + subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override

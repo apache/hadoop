@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A simple TCP based RPC client handler used by {@link SimpleTcpServer}.
  */
-public class SimpleTcpClientHandler extends SimpleChannelHandler {
+public class SimpleTcpClientHandler extends ChannelInboundHandlerAdapter {
   public static final Logger LOG =
       LoggerFactory.getLogger(SimpleTcpClient.class);
   protected final XDR request;
@@ -39,13 +39,13 @@ public class SimpleTcpClientHandler extends SimpleChannelHandler {
   }
 
   @Override
-  public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
+  public void channelActive(ChannelHandlerContext ctx) throws Exception {
     // Send the request
     if (LOG.isDebugEnabled()) {
       LOG.debug("sending PRC request");
     }
-    ChannelBuffer outBuf = XDR.writeMessageTcp(request, true);
-    e.getChannel().write(outBuf);
+    ByteBuf outBuf = XDR.writeMessageTcp(request, true);
+    ctx.channel().writeAndFlush(outBuf);
   }
 
   /**
@@ -53,13 +53,13 @@ public class SimpleTcpClientHandler extends SimpleChannelHandler {
    * more interaction with the server.
    */
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
-    e.getChannel().close();
+  public void channelRead(ChannelHandlerContext ctx, Object msg) {
+    ctx.channel().close();
   }
 
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-    LOG.warn("Unexpected exception from downstream: ", e.getCause());
-    e.getChannel().close();
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+    LOG.warn("Unexpected exception from downstream: ", cause.getCause());
+    ctx.channel().close();
   }
 }

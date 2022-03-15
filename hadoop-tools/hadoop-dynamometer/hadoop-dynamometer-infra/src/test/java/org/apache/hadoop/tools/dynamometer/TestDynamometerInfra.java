@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.dynamometer;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
@@ -76,6 +76,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,6 +112,7 @@ import static org.junit.Assert.fail;
  * property to point directly to a Hadoop tarball which is present locally and
  * no download will occur.
  */
+@Ignore
 public class TestDynamometerInfra {
 
   private static final Logger LOG =
@@ -122,7 +124,7 @@ public class TestDynamometerInfra {
   private static final String HADOOP_BIN_PATH_KEY = "dyno.hadoop.bin.path";
   private static final String HADOOP_BIN_VERSION_KEY =
       "dyno.hadoop.bin.version";
-  private static final String HADOOP_BIN_VERSION_DEFAULT = "3.1.3";
+  private static final String HADOOP_BIN_VERSION_DEFAULT = "3.1.4";
   private static final String FSIMAGE_FILENAME = "fsimage_0000000000000061740";
   private static final String VERSION_FILENAME = "VERSION";
 

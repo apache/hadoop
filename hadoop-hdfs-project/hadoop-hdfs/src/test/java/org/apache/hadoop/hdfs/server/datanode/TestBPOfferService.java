@@ -30,6 +30,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
@@ -48,11 +49,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -85,8 +85,8 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -94,9 +94,11 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 public class TestBPOfferService {
 
@@ -114,7 +116,7 @@ public class TestBPOfferService {
   private long nextFullBlockReportLeaseId = 1L;
 
   static {
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
   }
 
   private DatanodeProtocolClientSideTranslatorPB mockNN1;
@@ -126,7 +128,9 @@ public class TestBPOfferService {
   private final int[] heartbeatCounts = new int[3];
   private DataNode mockDn;
   private FsDatasetSpi<?> mockFSDataset;
-  
+  private DataSetLockManager dataSetLockManager = new DataSetLockManager();
+  private boolean isSlownode;
+
   @Before
   public void setupMocks() throws Exception {
     mockNN1 = setupNNMock(0);
@@ -150,6 +154,7 @@ public class TestBPOfferService {
 
     // Wire the dataset to the DN.
     Mockito.doReturn(mockFSDataset).when(mockDn).getFSDataset();
+    Mockito.doReturn(dataSetLockManager).when(mockDn).getDataSetLockManager();
   }
 
   /**
@@ -215,6 +220,23 @@ public class TestBPOfferService {
     }
   }
 
+  private class HeartbeatIsSlownodeAnswer implements Answer<HeartbeatResponse> {
+    private final int nnIdx;
+
+    HeartbeatIsSlownodeAnswer(int nnIdx) {
+      this.nnIdx = nnIdx;
+    }
+
+    @Override
+    public HeartbeatResponse answer(InvocationOnMock invocation)
+        throws Throwable {
+      HeartbeatResponse heartbeatResponse = new HeartbeatResponse(
+          datanodeCommands[nnIdx], mockHaStatuses[nnIdx], null,
+          0, isSlownode);
+
+      return heartbeatResponse;
+    }
+  }
 
   private class HeartbeatRegisterAnswer implements Answer<HeartbeatResponse> {
     private final int nnIdx;
@@ -488,6 +510,7 @@ public class TestBPOfferService {
   public void testBPInitErrorHandling() throws Exception {
     final DataNode mockDn = Mockito.mock(DataNode.class);
     Mockito.doReturn(true).when(mockDn).shouldRun();
+    Mockito.doReturn(dataSetLockManager).when(mockDn).getDataSetLockManager();
     Configuration conf = new Configuration();
     File dnDataDir = new File(
       new File(TEST_BUILD_DATA, "testBPInitErrorHandling"), "data");
@@ -1176,6 +1199,44 @@ public class TestBPOfferService {
       while(secondLeaseId != 2L) {
         Thread.sleep(1000);
       }
+    } finally {
+      bpos.stop();
+    }
+  }
+
+  @Test(timeout = 15000)
+  public void testSetIsSlownode() throws Exception {
+    assertEquals(mockDn.isSlownode(), false);
+    Mockito.when(mockNN1.sendHeartbeat(
+            Mockito.any(DatanodeRegistration.class),
+            Mockito.any(StorageReport[].class),
+            Mockito.anyLong(),
+            Mockito.anyLong(),
+            Mockito.anyInt(),
+            Mockito.anyInt(),
+            Mockito.anyInt(),
+            Mockito.any(VolumeFailureSummary.class),
+            Mockito.anyBoolean(),
+            Mockito.any(SlowPeerReports.class),
+            Mockito.any(SlowDiskReports.class)))
+        .thenAnswer(new HeartbeatIsSlownodeAnswer(0));
+
+    BPOfferService bpos = setupBPOSForNNs(mockNN1);
+    bpos.start();
+
+    try {
+      waitForInitialization(bpos);
+
+      bpos.triggerHeartbeatForTests();
+      assertFalse(bpos.isSlownode());
+
+      isSlownode = true;
+      bpos.triggerHeartbeatForTests();
+      assertTrue(bpos.isSlownode());
+
+      isSlownode = false;
+      bpos.triggerHeartbeatForTests();
+      assertFalse(bpos.isSlownode());
     } finally {
       bpos.stop();
     }

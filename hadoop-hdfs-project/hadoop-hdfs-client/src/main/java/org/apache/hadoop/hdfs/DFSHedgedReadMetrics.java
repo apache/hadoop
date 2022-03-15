@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * The client-side metrics for hedged read feature.
@@ -28,20 +28,20 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @InterfaceAudience.Private
 public class DFSHedgedReadMetrics {
-  public final AtomicLong hedgedReadOps = new AtomicLong();
-  public final AtomicLong hedgedReadOpsWin = new AtomicLong();
-  public final AtomicLong hedgedReadOpsInCurThread = new AtomicLong();
+  public final LongAdder hedgedReadOps = new LongAdder();
+  public final LongAdder hedgedReadOpsWin = new LongAdder();
+  public final LongAdder hedgedReadOpsInCurThread = new LongAdder();
 
   public void incHedgedReadOps() {
-    hedgedReadOps.incrementAndGet();
+    hedgedReadOps.increment();
   }
 
   public void incHedgedReadOpsInCurThread() {
-    hedgedReadOpsInCurThread.incrementAndGet();
+    hedgedReadOpsInCurThread.increment();
   }
 
   public void incHedgedReadWins() {
-    hedgedReadOpsWin.incrementAndGet();
+    hedgedReadOpsWin.increment();
   }
 
   public long getHedgedReadOps() {

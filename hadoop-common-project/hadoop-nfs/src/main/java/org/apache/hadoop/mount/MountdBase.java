@@ -41,6 +41,8 @@ abstract public class MountdBase {
   private final RpcProgram rpcProgram;
   private int udpBoundPort; // Will set after server starts
   private int tcpBoundPort; // Will set after server starts
+  private SimpleUdpServer udpServer = null;
+  private SimpleTcpServer tcpServer = null;
 
   public RpcProgram getRpcProgram() {
     return rpcProgram;
@@ -57,7 +59,7 @@ abstract public class MountdBase {
 
   /* Start UDP server */
   private void startUDPServer() {
-    SimpleUdpServer udpServer = new SimpleUdpServer(rpcProgram.getPort(),
+    udpServer = new SimpleUdpServer(rpcProgram.getPort(),
         rpcProgram, 1);
     rpcProgram.startDaemons();
     try {
@@ -76,7 +78,7 @@ abstract public class MountdBase {
 
   /* Start TCP server */
   private void startTCPServer() {
-    SimpleTcpServer tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
+    tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
         rpcProgram, 1);
     rpcProgram.startDaemons();
     try {
@@ -117,6 +119,14 @@ abstract public class MountdBase {
     if (tcpBoundPort > 0) {
       rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
       tcpBoundPort = 0;
+    }
+    if (udpServer != null) {
+      udpServer.shutdown();
+      udpServer = null;
+    }
+    if (tcpServer != null) {
+      tcpServer.shutdown();
+      tcpServer = null;
     }
   }
 

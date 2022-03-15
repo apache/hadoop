@@ -99,6 +99,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -1864,6 +1865,35 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     verifyContainerLogs(logAggregationService, appId,
         new ContainerId[] {container1}, logFiles, 2, false, EMPTY_FILES);
+
+    verifyLogAggFinishEvent(appId);
+  }
+
+  @Test (timeout = 50000)
+  @SuppressWarnings("unchecked")
+  public void testLimitSizeContainerLogAggregationPolicy() throws Exception {
+    ApplicationId appId = createApplication();
+    LogAggregationService logAggregationService = createLogAggregationService(
+        appId, LimitSizeContainerLogAggregationPolicy.class, null);
+
+    String[] logFiles = new String[] {"stdout" };
+    // exitCode KILLED_FOR_EXCESS_LOGS
+    finishContainer(
+        appId, logAggregationService, ContainerType.APPLICATION_MASTER, 1,
+        ContainerExitStatus.KILLED_FOR_EXCESS_LOGS,
+        logFiles);
+    ContainerId container2 =
+        finishContainer(appId, logAggregationService, ContainerType.TASK, 2, 0,
+        logFiles);
+    ContainerId container3 =
+        finishContainer(appId, logAggregationService, ContainerType.TASK, 3,
+        ContainerExecutor.ExitCode.FORCE_KILLED.getExitCode(), logFiles);
+
+    finishApplication(appId, logAggregationService);
+
+    verifyContainerLogs(logAggregationService, appId,
+        new ContainerId[] {container2, container3},
+        logFiles, 2, false, EMPTY_FILES);
 
     verifyLogAggFinishEvent(appId);
   }

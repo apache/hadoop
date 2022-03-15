@@ -29,6 +29,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetBucketEncryptionResult;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
 
@@ -44,9 +46,12 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapab
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_ETAG;
 import static org.hamcrest.Matchers.nullValue;
 
 /**
@@ -65,10 +70,13 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     enableChecksums(true);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf,
+        S3_ENCRYPTION_ALGORITHM,
+        S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     return conf;
@@ -109,16 +117,18 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   @Test
   public void testPutObjectDirect() throws Throwable {
     final S3AFileSystem fs = getFileSystem();
-    ObjectMetadata metadata = fs.newObjectMetadata(-1);
-    metadata.setContentLength(-1);
-    Path path = path("putDirect");
-    final PutObjectRequest put = new PutObjectRequest(fs.getBucket(),
-        path.toUri().getPath(),
-        new ByteArrayInputStream("PUT".getBytes()),
-        metadata);
-    LambdaTestUtils.intercept(IllegalStateException.class,
-        () -> fs.putObjectDirect(put));
-    assertPathDoesNotExist("put object was created", path);
+    try (AuditSpan span = span()) {
+      ObjectMetadata metadata = fs.newObjectMetadata(-1);
+      metadata.setContentLength(-1);
+      Path path = path("putDirect");
+      final PutObjectRequest put = new PutObjectRequest(fs.getBucket(),
+          path.toUri().getPath(),
+          new ByteArrayInputStream("PUT".getBytes()),
+          metadata);
+      LambdaTestUtils.intercept(IllegalStateException.class,
+          () -> fs.putObjectDirect(put));
+      assertPathDoesNotExist("put object was created", path);
+    }
   }
 
   private FSDataOutputStream createNonRecursive(Path path) throws IOException {
@@ -171,6 +181,9 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     assertNotEquals("file 1 checksum", 0, checksum1.getLength());
     assertEquals("checksums of empty files", checksum1,
         fs.getFileChecksum(touchFile("file2"), 0));
+    Assertions.assertThat(fs.getXAttr(file1, XA_ETAG))
+        .describedAs("etag from xattr")
+        .isEqualTo(checksum1.getBytes());
   }
 
   /**
@@ -179,6 +192,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    */
   private void assumeNoDefaultEncryption() throws IOException {
     try {
+      skipIfClientSideEncryption();
       Assume.assumeThat(getDefaultEncryption(), nullValue());
     } catch (AccessDeniedException e) {
       // if the user can't check the default encryption, assume that it is
@@ -222,6 +236,9 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     createFile(fs, file4, true,
         "hello, world".getBytes(StandardCharsets.UTF_8));
     assertNotEquals(checksum2, fs.getFileChecksum(file4, 0));
+    Assertions.assertThat(fs.getXAttr(file3, XA_ETAG))
+        .describedAs("etag from xattr")
+        .isEqualTo(checksum1.getBytes());
   }
 
   /**
@@ -243,7 +260,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   }
 
   private S3AEncryptionMethods encryptionAlgorithm() {
-    return getFileSystem().getServerSideEncryptionAlgorithm();
+    return getFileSystem().getS3EncryptionAlgorithm();
   }
 
   @Test
@@ -276,8 +293,14 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     }
   }
 
+  @Test
+  public void testS3AIOStatisticsUninitialized() throws Throwable {
+    try (S3AFileSystem fs = new S3AFileSystem()) {
+      fs.getIOStatistics();
+    }
+
+  }
   /**
-<<<<<<< ours
    * Verify that paths with a trailing "/" are fixed up.
    */
   @Test

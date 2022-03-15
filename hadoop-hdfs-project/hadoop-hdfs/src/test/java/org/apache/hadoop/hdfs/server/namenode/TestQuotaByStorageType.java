@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-  import static org.junit.Assert.assertEquals;
-  import static org.junit.Assert.assertTrue;
-  import static org.junit.Assert.fail;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -41,10 +37,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TestQuotaByStorageType {
 

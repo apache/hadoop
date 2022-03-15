@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -56,8 +57,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.Records;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-
 @InterfaceAudience.Private
 public abstract class MockAsm extends MockApps {
 
@@ -68,6 +67,10 @@ public abstract class MockAsm extends MockApps {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public String getRealUser() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
     @Override
     public ApplicationSubmissionContext getApplicationSubmissionContext() {
       throw new UnsupportedOperationException("Not supported yet.");

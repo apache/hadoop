@@ -33,8 +33,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedInputStream;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
@@ -523,6 +524,7 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
   @InterfaceAudience.Private
   public static class BlockReportReplica extends Block implements Replica {
     private ReplicaState state;
+
     private BlockReportReplica() {
     }
     public BlockReportReplica(Block block) {
@@ -554,6 +556,10 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
     }
     @Override
     public boolean isOnTransientStorage() {
+      throw new UnsupportedOperationException();
+    }
+    @Override
+    public FsVolumeSpi getVolume() {
       throw new UnsupportedOperationException();
     }
     @Override

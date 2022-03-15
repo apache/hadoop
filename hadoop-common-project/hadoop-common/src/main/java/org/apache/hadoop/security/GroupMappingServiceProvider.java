@@ -18,6 +18,7 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -61,5 +62,8 @@ public interface GroupMappingServiceProvider {
    * @return set of group memberships of user
    * @throws IOException
    */
-  Set<String> getGroupsSet(String user) throws IOException;
+  default Set<String> getGroupsSet(String user) throws IOException {
+    //Override to form the set directly to avoid another conversion
+    return new LinkedHashSet<>(getGroups(user));
+  }
 }

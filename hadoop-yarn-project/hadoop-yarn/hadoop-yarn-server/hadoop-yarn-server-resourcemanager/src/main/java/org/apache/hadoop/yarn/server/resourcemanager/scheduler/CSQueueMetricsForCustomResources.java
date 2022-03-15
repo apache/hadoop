@@ -17,6 +17,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 
 import java.util.Map;
 
@@ -27,10 +28,10 @@ import java.util.Map;
  */
 public class CSQueueMetricsForCustomResources
     extends QueueMetricsForCustomResources {
-  private final QueueMetricsCustomResource guaranteedCapacity =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource maxCapacity =
-      new QueueMetricsCustomResource();
+  private final CustomResourceMetricValue guaranteedCapacity =
+      new CustomResourceMetricValue();
+  private final CustomResourceMetricValue maxCapacity =
+      new CustomResourceMetricValue();
 
   public void setGuaranteedCapacity(Resource res) {
     guaranteedCapacity.set(res);

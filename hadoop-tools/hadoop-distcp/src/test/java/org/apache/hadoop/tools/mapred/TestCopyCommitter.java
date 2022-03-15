@@ -265,6 +265,51 @@ public class TestCopyCommitter {
     }
   }
 
+  @Test
+  public void testDeleteMissingWithOnlyFile() throws IOException {
+    TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
+    JobContext jobContext = new JobContextImpl(taskAttemptContext
+        .getConfiguration(), taskAttemptContext.getTaskAttemptID().getJobID());
+    Configuration conf = jobContext.getConfiguration();
+
+    String sourceBase;
+    String targetBase;
+    FileSystem fs = null;
+    try {
+      OutputCommitter committer = new CopyCommitter(null, taskAttemptContext);
+      fs = FileSystem.get(conf);
+      sourceBase = TestDistCpUtils.createTestSetupWithOnlyFile(fs,
+          FsPermission.getDefault());
+      targetBase = TestDistCpUtils.createTestSetupWithOnlyFile(fs,
+          FsPermission.getDefault());
+
+      final DistCpOptions options = new DistCpOptions.Builder(
+          Collections.singletonList(new Path(sourceBase)), new Path(targetBase))
+          .withSyncFolder(true).withDeleteMissing(true).build();
+      options.appendToConf(conf);
+      final DistCpContext context = new DistCpContext(options);
+
+      CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
+      Path listingFile = new Path(sourceBase);
+      listing.buildListing(listingFile, context);
+
+      conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, targetBase);
+      conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);
+
+      committer.commitJob(jobContext);
+      verifyFoldersAreInSync(fs, targetBase, sourceBase);
+      verifyFoldersAreInSync(fs, sourceBase, targetBase);
+
+      //Test for idempotent commit
+      committer.commitJob(jobContext);
+      verifyFoldersAreInSync(fs, targetBase, sourceBase);
+      verifyFoldersAreInSync(fs, sourceBase, targetBase);
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp1");
+      conf.set(DistCpConstants.CONF_LABEL_DELETE_MISSING, "false");
+    }
+  }
+
   // for HDFS-14621, should preserve times after -delete
   @Test
   public void testPreserveTimeWithDeleteMiss() throws IOException {

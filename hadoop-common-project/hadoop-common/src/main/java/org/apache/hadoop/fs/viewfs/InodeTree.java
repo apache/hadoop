@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import java.util.function.Function;
+import org.apache.hadoop.util.Preconditions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -80,13 +81,29 @@ abstract class InodeTree<T> {
   private List<RegexMountPoint<T>> regexMountPointList =
       new ArrayList<RegexMountPoint<T>>();
 
-  static class MountPoint<T> {
+  public static class MountPoint<T> {
     String src;
     INodeLink<T> target;
 
     MountPoint(String srcPath, INodeLink<T> mountLink) {
       src = srcPath;
       target = mountLink;
+    }
+
+    /**
+     * Returns the source of mount point.
+     * @return The source
+     */
+    public String getSource() {
+      return this.src;
+    }
+
+    /**
+     * Returns the target link.
+     * @return The target INode link
+     */
+    public INodeLink<T> getTarget() {
+      return this.target;
     }
   }
 
@@ -255,9 +272,12 @@ abstract class InodeTree<T> {
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)
    */
-  static class INodeLink<T> extends INode<T> {
+  public static class INodeLink<T> extends INode<T> {
     final URI[] targetDirLinkList;
-    final T targetFileSystem;   // file system object created from the link.
+    private T targetFileSystem;   // file system object created from the link.
+    // Function to initialize file system. Only applicable for simple links
+    private Function<URI, T> fileSystemInitMethod;
+    private final Object lock = new Object();
 
     /**
      * Construct a mergeLink or nfly.
@@ -273,18 +293,20 @@ abstract class InodeTree<T> {
      * Construct a simple link (i.e. not a mergeLink).
      */
     INodeLink(final String pathToNode, final UserGroupInformation aUgi,
-        final T targetFs, final URI aTargetDirLink) {
+        Function<URI, T> createFileSystemMethod,
+        final URI aTargetDirLink) {
       super(pathToNode, aUgi);
-      targetFileSystem = targetFs;
+      targetFileSystem = null;
       targetDirLinkList = new URI[1];
       targetDirLinkList[0] = aTargetDirLink;
+      this.fileSystemInitMethod = createFileSystemMethod;
     }
 
     /**
      * Get the target of the link. If a merge link then it returned
      * as "," separated URI list.
      */
-    Path getTargetLink() {
+    public Path getTargetLink() {
       StringBuilder result = new StringBuilder(targetDirLinkList[0].toString());
       // If merge link, use "," as separator between the merged URIs
       for (int i = 1; i < targetDirLinkList.length; ++i) {
@@ -298,7 +320,30 @@ abstract class InodeTree<T> {
       return false;
     }
 
-    public T getTargetFileSystem() {
+    /**
+     * Get the instance of FileSystem to use, creating one if needed.
+     * @return An Initialized instance of T
+     * @throws IOException
+     */
+    public T getTargetFileSystem() throws IOException {
+      if (targetFileSystem != null) {
+        return targetFileSystem;
+      }
+      // For non NFLY and MERGE links, we initialize the FileSystem when the
+      // corresponding mount path is accessed.
+      if (targetDirLinkList.length == 1) {
+        synchronized (lock) {
+          if (targetFileSystem != null) {
+            return targetFileSystem;
+          }
+          targetFileSystem = fileSystemInitMethod.apply(targetDirLinkList[0]);
+          if (targetFileSystem == null) {
+            throw new IOException(
+                "Could not initialize target File System for URI : " +
+                    targetDirLinkList[0]);
+          }
+        }
+      }
       return targetFileSystem;
     }
   }
@@ -359,7 +404,7 @@ abstract class InodeTree<T> {
     switch (linkType) {
     case SINGLE:
       newLink = new INodeLink<T>(fullPath, aUgi,
-          getTargetFileSystem(new URI(target)), new URI(target));
+          initAndGetTargetFs(), new URI(target));
       break;
     case SINGLE_FALLBACK:
     case MERGE_SLASH:
@@ -385,8 +430,7 @@ abstract class InodeTree<T> {
    * 3 abstract methods.
    * @throws IOException
    */
-  protected abstract T getTargetFileSystem(URI uri)
-      throws UnsupportedFileSystemException, URISyntaxException, IOException;
+  protected abstract Function<URI, T> initAndGetTargetFs();
 
   protected abstract T getTargetFileSystem(INodeDir<T> dir)
       throws URISyntaxException, IOException;
@@ -589,7 +633,7 @@ abstract class InodeTree<T> {
     if (isMergeSlashConfigured) {
       Preconditions.checkNotNull(mergeSlashTarget);
       root = new INodeLink<T>(mountTableName, ugi,
-          getTargetFileSystem(new URI(mergeSlashTarget)),
+          initAndGetTargetFs(),
           new URI(mergeSlashTarget));
       mountPoints.add(new MountPoint<T>("/", (INodeLink<T>) root));
       rootFallbackLink = null;
@@ -608,8 +652,7 @@ abstract class InodeTree<T> {
                 + "not allowed.");
           }
           fallbackLink = new INodeLink<T>(mountTableName, ugi,
-              getTargetFileSystem(new URI(le.getTarget())),
-              new URI(le.getTarget()));
+              initAndGetTargetFs(), new URI(le.getTarget()));
           continue;
         case REGEX:
           addRegexMountEntry(le);
@@ -630,13 +673,11 @@ abstract class InodeTree<T> {
             .append(theUri.getScheme()).append("://").append(mountTableName)
             .append("/").toString());
       }
-      StringBuilder msg =
-          new StringBuilder("Empty mount table detected for ").append(theUri)
-              .append(" and considering itself as a linkFallback.");
-      FileSystem.LOG.info(msg.toString());
-      rootFallbackLink =
-          new INodeLink<T>(mountTableName, ugi, getTargetFileSystem(theUri),
-              theUri);
+      FileSystem.LOG
+          .info("Empty mount table detected for {} and considering itself "
+              + "as a linkFallback.", theUri);
+      rootFallbackLink = new INodeLink<T>(mountTableName, ugi,
+          initAndGetTargetFs(), theUri);
       getRootDir().addFallbackLink(rootFallbackLink);
     }
   }
@@ -734,10 +775,10 @@ abstract class InodeTree<T> {
    * @param p - input path
    * @param resolveLastComponent
    * @return ResolveResult which allows further resolution of the remaining path
-   * @throws FileNotFoundException
+   * @throws IOException
    */
   ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
-      throws FileNotFoundException {
+      throws IOException {
     ResolveResult<T> resolveResult = null;
     String[] path = breakIntoPathComponents(p);
     if (path.length <= 1) { // special case for when path is "/"
@@ -881,19 +922,20 @@ abstract class InodeTree<T> {
       ResultKind resultKind, String resolvedPathStr,
       String targetOfResolvedPathStr, Path remainingPath) {
     try {
-      T targetFs = getTargetFileSystem(
-          new URI(targetOfResolvedPathStr));
+      T targetFs = initAndGetTargetFs()
+          .apply(new URI(targetOfResolvedPathStr));
+      if (targetFs == null) {
+        LOGGER.error(String.format(
+            "Not able to initialize target file system."
+                + " ResultKind:%s, resolvedPathStr:%s,"
+                + " targetOfResolvedPathStr:%s, remainingPath:%s,"
+                + " will return null.",
+            resultKind, resolvedPathStr, targetOfResolvedPathStr,
+            remainingPath));
+        return null;
+      }
       return new ResolveResult<T>(resultKind, targetFs, resolvedPathStr,
           remainingPath, true);
-    } catch (IOException ex) {
-      LOGGER.error(String.format(
-          "Got Exception while build resolve result."
-              + " ResultKind:%s, resolvedPathStr:%s,"
-              + " targetOfResolvedPathStr:%s, remainingPath:%s,"
-              + " will return null.",
-          resultKind, resolvedPathStr, targetOfResolvedPathStr, remainingPath),
-          ex);
-      return null;
     } catch (URISyntaxException uex) {
       LOGGER.error(String.format(
           "Got Exception while build resolve result."
@@ -906,7 +948,7 @@ abstract class InodeTree<T> {
     }
   }
 
-  List<MountPoint<T>> getMountPoints() {
+  public List<MountPoint<T>> getMountPoints() {
     return mountPoints;
   }
 

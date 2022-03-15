@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.function.Supplier;
+
+import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
+import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
+import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -46,10 +50,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -60,6 +62,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaHandler;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -67,12 +70,15 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -82,14 +88,13 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
 import static org.hamcrest.core.Is.is;
@@ -118,7 +123,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TestFsDatasetImpl {
-  Logger LOG = LoggerFactory.getLogger(TestFsDatasetImpl.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestFsDatasetImpl.class);
+
   private static final String BASE_DIR =
       new FileSystemTestHelper().getTestRootDir();
   private String replicaCacheRootDir = BASE_DIR + Path.SEPARATOR + "cache";
@@ -126,16 +134,16 @@ public class TestFsDatasetImpl {
   private static final String CLUSTER_ID = "cluser-id";
   private static final String[] BLOCK_POOL_IDS = {"bpid-0", "bpid-1"};
 
-  // Use to generate storageUuid
-  private static final DataStorage dsForStorageUuid = new DataStorage(
-      new StorageInfo(HdfsServerConstants.NodeType.DATA_NODE));
-
   private Configuration conf;
   private DataNode datanode;
   private DataStorage storage;
   private FsDatasetImpl dataset;
+  private DataSetLockManager manager = new DataSetLockManager();
   
   private final static String BLOCKPOOL = "BP-TEST";
+
+  @Rule
+  public TestName name = new TestName();
 
   private static Storage.StorageDirectory createStorageDirectory(File root,
       Configuration conf)
@@ -204,6 +212,7 @@ public class TestFsDatasetImpl {
     this.conf.set(DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY,
         replicaCacheRootDir);
 
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
     when(datanode.getDnConf()).thenReturn(dnConf);
@@ -221,117 +230,6 @@ public class TestFsDatasetImpl {
 
     assertEquals(NUM_INIT_VOLUMES, getNumVolumes());
     assertEquals(0, dataset.getNumFailedVolumes());
-  }
-
-  @Test(timeout=10000)
-  public void testReadLockEnabledByDefault()
-      throws Exception {
-    final FsDatasetSpi ds = dataset;
-    AtomicBoolean accessed = new AtomicBoolean(false);
-    CountDownLatch latch = new CountDownLatch(1);
-    CountDownLatch waiterLatch = new CountDownLatch(1);
-
-    Thread holder = new Thread() {
-      public void run() {
-        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-          latch.countDown();
-          // wait for the waiter thread to access the lock.
-          waiterLatch.await();
-        } catch (Exception e) {
-        }
-      }
-    };
-
-    Thread waiter = new Thread() {
-      public void run() {
-        try {
-          latch.await();
-        } catch (InterruptedException e) {
-          waiterLatch.countDown();
-          return;
-        }
-        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-          accessed.getAndSet(true);
-          // signal the holder thread.
-          waiterLatch.countDown();
-        } catch (Exception e) {
-        }
-      }
-    };
-    waiter.start();
-    holder.start();
-    holder.join();
-    waiter.join();
-    // The holder thread is still holding the lock, but the waiter can still
-    // run as the lock is a shared read lock.
-    assertEquals(true, accessed.get());
-    holder.interrupt();
-  }
-
-  @Test(timeout=10000)
-  public void testReadLockCanBeDisabledByConfig()
-      throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY, false);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(1).build();
-    try {
-      cluster.waitActive();
-      DataNode dn = cluster.getDataNodes().get(0);
-      final FsDatasetSpi<?> ds = DataNodeTestUtils.getFSDataset(dn);
-
-      CountDownLatch latch = new CountDownLatch(1);
-      CountDownLatch waiterLatch = new CountDownLatch(1);
-      // create a synchronized list and verify the order of elements.
-      List<Integer> syncList =
-          Collections.synchronizedList(new ArrayList<>());
-
-
-      Thread holder = new Thread() {
-        public void run() {
-          latch.countDown();
-          try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-            syncList.add(0);
-          } catch (Exception e) {
-            return;
-          }
-          try {
-            waiterLatch.await();
-            syncList.add(2);
-          } catch (InterruptedException e) {
-          }
-        }
-      };
-
-      Thread waiter = new Thread() {
-        public void run() {
-          try {
-            // wait for holder to get into the critical section.
-            latch.await();
-          } catch (InterruptedException e) {
-            waiterLatch.countDown();
-          }
-          try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-            syncList.add(1);
-            waiterLatch.countDown();
-          } catch (Exception e) {
-          }
-        }
-      };
-      waiter.start();
-      holder.start();
-
-      waiter.join();
-      holder.join();
-
-      // verify that the synchronized list has the correct sequence.
-      assertEquals(
-          "The sequence of checkpoints does not correspond to shared lock",
-          syncList, Arrays.asList(0, 1, 2));
-    } finally {
-      cluster.shutdown();
-    }
   }
 
   @Test
@@ -393,7 +291,7 @@ public class TestFsDatasetImpl {
         true);
     conf.setDouble(DFSConfigKeys
             .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
-        0.5);
+        0.4);
 
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
@@ -403,6 +301,7 @@ public class TestFsDatasetImpl {
     final ShortCircuitRegistry shortCircuitRegistry =
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
 
     createStorageDirs(storage, conf, 1);
     dataset = new FsDatasetImpl(datanode, storage, conf);
@@ -411,10 +310,18 @@ public class TestFsDatasetImpl {
     for (String bpid : BLOCK_POOL_IDS) {
       nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
     }
-    dataset.addVolume(
-        createStorageWithStorageType("archive1",
-            StorageType.ARCHIVE, conf, storage, datanode), nsInfos);
+    StorageLocation archive = createStorageWithStorageType("archive1",
+        StorageType.ARCHIVE, conf, storage, datanode);
+    dataset.addVolume(archive, nsInfos);
     assertEquals(2, dataset.getVolumeCount());
+
+    String mount = new DF(new File(archive.getUri()), conf).getMount();
+    double archiveRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.ARCHIVE);
+    double diskRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.DISK);
+    assertEquals(0.4, archiveRatio, 0);
+    assertEquals(0.6, diskRatio, 0);
 
     // Add second ARCHIVAL volume should fail fsDataSetImpl.
     try {
@@ -427,6 +334,108 @@ public class TestFsDatasetImpl {
       assertTrue(e.getMessage()
           .startsWith("Storage type ARCHIVE already exists on same mount:"));
     }
+  }
+
+  @Test
+  public void testAddVolumeWithCustomizedCapacityRatio()
+      throws IOException {
+    datanode = mock(DataNode.class);
+    storage = mock(DataStorage.class);
+    this.conf = new Configuration();
+    this.conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 0);
+    this.conf.set(DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY,
+        replicaCacheRootDir);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        true);
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
+        0.5);
+
+    // 1) Normal case, get capacity should return correct value.
+    String archivedir = "/archive1";
+    String diskdir = "/disk1";
+    String configStr = "[0.3]file:" + BASE_DIR + archivedir
+        + ", " + "[0.6]file:" + BASE_DIR + diskdir;
+
+    conf.set(DFSConfigKeys
+            .DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE,
+        configStr);
+
+    when(datanode.getConf()).thenReturn(conf);
+    final DNConf dnConf = new DNConf(datanode);
+    when(datanode.getDnConf()).thenReturn(dnConf);
+    final BlockScanner disabledBlockScanner = new BlockScanner(datanode);
+    when(datanode.getBlockScanner()).thenReturn(disabledBlockScanner);
+    final ShortCircuitRegistry shortCircuitRegistry =
+        new ShortCircuitRegistry(conf);
+    when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
+
+
+    createStorageDirs(storage, conf, 0);
+
+    dataset = createStorageWithCapacityRatioConfig(
+        configStr, archivedir, diskdir);
+
+    Path p = new Path("file:" + BASE_DIR);
+    String mount = new DF(new File(p.toUri()), conf).getMount();
+    double archiveRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.ARCHIVE);
+    double diskRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.DISK);
+    assertEquals(0.3, archiveRatio, 0);
+    assertEquals(0.6, diskRatio, 0);
+
+    // 2) Counter part volume should get rest of the capacity
+    // wihtout explicit config
+    configStr = "[0.3]file:" + BASE_DIR + archivedir;
+    dataset = createStorageWithCapacityRatioConfig(
+        configStr, archivedir, diskdir);
+    mount = new DF(new File(p.toUri()), conf).getMount();
+    archiveRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.ARCHIVE);
+    diskRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.DISK);
+    assertEquals(0.3, archiveRatio, 0);
+    assertEquals(0.7, diskRatio, 0);
+
+    // 3) Add volume will fail if capacity ratio is > 1
+    dataset = new FsDatasetImpl(datanode, storage, conf);
+    configStr = "[0.3]file:" + BASE_DIR + archivedir
+        + ", " + "[0.8]file:" + BASE_DIR + diskdir;
+
+    try {
+      createStorageWithCapacityRatioConfig(
+          configStr, archivedir, diskdir);
+      fail("Should fail add volume as capacity ratio sum is > 1");
+    } catch (IOException e) {
+      assertTrue(e.getMessage()
+          .contains("Not enough capacity ratio left on mount"));
+    }
+  }
+
+  private FsDatasetImpl createStorageWithCapacityRatioConfig(
+      String configStr, String archivedir, String diskdir)
+      throws IOException {
+    conf.set(DFSConfigKeys
+        .DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE, configStr
+    );
+    dataset = new FsDatasetImpl(datanode, storage, conf);
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    for (String bpid : BLOCK_POOL_IDS) {
+      nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
+    }
+
+    StorageLocation archive = createStorageWithStorageType(
+        archivedir, StorageType.ARCHIVE, conf, storage, datanode);
+
+    StorageLocation disk = createStorageWithStorageType(
+        diskdir, StorageType.DISK, conf, storage, datanode);
+
+    dataset.addVolume(archive, nsInfos);
+    dataset.addVolume(disk, nsInfos);
+    assertEquals(2, dataset.getVolumeCount());
+    return dataset;
   }
 
   @Test
@@ -658,41 +667,6 @@ public class TestFsDatasetImpl {
     }
 
     FsDatasetTestUtil.assertFileLockReleased(badDir.toString());
-  }
-
-  @Test
-  /**
-   * This test is here primarily to catch any case where the datanode replica
-   * map structure is changed to a new structure which is not sorted and hence
-   * reading the blocks from it directly would not be sorted.
-   */
-  public void testSortedFinalizedBlocksAreSorted() throws IOException {
-    this.conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    try {
-      cluster.waitActive();
-      DataNode dn = cluster.getDataNodes().get(0);
-
-      FsDatasetSpi<?> ds = DataNodeTestUtils.getFSDataset(dn);
-      ds.addBlockPool(BLOCKPOOL, conf);
-
-      // Load 1000 blocks with random blockIDs
-      for (int i=0; i<=1000; i++) {
-        ExtendedBlock eb = new ExtendedBlock(
-            BLOCKPOOL, new Random().nextInt(), 1000, 1000 + i);
-        cluster.getFsDatasetTestUtils(0).createFinalizedReplica(eb);
-      }
-      // Get the sorted blocks and validate the arrayList is sorted
-      List<ReplicaInfo> replicaList = ds.getSortedFinalizedBlocks(BLOCKPOOL);
-      for (int i=0; i<replicaList.size() - 1; i++) {
-        if (replicaList.get(i).compareTo(replicaList.get(i+1)) > 0) {
-          // Not sorted so fail the test
-          fail("ArrayList is not sorted, and it should be");
-        }
-      }
-    } finally {
-      cluster.shutdown();
-    }
   }
   
   @Test
@@ -1053,7 +1027,7 @@ public class TestFsDatasetImpl {
       Assert.assertEquals(0, cluster.getNamesystem().getCorruptReplicaBlocks());
 
       FileSystem fs = cluster.getFileSystem();
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       DFSTestUtil.createFile(fs, filePath, 1, (short) 1, 0);
 
       block = DFSTestUtil.getFirstBlock(fs, filePath);
@@ -1070,24 +1044,43 @@ public class TestFsDatasetImpl {
     }
   }
 
+  /**
+   * When moving blocks using hardLink or copy
+   * and append happened in the middle,
+   * block movement should fail and hardlink is removed.
+   */
   @Test(timeout = 30000)
   public void testMoveBlockFailure() {
+    // Test copy
+    testMoveBlockFailure(conf);
+    // Test hardlink
+    conf.setBoolean(DFSConfigKeys
+        .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+    conf.setDouble(DFSConfigKeys
+        .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+    testMoveBlockFailure(conf);
+  }
+
+  private void testMoveBlockFailure(Configuration config) {
     MiniDFSCluster cluster = null;
     try {
+
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
           .storagesPerDatanode(2)
           .build();
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
 
-      Path filePath = new Path("testData");
-      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
-      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+      Path filePath = new Path(name.getMethodName());
+      long fileLen = 100;
+      ExtendedBlock block = createTestFile(fs, fileLen, filePath);
 
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
-      ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
+      ReplicaInfo newReplicaInfo =
+          createNewReplicaObjWithLink(block, fsDataSetImpl);
 
       // Append to file to update its GS
       FSDataOutputStream out = fs.append(filePath, (short) 1);
@@ -1095,6 +1088,7 @@ public class TestFsDatasetImpl {
       out.hflush();
 
       // Call finalizeNewReplica
+      assertTrue(newReplicaInfo.blockDataExists());
       LOG.info("GenerationStamp of old replica: {}",
           block.getGenerationStamp());
       LOG.info("GenerationStamp of new replica: {}", fsDataSetImpl
@@ -1103,6 +1097,9 @@ public class TestFsDatasetImpl {
       LambdaTestUtils.intercept(IOException.class, "Generation Stamp "
               + "should be monotonically increased.",
           () -> fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block));
+      assertFalse(newReplicaInfo.blockDataExists());
+
+      validateFileLen(fs, fileLen, filePath);
     } catch (Exception ex) {
       LOG.info("Exception in testMoveBlockFailure ", ex);
       fail("Exception while testing testMoveBlockFailure ");
@@ -1125,7 +1122,7 @@ public class TestFsDatasetImpl {
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
 
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
 
@@ -1144,6 +1141,277 @@ public class TestFsDatasetImpl {
   }
 
   /**
+   * Make sure datanode restart can clean up un-finalized links,
+   * if the block is not finalized yet.
+   */
+  @Test(timeout = 30000)
+  public void testDnRestartWithHardLinkInTmp() {
+    MiniDFSCluster cluster = null;
+    try {
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storagesPerDatanode(2)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      Path filePath = new Path(name.getMethodName());
+      long fileLen = 100;
+
+      ExtendedBlock block = createTestFile(fs, fileLen, filePath);
+
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+
+      ReplicaInfo oldReplicaInfo = fsDataSetImpl.getReplicaInfo(block);
+      ReplicaInfo newReplicaInfo =
+          createNewReplicaObjWithLink(block, fsDataSetImpl);
+
+      // Link exists
+      assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
+
+      cluster.restartDataNode(0);
+      cluster.waitDatanodeFullyStarted(cluster.getDataNodes().get(0), 60000);
+      cluster.triggerBlockReports();
+
+      // Un-finalized replica data (hard link) is deleted as they were in /tmp
+      assertFalse(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
+
+      // Old block is there.
+      assertTrue(Files.exists(Paths.get(oldReplicaInfo.getBlockURI())));
+
+      validateFileLen(fs, fileLen, filePath);
+
+    } catch (Exception ex) {
+      LOG.info("Exception in testDnRestartWithHardLinkInTmp ", ex);
+      fail("Exception while testing testDnRestartWithHardLinkInTmp ");
+    } finally {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * If new block is finalized and DN restarted,
+   * DiskScanner should clean up the hardlink correctly.
+   */
+  @Test(timeout = 30000)
+  public void testDnRestartWithHardLink() throws Exception {
+    MiniDFSCluster cluster = null;
+    boolean isReplicaDeletionEnabled =
+        conf.getBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
+            DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION_DEFAULT);
+    try {
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      // Since Datanode restart in the middle of block movement may leave
+      // uncleaned hardlink, disabling this config (i.e. deletion of duplicate
+      // replica) will prevent this edge-case from happening.
+      // We also re-enable deletion of duplicate replica just before starting
+      // Dir Scanner using setDeleteDuplicateReplicasForTests (HDFS-16213).
+      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
+          false);
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storagesPerDatanode(2)
+          .build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      Path filePath = new Path(name.getMethodName());
+      long fileLen = 100;
+
+      ExtendedBlock block = createTestFile(fs, fileLen, filePath);
+
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+
+      final ReplicaInfo oldReplicaInfo = fsDataSetImpl.getReplicaInfo(block);
+      StorageType oldStorageType = oldReplicaInfo.getVolume().getStorageType();
+
+      fsDataSetImpl.finalizeNewReplica(
+          createNewReplicaObjWithLink(block, fsDataSetImpl), block);
+
+      ReplicaInfo newReplicaInfo = fsDataSetImpl.getReplicaInfo(block);
+      StorageType newStorageType = newReplicaInfo.getVolume().getStorageType();
+      assertEquals(StorageType.DISK, oldStorageType);
+      assertEquals(StorageType.ARCHIVE, newStorageType);
+
+      cluster.restartDataNode(0);
+      cluster.waitDatanodeFullyStarted(cluster.getDataNodes().get(0), 60000);
+      cluster.triggerBlockReports();
+
+      assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
+      assertTrue(Files.exists(Paths.get(oldReplicaInfo.getBlockURI())));
+
+      // Before starting Dir Scanner, we should enable deleteDuplicateReplicas.
+      FsDatasetSpi<?> fsDataset = cluster.getDataNodes().get(0).getFSDataset();
+      DirectoryScanner scanner = new DirectoryScanner(fsDataset, conf);
+      FsVolumeImpl fsVolume =
+          (FsVolumeImpl) fsDataset.getFsVolumeReferences().get(0);
+      fsVolume.getBlockPoolSlice(fsVolume.getBlockPoolList()[0])
+          .setDeleteDuplicateReplicasForTests(true);
+      scanner.start();
+      scanner.run();
+
+      GenericTestUtils.waitFor(
+          () -> !Files.exists(Paths.get(oldReplicaInfo.getBlockURI())),
+          100, 10000, "Old replica is not deleted by DirScanner even after "
+              + "10s of waiting has elapsed");
+      assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
+
+      validateFileLen(fs, fileLen, filePath);
+
+      // Additional tests to ensure latest replica gets deleted after file
+      // deletion.
+      fs.delete(filePath, false);
+      GenericTestUtils.waitFor(
+          () -> !Files.exists(Paths.get(newReplicaInfo.getBlockURI())),
+          100, 10000);
+    } finally {
+      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
+          isReplicaDeletionEnabled);
+      if (cluster != null && cluster.isClusterUp()) {
+        cluster.shutdown(true, true);
+      }
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testMoveBlockSuccessWithSameMountMove() {
+    MiniDFSCluster cluster = null;
+    try {
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storagesPerDatanode(2)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      Path filePath = new Path(name.getMethodName());
+      long fileLen = 100;
+
+      ExtendedBlock block = createTestFile(fs, fileLen, filePath);
+
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      assertEquals(StorageType.DISK,
+          fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
+
+      FsDatasetImpl fsDataSetImplSpy =
+          spy((FsDatasetImpl) dataNode.getFSDataset());
+      fsDataSetImplSpy.moveBlockAcrossStorage(
+          block, StorageType.ARCHIVE, null);
+
+      // Make sure it is done thru hardlink
+      verify(fsDataSetImplSpy).moveBlock(any(), any(), any(), eq(true));
+
+      assertEquals(StorageType.ARCHIVE,
+          fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
+      validateFileLen(fs, fileLen, filePath);
+
+    } catch (Exception ex) {
+      LOG.info("Exception in testMoveBlockSuccessWithSameMountMove ", ex);
+      fail("testMoveBlockSuccessWithSameMountMove operation should succeed");
+    } finally {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  // Move should fail if the volume on same mount has no space.
+  @Test(timeout = 30000)
+  public void testMoveBlockWithSameMountMoveWithoutSpace() {
+    MiniDFSCluster cluster = null;
+    try {
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.0);
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storagesPerDatanode(2)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      Path filePath = new Path(name.getMethodName());
+      long fileLen = 100;
+
+      ExtendedBlock block = createTestFile(fs, fileLen, filePath);
+
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      assertEquals(StorageType.DISK,
+          fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
+
+      FsDatasetImpl fsDataSetImplSpy =
+          spy((FsDatasetImpl) dataNode.getFSDataset());
+      fsDataSetImplSpy.moveBlockAcrossStorage(
+          block, StorageType.ARCHIVE, null);
+
+      fail("testMoveBlockWithSameMountMoveWithoutSpace operation" +
+          " should failed");
+    } catch (Exception ex) {
+      assertTrue(ex instanceof DiskChecker.DiskOutOfSpaceException);
+    } finally {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  // More tests on shouldConsiderSameMountVolume.
+  @Test(timeout = 10000)
+  public void testShouldConsiderSameMountVolume() throws IOException {
+    FsVolumeImpl volume = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(BASE_DIR)))
+        .build();
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.ARCHIVE, null));
+
+    conf.setBoolean(DFSConfigKeys
+            .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
+        0.5);
+    volume = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(BASE_DIR)))
+        .build();
+    assertTrue(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.ARCHIVE, null));
+    assertTrue(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.ARCHIVE, ""));
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.DISK, null));
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.ARCHIVE, "target"));
+  }
+
+  /**
    * Create a new temporary replica of replicaInfo object in another volume.
    *
    * @param block         - Extended Block
@@ -1156,6 +1424,38 @@ public class TestFsDatasetImpl {
     FsVolumeSpi destVolume = getDestinationVolume(block, fsDataSetImpl);
     return fsDataSetImpl.copyReplicaToVolume(block, replicaInfo,
         destVolume.obtainReference());
+  }
+
+  /**
+   * Create a new temporary replica of replicaInfo object in another volume.
+   *
+   * @param block         - Extended Block
+   * @param fsDataSetImpl - FsDatasetImpl reference
+   * @throws IOException
+   */
+  private ReplicaInfo createNewReplicaObjWithLink(ExtendedBlock block,
+      FsDatasetImpl fsDataSetImpl) throws IOException {
+    ReplicaInfo replicaInfo = fsDataSetImpl.getReplicaInfo(block);
+    FsVolumeSpi destVolume = getDestinationVolume(block, fsDataSetImpl);
+    return fsDataSetImpl.moveReplicaToVolumeOnSameMount(block, replicaInfo,
+        destVolume.obtainReference());
+  }
+
+  private ExtendedBlock createTestFile(FileSystem fs,
+      long fileLen, Path filePath) throws IOException {
+    DFSTestUtil.createFile(fs, filePath, fileLen, (short) 1, 0);
+    return DFSTestUtil.getFirstBlock(fs, filePath);
+  }
+
+  private void validateFileLen(FileSystem fs,
+      long fileLen, Path filePath) throws IOException {
+    // Read data file to make sure it is good.
+    InputStream in = fs.open(filePath);
+    int bytesCount = 0;
+    while (in.read() != -1) {
+      bytesCount++;
+    }
+    assertTrue(fileLen <= bytesCount);
   }
 
   /**
@@ -1225,7 +1525,8 @@ public class TestFsDatasetImpl {
       ReplicaInfo replicaInfo = fsDataSetImpl.getReplicaInfo(block);
       FsVolumeSpi destVolume = getDestinationVolume(block, fsDataSetImpl);
       assertNotNull("Destination volume should not be null.", destVolume);
-      fsDataSetImpl.moveBlock(block, replicaInfo, destVolume.obtainReference());
+      fsDataSetImpl.moveBlock(block, replicaInfo,
+          destVolume.obtainReference(), false);
       // Trigger block report to update block info in NN
       cluster.triggerBlockReports();
       blkReader.read(buf, 512, 512);
@@ -1328,6 +1629,142 @@ public class TestFsDatasetImpl {
     assertEquals(fileLength, metaLength);
     if (!blockDir.exists()) {
       assertTrue(blockDir.delete());
+    }
+  }
+
+  @Test
+  public void testNotifyNamenodeMissingOrNewBlock() throws Exception {
+    long blockSize = 1024;
+    int heatbeatInterval = 1;
+    HdfsConfiguration c = new HdfsConfiguration();
+    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heatbeatInterval);
+    c.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(c).
+        numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/f1"),
+          blockSize, (short)1, 0);
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetSpi fsdataset = dn.getFSDataset();
+      List<ReplicaInfo> replicaInfos =
+          fsdataset.getFinalizedBlocks(bpid);
+      assertEquals(1, replicaInfos.size());
+
+      ReplicaInfo replicaInfo = replicaInfos.get(0);
+      String blockPath = replicaInfo.getBlockURI().getPath();
+      String metaPath = replicaInfo.getMetadataURI().getPath();
+      String blockTempPath = blockPath + ".tmp";
+      String metaTempPath = metaPath + ".tmp";
+      File blockFile = new File(blockPath);
+      File blockTempFile = new File(blockTempPath);
+      File metaFile = new File(metaPath);
+      File metaTempFile = new File(metaTempPath);
+
+      // remove block and meta file of the block
+      blockFile.renameTo(blockTempFile);
+      metaFile.renameTo(metaTempFile);
+      assertFalse(blockFile.exists());
+      assertFalse(metaFile.exists());
+
+      FsVolumeSpi.ScanInfo info = new FsVolumeSpi.ScanInfo(
+          replicaInfo.getBlockId(), blockFile.getParentFile().getAbsoluteFile(),
+          blockFile.getName(), metaFile.getName(), replicaInfo.getVolume());
+      fsdataset.checkAndUpdate(bpid, info);
+
+      BlockManager blockManager = cluster.getNameNode().
+          getNamesystem().getBlockManager();
+      GenericTestUtils.waitFor(() ->
+          blockManager.getLowRedundancyBlocksCount() == 1, 100, 5000);
+
+      // move the block and meta file back
+      blockTempFile.renameTo(blockFile);
+      metaTempFile.renameTo(metaFile);
+
+      fsdataset.checkAndUpdate(bpid, info);
+      GenericTestUtils.waitFor(() ->
+          blockManager.getLowRedundancyBlocksCount() == 0, 100, 5000);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 20000)
+  public void testReleaseVolumeRefIfExceptionThrown() throws IOException {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(
+        new HdfsConfiguration()).build();
+    cluster.waitActive();
+    FsVolumeImpl vol = (FsVolumeImpl) dataset.getFsVolumeReferences().get(0);
+    ExtendedBlock eb;
+    ReplicaInfo info;
+    int beforeCnt = 0;
+    try {
+      List<Block> blockList = new ArrayList<Block>();
+      eb = new ExtendedBlock(BLOCKPOOL, 1, 1, 1001);
+      info = new FinalizedReplica(
+          eb.getLocalBlock(), vol, vol.getCurrentDir().getParentFile());
+      dataset.volumeMap.add(BLOCKPOOL, info);
+      ((LocalReplica) info).getBlockFile().createNewFile();
+      ((LocalReplica) info).getMetaFile().createNewFile();
+      blockList.add(info);
+
+      // Create a runtime exception.
+      dataset.asyncDiskService.shutdown();
+
+      beforeCnt = vol.getReferenceCount();
+      dataset.invalidate(BLOCKPOOL, blockList.toArray(new Block[0]));
+
+    } catch (RuntimeException re) {
+      int afterCnt = vol.getReferenceCount();
+      assertEquals(beforeCnt, afterCnt);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testTransferAndNativeCopyMetrics() throws IOException {
+    Configuration config = new HdfsConfiguration();
+    config.setInt(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
+        100);
+    config.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY,
+        "60,300,1500");
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(1)
+        .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+        .storagesPerDatanode(2)
+        .build()) {
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      // Create file that has one block with one replica.
+      Path filePath = new Path(name.getMethodName());
+      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+
+      // Copy a new replica to other volume.
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
+      fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block);
+
+      // Get the volume where the original replica resides.
+      FsVolumeSpi volume = null;
+      for (FsVolumeSpi fsVolumeReference :
+          fsDataSetImpl.getFsVolumeReferences()) {
+        if (!fsVolumeReference.getStorageID()
+            .equals(newReplicaInfo.getStorageUuid())) {
+          volume = fsVolumeReference;
+        }
+      }
+
+      // Assert metrics.
+      DataNodeVolumeMetrics metrics = volume.getMetrics();
+      assertEquals(2, metrics.getTransferIoSampleCount());
+      assertEquals(3, metrics.getTransferIoQuantiles().length);
+      assertEquals(2, metrics.getNativeCopyIoSampleCount());
+      assertEquals(3, metrics.getNativeCopyIoQuantiles().length);
     }
   }
 }

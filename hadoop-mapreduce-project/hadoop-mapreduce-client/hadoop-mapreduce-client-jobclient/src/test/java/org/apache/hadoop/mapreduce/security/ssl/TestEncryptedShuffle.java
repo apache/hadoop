@@ -19,7 +19,6 @@ package org.apache.hadoop.mapreduce.security.ssl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -31,58 +30,55 @@ import org.apache.hadoop.mapred.RunningJob;
 
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Assert;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.net.URL;
 
 public class TestEncryptedShuffle {
 
-  private static final String BASEDIR =
-    System.getProperty("test.build.dir", "target/test-dir") + "/" +
-    TestEncryptedShuffle.class.getSimpleName();
-  
-  private String classpathDir;
+  private static File testRootDir;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    File base = new File(BASEDIR);
-    FileUtil.fullyDelete(base);
-    base.mkdirs();
+    testRootDir =
+        GenericTestUtils.setupTestRootDir(TestEncryptedShuffle.class);
   }
 
   @Before
   public void createCustomYarnClasspath() throws Exception {
     classpathDir = KeyStoreTestUtil.getClasspathDir(TestEncryptedShuffle.class);
     new File(classpathDir, "core-site.xml").delete();
+    dfsFolder = new File(testRootDir, String.format("dfs-%d",
+        Time.monotonicNow()));
   }
 
   @After
   public void cleanUpMiniClusterSpecialConfig() throws Exception {
     new File(classpathDir, "core-site.xml").delete();
-    String keystoresDir = new File(BASEDIR).getAbsolutePath();
+    String keystoresDir = testRootDir.getAbsolutePath();
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, classpathDir);
   }
 
+  private String classpathDir;
   private MiniDFSCluster dfsCluster = null;
   private MiniMRClientCluster mrCluster = null;
+  private File dfsFolder;
 
   private void startCluster(Configuration  conf) throws Exception {
     if (System.getProperty("hadoop.log.dir") == null) {
-      System.setProperty("hadoop.log.dir", "target/test-dir");
+      System.setProperty("hadoop.log.dir", testRootDir.getAbsolutePath());
     }
     conf.set("dfs.block.access.token.enable", "false");
     conf.set("dfs.permissions", "true");
@@ -92,7 +88,7 @@ public class TestEncryptedShuffle {
             YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH))
         + File.pathSeparator + classpathDir;
     conf.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH, cp);
-    dfsCluster = new MiniDFSCluster.Builder(conf).build();
+    dfsCluster = new MiniDFSCluster.Builder(conf, dfsFolder).build();
     FileSystem fileSystem = dfsCluster.getFileSystem();
     fileSystem.mkdirs(new Path("/tmp"));
     fileSystem.mkdirs(new Path("/user"));
@@ -129,7 +125,7 @@ public class TestEncryptedShuffle {
     throws Exception {
     try {
       Configuration conf = new Configuration();
-      String keystoresDir = new File(BASEDIR).getAbsolutePath();
+      String keystoresDir = testRootDir.getAbsolutePath();
       String sslConfsDir =
         KeyStoreTestUtil.getClasspathDir(TestEncryptedShuffle.class);
       KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfsDir, conf,

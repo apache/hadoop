@@ -73,11 +73,11 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -172,6 +172,7 @@ public class FSImage implements Closeable {
 
     this.editLog = FSEditLog.newInstance(conf, storage, editsDirs);
     archivalManager = new NNStorageRetentionManager(conf, storage, editLog);
+    FSImageFormatProtobuf.initParallelLoad(conf);
   }
  
   void format(FSNamesystem fsn, String clusterId, boolean force)
@@ -581,12 +582,12 @@ public class FSImage implements Closeable {
 
     if (checkpointDirs == null || checkpointDirs.isEmpty()) {
       throw new IOException("Cannot import image from a checkpoint. "
-                            + "\"dfs.namenode.checkpoint.dir\" is not set." );
+                            + "\"dfs.namenode.checkpoint.dir\" is not set.");
     }
     
     if (checkpointEditsDirs == null || checkpointEditsDirs.isEmpty()) {
       throw new IOException("Cannot import image from a checkpoint. "
-                            + "\"dfs.namenode.checkpoint.dir\" is not set." );
+                            + "\"dfs.namenode.checkpoint.edits.dir\" is not set.");
     }
 
     FSImage realImage = target.getFSImage();

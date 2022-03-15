@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.util.Progressable;
 
 import static org.junit.Assert.assertEquals;
@@ -27,14 +29,14 @@ import static org.junit.Assert.assertEquals;
  */
 public class ProgressCounter implements Progressable {
 
-  private long count;
+  private final AtomicLong count = new AtomicLong();
 
   public void progress() {
-    count++;
+    count.incrementAndGet();
   }
 
   public long getCount() {
-    return count;
+    return count.get();
   }
 
   public void assertCount(String message, int expected) {

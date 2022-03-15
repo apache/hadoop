@@ -143,7 +143,7 @@ public class SerialJobFactory extends JobFactory<JobStats> {
       } catch (InterruptedException e) {
         return;
       } finally {
-        IOUtils.cleanup(null, jobProducer);
+        IOUtils.cleanupWithLogger(null, jobProducer);
       }
     }
 

@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -228,6 +229,32 @@ public class TestBlockManagerSafeMode {
     setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
     bmSafeMode.checkSafeMode();
     assertEquals(BMSafeModeStatus.OFF, getSafeModeStatus());
+  }
+
+  @Test(timeout = 20000)
+  public void testCheckSafeMode9() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY, 3000);
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(BlockManagerSafeMode.LOG);
+    BlockManagerSafeMode blockManagerSafeMode = new BlockManagerSafeMode(bm,
+        fsn, true, conf);
+    String content = logs.getOutput();
+    assertTrue(content.contains("Using 3000 as SafeModeMonitor Interval"));
+  }
+
+  @Test(timeout = 20000)
+  public void testCheckSafeMode10(){
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY, -1);
+    GenericTestUtils.LogCapturer logs =
+            GenericTestUtils.LogCapturer.captureLogs(BlockManagerSafeMode.LOG);
+    BlockManagerSafeMode blockManagerSafeMode = new BlockManagerSafeMode(bm,
+            fsn, true, conf);
+    String content = logs.getOutput();
+    Assertions.assertThat(content).contains("Invalid value for " +
+            DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY +
+            ". Should be greater than 0, but is -1");
   }
 
   /**

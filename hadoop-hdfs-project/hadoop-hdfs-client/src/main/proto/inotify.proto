@@ -32,7 +32,6 @@ package hadoop.hdfs;
 
 import "acl.proto";
 import "xattr.proto";
-import "hdfs.proto";
 
 enum EventType {
   EVENT_CREATE = 0x0;

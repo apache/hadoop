@@ -27,8 +27,6 @@ import org.apache.hadoop.oncrpc.XDR;
  */
 public abstract class Verifier extends RpcAuthInfo {
 
-  public static final Verifier VERIFIER_NONE = new VerifierNone();
-
   protected Verifier(AuthFlavor flavor) {
     super(flavor);
   }

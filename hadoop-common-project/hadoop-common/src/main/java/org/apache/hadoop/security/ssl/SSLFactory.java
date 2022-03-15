@@ -25,14 +25,16 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+import static org.apache.hadoop.util.PlatformName.JAVA_VENDOR_NAME;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.security.GeneralSecurityException;
@@ -99,7 +101,13 @@ public class SSLFactory implements ConnectionConfigurator {
   public static final String SSL_SERVER_EXCLUDE_CIPHER_LIST =
       "ssl.server.exclude.cipher.list";
 
-  public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509";
+  public static final String KEY_MANAGER_SSLCERTIFICATE =
+      JAVA_VENDOR_NAME.contains("IBM") ? "ibmX509" :
+          KeyManagerFactory.getDefaultAlgorithm();
+
+  public static final String TRUST_MANAGER_SSLCERTIFICATE =
+      JAVA_VENDOR_NAME.contains("IBM") ? "ibmX509" :
+          TrustManagerFactory.getDefaultAlgorithm();
 
   public static final String KEYSTORES_FACTORY_CLASS_KEY =
       "hadoop.ssl.keystores.factory.class";

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +37,6 @@ import static org.junit.Assume.assumeTrue;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 /**
@@ -61,7 +61,8 @@ public abstract class FileSystemContractBaseTest {
   protected byte[] data = dataset(getBlockSize() * 2, 0, 255);
 
   @Rule
-  public Timeout globalTimeout = new Timeout(getGlobalTimeout());
+  public Timeout globalTimeout =
+      new Timeout(getGlobalTimeout(), TimeUnit.MILLISECONDS);
 
   /**
    * Get the timeout in milliseconds for each test case.
@@ -70,9 +71,6 @@ public abstract class FileSystemContractBaseTest {
   protected int getGlobalTimeout() {
     return 30 * 1000;
   }
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @After
   public void tearDown() throws Exception {

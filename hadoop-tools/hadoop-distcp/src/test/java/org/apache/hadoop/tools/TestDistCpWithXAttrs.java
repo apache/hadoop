@@ -114,7 +114,7 @@ public class TestDistCpWithXAttrs {
 
   @AfterClass
   public static void shutdown() {
-    IOUtils.cleanup(null, fs);
+    IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
       cluster.shutdown();
     }

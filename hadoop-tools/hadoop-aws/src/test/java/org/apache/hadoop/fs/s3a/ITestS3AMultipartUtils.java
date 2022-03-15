@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.services.s3.model.MultipartUpload;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+
 import org.junit.Test;
 
 import java.io.IOException;
@@ -57,7 +59,7 @@ public class ITestS3AMultipartUtils extends AbstractS3ATestBase {
   public void testListMultipartUploads() throws Exception {
     S3AFileSystem fs = getFileSystem();
     Set<MultipartTestUtils.IdKey> keySet = new HashSet<>();
-    try {
+    try (AuditSpan span = span()) {
       // 1. Create NUM_KEYS pending upload parts
       for (int i = 0; i < NUM_KEYS; i++) {
         Path filePath = getPartFilename(i);

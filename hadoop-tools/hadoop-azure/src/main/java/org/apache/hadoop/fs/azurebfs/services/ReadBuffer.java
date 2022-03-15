@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus.READ_FAILED;
 
@@ -36,6 +37,7 @@ class ReadBuffer {
   private ReadBufferStatus status;             // status of the buffer
   private CountDownLatch latch = null;   // signaled when the buffer is done reading, so any client
   // waiting on this buffer gets unblocked
+  private TracingContext tracingContext;
 
   // fields to help with eviction logic
   private long timeStamp = 0;  // tick at which buffer became available to read
@@ -51,6 +53,14 @@ class ReadBuffer {
 
   public void setStream(AbfsInputStream stream) {
     this.stream = stream;
+  }
+
+  public void setTracingContext(TracingContext tracingContext) {
+    this.tracingContext = tracingContext;
+  }
+
+  public TracingContext getTracingContext() {
+    return tracingContext;
   }
 
   public long getOffset() {

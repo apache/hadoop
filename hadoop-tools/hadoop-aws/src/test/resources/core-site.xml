@@ -43,30 +43,18 @@
     it will only create log noise.</description>
   </property>
 
-  <!-- Make sure S3Guard is disabled for read-only bucket tests. -->
-  <property>
-    <name>fs.s3a.bucket.landsat-pds.metadatastore.impl</name>
-    <value>${s3guard.null}</value>
-    <description>The read-only landsat-pds repository isn't
-        managed by s3guard</description>
-  </property>
-
   <property>
     <name>fs.s3a.bucket.landsat-pds.probe</name>
     <value>0</value>
     <description>Let's postpone existence checks to the first IO operation </description>
   </property>
 
-  <!-- Convenience definitions. -->
   <property>
-    <name>s3guard.null</name>
-    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+    <name>fs.s3a.bucket.landsat-pds.audit.add.referrer.header</name>
+    <value>false</value>
+    <description>Do not add the referrer header to landsat operations</description>
   </property>
 
-  <property>
-    <name>s3guard.dynamo</name>
-    <value>org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore</value>
-  </property>
 
   <!--
    This is the default endpoint, which can be used to interact
@@ -156,14 +144,11 @@
     <value>simple</value>
   </property>
 
-  <!-- Reduce DDB capacity on auto-created tables, to keep bills down. -->
+  <!-- auditing rejects out of span operations; this ensures that
+        no regressions take place. -->
   <property>
-    <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-    <value>0</value>
-  </property>
-  <property>
-    <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-    <value>0</value>
+    <name>fs.s3a.audit.reject.out.of.span.operations</name>
+    <value>true</value>
   </property>
 
   <!--

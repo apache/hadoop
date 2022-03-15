@@ -395,7 +395,7 @@ public abstract class GetApplicationsRequest {
   public abstract void setScope(ApplicationsRequestScope scope);
 
   /**
-   * Set the name to filter applications.
+   * Get the name to filter applications.
    *
    * @return the name
    */
@@ -404,7 +404,7 @@ public abstract class GetApplicationsRequest {
   public abstract String getName();
 
   /**
-   * Get the name to filter applications.
+   * Set the name to filter applications.
    *
    * @param name of the application
    */

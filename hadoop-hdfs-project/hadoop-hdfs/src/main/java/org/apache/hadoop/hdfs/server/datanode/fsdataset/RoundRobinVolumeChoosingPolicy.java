@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_KEY;
+
 import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
@@ -30,7 +35,7 @@ import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
  * Use fine-grained locks to synchronize volume choosing.
  */
 public class RoundRobinVolumeChoosingPolicy<V extends FsVolumeSpi>
-    implements VolumeChoosingPolicy<V> {
+    implements VolumeChoosingPolicy<V>, Configurable {
   public static final Logger LOG =
       LoggerFactory.getLogger(RoundRobinVolumeChoosingPolicy.class);
 
@@ -41,6 +46,9 @@ public class RoundRobinVolumeChoosingPolicy<V extends FsVolumeSpi>
   // syncLocks stores the locks for each storage type.
   private Object[] syncLocks;
 
+  // The required additional available space when choosing a volume.
+  private long additionalAvailableSpace;
+
   public RoundRobinVolumeChoosingPolicy() {
     int numStorageTypes = StorageType.values().length;
     curVolumes = new int[numStorageTypes];
@@ -48,6 +56,23 @@ public class RoundRobinVolumeChoosingPolicy<V extends FsVolumeSpi>
     for (int i = 0; i < numStorageTypes; i++) {
       syncLocks[i] = new Object();
     }
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    additionalAvailableSpace = conf.getLong(
+        DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_KEY,
+        DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_DEFAULT);
+
+    LOG.info("Round robin volume choosing policy initialized: " +
+        DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_KEY +
+        " = " + additionalAvailableSpace);
+  }
+
+  @Override
+  public Configuration getConf() {
+    // Nothing to do. Only added to fulfill the Configurable contract.
+    return null;
   }
 
   @Override
@@ -83,7 +108,7 @@ public class RoundRobinVolumeChoosingPolicy<V extends FsVolumeSpi>
       final V volume = volumes.get(curVolume);
       curVolume = (curVolume + 1) % volumes.size();
       long availableVolumeSize = volume.getAvailable();
-      if (availableVolumeSize > blockSize) {
+      if (availableVolumeSize > blockSize + additionalAvailableSpace) {
         curVolumes[curVolumeIndex] = curVolume;
         return volume;
       }

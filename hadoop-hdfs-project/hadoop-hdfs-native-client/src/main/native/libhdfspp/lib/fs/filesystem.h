@@ -23,6 +23,7 @@
 #include "hdfspp/hdfspp.h"
 #include "reader/fileinfo.h"
 
+#include <memory>
 #include <thread>
 
 namespace hdfs {
@@ -217,7 +218,7 @@ private:
    **/
   std::shared_ptr<IoService> io_service_;
   const Options options_;
-  const std::string client_name_;
+  const std::shared_ptr<std::string> client_name_;
   std::string cluster_name_;
   NameNodeOperations nn_;
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;

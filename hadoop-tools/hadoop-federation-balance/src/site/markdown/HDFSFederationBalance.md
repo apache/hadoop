@@ -45,10 +45,9 @@ Usage
 
   The command below runs an hdfs federation balance job. The first parameter is
   the mount entry. The second one is the target path which must include the
-  target cluster. The option `-router` indicates this is in router-based
-  federation mode.
+  target cluster.
 
-    bash$ /bin/hadoop fedbalance -router submit /foo/src hdfs://namespace-1/foo/dst
+    bash$ /bin/hadoop rbfbalance -router submit /foo/src hdfs://namespace-1/foo/dst
 
   It copies data from hdfs://namespace-0/foo/src to hdfs://namespace-1/foo/dst
   incrementally and finally updates the mount entry to:
@@ -59,7 +58,7 @@ Usage
   If the hadoop shell process exits unexpectedly, we can use the command below
   to continue the unfinished job:
 
-    bash$ /bin/hadoop fedbalance continue
+    bash$ /bin/hadoop rbfbalance continue
 
   This will scan the journal to find all the unfinished jobs, recover and
   continue to execute them.
@@ -77,8 +76,8 @@ Usage
   * the router-based federation mode (RBF mode).
   * the normal federation mode.
 
-  By default the command runs in the normal federation mode. You can specify the
-  rbf mode by using the option `-router`.
+  The command `rbfbalance` runs in router-based federation mode. The command
+  `fedbalance` runs in normal federation mode.
 
   In the rbf mode the first parameter is taken as the mount point. It disables
   write by setting the mount point readonly.
@@ -91,11 +90,10 @@ Usage
 
 ### Command Options
 
-Command `submit` has 5 options:
+Command `submit` has 4 options:
 
 | Option key                     | Description                          | Default |
 | ------------------------------ | ------------------------------------ | ------- |
-| -router | Run in router-based federation mode. | Normal federation mode. |
 | -forceCloseOpen | Force close all open files when there is no diff in the DIFF_DISTCP stage. | Wait until there is no open files. |
 | -map | Max number of concurrent maps to use for copy. | 10 |
 | -bandwidth | Specify bandwidth per map in MB. | 10 |
@@ -106,7 +104,7 @@ Command `submit` has 5 options:
 ### Configuration Options
 --------------------
 
-Set configuration options at fedbalance-site.xml.
+Set configuration options at hdfs-fedbalance-site.xml.
 
 | Configuration key              | Description                          | Default |
 | ------------------------------ | ------------------------------------ | ------- |
@@ -165,7 +163,7 @@ Architecture of HDFS Federation Balance
 
   * MountTableProcedure: This procedure updates the mount entry in Router. The
     readonly is unset and the destination is updated of the mount point. This
-    procedure is activated only when option `-router`.
+    procedure is activated only in router based federation mode.
 
   * TrashProcedure: This procedure moves the source path to trash.
 

@@ -18,15 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import com.google.inject.Guice;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.junit.Before;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -83,6 +88,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfNodes;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyQueueOrder;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createMockRM;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createWebAppDescriptor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -91,11 +98,23 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests for scheduler/app activities.
  */
-public class TestRMWebServicesSchedulerActivities
-    extends TestRMWebServicesCapacitySched {
+public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      TestRMWebServicesSchedulerActivities.class);
+  private MockRM rm;
+
+  public TestRMWebServicesSchedulerActivities() {
+    super(createWebAppDescriptor());
+  }
+
+  @Before
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+    rm = createMockRM(new CapacitySchedulerConfiguration(
+        new Configuration(false)));
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new TestRMWebServicesCapacitySched.WebServletModule(rm)));
+  }
 
   @Test
   public void testAssignMultipleContainersPerNodeHeartbeat()
@@ -156,7 +175,7 @@ public class TestRMWebServicesSchedulerActivities
       verifyStateOfAllocations(allocation,
           FN_ACT_FINAL_ALLOCATION_STATE, "ALLOCATED");
       verifyQueueOrder(allocation,
-          "root-root.a-root.b-root.b.b2-root.b.b3-root.b.b1");
+          "root-root.a-root.c-root.b-root.b.b2-root.b.b3-root.b.b1");
     } finally {
       rm.stop();
     }
@@ -380,7 +399,7 @@ public class TestRMWebServicesSchedulerActivities
       JSONObject allocations = getFirstSubNodeFromJson(json,
           FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS);
       verifyQueueOrder(allocations,
-          "root-root.a-root.b-root.b.b3-root.b.b1");
+          "root-root.c-root.a-root.b-root.b.b3-root.b.b1");
       verifyStateOfAllocations(allocations, FN_ACT_FINAL_ALLOCATION_STATE,
           "RESERVED");
 

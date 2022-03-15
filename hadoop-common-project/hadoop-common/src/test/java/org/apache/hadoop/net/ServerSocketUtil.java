@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.Random;
 
@@ -49,7 +50,8 @@ public class ServerSocketUtil {
       if (tryPort == 0) {
         continue;
       }
-      try (ServerSocket s = new ServerSocket(tryPort)) {
+      try (ServerSocket s = new ServerSocket(tryPort, 50,
+          InetAddress.getLoopbackAddress())) {
         LOG.info("Using port " + tryPort);
         return tryPort;
       } catch (IOException e) {

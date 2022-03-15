@@ -166,8 +166,8 @@ public class Count extends FsCommand {
           headString.append(ContentSummary.getHeader(showQuotas));
         }
       }
-      if(displayECPolicy){
-        headString.append("ERASURECODING_POLICY ");
+      if (displayECPolicy) {
+        headString.append(ContentSummary.getErasureCodingPolicyHeader());
       }
       if (showSnapshot) {
         headString.append(ContentSummary.getSnapshotHeader());
@@ -204,13 +204,9 @@ public class Count extends FsCommand {
       outputString.append(summary.toString(
           showQuotas, isHumanReadable(), excludeSnapshots));
     }
-    if(displayECPolicy){
+    if (displayECPolicy) {
       ContentSummary summary = src.fs.getContentSummary(src.path);
-      if(!summary.getErasureCodingPolicy().equals("Replicated")){
-        outputString.append("EC:");
-      }
-      outputString.append(summary.getErasureCodingPolicy())
-          .append(" ");
+      outputString.append(summary.toErasureCodingPolicy());
     }
     if (showSnapshot) {
       ContentSummary summary = src.fs.getContentSummary(src.path);

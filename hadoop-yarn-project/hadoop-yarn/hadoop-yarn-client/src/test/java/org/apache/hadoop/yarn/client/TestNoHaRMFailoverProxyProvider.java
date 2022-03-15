@@ -140,9 +140,9 @@ public class TestNoHaRMFailoverProxyProvider {
     // Create a proxy and mock a RMProxy
     Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
-    RMProxy mockRMProxy = mock(RMProxy.class);
-    DefaultNoHARMFailoverProxyProvider <RMProxy> fpp =
-        new DefaultNoHARMFailoverProxyProvider<RMProxy>();
+    RMProxy<Proxy> mockRMProxy = mock(RMProxy.class);
+    DefaultNoHARMFailoverProxyProvider<Proxy> fpp =
+        new DefaultNoHARMFailoverProxyProvider<>();
 
     InetSocketAddress mockAdd1 = new InetSocketAddress(RM1_PORT);
 
@@ -154,7 +154,7 @@ public class TestNoHaRMFailoverProxyProvider {
 
     // Initialize failover proxy provider and get proxy from it.
     fpp.init(conf, mockRMProxy, protocol);
-    FailoverProxyProvider.ProxyInfo<RMProxy> actualProxy1 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy1 = fpp.getProxy();
     assertEquals(
         "AutoRefreshRMFailoverProxyProvider doesn't generate " +
         "expected proxy",
@@ -180,7 +180,7 @@ public class TestNoHaRMFailoverProxyProvider {
 
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy1.proxy);
-    FailoverProxyProvider.ProxyInfo<RMProxy> actualProxy2 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy2 = fpp.getProxy();
     assertEquals("AutoRefreshRMFailoverProxyProvider " +
         "doesn't generate expected proxy after failover",
         mockProxy1, actualProxy2.proxy);
@@ -208,9 +208,9 @@ public class TestNoHaRMFailoverProxyProvider {
     Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
     Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
-    RMProxy mockRMProxy = mock(RMProxy.class);
-    AutoRefreshNoHARMFailoverProxyProvider<RMProxy> fpp =
-        new AutoRefreshNoHARMFailoverProxyProvider<RMProxy>();
+    RMProxy<Proxy> mockRMProxy = mock(RMProxy.class);
+    AutoRefreshNoHARMFailoverProxyProvider<Proxy> fpp =
+        new AutoRefreshNoHARMFailoverProxyProvider<>();
 
     // generate two address with different ports.
     InetSocketAddress mockAdd1 = new InetSocketAddress(RM1_PORT);
@@ -224,7 +224,7 @@ public class TestNoHaRMFailoverProxyProvider {
 
     // Initialize proxy provider and get proxy from it.
     fpp.init(conf, mockRMProxy, protocol);
-    FailoverProxyProvider.ProxyInfo <RMProxy> actualProxy1 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy1 = fpp.getProxy();
     assertEquals(
         "AutoRefreshRMFailoverProxyProvider doesn't generate " +
         "expected proxy",
@@ -259,7 +259,7 @@ public class TestNoHaRMFailoverProxyProvider {
 
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy1.proxy);
-    FailoverProxyProvider.ProxyInfo <RMProxy> actualProxy2 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy2 = fpp.getProxy();
     assertEquals("AutoRefreshNoHARMFailoverProxyProvider " +
         "doesn't generate expected proxy after failover",
         mockProxy2, actualProxy2.proxy);

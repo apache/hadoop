@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.shell.PathData;
 
 import java.io.PrintStream;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.Before;
@@ -36,7 +37,7 @@ public class TestPrint {
   private FileSystem mockFs;
 
   @Rule
-  public Timeout globalTimeout = new Timeout(10000);
+  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
   @Before
   public void resetMock() throws IOException {

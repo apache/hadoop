@@ -27,7 +27,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.internal.AssumptionViolatedException;
+import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.cleanup;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
@@ -164,7 +165,8 @@ public abstract class AbstractFSContractTestBase extends Assert
    * Set the timeout for every test.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(getTestTimeoutMillis());
+  public Timeout testTimeout =
+      new Timeout(getTestTimeoutMillis(), TimeUnit.MILLISECONDS);
 
   /**
    * Option for tests to override the default timeout value.

@@ -49,7 +49,11 @@ public final class DomainNameResolverFactory {
    */
   public static DomainNameResolver newInstance(
       Configuration conf, URI uri, String configKey) {
-    String host = uri.getHost();
+    return newInstance(conf, uri.getHost(), configKey);
+  }
+
+  public static DomainNameResolver newInstance(
+      Configuration conf, String host, String configKey) {
     String confKeyWithHost = configKey + "." + host;
     return newInstance(conf, confKeyWithHost);
   }

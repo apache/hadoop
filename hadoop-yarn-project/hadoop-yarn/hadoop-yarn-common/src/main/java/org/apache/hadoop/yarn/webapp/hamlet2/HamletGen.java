@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.webapp.hamlet2;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
@@ -34,6 +32,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 

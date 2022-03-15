@@ -40,7 +40,7 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, "");
+    conf.set(Constants.S3_ENCRYPTION_KEY, "");
     return conf;
   }
 

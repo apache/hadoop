@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import org.junit.Test;
 
@@ -79,8 +80,10 @@ public class ITestS3AEmptyDirectory extends AbstractS3ATestBase {
 
   private S3AFileStatus getS3AFileStatus(S3AFileSystem fs, Path p) throws
       IOException {
-    return fs.innerGetFileStatus(p, true,
-        StatusProbeEnum.ALL);
+    try (AuditSpan span = span()) {
+      return fs.innerGetFileStatus(p, true,
+          StatusProbeEnum.ALL);
+    }
   }
 
 }

@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.fs.contract.localfs;
 
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
@@ -29,4 +32,17 @@ public class TestLocalFSContractCreate extends AbstractContractCreateTest {
     return new LocalFSContract(conf);
   }
 
+  @Test
+  public void testSyncablePassthroughIfChecksumDisabled() throws Throwable {
+    describe("Create an instance of the local fs, disable the checksum"
+        + " and verify that Syncable now works");
+    LocalFileSystem fs = (LocalFileSystem) getFileSystem();
+    try (LocalFileSystem lfs = new LocalFileSystem(
+        fs.getRawFileSystem())) {
+      // disable checksumming output
+      lfs.setWriteChecksum(false);
+      // now the filesystem supports Sync with immediate update of file status
+      validateSyncableSemantics(lfs, true, true, true);
+    }
+  }
 }

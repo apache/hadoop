@@ -42,14 +42,12 @@ also be followed as well as portability requirements.
 Automated Formatting
 --------------------
 
-Prior to submitting a patch for code review use llvm's formatting tool, clang-format, on the .h, .c, and .cc files included in the patch.  Use the -style=google switch when doing so.
+Prior to submitting a patch for code review use LLVM's formatting tool, clang-format, on the .h, .c, and .cc files included in the patch.  Use the -style=google switch when doing so.
 
-Example presubmission usage:
+Example pre-submission usage:
 
 ``` shell
-cat my_source_file.cc | clang-format -style=goole > temp_file.cc
-#optionally diff the source and temp file to get an idea what changed
-mv temp_file.cc my_source_file.cc
+$ clang-format -i -style=google temp_file.cc
 ```
 
 * note: On some linux distributions clang-format already exists in repositories but don't show up without an appended version number.  On Ubuntu you'll find it with:

@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.io.erasurecode.rawcoder.InvalidDecodingException;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -52,6 +53,8 @@ class StripedBlockReconstructor extends StripedReconstructor
   public void run() {
     try {
       initDecoderIfNecessary();
+
+      initDecodingValidatorIfNecessary();
 
       getStripedReader().init();
 
@@ -126,12 +129,38 @@ class StripedBlockReconstructor extends StripedReconstructor
     int[] erasedIndices = stripedWriter.getRealTargetIndices();
     ByteBuffer[] outputs = stripedWriter.getRealTargetBuffers(toReconstructLen);
 
+    if (isValidationEnabled()) {
+      markBuffers(inputs);
+      decode(inputs, erasedIndices, outputs);
+      resetBuffers(inputs);
+
+      DataNodeFaultInjector.get().badDecoding(outputs);
+      long start = Time.monotonicNow();
+      try {
+        getValidator().validate(inputs, erasedIndices, outputs);
+        long validateEnd = Time.monotonicNow();
+        getDatanode().getMetrics().incrECReconstructionValidateTime(
+            validateEnd - start);
+      } catch (InvalidDecodingException e) {
+        long validateFailedEnd = Time.monotonicNow();
+        getDatanode().getMetrics().incrECReconstructionValidateTime(
+            validateFailedEnd - start);
+        getDatanode().getMetrics().incrECInvalidReconstructionTasks();
+        throw e;
+      }
+    } else {
+      decode(inputs, erasedIndices, outputs);
+    }
+
+    stripedWriter.updateRealTargetBuffers(toReconstructLen);
+  }
+
+  private void decode(ByteBuffer[] inputs, int[] erasedIndices,
+      ByteBuffer[] outputs) throws IOException {
     long start = System.nanoTime();
     getDecoder().decode(inputs, erasedIndices, outputs);
     long end = System.nanoTime();
     this.getDatanode().getMetrics().incrECDecodingTime(end - start);
-
-    stripedWriter.updateRealTargetBuffers(toReconstructLen);
   }
 
   /**

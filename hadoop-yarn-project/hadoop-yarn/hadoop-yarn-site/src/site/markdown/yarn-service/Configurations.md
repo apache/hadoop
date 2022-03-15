@@ -132,6 +132,7 @@ The above config allows the service AM to be retried a maximum of 10 times.
 |yarn.service.rolling-log.include-pattern | Regex expression for including log files by name when aggregating the logs while app is running.|
 |yarn.service.rolling-log.exclude-pattern | Regex expression for excluding log files by name when aggregating the logs while app is running. If the log file name matches both include and exclude pattern, this file will be excluded.|
 |yarn.service.classpath | Comma separated extra class path parameters for yarn services AM. These path elements will be appended to the end of the YARN service AM classpath. |
+|yarn.service.am.client.port-range | Range of ports that the Yarn Service AM can use when binding. Leave blank if you want all possible ports. For example 50000-50050,50100-50200. |
 
 ### Component-level configuration properties
 Component-level service AM configuration properties can be specified either in the cluster `yarn-site.xml` at the global level (effectively overriding the default values system-wide), specified per service in the `properties` field of the `Configuration` object, or specified per component in the `properties` field of the component's `Configuration` object.

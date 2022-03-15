@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,11 +27,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRuleAction;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRuleActions;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRuleMatcher;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRuleMatchers;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleAction;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleActions;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleMatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleMatchers;
 
 // These are generated classes - use GeneratePojos class to create them
 // if they are missing
@@ -44,7 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 public class MappingRuleCreator {
   private static final String ALL_USER = "*";

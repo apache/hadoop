@@ -41,13 +41,13 @@ import org.apache.hadoop.fs.viewfs.ViewFsTestSetup;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests DFSAdmin with ViewFileSystemOverloadScheme with configured mount links.
@@ -198,13 +198,15 @@ public class TestViewFileSystemOverloadSchemeWithDFSAdmin {
    */
   @Test
   public void testSafeModeWithWrongFS() throws Exception {
+    String wrongFsUri = "hdfs://nonExistent";
     final Path hdfsTargetPath =
-        new Path("hdfs://nonExistent" + HDFS_USER_FOLDER);
+        new Path(wrongFsUri + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getHost(), new String[] {HDFS_USER_FOLDER},
         new String[] {hdfsTargetPath.toUri().toString()}, conf);
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
     redirectStream();
-    int ret = ToolRunner.run(dfsAdmin, new String[] {"-safemode", "enter" });
+    int ret = ToolRunner.run(dfsAdmin,
+        new String[] {"-fs", wrongFsUri, "-safemode", "enter" });
     assertEquals(-1, ret);
     assertErrMsg("safemode: java.net.UnknownHostException: nonExistent", 0);
   }

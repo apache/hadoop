@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
@@ -36,8 +37,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdToLabelsProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNodesToLabelsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNodesToLabelsResponseProtoOrBuilder;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class GetNodesToLabelsResponsePBImpl extends
     GetNodesToLabelsResponse {

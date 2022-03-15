@@ -36,7 +36,7 @@ Secure Containers work only in the context of secured YARN clusters.
 
   The configured directories for `yarn.nodemanager.local-dirs` and `yarn.nodemanager.log-dirs` must be owned by the configured NodeManager user (`yarn`) and group (`hadoop`). The permission set on these directories must be `drwxr-xr-x`.
 
-  The `container-executor` program must be owned by `root` and have the permission set `---sr-s---`.
+  The `container-executor` program must be owned by `root` and have the permission set `---Sr-s---`.
 
   To configure the `NodeManager` to use the `LinuxContainerExecutor` set the following in the **conf/yarn-site.xml**:
 

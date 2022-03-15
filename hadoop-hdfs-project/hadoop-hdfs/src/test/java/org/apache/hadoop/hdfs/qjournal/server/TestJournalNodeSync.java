@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.qjournal.server;
 
 import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -36,6 +35,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FileJournalManager
     .getLogFile;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

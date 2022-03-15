@@ -97,14 +97,13 @@ public class TestBlockReportLease {
       DelayAnswer delayer = new DelayAnswer(BlockManager.LOG);
       doAnswer(delayer).when(spyBlockManager).processReport(
           any(DatanodeStorageInfo.class),
-          any(BlockListAsLongs.class),
-          any(BlockReportContext.class));
+          any(BlockListAsLongs.class));
 
       ExecutorService pool = Executors.newFixedThreadPool(1);
 
       // Trigger sendBlockReport
       BlockReportContext brContext = new BlockReportContext(1, 0,
-          rand.nextLong(), hbResponse.getFullBlockReportLeaseId(), true);
+          rand.nextLong(), hbResponse.getFullBlockReportLeaseId());
       Future<DatanodeCommand> sendBRfuturea = pool.submit(() -> {
         // Build every storage with 100 blocks for sending report
         DatanodeStorage[] datanodeStorages

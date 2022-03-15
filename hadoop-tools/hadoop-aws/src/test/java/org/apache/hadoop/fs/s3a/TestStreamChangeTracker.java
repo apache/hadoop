@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.Headers;
@@ -36,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
@@ -359,7 +358,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
       final ChangeTracker tracker,
       final int expectedCount) {
     assertEquals("counter in tracker " + tracker,
-        expectedCount, tracker.getVersionMismatches().get());
+        expectedCount, tracker.getVersionMismatches());
   }
 
   /**
@@ -386,7 +385,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         source,
         requireVersion);
     ChangeTracker tracker = new ChangeTracker(URI, policy,
-        new AtomicLong(0), objectAttributes);
+        new CountingChangeTracker(), objectAttributes);
     if (objectAttributes.getVersionId() == null
         && objectAttributes.getETag() == null) {
       assertFalse("Tracker should not have applied constraints " + tracker,

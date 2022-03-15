@@ -24,6 +24,7 @@ import java.util.List;
 import com.amazonaws.services.s3.model.PartETag;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
  * Multipart put tracker.
@@ -68,6 +69,7 @@ public class PutTracker {
    * @param uploadId Upload ID
    * @param parts list of parts
    * @param bytesWritten bytes written
+   * @param iostatistics nullable IO statistics
    * @return true if the commit is to be initiated immediately.
    * False implies the output stream does not need to worry about
    * what happens.
@@ -75,7 +77,8 @@ public class PutTracker {
    */
   public boolean aboutToComplete(String uploadId,
       List<PartETag> parts,
-      long bytesWritten)
+      long bytesWritten,
+      final IOStatistics iostatistics)
       throws IOException {
     return true;
   }

@@ -38,6 +38,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -58,6 +60,7 @@ import java.util.zip.ZipInputStream;
 import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -182,7 +185,7 @@ public class FileUtil {
       return true;
     }
     // handle nonempty directory deletion
-    if (!fullyDeleteContents(dir, tryGrantPermissions)) {
+    if (!FileUtils.isSymlink(dir) && !fullyDeleteContents(dir, tryGrantPermissions)) {
       return false;
     }
     return deleteImpl(dir, true);
@@ -398,12 +401,6 @@ public class FileUtil {
                              Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
-
-    if (srcFS.makeQualified(src).equals(dstFS.makeQualified(dst))) {
-      throw new PathOperationException("Source (" + src + ") and destination " +
-          "(" + dst + ") are equal in the copy command.");
-    }
-
     if (srcStatus.isDirectory()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
@@ -524,6 +521,9 @@ public class FileUtil {
     if (null != sdst) {
       if (sdst.isDirectory()) {
         if (null == srcName) {
+          if (overwrite) {
+            return dst;
+          }
           throw new PathIsDirectoryException(dst.toString());
         }
         return checkDest(null, dstFS, new Path(dst, srcName), overwrite);
@@ -533,6 +533,26 @@ public class FileUtil {
       }
     }
     return dst;
+  }
+
+  public static boolean isRegularFile(File file) {
+    return isRegularFile(file, true);
+  }
+
+  /**
+   * Check if the file is regular.
+   * @param file The file being checked.
+   * @param allowLinks Whether to allow matching links.
+   * @return Returns the result of checking whether the file is a regular file.
+   */
+  public static boolean isRegularFile(File file, boolean allowLinks) {
+    if (file != null) {
+      if (allowLinks) {
+        return Files.isRegularFile(file.toPath());
+      }
+      return Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS);
+    }
+    return true;
   }
 
   /**
@@ -604,18 +624,12 @@ public class FileUtil {
       return dir.length();
     } else {
       File[] allFiles = dir.listFiles();
-      if(allFiles != null) {
-         for (int i = 0; i < allFiles.length; i++) {
-           boolean isSymLink;
-           try {
-             isSymLink = org.apache.commons.io.FileUtils.isSymlink(allFiles[i]);
-           } catch(IOException ioe) {
-             isSymLink = true;
-           }
-           if(!isSymLink) {
-             size += getDU(allFiles[i]);
-           }
-         }
+      if (allFiles != null) {
+        for (File f : allFiles) {
+          if (!org.apache.commons.io.FileUtils.isSymlink(f)) {
+            size += getDU(f);
+          }
+        }
       }
       return size;
     }
@@ -896,10 +910,13 @@ public class FileUtil {
   private static void unTarUsingTar(File inFile, File untarDir,
       boolean gzipped) throws IOException {
     StringBuffer untarCommand = new StringBuffer();
+    // not using canonical path here; this postpones relative path
+    // resolution until bash is executed.
+    final String source = "'" + FileUtil.makeSecureShellPath(inFile) + "'";
     if (gzipped) {
-      untarCommand.append(" gzip -dc '")
-          .append(FileUtil.makeSecureShellPath(inFile))
-          .append("' | (");
+      untarCommand.append(" gzip -dc ")
+          .append(source)
+          .append(" | (");
     }
     untarCommand.append("cd '")
         .append(FileUtil.makeSecureShellPath(untarDir))
@@ -909,15 +926,17 @@ public class FileUtil {
     if (gzipped) {
       untarCommand.append(" -)");
     } else {
-      untarCommand.append(FileUtil.makeSecureShellPath(inFile));
+      untarCommand.append(source);
     }
+    LOG.debug("executing [{}]", untarCommand);
     String[] shellCmd = { "bash", "-c", untarCommand.toString() };
     ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
     shexec.execute();
     int exitcode = shexec.getExitCode();
     if (exitcode != 0) {
       throw new IOException("Error untarring file " + inFile +
-                  ". Tar process exited with exit code " + exitcode);
+          ". Tar process exited with exit code " + exitcode
+          + " from command " + untarCommand);
     }
   }
 
@@ -974,6 +993,14 @@ public class FileUtil {
           + " would create entry outside of " + outputDir);
     }
 
+    if (entry.isSymbolicLink() || entry.isLink()) {
+      String canonicalTargetPath = getCanonicalPath(entry.getLinkName(), outputDir);
+      if (!canonicalTargetPath.startsWith(targetDirPath)) {
+        throw new IOException(
+            "expanding " + entry.getName() + " would create entry outside of " + outputDir);
+      }
+    }
+
     if (entry.isDirectory()) {
       File subDir = new File(outputDir, entry.getName());
       if (!subDir.mkdirs() && !subDir.isDirectory()) {
@@ -989,10 +1016,12 @@ public class FileUtil {
     }
 
     if (entry.isSymbolicLink()) {
-      // Create symbolic link relative to tar parent dir
-      Files.createSymbolicLink(FileSystems.getDefault()
-              .getPath(outputDir.getPath(), entry.getName()),
-          FileSystems.getDefault().getPath(entry.getLinkName()));
+      // Create symlink with canonical target path to ensure that we don't extract
+      // outside targetDirPath
+      String canonicalTargetPath = getCanonicalPath(entry.getLinkName(), outputDir);
+      Files.createSymbolicLink(
+          FileSystems.getDefault().getPath(outputDir.getPath(), entry.getName()),
+          FileSystems.getDefault().getPath(canonicalTargetPath));
       return;
     }
 
@@ -1004,12 +1033,27 @@ public class FileUtil {
     }
 
     if (entry.isLink()) {
-      File src = new File(outputDir, entry.getLinkName());
+      String canonicalTargetPath = getCanonicalPath(entry.getLinkName(), outputDir);
+      File src = new File(canonicalTargetPath);
       HardLink.createHardLink(src, outputFile);
       return;
     }
 
     org.apache.commons.io.FileUtils.copyToFile(tis, outputFile);
+  }
+
+  /**
+   * Gets the canonical path for the given path.
+   *
+   * @param path      The path for which the canonical path needs to be computed.
+   * @param parentDir The parent directory to use if the path is a relative path.
+   * @return The canonical path of the given path.
+   */
+  private static String getCanonicalPath(String path, File parentDir) throws IOException {
+    java.nio.file.Path targetPath = Paths.get(path);
+    return (targetPath.isAbsolute() ?
+        new File(path) :
+        new File(parentDir, path)).getCanonicalPath();
   }
 
   /**
@@ -1874,5 +1918,21 @@ public class FileUtil {
   public static FileContext write(final FileContext fileContext,
       final Path path, final CharSequence charseq) throws IOException {
     return write(fileContext, path, charseq, StandardCharsets.UTF_8);
+  }
+
+  @InterfaceAudience.LimitedPrivate({"ViewDistributedFileSystem"})
+  @InterfaceStability.Unstable
+  /**
+   * Used in ViewDistributedFileSystem rename API to get access to the protected
+   * API of FileSystem interface. Even though Rename with options API
+   * deprecated, we are still using as part of trash. If any filesystem provided
+   * implementation to this protected FileSystem API, we can't invoke it with
+   * out casting to the specific filesystem. This util method is proposed to get
+   * the access to FileSystem#rename with options.
+   */
+  @SuppressWarnings("deprecation")
+  public static void rename(FileSystem srcFs, Path src, Path dst,
+      final Options.Rename... options) throws IOException {
+    srcFs.rename(src, dst, options);
   }
 }

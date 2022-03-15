@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -75,11 +75,9 @@ public class ProvidedStorageMap {
   private final ProvidedDescriptor providedDescriptor;
   private final DatanodeStorageInfo providedStorageInfo;
   private boolean providedEnabled;
-  private long capacity;
   private int defaultReplication;
 
-  ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf)
-      throws IOException {
+  ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf) {
 
     storageId = conf.get(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID,
         DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT);

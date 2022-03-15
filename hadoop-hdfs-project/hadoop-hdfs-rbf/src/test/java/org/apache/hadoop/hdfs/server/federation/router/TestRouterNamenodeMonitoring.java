@@ -54,14 +54,15 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 /**
  * Test namenodes monitor behavior in the Router.
@@ -300,7 +301,7 @@ public class TestRouterNamenodeMonitoring {
     final org.apache.log4j.Logger logger =
         org.apache.log4j.Logger.getRootLogger();
     logger.addAppender(appender);
-    logger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     // Setup and start the Router
     Configuration conf = getNamenodesConfig();

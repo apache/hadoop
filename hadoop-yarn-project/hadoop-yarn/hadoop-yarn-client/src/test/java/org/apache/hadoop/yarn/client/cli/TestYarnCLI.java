@@ -52,6 +52,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -101,7 +102,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class TestYarnCLI {
   private static final Logger LOG = LoggerFactory.getLogger(TestYarnCLI.class);
@@ -1718,9 +1718,12 @@ public class TestYarnCLI {
     Set<String> nodeLabels = new HashSet<String>();
     nodeLabels.add("GPU");
     nodeLabels.add("JDK_7");
-    QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
-        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, null,
-        false);
+    QueueInfo queueInfo = QueueInfo.
+        newInstance("queueA", "root.queueA",
+            0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels,
+        "GPU", null, false, -1.0f, 10,
+            null, false);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
     int result = cli.run(new String[] { "-status", "queueA" });
     assertEquals(0, result);
@@ -1729,10 +1732,13 @@ public class TestYarnCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Queue Information : ");
     pw.println("Queue Name : " + "queueA");
+    pw.println("Queue Path : " + "root.queueA");
     pw.println("\tState : " + "RUNNING");
     pw.println("\tCapacity : " + "40.00%");
     pw.println("\tCurrent Capacity : " + "50.00%");
     pw.println("\tMaximum Capacity : " + "80.00%");
+    pw.println("\tWeight : " + "-1.00");
+    pw.println("\tMaximum Parallel Apps : " + "10");
     pw.println("\tDefault Node Label expression : " + "GPU");
     pw.println("\tAccessible Node Labels : " + "JDK_7,GPU");
     pw.println("\tPreemption : " + "enabled");
@@ -1886,8 +1892,11 @@ public class TestYarnCLI {
   @Test
   public void testGetQueueInfoWithEmptyNodeLabel() throws Exception {
     QueueCLI cli = createAndGetQueueCLI();
-    QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
-        null, null, QueueState.RUNNING, null, null, null, true, null, true);
+    QueueInfo queueInfo = QueueInfo.
+        newInstance("queueA", "root.queueA",
+            0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, null, null, null,
+        true, -1.0f, 10, null, true);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
     int result = cli.run(new String[] { "-status", "queueA" });
     assertEquals(0, result);
@@ -1896,10 +1905,13 @@ public class TestYarnCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Queue Information : ");
     pw.println("Queue Name : " + "queueA");
+    pw.println("Queue Path : " + "root.queueA");
     pw.println("\tState : " + "RUNNING");
     pw.println("\tCapacity : " + "40.00%");
     pw.println("\tCurrent Capacity : " + "50.00%");
     pw.println("\tMaximum Capacity : " + "80.00%");
+    pw.println("\tWeight : " + "-1.00");
+    pw.println("\tMaximum Parallel Apps : " + "10");
     pw.println("\tDefault Node Label expression : "
         + NodeLabel.DEFAULT_NODE_LABEL_PARTITION);
     pw.println("\tAccessible Node Labels : ");

@@ -86,6 +86,8 @@ import org.apache.hadoop.hdfs.server.datanode.VolumeScanner;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -146,9 +148,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -533,6 +533,9 @@ public class MiniDFSCluster implements AutoCloseable {
           DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
       this.storagesPerDatanode =
           FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
+      conf.setLong(DFSConfigKeys
+          .DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_KEY,
+          0);
     }
   }
   
@@ -599,7 +602,7 @@ public class MiniDFSCluster implements AutoCloseable {
                        builder.useConfiguredTopologyMappingClass);
   }
   
-  public class DataNodeProperties {
+  public static class DataNodeProperties {
     final DataNode datanode;
     final Configuration conf;
     String[] dnArgs;
@@ -1065,7 +1068,7 @@ public class MiniDFSCluster implements AutoCloseable {
    * Do the rest of the NN configuration for things like shared edits,
    * as well as directory formatting, etc. for a single nameservice
    * @param nnCounter the count of the number of namenodes already configured/started. Also,
-   *                  acts as the <i>index</i> to the next NN to start (since indicies start at 0).
+   *                  acts as the <i>index</i> to the next NN to start (since indices start at 0).
    * @throws IOException
    */
   private void configureNameService(MiniDFSNNTopology.NSConf nameservice, int nsCounter,
@@ -2264,9 +2267,11 @@ public class MiniDFSCluster implements AutoCloseable {
     info.nameNode = nn;
     info.setStartOpt(startOpt);
     if (waitActive) {
-      waitClusterUp();
+      if (numDataNodes > 0) {
+        waitNameNodeUp(nnIndex);
+      }
       LOG.info("Restarted the namenode");
-      waitActive();
+      waitActive(nnIndex);
     }
   }
 
@@ -2480,12 +2485,8 @@ public class MiniDFSCluster implements AutoCloseable {
 
   public void waitDatanodeFullyStarted(DataNode dn, int timeout)
       throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return dn.isDatanodeFullyStarted();
-      }
-    }, 100, timeout);
+    GenericTestUtils.waitFor(dn::isDatanodeFullyStarted, 100, timeout,
+        "Datanode is not started even after " + timeout + " ms of waiting");
   }
 
   private void waitDataNodeFullyStarted(final DataNode dn)
@@ -2776,11 +2777,25 @@ public class MiniDFSCluster implements AutoCloseable {
     DFSClient client = new DFSClient(addr, conf);
 
     // ensure all datanodes have registered and sent heartbeat to the namenode
-    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
+    int failedCount = 0;
+    while (true) {
       try {
-        LOG.info("Waiting for cluster to become active");
-        Thread.sleep(100);
+        while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
+          LOG.info("Waiting for cluster to become active");
+          Thread.sleep(100);
+        }
+        break;
+      } catch (IOException e) {
+        failedCount++;
+        // Cached RPC connection to namenode, if any, is expected to fail once
+        if (failedCount > 1) {
+          LOG.warn("Tried waitActive() " + failedCount
+              + " time(s) and failed, giving up.  " + StringUtils
+              .stringifyException(e));
+          throw e;
+        }
       } catch (InterruptedException e) {
+        throw new IOException(e);
       }
     }
 
@@ -2816,22 +2831,7 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public void waitActive() throws IOException {
     for (int index = 0; index < namenodes.size(); index++) {
-      int failedCount = 0;
-      while (true) {
-        try {
-          waitActive(index);
-          break;
-        } catch (IOException e) {
-          failedCount++;
-          // Cached RPC connection to namenode, if any, is expected to fail once
-          if (failedCount > 1) {
-            LOG.warn("Tried waitActive() " + failedCount
-                + " time(s) and failed, giving up.  "
-                + StringUtils.stringifyException(e));
-            throw e;
-          }
-        }
-      }
+      waitActive(index);
     }
     LOG.info("Cluster is active");
   }

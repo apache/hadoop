@@ -61,7 +61,6 @@ import java.util.regex.Pattern;
 
 import java.util.function.Supplier;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -119,6 +118,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -128,8 +128,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.slf4j.LoggerFactory;
 
 /**
  * A JUnit test for doing fsck.
@@ -145,14 +144,14 @@ public class TestFsck {
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
   static final Pattern FSCK_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
-      "ugi=.*?\\s" + 
-      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
       "cmd=fsck\\ssrc=\\/\\sdst=null\\s" + 
       "perm=null\\s" + "proto=.*");
   static final Pattern GET_FILE_INFO_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
-      "ugi=.*?\\s" + 
-      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
       "cmd=getfileinfo\\ssrc=\\/\\sdst=null\\s" + 
       "perm=null\\s" + "proto=.*");
 
@@ -254,6 +253,7 @@ public class TestFsck {
       file.delete();
     }
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    logger.removeAllAppenders();
     logger.setLevel(Level.INFO);
     PatternLayout layout = new PatternLayout("%m%n");
     RollingFileAppender appender =
@@ -263,8 +263,8 @@ public class TestFsck {
   
   private void verifyAuditLogs() throws IOException {
     // Turn off the logs
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    logger.setLevel(Level.OFF);
+    GenericTestUtils.disableLog(LoggerFactory.getLogger(
+        FSNamesystem.class.getName() + ".audit"));
 
     BufferedReader reader = null;
     try {
@@ -291,6 +291,7 @@ public class TestFsck {
       if (reader != null) {
         reader.close();
       }
+      Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
       if (logger != null) {
         logger.removeAllAppenders();
       }
@@ -566,7 +567,7 @@ public class TestFsck {
           }
         }
       } finally {
-        IOUtils.cleanup(null, in);
+        IOUtils.cleanupWithLogger(null, in);
       }
     }
   }
@@ -1134,7 +1135,7 @@ public class TestFsck {
     String outStr = runFsck(conf, 0, false, "/corruptData",
         "-list-corruptfileblocks");
     System.out.println("1. good fsck out: " + outStr);
-    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    assertTrue(outStr.contains("has 0 CORRUPT blocks"));
     // delete the blocks
     final String bpid = cluster.getNamesystem().getBlockPoolId();
     for (int i=0; i<4; i++) {
@@ -1157,19 +1158,19 @@ public class TestFsck {
     waitForCorruptionBlocks(3, "/corruptData");
     outStr = runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
     System.out.println("2. bad fsck out: " + outStr);
-    assertTrue(outStr.contains("has 3 CORRUPT files"));
+    assertTrue(outStr.contains("has 3 CORRUPT blocks"));
 
     // Do a listing on a dir which doesn't have any corrupt blocks and validate
     util.createFiles(fs, "/goodData");
     outStr = runFsck(conf, 0, true, "/goodData", "-list-corruptfileblocks");
     System.out.println("3. good fsck out: " + outStr);
-    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    assertTrue(outStr.contains("has 0 CORRUPT blocks"));
     util.cleanup(fs, "/goodData");
 
     // validate if a directory have any invalid entries
     util.createFiles(fs, "/corruptDa");
     outStr = runFsck(conf, 0, true, "/corruptDa", "-list-corruptfileblocks");
-    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    assertTrue(outStr.contains("has 0 CORRUPT blocks"));
     util.cleanup(fs, "/corruptData");
     util.cleanup(fs, "/corruptDa");
   }
@@ -2118,7 +2119,7 @@ public class TestFsck {
     String outStr =
         runFsck(conf, 0, false, "/corruptData", "-list-corruptfileblocks");
     System.out.println("1. good fsck out: " + outStr);
-    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    assertTrue(outStr.contains("has 0 CORRUPT blocks"));
     // delete the blocks
     final String bpid = cluster.getNamesystem().getBlockPoolId();
     for (int i=0; i<numFiles; i++) {
@@ -2148,14 +2149,14 @@ public class TestFsck {
         "-list-corruptfileblocks", "-includeSnapshots");
     System.out.println("2. bad fsck include snapshot out: " + outStr);
     assertTrue(outStr
-        .contains("has " + (numFiles + numSnapshots) + " CORRUPT files"));
+        .contains("has " + (numFiles + numSnapshots) + " CORRUPT blocks"));
     assertTrue(outStr.contains("/.snapshot/"));
 
     // without -includeSnapshots only non-snapshots are reported
     outStr =
         runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
     System.out.println("3. bad fsck exclude snapshot out: " + outStr);
-    assertTrue(outStr.contains("has " + numFiles + " CORRUPT files"));
+    assertTrue(outStr.contains("has " + numFiles + " CORRUPT blocks"));
     assertFalse(outStr.contains("/.snapshot/"));
   }
 
@@ -2401,7 +2402,7 @@ public class TestFsck {
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
     assertTrue(outStr.contains("Under-erasure-coded block groups:\t0"));
     outStr = runFsck(conf, -1, true, "/", "-list-corruptfileblocks");
-    assertTrue(outStr.contains("has 1 CORRUPT files"));
+    assertTrue(outStr.contains("has 1 CORRUPT blocks"));
   }
 
   @Test (timeout = 300000)
@@ -2446,7 +2447,7 @@ public class TestFsck {
     assertTrue(outStr.contains("Live_repl=" + (dataBlocks - 1)));
     assertTrue(outStr.contains("Under-erasure-coded block groups:\t0"));
     outStr = runFsck(conf, -1, true, "/", "-list-corruptfileblocks");
-    assertTrue(outStr.contains("has 1 CORRUPT files"));
+    assertTrue(outStr.contains("has 1 CORRUPT blocks"));
   }
 
   private void waitForUnrecoverableBlockGroup(Configuration configuration)
@@ -2509,13 +2510,17 @@ public class TestFsck {
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
        @Override
         public Void run() throws Exception {
-         String path = "/";
-         String outStr = runFsck(conf, -1, true, path, "-list-corruptfileblocks");
+        String path = "/";
+        String outStr =
+            runFsck(conf, -1, true, path, "-list-corruptfileblocks");
 
-         assertFalse(outStr.contains("The list of corrupt files under path '" + path + "' are:"));
-         assertFalse(outStr.contains("The filesystem under path '" + path + "' has "));
-         assertTrue(outStr.contains("Failed to open path '" + path + "': Permission denied"));
-         return null;
+        assertFalse(outStr.contains(
+            "The list of corrupt blocks under path '" + path + "' are:"));
+        assertFalse(
+            outStr.contains("The filesystem under path '" + path + "' has "));
+        assertTrue(outStr
+            .contains("Failed to open path '" + path + "': Permission denied"));
+        return null;
        }
       });
   }

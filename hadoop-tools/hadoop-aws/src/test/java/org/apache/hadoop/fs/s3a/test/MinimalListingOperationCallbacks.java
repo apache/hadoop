@@ -27,7 +27,8 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 /**
  * Stub implementation of {@link ListingOperationCallbacks}.
@@ -37,16 +38,16 @@ public class MinimalListingOperationCallbacks
 
   @Override
   public CompletableFuture<S3ListResult> listObjectsAsync(
-      S3ListRequest request)
-      throws IOException {
+      final S3ListRequest request,
+      final DurationTrackerFactory trackerFactory, AuditSpan span) {
     return null;
   }
 
   @Override
   public CompletableFuture<S3ListResult> continueListObjectsAsync(
-      S3ListRequest request,
-      S3ListResult prevResult)
-      throws IOException {
+      final S3ListRequest request,
+      final S3ListResult prevResult,
+      final DurationTrackerFactory trackerFactory, AuditSpan span) {
     return null;
   }
 
@@ -59,7 +60,8 @@ public class MinimalListingOperationCallbacks
   @Override
   public S3ListRequest createListObjectsRequest(
       String key,
-      String delimiter) {
+      String delimiter,
+      AuditSpan span) {
     return null;
   }
 
@@ -73,13 +75,4 @@ public class MinimalListingOperationCallbacks
     return 0;
   }
 
-  @Override
-  public ITtlTimeProvider getUpdatedTtlTimeProvider() {
-    return null;
-  }
-
-  @Override
-  public boolean allowAuthoritative(Path p) {
-    return false;
-  }
 }

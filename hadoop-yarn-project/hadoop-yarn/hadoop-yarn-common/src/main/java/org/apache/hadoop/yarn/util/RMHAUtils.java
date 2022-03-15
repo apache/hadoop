@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -35,7 +36,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @Unstable
 public class RMHAUtils {
 
-  public static String findActiveRMHAId(YarnConfiguration conf) {
+  public static String findActiveRMHAId(Configuration conf) {
     YarnConfiguration yarnConf = new YarnConfiguration(conf);
     Collection<String> rmIds =
         yarnConf.getStringCollection(YarnConfiguration.RM_HA_IDS);

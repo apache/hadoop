@@ -79,14 +79,14 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Times;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.yarn.util.StringHelper;
 
 /**
- * This class manages the list of applications for the resource manager. 
+ * This class manages the list of applications for the resource manager.
  */
-public class RMAppManager implements EventHandler<RMAppManagerEvent>, 
+public class RMAppManager implements EventHandler<RMAppManagerEvent>,
                                         Recoverable {
 
   private static final Logger LOG =
@@ -143,7 +143,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     static final Logger LOG = LoggerFactory.
         getLogger(ApplicationSummary.class);
 
-    // Escape sequences 
+    // Escape sequences
     static final char EQUALS = '=';
     static final char[] charsToEscape =
       {StringUtils.COMMA, EQUALS, StringUtils.ESCAPE_CHAR};
@@ -182,7 +182,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     /**
      * create a summary of the application's runtime.
-     * 
+     *
      * @param app {@link RMApp} whose summary is to be created, cannot
      *            be <code>null</code>.
      */
@@ -247,7 +247,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     /**
      * Log a summary of the application's runtime.
-     * 
+     *
      * @param app {@link RMApp} whose summary is to be logged
      */
     public static void logAppSummary(RMApp app) {
@@ -274,7 +274,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   }
 
   protected synchronized int getCompletedAppsListSize() {
-    return this.completedApps.size(); 
+    return this.completedApps.size();
   }
 
   protected synchronized void finishApplication(ApplicationId applicationId) {
@@ -285,7 +285,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       if (UserGroupInformation.isSecurityEnabled()) {
         rmContext.getDelegationTokenRenewer().applicationFinished(applicationId);
       }
-      
+
       completedApps.add(applicationId);
       completedAppsInStateStore++;
       writeAuditLog(applicationId);
@@ -297,26 +297,26 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     String operation = "UNKONWN";
     boolean success = false;
     switch (app.getState()) {
-      case FAILED: 
+      case FAILED:
         operation = AuditConstants.FINISH_FAILED_APP;
         break;
       case FINISHED:
         operation = AuditConstants.FINISH_SUCCESS_APP;
         success = true;
         break;
-      case KILLED: 
+      case KILLED:
         operation = AuditConstants.FINISH_KILLED_APP;
         success = true;
         break;
       default:
         break;
     }
-    
+
     if (success) {
       RMAuditLogger.logSuccess(app.getUser(), operation,
           "RMAppManager", app.getApplicationId());
     } else {
-      StringBuilder diag = app.getDiagnostics(); 
+      StringBuilder diag = app.getDiagnostics();
       String msg = diag == null ? null : diag.toString();
       RMAuditLogger.logFailure(app.getUser(), operation, msg, "RMAppManager",
           "App failed with state: " + app.getState(), appId);
@@ -352,16 +352,26 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @VisibleForTesting
+  @Deprecated
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
       String user) throws YarnException {
+    submitApplication(submissionContext, submitTime,
+        UserGroupInformation.createRemoteUser(user));
+  }
+
+  @VisibleForTesting
+  @SuppressWarnings("unchecked")
+  protected void submitApplication(
+      ApplicationSubmissionContext submissionContext, long submitTime,
+      UserGroupInformation userUgi) throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
     // Passing start time as -1. It will be eventually set in RMAppImpl
     // constructor.
     RMAppImpl application = createAndPopulateNewRMApp(
-        submissionContext, submitTime, user, false, -1, null);
+        submissionContext, submitTime, userUgi, false, -1, null);
     try {
       if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer()
@@ -394,11 +404,21 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ApplicationSubmissionContext appContext =
         appState.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
+    UserGroupInformation userUgi = null;
+    if (appState.getRealUser() != null) {
+      UserGroupInformation realUserUgi = null;
+      realUserUgi =
+          UserGroupInformation.createRemoteUser(appState.getRealUser());
+      userUgi = UserGroupInformation.createProxyUser(appState.getUser(),
+          realUserUgi);
+    } else {
+      userUgi = UserGroupInformation.createRemoteUser(appState.getUser());
+    }
 
     // create and recover app.
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
-            appState.getUser(), true, appState.getStartTime(),
+            userUgi, true, appState.getStartTime(),
             appState.getState());
 
     application.handle(new RMAppRecoverEvent(appId, rmState));
@@ -406,8 +426,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery, long startTime,
+      UserGroupInformation userUgi, boolean isRecovery, long startTime,
       RMAppState recoveredFinalState) throws YarnException {
+    String user = userUgi.getShortUserName();
 
     ApplicationPlacementContext placementContext = null;
     if (recoveredFinalState == null) {
@@ -431,7 +452,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     // Verify and get the update application priority and set back to
     // submissionContext
-    UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
 
     // Application priority needed to be validated only while submitting. During
     // recovery, validated priority could be recovered from submission context.
@@ -445,7 +465,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     if (!isRecovery && YarnConfiguration.isAclEnabled(conf)) {
       if (scheduler instanceof CapacityScheduler) {
-        String queueName = submissionContext.getQueue();
+        String queueName = placementContext == null ?
+            submissionContext.getQueue() : placementContext.getFullQueuePath();
+
         String appName = submissionContext.getApplicationName();
         CSQueue csqueue = ((CapacityScheduler) scheduler).getQueue(queueName);
 
@@ -500,11 +522,25 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       }
     }
 
+    //In the case of capacity scheduler the queue name only means the name of
+    // the leaf queue, but since YARN-9879, internal queue references should
+    // use full path, so we get the queue and parent name from the placement
+    // context instead of the submissionContext.
+    String placementQueueName = submissionContext.getQueue();
+    if (placementContext != null && scheduler instanceof CapacityScheduler) {
+      if (placementContext.hasParentQueue()) {
+        placementQueueName = placementContext.getParentQueue() + "." +
+            placementContext.getQueue();
+      } else {
+        placementQueueName = placementContext.getQueue();
+      }
+    }
+
     // Create RMApp
     RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,
-            submissionContext.getApplicationName(), user,
-            submissionContext.getQueue(),
+            submissionContext.getApplicationName(), userUgi,
+            placementQueueName,
             submissionContext, this.scheduler, this.masterService,
             submitTime, submissionContext.getApplicationType(),
             submissionContext.getApplicationTags(), amReqs, placementContext,

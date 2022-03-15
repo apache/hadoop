@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import java.util.Collection;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_LABEL;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
@@ -90,9 +91,7 @@ class NodesPage extends RmView {
             .th(".mem", "Phys Mem Used %")
             .th(".vcores", "VCores Used")
             .th(".vcores", "VCores Avail")
-            .th(".vcores", "Phys VCores Used %")
-            .th(".gpus", "GPUs Used")
-            .th(".gpus", "GPUs Avail");
+            .th(".vcores", "Phys VCores Used %");
       } else {
         trbody.th(".containers", "Running Containers (G)")
             .th(".allocationTags", "Allocation Tags")
@@ -102,12 +101,24 @@ class NodesPage extends RmView {
             .th(".vcores", "VCores Used (G)")
             .th(".vcores", "VCores Avail (G)")
             .th(".vcores", "Phys VCores Used %")
-            .th(".gpus", "GPUs Used (G)")
-            .th(".gpus", "GPUs Avail (G)")
             .th(".containers", "Running Containers (O)")
             .th(".mem", "Mem Used (O)")
             .th(".vcores", "VCores Used (O)")
             .th(".containers", "Queued Containers");
+      }
+
+      for (Map.Entry<String, Integer> integerEntry :
+          ResourceUtils.getResourceTypeIndex().entrySet()) {
+        if (integerEntry.getKey().equals(ResourceInformation.MEMORY_URI)
+            || integerEntry.getKey().equals(ResourceInformation.VCORES_URI)) {
+          continue;
+        }
+
+        trbody.th("." + integerEntry.getKey(),
+            integerEntry.getKey() + " " + "Used");
+
+        trbody.th("." + integerEntry.getKey(),
+            integerEntry.getKey() + " " + "Avail");
       }
 
       TBODY<TABLE<Hamlet>> tbody =
@@ -175,17 +186,7 @@ class NodesPage extends RmView {
           nodeTableData.append("\",\"<a ").append("href='" + "//" + httpAddress)
               .append("'>").append(httpAddress).append("</a>\",").append("\"");
         }
-        Integer gpuIndex = ResourceUtils.getResourceTypeIndex()
-            .get(ResourceInformation.GPU_URI);
-        long usedGPUs = 0;
-        long availableGPUs = 0;
-        if (gpuIndex != null && info.getUsedResource() != null
-            && info.getAvailableResource() != null) {
-          usedGPUs = info.getUsedResource().getResource()
-              .getResourceValue(ResourceInformation.GPU_URI);
-          availableGPUs = info.getAvailableResource().getResource()
-              .getResourceValue(ResourceInformation.GPU_URI);
-        }
+
         nodeTableData.append("<br title='")
             .append(String.valueOf(info.getLastHealthUpdate())).append("'>")
             .append(Times.format(info.getLastHealthUpdate())).append("\",\"")
@@ -205,10 +206,6 @@ class NodesPage extends RmView {
             .append(String.valueOf(info.getAvailableVirtualCores()))
             .append("\",\"")
             .append(String.valueOf((int) info.getVcoreUtilization()))
-            .append("\",\"")
-            .append(String.valueOf(usedGPUs))
-            .append("\",\"")
-            .append(String.valueOf(availableGPUs))
             .append("\",\"");
 
         // If opportunistic containers are enabled, add extra fields.
@@ -224,6 +221,34 @@ class NodesPage extends RmView {
               .append("\",\"")
               .append(String.valueOf(info.getNumQueuedContainers()))
               .append("\",\"");
+        }
+
+        for (Map.Entry<String, Integer> integerEntry :
+            ResourceUtils.getResourceTypeIndex().entrySet()) {
+          if (integerEntry.getKey().equals(ResourceInformation.MEMORY_URI)
+              || integerEntry.getKey().equals(ResourceInformation.VCORES_URI)) {
+            continue;
+          }
+
+          long usedCustomResource = 0;
+          long availableCustomResource = 0;
+
+          String resourceName = integerEntry.getKey();
+          Integer index = integerEntry.getValue();
+
+          if (index != null && info.getUsedResource() != null
+              && info.getAvailableResource() != null) {
+            usedCustomResource = info.getUsedResource().getResource()
+                .getResourceValue(resourceName);
+            availableCustomResource = info.getAvailableResource().getResource()
+                .getResourceValue(resourceName);
+
+            nodeTableData
+                .append(usedCustomResource)
+                .append("\",\"")
+                .append(availableCustomResource)
+                .append("\",\"");
+          }
         }
 
         nodeTableData.append(ni.getNodeManagerVersion())

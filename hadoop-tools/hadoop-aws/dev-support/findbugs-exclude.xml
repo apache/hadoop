@@ -30,20 +30,6 @@
   </Match>
 
   <!--
-    This extends the serializable S3Object, so findbug checks
-    serializability. It is never serialized however, so its
-    warnings are false positives.
-  -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.InconsistentS3Object" />
-    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.InconsistentS3Object" />
-    <Bug pattern="SE_NO_SERIALVERSIONID" />
-  </Match>
-
-  <!--
    findbugs gets confused by lambda expressions in synchronized methods
    and considers references to fields to be unsynchronized.
    As you can't disable the methods individually, we have to disable
@@ -74,4 +60,20 @@
     <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
   </Match>
 
+  <!--
+  Some of the S3A Instrumentation classes increment volatile references from
+  within synchronized contexts; they use volatile to keep the cost
+  of these updates and reading them down.
+   -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.S3AInstrumentation$InputStreamStatisticsImpl"/>
+    <Bug pattern="VO_VOLATILE_INCREMENT"/>
+  </Match>
+
+  <!-- Ignore return value from this method call -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.impl.StoreContext"/>
+    <Method name="submit"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+  </Match>
 </FindBugsFilter>

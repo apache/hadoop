@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.util;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
@@ -53,7 +54,7 @@ public class TestShell extends Assert {
    * Set the timeout for every test
    */
   @Rule
-  public Timeout testTimeout = new Timeout(30000);
+  public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);
 
   @Rule
   public TestName methodName = new TestName();

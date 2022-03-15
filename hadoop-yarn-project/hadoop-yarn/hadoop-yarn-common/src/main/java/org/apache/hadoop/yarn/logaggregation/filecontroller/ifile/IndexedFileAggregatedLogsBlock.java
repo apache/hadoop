@@ -28,12 +28,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.apache.commons.io.IOUtils;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.file.tfile.BoundedRangeFileInputStream;
 import org.apache.hadoop.io.file.tfile.Compression;
@@ -232,7 +233,7 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
           LOG.error("Error getting logs for " + logEntity, ex);
           continue;
         } finally {
-          IOUtils.closeQuietly(in);
+          IOUtils.closeStream(in);
         }
       }
     }

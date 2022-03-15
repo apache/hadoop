@@ -145,7 +145,7 @@ public class TestProtoBufRpcServerHandoff {
         ServiceException {
       final long startTime = System.currentTimeMillis();
       final ProtobufRpcEngineCallback2 callback =
-          ProtobufRpcEngine2.Server.registerForDeferredResponse();
+          ProtobufRpcEngine2.Server.registerForDeferredResponse2();
       final long sleepTime = request.getSleepTime();
       new Thread() {
         @Override

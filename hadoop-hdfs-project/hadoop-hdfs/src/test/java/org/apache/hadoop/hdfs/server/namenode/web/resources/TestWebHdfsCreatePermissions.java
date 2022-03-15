@@ -28,11 +28,11 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * Test WebHDFS files/directories creation to make sure it follows same rules
@@ -42,7 +42,7 @@ public class TestWebHdfsCreatePermissions {
   static final Logger LOG =
       LoggerFactory.getLogger(TestWebHdfsCreatePermissions.class);
   {
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
 
   private MiniDFSCluster cluster;

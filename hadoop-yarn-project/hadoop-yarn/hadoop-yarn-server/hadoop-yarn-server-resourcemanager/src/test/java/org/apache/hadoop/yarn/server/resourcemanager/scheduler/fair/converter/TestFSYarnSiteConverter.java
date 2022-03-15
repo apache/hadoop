@@ -18,7 +18,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueDeletionPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueConfigurationAutoRefreshPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -28,6 +31,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 
 /**
  * Unit tests for FSYarnSiteConverter.
@@ -37,6 +41,8 @@ public class TestFSYarnSiteConverter {
   private Configuration yarnConfig;
   private FSYarnSiteConverter converter;
   private Configuration yarnConvertedConfig;
+  private static final String DELETION_POLICY_CLASS =
+      AutoCreatedQueueDeletionPolicy.class.getCanonicalName();
 
   @Before
   public void setup() {
@@ -54,7 +60,7 @@ public class TestFSYarnSiteConverter {
         FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_SLEEP_MS, 666);
 
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
-      false);
+        false, false, null);
 
     assertTrue("Cont. scheduling", yarnConvertedConfig.getBoolean(
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, false));
@@ -62,6 +68,19 @@ public class TestFSYarnSiteConverter {
         yarnConvertedConfig.getInt(
             "yarn.scheduler.capacity.schedule-asynchronously" +
                 ".scheduling-interval-ms", -1));
+  }
+
+  @Test
+  public void testSiteQueueConfAutoRefreshConversion() {
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+        false, false, null);
+    assertTrue(yarnConvertedConfig.get(YarnConfiguration.
+        RM_SCHEDULER_ENABLE_MONITORS), true);
+    assertTrue("Scheduling Policies contains queue conf auto refresh",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES)
+            .contains(QueueConfigurationAutoRefreshPolicy.
+                class.getCanonicalName()));
   }
 
   @Test
@@ -73,7 +92,7 @@ public class TestFSYarnSiteConverter {
           321);
 
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
-      false);
+        false, false, null);
 
     assertTrue("Preemption enabled",
         yarnConvertedConfig.getBoolean(
@@ -87,6 +106,41 @@ public class TestFSYarnSiteConverter {
         yarnConvertedConfig.getInt(
             CapacitySchedulerConfiguration.PREEMPTION_MONITORING_INTERVAL,
               -1));
+
+    assertFalse("Observe_only should be false",
+        yarnConvertedConfig.getBoolean(CapacitySchedulerConfiguration.
+                PREEMPTION_OBSERVE_ONLY, false));
+
+    assertTrue("Should contain ProportionalCapacityPreemptionPolicy.",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES).
+        contains(ProportionalCapacityPreemptionPolicy.
+        class.getCanonicalName()));
+  }
+
+  @Test
+  public void testSiteDisabledPreemptionWithNoPolicyConversion() {
+    // Default mode is nopolicy
+    yarnConfig.setBoolean(FairSchedulerConfiguration.PREEMPTION, false);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+        false, false,  null);
+
+    assertFalse("Should not contain ProportionalCapacityPreemptionPolicy.",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES).
+            contains(ProportionalCapacityPreemptionPolicy.
+                class.getCanonicalName()));
+
+    yarnConfig.setBoolean(FairSchedulerConfiguration.PREEMPTION, false);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+        false, false,
+        FSConfigToCSConfigConverterParams.PreemptionMode.NO_POLICY);
+
+    assertFalse("Should not contain ProportionalCapacityPreemptionPolicy.",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES).
+            contains(ProportionalCapacityPreemptionPolicy.
+                class.getCanonicalName()));
   }
 
   @Test
@@ -94,7 +148,7 @@ public class TestFSYarnSiteConverter {
     yarnConfig.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
 
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
-      false);
+        false, false, null);
 
     assertTrue("Assign multiple",
         yarnConvertedConfig.getBoolean(
@@ -107,7 +161,7 @@ public class TestFSYarnSiteConverter {
     yarnConfig.setInt(FairSchedulerConfiguration.MAX_ASSIGN, 111);
 
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
-      false);
+        false, false, null);
 
     assertEquals("Max assign", 111,
         yarnConvertedConfig.getInt(
@@ -122,7 +176,7 @@ public class TestFSYarnSiteConverter {
         "321.321");
 
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
-      false);
+        false, false, null);
 
     assertEquals("Locality threshold node", "123.123",
         yarnConvertedConfig.get(
@@ -135,7 +189,7 @@ public class TestFSYarnSiteConverter {
   @Test
   public void testSiteDrfEnabledConversion() {
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, true,
-      false);
+        false, false, null);
 
     assertEquals("Resource calculator type", DominantResourceCalculator.class,
         yarnConvertedConfig.getClass(
@@ -145,7 +199,7 @@ public class TestFSYarnSiteConverter {
   @Test
   public void testSiteDrfDisabledConversion() {
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
-      false);
+        false, false, null);
 
     assertEquals("Resource calculator type", DefaultResourceCalculator.class,
         yarnConvertedConfig.getClass(
@@ -156,7 +210,7 @@ public class TestFSYarnSiteConverter {
   @Test
   public void testAsyncSchedulingEnabledConversion() {
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, true,
-            true);
+            true, false, null);
 
     assertTrue("Asynchronous scheduling", yarnConvertedConfig.getBoolean(
                     CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE,
@@ -166,10 +220,79 @@ public class TestFSYarnSiteConverter {
   @Test
   public void testAsyncSchedulingDisabledConversion() {
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
-            false);
+            false, false, null);
 
     assertFalse("Asynchronous scheduling", yarnConvertedConfig.getBoolean(
             CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE,
             CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE));
+  }
+
+  @Test
+  public void testSiteQueueAutoDeletionConversionWithWeightMode() {
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+        false, false, null);
+    assertTrue(yarnConvertedConfig.get(YarnConfiguration.
+        RM_SCHEDULER_ENABLE_MONITORS), true);
+    assertTrue("Scheduling Policies contain auto deletion policy",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES)
+            .contains(DELETION_POLICY_CLASS));
+
+    // Test when policy has existed.
+    yarnConvertedConfig.
+        set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+        "testPolicy");
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+        false, false, null);
+    assertTrue("Scheduling Policies contain auto deletion policy",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES)
+            .contains(DELETION_POLICY_CLASS));
+
+    assertEquals("Auto deletion policy expired time should be 10s",
+        10, yarnConvertedConfig.
+            getLong(CapacitySchedulerConfiguration.
+                    AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME,
+                CapacitySchedulerConfiguration.
+                    DEFAULT_AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME));
+  }
+
+  @Test
+  public void
+      testSiteQueueAutoDeletionConversionDisabledForPercentageMode() {
+
+    // test percentage mode
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+        false, true, null);
+    assertTrue(yarnConvertedConfig.get(YarnConfiguration.
+        RM_SCHEDULER_ENABLE_MONITORS), true);
+
+    assertTrue("Scheduling Policies should not" +
+            "contain auto deletion policy in percentage mode",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES) == null ||
+            !yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES).
+                contains(DELETION_POLICY_CLASS));
+
+    yarnConvertedConfig.
+        set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+            "testPolicy");
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+        false, true, null);
+    assertFalse("Scheduling Policies should not " +
+            "contain auto deletion policy in percentage mode",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES)
+            .contains(DELETION_POLICY_CLASS));
+
+    assertNotEquals("Auto deletion policy expired time should not " +
+            "be set in percentage mode",
+        10, yarnConvertedConfig.
+            getLong(CapacitySchedulerConfiguration.
+                    AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME,
+                CapacitySchedulerConfiguration.
+                    DEFAULT_AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME));
+
   }
 }

@@ -108,7 +108,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 
@@ -159,6 +159,7 @@ public abstract class AbstractYarnScheduler
   protected ConcurrentMap<ApplicationId, SchedulerApplication<T>> applications;
   protected int nmExpireInterval;
   protected long nmHeartbeatInterval;
+  private long skipNodeInterval;
 
   private final static List<Container> EMPTY_CONTAINER_LIST =
       new ArrayList<Container>();
@@ -210,6 +211,7 @@ public abstract class AbstractYarnScheduler
     nmHeartbeatInterval =
         conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
+    skipNodeInterval = YarnConfiguration.getSkipNodeInterval(conf);
     long configuredMaximumAllocationWaitTime =
         conf.getLong(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS,
           YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS);
@@ -366,6 +368,10 @@ public abstract class AbstractYarnScheduler
 
   public long getLastNodeUpdateTime() {
     return lastNodeUpdateTime;
+  }
+
+  public long getSkipNodeInterval(){
+    return skipNodeInterval;
   }
 
   protected void containerLaunchedOnNode(
@@ -578,8 +584,14 @@ public abstract class AbstractYarnScheduler
             rmContainer);
 
         // recover scheduler attempt
-        schedulerAttempt.recoverContainer(schedulerNode, rmContainer);
+        final boolean recovered = schedulerAttempt.recoverContainer(
+            schedulerNode, rmContainer);
 
+        if (recovered && rmContainer.getExecutionType() ==
+            ExecutionType.OPPORTUNISTIC) {
+          OpportunisticSchedulerMetrics.getMetrics()
+              .incrAllocatedOppContainers(1);
+        }
         // set master container for the current running AMContainer for this
         // attempt.
         RMAppAttempt appAttempt = rmApp.getCurrentAppAttempt();
@@ -714,7 +726,10 @@ public abstract class AbstractYarnScheduler
       SchedulerApplicationAttempt schedulerAttempt =
           getCurrentAttemptForContainer(containerId);
       if (schedulerAttempt != null) {
-        schedulerAttempt.removeRMContainer(containerId);
+        if (schedulerAttempt.removeRMContainer(containerId)) {
+          OpportunisticSchedulerMetrics.getMetrics()
+              .incrReleasedOppContainers(1);
+        }
       }
       LOG.debug("Completed container: {} in state: {} event:{}",
           rmContainer.getContainerId(), rmContainer.getState(), event);
@@ -723,7 +738,6 @@ public abstract class AbstractYarnScheduler
       if (node != null) {
         node.releaseContainer(rmContainer.getContainerId(), false);
       }
-      OpportunisticSchedulerMetrics.getMetrics().incrReleasedOppContainers(1);
     }
 
     // If the container is getting killed in ACQUIRED state, the requester (AM
@@ -842,6 +856,11 @@ public abstract class AbstractYarnScheduler
     writeLock.lock();
     try {
       SchedulerNode node = getSchedulerNode(nm.getNodeID());
+      if (node == null) {
+        LOG.info("Node: " + nm.getNodeID() + " has already been taken out of " +
+            "scheduling. Skip updating its resource");
+        return;
+      }
       Resource newResource = resourceOption.getResource();
       final int timeout = resourceOption.getOverCommitTimeout();
       Resource oldResource = node.getTotalResource();
@@ -1400,6 +1419,8 @@ public abstract class AbstractYarnScheduler
             RMContainer demotedRMContainer =
                 createDemotedRMContainer(appAttempt, oppCntxt, rmContainer);
             if (demotedRMContainer != null) {
+              OpportunisticSchedulerMetrics.getMetrics()
+                  .incrAllocatedOppContainers(1);
               appAttempt.addToNewlyDemotedContainers(
                       uReq.getContainerId(), demotedRMContainer);
             }

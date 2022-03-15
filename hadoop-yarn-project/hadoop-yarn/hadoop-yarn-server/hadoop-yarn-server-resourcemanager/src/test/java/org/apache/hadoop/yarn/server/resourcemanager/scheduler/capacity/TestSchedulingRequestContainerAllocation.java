@@ -862,7 +862,7 @@ public class TestSchedulingRequestContainerAllocation {
     try {
       rm.start();
 
-      MockNM nm1 = rm.registerNode("192.168.0.1:1234:", 100*GB, 100);
+      MockNM nm1 = rm.registerNode("192.168.0.1:1234", 100*GB, 100);
       MockNM nm2 = rm.registerNode("192.168.0.2:1234", 100*GB, 100);
       MockNM nm3 = rm.registerNode("192.168.0.3:1234", 100*GB, 100);
       MockNM nm4 = rm.registerNode("192.168.0.4:1234", 100*GB, 100);

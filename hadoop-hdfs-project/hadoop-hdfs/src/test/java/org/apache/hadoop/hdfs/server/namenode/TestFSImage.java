@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
@@ -53,8 +52,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Assert;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -81,7 +80,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -272,6 +273,22 @@ public class TestFSImage {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testImportCheckpoint() throws Exception{
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, "");
+    try(MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()){
+      cluster.waitActive();
+      FSNamesystem fsn = cluster.getNamesystem();
+      FSImage fsImage= new FSImage(conf);
+      LambdaTestUtils.intercept(
+          IOException.class,
+          "Cannot import image from a checkpoint. "
+                  + "\"dfs.namenode.checkpoint.edits.dir\" is not set.",
+          () -> fsImage.doImportCheckpoint(fsn));
     }
   }
 

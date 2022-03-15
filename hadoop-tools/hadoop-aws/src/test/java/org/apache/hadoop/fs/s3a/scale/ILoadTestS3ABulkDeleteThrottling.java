@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -45,8 +45,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.impl.FunctionsRaisingIOE;
-import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.delegation.Csvout;
@@ -249,7 +247,7 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
             new ContractTestUtils.NanoTimer();
         Exception ex = null;
         try {
-          fs.removeKeys(fileList, false, null);
+          fs.removeKeys(fileList, false);
         } catch (IOException e) {
           ex = e;
         }
@@ -314,15 +312,6 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
           String.format("%s/file-%04d", base, i)));
     }
     return request;
-  }
-
-
-  private <R> R wrap(FunctionsRaisingIOE.CallableRaisingIOE<R> callable) {
-    try {
-      return callable.apply();
-    } catch (IOException e) {
-      throw new WrappedIOException(e);
-    }
   }
 
   /**

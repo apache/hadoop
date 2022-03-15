@@ -83,6 +83,9 @@ public interface HdfsClientConfigKeys {
       "dfs.namenode.kerberos.principal";
   String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";
   int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
+  String  DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES =
+      "dfs.client.pipeline.recovery.max-retries";
+  int     DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES_DEFAULT = 5;
   String  DFS_CLIENT_SOCKET_TIMEOUT_KEY = "dfs.client.socket-timeout";
   String  DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY =
       "dfs.client.socket.send.buffer.size";
@@ -130,6 +133,8 @@ public interface HdfsClientConfigKeys {
   int     DFS_BYTES_PER_CHECKSUM_DEFAULT = 512;
   String  DFS_CHECKSUM_COMBINE_MODE_KEY = "dfs.checksum.combine.mode";
   String  DFS_CHECKSUM_COMBINE_MODE_DEFAULT = "MD5MD5CRC";
+  String  DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY = "dfs.checksum.ec.socket-timeout";
+  int     DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT = 3000;
   String  DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY =
       "dfs.datanode.socket.write.timeout";
   String  DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC =
@@ -149,6 +154,9 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
       "dfs.client.slow.io.warning.threshold.ms";
   long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
+  String  DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY =
+      "dfs.client.mark.slownode.as.badnode.threshold";
+  int DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_DEFAULT = 10;
   String  DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS =
           "dfs.client.key.provider.cache.expiry";
   long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
@@ -161,13 +169,9 @@ public interface HdfsClientConfigKeys {
           "dfs.client.deadnode.detection.enabled";
   boolean DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_DEFAULT = false;
 
-  String DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY =
-      "dfs.client.deadnode.detection.deadnode.queue.max";
-  int DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_DEFAULT = 100;
-
-  String DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY =
-      "dfs.client.deadnode.detection.suspectnode.queue.max";
-  int DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_DEFAULT = 1000;
+  String DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_KEY =
+      "dfs.client.deadnode.detection.idle.sleep.ms";
+  long DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_DEFAULT = 10000;
 
   String DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_CONNECTION_TIMEOUT_MS_KEY =
       "dfs.client.deadnode.detection.probe.connection.timeout.ms";
@@ -200,6 +204,19 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_KEY =
       "dfs.client.refresh.read-block-locations.ms";
   long DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_DEFAULT = 0L;
+
+  //  Number of threads to use for refreshing LocatedBlocks of registered
+  //  DFSInputStreams. If a DFSClient opens many DFSInputStreams, increasing
+  //  this may help refresh them all in a timely manner.
+  String DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_THREADS_KEY =
+      "dfs.client.refresh.read-block-locations.threads";
+  int DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_THREADS_DEFAULT = 5;
+
+  // Whether to auto-register all DFSInputStreams for background refreshes.
+  // If false, user must manually register using DFSClient#addLocatedBlocksRefresh(DFSInputStream)
+  String DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_KEY =
+      "dfs.client.refresh.read-block-locations.register-automatically";
+  boolean DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_DEFAULT = true;
 
   String  DFS_DATANODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.datanode.kerberos.principal";

@@ -112,7 +112,7 @@ import java.util.concurrent.TimeUnit;
       } catch (InterruptedException e) {
         // exit thread; ignore any jobs remaining in the trace
       } finally {
-        IOUtils.cleanup(null, jobProducer);
+        IOUtils.cleanupWithLogger(null, jobProducer);
       }
     }
   }

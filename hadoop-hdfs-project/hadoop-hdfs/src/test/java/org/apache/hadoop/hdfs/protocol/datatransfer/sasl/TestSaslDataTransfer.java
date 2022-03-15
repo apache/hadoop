@@ -256,7 +256,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     } catch (SocketTimeoutException e) {
       GenericTestUtils.assertExceptionContains("Read timed out", e);
     } finally {
-      IOUtils.cleanup(null, socket, serverSocket);
+      IOUtils.cleanupWithLogger(null, socket, serverSocket);
     }
   }
 

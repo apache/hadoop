@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.net;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -173,6 +173,7 @@ public class DFSNetworkTopology extends NetworkTopology {
    * @param scope the scope where we look for node.
    * @param excludedScope the scope where the node must NOT be from.
    * @param excludedNodes the returned node must not be in this set
+   * @param type the storage type we search for
    * @return a node with required storage type
    */
   @VisibleForTesting

@@ -160,9 +160,9 @@ export default Ember.Component.extend({
       .on(
         "click",
         function(d) {
-          if (d.queueData.get("name") !== this.get("selected")) {
+          if (d.queueData.get("queuePath") !== this.get("selected")) {
             document.location.href =
-              "#/yarn-queues/" + d.queueData.get("name") + "!";
+              "#/yarn-queues/" + d.queueData.get("queuePath") + "!";
           }
 
           Ember.run.later(
@@ -183,7 +183,7 @@ export default Ember.Component.extend({
       )
       .on("dblclick", function(d) {
         document.location.href =
-          "#/yarn-queue/" + d.queueData.get("name") + "/apps";
+          "#/yarn-queue/" + d.queueData.get("queuePath") + "/apps";
       });
 
     nodeEnter
@@ -235,7 +235,7 @@ export default Ember.Component.extend({
       .attr("dy", "45px")
       .attr("text-anchor", "middle")
       .text(function(d) {
-        return d.name;
+        return d.queueData.get("name");
       })
       .style("fill-opacity", 1e-6);
 
@@ -251,12 +251,12 @@ export default Ember.Component.extend({
       .select("circle")
       .attr("r", 30)
       .attr("href", function(d) {
-        return "#/yarn-queues/" + d.queueData.get("name");
+        return "#/yarn-queues/" + d.queueData.get("queuePath");
       })
       .style(
         "stroke-width",
         function(d) {
-          if (d.queueData.get("name") === this.get("selected")) {
+          if (d.queueData.get("queuePath") === this.get("selected")) {
             return 7;
           } else {
             return 2;
@@ -266,7 +266,7 @@ export default Ember.Component.extend({
       .style(
         "stroke",
         function(d) {
-          if (d.queueData.get("name") === this.get("selected")) {
+          if (d.queueData.get("queuePath") === this.get("selected")) {
             return "gray";
           } else {
             return "gray";

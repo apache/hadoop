@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler;
 
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.w3c.dom.Document;

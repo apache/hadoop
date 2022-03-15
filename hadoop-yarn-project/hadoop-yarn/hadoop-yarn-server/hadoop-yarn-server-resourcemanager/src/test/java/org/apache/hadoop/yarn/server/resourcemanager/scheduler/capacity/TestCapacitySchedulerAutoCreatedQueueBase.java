@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.Queu
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .ResourceScheduler;
 
@@ -88,6 +89,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CSQueueUtils.EPSILON;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
@@ -165,6 +167,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   public static final float NODE_LABEL_GPU_TEMPLATE_CAPACITY = 30.0f;
   public static final float NODEL_LABEL_SSD_TEMPLATE_CAPACITY = 40.0f;
+  public static final ImmutableSet<String> RESOURCE_TYPES = ImmutableSet.of("memory", "vcores");
 
   protected MockRM mockRM = null;
   protected MockNM nm1 = null;
@@ -205,6 +208,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   @Before
   public void setUp() throws Exception {
+    QueueMetrics.clearQueueMetrics();
     CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -406,6 +410,9 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setAutoCreatedLeafQueueConfigMaxCapacity(C, 100.0f);
     conf.setAutoCreatedLeafQueueConfigUserLimit(C, 100);
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
+    conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
+    conf.setAutoCreatedLeafQueueConfigMaximumAllocation(C,
+        "memory-mb=10240,vcores=6");
 
     conf.setAutoCreatedLeafQueueTemplateCapacityByLabel(C, NODEL_LABEL_GPU,
         NODE_LABEL_GPU_TEMPLATE_CAPACITY);
@@ -420,7 +427,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         (C, NODEL_LABEL_SSD);
 
 
-    LOG.info("Setup " + C + " as an auto leaf creation enabled parent queue");
+    LOG.info("Setup " + D + " as an auto leaf creation enabled parent queue");
 
     conf.setUserLimitFactor(D, 1.0f);
     conf.setAutoCreateChildQueueEnabled(D, true);
@@ -561,7 +568,29 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
         + ".memory-mb.maximum-allocation", 16384);
 
+
     return new CapacitySchedulerConfiguration(schedConf);
+  }
+
+  protected void setSchedulerMinMaxAllocation(CapacitySchedulerConfiguration conf) {
+    unsetMinMaxAllocation(conf);
+
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 1);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, 8);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 1024);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 18384);
+
+  }
+
+  private void unsetMinMaxAllocation(CapacitySchedulerConfiguration conf) {
+    conf.unset(YarnConfiguration.RESOURCE_TYPES
+        + ".vcores.minimum-allocation");
+    conf.unset(YarnConfiguration.RESOURCE_TYPES
+        + ".vcores.maximum-allocation");
+    conf.unset(YarnConfiguration.RESOURCE_TYPES
+        + ".memory-mb.minimum-allocation");
+    conf.unset(YarnConfiguration.RESOURCE_TYPES
+        + ".memory-mb.maximum-allocation");
   }
 
   protected MockRM setupSchedulerInstance() throws Exception {
@@ -661,10 +690,11 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   }
 
   protected void validateContainerLimits(
-      AutoCreatedLeafQueue autoCreatedLeafQueue) {
-    assertEquals(8,
+      AutoCreatedLeafQueue autoCreatedLeafQueue, int vCoreLimit,
+      long memorySize) {
+    assertEquals(vCoreLimit,
         autoCreatedLeafQueue.getMaximumAllocation().getVirtualCores());
-    assertEquals(16384,
+    assertEquals(memorySize,
         autoCreatedLeafQueue.getMaximumAllocation().getMemorySize());
   }
 
@@ -749,7 +779,21 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
             * parentQueue.getQueueCapacities().getAbsoluteCapacity(label));
     assertEquals(effMinCapacity, Resources.multiply(resourceByLabel,
         leafQueue.getQueueCapacities().getAbsoluteCapacity(label)));
-    assertEquals(effMinCapacity, leafQueue.getEffectiveCapacity(label));
+
+    if (expectedQueueEntitlements.get(label).getCapacity() > EPSILON) {
+      if (leafQueue.getCapacityConfigType().equals(ABSOLUTE_RESOURCE)) {
+        String templatePrefix = cs.getConfiguration().getAutoCreatedQueueTemplateConfPrefix(
+            parentQueue.getQueuePath());
+        Resource resourceTemplate = parentQueue.getLeafQueueTemplate().getLeafQueueConfigs()
+            .getMinimumResourceRequirement(label, templatePrefix, RESOURCE_TYPES);
+        assertEquals(resourceTemplate, leafQueue.getEffectiveCapacity(label));
+      } else {
+        assertEquals(effMinCapacity, leafQueue.getEffectiveCapacity(label));
+      }
+    } else {
+      assertEquals(Resource.newInstance(0, 0),
+          leafQueue.getEffectiveCapacity(label));
+    }
 
     if (leafQueue.getQueueCapacities().getAbsoluteCapacity(label) > 0) {
       assertTrue(Resources.greaterThan(cs.getResourceCalculator(),
