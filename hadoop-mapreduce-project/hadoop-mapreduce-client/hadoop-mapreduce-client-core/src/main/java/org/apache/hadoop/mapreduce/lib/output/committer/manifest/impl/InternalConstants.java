@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.util.Lists;
 
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
@@ -127,6 +125,6 @@ public final class InternalConstants {
   public static final String NAME_FORMAT_JOB_ATTEMPT = "[Job-Attempt %s]";
 
   /** Schemas of filesystems we know to not work with this committer. */
-  public static Set<String> UNSUPPORTED_FS_SCHEMAS =
-      new HashSet(Lists.newArrayList("s3a", "wasb"));
+  public static final Set<String> UNSUPPORTED_FS_SCHEMAS =
+      ImmutableSet.of("s3a", "wasb");
 }
