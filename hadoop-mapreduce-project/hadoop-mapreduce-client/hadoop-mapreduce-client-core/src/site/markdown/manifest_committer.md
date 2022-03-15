@@ -422,7 +422,7 @@ spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOut
 spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
 ```
 
-## ABFS Rename Rate Limiting `fs.azure.io.rate.limit`
+## Experimental: ABFS Rename Rate Limiting `fs.azure.io.rate.limit`
 
 To avoid triggering store throttling and backoff delays, as well as other
 throttling-related failure conditions file renames during job commit
@@ -466,6 +466,14 @@ If server-side throttling took place, signs of this can be seen in
 If these are seen -or other applications running at the same time experience
 throttling/throttling-triggered problems, consider reducing the value of
 `fs.azure.io.rate.limit`, and/or requesting a higher IO capacity from Microsoft.
+
+*Important* if you do get extra capacity from Microsoft and you want to use
+it to speed up job commits, increase the value of `fs.azure.io.rate.limit`
+either across the cluster, or specifically for those jobs which you wish
+to allocate extra priority to.
+
+This is still a work in progress; it may be expanded to support
+all IO operations performed by a single filesystem instance.
 
 # <a name="gcs"></a> Working with Google Cloud Storage
 

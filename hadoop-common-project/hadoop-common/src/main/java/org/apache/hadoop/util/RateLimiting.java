@@ -44,9 +44,9 @@ public interface RateLimiting {
    * If there is not enough space, the permits will be acquired,
    * but the subsequent call will block until the capacity has been
    * refilled.
-   * @param capacity capacity to acquire.
+   * @param requestedCapacity capacity to acquire.
    * @return time spent waiting for output.
    */
-  Duration acquire(int capacity);
+  Duration acquire(int requestedCapacity);
 
 }

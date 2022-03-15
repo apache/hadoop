@@ -224,12 +224,21 @@
     manifest committer support. It is not needed on the classpath
     except when using this committer, so it only tagged as
     "provided".
+    It is not exported as a transitive dependency of the JAR.
+    Applications which wish to to use the manifest committer
+    will need to explicity add the mapreduce JAR to their classpath.
+    This is already done by MapReduce and Spark.
     -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!--
+    These are only added to the classpath for tests,
+    and are not exported by the test JAR as transitive
+    dependencies.
+    -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>

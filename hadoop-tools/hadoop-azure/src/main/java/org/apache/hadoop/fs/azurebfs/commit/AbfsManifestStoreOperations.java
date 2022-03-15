@@ -37,8 +37,8 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestSt
 /**
  * Extension of StoreOperationsThroughFileSystem with ABFS awareness.
  * Purely for use by jobs committing work through the manifest committer.
- * The {@link AzureManifestCommitterFactory} will configure the
- * configure to use this as the binding to the FS.
+ * The {@link AzureManifestCommitterFactory} will configure
+ * this as the binding to the FS.
  *
  * ADLS Gen2 stores support etag-recovery on renames, but not WASB
  * stores.

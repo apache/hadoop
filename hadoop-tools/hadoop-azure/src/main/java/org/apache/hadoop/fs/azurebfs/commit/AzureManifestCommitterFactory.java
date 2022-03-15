@@ -41,9 +41,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 @InterfaceStability.Evolving
 public class AzureManifestCommitterFactory extends ManifestCommitterFactory {
 
-
   /**
-   * Classname, which can be declared in jpb configurations.
+   * Classname, which can be declared in job configurations.
    */
   public static final String NAME = ManifestCommitterFactory.class.getName();
 

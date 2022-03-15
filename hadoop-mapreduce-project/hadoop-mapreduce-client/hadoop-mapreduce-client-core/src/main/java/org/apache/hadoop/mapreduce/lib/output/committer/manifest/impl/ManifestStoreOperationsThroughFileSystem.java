@@ -46,7 +46,9 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   private FileSystem fileSystem;
 
   /**
-   * Has a call to msync failed as unsupported?
+   * Has a call to FileSystem.msync() failed as unsupported?
+   * If so, no new attempts will be made when
+   * (@link {@link #msync(Path)} is invoked.
    */
   private boolean msyncUnsupported = false;
 

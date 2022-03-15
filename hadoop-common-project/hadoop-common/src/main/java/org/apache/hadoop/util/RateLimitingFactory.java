@@ -28,7 +28,6 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimite
  * Factory for Rate Limiting.
  * This should be only place in the code where the guava RateLimiter is imported.
  */
-
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class RateLimitingFactory {
@@ -50,7 +49,7 @@ public final class RateLimitingFactory {
 
 
     @Override
-    public Duration acquire(int capacity) {
+    public Duration acquire(int requestedCapacity) {
       return INSTANTLY;
     }
   }
@@ -63,18 +62,18 @@ public final class RateLimitingFactory {
 
     /**
      * Constructor.
-     * @param capacity capacity in permits/second.
+     * @param capacityPerSecond capacity in permits/second.
      */
-    private RestrictedRateLimiting(int capacity) {
-      this.limiter = RateLimiter.create(capacity);
+    private RestrictedRateLimiting(int capacityPerSecond) {
+      this.limiter = RateLimiter.create(capacityPerSecond);
     }
 
     @Override
-    public Duration acquire(int capacity) {
-      final double t = limiter.acquire(capacity);
-      return t == 0
+    public Duration acquire(int requestedCapacity) {
+      final double delayMillis = limiter.acquire(requestedCapacity);
+      return delayMillis == 0
           ? INSTANTLY
-          : Duration.ofMillis((long) (t * 1000));
+          : Duration.ofMillis((long) (delayMillis * 1000));
     }
 
   }

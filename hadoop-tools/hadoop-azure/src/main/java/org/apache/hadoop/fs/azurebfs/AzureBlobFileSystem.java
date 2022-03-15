@@ -503,6 +503,17 @@ public class AzureBlobFileSystem extends FileSystem
    * being used widely (as has happened to the S3A FS)
    */
   public class ResilientCommitByRenameImpl implements ResilientCommitByRename {
+
+    /**
+     * Perform the rename.
+     * This will be rate limited, as well as able to recover
+     * from rename errors if the etag was passed in.
+     * @param source path to source file
+     * @param dest destination of rename.
+     * @param sourceEtag etag of source file. may be null or empty
+     * @return the outcome of the operation
+     * @throws IOException any rename failure which was not recovered from.
+     */
     public Pair<Boolean, Duration> commitSingleFileByRename(
         final Path source,
         final Path dest,

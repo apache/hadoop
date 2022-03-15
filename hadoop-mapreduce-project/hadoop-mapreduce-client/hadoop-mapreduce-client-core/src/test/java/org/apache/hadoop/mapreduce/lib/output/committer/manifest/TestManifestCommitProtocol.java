@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
@@ -1500,6 +1501,13 @@ public class TestManifestCommitProtocol
     // validate output
     // There's no success marker in the subdirectory
     validateContent(outSubDir, false, "");
+  }
+
+  @Test
+  public void testUnsupportedSchema() throws Throwable {
+    intercept(PathIOException.class, () ->
+        new ManifestCommitterFactory()
+            .createOutputCommitter(new Path("s3a://unsupported/"), null));
   }
 
   /**

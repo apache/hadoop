@@ -71,7 +71,7 @@ The committer built into `hadoop-mapreduce-client-core` module is the `FileOutpu
 
 ## The Manifest Committer: A high performance committer for Spark on Azure and Google storage.
 
-The Manifest Committera higher performance committer for ABFS and GCS storage
+The Manifest Committer is a higher performance committer for ABFS and GCS storage
 for jobs which create file across deep directory trees through many tasks.
 
 It will also work on `hdfs://` and indeed, `file://` URLs, but
@@ -84,7 +84,7 @@ problems of copying rather than moving all the generated data.
 
 Although it will work with MapReduce
 there is no handling of multiple job attempts with recovery from previous failed
-attempts. (Plan: fail on MR AM restart)
+attempts.
 
 ### The Manifest
 
@@ -257,7 +257,7 @@ Directory Preparation: merge the directory lists of all manifests,
 then queue for creation the (hopefully very much smaller) set of unique
 directories.
 
-Rname: iterate through all manifests and queue their renames into a pool for
+Rename: iterate through all manifests and queue their renames into a pool for
 renaming.
 
 #### Thread pool lifetimes

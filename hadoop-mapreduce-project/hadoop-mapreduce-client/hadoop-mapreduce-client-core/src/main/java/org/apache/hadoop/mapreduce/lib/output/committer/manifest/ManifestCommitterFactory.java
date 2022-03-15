@@ -20,15 +20,14 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.io.IOException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
+
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.UNSUPPORTED_FS_SCHEMAS;
 
 /**
  * This is the committer factory to register as the source of committers
@@ -37,9 +36,6 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ManifestCommitterFactory extends PathOutputCommitterFactory {
-
-  public static final Logger LOG = LoggerFactory.getLogger(
-      ManifestCommitterFactory.class);
 
   /**
    * Name of this factory.
@@ -50,9 +46,10 @@ public class ManifestCommitterFactory extends PathOutputCommitterFactory {
   public ManifestCommitter createOutputCommitter(final Path outputPath,
       final TaskAttemptContext context) throws IOException {
     // safety check. S3A does not support this, so fail fast.
-    if ("s3a".equals(outputPath.toUri().getScheme())) {
+    final String scheme = outputPath.toUri().getScheme();
+    if (UNSUPPORTED_FS_SCHEMAS.contains(scheme)) {
       throw new PathIOException(outputPath.toString(),
-          "This committer does not work with S3 storage");
+          "This committer does not work with the filesystem of type " + scheme);
     }
     return new ManifestCommitter(outputPath, context);
   }
