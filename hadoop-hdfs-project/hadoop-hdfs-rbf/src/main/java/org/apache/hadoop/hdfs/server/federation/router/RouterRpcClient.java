@@ -466,7 +466,7 @@ public class RouterRpcClient {
           + router.getRouterId());
     }
 
-    appendClientIpPortToCallerContextIfAbsent();
+    addClientIpToCallerContext();
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -588,19 +588,32 @@ public class RouterRpcClient {
   /**
    * For tracking which is the actual client address.
    * It adds trace info "clientIp:ip" and "clientPort:port"
-   * to caller context if they are absent.
+   * in the caller context, removing the old values if they were
+   * already present.
    */
-  private void appendClientIpPortToCallerContextIfAbsent() {
+  private void addClientIpToCallerContext() {
     CallerContext ctx = CallerContext.getCurrent();
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
-    CallerContext.setCurrent(
-        new CallerContext.Builder(origContext, contextFieldSeparator)
-            .appendIfAbsent(CLIENT_IP_STR, Server.getRemoteAddress())
-            .appendIfAbsent(CLIENT_PORT_STR,
+    CallerContext.Builder builder =
+        new CallerContext.Builder("", contextFieldSeparator)
+            .append(CLIENT_IP_STR, Server.getRemoteAddress())
+            .append(CLIENT_PORT_STR,
                 Integer.toString(Server.getRemotePort()))
-            .setSignature(origSignature)
-            .build());
+            .setSignature(origSignature);
+    // Append the original caller context
+    if (origContext != null) {
+      for (String part : origContext.split(contextFieldSeparator)) {
+        String[] keyValue =
+            part.split(CallerContext.Builder.KEY_VALUE_SEPARATOR, 2);
+        if (keyValue.length == 2) {
+          builder.appendIfAbsent(keyValue[0], keyValue[1]);
+        } else if (keyValue.length == 1) {
+          builder.append(keyValue[0]);
+        }
+      }
+    }
+    CallerContext.setCurrent(builder.build());
   }
 
   /**

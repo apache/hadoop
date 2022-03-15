@@ -116,7 +116,7 @@ public final class CallerContext {
 
   /** The caller context builder. */
   public static final class Builder {
-    private static final String KEY_VALUE_SEPARATOR = ":";
+    public static final String KEY_VALUE_SEPARATOR = ":";
     /**
      * The illegal separators include '\t', '\n', '='.
      * User should not set illegal separator.

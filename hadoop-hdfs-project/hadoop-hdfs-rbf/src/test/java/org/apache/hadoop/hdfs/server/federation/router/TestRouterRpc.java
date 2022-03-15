@@ -1950,9 +1950,10 @@ public class TestRouterRpc {
     FsPermission permission = new FsPermission("755");
     routerProtocol.mkdirs(dirPath, permission, false);
 
-    // The audit log should contains "callerContext=clientContext,clientIp:"
-    assertTrue(auditlog.getOutput()
-        .contains("callerContext=clientContext,clientIp:"));
+    // The audit log should contains "callerContext=clientIp:...,clientContext"
+    final String logOutput = auditlog.getOutput();
+    assertTrue(logOutput.contains("callerContext=clientIp:"));
+    assertTrue(logOutput.contains(",clientContext"));
     assertTrue(verifyFileExists(routerFS, dirPath));
   }
 
@@ -1997,9 +1998,9 @@ public class TestRouterRpc {
     // Create a directory via the router.
     routerProtocol.getFileInfo(dirPath);
 
-    // The audit log should contains the original clientIp and clientPort
+    // The audit log should not contain the original clientIp and clientPort
     // set by client.
-    assertTrue(auditLog.getOutput().contains("clientIp:1.1.1.1"));
-    assertTrue(auditLog.getOutput().contains("clientPort:1234"));
+    assertFalse(auditLog.getOutput().contains("clientIp:1.1.1.1"));
+    assertFalse(auditLog.getOutput().contains("clientPort:1234"));
   }
 }
