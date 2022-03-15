@@ -461,11 +461,10 @@ public class TestExternalStoragePolicySatisfier {
       LambdaTestUtils.intercept(ExitUtil.ExitException.class,
           "Exit immediately because another ExternalStoragePolicySatisfier is running",
           () -> ExternalStoragePolicySatisfier.getNameNodeConnector(config));
-
+    } finally {
       // Reset first exit exception to avoid AssertionError in MiniDFSCluster#shutdown.
       // This has no effect on functionality.
       ExitUtil.resetFirstExitException();
-    } finally {
       shutdownCluster();
     }
   }
