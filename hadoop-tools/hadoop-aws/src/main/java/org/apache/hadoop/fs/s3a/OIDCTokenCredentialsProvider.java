@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.commons.lang3.StringUtils;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.WebIdentityTokenCredentialsProvider;
+
+import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ProviderUtils;
+
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -58,15 +60,15 @@ public class OIDCTokenCredentialsProvider implements AWSCredentialsProvider {
   private IOException lookupIOE;
 
   public OIDCTokenCredentialsProvider(Configuration conf) {
-      try {
-          Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
+    try {
+      Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
                   conf, S3AFileSystem.class);
-          this.jwtPath = S3AUtils.lookupPassword(c, JWT_PATH, null);
-          this.roleARN = S3AUtils.lookupPassword(c, ASSUMED_ROLE_ARN, null);
-          this.sessionName = S3AUtils.lookupPassword(c, ASSUMED_ROLE_SESSION_NAME, null);
-      } catch (IOException e) {
-          lookupIOE = e;
-      }
+      this.jwtPath = S3AUtils.lookupPassword(c, JWT_PATH, null);
+      this.roleARN = S3AUtils.lookupPassword(c, ASSUMED_ROLE_ARN, null);
+      this.sessionName = S3AUtils.lookupPassword(c, ASSUMED_ROLE_SESSION_NAME, null);
+    } catch (IOException e) {
+      lookupIOE = e;
+    }
   }
 
   public AWSCredentials getCredentials() {
