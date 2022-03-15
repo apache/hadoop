@@ -142,6 +142,10 @@ public final class Constants {
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
+  /**
+   * Absolute path to the web identity token file
+   */
+  public static final String JWT_PATH = "fs.s3a.jwt.path";
 
   // the maximum number of tasks cached if all threads are already uploading
   public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
