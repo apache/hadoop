@@ -493,11 +493,13 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
     in = openTestFile(S3AInputPolicy.Random, DEFAULT_READAHEAD_RANGE);
 
-    in.skip(_4K);
+    assertEquals("bytes skipped", _4K, in.skip(_4K));
+
     // Skip within read ahead range, will not make a new get request
-    in.skip(_8K);
+    assertEquals("bytes skipped", _8K, in.skip(_8K));
+
     // Skip outside read ahead range, should make a new get request
-    in.skip(_256K);
+    assertEquals("bytes skipped", _256K, in.skip(_256K));
 
     IOStatistics ioStatistics = streamStatistics.getIOStatistics();
 

@@ -1179,14 +1179,16 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     checkNotClosed();
     streamStatistics.skipOperationStarted();
 
-    long targetPos = pos + n;
+    // target pos should be less than EOF
+    long targetPos = Math.min(contentLength, pos + n);
+    long bytesToSkip = targetPos - pos;
     long skipped;
 
     try {
       lazySeek(targetPos, 1);
-      skipped = n;
+      skipped = bytesToSkip;
     } catch (EOFException e) {
-      LOG.debug("Lazy seek failed, attempting default skip");
+      LOG.debug("Lazy seek failed, attempting default skip", e);
 
       skipped = wrappedStream.skip(n);
       if (skipped > 0) {
