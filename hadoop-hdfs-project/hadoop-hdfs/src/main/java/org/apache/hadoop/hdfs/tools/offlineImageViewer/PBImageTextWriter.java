@@ -33,6 +33,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.HashMap;
@@ -505,7 +508,7 @@ abstract class PBImageTextWriter implements Closeable {
   private String delimiter;
   private File filename;
   private int numThreads;
-  private String parallelOut;
+  private String parallelOutputFile;
 
   /**
    * Construct a PB FsImage writer to generate text file.
@@ -514,7 +517,7 @@ abstract class PBImageTextWriter implements Closeable {
    *                 in memory instead.
    */
   PBImageTextWriter(PrintStream out, String delimiter, String tempPath,
-      int numThreads, String parallelOut) throws IOException {
+      int numThreads, String parallelOutputFile) throws IOException {
     this.out = out;
     this.delimiter = delimiter;
     if (tempPath.isEmpty()) {
@@ -523,7 +526,7 @@ abstract class PBImageTextWriter implements Closeable {
       metadataMap = new LevelDBMetadataMap(tempPath);
     }
     this.numThreads = numThreads;
-    this.parallelOut = parallelOut;
+    this.parallelOutputFile = parallelOutputFile;
   }
 
   PBImageTextWriter(PrintStream out, String delimiter, String tempPath)
@@ -663,10 +666,12 @@ abstract class PBImageTextWriter implements Closeable {
       throws IOException {
     ArrayList<FileSummary.Section> allINodeSubSections =
         getINodeSubSections(sections);
-    if (numThreads > 1 && !parallelOut.equals("-") &&
+    if (numThreads > 1 && !parallelOutputFile.equals("-") &&
         allINodeSubSections.size() > 1) {
       outputInParallel(conf, summary, allINodeSubSections);
     } else {
+      LOG.info("Serial output due to threads num: {}, parallel output file: {}, " +
+          "subSections: {}.", numThreads, parallelOutputFile, allINodeSubSections.size());
       outputInSerial(conf, summary, fin, sections);
     }
   }
@@ -691,113 +696,91 @@ abstract class PBImageTextWriter implements Closeable {
     }
     afterOutput();
     long timeTaken = Time.monotonicNow() - startTime;
-    LOG.debug("Time to output inodes: {}ms", timeTaken);
+    LOG.debug("Time to output inodes: {} ms", timeTaken);
   }
 
   /**
    * STEP1: Multi-threaded process sub-sections.
    * Given n (n>1) threads to process k (k>=n) sections,
-   * E.g. 10 sections and 4 threads, grouped as follows:
-   * |---------------------------------------------------------------|
-   * | (0    1    2)    (3    4    5)    (6    7)     (8    9)       |
-   * | thread[0]        thread[1]        thread[2]    thread[3]      |
-   * |---------------------------------------------------------------|
-   *
-   * STEP2: Merge files.
+   * output parsed results of each section to tmp file in order.
+   * 
+   * STEP2: Merge tmp files.
    */
   private void outputInParallel(Configuration conf, FileSummary summary,
       ArrayList<FileSummary.Section> subSections)
       throws IOException {
     int nThreads = Integer.min(numThreads, subSections.size());
-    LOG.info("Outputting in parallel with {} sub-sections" +
-        " using {} threads", subSections.size(), nThreads);
-    final CopyOnWriteArrayList<IOException> exceptions =
-        new CopyOnWriteArrayList<>();
-    Thread[] threads = new Thread[nThreads];
-    String[] paths = new String[nThreads];
-    for (int i = 0; i < paths.length; i++) {
-      paths[i] = parallelOut + ".tmp." + i;
-    }
+    LOG.info("Outputting in parallel with {} sub-sections using {} threads",
+        subSections.size(), nThreads);
+    final CopyOnWriteArrayList<IOException> exceptions = new CopyOnWriteArrayList<>();
+    CountDownLatch latch = new CountDownLatch(subSections.size());
+    ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
     AtomicLong expectedINodes = new AtomicLong(0);
     AtomicLong totalParsed = new AtomicLong(0);
     String codec = summary.getCodec();
+    String[] paths = new String[subSections.size()];
 
-    int mark = 0;
-    for (int i = 0; i < nThreads; i++) {
-      // Each thread processes different ordered sub-sections
-      // and outputs to different paths
-      int step = subSections.size() / nThreads +
-          (i < subSections.size() % nThreads ? 1 : 0);
-      int start = mark;
-      int end = start + step;
-      ArrayList<FileSummary.Section> subList = new ArrayList<>(
-          subSections.subList(start, end));
-      mark = end;
-      String path = paths[i];
-
-      threads[i] = new Thread(() -> {
-        LOG.info("output iNodes of sub-sections: [{},{})", start, end);
+    for (int i = 0; i < subSections.size(); i++) {
+      paths[i] = parallelOutputFile + ".tmp." + i;
+      int index = i;
+      executorService.submit(() -> {
+        LOG.info("Output iNodes of section-{}", index);
         InputStream is = null;
-        try (PrintStream theOut = new PrintStream(path, "UTF-8")) {
+        try (PrintStream outStream = new PrintStream(paths[index], "UTF-8")) {
           long startTime = Time.monotonicNow();
-          for (int j = 0; j < subList.size(); j++) {
-            is = getInputStreamForSection(subList.get(j), codec, conf);
-            if (start == 0 && j == 0) {
-              // The first iNode section has a header which must be
-              // processed first
-              INodeSection s = INodeSection.parseDelimitedFrom(is);
-              expectedINodes.set(s.getNumInodes());
-            }
-            totalParsed.addAndGet(outputINodes(is, theOut));
+          is = getInputStreamForSection(subSections.get(index), codec, conf);
+          if (index == 0) {
+            // The first iNode section has a header which must be processed first
+            INodeSection s = INodeSection.parseDelimitedFrom(is);
+            expectedINodes.set(s.getNumInodes());
           }
+          totalParsed.addAndGet(outputINodes(is, outStream));
           long timeTaken = Time.monotonicNow() - startTime;
-          LOG.info("Time to output iNodes of sub-sections: [{},{}) {} ms",
-              start, end, timeTaken);
+          LOG.info("Time to output iNodes of section-{}: {} ms", index, timeTaken);
         } catch (Exception e) {
           exceptions.add(new IOException(e));
         } finally {
+          latch.countDown();
           try {
-            is.close();
+            if (is != null) {
+              is.close();
+            }
           } catch (IOException ioe) {
             LOG.warn("Failed to close the input stream, ignoring", ioe);
           }
         }
       });
     }
-    for (Thread t : threads) {
-      t.start();
-    }
-    for (Thread t : threads) {
-      try {
-        t.join();
-      } catch (InterruptedException e) {
-        LOG.error("Interrupted when thread join.", e);
-        throw new IOException(e);
-      }
+
+    try {
+      latch.await();
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted waiting for countdown latch", e);
+      throw new IOException(e);
     }
 
+    executorService.shutdown();
     if (exceptions.size() != 0) {
-      LOG.error("Failed to output INode sub-sections, {} exception(s)" +
-              " occurred.", exceptions.size());
+      LOG.error("Failed to output INode sub-sections, {} exception(s) occurred.",
+          exceptions.size());
       throw exceptions.get(0);
     }
     if (totalParsed.get() != expectedINodes.get()) {
-      throw new IOException("Expected to parse " + expectedINodes + " in " +
-          "parallel, but parsed " + totalParsed.get() + ". The image may " +
-          "be corrupt.");
+      throw new IOException("Expected to parse " + expectedINodes + " in parallel, " +
+          "but parsed " + totalParsed.get() + ". The image may be corrupt.");
     }
     LOG.info("Completed outputting all INode sub-sections to {} tmp files.",
-        paths.length);
+        subSections.size());
 
-    try (PrintStream pout = new PrintStream(parallelOut, "UTF-8")) {
-      pout.println(getHeader());
+    try (PrintStream ps = new PrintStream(parallelOutputFile, "UTF-8")) {
+      ps.println(getHeader());
     }
 
     // merge tmp files
     long startTime = Time.monotonicNow();
-    mergeFiles(paths, parallelOut);
+    mergeFiles(paths, parallelOutputFile);
     long timeTaken = Time.monotonicNow() - startTime;
-    LOG.info("Completed all stages. Time to merge files: {}ms", timeTaken);
+    LOG.info("Completed all stages. Time to merge files: {} ms", timeTaken);
   }
 
   protected PermissionStatus getPermission(long perm) {
