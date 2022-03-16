@@ -43,7 +43,7 @@ target_include_directories(hdfs_tool_tests PRIVATE
                             ../../tools
                             ../../tools/hdfs-df
                             ../../tools/hdfs-du
-                            ../../tools/hdfs-allow-snapshot 
+                            ../../tools/hdfs-allow-snapshot
                             ../../tools/hdfs-disallow-snapshot
                             ../../tools/hdfs-delete-snapshot
                             ../../tools/hdfs-create-snapshot

@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   });
   if (result != 0) {
     std::cerr
-        << "Error: Unable to schedule clean-up tasks for HDFS df tool, exiting"
+        << "Error: Unable to schedule clean-up tasks for HDFS find tool, exiting"
         << std::endl;
     std::exit(EXIT_FAILURE);
   }
