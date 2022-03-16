@@ -36,11 +36,11 @@ bool Find::Initialize() {
       "Finds all files recursively starting from the specified PATH and prints "
       "their file paths. This hdfs_find tool mimics the POSIX find.");
   add_options(
-      "name,n",
+      "name,n", po::value<std::string>(),
       "If provided, all results will be matching the NAME pattern otherwise, "
       "the implicit '*' will be used NAME allows wild-cards");
   add_options(
-      "max-depth,m",
+      "max-depth,m", po::value<u_int32_t>(),
       "If provided, the maximum depth to recurse after the end of the path is "
       "reached will be limited by MAX_DEPTH otherwise, the maximum depth to "
       "recurse is unbound MAX_DEPTH can be set to 0 for pure globbing and "
@@ -121,9 +121,10 @@ bool Find::Do() {
     const auto path = opt_val_["path"].as<std::string>();
     const auto name =
         opt_val_.count("name") > 0 ? opt_val_["name"].as<std::string>() : "*";
-    const auto max_depth = opt_val_.count("max-depth") > 0
-                               ? opt_val_["max-depth"].as<u_int32_t>()
-                               : hdfs::FileSystem::GetDefaultFindMaxDepth();
+    const auto max_depth = opt_val_.count("max-depth") <= 0
+                               ? hdfs::FileSystem::GetDefaultFindMaxDepth()
+                               : opt_val_["max-depth"].as<uint32_t>();
+    return HandlePath(path, name, max_depth);
   }
 
   return false;
