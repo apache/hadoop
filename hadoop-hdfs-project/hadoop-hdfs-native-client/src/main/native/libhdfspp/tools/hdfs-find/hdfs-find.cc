@@ -137,7 +137,7 @@ bool Find::HandleHelp() const {
 
 bool Find::HandlePath(const std::string &path, const std::string &name,
                       const uint32_t max_depth) const {
-  // Building a URI object from the given uri_path
+  // Building a URI object from the given path
   auto uri = hdfs::parse_path_or_exit(path);
 
   const auto fs = hdfs::doConnect(uri, true);
@@ -169,12 +169,12 @@ bool Find::HandlePath(const std::string &path, const std::string &name,
       }
     }
     if (!status.ok() && final_status.ok()) {
-      // We make sure we set 'status' only on the first error.
+      // We make sure we set 'status' only on the first error
       final_status = status;
     }
     if (!has_more_results) {
-      promise->set_value(); // set promise
-      return false;         // request stop sending results
+      promise->set_value(); // Set promise
+      return false;         // Request stop sending results
     }
     return true; // request more results
   };
@@ -182,7 +182,7 @@ bool Find::HandlePath(const std::string &path, const std::string &name,
   // Asynchronous call to Find
   fs->Find(uri.get_path(), name, max_depth, handler);
 
-  // block until promise is set
+  // Block until promise is set
   future.get();
   if (!final_status.ok()) {
     std::cerr << "Error: " << final_status.ToString() << std::endl;

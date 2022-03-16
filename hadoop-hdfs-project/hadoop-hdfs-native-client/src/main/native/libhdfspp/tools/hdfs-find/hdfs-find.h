@@ -27,8 +27,9 @@
 
 namespace hdfs::tools {
 /**
- * {@class Find} is an {@class HdfsTool} that displays the size of the
- * directories and files.
+ * {@class Find} is an {@class HdfsTool} finds all files recursively starting
+ * from the specified PATH and prints their file paths. This tool mimics the
+ * POSIX find.
  */
 class Find : public HdfsTool {
 public:
@@ -73,7 +74,10 @@ protected:
   /**
    * Handle the path argument that's passed to this tool.
    *
-   * @param path The path to the directory for which we need du info.
+   * @param path The path to the directory to begin the find.
+   * @param name The pattern name of the search term.
+   * @param max_depth The maximum depth of the traversal while searching through
+   * the folders.
    *
    * @return A boolean indicating the result of this operation.
    */
