@@ -51,6 +51,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
@@ -67,6 +68,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SERVER_SIDE_ENCRYPTION_ALGORITHM;
@@ -478,8 +481,30 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation renamePath(String source, final String destination,
-      final String continuation, TracingContext tracingContext)
+
+  /**
+   * Rename a file or directory.
+   * If a source etag is passed in, the operation will attempt to recover
+   * from a missing source file by probing the destination for
+   * existence and comparing etags.
+   * The second value in the result will be true to indicate that this
+   * took place.
+   * As rename recovery is only attempted if the source etag is non-empty,
+   * in normal rename operations rename recovery will never happen.
+   * @param source path to source file
+   * @param destination destination of rename.
+   * @param continuation continuation.
+   * @param tracingContext trace context
+   * @param sourceEtag etag of source file. may be null or empty
+   * @return pair of (the rename operation, flag indicating recovery took place)
+   * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
+   */
+  public Pair<AbfsRestOperation, Boolean> renamePath(
+      final String source,
+      final String destination,
+      final String continuation,
+      final TracingContext tracingContext,
+      final String sourceEtag)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
@@ -505,9 +530,73 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders);
-    // no attempt at recovery using timestamps as it was not reliable.
-    op.execute(tracingContext);
-    return op;
+    try {
+      op.execute(tracingContext);
+      return Pair.of(op, false);
+    } catch (AzureBlobFileSystemException e) {
+        // If we have no HTTP response, throw the original exception.
+        if (!op.hasResult()) {
+          throw e;
+        }
+        boolean etagCheckSucceeded = renameIdempotencyCheckOp(
+            source,
+            sourceEtag, op, destination, tracingContext);
+        if (!etagCheckSucceeded) {
+          // idempotency did not return different result
+          // throw back the exception
+          throw e;
+        }
+      return Pair.of(op, true);
+    }
+  }
+
+  /**
+   * Check if the rename request failure is post a retry and if earlier rename
+   * request might have succeeded at back-end.
+   *
+   * If a source etag was passed in, and the error was 404, get the
+   * etag of any file at the destination.
+   * If it matches the source etag, then the rename is considered
+   * a success.
+   * Exceptions raised in the probe of the destination are swallowed,
+   * so that they do not interfere with the original rename failures.
+   * @param source source path
+   * @param op Rename request REST operation response with non-null HTTP response
+   * @param destination rename destination path
+   * @param sourceEtag etag of source file. may be null or empty
+   * @param tracingContext Tracks identifiers for request header
+   * @return true if the file was successfully copied
+   */
+  public boolean renameIdempotencyCheckOp(
+      final String source,
+      final String sourceEtag,
+      final AbfsRestOperation op,
+      final String destination,
+      TracingContext tracingContext) {
+    Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
+
+    if ((op.isARetriedRequest())
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
+        && isNotEmpty(sourceEtag)) {
+
+      // Server has returned HTTP 404, which means rename source no longer
+      // exists. Check on destination status and if its etag matches
+      // that of the source, consider it to be a success.
+      LOG.debug("rename {} to {} failed, checking etag of destination",
+          source, destination);
+
+      try {
+        final AbfsRestOperation destStatusOp = getPathStatus(destination,
+            false, tracingContext);
+        final AbfsHttpOperation result = destStatusOp.getResult();
+
+        return result.getStatusCode() == HttpURLConnection.HTTP_OK
+            && sourceEtag.equals(extractEtagHeader(result));
+      } catch (AzureBlobFileSystemException ignored) {
+        // GetFileStatus on the destination failed, the rename did not take place
+      }
+    }
+    return false;
   }
 
   public AbfsRestOperation append(final String path, final byte[] buffer,
