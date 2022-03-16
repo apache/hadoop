@@ -173,6 +173,9 @@ public class JsonSerialization<T> {
   @SuppressWarnings("unchecked")
   public synchronized T load(File jsonFile)
       throws IOException, JsonParseException, JsonMappingException {
+    if (!jsonFile.exists()) {
+      throw new FileNotFoundException("No such file: " + jsonFile);
+    }
     if (!jsonFile.isFile()) {
       throw new FileNotFoundException("Not a file: " + jsonFile);
     }
@@ -182,7 +185,7 @@ public class JsonSerialization<T> {
     try {
       return mapper.readValue(jsonFile, classType);
     } catch (IOException e) {
-      LOG.error("Exception while parsing json file {}", jsonFile, e);
+      LOG.warn("Exception while parsing json file {}", jsonFile, e);
       throw e;
     }
   }

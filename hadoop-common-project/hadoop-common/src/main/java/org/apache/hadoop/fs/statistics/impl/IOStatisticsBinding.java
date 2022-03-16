@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.statistics.impl;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Serializable;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -450,8 +451,33 @@ public final class IOStatisticsBinding {
    * @param factory factory of duration trackers
    * @param statistic statistic key
    * @param input input callable.
+   * @throws IOException IO failure.
    */
   public static void trackDurationOfInvocation(
+      DurationTrackerFactory factory,
+      String statistic,
+      InvocationRaisingIOE input) throws IOException {
+
+    measureDurationOfInvocation(factory, statistic, input);
+  }
+
+  /**
+   * Given an IOException raising callable/lambda expression,
+   * execute it and update the relevant statistic,
+   * returning the measured duration.
+   *
+   * {@link #trackDurationOfInvocation(DurationTrackerFactory, String, InvocationRaisingIOE)}
+   * with the duration returned for logging etc.; added as a new
+   * method to avoid linking problems with any code calling the existing
+   * method.
+   *
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param input input callable.
+   * @return the duration of the operation, as measured by the duration tracker.
+   * @throws IOException IO failure.
+   */
+  public static Duration measureDurationOfInvocation(
       DurationTrackerFactory factory,
       String statistic,
       InvocationRaisingIOE input) throws IOException {
@@ -473,6 +499,7 @@ public final class IOStatisticsBinding {
       // set the failed flag.
       tracker.close();
     }
+    return tracker.asDuration();
   }
 
   /**
@@ -622,7 +649,7 @@ public final class IOStatisticsBinding {
    * @param statistic statistic to track
    * @return a duration tracker.
    */
-  private static DurationTracker createTracker(
+  public static DurationTracker createTracker(
       @Nullable final DurationTrackerFactory factory,
       final String statistic) {
     return factory != null
