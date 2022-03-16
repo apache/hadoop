@@ -294,7 +294,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
 
     this.pos = targetPos;
-    nextReadPos = targetPos;
   }
 
   @Override
@@ -369,7 +368,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         long skipped = wrappedStream.skip(diff);
         if (skipped > 0) {
           pos += skipped;
-          nextReadPos += skipped;
         }
         streamStatistics.seekForwards(diff, skipped);
 
@@ -409,7 +407,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     // close the stream; if read the object will be opened at the new pos
     closeStream("seekInStream()", false, false);
     pos = targetPos;
-    nextReadPos = targetPos;
   }
 
   @Override
@@ -1190,6 +1187,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     try {
       lazySeek(targetPos, 1);
       skipped = bytesToSkip;
+      nextReadPos += skipped;
     } catch (EOFException e) {
       LOG.debug("Lazy seek failed, attempting default skip", e);
 
