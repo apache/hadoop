@@ -49,7 +49,9 @@ import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.c
  * Raises a {@link OutputValidationException} on a validation failure.
  */
 public class ValidateRenamedFilesStage extends
-    AbstractJobCommitStage<List<TaskManifest>, List<FileEntry>> {
+    AbstractJobOrTaskStage<
+        List<TaskManifest>,
+        List<FileEntry>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ValidateRenamedFilesStage.class);

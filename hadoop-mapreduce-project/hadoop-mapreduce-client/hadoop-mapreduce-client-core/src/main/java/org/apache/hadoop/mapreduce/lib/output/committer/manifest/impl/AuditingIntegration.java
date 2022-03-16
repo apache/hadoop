@@ -55,7 +55,7 @@ public final class AuditingIntegration {
 
   /**
    * Callback on stage entry.
-   * Sets the sactiveStage and updates the
+   * Sets the activeStage and updates the
    * common context.
    * @param stage new stage
    */

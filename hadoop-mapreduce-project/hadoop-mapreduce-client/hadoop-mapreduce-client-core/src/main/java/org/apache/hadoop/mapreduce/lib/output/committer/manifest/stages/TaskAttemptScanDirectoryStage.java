@@ -49,7 +49,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
  * This is executed by the task committer.
  */
 public final class TaskAttemptScanDirectoryStage
-    extends AbstractJobCommitStage<Void, TaskManifest> {
+    extends AbstractJobOrTaskStage<Void, TaskManifest> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       TaskAttemptScanDirectoryStage.class);

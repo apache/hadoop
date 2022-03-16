@@ -74,7 +74,9 @@ import static org.apache.hadoop.util.OperationDuration.humanTime;
  * do use benchmarks from real test runs when tuning this algorithm.
  */
 public class CreateOutputDirectoriesStage extends
-    AbstractJobCommitStage<List<TaskManifest>, CreateOutputDirectoriesStage.Result> {
+    AbstractJobOrTaskStage<
+        List<TaskManifest>,
+        CreateOutputDirectoriesStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       CreateOutputDirectoriesStage.class);

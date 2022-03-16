@@ -34,7 +34,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Exceptions may/may not be suppressed.
  */
 public class AbortTaskStage extends
-    AbstractJobCommitStage<Boolean, Path> {
+    AbstractJobOrTaskStage<Boolean, Path> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AbortTaskStage.class);

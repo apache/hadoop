@@ -47,9 +47,9 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.Di
  * Outputs: SuccessData
  */
 public class CommitJobStage extends
-    AbstractJobCommitStage<
-        CommitJobStage.Arguments,
-        CommitJobStage.Result> {
+    AbstractJobOrTaskStage<
+            CommitJobStage.Arguments,
+            CommitJobStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       CommitJobStage.class);

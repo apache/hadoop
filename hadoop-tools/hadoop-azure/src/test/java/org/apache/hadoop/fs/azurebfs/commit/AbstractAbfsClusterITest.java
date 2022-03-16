@@ -155,7 +155,6 @@ public abstract class AbstractAbfsClusterITest extends
    * the HDFS cluster binding is implicitly propagated to YARN.
    * If one is not requested, the local filesystem is used as the cluster FS.
    * @param conf configuration to start with.
-   * @param useHDFS should an HDFS cluster be instantiated.
    * @return the cluster binding.
    * @throws IOException failure.
    */
@@ -229,13 +228,6 @@ public abstract class AbstractAbfsClusterITest extends
     jobConf.addResource(getConfiguration());
     applyCustomConfigOptions(jobConf);
     return jobConf;
-  }
-
-
-  protected Job createJob(Configuration jobConf) throws IOException {
-    Job mrJob = Job.getInstance(jobConf, getMethodName());
-    patchConfigurationForCommitter(mrJob.getConfiguration());
-    return mrJob;
   }
 
   /**

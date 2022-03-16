@@ -33,7 +33,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Argument passed in is task name:only for logging.
  */
 public class SetupTaskStage extends
-    AbstractJobCommitStage<String, Path> {
+    AbstractJobOrTaskStage<String, Path> {
 
   public SetupTaskStage(final StageConfig stageConfig) {
     super(true, stageConfig, OP_STAGE_TASK_SETUP, false);

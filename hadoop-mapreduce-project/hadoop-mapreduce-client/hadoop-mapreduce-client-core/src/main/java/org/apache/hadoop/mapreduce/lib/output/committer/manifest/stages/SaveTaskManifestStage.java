@@ -47,7 +47,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
  * Returns the path where the manifest was saved.
  */
 public class SaveTaskManifestStage extends
-    AbstractJobCommitStage<TaskManifest, Path> {
+    AbstractJobOrTaskStage<TaskManifest, Path> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       SaveTaskManifestStage.class);

@@ -32,7 +32,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * The job attempt directory must not exist before the call.
  */
 public class SetupJobStage extends
-    AbstractJobCommitStage<Boolean, Path> {
+    AbstractJobOrTaskStage<Boolean, Path> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       SetupJobStage.class);

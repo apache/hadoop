@@ -74,9 +74,9 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  *
  */
 public class CleanupJobStage extends
-    AbstractJobCommitStage<
-        CleanupJobStage.Arguments,
-        CleanupJobStage.Result> {
+    AbstractJobOrTaskStage<
+            CleanupJobStage.Arguments,
+            CleanupJobStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       CleanupJobStage.class);

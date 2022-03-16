@@ -51,7 +51,9 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
  * This keeps the memory footprint of each manifest down.
  */
 public class LoadManifestsStage extends
-    AbstractJobCommitStage<Boolean, LoadManifestsStage.Result> {
+    AbstractJobOrTaskStage<
+        Boolean,
+        LoadManifestsStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       LoadManifestsStage.class);

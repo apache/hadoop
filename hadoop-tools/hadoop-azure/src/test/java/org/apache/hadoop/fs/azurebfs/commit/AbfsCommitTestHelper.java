@@ -33,7 +33,7 @@ final class AbfsCommitTestHelper {
   /**
    * Prepare the test configuration.
    * @param contractTestBinding test binding
-   * @return an extraced and patched configuration.
+   * @return an extracted and patched configuration.
    */
   static Configuration prepareTestConfiguration(
       ABFSContractTestBinding contractTestBinding) {

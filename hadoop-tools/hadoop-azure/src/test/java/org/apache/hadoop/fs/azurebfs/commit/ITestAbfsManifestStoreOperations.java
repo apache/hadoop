@@ -44,17 +44,19 @@ import static org.junit.Assume.assumeTrue;
 /**
  * Test {@link AbfsManifestStoreOperations}.
  * As this looks at etag handling through FS operations, it's actually testing how etags work
- * in ABFS (preservation across renames) and in the client (are they consisten
- * in LIST and HEAD calls)
+ * in ABFS (preservation across renames) and in the client (are they consistent
+ * in LIST and HEAD calls).
+ *
+ * Skipped when tested against wasb-compatible stores.
  */
-public class ITestAbfsManifestManifestStoreOperations extends AbstractManifestCommitterTest {
+public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterTest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestAbfsManifestManifestStoreOperations.class);
+      LoggerFactory.getLogger(ITestAbfsManifestStoreOperations.class);
 
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsManifestManifestStoreOperations() throws Exception {
+  public ITestAbfsManifestStoreOperations() throws Exception {
     binding = new ABFSContractTestBinding();
   }
 
@@ -111,9 +113,6 @@ public class ITestAbfsManifestManifestStoreOperations extends AbstractManifestCo
         .isEqualTo(etag);
   }
 
-  /**
-   * Ovew
-   */
   @Test
   public void testEtagsOfDifferentDataDifferent() throws Throwable {
     describe("Verify that two different blocks of data written have different tags");

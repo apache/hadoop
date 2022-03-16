@@ -50,7 +50,9 @@ import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.c
  * output, but does not add iostatistics to it.
  */
 public class RenameFilesStage extends
-    AbstractJobCommitStage<Pair<List<TaskManifest>, Set<Path>>, ManifestSuccessData> {
+    AbstractJobOrTaskStage<
+        Pair<List<TaskManifest>, Set<Path>>,
+        ManifestSuccessData> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       RenameFilesStage.class);

@@ -27,7 +27,7 @@ import org.apache.hadoop.util.functional.FunctionRaisingIOE;
  * @param <IN> Type of arguments to the stage.
  * @param <OUT> Type of result.
  */
-public interface JobStage<IN, OUT> extends FunctionRaisingIOE<IN, OUT>,
+public interface JobOrTaskStage<IN, OUT> extends FunctionRaisingIOE<IN, OUT>,
     IOStatisticsSource {
 
 }

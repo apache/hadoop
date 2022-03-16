@@ -72,11 +72,11 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Aud
  * @param <IN> Type of arguments to the stage.
  * @param <OUT> Type of result.
  */
-public abstract class AbstractJobCommitStage<IN, OUT>
-    implements JobStage<IN, OUT> {
+public abstract class AbstractJobOrTaskStage<IN, OUT>
+    implements JobOrTaskStage<IN, OUT> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      AbstractJobCommitStage.class);
+      AbstractJobOrTaskStage.class);
 
   /**
    * Error text on rename failure: {@value}.
@@ -137,7 +137,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @param stageStatisticName name of the stage for statistics/logging
    * @param requireIOProcessors are the IO processors required?
    */
-  protected AbstractJobCommitStage(
+  protected AbstractJobOrTaskStage(
       final boolean isTaskStage,
       final StageConfig stageConfig,
       final String stageStatisticName,
@@ -315,7 +315,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
-        "AbstractJobCommitStage{");
+        "AbstractJobOrTaskStage{");
     sb.append(isTaskStage ? "Task Stage" : "Job Stage");
     sb.append(" name='").append(name).append('\'');
     sb.append(" stage='").append(stageStatisticName).append('\'');

@@ -37,7 +37,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Returns the path of the file
  */
 public class SaveSuccessFileStage extends
-    AbstractJobCommitStage<ManifestSuccessData, Path> {
+    AbstractJobOrTaskStage<ManifestSuccessData, Path> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       SaveSuccessFileStage.class);
