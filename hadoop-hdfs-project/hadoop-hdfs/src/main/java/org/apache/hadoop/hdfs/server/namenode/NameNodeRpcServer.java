@@ -1633,7 +1633,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         }
       }
     } catch (UnregisteredNodeException une) {
-      LOG.warn("Datanode {} is attempting to report but not register yet.",
+      LOG.debug("Datanode {} is attempting to report but not register yet.",
           nodeReg);
       return RegisterCommand.REGISTER;
     }
