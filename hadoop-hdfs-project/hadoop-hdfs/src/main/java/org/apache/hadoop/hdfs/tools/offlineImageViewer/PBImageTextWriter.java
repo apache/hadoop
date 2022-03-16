@@ -703,7 +703,6 @@ abstract class PBImageTextWriter implements Closeable {
    * STEP1: Multi-threaded process sub-sections.
    * Given n (n>1) threads to process k (k>=n) sections,
    * output parsed results of each section to tmp file in order.
-   * 
    * STEP2: Merge tmp files.
    */
   private void outputInParallel(Configuration conf, FileSummary summary,

@@ -936,16 +936,16 @@ public class TestOfflineImageViewer {
   }
 
   private void testParallelPBDelimitedWriter(String db) throws Exception{
-    String delemiter = "\t";
+    String delimiter = "\t";
     int numThreads = 4;
 
     File parallelDelimitedOut = new File(tempDir, "parallelDelimitedOut");
     if (OfflineImageViewerPB.run(new String[] {"-p", "Delimited",
         "-i", originalFsimage.getAbsolutePath(),
         "-o", parallelDelimitedOut.getAbsolutePath(),
-        "-delimiter", delemiter,
+        "-delimiter", delimiter,
         "-t", db,
-        "-threads", String.valueOf(numThreads)}) != 0) {
+        "-m", String.valueOf(numThreads)}) != 0) {
       throw new IOException("oiv returned failure outputting in parallel.");
     }
     MD5Hash parallelMd5 = MD5FileUtils.computeMd5ForFile(parallelDelimitedOut);
@@ -958,7 +958,7 @@ public class TestOfflineImageViewer {
         "-i", originalFsimage.getAbsolutePath(),
         "-o", serialDelimitedOut.getAbsolutePath(),
         "-t", db,
-        "-delimiter", delemiter}) != 0) {
+        "-delimiter", delimiter}) != 0) {
       throw new IOException("oiv returned failure outputting in serial.");
     }
     MD5Hash serialMd5 = MD5FileUtils.computeMd5ForFile(serialDelimitedOut);
