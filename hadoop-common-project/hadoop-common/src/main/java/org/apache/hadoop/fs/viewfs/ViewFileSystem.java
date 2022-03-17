@@ -316,7 +316,9 @@ public class ViewFileSystem extends FileSystem {
       tableName = theUri.getHost();
     }
     try {
-      myUri = new URI(getScheme(), authority, "/", null, null);
+      myUri = (authority != null) ?
+          new URI(getScheme(), authority, null, null, null) :
+          new URI(getScheme(), null, "/", null, null);
       boolean initingUriAsFallbackOnNoMounts =
           supportAutoAddingFallbackOnNoMounts();
       fsState = new InodeTree<FileSystem>(conf, tableName, myUri,
