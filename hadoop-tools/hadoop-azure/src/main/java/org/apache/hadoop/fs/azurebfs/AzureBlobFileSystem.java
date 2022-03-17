@@ -1534,8 +1534,8 @@ public class AzureBlobFileSystem extends FileSystem
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.ETAGS_AVAILABLE:
-    case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:
       return true;
+    case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:
     case CommonPathCapabilities.FS_ACLS:
       return getIsNamespaceEnabled(
           new TracingContext(clientCorrelationId, fileSystemId,
