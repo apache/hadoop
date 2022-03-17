@@ -991,6 +991,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.lifeline.handler.count";
   public static final String  DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY = "dfs.namenode.service.handler.count";
   public static final int     DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT = 10;
+  // List of users that can override their client ip
+  public static final String  DFS_NAMENODE_IP_PROXY_USERS = "dfs.namenode.ip-proxy-users";
   public static final String  DFS_HTTP_POLICY_KEY = "dfs.http.policy";
   public static final String  DFS_HTTP_POLICY_DEFAULT =  HttpConfig.Policy.HTTP_ONLY.name();
   public static final String  DFS_DATANODE_HTTPSERVER_FILTER_HANDLERS = "dfs.datanode.httpserver.filter.handlers";
