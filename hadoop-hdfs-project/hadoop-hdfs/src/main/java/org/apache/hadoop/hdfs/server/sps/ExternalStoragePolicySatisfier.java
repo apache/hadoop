@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,20 +97,25 @@ public final class ExternalStoragePolicySatisfier {
         socAddr.getHostName());
   }
 
-  private static NameNodeConnector getNameNodeConnector(Configuration conf)
-      throws IOException, InterruptedException {
+  public static NameNodeConnector getNameNodeConnector(Configuration conf)
+      throws InterruptedException {
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     final Path externalSPSPathId = HdfsServerConstants.MOVER_ID_PATH;
+    String serverName = ExternalStoragePolicySatisfier.class.getSimpleName();
     while (true) {
       try {
         final List<NameNodeConnector> nncs = NameNodeConnector
             .newNameNodeConnectors(namenodes,
-                ExternalStoragePolicySatisfier.class.getSimpleName(),
+                serverName,
                 externalSPSPathId, conf,
                 NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
         return nncs.get(0);
       } catch (IOException e) {
         LOG.warn("Failed to connect with namenode", e);
+        if (e.getMessage().equals("Another " + serverName + " is running.")) {
+          ExitUtil.terminate(-1,
+              "Exit immediately because another " + serverName + " is running");
+        }
         Thread.sleep(3000); // retry the connection after few secs
       }
     }
