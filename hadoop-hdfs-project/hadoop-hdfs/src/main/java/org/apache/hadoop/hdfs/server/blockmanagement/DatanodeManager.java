@@ -178,6 +178,11 @@ public class DatanodeManager {
    */
   private boolean hasClusterEverBeenMultiRack = false;
 
+  /**
+   * Number of racks of which all nodes are excluded: in decommission or decommissioned.
+   */
+  private int numOfExcludedRacks = 0;
+
   private final boolean checkIpHostnameInRegistration;
   /**
    * Whether we should tell datanodes what to cache in replies to
@@ -1300,6 +1305,29 @@ public class DatanodeManager {
     }
   }
 
+  /**
+   * Refresh the number of decommission racks:
+   * all nodes in which are either in DECOMMISSION_INPROGRESS or DECOMMISSIONED.
+   */
+  public void refreshDecommissionRacks() {
+    List<DatanodeDescriptor> copy;
+    synchronized (this) {
+      copy = new ArrayList<>(datanodeMap.values());
+    }
+    Set<String> decommissionRacks = new HashSet<>();
+    for (DatanodeDescriptor dn : copy) {
+      if (dn.isDecommissionInProgress() || dn.isDecommissioned()) {
+        decommissionRacks.add(dn.getNetworkLocation());
+      }
+    }
+    for (DatanodeDescriptor dn : copy) {
+      if (!dn.isDecommissionInProgress() && !dn.isDecommissioned()) {
+        decommissionRacks.remove(dn.getNetworkLocation());
+      }
+    }
+    this.numOfExcludedRacks = decommissionRacks.size();
+  }
+
   /** Reread include/exclude files. */
   private void refreshHostsReader(Configuration conf) throws IOException {
     // Reread the conf to get dfs.hosts and dfs.hosts.exclude filenames.
@@ -2060,6 +2088,12 @@ public class DatanodeManager {
       public Map<StorageType, StorageTypeStats> getStorageTypeStats() {
         return heartbeatManager.getStorageTypeStats();
       }
+
+      @Override
+      public int getNumOfExcludedRacks() {
+        return numOfExcludedRacks;
+      }
+
     };
   }
 

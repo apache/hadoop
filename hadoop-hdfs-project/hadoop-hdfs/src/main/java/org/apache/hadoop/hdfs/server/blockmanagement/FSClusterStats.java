@@ -66,4 +66,10 @@ public interface FSClusterStats {
    * @return storage statistics per storage type.
    */
   Map<StorageType, StorageTypeStats> getStorageTypeStats();
+
+  /**
+   * Number of racks of which all nodes are excluded: in decommission or decommissioned.
+   * @return Number of excluded racks.
+   */
+  int getNumOfExcludedRacks();
 }

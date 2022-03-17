@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.Node;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
@@ -130,19 +131,32 @@ class ErasureCodingWork extends BlockReconstructionWork {
     assert targets.length > 0;
     BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
 
-    if (hasNotEnoughRack()) {
-      // if we already have all the internal blocks, but not enough racks,
-      // we only need to replicate one internal block to a new rack
-      int sourceIndex = chooseSource4SimpleReplication();
-      createReplicationWork(sourceIndex, targets[0]);
-    } else if ((numberReplicas.decommissioning() > 0 ||
-        numberReplicas.liveEnteringMaintenanceReplicas() > 0) &&
-        hasAllInternalBlocks()) {
-      List<Integer> leavingServiceSources = findLeavingServiceSources();
-      // decommissioningSources.size() should be >= targets.length
-      final int num = Math.min(leavingServiceSources.size(), targets.length);
-      for (int i = 0; i < num; i++) {
-        createReplicationWork(leavingServiceSources.get(i), targets[i]);
+    if (hasAllInternalBlocks()) {
+      // We should take care of decommission first, specially when rack is not enough.
+      if (numberReplicas.decommissioning() > 0 ||
+          numberReplicas.liveEnteringMaintenanceReplicas() > 0) {
+        List<Integer> leavingServiceSources = findLeavingServiceSources();
+        // decommissioningSources.size() should be >= targets.length
+        final int num = Math.min(leavingServiceSources.size(), targets.length);
+        for (int i = 0; i < num; i++) {
+          createReplicationWork(leavingServiceSources.get(i), targets[i]);
+        }
+      } else if (hasNotEnoughRack()) {
+        // if we already have all the internal blocks, but not enough racks,
+        // we only need to replicate one internal block to a new rack
+        int sourceIndex = chooseSource4SimpleReplication();
+        createReplicationWork(sourceIndex, targets[0]);
+      } else {
+        // In fact it will not reach here, we dump related information in case of bug or what else.
+        LOG.warn("Unknown reconstruction work" +
+            ", block: " + getBlock()
+            + ", srcNodes: " + Arrays.toString(getSrcNodes())
+            + ", liveReplicaStorages: " + getLiveReplicaStorages()
+            + ", additionalReplRequired: " + getAdditionalReplRequired()
+            + ", targets: " + Arrays.toString(targets)
+            + ", notEnoughRack: " + hasNotEnoughRack()
+            + ", liveBlockIndicies: " + Arrays.toString(liveBlockIndices)
+            + ", liveBusyBlockIndicies: " + Arrays.toString(liveBusyBlockIndices));
       }
     } else {
       targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(

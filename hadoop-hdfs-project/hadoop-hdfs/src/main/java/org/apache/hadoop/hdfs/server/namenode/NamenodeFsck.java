@@ -221,8 +221,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     this.out = out;
     this.totalDatanodes = totalDatanodes;
     this.remoteAddress = remoteAddress;
-    this.bpPolicies = new BlockPlacementPolicies(conf, null,
-        networktopology,
+    this.bpPolicies = new BlockPlacementPolicies(conf,
+        this.blockManager.getDatanodeManager().getFSClusterStats(), networktopology,
         namenode.getNamesystem().getBlockManager().getDatanodeManager()
         .getHost2DatanodeMap());
     this.staleInterval =

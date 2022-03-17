@@ -544,6 +544,7 @@ class HeartbeatManager implements DatanodeStatistics {
         } catch (Exception e) {
           LOG.error("Exception while checking heartbeat", e);
         }
+        blockManager.getDatanodeManager().refreshDecommissionRacks();
         try {
           Thread.sleep(5000);  // 5 seconds
         } catch (InterruptedException ignored) {

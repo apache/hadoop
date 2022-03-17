@@ -243,7 +243,7 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       racks.add(dn.getNetworkLocation());
     }
     return new BlockPlacementStatusDefault(racks.size(), numberOfReplicas,
-        clusterMap.getNumOfRacks());
+        clusterMap.getNumOfRacks() - getStats().getNumOfExcludedRacks());
   }
 
   @Override

@@ -50,7 +50,14 @@ public class BlockPlacementStatusDefault implements BlockPlacementStatus {
     if (isPlacementPolicySatisfied()) {
       return 0;
     } else {
-      return requiredRacks - currentRacks;
+      // As 'requiredRacks - currentRacks' accounts for racks still needed,
+      // while 'totalRacks - currentRacks' accounts for racks can extra provided.
+      // When either racks still needed or racks can extra provided <= 0,
+      // it would be considered as placement satisfied, see
+      // 'BlockPlacementStatusDefault#isPlacementPolicySatisfied'.
+      // So as the method name, the additional replicas required should be
+      // the minimum value of them.
+      return Math.min(requiredRacks - currentRacks, totalRacks - currentRacks);
     }
   }
 }

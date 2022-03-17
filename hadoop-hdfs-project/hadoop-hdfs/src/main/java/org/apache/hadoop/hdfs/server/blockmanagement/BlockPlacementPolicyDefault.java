@@ -1173,7 +1173,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         .map(dn -> dn.getNetworkLocation()).distinct().count();
 
     return new BlockPlacementStatusDefault(Math.toIntExact(rackCount),
-        minRacks, clusterMap.getNumOfRacks());
+        minRacks, clusterMap.getNumOfRacks() - stats.getNumOfExcludedRacks());
   }
 
   /**
@@ -1369,5 +1369,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   public boolean getExcludeSlowNodesEnabled() {
     return excludeSlowNodesEnabled;
   }
+
+  protected FSClusterStats getStats() {
+    return stats;
+  }
+
 }
 
