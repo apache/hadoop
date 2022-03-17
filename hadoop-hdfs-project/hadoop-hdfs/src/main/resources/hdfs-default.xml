@@ -4123,8 +4123,8 @@
   <name>dfs.namenode.get-blocks.check.operation</name>
   <value>true</value>
   <description>
-    Whether enable checkOperation when call getBlocks.
-    It is enabled (true) by default.
+    Set false to disable checkOperation and getBlocks for Balancer
+    will route to Standby NameNode for HA mode setup.
   </description>
 </property>
 <property>
