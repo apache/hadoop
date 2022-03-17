@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.fs.CachingGetSpaceUsed;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
@@ -76,6 +78,7 @@ public class TestDataNodeReconfiguration {
   private final int NUM_NAME_NODE = 1;
   private final int NUM_DATA_NODE = 10;
   private MiniDFSCluster cluster;
+  private static long counter = 0;
 
   @Before
   public void Setup() throws IOException {
@@ -99,6 +102,7 @@ public class TestDataNodeReconfiguration {
       throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
+    conf.set(FS_GETSPACEUSED_CLASSNAME, DummyDU.class.getName());
 
     MiniDFSNNTopology nnTopology = MiniDFSNNTopology
         .simpleFederatedTopology(numNameNodes);
@@ -672,5 +676,33 @@ public class TestDataNodeReconfiguration {
       assertEquals(DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT,
           dn.getDiskMetrics().getSlowDiskDetector().getLowThresholdMs());
     }
+  }
+
+  private static class DummyDU extends CachingGetSpaceUsed {
+    public DummyDU(Builder builder) throws IOException {
+      super(builder.setInterval(1000));
+    }
+
+    @Override
+    protected void refresh() {
+      counter++;
+    }
+  }
+
+  @Test
+  public void testDfsUsageParameters() throws IOException, ReconfigurationException, InterruptedException {
+    final DataNode[] dns = createDNsForTest(1);
+    final DataNode dataNode = dns[0];
+
+    long lastCounter = counter;
+
+    Thread.sleep(5000);
+    assertTrue(counter > lastCounter);
+
+    dataNode.reconfigurePropertyImpl(FS_GETSPACEUSED_CLASSNAME, null);
+
+    lastCounter = counter;
+    Thread.sleep(5000);
+    assertEquals(lastCounter, counter);
   }
 }

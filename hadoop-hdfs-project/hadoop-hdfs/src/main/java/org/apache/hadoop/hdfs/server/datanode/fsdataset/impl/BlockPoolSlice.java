@@ -235,6 +235,7 @@ public class BlockPoolSlice {
   }
 
   public void refreshSpaceUsedKlass(Configuration conf) throws IOException {
+    ((CachingGetSpaceUsed)dfsUsage).close();
     this.dfsUsage = new FSCachingGetSpaceUsed.Builder().setBpid(bpid)
             .setVolume(volume)
             .setPath(bpDir)
