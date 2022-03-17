@@ -37,6 +37,11 @@ import java.util.Arrays;
 @InterfaceStability.Evolving
 public class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
+
+  // field names
+  public static final String CLIENT_IP_STR = "clientIp";
+  public static final String CLIENT_PORT_STR = "clientPort";
+
   /** The caller context.
    *
    * It will be truncated if it exceeds the maximum allowed length in
@@ -110,6 +115,7 @@ public class CallerContext {
 
   /** The caller context builder. */
   public static final class Builder {
+    public static final String KEY_VALUE_SEPARATOR = ":";
     private final String context;
     private byte[] signature;
 
