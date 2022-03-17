@@ -503,7 +503,7 @@ abstract class PBImageTextWriter implements Closeable {
   }
 
   private SerialNumberManager.StringTable stringTable;
-  protected final PrintStream out;
+  private final PrintStream out;
   private MetadataMap metadataMap = null;
   private String delimiter;
   private File filename;
@@ -532,6 +532,10 @@ abstract class PBImageTextWriter implements Closeable {
   PBImageTextWriter(PrintStream out, String delimiter, String tempPath)
       throws IOException {
     this(out, delimiter, tempPath, 1, "-");
+  }
+
+  protected PrintStream serialOutStream() {
+    return out;
   }
 
   @Override
@@ -681,7 +685,7 @@ abstract class PBImageTextWriter implements Closeable {
       throws IOException {
     InputStream is;
     long startTime = Time.monotonicNow();
-    out.println(getHeader());
+    serialOutStream().println(getHeader());
     for (FileSummary.Section section : sections) {
       if (SectionName.fromString(section.getName()) == SectionName.INODE) {
         fin.getChannel().position(section.getOffset());
@@ -690,7 +694,7 @@ abstract class PBImageTextWriter implements Closeable {
                 fin, section.getLength())));
         INodeSection s = INodeSection.parseDelimitedFrom(is);
         LOG.info("Found {} INodes in the INode section", s.getNumInodes());
-        int count = outputINodes(is, out);
+        int count = outputINodes(is, serialOutStream());
         LOG.info("Outputted {} INodes.", count);
       }
     }
