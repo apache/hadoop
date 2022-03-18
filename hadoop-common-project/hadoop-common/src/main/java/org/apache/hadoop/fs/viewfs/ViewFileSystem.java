@@ -183,12 +183,12 @@ public class ViewFileSystem extends FileSystem {
     }
 
     URI[] getTargets() {
-        URI[] targetUris = new URI[targets.length];
-        for (int i = 0; i < targets.length; i++) {
-          targetUris[i] = URI.create(targets[i]);
-        }
-        return targetUris;
+      URI[] targetUris = new URI[targets.length];
+      for (int i = 0; i < targets.length; i++) {
+        targetUris[i] = URI.create(targets[i]);
       }
+      return targetUris;
+    }
 
     public String[] getTargetFileSystemPaths() {
       return targets;
