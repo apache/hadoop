@@ -679,7 +679,7 @@ public class TestDataNodeReconfiguration {
   }
 
   private static class DummyDU extends CachingGetSpaceUsed {
-    public DummyDU(Builder builder) throws IOException {
+    DummyDU(Builder builder) throws IOException {
       super(builder.setInterval(1000));
     }
 
@@ -690,7 +690,8 @@ public class TestDataNodeReconfiguration {
   }
 
   @Test
-  public void testDfsUsageParameters() throws IOException, ReconfigurationException, InterruptedException {
+  public void testDfsUsageParameters() throws IOException, ReconfigurationException,
+          InterruptedException {
     final DataNode[] dns = createDNsForTest(1);
     final DataNode dataNode = dns[0];
 
