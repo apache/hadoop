@@ -144,7 +144,7 @@ public class TestBalancerWithHANameNodes {
     TestBalancer.createFile(cluster, TestBalancer.filePath, totalUsedSpace
         / numOfDatanodes, (short) numOfDatanodes, 0);
 
-    boolean isRequestStandby = conf.getBoolean(
+    boolean isRequestStandby = !conf.getBoolean(
         DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
         DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
     if (isRequestStandby) {
