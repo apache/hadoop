@@ -102,7 +102,7 @@ public class TestDataNodeReconfiguration {
       throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
-    conf.set(FS_GETSPACEUSED_CLASSNAME, DummyDU.class.getName());
+    conf.set(FS_GETSPACEUSED_CLASSNAME, DummyCachingGetSpaceUsed.class.getName());
 
     MiniDFSNNTopology nnTopology = MiniDFSNNTopology
         .simpleFederatedTopology(numNameNodes);
@@ -678,8 +678,8 @@ public class TestDataNodeReconfiguration {
     }
   }
 
-  private static class DummyDU extends CachingGetSpaceUsed {
-    DummyDU(Builder builder) throws IOException {
+  public static class DummyCachingGetSpaceUsed extends CachingGetSpaceUsed {
+    public DummyCachingGetSpaceUsed(Builder builder) throws IOException {
       super(builder.setInterval(1000));
     }
 
