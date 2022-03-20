@@ -27,9 +27,7 @@
 
 namespace hdfs::tools {
 /**
- * {@class Ls} is an {@class HdfsTool} lss all files recursively starting
- * from the specified PATH and prints their file paths. This tool mimics the
- * POSIX ls.
+ * {@class Ls} is an {@class HdfsTool} that lists information about the files.
  */
 class Ls : public HdfsTool {
 public:
@@ -74,8 +72,8 @@ protected:
   /**
    * Handle the path argument that's passed to this tool.
    *
-   * @param path The path to the directory for which we need du info.
-   * @param recursive A boolean indicating whether du needs to be
+   * @param path The path to the directory for which we need to ls.
+   * @param recursive A boolean indicating whether ls needs to be
    * performed recursively for the given path.
    *
    * @return A boolean indicating the result of this operation.

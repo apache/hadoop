@@ -31,12 +31,10 @@ Ls::Ls(const int argc, char **argv) : HdfsTool(argc, argv) {}
 
 bool Ls::Initialize() {
   auto add_options = opt_desc_.add_options();
-  add_options("help,h",
-              "Displays sizes of files and directories contained in the given "
-              "PATH or the length of a file in case PATH is just a file");
+  add_options("help,h", "List information about the files");
   add_options("recursive,R", "Operate on files and directories recursively");
   add_options("path", po::value<std::string>(),
-              "The path indicating the filesystem that needs to be du-ed");
+              "The path for which we need to do ls");
 
   // We allow only one positional argument to be passed to this tool. An
   // exception is thrown if multiple arguments are passed.
@@ -53,42 +51,16 @@ bool Ls::Initialize() {
 
 std::string Ls::GetDescription() const {
   std::stringstream desc;
-  desc << "Usage: hdfs_ls [OPTION] PATH" << std::endl
+  desc << "Usage: hdfs_ls [OPTION] FILE" << std::endl
        << std::endl
-       << "Lss all files recursively starting from the" << std::endl
-       << "specified PATH and prints their file paths." << std::endl
-       << "This hdfs_ls tool mimics the POSIX ls." << std::endl
+       << "List information about the FILEs." << std::endl
        << std::endl
-       << "Both PATH and NAME can have wild-cards." << std::endl
-       << std::endl
-       << "  -n NAME       if provided all results will be matching the NAME "
-          "pattern"
-       << std::endl
-       << "                otherwise, the implicit '*' will be used"
-       << std::endl
-       << "                NAME allows wild-cards" << std::endl
-       << std::endl
-       << "  -m MAX_DEPTH  if provided the maximum depth to recurse after the "
-          "end of"
-       << std::endl
-       << "                the path is reached will be limited by MAX_DEPTH"
-       << std::endl
-       << "                otherwise, the maximum depth to recurse is unbound"
-       << std::endl
-       << "                MAX_DEPTH can be set to 0 for pure globbing and "
-          "ignoring"
-       << std::endl
-       << "                the NAME option (no recursion after the end of the "
-          "path)"
-       << std::endl
-       << std::endl
-       << "  -h            display this help and exit" << std::endl
+       << "  -R        list subdirectories recursively" << std::endl
+       << "  -h        display this help and exit" << std::endl
        << std::endl
        << "Examples:" << std::endl
-       << "hdfs_ls hdfs://localhost.localdomain:8020/dir?/tree* -n "
-          "some?file*name"
-       << std::endl
-       << "hdfs_ls / -n file_name -m 3" << std::endl;
+       << "hdfs_ls hdfs://localhost.localdomain:8020/dir" << std::endl
+       << "hdfs_ls -R /dir1/dir2" << std::endl;
   return desc.str();
 }
 
@@ -122,7 +94,7 @@ bool Ls::HandleHelp() const {
 }
 
 bool Ls::HandlePath(const std::string &path, const bool recursive) const {
-  // Building a URI object from the given uri_path
+  // Building a URI object from the given path
   auto uri = hdfs::parse_path_or_exit(path);
 
   const auto fs = hdfs::doConnect(uri, true);
@@ -135,7 +107,7 @@ bool Ls::HandlePath(const std::string &path, const bool recursive) const {
   auto future(promise->get_future());
   auto result = hdfs::Status::OK();
 
-  /**
+  /*
    * Keep requesting more until we get the entire listing. Set the promise
    * when we have the entire listing to stop.
    *
@@ -154,14 +126,14 @@ bool Ls::HandlePath(const std::string &path, const bool recursive) const {
       }
     }
     if (!status.ok() && result.ok()) {
-      // We make sure we set 'status' only on the first error.
+      // We make sure we set the result only on the first error
       result = status;
     }
     if (!has_more_results) {
-      promise->set_value(); // set promise
-      return false;         // request stop sending results
+      promise->set_value(); // Set promise
+      return false;         // Request to stop sending results
     }
-    return true; // request more results
+    return true; // Request more results
   };
 
   if (!recursive) {
