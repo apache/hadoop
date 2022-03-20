@@ -4120,6 +4120,14 @@
   </description>
 </property>
 <property>
+  <name>dfs.namenode.get-blocks.check.operation</name>
+  <value>true</value>
+  <description>
+    Set false to disable checkOperation and getBlocks for Balancer
+    will route to Standby NameNode for HA mode setup.
+  </description>
+</property>
+<property>
   <name>dfs.balancer.dispatcherThreads</name>
   <value>200</value>
   <description>
