@@ -33,6 +33,7 @@
 #include "hdfs-du-mock.h"
 #include "hdfs-find-mock.h"
 #include "hdfs-get-mock.h"
+#include "hdfs-ls-mock.h"
 #include "hdfs-mkdir-mock.h"
 #include "hdfs-move-to-local-mock.h"
 #include "hdfs-rename-snapshot-mock.h"
@@ -80,6 +81,12 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(PassAPath<hdfs::tools::test::DuMock>,
                     CallHelp<hdfs::tools::test::DuMock>,
                     PassRecursivePath<hdfs::tools::test::DuMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsLs, HdfsToolBasicTest,
+    testing::Values(PassAPath<hdfs::tools::test::LsMock>,
+                    CallHelp<hdfs::tools::test::LsMock>,
+                    PassRecursivePath<hdfs::tools::test::LsMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsDeleteSnapshot, HdfsToolBasicTest,
@@ -181,6 +188,14 @@ INSTANTIATE_TEST_SUITE_P(
                     PassPermissionsAndAPath<hdfs::tools::test::DuMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsLs, HdfsToolNegativeTestThrows,
+    testing::Values(Pass2Paths<hdfs::tools::test::LsMock>,
+                    Pass3Paths<hdfs::tools::test::LsMock>,
+                    PassNOptAndAPath<hdfs::tools::test::LsMock>,
+                    PassOwnerAndAPath<hdfs::tools::test::LsMock>,
+                    PassPermissionsAndAPath<hdfs::tools::test::LsMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsCat, HdfsToolNegativeTestThrows,
     testing::Values(Pass2Paths<hdfs::tools::test::CatMock>));
 
@@ -261,6 +276,10 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsDu, HdfsToolNegativeTestNoThrow,
     testing::Values(PassRecursive<hdfs::tools::test::DuMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsLs, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassRecursive<hdfs::tools::test::LsMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsChown, HdfsToolNegativeTestNoThrow,
