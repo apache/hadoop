@@ -294,7 +294,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   protected void writeAuditLog(ApplicationId appId) {
     RMApp app = rmContext.getRMApps().get(appId);
-    String operation = "UNKONWN";
+    String operation = "UNKNOWN";
     boolean success = false;
     switch (app.getState()) {
       case FAILED:
