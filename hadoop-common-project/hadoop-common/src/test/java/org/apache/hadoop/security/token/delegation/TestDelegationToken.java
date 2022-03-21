@@ -579,4 +579,29 @@ public class TestDelegationToken {
     assertEquals(token1, token2);
     assertEquals(token1.encodeToUrlString(), token2.encodeToUrlString());
   }
+
+  @Test
+  public void testDelegationTokenSecretManagerMetrics() throws Exception {
+    TestDelegationTokenSecretManager dtSecretManager =
+        new TestDelegationTokenSecretManager(24*60*60*1000,
+            10*1000,1*1000,3600000);
+    try {
+      dtSecretManager.startThreads();
+      
+      Assert.assertEquals(0, dtSecretManager.metrics.storeToken.lastStat().numSamples());
+      final Token<TestDelegationTokenIdentifier> token =
+          generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
+      Assert.assertEquals(1, dtSecretManager.metrics.storeToken.lastStat().numSamples());
+
+      Assert.assertEquals(0, dtSecretManager.metrics.updateToken.lastStat().numSamples());
+      dtSecretManager.renewToken(token, "JobTracker");
+      Assert.assertEquals(1, dtSecretManager.metrics.updateToken.lastStat().numSamples());
+
+      Assert.assertEquals(0, dtSecretManager.metrics.removeToken.lastStat().numSamples());
+      dtSecretManager.cancelToken(token, "JobTracker");
+      Assert.assertEquals(1, dtSecretManager.metrics.removeToken.lastStat().numSamples());
+    } finally {
+      dtSecretManager.stopThreads();
+    }
+  }
 }

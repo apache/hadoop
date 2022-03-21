@@ -37,6 +37,11 @@ import javax.crypto.SecretKey;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
 import org.apache.hadoop.metrics2.util.Metrics2Util.TopN;
 import org.apache.hadoop.security.AccessControlException;
@@ -96,6 +101,10 @@ extends AbstractDelegationTokenIdentifier>
    * Access to currentKey is protected by this object lock
    */
   private DelegationKey currentKey;
+  /**
+   * Metrics to track token management operations
+   */
+  protected DelegationTokenSecretManagerMetrics metrics;
   
   private long keyUpdateInterval;
   private long tokenMaxLifetime;
@@ -134,6 +143,7 @@ extends AbstractDelegationTokenIdentifier>
     this.tokenRenewInterval = delegationTokenRenewInterval;
     this.tokenRemoverScanInterval = delegationTokenRemoverScanInterval;
     this.storeTokenTrackingId = false;
+    this.metrics = DelegationTokenSecretManagerMetrics.create();
   }
 
   /** should be called before this object is used */
@@ -429,11 +439,16 @@ extends AbstractDelegationTokenIdentifier>
     byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
+    long start = Time.monotonicNow();
     try {
       storeToken(identifier, tokenInfo);
     } catch (IOException ioe) {
       LOG.error("Could not store token " + formatTokenId(identifier) + "!!",
           ioe);
+    } finally {
+      if (metrics != null) {
+        metrics.storeToken.add(Time.monotonicNow() - start);
+      }
     }
     return password;
   }
@@ -555,7 +570,14 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("Renewal request for unknown token "
           + formatTokenId(id));
     }
-    updateToken(id, info);
+    long start = Time.monotonicNow();
+    try {
+      updateToken(id, info);
+    } finally {
+      if (metrics != null) {
+        metrics.updateToken.add(Time.monotonicNow() - start);
+      }
+    }
     return renewTime;
   }
   
@@ -591,8 +613,15 @@ extends AbstractDelegationTokenIdentifier>
     if (info == null) {
       throw new InvalidToken("Token not found " + formatTokenId(id));
     }
-    removeTokenForOwnerStats(id);
-    removeStoredToken(id);
+    long start = Time.monotonicNow();
+    try {
+      removeTokenForOwnerStats(id);
+      removeStoredToken(id);
+    } finally {
+      if (metrics != null) {
+        metrics.removeToken.add(Time.monotonicNow() - start);
+      }
+    }
     return id;
   }
   
@@ -823,6 +852,26 @@ extends AbstractDelegationTokenIdentifier>
     tokenOwnerStats.clear();
     for (TokenIdent id : currentTokens.keySet()) {
       addTokenForOwnerStats(id);
+    }
+  }
+  
+  /**
+   * DelegationTokenSecretManagerMetrics tracks token management operations
+   * and publishes them through the metrics interfaces.
+   */
+  @Metrics(about="Delegation token secret manager metrics", context="token")
+  static class DelegationTokenSecretManagerMetrics {
+    final MetricsRegistry registry = new MetricsRegistry("DelegationTokenSecretManagerMetrics");
+
+    @Metric("Rate of storage of delegation tokens and latency (milliseconds)")
+    MutableRate storeToken;
+    @Metric("Rate of update of delegation tokens and latency (milliseconds)")
+    MutableRate updateToken;
+    @Metric("Rate of removal of delegation tokens and latency (milliseconds)")
+    MutableRate removeToken;
+
+    static DelegationTokenSecretManagerMetrics create() {
+      return DefaultMetricsSystem.instance().register(new DelegationTokenSecretManagerMetrics());
     }
   }
 }
