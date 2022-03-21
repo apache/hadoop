@@ -142,14 +142,14 @@ public class TestBlockReportLease {
     HdfsConfiguration conf = new HdfsConfiguration();
     Random rand = new Random();
 
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(1).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
       FSNamesystem fsn = cluster.getNamesystem();
       BlockManager blockManager = fsn.getBlockManager();
       String poolId = cluster.getNamesystem().getBlockPoolId();
       NamenodeProtocols rpcServer = cluster.getNameNodeRpc();
 
-      // Remove the unique datanode to simulate the unregistered situation.
+      // Remove the unique DataNode to simulate the unregistered situation.
+      // This is similar to starting NameNode, and DataNodes are not registered yet.
       DataNode dn = cluster.getDataNodes().get(0);
       blockManager.getDatanodeManager().getDatanodeMap().remove(dn.getDatanodeUuid());
 
@@ -159,7 +159,7 @@ public class TestBlockReportLease {
       ExecutorService pool = Executors.newFixedThreadPool(1);
       BlockReportContext brContext = new BlockReportContext(1, 0,
           rand.nextLong(), 1);
-      Future<DatanodeCommand> sendBRfuturea = pool.submit(() -> {
+      Future<DatanodeCommand> sendBRFuture = pool.submit(() -> {
         // Build every storage with 100 blocks for sending report.
         DatanodeStorage[] datanodeStorages
             = new DatanodeStorage[storages.length];
@@ -173,8 +173,10 @@ public class TestBlockReportLease {
             brContext);
       });
 
-      // Get datanodeCommand, it should be RegisterCommand.
-      DatanodeCommand datanodeCommand = sendBRfuturea.get();
+      // When unregistered DataNode triggering the block report, will throw an
+      // UnregisteredNodeException. After NameNode processing, RegisterCommand
+      // is returned to the DataNode.
+      DatanodeCommand datanodeCommand = sendBRFuture.get();
       assertTrue(datanodeCommand instanceof RegisterCommand);
     }
   }
