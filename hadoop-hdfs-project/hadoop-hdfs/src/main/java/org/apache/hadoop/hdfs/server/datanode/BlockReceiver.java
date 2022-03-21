@@ -887,7 +887,7 @@ class BlockReceiver implements Closeable {
    */
   private void trackSendPacketToLastNodeInPipeline(final long elapsedMs) {
     final DataNodePeerMetrics peerMetrics = datanode.getPeerMetrics();
-    if (peerMetrics != null && isPenultimateNode) {
+    if (datanode.getDnConf().peerStatsEnabled && peerMetrics != null && isPenultimateNode) {
       peerMetrics.addSendPacketDownstream(mirrorNameForMetrics, elapsedMs);
     }
   }
@@ -1107,7 +1107,7 @@ class BlockReceiver implements Closeable {
     if (downstreams != null && downstreams.length > 0) {
       downstreamDNs = downstreams;
       isPenultimateNode = (downstreams.length == 1);
-      if (isPenultimateNode && datanode.getPeerMetrics() != null) {
+      if (isPenultimateNode && datanode.getDnConf().peerStatsEnabled) {
         mirrorNameForMetrics = (downstreams[0].getInfoSecurePort() != 0 ?
             downstreams[0].getInfoSecureAddr() : downstreams[0].getInfoAddr());
         LOG.debug("Will collect peer metrics for downstream node {}",

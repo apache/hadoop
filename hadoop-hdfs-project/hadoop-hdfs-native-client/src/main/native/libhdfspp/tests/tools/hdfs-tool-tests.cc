@@ -31,6 +31,8 @@
 #include "hdfs-df-mock.h"
 #include "hdfs-disallow-snapshot-mock.h"
 #include "hdfs-du-mock.h"
+#include "hdfs-find-mock.h"
+#include "hdfs-get-mock.h"
 #include "hdfs-mkdir-mock.h"
 #include "hdfs-move-to-local-mock.h"
 #include "hdfs-rename-snapshot-mock.h"
@@ -109,6 +111,11 @@ INSTANTIATE_TEST_SUITE_P(
                     Pass2Paths<hdfs::tools::test::CopyToLocalMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsGet, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::GetMock>,
+                    Pass2Paths<hdfs::tools::test::GetMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsMoveToLocal, HdfsToolBasicTest,
     testing::Values(CallHelp<hdfs::tools::test::MoveToLocalMock>,
                     Pass2Paths<hdfs::tools::test::MoveToLocalMock>));
@@ -133,6 +140,14 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(CallHelp<hdfs::tools::test::RmMock>,
                     PassAPath<hdfs::tools::test::RmMock>,
                     PassRecursivePath<hdfs::tools::test::RmMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsFind, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::FindMock>,
+                    PassAPath<hdfs::tools::test::FindMock>,
+                    PassNStrMNumAndAPath<hdfs::tools::test::FindMock>,
+                    PassMOptPermissionsAndAPath<hdfs::tools::test::FindMock>,
+                    PassNOptAndAPath<hdfs::tools::test::FindMock>));
 
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(
@@ -174,6 +189,10 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(Pass3Paths<hdfs::tools::test::CopyToLocalMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsGet, HdfsToolNegativeTestThrows,
+    testing::Values(Pass3Paths<hdfs::tools::test::GetMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsMoveToLocal, HdfsToolNegativeTestThrows,
     testing::Values(Pass3Paths<hdfs::tools::test::MoveToLocalMock>));
 
@@ -201,6 +220,17 @@ INSTANTIATE_TEST_SUITE_P(
                     PassMOpt<hdfs::tools::test::RmMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsFind, HdfsToolNegativeTestThrows,
+    testing::Values(Pass2Paths<hdfs::tools::test::FindMock>,
+                    Pass3Paths<hdfs::tools::test::FindMock>,
+                    PassRecursiveOwnerAndAPath<hdfs::tools::test::FindMock>,
+                    PassRecursive<hdfs::tools::test::FindMock>,
+                    PassRecursivePath<hdfs::tools::test::FindMock>,
+                    PassMPOptsPermissionsAndAPath<hdfs::tools::test::FindMock>,
+                    PassMOpt<hdfs::tools::test::FindMock>,
+                    PassNOpt<hdfs::tools::test::FindMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsRm, HdfsToolNegativeTestNoThrow,
     testing::Values(PassRecursive<hdfs::tools::test::RmMock>));
 
@@ -219,6 +249,10 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsCopyToLocal, HdfsToolNegativeTestNoThrow,
     testing::Values(PassAPath<hdfs::tools::test::CopyToLocalMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsGet, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::GetMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsDeleteSnapshot, HdfsToolNegativeTestNoThrow,

@@ -423,6 +423,14 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     return this.startTime;
   }
 
+  @Override
+  // JournalNodeMXBean
+  public List<String> getStorageInfos() {
+    return journalsById.values().stream()
+        .map(journal -> journal.getStorage().toMapString())
+        .collect(Collectors.toList());
+  }
+
   /**
    * Register JournalNodeMXBean
    */

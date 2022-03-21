@@ -20,10 +20,13 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
@@ -37,9 +40,11 @@ import java.util.List;
 import java.nio.file.AccessDeniedException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
+import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
+import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
  * ITest for failure handling, primarily multipart deletion.
@@ -70,6 +75,37 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   public void testMultiObjectDeleteNoFile() throws Throwable {
     describe("Deleting a missing object");
     removeKeys(getFileSystem(), "ITestS3AFailureHandling/missingFile");
+  }
+
+  /**
+   * See HADOOP-18112.
+   */
+  @Test
+  public void testMultiObjectDeleteLargeNumKeys() throws Exception {
+    S3AFileSystem fs =  getFileSystem();
+    Path path = path("largeDir");
+    mkdirs(path);
+    createFiles(fs, path, 1, 1005, 0);
+    RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator =
+            fs.listFiles(path, false);
+    List<String> keys  = toList(mappingRemoteIterator(locatedFileStatusRemoteIterator,
+        locatedFileStatus -> fs.pathToKey(locatedFileStatus.getPath())));
+    // After implementation of paging during multi object deletion,
+    // no exception is encountered.
+    Long bulkDeleteReqBefore = getNumberOfBulkDeleteRequestsMadeTillNow(fs);
+    try (AuditSpan span = span()) {
+      fs.removeKeys(buildDeleteRequest(keys.toArray(new String[0])), false);
+    }
+    Long bulkDeleteReqAfter = getNumberOfBulkDeleteRequestsMadeTillNow(fs);
+    // number of delete requests is 5 as we have default page size of 250.
+    Assertions.assertThat(bulkDeleteReqAfter - bulkDeleteReqBefore)
+            .describedAs("Number of batched bulk delete requests")
+            .isEqualTo(5);
+  }
+
+  private Long getNumberOfBulkDeleteRequestsMadeTillNow(S3AFileSystem fs) {
+    return fs.getIOStatistics().counters()
+            .get(StoreStatisticNames.OBJECT_BULK_DELETE_REQUEST);
   }
 
   private void removeKeys(S3AFileSystem fileSystem, String... keys)

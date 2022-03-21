@@ -4846,4 +4846,17 @@
     <name>yarn.resourcemanager.enable-node-untracked-without-include-path</name>
     <value>false</value>
   </property>
+
+  <property>
+    <name>yarn.scheduler.app-placement-allocator.class</name>
+    <value></value>
+    <description>
+      In the absence of APPLICATION_PLACEMENT_TYPE_CLASS from the RM
+      application scheduling environments, the value of this config
+      is used to determine the default implementation of AppPlacementAllocator.
+      If APPLICATION_PLACEMENT_TYPE_CLASS is absent from the application
+      scheduling env and this config also has no value present, then
+      default implementation LocalityAppPlacementAllocator is used.
+    </description>
+  </property>
 </configuration>

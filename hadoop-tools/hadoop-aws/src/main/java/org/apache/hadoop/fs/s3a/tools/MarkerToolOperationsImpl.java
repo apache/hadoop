@@ -23,7 +23,6 @@ import java.util.List;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 
 import org.apache.hadoop.fs.Path;
@@ -55,13 +54,12 @@ public class MarkerToolOperationsImpl implements MarkerToolOperations {
   }
 
   @Override
-  public DeleteObjectsResult removeKeys(
+  public void removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      final boolean deleteFakeDir,
-      final boolean quiet)
+      final boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
-    return operationCallbacks.removeKeys(keysToDelete, deleteFakeDir,
-        quiet);
+    operationCallbacks.removeKeys(keysToDelete, deleteFakeDir
+    );
   }
 
 }

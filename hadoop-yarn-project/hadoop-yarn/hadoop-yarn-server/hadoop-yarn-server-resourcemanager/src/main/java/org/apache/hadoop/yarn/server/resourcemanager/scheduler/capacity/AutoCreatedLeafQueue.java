@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 
@@ -29,6 +30,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE;
 
 /**
  * Leaf queues which are auto created by an underlying implementation of
@@ -81,14 +84,14 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
       QueueCapacities capacities = leafQueueTemplate.getQueueCapacities();
 
       //reset capacities for the leaf queue
-      mergeCapacities(capacities);
+      mergeCapacities(capacities, leafQueueTemplate.getResourceQuotas());
 
     } finally {
       writeLock.unlock();
     }
   }
 
-  public void mergeCapacities(QueueCapacities capacities) {
+  public void mergeCapacities(QueueCapacities capacities, QueueResourceQuotas resourceQuotas) {
     for ( String nodeLabel : capacities.getExistingNodeLabels()) {
       queueCapacities.setCapacity(nodeLabel,
           capacities.getCapacity(nodeLabel));
@@ -101,9 +104,19 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
       Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
           queueContext.getClusterResource());
-      getQueueResourceQuotas().setEffectiveMinResource(nodeLabel,
-          Resources.multiply(resourceByLabel,
-              queueCapacities.getAbsoluteCapacity(nodeLabel)));
+      // Update effective resource from template due to rounding errors.
+      // However, we need to consider deactivation as well, in which case we fall back to
+      // Percentage calculation (as absolute capacity will be 0, resource will be zero as well).
+      if (getCapacityConfigType().equals(ABSOLUTE_RESOURCE)
+          && queueCapacities.getAbsoluteCapacity(nodeLabel) > 0) {
+        getQueueResourceQuotas().setEffectiveMinResource(nodeLabel,
+            resourceQuotas.getConfiguredMinResource(nodeLabel));
+      } else {
+        getQueueResourceQuotas().setEffectiveMinResource(nodeLabel,
+            Resources.multiply(resourceByLabel,
+                queueCapacities.getAbsoluteCapacity(nodeLabel)));
+      }
+
       getQueueResourceQuotas().setEffectiveMaxResource(nodeLabel,
           Resources.multiply(resourceByLabel, queueCapacities
               .getAbsoluteMaximumCapacity(nodeLabel)));

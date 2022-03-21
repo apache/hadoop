@@ -24,7 +24,6 @@ import java.util.List;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
 
@@ -138,10 +137,6 @@ public interface OperationCallbacks {
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs.
-   * @param quiet should a bulk query be quiet, or should its result list
-   * all deleted keys
-   * @return the deletion result if a multi object delete was invoked
-   * and it returned without a failure, else null.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -150,10 +145,9 @@ public interface OperationCallbacks {
    * @throws IOException other IO Exception.
    */
   @Retries.RetryRaw
-  DeleteObjectsResult removeKeys(
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean deleteFakeDir,
-      boolean quiet)
+  void removeKeys(
+          List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+          boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException;
 

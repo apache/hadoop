@@ -21,18 +21,23 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.metrics2.MetricsJsonBuilder;
 import org.apache.hadoop.metrics2.lib.MutableRollingAverages;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY;
 
 /**
  * This class maintains DataNode peer metrics (e.g. numOps, AvgTime, etc.) for
@@ -57,15 +62,15 @@ public class DataNodePeerMetrics {
    * for outlier detection. If the number of samples is below this then
    * outlier detection is skipped.
    */
-  private final long minOutlierDetectionSamples;
+  private volatile long minOutlierDetectionSamples;
   /**
    * Threshold in milliseconds below which a DataNode is definitely not slow.
    */
-  private final long lowThresholdMs;
+  private volatile long lowThresholdMs;
   /**
    * Minimum number of nodes to run outlier detection.
    */
-  private final long minOutlierDetectionNodes;
+  private volatile long minOutlierDetectionNodes;
 
   public DataNodePeerMetrics(final String name, Configuration conf) {
     this.name = name;
@@ -73,11 +78,11 @@ public class DataNodePeerMetrics {
         DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY,
         DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT);
     lowThresholdMs =
-        conf.getLong(DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY,
-            DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT);
+        conf.getLong(DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY,
+            DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT);
     minOutlierDetectionNodes =
-        conf.getLong(DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY,
-            DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
+        conf.getLong(DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY,
+            DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
     this.slowNodeDetector =
         new OutlierDetector(minOutlierDetectionNodes, lowThresholdMs);
     sendPacketDownstreamRollingAverages = new MutableRollingAverages("Time");
@@ -87,7 +92,7 @@ public class DataNodePeerMetrics {
     return name;
   }
 
-  long getMinOutlierDetectionSamples() {
+  public long getMinOutlierDetectionSamples() {
     return minOutlierDetectionSamples;
   }
 
@@ -149,5 +154,39 @@ public class DataNodePeerMetrics {
 
   public MutableRollingAverages getSendPacketDownstreamRollingAverages() {
     return sendPacketDownstreamRollingAverages;
+  }
+
+  public void setMinOutlierDetectionNodes(long minNodes) {
+    Preconditions.checkArgument(minNodes > 0,
+        DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY + " should be larger than 0");
+    minOutlierDetectionNodes = minNodes;
+    this.slowNodeDetector.setMinNumResources(minNodes);
+  }
+
+  public long getMinOutlierDetectionNodes() {
+    return minOutlierDetectionNodes;
+  }
+
+  public void setLowThresholdMs(long thresholdMs) {
+    Preconditions.checkArgument(thresholdMs > 0,
+        DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY + " should be larger than 0");
+    lowThresholdMs = thresholdMs;
+    this.slowNodeDetector.setLowThresholdMs(thresholdMs);
+  }
+
+  public long getLowThresholdMs() {
+    return lowThresholdMs;
+  }
+
+  public void setMinOutlierDetectionSamples(long minSamples) {
+    Preconditions.checkArgument(minSamples > 0,
+        DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY +
+            " should be larger than 0");
+    minOutlierDetectionSamples = minSamples;
+  }
+
+  @VisibleForTesting
+  public OutlierDetector getSlowNodeDetector() {
+    return this.slowNodeDetector;
   }
 }

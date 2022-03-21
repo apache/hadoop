@@ -746,6 +746,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
    */
   public static final String  DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY = "dfs.namenode.get-blocks.max-qps";
   public static final int     DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT = 20;
+  public static final String  DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY
+      = "dfs.namenode.get-blocks.check.operation";
+  public static final boolean  DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT
+      = true;
 
   public static final String  DFS_BALANCER_MOVEDWINWIDTH_KEY = "dfs.balancer.movedWinWidth";
   public static final long    DFS_BALANCER_MOVEDWINWIDTH_DEFAULT = 5400*1000L;

@@ -38,6 +38,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -533,6 +535,26 @@ public class FileUtil {
     return dst;
   }
 
+  public static boolean isRegularFile(File file) {
+    return isRegularFile(file, true);
+  }
+
+  /**
+   * Check if the file is regular.
+   * @param file The file being checked.
+   * @param allowLinks Whether to allow matching links.
+   * @return Returns the result of checking whether the file is a regular file.
+   */
+  public static boolean isRegularFile(File file, boolean allowLinks) {
+    if (file != null) {
+      if (allowLinks) {
+        return Files.isRegularFile(file.toPath());
+      }
+      return Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS);
+    }
+    return true;
+  }
+
   /**
    * Convert a os-native filename to a path that works for the shell.
    * @param filename The filename to convert
@@ -888,10 +910,13 @@ public class FileUtil {
   private static void unTarUsingTar(File inFile, File untarDir,
       boolean gzipped) throws IOException {
     StringBuffer untarCommand = new StringBuffer();
+    // not using canonical path here; this postpones relative path
+    // resolution until bash is executed.
+    final String source = "'" + FileUtil.makeSecureShellPath(inFile) + "'";
     if (gzipped) {
-      untarCommand.append(" gzip -dc '")
-          .append(FileUtil.makeSecureShellPath(inFile))
-          .append("' | (");
+      untarCommand.append(" gzip -dc ")
+          .append(source)
+          .append(" | (");
     }
     untarCommand.append("cd '")
         .append(FileUtil.makeSecureShellPath(untarDir))
@@ -901,15 +926,17 @@ public class FileUtil {
     if (gzipped) {
       untarCommand.append(" -)");
     } else {
-      untarCommand.append(FileUtil.makeSecureShellPath(inFile));
+      untarCommand.append(source);
     }
+    LOG.debug("executing [{}]", untarCommand);
     String[] shellCmd = { "bash", "-c", untarCommand.toString() };
     ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
     shexec.execute();
     int exitcode = shexec.getExitCode();
     if (exitcode != 0) {
       throw new IOException("Error untarring file " + inFile +
-                  ". Tar process exited with exit code " + exitcode);
+          ". Tar process exited with exit code " + exitcode
+          + " from command " + untarCommand);
     }
   }
 
@@ -966,6 +993,14 @@ public class FileUtil {
           + " would create entry outside of " + outputDir);
     }
 
+    if (entry.isSymbolicLink() || entry.isLink()) {
+      String canonicalTargetPath = getCanonicalPath(entry.getLinkName(), outputDir);
+      if (!canonicalTargetPath.startsWith(targetDirPath)) {
+        throw new IOException(
+            "expanding " + entry.getName() + " would create entry outside of " + outputDir);
+      }
+    }
+
     if (entry.isDirectory()) {
       File subDir = new File(outputDir, entry.getName());
       if (!subDir.mkdirs() && !subDir.isDirectory()) {
@@ -981,10 +1016,12 @@ public class FileUtil {
     }
 
     if (entry.isSymbolicLink()) {
-      // Create symbolic link relative to tar parent dir
-      Files.createSymbolicLink(FileSystems.getDefault()
-              .getPath(outputDir.getPath(), entry.getName()),
-          FileSystems.getDefault().getPath(entry.getLinkName()));
+      // Create symlink with canonical target path to ensure that we don't extract
+      // outside targetDirPath
+      String canonicalTargetPath = getCanonicalPath(entry.getLinkName(), outputDir);
+      Files.createSymbolicLink(
+          FileSystems.getDefault().getPath(outputDir.getPath(), entry.getName()),
+          FileSystems.getDefault().getPath(canonicalTargetPath));
       return;
     }
 
@@ -996,12 +1033,27 @@ public class FileUtil {
     }
 
     if (entry.isLink()) {
-      File src = new File(outputDir, entry.getLinkName());
+      String canonicalTargetPath = getCanonicalPath(entry.getLinkName(), outputDir);
+      File src = new File(canonicalTargetPath);
       HardLink.createHardLink(src, outputFile);
       return;
     }
 
     org.apache.commons.io.FileUtils.copyToFile(tis, outputFile);
+  }
+
+  /**
+   * Gets the canonical path for the given path.
+   *
+   * @param path      The path for which the canonical path needs to be computed.
+   * @param parentDir The parent directory to use if the path is a relative path.
+   * @return The canonical path of the given path.
+   */
+  private static String getCanonicalPath(String path, File parentDir) throws IOException {
+    java.nio.file.Path targetPath = Paths.get(path);
+    return (targetPath.isAbsolute() ?
+        new File(path) :
+        new File(parentDir, path)).getCanonicalPath();
   }
 
   /**

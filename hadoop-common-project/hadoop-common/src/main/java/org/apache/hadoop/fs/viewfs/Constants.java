@@ -132,4 +132,11 @@ public interface Constants {
   Class<? extends MountTableConfigLoader>
       DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL =
       HCFSMountTableConfigLoader.class;
+
+  /**
+   * Force ViewFileSystem to return a trashRoot that is inside a mount point.
+   */
+  String CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT =
+      "fs.viewfs.trash.force-inside-mount-point";
+  boolean CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT = false;
 }

@@ -1864,8 +1864,8 @@ public class ResourceManager extends CompositeService
       confStore.initialize(conf, conf, rmContext);
       confStore.format();
     } else {
-      System.out.println("Scheduler Configuration format only " +
-          "supported by MutableConfScheduler.");
+      System.out.println(String.format("Scheduler Configuration format only " +
+          "supported by %s.", MutableConfScheduler.class.getSimpleName()));
     }
   }
 

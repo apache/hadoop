@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,48 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.http;
-
-import org.apache.log4j.spi.LoggingEvent;
-import org.apache.log4j.AppenderSkeleton;
 
 /**
- * Log4j Appender adapter for HttpRequestLog
+ * Support for manifest committer.
+ * Unless otherwise stated: classes are private.
  */
-public class HttpRequestLogAppender extends AppenderSkeleton {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.fs.azurebfs.commit;
 
-  private String filename;
-  private int retainDays;
-
-  public HttpRequestLogAppender() {
-  }
-
-  public void setRetainDays(int retainDays) {
-    this.retainDays = retainDays;
-  }
-
-  public int getRetainDays() {
-    return retainDays;
-  }
-
-  public void setFilename(String filename) {
-    this.filename = filename;
-  }
-
-  public String getFilename() {
-    return filename;
-  }
-
-  @Override
-  public void append(LoggingEvent event) {
-  }
-
-  @Override
-  public void close() {
-  }
-
-  @Override
-  public boolean requiresLayout() {
-    return false;
-  }
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

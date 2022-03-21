@@ -15,23 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.http;
 
-import org.junit.Test;
+#include <cstdlib>
+#include <exception>
+#include <iostream>
 
-import static org.junit.Assert.assertEquals;
+#include <google/protobuf/stubs/common.h>
 
-public class TestHttpRequestLogAppender {
+#include "hdfs-find.h"
 
-  @Test
-  public void testParameterPropagation() {
-
-    HttpRequestLogAppender requestLogAppender = new HttpRequestLogAppender();
-    requestLogAppender.setFilename("jetty-namenode-yyyy_mm_dd.log");
-    requestLogAppender.setRetainDays(17);
-    assertEquals("Filename mismatch", "jetty-namenode-yyyy_mm_dd.log",
-        requestLogAppender.getFilename());
-    assertEquals("Retain days mismatch", 17,
-        requestLogAppender.getRetainDays());
+int main(int argc, char *argv[]) {
+  const auto result = std::atexit([]() -> void {
+    // Clean up static data on exit and prevent valgrind memory leaks
+    google::protobuf::ShutdownProtobufLibrary();
+  });
+  if (result != 0) {
+    std::cerr
+        << "Error: Unable to schedule clean-up tasks for HDFS find tool, exiting"
+        << std::endl;
+    std::exit(EXIT_FAILURE);
   }
+
+  hdfs::tools::Find find(argc, argv);
+  auto success = false;
+
+  try {
+    success = find.Do();
+  } catch (const std::exception &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+  }
+
+  if (!success) {
+    std::exit(EXIT_FAILURE);
+  }
+  return 0;
 }

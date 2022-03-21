@@ -49,6 +49,7 @@ import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinA
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.RENAME_PARALLEL_LIMIT;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * A parallelized rename operation.
@@ -155,6 +156,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     this.destKey = destKey;
     this.destStatus = destStatus;
     this.callbacks = callbacks;
+    checkArgument(pageSize > 0
+                    && pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
+            "page size out of range: %s", pageSize);
     this.pageSize = pageSize;
   }
 
@@ -586,8 +590,8 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
         sourcePath.toString(), () ->
             callbacks.removeKeys(
                 keys,
-                false,
-                true));
+                false
+            ));
   }
 
   /**
