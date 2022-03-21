@@ -168,8 +168,8 @@ final class FSDirErasureCodingOp {
       throw new FileNotFoundException("Path not found: " + srcIIP.getPath());
     }
     if (!inode.isDirectory()) {
-      throw new IOException("Attempt to set an erasure coding policy " +
-          "for a file " + src);
+      throw new IOException("Cannot set an erasure coding policy " +
+          "for a file " + src + ". Expected to be a directory");
     }
 
     final XAttr ecXAttr;
