@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
@@ -57,6 +58,31 @@ public class TestNameNodeRpcServer {
       }
       // Reset the config
       conf.unset(DFS_NAMENODE_RPC_BIND_HOST_KEY);
+    }
+  }
+
+  @Test
+  public void testLifelineHandlerCount() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY, "0.0.0.0:0");
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 20);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER_COUNT_KEY, -1);
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      int lifeHandlerCount = ((NameNodeRpcServer)cluster.getNameNodeRpc())
+          .getLifelineRpcServer().getHandlerCount();
+      assertEquals(2, lifeHandlerCount);
+
+      int clientHandlerCount = ((NameNodeRpcServer)cluster.getNameNodeRpc())
+          .getClientRpcServer().getHandlerCount();
+      assertEquals(18, clientHandlerCount);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }
