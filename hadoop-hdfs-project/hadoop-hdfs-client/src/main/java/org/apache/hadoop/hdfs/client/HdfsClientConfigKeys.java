@@ -205,6 +205,19 @@ public interface HdfsClientConfigKeys {
       "dfs.client.refresh.read-block-locations.ms";
   long DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_DEFAULT = 0L;
 
+  //  Number of threads to use for refreshing LocatedBlocks of registered
+  //  DFSInputStreams. If a DFSClient opens many DFSInputStreams, increasing
+  //  this may help refresh them all in a timely manner.
+  String DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_THREADS_KEY =
+      "dfs.client.refresh.read-block-locations.threads";
+  int DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_THREADS_DEFAULT = 5;
+
+  // Whether to auto-register all DFSInputStreams for background refreshes.
+  // If false, user must manually register using DFSClient#addLocatedBlocksRefresh(DFSInputStream)
+  String DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_KEY =
+      "dfs.client.refresh.read-block-locations.register-automatically";
+  boolean DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_DEFAULT = true;
+
   String  DFS_DATANODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.datanode.kerberos.principal";
   String  DFS_DATANODE_READAHEAD_BYTES_KEY = "dfs.datanode.readahead.bytes";

@@ -25,6 +25,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
+import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
+import org.apache.hadoop.security.UserGroupInformation;
+import java.io.IOException;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -63,6 +66,13 @@ public class TestViewFileSystemWithAuthorityLocalFileSystem extends ViewFileSyst
     super.tearDown();
   }
  
+  @Override
+  Path getTrashRootInFallBackFS() throws IOException {
+    return new Path(
+        "/" + TRASH_PREFIX + "/" + UserGroupInformation.getCurrentUser()
+            .getShortUserName());
+  }
+
   @Override
   @Test
   public void testBasicPaths() {

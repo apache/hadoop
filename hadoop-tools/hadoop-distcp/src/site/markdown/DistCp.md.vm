@@ -363,6 +363,7 @@ Command Line Options
 | `-xtrack <path>` | Save information about missing source files to the specified path. | This option is only valid with `-update` option. This is an experimental property and it cannot be used with `-atomic` option. |
 | `-direct` | Write directly to destination paths | Useful for avoiding potentially very expensive temporary file rename operations when the destination is an object store |
 | `-useiterator` | Uses single threaded listStatusIterator to build listing | Useful for saving memory at the client side. Using this option will ignore the numListstatusThreads option |
+| `-updateRoot` | Update root directory attributes (eg permissions, ownership ...) | Useful if you need to enforce root directory attributes update when using distcp |
 
 Architecture of DistCp
 ----------------------

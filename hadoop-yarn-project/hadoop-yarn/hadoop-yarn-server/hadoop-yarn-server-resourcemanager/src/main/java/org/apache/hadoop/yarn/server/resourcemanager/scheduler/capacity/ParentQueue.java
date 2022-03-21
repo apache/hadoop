@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -101,11 +102,11 @@ public class ParentQueue extends AbstractCSQueue {
 
   private AutoCreatedQueueTemplate autoCreatedQueueTemplate;
 
-  // effective min ratio per resource, it is used during updateClusterResource,
-  // leaf queue can use this to calculate effective resources.
-  // This field will not be edited, reference will point to a new immutable map
-  // after every time recalculation
-  private volatile Map<String, Float> effectiveMinRatioPerResource;
+  // A ratio of the queue's effective minimum resource and the summary of the configured
+  // minimum resource of its children grouped by labels and calculated for each resource names
+  // distinctively.
+  private final Map<String, Map<String, Float>> effectiveMinResourceRatio =
+      new ConcurrentHashMap<>();
 
   public ParentQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -1293,17 +1294,24 @@ public class ParentQueue extends AbstractCSQueue {
 
   private void calculateEffectiveResourcesAndCapacity(String label,
       Resource clusterResource) {
+    // Update effective resources for my self;
+    if (rootQueue) {
+      Resource resourceByLabel = labelManager.getResourceByLabel(label, clusterResource);
+      usageTracker.getQueueResourceQuotas().setEffectiveMinResource(label, resourceByLabel);
+      usageTracker.getQueueResourceQuotas().setEffectiveMaxResource(label, resourceByLabel);
+    } else {
+      super.updateEffectiveResources(clusterResource);
+    }
+
+    recalculateEffectiveMinRatio(label, clusterResource);
+  }
+
+  private void recalculateEffectiveMinRatio(String label, Resource clusterResource) {
     // For root queue, ensure that max/min resource is updated to latest
     // cluster resource.
-    Resource resourceByLabel = labelManager.getResourceByLabel(label,
-        clusterResource);
+    Resource resourceByLabel = labelManager.getResourceByLabel(label, clusterResource);
 
-    /*
-     * == Below logic are added to calculate effectiveMinRatioPerResource ==
-     */
-
-    // Total configured min resources of direct children of this given parent
-    // queue
+    // Total configured min resources of direct children of this given parent queue
     Resource configuredMinResources = Resource.newInstance(0L, 0);
     for (CSQueue childQueue : getChildQueues()) {
       Resources.addTo(configuredMinResources,
@@ -1311,8 +1319,7 @@ public class ParentQueue extends AbstractCSQueue {
     }
 
     // Factor to scale down effective resource: When cluster has sufficient
-    // resources, effective_min_resources will be same as configured
-    // min_resources.
+    // resources, effective_min_resources will be same as configured min_resources.
     Resource numeratorForMinRatio = null;
     if (getQueuePath().equals("root")) {
       if (!resourceByLabel.equals(Resources.none()) && Resources.lessThan(resourceCalculator,
@@ -1323,24 +1330,15 @@ public class ParentQueue extends AbstractCSQueue {
       if (Resources.lessThan(resourceCalculator, clusterResource,
           usageTracker.getQueueResourceQuotas().getEffectiveMinResource(label),
           configuredMinResources)) {
-        numeratorForMinRatio = usageTracker.getQueueResourceQuotas()
-            .getEffectiveMinResource(label);
+        numeratorForMinRatio = usageTracker.getQueueResourceQuotas().getEffectiveMinResource(label);
       }
     }
 
-    effectiveMinRatioPerResource = getEffectiveMinRatioPerResource(
-        configuredMinResources, numeratorForMinRatio);
-
-    // Update effective resources for my self;
-    if (rootQueue) {
-      usageTracker.getQueueResourceQuotas().setEffectiveMinResource(label, resourceByLabel);
-      usageTracker.getQueueResourceQuotas().setEffectiveMaxResource(label, resourceByLabel);
-    } else{
-      super.updateEffectiveResources(clusterResource);
-    }
+    effectiveMinResourceRatio.put(label, getEffectiveMinRatio(
+        configuredMinResources, numeratorForMinRatio));
   }
 
-  private Map<String, Float> getEffectiveMinRatioPerResource(
+  private Map<String, Float> getEffectiveMinRatio(
       Resource configuredMinResources, Resource numeratorForMinRatio) {
     Map<String, Float> effectiveMinRatioPerResource = new HashMap<>();
     if (numeratorForMinRatio != null) {
@@ -1637,9 +1635,8 @@ public class ParentQueue extends AbstractCSQueue {
     }
   }
 
-  // This is a locking free method
-  Map<String, Float> getEffectiveMinRatioPerResource() {
-    return effectiveMinRatioPerResource;
+  Map<String, Float> getEffectiveMinRatio(String label) {
+    return effectiveMinResourceRatio.get(label);
   }
 
   @Override

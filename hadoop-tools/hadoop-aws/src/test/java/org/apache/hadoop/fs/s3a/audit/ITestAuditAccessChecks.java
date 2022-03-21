@@ -37,8 +37,9 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_ACCESS_CHECK_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_ACCESS;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_REQUEST;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.resetAuditOptions;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_ALL_PROBES;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_FILE_PROBE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.ROOT_FILE_STATUS_PROBE;
@@ -67,6 +68,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     Configuration conf = super.createConfiguration();
     resetAuditOptions(conf);
     conf.set(AUDIT_SERVICE_CLASSNAME, AccessCheckingAuditor.CLASS);
+    conf.setBoolean(AUDIT_ENABLED, true);
     return conf;
   }
 

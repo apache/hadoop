@@ -332,6 +332,10 @@
           <groupId>org.apache.hadoop.thirdparty</groupId>
           <artifactId>hadoop-shaded-guava</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.ow2.asm</groupId>
+          <artifactId>asm-commons</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <!-- Add optional runtime dependency on the in-development timeline server module
@@ -403,8 +407,8 @@
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
     <!-- Skip jetty-util because it's in client -->
     <dependency>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-core</artifactId>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-core</artifactId>
       <optional>true</optional>
       <exclusions>
         <exclusion>
@@ -451,9 +455,19 @@
       <optional>true</optional>
     </dependency>
     <dependency>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-servlet</artifactId>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-servlet</artifactId>
       <optional>true</optional>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.servlet</groupId>
+          <artifactId>servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.enterprise</groupId>
+          <artifactId>cdi-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- skip org.apache.avro:avro-ipc because it doesn't look like hadoop-common actually uses it -->
     <dependency>

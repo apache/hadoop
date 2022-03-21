@@ -1664,9 +1664,16 @@ public class BlockManager implements BlockStatsMXBean {
     if(numBlocks == 0) {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
+
+    // skip stale storage
+    DatanodeStorageInfo[] storageInfos = Arrays
+        .stream(node.getStorageInfos())
+        .filter(s -> !s.areBlockContentsStale())
+        .toArray(DatanodeStorageInfo[]::new);
+
     // starting from a random block
     int startBlock = ThreadLocalRandom.current().nextInt(numBlocks);
-    Iterator<BlockInfo> iter = node.getBlockIterator(startBlock);
+    Iterator<BlockInfo> iter = node.getBlockIterator(startBlock, storageInfos);
     List<BlockWithLocations> results = new ArrayList<BlockWithLocations>();
     List<BlockInfo> pending = new ArrayList<BlockInfo>();
     long totalSize = 0;
@@ -1685,8 +1692,8 @@ public class BlockManager implements BlockStatsMXBean {
       }
     }
     if(totalSize<size) {
-      iter = node.getBlockIterator(); // start from the beginning
-      for(int i=0; i<startBlock&&totalSize<size; i++) {
+      iter = node.getBlockIterator(0, storageInfos); // start from the beginning
+      for(int i = 0; i < startBlock && totalSize < size && iter.hasNext(); i++) {
         curBlock = iter.next();
         if(!curBlock.isComplete())  continue;
         if (curBlock.getNumBytes() < minBlockSize) {
@@ -2684,7 +2691,7 @@ public class BlockManager implements BlockStatsMXBean {
   void updateHeartbeat(DatanodeDescriptor node, StorageReport[] reports,
       long cacheCapacity, long cacheUsed, int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
-
+    BlockManagerFaultInjector.getInstance().mockAnException();
     for (StorageReport report: reports) {
       providedStorageMap.updateStorage(node, report.getStorage());
     }
@@ -2696,6 +2703,7 @@ public class BlockManager implements BlockStatsMXBean {
       StorageReport[] reports, long cacheCapacity, long cacheUsed,
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
+    BlockManagerFaultInjector.getInstance().mockAnException();
     for (StorageReport report: reports) {
       providedStorageMap.updateStorage(node, report.getStorage());
     }
@@ -4052,6 +4060,14 @@ public class BlockManager implements BlockStatsMXBean {
         List<DatanodeStorageInfo> replicasToDelete = placementPolicy
             .chooseReplicasToDelete(nonExcess, candidates, (short) 1,
                 excessTypes, null, null);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Choose redundant EC replicas to delete from blk_{} which is located in {}",
+              sblk.getBlockId(), storage2index);
+          LOG.debug("Storages with candidate blocks to be deleted: {}", candidates);
+          LOG.debug("Storages with blocks to be deleted: {}", replicasToDelete);
+        }
+        Preconditions.checkArgument(candidates.containsAll(replicasToDelete),
+            "The EC replicas to be deleted are not in the candidate list");
         for (DatanodeStorageInfo chosen : replicasToDelete) {
           processChosenExcessRedundancy(nonExcess, chosen, storedBlock);
           candidates.remove(chosen);

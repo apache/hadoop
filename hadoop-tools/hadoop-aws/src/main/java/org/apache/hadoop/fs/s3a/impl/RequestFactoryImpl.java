@@ -575,12 +575,11 @@ public class RequestFactoryImpl implements RequestFactory {
 
   @Override
   public DeleteObjectsRequest newBulkDeleteRequest(
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean quiet) {
+          List<DeleteObjectsRequest.KeyVersion> keysToDelete) {
     return prepareRequest(
         new DeleteObjectsRequest(bucket)
             .withKeys(keysToDelete)
-            .withQuiet(quiet));
+            .withQuiet(true));
   }
 
   @Override

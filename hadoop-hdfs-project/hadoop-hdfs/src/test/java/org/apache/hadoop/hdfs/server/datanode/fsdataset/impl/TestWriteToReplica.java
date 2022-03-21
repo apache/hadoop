@@ -27,7 +27,6 @@ import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -550,7 +549,7 @@ public class TestWriteToReplica {
           bpList.size() == 2);
       
       createReplicas(bpList, volumes, cluster.getFsDatasetTestUtils(dn));
-      ReplicaMap oldReplicaMap = new ReplicaMap(new ReentrantReadWriteLock());
+      ReplicaMap oldReplicaMap = new ReplicaMap();
       oldReplicaMap.addAll(dataSet.volumeMap);
 
       cluster.restartDataNode(0);
