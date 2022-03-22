@@ -793,7 +793,7 @@ public class NetworkTopology {
    * @param node Replica of data
    * @return weight
    */
-  private static int getWeightUsingNetworkLocation(Node reader, Node node) {
+  static int getWeightUsingNetworkLocation(Node reader, Node node) {
     //Start off by initializing to Integer.MAX_VALUE
     int weight = Integer.MAX_VALUE;
     if(reader != null && node != null) {
@@ -824,7 +824,7 @@ public class NetworkTopology {
           currentLevel++;
         }
         weight = (readerPathToken.length - currentLevel) +
-            (nodePathToken.length - currentLevel);
+            (nodePathToken.length - currentLevel) + 2;
       }
     }
     return weight;
