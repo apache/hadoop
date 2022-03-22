@@ -746,6 +746,17 @@ public class ViewFs extends AbstractFileSystem {
         result.addAll(tokens);
       }
     }
+
+    // Add tokens from fallback FS
+    if (this.fsState.getRootFallbackLink() != null) {
+      AbstractFileSystem linkedFallbackFs =
+          this.fsState.getRootFallbackLink().getTargetFileSystem();
+      List<Token<?>> tokens = linkedFallbackFs.getDelegationTokens(renewer);
+      if (tokens != null) {
+        result.addAll(tokens);
+      }
+    }
+
     return result;
   }
 
