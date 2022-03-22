@@ -587,7 +587,7 @@ public class TestDelegationToken {
             10*1000,1*1000,3600000);
     try {
       dtSecretManager.startThreads();
-      
+
       Assert.assertEquals(0, dtSecretManager.metrics.storeToken.lastStat().numSamples());
       final Token<TestDelegationTokenIdentifier> token =
           generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");

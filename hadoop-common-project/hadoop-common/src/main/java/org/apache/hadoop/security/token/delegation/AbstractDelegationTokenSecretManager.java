@@ -36,6 +36,9 @@ import javax.crypto.SecretKey;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -54,6 +57,9 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.*;
+
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -854,14 +860,19 @@ extends AbstractDelegationTokenIdentifier>
       addTokenForOwnerStats(id);
     }
   }
-  
+
   /**
    * DelegationTokenSecretManagerMetrics tracks token management operations
    * and publishes them through the metrics interfaces.
    */
   @Metrics(about="Delegation token secret manager metrics", context="token")
-  static class DelegationTokenSecretManagerMetrics {
+  static class DelegationTokenSecretManagerMetrics implements IOStatisticsSource {
+    final static String STORE_TOKEN_STAT = "storeToken";
+    final static String UPDATE_TOKEN_STAT = "updateToken";
+    final static String REMOVE_TOKEN_STAT = "removeToken";
+
     final MetricsRegistry registry = new MetricsRegistry("DelegationTokenSecretManagerMetrics");
+    final IOStatisticsStore ioStatistics;
 
     @Metric("Rate of storage of delegation tokens and latency (milliseconds)")
     MutableRate storeToken;
@@ -872,6 +883,32 @@ extends AbstractDelegationTokenIdentifier>
 
     static DelegationTokenSecretManagerMetrics create() {
       return DefaultMetricsSystem.instance().register(new DelegationTokenSecretManagerMetrics());
+    }
+
+    public DelegationTokenSecretManagerMetrics() {
+      ioStatistics = iostatisticsStore()
+          .withDurationTracking(STORE_TOKEN_STAT, UPDATE_TOKEN_STAT, REMOVE_TOKEN_STAT)
+          .build();
+    }
+
+    public void addStoreToken(long value) {
+      storeToken.add(value);
+      ioStatistics.addTimedOperation(STORE_TOKEN_STAT, value);
+    }
+
+    public void addUpdateToken(long value) {
+      updateToken.add(value);
+      ioStatistics.addTimedOperation(UPDATE_TOKEN_STAT, value);
+    }
+
+    public void addRemoveToken(long value) {
+      removeToken.add(value);
+      ioStatistics.addTimedOperation(REMOVE_TOKEN_STAT, value);
+    }
+
+    @Override
+    public IOStatistics getIOStatistics() {
+      return ioStatistics;
     }
   }
 }
