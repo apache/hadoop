@@ -57,7 +57,7 @@ public class Tracer {
   }
 
   public Span newSpan(String description, SpanContext spanCtx) {
-    io.opentelemetry.api.trace.Span parentSpan = io.opentelemetry.api.trace.Span.wrap(spanCtx.getSpanContext());
+    io.opentelemetry.api.trace.Span parentSpan = io.opentelemetry.api.trace.Span.wrap(spanCtx.getOpenSpanContext());
     io.opentelemetry.api.trace.Span span = OTelTracer.spanBuilder(description).setParent(Context.current().with(parentSpan)).startSpan();
     return new Span(span);
   }

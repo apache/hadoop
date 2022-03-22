@@ -23,11 +23,11 @@ import java.io.Closeable;
 
 public class TraceScope implements Closeable {
   Span span;
-  Scope scope;
+  Scope openScope;
   public TraceScope(Span span) {
     this.span = span;
     if(span != null){
-      this.scope = span.makeCurrent();
+      this.openScope = span.makeCurrent();
     }
   }
 
@@ -60,8 +60,8 @@ public class TraceScope implements Closeable {
   }
 
   public void close() {
-    if(scope != null){
-      scope.close();
+    if(openScope != null){
+      openScope.close();
     }
     if (span != null) {
       span.close();

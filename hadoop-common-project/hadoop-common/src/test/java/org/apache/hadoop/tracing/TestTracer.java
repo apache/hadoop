@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.tracing;
 
+import org.apache.hadoop.test.HadoopTestBase;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class TestTracer {
+public class TestTracer extends HadoopTestBase {
   @Test
   public void testNoopTracer(){
     Tracer tracer = new Tracer.Builder().build();

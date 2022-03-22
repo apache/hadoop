@@ -21,11 +21,9 @@ import java.io.Closeable;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.TraceFlags;
 import io.opentelemetry.api.trace.TraceState;
 import io.opentelemetry.api.trace.TraceStateBuilder;
-import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,9 +38,9 @@ public class SpanContext implements Closeable  {
   private static final String TRACE_FLAGS = "TRACE_FLAGS";
 
 
-  private io.opentelemetry.api.trace.SpanContext spanContext = null;
-  public SpanContext(io.opentelemetry.api.trace.SpanContext spanContext) {
-    this.spanContext = spanContext;
+  private io.opentelemetry.api.trace.SpanContext openSpanContext;
+  public SpanContext(io.opentelemetry.api.trace.SpanContext openSpanContext) {
+    this.openSpanContext = openSpanContext;
   }
 
   public void close() {
@@ -50,13 +48,13 @@ public class SpanContext implements Closeable  {
   }
 
   public Map<String, String> getKVSpanContext(){
-    if(spanContext != null){
+    if(openSpanContext != null){
       //TODO: may we should move this to Proto
       Map<String, String> kvMap = new HashMap<>();
-      kvMap.put(TRACE_ID, spanContext.getTraceId());
-      kvMap.put(SPAN_ID, spanContext.getSpanId());
-      kvMap.put(TRACE_FLAGS, spanContext.getTraceFlags().asHex());
-      kvMap.putAll(spanContext.getTraceState().asMap());
+      kvMap.put(TRACE_ID, openSpanContext.getTraceId());
+      kvMap.put(SPAN_ID, openSpanContext.getSpanId());
+      kvMap.put(TRACE_FLAGS, openSpanContext.getTraceFlags().asHex());
+      kvMap.putAll(openSpanContext.getTraceState().asMap());
       return kvMap;
     }
     return null;
@@ -67,6 +65,9 @@ public class SpanContext implements Closeable  {
       String traceId = kvMap.get(TRACE_ID);
       String spanId = kvMap.get(SPAN_ID);
       String traceFlagsHex = kvMap.get(TRACE_FLAGS);
+      if(traceId == null || spanId == null || traceFlagsHex == null){
+        return null;
+      }
       TraceFlags traceFlags = TraceFlags.fromHex(traceFlagsHex, 0);
       TraceStateBuilder traceStateBuilder = TraceState.builder();
       for(Map.Entry<String, String> keyValue: kvMap.entrySet()){
@@ -86,7 +87,7 @@ public class SpanContext implements Closeable  {
 
   }
 
-  public io.opentelemetry.api.trace.SpanContext getSpanContext() {
-      return spanContext;
+  public io.opentelemetry.api.trace.SpanContext getOpenSpanContext() {
+      return openSpanContext;
   }
 }

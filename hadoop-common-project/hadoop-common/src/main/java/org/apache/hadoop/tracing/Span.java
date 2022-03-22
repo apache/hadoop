@@ -21,32 +21,36 @@ import io.opentelemetry.context.Scope;
 
 import java.io.Closeable;
 
+/***
+ * This class is a wrapper class on top of opentelemetry Span class
+ * avoiding direct dependency on opentelemetry API
+ */
 public class Span implements Closeable {
-  private io.opentelemetry.api.trace.Span span = null;
+  private io.opentelemetry.api.trace.Span openSpan;
   public Span() {
   }
 
-  public Span(io.opentelemetry.api.trace.Span span){
-    this.span = span;
+  public Span(io.opentelemetry.api.trace.Span openSpan){
+    this.openSpan = openSpan;
   }
 
   public Span addKVAnnotation(String key, String value) {
-    if(span != null){
-      span.setAttribute(key, value);
+    if(openSpan != null){
+      openSpan.setAttribute(key, value);
     }
     return this;
   }
 
   public Span addTimelineAnnotation(String msg) {
-    if(span != null){
-      span.addEvent(msg);
+    if(openSpan != null){
+      openSpan.addEvent(msg);
     }
     return this;
   }
 
   public SpanContext getContext() {
-    if(span != null){
-      return  new SpanContext(span.getSpanContext());
+    if(openSpan != null){
+      return  new SpanContext(openSpan.getSpanContext());
     }
     return null;
   }
@@ -56,14 +60,18 @@ public class Span implements Closeable {
   }
 
   public void close() {
-    if(span != null){
-      span.end();
+    if(openSpan != null){
+      openSpan.end();
     }
   }
 
+  /***
+   * This method activates the current span on the current thread
+   * @return the scope for the current span
+   */
   public Scope makeCurrent() {
-    if(span != null){
-      return span.makeCurrent();
+    if(openSpan != null){
+      return openSpan.makeCurrent();
     }
     return null;
   }
