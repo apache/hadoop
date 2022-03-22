@@ -30,8 +30,9 @@ public abstract class AbstractQueueCapacityCalculator {
   /**
    * Sets the metrics and statistics after effective resource values calculation.
    *
-   * @param resourceCalculationDriver driver that contains the current resource unit and child to
-   *                                  process
+   * @param queue the queue on which the calculations are based
+   * @param resourceCalculationDriver driver that contains the intermediate calculation results for
+   *                                  a queue branch
    * @param label         node label
    */
   public abstract void updateCapacitiesAfterCalculation(
@@ -48,8 +49,9 @@ public abstract class AbstractQueueCapacityCalculator {
   /**
    * Calculates the minimum effective resource.
    *
-   * @param resourceCalculationDriver driver that contains the current resource unit and child to
-   *                                  process
+   * @param resourceCalculationDriver driver that contains the intermediate calculation results for
+   *                                  a queue branch
+   * @param context the units evaluated in the current iteration phase
    * @param label         node label
    * @return minimum effective resource
    */
@@ -60,8 +62,9 @@ public abstract class AbstractQueueCapacityCalculator {
   /**
    * Calculates the maximum effective resource.
    *
-   * @param resourceCalculationDriver driver that contains the current resource unit and child to
-   *                                  process
+   * @param resourceCalculationDriver driver that contains the intermediate calculation results for
+   *                                  a queue branch
+   * @param context the units evaluated in the current iteration phase
    * @param label         node label
    * @return minimum effective resource
    */

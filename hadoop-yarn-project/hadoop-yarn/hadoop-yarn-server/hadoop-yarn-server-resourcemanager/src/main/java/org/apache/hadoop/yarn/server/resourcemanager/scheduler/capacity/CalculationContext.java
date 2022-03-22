@@ -19,31 +19,33 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 
 /**
  * A storage class that wraps arguments used in a resource calculation iteration.
  */
 public class CalculationContext {
   private final String resourceName;
-  private final QueueCapacityVector.ResourceUnitCapacityType capacityType;
-  private final CSQueue childQueue;
+  private final ResourceUnitCapacityType capacityType;
+  private final CSQueue queue;
 
-  public CalculationContext(String resourceName, QueueCapacityVector.ResourceUnitCapacityType capacityType, CSQueue childQueue) {
+  public CalculationContext(String resourceName, ResourceUnitCapacityType capacityType,
+                            CSQueue queue) {
     this.resourceName = resourceName;
     this.capacityType = capacityType;
-    this.childQueue = childQueue;
+    this.queue = queue;
   }
 
   public String getResourceName() {
     return resourceName;
   }
 
-  public QueueCapacityVector.ResourceUnitCapacityType getCapacityType() {
+  public ResourceUnitCapacityType getCapacityType() {
     return capacityType;
   }
 
-  public CSQueue getChildQueue() {
-    return childQueue;
+  public CSQueue getQueue() {
+    return queue;
   }
 
   /**
@@ -54,7 +56,7 @@ public class CalculationContext {
    * @return capacity vector entry
    */
   public QueueCapacityVectorEntry getCurrentMinimumCapacityEntry(String label) {
-    return childQueue.getConfiguredCapacityVector(label).getResource(resourceName);
+    return queue.getConfiguredCapacityVector(label).getResource(resourceName);
   }
 
   /**
@@ -65,6 +67,6 @@ public class CalculationContext {
    * @return capacity vector entry
    */
   public QueueCapacityVectorEntry getCurrentMaximumCapacityEntry(String label) {
-    return childQueue.getConfiguredMaxCapacityVector(label).getResource(resourceName);
+    return queue.getConfiguredMaxCapacityVector(label).getResource(resourceName);
   }
 }

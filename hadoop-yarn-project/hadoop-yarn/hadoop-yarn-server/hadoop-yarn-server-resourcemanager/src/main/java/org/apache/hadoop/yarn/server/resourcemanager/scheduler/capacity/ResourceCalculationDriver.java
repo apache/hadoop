@@ -216,10 +216,10 @@ public class ResourceCalculationDriver {
   }
 
   private void calculateResourceOnChild(CalculationContext context) {
-    context.getChildQueue().getWriteLock().lock();
+    context.getQueue().getWriteLock().lock();
     try {
-      for (String label : context.getChildQueue().getConfiguredNodeLabels()) {
-        if (!context.getChildQueue().getConfiguredCapacityVector(label).isResourceOfType(context.getResourceName(),
+      for (String label : context.getQueue().getConfiguredNodeLabels()) {
+        if (!context.getQueue().getConfiguredCapacityVector(label).isResourceOfType(context.getResourceName(),
             context.getCapacityType())) {
           continue;
         }
@@ -232,14 +232,14 @@ public class ResourceCalculationDriver {
         usedResourceByCurrentCalculatorPerLabel.put(label, resourceUsedByLabel);
       }
     } finally {
-      context.getChildQueue().getWriteLock().unlock();
+      context.getQueue().getWriteLock().unlock();
     }
   }
 
   private double setChildResources(CalculationContext context, String label) {
-    QueueCapacityVectorEntry capacityVectorEntry = context.getChildQueue().getConfiguredCapacityVector(
+    QueueCapacityVectorEntry capacityVectorEntry = context.getQueue().getConfiguredCapacityVector(
         label).getResource(context.getResourceName());
-    QueueCapacityVectorEntry maximumCapacityVectorEntry = context.getChildQueue()
+    QueueCapacityVectorEntry maximumCapacityVectorEntry = context.getQueue()
         .getConfiguredMaxCapacityVector(label).getResource(context.getResourceName());
     AbstractQueueCapacityCalculator maximumCapacityCalculator = calculators.get(
         maximumCapacityVectorEntry.getVectorResourceType());
@@ -255,9 +255,9 @@ public class ResourceCalculationDriver {
     minimumResource = resources.getLeft();
     maximumResource = resources.getRight();
 
-    context.getChildQueue().getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
+    context.getQueue().getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
         context.getResourceName(), (long) minimumResource);
-    context.getChildQueue().getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
+    context.getQueue().getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
         context.getResourceName(), (long) maximumResource);
 
     return minimumResource;
@@ -266,7 +266,7 @@ public class ResourceCalculationDriver {
   private Pair<Double, Double> validateCalculatedResources(CalculationContext context,
       String label, Pair<Double, Double> calculatedResources) {
     double minimumResource = calculatedResources.getLeft();
-    long minimumMemoryResource = context.getChildQueue().getQueueResourceQuotas().getEffectiveMinResource(label)
+    long minimumMemoryResource = context.getQueue().getQueueResourceQuotas().getEffectiveMinResource(label)
         .getMemorySize();
 
     double remainingResourceUnderParent = overallRemainingResourcePerLabel.get(label).getValue(
@@ -283,14 +283,14 @@ public class ResourceCalculationDriver {
 
     if (maximumResource != 0 && maximumResource > parentMaximumResource) {
       updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_MAX_RESOURCE_EXCEEDS_PARENT.ofQueue(
-          context.getChildQueue().getQueuePath()));
+          context.getQueue().getQueuePath()));
     }
     maximumResource = maximumResource == 0 ? parentMaximumResource : Math.min(maximumResource,
         parentMaximumResource);
 
     if (maximumResource < minimumResource) {
       updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_EXCEEDS_MAX_RESOURCE.ofQueue(
-          context.getChildQueue().getQueuePath()));
+          context.getQueue().getQueuePath()));
       minimumResource = maximumResource;
     }
 
@@ -300,7 +300,7 @@ public class ResourceCalculationDriver {
         minimumResource = 0;
       } else {
         updateContext.addUpdateWarning(
-            QueueUpdateWarningType.QUEUE_OVERUTILIZED.ofQueue(context.getChildQueue().getQueuePath()).withInfo(
+            QueueUpdateWarningType.QUEUE_OVERUTILIZED.ofQueue(context.getQueue().getQueuePath()).withInfo(
                 "Resource name: " + context.getResourceName() + " resource value: " + minimumResource));
         minimumResource = remainingResourceUnderParent;
       }
@@ -308,7 +308,7 @@ public class ResourceCalculationDriver {
 
     if (minimumResource == 0) {
       updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_ZERO_RESOURCE.ofQueue(
-          context.getChildQueue().getQueuePath()).withInfo("Resource name: " + context.getResourceName()));
+          context.getQueue().getQueuePath()).withInfo("Resource name: " + context.getResourceName()));
     }
 
     return new ImmutablePair<>(minimumResource, maximumResource);

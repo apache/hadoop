@@ -71,6 +71,8 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
    * aggregated configured absolute resource of its children, the resource ratio will be less,
    * than 1.
    *
+   * @param calculationDriver the driver, which contains the parent queue that will form the base
+   *                          of the normalization calculation
    */
   public static void setNormalizedResourceRatio(ResourceCalculationDriver calculationDriver) {
     CSQueue queue = calculationDriver.getQueue();

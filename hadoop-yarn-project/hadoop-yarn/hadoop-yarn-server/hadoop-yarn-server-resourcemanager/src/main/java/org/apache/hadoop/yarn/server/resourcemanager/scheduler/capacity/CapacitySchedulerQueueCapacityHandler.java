@@ -121,7 +121,7 @@ public class CapacitySchedulerQueueCapacityHandler {
       ResourceCalculationDriver resourceCalculationDriver, ResourceLimits resourceLimits) {
     ParentQueue parentQueue = (ParentQueue) resourceCalculationDriver.getQueue();
     for (CSQueue childQueue : parentQueue.getChildQueues()) {
-      updateChildCapacities(resourceCalculationDriver, childQueue);
+      updateQueueCapacities(resourceCalculationDriver, childQueue);
 
       ResourceLimits childLimit = parentQueue.getResourceLimitsOfChild(childQueue,
           resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(),
@@ -135,27 +135,29 @@ public class CapacitySchedulerQueueCapacityHandler {
 
   /**
    * Updates the capacity values of the currently evaluated child.
-   * @param childQueue child queue on which the capacities are set
+   * @param queue queue on which the capacities are set
    */
-  private void updateChildCapacities(ResourceCalculationDriver resourceCalculationDriver, CSQueue childQueue) {
-    childQueue.getWriteLock().lock();
+  private void updateQueueCapacities(
+      ResourceCalculationDriver resourceCalculationDriver, CSQueue queue) {
+    queue.getWriteLock().lock();
     try {
-      for (String label : childQueue.getConfiguredNodeLabels()) {
-        QueueCapacityVector capacityVector = childQueue.getConfiguredCapacityVector(label);
+      for (String label : queue.getConfiguredNodeLabels()) {
+        QueueCapacityVector capacityVector = queue.getConfiguredCapacityVector(label);
         if (capacityVector.isMixedCapacityVector()) {
           // Post update capacities based on the calculated effective resource values
-          setQueueCapacities(resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label), childQueue, label);
+          setQueueCapacities(resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(
+              label), queue, label);
         } else {
           // Update capacities according to the legacy logic
           for (ResourceUnitCapacityType capacityType :
-              childQueue.getConfiguredCapacityVector(label).getDefinedCapacityTypes()) {
+              queue.getConfiguredCapacityVector(label).getDefinedCapacityTypes()) {
             AbstractQueueCapacityCalculator calculator = calculators.get(capacityType);
-            calculator.updateCapacitiesAfterCalculation(resourceCalculationDriver, childQueue, label);
+            calculator.updateCapacitiesAfterCalculation(resourceCalculationDriver, queue, label);
           }
         }
       }
     } finally {
-      childQueue.getWriteLock().unlock();
+      queue.getWriteLock().unlock();
     }
   }
 
@@ -163,6 +165,7 @@ public class CapacitySchedulerQueueCapacityHandler {
    * Sets capacity and absolute capacity values of a queue based on minimum and
    * maximum effective resources.
    *
+   * @param clusterResource overall cluster resource
    * @param queue child queue for which the capacities are set
    * @param label node label
    */
