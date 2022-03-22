@@ -163,6 +163,7 @@
                         <exclude>org/xerial/snappy/**/*</exclude>
                         <!-- Exclude org.widlfly.openssl -->
                         <exclude>org/wildfly/openssl/*</exclude>
+                        <exclude>org/wildfly/openssl/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
