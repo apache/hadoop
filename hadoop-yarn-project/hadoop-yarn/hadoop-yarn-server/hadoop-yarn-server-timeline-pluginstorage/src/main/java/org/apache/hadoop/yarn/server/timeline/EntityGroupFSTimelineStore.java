@@ -76,9 +76,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -141,6 +143,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
   private long unknownActiveMillis;
   private int appCacheMaxSize = 0;
   private boolean recoveryEnabled;
+  private boolean isAppendSupported;
   private Path checkpointFile;
   private ConcurrentMap<String, Pair<Long, Long>> recoveredLogs =
       new ConcurrentHashMap<String, Pair<Long, Long>>();
@@ -222,6 +225,10 @@ public class EntityGroupFSTimelineStore extends CompositeService
     recoveryEnabled = conf.getBoolean(
         YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RECOVERY_ENABLED,
         YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RECOVERY_ENABLED_DEFAULT);
+
+    isAppendSupported = conf.getBoolean(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYFILE_FS_SUPPORT_APPEND,
+        YarnConfiguration.TIMELINE_SERVICE_ENTITYFILE_FS_SUPPORT_APPEND_DEFAULT);
 
     aclsEnabled = conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
     YarnConfiguration.DEFAULT_YARN_ACL_ENABLE);
@@ -842,11 +849,28 @@ public class EntityGroupFSTimelineStore extends CompositeService
         }
         String attemptDirName = statAttempt.getPath().getName();
         RemoteIterator<FileStatus> iterCache = list(statAttempt.getPath());
+        List<FileStatus> files = new ArrayList<>();
         while (iterCache.hasNext()) {
           FileStatus statCache = iterCache.next();
           if (!statCache.isFile()) {
             continue;
           }
+          files.add(statCache);
+        }
+        if (isAppendSupported) {
+          Collections.sort(files, new Comparator<FileStatus>() {
+            @Override
+            public int compare(FileStatus o1, FileStatus o2) {
+              String[] ts1 = o1.getPath().getName().split("_");
+              String[] ts2 = o2.getPath().getName().split("_");
+              return (Integer.parseInt(ts1[ts1.length - 1]) - Integer.parseInt(ts2[ts2.length - 1]));
+            }
+          });
+        }
+        Iterator<FileStatus> fileIterator = files.iterator();
+
+        while (fileIterator.hasNext()) {
+          FileStatus statCache = fileIterator.next();
           String filename = statCache.getPath().getName();
           String owner = statCache.getOwner();
           //YARN-10884:Owner of File is set to Null on WASB Append Operation.ATS fails to read such

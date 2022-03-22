@@ -3275,7 +3275,9 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_ENTITYFILE_FS_SUPPORT_APPEND
       = TIMELINE_SERVICE_PREFIX
       + "entity-file.fs-support-append";
-
+  public static final boolean TIMELINE_SERVICE_ENTITYFILE_FS_SUPPORT_APPEND_DEFAULT
+      = true;
+      
   public static final String
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_WITH_USER_DIR =
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "with-user-dir";
