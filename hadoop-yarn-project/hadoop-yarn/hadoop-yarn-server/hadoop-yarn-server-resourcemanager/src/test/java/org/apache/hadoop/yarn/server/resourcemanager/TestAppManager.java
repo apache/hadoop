@@ -331,7 +331,7 @@ public class TestAppManager extends AppManagerTestBase{
     csConf.set(PREFIX + "root.test.acl_submit_applications", "test");
     csConf.set(PREFIX + "root.test.acl_administer_queue", "test");
 
-    asContext.setQueue("test");
+    asContext.setQueue("oldQueue");
 
     MockRM newMockRM = new MockRM(csConf);
     RMContext newMockRMContext = newMockRM.getRMContext();

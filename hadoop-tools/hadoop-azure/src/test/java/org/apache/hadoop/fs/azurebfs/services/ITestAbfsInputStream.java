@@ -81,7 +81,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
         }
         assertEquals(length, bytesRead);
         assertContentReadCorrectly(fileContent,
-            (int) (seekPos + totalBytesRead - length), length, buffer);
+            (int) (seekPos + totalBytesRead - length), length, buffer, testFilePath);
 
         assertTrue(abfsInputStream.getFCursor() >= seekPos + totalBytesRead);
         assertTrue(abfsInputStream.getFCursorAfterLastRead() >= seekPos + totalBytesRead);
@@ -133,7 +133,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
         actualLength = length - delta;
       }
       assertEquals(bytesRead, actualLength);
-      assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer);
+      assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer, testFilePath);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
       assertEquals(fileContent.length, abfsInputStream.getFCursorAfterLastRead());
       assertEquals(actualLength, abfsInputStream.getBCursor());
@@ -200,24 +200,24 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
   }
 
   protected void assertContentReadCorrectly(byte[] actualFileContent, int from,
-      int len, byte[] contentRead) {
+      int len, byte[] contentRead, Path testFilePath) {
     for (int i = 0; i < len; i++) {
-      assertEquals(contentRead[i], actualFileContent[i + from]);
+      assertEquals("The test file path is " + testFilePath, contentRead[i], actualFileContent[i + from]);
     }
   }
 
   protected void assertBuffersAreNotEqual(byte[] actualContent,
-      byte[] contentRead, AbfsConfiguration conf) {
-    assertBufferEquality(actualContent, contentRead, conf, false);
+      byte[] contentRead, AbfsConfiguration conf, Path testFilePath) {
+    assertBufferEquality(actualContent, contentRead, conf, false, testFilePath);
   }
 
   protected void assertBuffersAreEqual(byte[] actualContent, byte[] contentRead,
-      AbfsConfiguration conf) {
-    assertBufferEquality(actualContent, contentRead, conf, true);
+      AbfsConfiguration conf, Path testFilePath) {
+    assertBufferEquality(actualContent, contentRead, conf, true, testFilePath);
   }
 
   private void assertBufferEquality(byte[] actualContent, byte[] contentRead,
-      AbfsConfiguration conf, boolean assertEqual) {
+      AbfsConfiguration conf, boolean assertEqual, Path testFilePath) {
     int bufferSize = conf.getReadBufferSize();
     int actualContentSize = actualContent.length;
     int n = (actualContentSize < bufferSize) ? actualContentSize : bufferSize;
@@ -228,9 +228,9 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       }
     }
     if (assertEqual) {
-      assertEquals(n, matches);
+      assertEquals("The test file path is " + testFilePath, n, matches);
     } else {
-      assertNotEquals(n, matches);
+      assertNotEquals("The test file path is " + testFilePath, n, matches);
     }
   }
 

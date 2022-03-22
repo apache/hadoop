@@ -375,6 +375,20 @@ With this setting a user can interact with `ns-fed` as a regular namespace:
 This federated namespace can also be set as the default one at **core-site.xml** using `fs.defaultFS`.
 
 
+NameNode configuration
+--------------------
+
+In order for the system to support data-locality, you must configure your NameNodes so that they will trust the routers to supply the user's client IP address. `dfs.namenode.ip-proxy-users` defines a comma separated list of users that are allowed to provide the client ip address via the caller context.
+
+```xml
+<configuration>
+  <property>
+    <name>dfs.namenode.ip-proxy-users</name>
+    <value>hdfs</value>
+  </property>
+</configuration>
+```
+
 Router configuration
 --------------------
 

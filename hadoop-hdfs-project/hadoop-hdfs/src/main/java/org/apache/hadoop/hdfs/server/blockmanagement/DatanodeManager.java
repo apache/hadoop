@@ -314,18 +314,12 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval
         + 10 * 1000 * heartbeatIntervalSeconds;
-    // Effected block invalidate limit is the bigger value between
-    // value configured in hdfs-site.xml, and 20 * HB interval.
     final int configuredBlockInvalidateLimit = conf.getInt(
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY,
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
-    final int countedBlockInvalidateLimit = 20*(int)(heartbeatIntervalSeconds);
-    this.blockInvalidateLimit = Math.max(countedBlockInvalidateLimit,
-        configuredBlockInvalidateLimit);
-    LOG.info(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY
-        + ": configured=" + configuredBlockInvalidateLimit
-        + ", counted=" + countedBlockInvalidateLimit
-        + ", effected=" + blockInvalidateLimit);
+    // Block invalidate limit also has some dependency on heartbeat interval.
+    // Check setBlockInvalidateLimit().
+    setBlockInvalidateLimit(configuredBlockInvalidateLimit);
     this.checkIpHostnameInRegistration = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY,
         DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT);
@@ -2088,8 +2082,25 @@ public class DatanodeManager {
     this.heartbeatRecheckInterval = recheckInterval;
     this.heartbeatExpireInterval = 2L * recheckInterval + 10 * 1000
         * intervalSeconds;
-    this.blockInvalidateLimit = Math.max(20 * (int) (intervalSeconds),
-        blockInvalidateLimit);
+    this.blockInvalidateLimit = getBlockInvalidateLimit(blockInvalidateLimit);
+  }
+
+  private int getBlockInvalidateLimitFromHBInterval() {
+    return 20 * (int) heartbeatIntervalSeconds;
+  }
+
+  private int getBlockInvalidateLimit(int configuredBlockInvalidateLimit) {
+    return Math.max(getBlockInvalidateLimitFromHBInterval(), configuredBlockInvalidateLimit);
+  }
+
+  public void setBlockInvalidateLimit(int configuredBlockInvalidateLimit) {
+    final int countedBlockInvalidateLimit = getBlockInvalidateLimitFromHBInterval();
+    // Effected block invalidate limit is the bigger value between
+    // value configured in hdfs-site.xml, and 20 * HB interval.
+    this.blockInvalidateLimit = getBlockInvalidateLimit(configuredBlockInvalidateLimit);
+    LOG.info("{} : configured={}, counted={}, effected={}",
+        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY, configuredBlockInvalidateLimit,
+        countedBlockInvalidateLimit, this.blockInvalidateLimit);
   }
 
   /**

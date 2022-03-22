@@ -214,7 +214,7 @@ com.aliyun:aliyun-java-sdk-core:3.4.0
 com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
-com.aliyun.oss:aliyun-sdk-oss:3.13.0
+com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.amazonaws:aws-java-sdk-bundle:1.11.901
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
@@ -321,6 +321,7 @@ org.apache.kerby:kerby-pkix:1.0.1
 org.apache.kerby:kerby-util:1.0.1
 org.apache.kerby:kerby-xdr:1.0.1
 org.apache.kerby:token-provider:1.0.1
+org.apache.solr:solr-solrj:8.8.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.6.3
 org.codehaus.jackson:jackson-core-asl:1.9.13
@@ -404,7 +405,7 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.css
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-full-2.0.0.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-helpers-1.1.1.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.5.1.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.6.0.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery.dataTables.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/moment.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js
@@ -467,8 +468,8 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk15on:1.60
-org.bouncycastle:bcprov-jdk15on:1.60
+org.bouncycastle:bcpkix-jdk15on:1.68
+org.bouncycastle:bcprov-jdk15on:1.68
 org.checkerframework:checker-qual:2.5.2
 org.codehaus.mojo:animal-sniffer-annotations:1.17
 org.jruby.jcodings:jcodings:1.0.13
@@ -514,7 +515,7 @@ org.hsqldb:hsqldb:2.3.4
 JDOM License
 ------------
 
-org.jdom:jdom:1.1
+org.jdom:jdom2:2.0.6.1
 
 
 Public Domain

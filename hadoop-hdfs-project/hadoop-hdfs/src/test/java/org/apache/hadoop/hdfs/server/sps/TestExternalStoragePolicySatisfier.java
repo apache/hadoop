@@ -90,6 +90,8 @@ import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -197,9 +199,24 @@ public class TestExternalStoragePolicySatisfier {
     writeContent(FILE);
   }
 
+  private void createCluster(boolean createMoverPath) throws IOException {
+    getConf().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    setCluster(startCluster(getConf(), allDiskTypes, NUM_OF_DATANODES,
+        STORAGES_PER_DATANODE, CAPACITY, createMoverPath));
+    getFS();
+    writeContent(FILE);
+  }
+
   private MiniDFSCluster startCluster(final Configuration conf,
       StorageType[][] storageTypes, int numberOfDatanodes, int storagesPerDn,
       long nodeCapacity) throws IOException {
+    return startCluster(conf, storageTypes, numberOfDatanodes, storagesPerDn,
+        nodeCapacity, false);
+  }
+
+  private MiniDFSCluster startCluster(final Configuration conf,
+      StorageType[][] storageTypes, int numberOfDatanodes, int storagesPerDn,
+      long nodeCapacity, boolean createMoverPath) throws IOException {
     long[][] capacities = new long[numberOfDatanodes][storagesPerDn];
     for (int i = 0; i < numberOfDatanodes; i++) {
       for (int j = 0; j < storagesPerDn; j++) {
@@ -212,7 +229,7 @@ public class TestExternalStoragePolicySatisfier {
     cluster.waitActive();
 
     nnc = DFSTestUtil.getNameNodeConnector(getConf(),
-        HdfsServerConstants.MOVER_ID_PATH, 1, false);
+        HdfsServerConstants.MOVER_ID_PATH, 1, createMoverPath);
 
     externalSps = new StoragePolicySatisfier(getConf());
     externalCtxt = new ExternalSPSContext(externalSps, nnc);
@@ -424,6 +441,30 @@ public class TestExternalStoragePolicySatisfier {
       createCluster();
       doTestWhenStoragePolicySetToCOLD();
     } finally {
+      shutdownCluster();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testInfiniteStartWhenAnotherSPSRunning()
+      throws Exception {
+
+    try {
+      // Create cluster and create mover path when get NameNodeConnector.
+      createCluster(true);
+
+      // Disable system exit for assert.
+      ExitUtil.disableSystemExit();
+
+      // Get NameNodeConnector one more time to simulate starting other sps process.
+      // It should exit immediately when another sps is running.
+      LambdaTestUtils.intercept(ExitUtil.ExitException.class,
+          "Exit immediately because another ExternalStoragePolicySatisfier is running",
+          () -> ExternalStoragePolicySatisfier.getNameNodeConnector(config));
+    } finally {
+      // Reset first exit exception to avoid AssertionError in MiniDFSCluster#shutdown.
+      // This has no effect on functionality.
+      ExitUtil.resetFirstExitException();
       shutdownCluster();
     }
   }

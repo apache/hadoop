@@ -170,8 +170,7 @@ public class AutoCreatedQueueTemplate {
     int wildcardLevel = 0;
     // root can not be wildcarded
     // MAX_WILDCARD_LEVEL will be configurable in the future
-    int supportedWildcardLevel = Math.min(queuePathMaxIndex - 1,
-        MAX_WILDCARD_LEVEL);
+    int supportedWildcardLevel = Math.min(queuePathMaxIndex, MAX_WILDCARD_LEVEL);
     // Allow root to have template properties
     if (queuePath.isRoot()) {
       supportedWildcardLevel = 0;

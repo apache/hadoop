@@ -29,11 +29,20 @@ add_executable(hdfs_tool_tests
                 hdfs-tool-test-fixtures.cc
                 hdfs-tool-tests.cc
                 hdfs-df-mock.cc
+                hdfs-du-mock.cc
+                hdfs-copy-to-local-mock.cc
+                hdfs-move-to-local-mock.cc
+                hdfs-count-mock.cc
+                hdfs-mkdir-mock.cc
+                hdfs-rm-mock.cc
+                hdfs-get-mock.cc
+                hdfs-find-mock.cc
                 main.cc)
 target_include_directories(hdfs_tool_tests PRIVATE
                             ../tools
                             ../../tools
                             ../../tools/hdfs-df
+                            ../../tools/hdfs-du
                             ../../tools/hdfs-allow-snapshot
                             ../../tools/hdfs-disallow-snapshot
                             ../../tools/hdfs-delete-snapshot
@@ -42,10 +51,18 @@ target_include_directories(hdfs_tool_tests PRIVATE
                             ../../tools/hdfs-chown
                             ../../tools/hdfs-chgrp
                             ../../tools/hdfs-chmod
+                            ../../tools/hdfs-copy-to-local
+                            ../../tools/hdfs-move-to-local
+                            ../../tools/hdfs-count
+                            ../../tools/hdfs-mkdir
+                            ../../tools/hdfs-rm
+                            ../../tools/hdfs-get
+                            ../../tools/hdfs-find
                             ../../tools/hdfs-cat)
 target_link_libraries(hdfs_tool_tests PRIVATE
                        gmock_main
                        hdfs_df_lib
+                       hdfs_du_lib
                        hdfs_allowSnapshot_lib
                        hdfs_disallowSnapshot_lib
                        hdfs_deleteSnapshot_lib
@@ -54,5 +71,12 @@ target_link_libraries(hdfs_tool_tests PRIVATE
                        hdfs_chown_lib
                        hdfs_chgrp_lib
                        hdfs_chmod_lib
+                       hdfs_copyToLocal_lib
+                       hdfs_moveToLocal_lib
+                       hdfs_count_lib
+                       hdfs_mkdir_lib
+                       hdfs_rm_lib
+                       hdfs_get_lib
+                       hdfs_find_lib
                        hdfs_cat_lib)
 add_test(hdfs_tool_tests hdfs_tool_tests)

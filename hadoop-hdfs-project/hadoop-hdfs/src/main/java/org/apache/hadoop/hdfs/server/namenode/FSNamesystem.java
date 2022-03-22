@@ -401,7 +401,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
 
-  private static final String CLIENT_PORT_STR = "clientPort";
   private final String contextFieldSeparator;
 
   boolean isAuditEnabled() {
@@ -467,7 +466,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
       CallerContext.setCurrent(
           new CallerContext.Builder(origContext, contextFieldSeparator)
-              .append(CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
+              .append(CallerContext.CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
               .setSignature(origSignature)
               .build());
     }
@@ -475,7 +474,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private boolean isClientPortInfoAbsent(CallerContext ctx){
     return ctx == null || ctx.getContext() == null
-        || !ctx.getContext().contains(CLIENT_PORT_STR);
+        || !ctx.getContext().contains(CallerContext.CLIENT_PORT_STR);
   }
 
   /**
@@ -504,6 +503,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final boolean isSnapshotTrashRootEnabled;
   private final int snapshotDiffReportLimit;
   private final int blockDeletionIncrement;
+
+  /**
+   * Whether enable checkOperation when call getBlocks.
+   * It is enabled  by default.
+   */
+  private final boolean isGetBlocksCheckOperationEnabled;
 
   /** Interval between each check of lease to release. */
   private final long leaseRecheckIntervalMs;
@@ -1014,6 +1019,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.leaseRecheckIntervalMs = conf.getLong(
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT);
+      Preconditions.checkArgument(
+              leaseRecheckIntervalMs > 0,
+              DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY +
+                      " must be greater than zero");
       this.maxLockHoldToReleaseLeaseMs = conf.getLong(
           DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_KEY,
           DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_DEFAULT);
@@ -1062,6 +1071,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Preconditions.checkArgument(blockDeletionIncrement > 0,
           DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY +
               " must be a positive integer.");
+      this.isGetBlocksCheckOperationEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+          DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
+
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -1934,10 +1947,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
       minimumBlockSize, long timeInterval) throws IOException {
-    checkOperation(OperationCategory.READ);
+    OperationCategory checkOp =
+        isGetBlocksCheckOperationEnabled ? OperationCategory.READ :
+            OperationCategory.UNCHECKED;
+    checkOperation(checkOp);
     readLock();
     try {
-      checkOperation(OperationCategory.READ);
+      checkOperation(checkOp);
       return getBlockManager().getBlocksWithLocations(datanode, size,
           minimumBlockSize, timeInterval);
     } finally {
@@ -2369,8 +2385,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       getEditLog().logSync();
       if (!toRemoveBlocks.getToDeleteList().isEmpty()) {
-        removeBlocks(toRemoveBlocks);
-        toRemoveBlocks.clear();
+        blockManager.addBLocksToMarkedDeleteQueue(
+            toRemoveBlocks.getToDeleteList());
       }
       logAuditEvent(true, operationName, src, null, status);
     } catch (AccessControlException e) {
@@ -2817,8 +2833,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (!skipSync) {
         getEditLog().logSync();
         if (toRemoveBlocks != null) {
-          removeBlocks(toRemoveBlocks);
-          toRemoveBlocks.clear();
+          blockManager.addBLocksToMarkedDeleteQueue(
+              toRemoveBlocks.getToDeleteList());
         }
       }
     }
@@ -3341,8 +3357,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     assert res != null;
     BlocksMapUpdateInfo collectedBlocks = res.collectedBlocks;
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
-      removeBlocks(collectedBlocks);
-      collectedBlocks.clear();
+      blockManager.addBLocksToMarkedDeleteQueue(
+          collectedBlocks.getToDeleteList());
     }
 
     logAuditEvent(true, operationName + " (options=" +
@@ -3381,7 +3397,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logSync();
     logAuditEvent(ret, operationName, src);
     if (toRemovedBlocks != null) {
-      removeBlocks(toRemovedBlocks); // Incremental deletion of blocks
+      blockManager.addBLocksToMarkedDeleteQueue(
+          toRemovedBlocks.getToDeleteList());
     }
     return ret;
   }
@@ -3391,30 +3408,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return dir.getPermissionChecker();
   }
 
-  /**
-   * From the given list, incrementally remove the blocks from blockManager
-   * Writelock is dropped and reacquired every blockDeletionIncrement to
-   * ensure that other waiters on the lock can get in. See HDFS-2938
-   * 
-   * @param blocks
-   *          An instance of {@link BlocksMapUpdateInfo} which contains a list
-   *          of blocks that need to be removed from blocksMap
-   */
-  void removeBlocks(BlocksMapUpdateInfo blocks) {
-    List<BlockInfo> toDeleteList = blocks.getToDeleteList();
-    Iterator<BlockInfo> iter = toDeleteList.iterator();
-    while (iter.hasNext()) {
-      writeLock();
-      try {
-        for (int i = 0; i < blockDeletionIncrement && iter.hasNext(); i++) {
-          blockManager.removeBlock(iter.next());
-        }
-      } finally {
-        writeUnlock("removeBlocks");
-      }
-    }
-  }
-  
   /**
    * Remove leases and inodes related to a given path
    * @param removedUCFiles INodes whose leases need to be released
@@ -4623,7 +4616,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                   INodesInPath.fromINode((INodeFile) bc), false);
           changed |= toRemoveBlocks != null;
           if (toRemoveBlocks != null) {
-            removeBlocks(toRemoveBlocks); // Incremental deletion of blocks
+            blockManager.addBLocksToMarkedDeleteQueue(
+                toRemoveBlocks.getToDeleteList());
           }
         }
       } finally {
@@ -7334,7 +7328,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // Breaking the pattern as removing blocks have to happen outside of the
     // global lock
     if (blocksToBeDeleted != null) {
-      removeBlocks(blocksToBeDeleted);
+      blockManager.addBLocksToMarkedDeleteQueue(
+          blocksToBeDeleted.getToDeleteList());
     }
     logAuditEvent(true, operationName, rootPath, null, null);
   }
@@ -7360,7 +7355,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       writeUnlock(operationName, getLockReportInfoSupplier(rootPath));
     }
-    removeBlocks(blocksToBeDeleted);
+    blockManager.addBLocksToMarkedDeleteQueue(
+        blocksToBeDeleted.getToDeleteList());
   }
 
   /**

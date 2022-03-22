@@ -74,8 +74,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
+/**
+ * Provides implementation of {@code CSQueue} methods common for every queue class in Capacity
+ * Scheduler.
+ */
 public abstract class AbstractCSQueue implements CSQueue {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractCSQueue.class);
@@ -105,11 +110,9 @@ public abstract class AbstractCSQueue implements CSQueue {
   CSQueueUsageTracker usageTracker;
 
   public enum CapacityConfigType {
-    // FIXME, from what I can see, Percentage mode can almost apply to weighted
-    // and percentage mode at the same time, there's only small area need to be
-    // changed, we need to rename "PERCENTAGE" to "PERCENTAGE" and "WEIGHT"
     NONE, PERCENTAGE, ABSOLUTE_RESOURCE
   };
+
   protected CapacityConfigType capacityConfigType =
       CapacityConfigType.NONE;
 
@@ -175,6 +178,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     return new QueuePath(parent.getQueuePath(), queueName);
   }
 
+  /**
+   * Sets up capacity and weight values from configuration.
+   */
   protected void setupConfigurableCapacities() {
     CSQueueUtils.loadCapacitiesByLabelsFromConf(queuePath, queueCapacities,
         queueContext.getConfiguration(), this.queueNodeLabelsSettings.getConfiguredNodeLabels());
@@ -272,6 +278,12 @@ public abstract class AbstractCSQueue implements CSQueue {
     return queueNodeLabelsSettings.getAccessibleNodeLabels();
   }
 
+  /**
+   * Checks whether the user has the required permission to execute the action of {@code QueueACL}.
+   * @param acl the access type the user is checked for
+   * @param user UGI of the user
+   * @return true, if the user has permission, false otherwise
+   */
   @Override
   public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
     return authorizer.checkPermission(
@@ -280,33 +292,23 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   /**
-   * Set maximum capacity - used only for testing.
+   * Set maximum capacity for empty node label.
    * @param maximumCapacity new max capacity
    */
   @VisibleForTesting
   void setMaxCapacity(float maximumCapacity) {
-    writeLock.lock();
-    try {
-      // Sanity check
-      CSQueueUtils.checkMaxCapacity(this.queuePath,
-          queueCapacities.getCapacity(), maximumCapacity);
-      float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(
-          maximumCapacity, parent);
-      CSQueueUtils.checkAbsoluteCapacity(this.queuePath,
-          queueCapacities.getAbsoluteCapacity(), absMaxCapacity);
-
-      queueCapacities.setMaximumCapacity(maximumCapacity);
-      queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
-    } finally {
-      writeLock.unlock();
-    }
+    internalSetMaximumCapacity(maximumCapacity, NO_LABEL);
   }
 
   /**
-   * Set maximum capacity
+   * Set maximum capacity.
    * @param maximumCapacity new max capacity
    */
   void setMaxCapacity(String nodeLabel, float maximumCapacity) {
+    internalSetMaximumCapacity(maximumCapacity, nodeLabel);
+  }
+
+  private void internalSetMaximumCapacity(float maximumCapacity, String nodeLabel) {
     writeLock.lock();
     try {
       // Sanity check
@@ -324,12 +326,16 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
-
   @Override
   public String getDefaultNodeLabelExpression() {
     return this.queueNodeLabelsSettings.getDefaultLabelExpression();
   }
 
+  /**
+   * Initialize queue properties that are based on configuration.
+   * @param clusterResource overall resource of the cluster
+   * @throws IOException if configuration is set in a way that is inconsistent
+   */
   protected void setupQueueConfigs(Resource clusterResource) throws
       IOException {
 
@@ -342,7 +348,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Collect and set the Node label configuration
       this.queueNodeLabelsSettings = new QueueNodeLabelsSettings(configuration, parent,
-          getQueuePath(), queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
+          queuePath, queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
 
       // Initialize the queue capacities
       setupConfigurableCapacities();
@@ -360,7 +366,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Initialize the queue state based on previous state, configured state
       // and its parent state
-      initializeQueueState();
+      QueueStateHelper.setQueueState(this);
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
@@ -391,7 +397,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Setup application related limits
       this.queueAppLifetimeSettings = new QueueAppLifetimeAndLimitSettings(configuration,
-          this, getQueuePath());
+          this, queuePath);
     } finally {
       writeLock.unlock();
     }
@@ -472,6 +478,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
+  /**
+   * Initializes configured minimum and maximum capacity from configuration, if capacity is defined
+   * in ABSOLUTE node.
+   * @param clusterResource overall resource of the cluster
+   */
   protected void updateConfigurableResourceLimits(Resource clusterResource) {
     for (String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
       final Resource minResource = getMinimumAbsoluteResource(getQueuePath(), label);
@@ -580,60 +591,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     configuredMaxCapacityVectors.put(label, maxCapacityVector);
   }
 
-  private void initializeQueueState() {
-    QueueState previousState = getState();
-    QueueState configuredState = queueContext.getConfiguration()
-        .getConfiguredState(getQueuePath());
-    QueueState parentState = (parent == null) ? null : parent.getState();
-
-    // verify that we can not any value for State other than RUNNING/STOPPED
-    if (configuredState != null && configuredState != QueueState.RUNNING
-        && configuredState != QueueState.STOPPED) {
-      throw new IllegalArgumentException("Invalid queue state configuration."
-          + " We can only use RUNNING or STOPPED.");
-    }
-    // If we did not set state in configuration, use Running as default state
-    QueueState defaultState = QueueState.RUNNING;
-
-    if (previousState == null) {
-      // If current state of the queue is null, we would inherit the state
-      // from its parent. If this queue does not has parent, such as root queue,
-      // we would use the configured state.
-      if (parentState == null) {
-        updateQueueState((configuredState == null) ? defaultState
-            : configuredState);
-      } else {
-        if (configuredState == null) {
-          updateQueueState((parentState == QueueState.DRAINING) ?
-              QueueState.STOPPED : parentState);
-        } else if (configuredState == QueueState.RUNNING
-            && parentState != QueueState.RUNNING) {
-          throw new IllegalArgumentException(
-              "The parent queue:" + parent.getQueuePath()
-                  + " cannot be STOPPED as the child queue:" + getQueuePath()
-                  + " is in RUNNING state.");
-        } else {
-          updateQueueState(configuredState);
-        }
-      }
-    } else {
-      // when we get a refreshQueue request from AdminService,
-      if (previousState == QueueState.RUNNING) {
-        if (configuredState == QueueState.STOPPED) {
-          stopQueue();
-        }
-      } else {
-        if (configuredState == QueueState.RUNNING) {
-          try {
-            activateQueue();
-          } catch (YarnException ex) {
-            throw new IllegalArgumentException(ex.getMessage());
-          }
-        }
-      }
-    }
-  }
-
   protected QueueInfo getQueueInfo() {
     // Deliberately doesn't use lock here, because this method will be invoked
     // from schedulerApplicationAttempt, to avoid deadlock, sacrifice
@@ -728,6 +685,13 @@ public abstract class AbstractCSQueue implements CSQueue {
     return queueAllocationSettings.getMinimumAllocation();
   }
 
+  /**
+   * Increments resource usage of the queue and all related statistics and metrics that depends on
+   * it.
+   * @param clusterResource overall cluster resource
+   * @param resource resource amount to increment
+   * @param nodePartition node label
+   */
   void allocateResource(Resource clusterResource,
       Resource resource, String nodePartition) {
     writeLock.lock();
@@ -741,6 +705,13 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
+  /**
+   * Decrements resource usage of the queue and all related statistics and metrics that depends on
+   * it.
+   * @param clusterResource overall cluster resource
+   * @param resource resource amount to decrement
+   * @param nodePartition node label
+   */
   protected void releaseResource(Resource clusterResource,
       Resource resource, String nodePartition) {
     writeLock.lock();
@@ -756,6 +727,10 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
+  /**
+   * Returns whether we should continue to look at all heart beating nodes even
+   * after the reservation limit was hit.
+   */
   @Private
   public boolean isReservationsContinueLooking() {
     return reservationsContinueLooking;
@@ -845,6 +820,15 @@ public abstract class AbstractCSQueue implements CSQueue {
     return childQueues != null && !childQueues.isEmpty();
   }
 
+  /**
+   * Checks whether this queue has remaining resources left for further container assigment.
+   * @param clusterResource overall cluster resource
+   * @param nodePartition node label
+   * @param currentResourceLimits limit of the queue imposed by its maximum capacity
+   * @param resourceCouldBeUnreserved reserved resource that could potentially be unreserved
+   * @param schedulingMode scheduling strategy to handle node labels
+   * @return true if queue has remaining free resource, false otherwise
+   */
   boolean canAssignToThisQueue(Resource clusterResource,
       String nodePartition, ResourceLimits currentResourceLimits,
       Resource resourceCouldBeUnreserved, SchedulingMode schedulingMode) {
@@ -944,7 +928,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   private static String ensurePartition(String partition) {
-    return Optional.ofNullable(partition).orElse(RMNodeLabelsManager.NO_LABEL);
+    return Optional.ofNullable(partition).orElse(NO_LABEL);
   }
 
   @FunctionalInterface
@@ -1023,10 +1007,14 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public Priority getDefaultApplicationPriority() {
-    // TODO add dummy implementation
     return null;
   }
 
+  /**
+   * Returns the union of all node labels that could be accessed by this queue based on accessible
+   * node labels and configured node labels properties.
+   * @return node labels this queue has access to
+   */
   @Override
   public Set<String> getNodeLabelsForQueue() {
     // if queue's label is *, queue can access any labels. Instead of
@@ -1043,8 +1031,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     // Add NO_LABEL also to this list as NO_LABEL also can be granted with
     // resource in many general cases.
-    if (!nodeLabels.contains(RMNodeLabelsManager.NO_LABEL)) {
-      nodeLabels.add(RMNodeLabelsManager.NO_LABEL);
+    if (!nodeLabels.contains(NO_LABEL)) {
+      nodeLabels.add(NO_LABEL);
     }
     return nodeLabels;
   }
@@ -1069,6 +1057,12 @@ public abstract class AbstractCSQueue implements CSQueue {
         resourceLimits, schedulingMode);
   }
 
+  /**
+   * Checks whether this queue could accept the container allocation request.
+   * @param cluster overall cluster resource
+   * @param request container allocation request
+   * @return true if queue could accept the container allocation request, false otherwise
+   */
   @Override
   public boolean accept(Resource cluster,
       ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request) {
@@ -1134,6 +1128,10 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.state = queueState;
   }
 
+  /**
+   * Sets the state of this queue to RUNNING.
+   * @throws YarnException if its parent queue is not in RUNNING state
+   */
   @Override
   public void activateQueue() throws YarnException {
     this.writeLock.lock();
@@ -1155,6 +1153,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
+  /**
+   * Stops this queue if no application is currently running on the queue.
+   */
   protected void appFinished() {
     this.writeLock.lock();
     try {
@@ -1178,6 +1179,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     return userWeights;
   }
 
+  /**
+   * Recursively sets the state of this queue and the state of its parent to DRAINING.
+   */
   public void recoverDrainingState() {
     this.writeLock.lock();
     try {
@@ -1325,7 +1329,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           CapacityConfigType.ABSOLUTE_RESOURCE)) {
         newEffectiveMinResource = createNormalizedMinResource(
             usageTracker.getQueueResourceQuotas().getConfiguredMinResource(label),
-            ((ParentQueue) parent).getEffectiveMinRatioPerResource());
+            ((ParentQueue) parent).getEffectiveMinRatio(label));
 
         // Max resource of a queue should be the minimum of {parent's maxResources,
         // this queue's maxResources}. Both parent's maxResources and this queue's
@@ -1399,10 +1403,19 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
+  /**
+   * Checks whether this queue is a dynamic queue and could be deleted.
+   * @return true if the dynamic queue could be deleted, false otherwise
+   */
   public boolean isEligibleForAutoDeletion() {
     return false;
   }
 
+  /**
+   * Checks whether this queue is a dynamic queue and there has not been an application submission
+   * on it for a configured period of time.
+   * @return true if queue has been idle for a configured period of time, false otherwise
+   */
   public boolean isInactiveDynamicQueue() {
     long idleDurationSeconds =
         (Time.monotonicNow() - getLastSubmittedTimestamp())/1000;

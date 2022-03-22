@@ -41,7 +41,6 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
@@ -175,7 +174,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   }
 
   /**
-   * Create a configuration, possibly patching in S3Guard options.
+   * Create a configuration.
    * @return a configuration
    */
   @Override
@@ -233,10 +232,6 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     byte[] data = dataset(len, 'a', 'z');
     writeDataset(getFileSystem(), path, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
-  }
-
-  protected String getTestTableName(String suffix) {
-    return getTestDynamoTablePrefix(getConfiguration()) + suffix;
   }
 
   /**

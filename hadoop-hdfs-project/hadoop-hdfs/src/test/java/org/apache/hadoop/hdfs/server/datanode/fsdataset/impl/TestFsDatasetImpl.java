@@ -21,11 +21,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
 
@@ -70,7 +70,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.Lists;
@@ -94,7 +93,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS;
@@ -140,6 +138,7 @@ public class TestFsDatasetImpl {
   private DataNode datanode;
   private DataStorage storage;
   private FsDatasetImpl dataset;
+  private DataSetLockManager manager = new DataSetLockManager();
   
   private final static String BLOCKPOOL = "BP-TEST";
 
@@ -213,6 +212,7 @@ public class TestFsDatasetImpl {
     this.conf.set(DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY,
         replicaCacheRootDir);
 
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
     when(datanode.getDnConf()).thenReturn(dnConf);
@@ -230,118 +230,6 @@ public class TestFsDatasetImpl {
 
     assertEquals(NUM_INIT_VOLUMES, getNumVolumes());
     assertEquals(0, dataset.getNumFailedVolumes());
-  }
-
-  @Test(timeout=10000)
-  public void testReadLockEnabledByDefault()
-      throws Exception {
-    final FsDatasetSpi ds = dataset;
-    AtomicBoolean accessed = new AtomicBoolean(false);
-    CountDownLatch latch = new CountDownLatch(1);
-    CountDownLatch waiterLatch = new CountDownLatch(1);
-
-    Thread holder = new Thread() {
-      public void run() {
-        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-          latch.countDown();
-          // wait for the waiter thread to access the lock.
-          waiterLatch.await();
-        } catch (Exception e) {
-        }
-      }
-    };
-
-    Thread waiter = new Thread() {
-      public void run() {
-        try {
-          latch.await();
-        } catch (InterruptedException e) {
-          waiterLatch.countDown();
-          return;
-        }
-        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-          accessed.getAndSet(true);
-          // signal the holder thread.
-          waiterLatch.countDown();
-        } catch (Exception e) {
-        }
-      }
-    };
-    waiter.start();
-    holder.start();
-    holder.join();
-    waiter.join();
-    // The holder thread is still holding the lock, but the waiter can still
-    // run as the lock is a shared read lock.
-    // Otherwise test will timeout with deadlock.
-    assertEquals(true, accessed.get());
-    holder.interrupt();
-  }
-
-  @Test(timeout=20000)
-  public void testReadLockCanBeDisabledByConfig()
-      throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY, false);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(1).build();
-    try {
-      AtomicBoolean accessed = new AtomicBoolean(false);
-      cluster.waitActive();
-      DataNode dn = cluster.getDataNodes().get(0);
-      final FsDatasetSpi<?> ds = DataNodeTestUtils.getFSDataset(dn);
-
-      CountDownLatch latch = new CountDownLatch(1);
-      CountDownLatch waiterLatch = new CountDownLatch(1);
-      Thread holder = new Thread() {
-        public void run() {
-          try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-            latch.countDown();
-            // wait for the waiter thread to access the lock.
-            waiterLatch.await();
-          } catch (Exception e) {
-          }
-        }
-      };
-
-      Thread waiter = new Thread() {
-        public void run() {
-          try {
-            // Wait for holder to get ds read lock.
-            latch.await();
-          } catch (InterruptedException e) {
-            waiterLatch.countDown();
-            return;
-          }
-          try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-            accessed.getAndSet(true);
-            // signal the holder thread.
-            waiterLatch.countDown();
-          } catch (Exception e) {
-          }
-        }
-      };
-      waiter.start();
-      holder.start();
-      // Wait for sometime to make sure we are in deadlock,
-      try {
-        GenericTestUtils.waitFor(() ->
-                accessed.get(),
-            100, 10000);
-        fail("Waiter thread should not execute.");
-      } catch (TimeoutException e) {
-      }
-      // Release waiterLatch to exit deadlock.
-      waiterLatch.countDown();
-      holder.join();
-      waiter.join();
-      // After releasing waiterLatch water
-      // thread will be able to execute.
-      assertTrue(accessed.get());
-    } finally {
-      cluster.shutdown();
-    }
   }
 
   @Test
@@ -413,6 +301,7 @@ public class TestFsDatasetImpl {
     final ShortCircuitRegistry shortCircuitRegistry =
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
 
     createStorageDirs(storage, conf, 1);
     dataset = new FsDatasetImpl(datanode, storage, conf);
@@ -480,6 +369,8 @@ public class TestFsDatasetImpl {
     final ShortCircuitRegistry shortCircuitRegistry =
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
+
 
     createStorageDirs(storage, conf, 0);
 

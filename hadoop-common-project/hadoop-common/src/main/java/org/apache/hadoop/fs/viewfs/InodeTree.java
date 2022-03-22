@@ -81,13 +81,29 @@ abstract class InodeTree<T> {
   private List<RegexMountPoint<T>> regexMountPointList =
       new ArrayList<RegexMountPoint<T>>();
 
-  static class MountPoint<T> {
+  public static class MountPoint<T> {
     String src;
     INodeLink<T> target;
 
     MountPoint(String srcPath, INodeLink<T> mountLink) {
       src = srcPath;
       target = mountLink;
+    }
+
+    /**
+     * Returns the source of mount point.
+     * @return The source
+     */
+    public String getSource() {
+      return this.src;
+    }
+
+    /**
+     * Returns the target link.
+     * @return The target INode link
+     */
+    public INodeLink<T> getTarget() {
+      return this.target;
     }
   }
 
@@ -256,8 +272,8 @@ abstract class InodeTree<T> {
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)
    */
-  static class INodeLink<T> extends INode<T> {
-    final URI[] targetDirLinkList;
+  public static class INodeLink<T> extends INode<T> {
+    final String[] targetDirLinkList;
     private T targetFileSystem;   // file system object created from the link.
     // Function to initialize file system. Only applicable for simple links
     private Function<URI, T> fileSystemInitMethod;
@@ -267,7 +283,7 @@ abstract class InodeTree<T> {
      * Construct a mergeLink or nfly.
      */
     INodeLink(final String pathToNode, final UserGroupInformation aUgi,
-        final T targetMergeFs, final URI[] aTargetDirLinkList) {
+        final T targetMergeFs, final String[] aTargetDirLinkList) {
       super(pathToNode, aUgi);
       targetFileSystem = targetMergeFs;
       targetDirLinkList = aTargetDirLinkList;
@@ -278,11 +294,11 @@ abstract class InodeTree<T> {
      */
     INodeLink(final String pathToNode, final UserGroupInformation aUgi,
         Function<URI, T> createFileSystemMethod,
-        final URI aTargetDirLink) {
+        final String aTargetDirLink) throws URISyntaxException {
       super(pathToNode, aUgi);
       targetFileSystem = null;
-      targetDirLinkList = new URI[1];
-      targetDirLinkList[0] = aTargetDirLink;
+      targetDirLinkList = new String[1];
+      targetDirLinkList[0] = new URI(aTargetDirLink).toString();
       this.fileSystemInitMethod = createFileSystemMethod;
     }
 
@@ -290,7 +306,7 @@ abstract class InodeTree<T> {
      * Get the target of the link. If a merge link then it returned
      * as "," separated URI list.
      */
-    Path getTargetLink() {
+    public Path getTargetLink() {
       StringBuilder result = new StringBuilder(targetDirLinkList[0].toString());
       // If merge link, use "," as separator between the merged URIs
       for (int i = 1; i < targetDirLinkList.length; ++i) {
@@ -320,7 +336,8 @@ abstract class InodeTree<T> {
           if (targetFileSystem != null) {
             return targetFileSystem;
           }
-          targetFileSystem = fileSystemInitMethod.apply(targetDirLinkList[0]);
+          targetFileSystem =
+              fileSystemInitMethod.apply(URI.create(targetDirLinkList[0]));
           if (targetFileSystem == null) {
             throw new IOException(
                 "Could not initialize target File System for URI : " +
@@ -388,7 +405,7 @@ abstract class InodeTree<T> {
     switch (linkType) {
     case SINGLE:
       newLink = new INodeLink<T>(fullPath, aUgi,
-          initAndGetTargetFs(), new URI(target));
+          initAndGetTargetFs(), target);
       break;
     case SINGLE_FALLBACK:
     case MERGE_SLASH:
@@ -397,10 +414,10 @@ abstract class InodeTree<T> {
       throw new IllegalArgumentException("Unexpected linkType: " + linkType);
     case MERGE:
     case NFLY:
-      final URI[] targetUris = StringUtils.stringToURI(
-          StringUtils.getStrings(target));
+      final String[] targetUris = StringUtils.getStrings(target);
       newLink = new INodeLink<T>(fullPath, aUgi,
-            getTargetFileSystem(settings, targetUris), targetUris);
+          getTargetFileSystem(settings, StringUtils.stringToURI(targetUris)),
+          targetUris);
       break;
     default:
       throw new IllegalArgumentException(linkType + ": Infeasible linkType");
@@ -617,8 +634,7 @@ abstract class InodeTree<T> {
     if (isMergeSlashConfigured) {
       Preconditions.checkNotNull(mergeSlashTarget);
       root = new INodeLink<T>(mountTableName, ugi,
-          initAndGetTargetFs(),
-          new URI(mergeSlashTarget));
+          initAndGetTargetFs(), mergeSlashTarget);
       mountPoints.add(new MountPoint<T>("/", (INodeLink<T>) root));
       rootFallbackLink = null;
     } else {
@@ -636,7 +652,7 @@ abstract class InodeTree<T> {
                 + "not allowed.");
           }
           fallbackLink = new INodeLink<T>(mountTableName, ugi,
-              initAndGetTargetFs(), new URI(le.getTarget()));
+              initAndGetTargetFs(), le.getTarget());
           continue;
         case REGEX:
           addRegexMountEntry(le);
@@ -661,7 +677,7 @@ abstract class InodeTree<T> {
           .info("Empty mount table detected for {} and considering itself "
               + "as a linkFallback.", theUri);
       rootFallbackLink = new INodeLink<T>(mountTableName, ugi,
-          initAndGetTargetFs(), theUri);
+          initAndGetTargetFs(), theUri.toString());
       getRootDir().addFallbackLink(rootFallbackLink);
     }
   }
@@ -932,7 +948,7 @@ abstract class InodeTree<T> {
     }
   }
 
-  List<MountPoint<T>> getMountPoints() {
+  public List<MountPoint<T>> getMountPoints() {
     return mountPoints;
   }
 

@@ -260,6 +260,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_IO_RATE_LIMIT,
+      MinValue = 0,
+      DefaultValue = RATE_LIMIT_DEFAULT)
+  private int rateLimit;
+
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USER_AGENT_PREFIX_KEY,
       DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
   private String userAgentId;
@@ -724,6 +729,10 @@ public class AbfsConfiguration{
 
   public boolean isAutoThrottlingEnabled() {
     return this.enableAutoThrottling;
+  }
+
+  public int getRateLimit() {
+    return rateLimit;
   }
 
   public String getCustomUserAgentPrefix() {

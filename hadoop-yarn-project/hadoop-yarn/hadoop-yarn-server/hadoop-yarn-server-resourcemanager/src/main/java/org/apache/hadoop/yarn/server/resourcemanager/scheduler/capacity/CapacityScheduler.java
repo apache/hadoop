@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -200,6 +201,9 @@ public class CapacityScheduler extends
   private CSConfigurationProvider csConfProvider;
 
   private int threadNum = 0;
+
+  private final PendingApplicationComparator applicationComparator =
+      new PendingApplicationComparator();
 
   @Override
   public void setConf(Configuration conf) {
@@ -3553,6 +3557,33 @@ public class CapacityScheduler extends
     @VisibleForTesting
     public List<AsyncScheduleThread> getAsyncSchedulerThreads() {
       return asyncSchedulerThreads;
+    }
+  }
+
+  @Override
+  public PendingApplicationComparator getPendingApplicationComparator(){
+    return applicationComparator;
+  }
+
+  /**
+   * Comparator that orders applications by their submit time.
+   */
+  class PendingApplicationComparator
+      implements Comparator<FiCaSchedulerApp> {
+
+    @Override
+    public int compare(FiCaSchedulerApp app1, FiCaSchedulerApp app2) {
+      RMApp rmApp1 = rmContext.getRMApps().get(app1.getApplicationId());
+      RMApp rmApp2 = rmContext.getRMApps().get(app2.getApplicationId());
+      if (rmApp1 != null && rmApp2 != null) {
+        return Long.compare(rmApp1.getSubmitTime(), rmApp2.getSubmitTime());
+      } else if (rmApp1 != null) {
+        return -1;
+      } else if (rmApp2 != null) {
+        return 1;
+      } else{
+        return 0;
+      }
     }
   }
 }

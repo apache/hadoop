@@ -19,11 +19,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -300,17 +301,6 @@ public class CSQueueUtils {
             parentQueueCapacities == null ? 1 :
                 parentQueueCapacities.getAbsoluteMaximumCapacity(label)));
       }
-    }
-  }
-
-  public static ApplicationPlacementContext extractQueuePath(String queuePath) {
-    int parentQueueNameEndIndex = queuePath.lastIndexOf(".");
-    if (parentQueueNameEndIndex > -1) {
-      String parent = queuePath.substring(0, parentQueueNameEndIndex).trim();
-      String leaf = queuePath.substring(parentQueueNameEndIndex + 1).trim();
-      return new ApplicationPlacementContext(leaf, parent);
-    } else{
-      return new ApplicationPlacementContext(queuePath);
     }
   }
 }

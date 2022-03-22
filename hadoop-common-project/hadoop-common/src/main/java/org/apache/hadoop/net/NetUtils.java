@@ -1054,6 +1054,32 @@ public class NetUtils {
   }
 
   /**
+   * Return free ports. There is no guarantee they will remain free, so
+   * ports should be used immediately. The number of free ports returned by
+   * this method should match argument {@code numOfPorts}. Num of ports
+   * provided in the argument should not exceed 25.
+   *
+   * @param numOfPorts Number of free ports to acquire.
+   * @return Free ports for binding a local socket.
+   */
+  public static Set<Integer> getFreeSocketPorts(int numOfPorts) {
+    Preconditions.checkArgument(numOfPorts > 0 && numOfPorts <= 25,
+        "Valid range for num of ports is between 0 and 26");
+    final Set<Integer> freePorts = new HashSet<>(numOfPorts);
+    for (int i = 0; i < numOfPorts * 5; i++) {
+      int port = getFreeSocketPort();
+      if (port == 0) {
+        continue;
+      }
+      freePorts.add(port);
+      if (freePorts.size() == numOfPorts) {
+        return freePorts;
+      }
+    }
+    throw new IllegalStateException(numOfPorts + " free ports could not be acquired.");
+  }
+
+  /**
    * Return an @{@link InetAddress} to bind to. If bindWildCardAddress is true
    * than returns null.
    *
