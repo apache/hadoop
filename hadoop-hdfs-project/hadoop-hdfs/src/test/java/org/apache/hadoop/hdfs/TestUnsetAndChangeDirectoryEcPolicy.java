@@ -362,8 +362,8 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
       fs.setErasureCodingPolicy(ecFilePath, ecPolicy.getName());
       fail("IOException should be thrown for setting EC policy on file");
     } catch (IOException e) {
-      assertExceptionContains("Attempt to set an erasure coding policy " +
-          "for a file " + ecFilePath, e);
+      assertExceptionContains("Cannot set an erasure coding policy " +
+          "for a file " + ecFilePath + ". Expected to be a directory", e);
     }
 
     // Unset EC policy on file
