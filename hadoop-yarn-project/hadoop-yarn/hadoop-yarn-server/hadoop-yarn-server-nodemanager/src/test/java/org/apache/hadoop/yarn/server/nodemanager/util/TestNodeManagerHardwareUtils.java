@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.util;
 
-import org.apache.hadoop.util.NodeResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Assert;
@@ -76,16 +75,6 @@ public class TestNodeManagerHardwareUtils {
     @Override
     public float getCpuUsagePercentage() {
       return 0;
-    }
-
-    @Override
-    public float getIoUsagePercentage(String[] paths) {
-      return 0;
-    }
-
-    @Override
-    public NodeResource getNodeResourceLastPeriod(String[] localDirs, long millis) {
-      return new NodeResource(0, 0, 0);
     }
 
     @Override
