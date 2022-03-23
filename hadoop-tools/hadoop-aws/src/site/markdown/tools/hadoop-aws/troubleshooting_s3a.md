@@ -547,6 +547,20 @@ When trying to write or read SEE-KMS-encrypted data, the client gets a
 The caller does not have the permissions to access
 the key with which the data was encrypted.
 
+### <a name="access_denied_requester_pays"></a>`AccessDeniedException` when using a "Requester Pays" enabled bucket
+
+When making cross-account requests to a requester pays enabled bucket, all calls must acknowledge via a header that the requester will be billed.
+
+If you don't enable this acknowledgement within S3A, then you will see a message similar to this:
+
+```
+java.nio.file.AccessDeniedException: s3a://my-bucket/my-object: getFileStatus on s3a://my-bucket/my-object:
+com.amazonaws.services.s3.model.AmazonS3Exception: Forbidden (Service: Amazon S3; Status Code: 403;
+Error Code: 403 Forbidden; Request ID: myshortreqid; S3 Extended Request ID: mylongreqid):403 Forbidden
+```
+
+To enable requester pays, set `fs.s3a.requester.pays.enabled` property to `true`.
+
 ### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
 
 Region must be provided when requesting session credentials, or an exception will be thrown with the message:
