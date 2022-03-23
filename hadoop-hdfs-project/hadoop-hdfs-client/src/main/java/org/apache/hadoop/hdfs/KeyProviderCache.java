@@ -85,6 +85,16 @@ public class KeyProviderCache {
     }
   }
 
+  /**
+   * Invalidate KeyProviderCache and close cached KeyProvider instance.
+   */
+  public void invalidate() {
+    LOG.debug("Invalidating KeyProvider cache");
+    if (cache != null) {
+      cache.invalidateAll();
+    }
+  }
+
   private URI createKeyProviderURI(Configuration conf) {
     final String providerUriStr = conf.getTrimmed(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);

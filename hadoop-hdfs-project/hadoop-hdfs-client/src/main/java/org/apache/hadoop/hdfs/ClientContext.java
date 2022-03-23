@@ -250,4 +250,14 @@ public class ClientContext {
         datanodeInfo.getNetworkLocation());
     return NetworkTopology.getDistanceByPath(clientNode, node);
   }
+
+  /**
+   * Clean up outstanding open resources. For now, mostly potential open
+   * connections in key provider cache
+   */
+  public void cleanUp() {
+    if (keyProviderCache != null) {
+      keyProviderCache.invalidate();
+    }
+  }
 }

@@ -627,6 +627,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       // close connections to the namenode
       closeConnectionToNamenode();
     }
+    // clean up client context
+    clientContext.cleanUp();
   }
 
   /**
@@ -904,12 +906,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * get {@link BlockStorageLocation}s for blocks returned by
    * {@link DistributedFileSystem#getFileBlockLocations(org.apache.hadoop.fs.FileStatus, long, long)}
    * .
-   * 
+   *
    * This is done by making a round of RPCs to the associated datanodes, asking
    * the volume of each block replica. The returned array of
    * {@link BlockStorageLocation} expose this information as a
    * {@link VolumeId}.
-   * 
+   *
    * @param blockLocations
    *          target blocks on which to query volume location information
    * @return volumeBlockLocations original block array augmented with additional
@@ -933,10 +935,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       HdfsBlockLocation hdfsLoc = (HdfsBlockLocation) loc;
       blocks.add(hdfsLoc.getLocatedBlock());
     }
-    
+
     // Re-group the LocatedBlocks to be grouped by datanodes, with the values
     // a list of the LocatedBlocks on the datanode.
-    Map<DatanodeInfo, List<LocatedBlock>> datanodeBlocks = 
+    Map<DatanodeInfo, List<LocatedBlock>> datanodeBlocks =
         new LinkedHashMap<DatanodeInfo, List<LocatedBlock>>();
     for (LocatedBlock b : blocks) {
       for (DatanodeInfo info : b.getLocations()) {
@@ -947,7 +949,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         l.add(b);
       }
     }
-        
+
     // Make RPCs to the datanodes to get volume locations for its replicas
     TraceScope scope =
       tracer.newScope("getBlockStorageLocations");
@@ -965,12 +967,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     } finally {
       scope.close();
     }
-    
+
     // Regroup the returned VolumeId metadata to again be grouped by
     // LocatedBlock rather than by datanode
     Map<LocatedBlock, List<VolumeId>> blockVolumeIds = BlockStorageLocationUtil
         .associateVolumeIdsWithBlocks(blocks, metadatas);
-    
+
     // Combine original BlockLocations with new VolumeId information
     BlockStorageLocation[] volumeBlockLocations = BlockStorageLocationUtil
         .convertToVolumeBlockLocations(blocks, blockVolumeIds);
@@ -2768,7 +2770,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return new EncryptionZoneIterator(namenode, tracer);
   }
 
-  public void setXAttr(String src, String name, byte[] value, 
+  public void setXAttr(String src, String name, byte[] value,
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();
     try (TraceScope ignored = newPathTraceScope("setXAttr", src)) {
