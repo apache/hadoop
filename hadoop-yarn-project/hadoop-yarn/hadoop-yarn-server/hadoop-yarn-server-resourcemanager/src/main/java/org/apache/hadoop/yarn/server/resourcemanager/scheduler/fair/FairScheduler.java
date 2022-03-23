@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
@@ -200,6 +201,11 @@ public class FairScheduler extends
   protected long rackLocalityDelayMs; // Delay for rack locality
   protected boolean assignMultiple; // Allocate multiple containers per
                                     // heartbeat
+
+  protected volatile boolean nodeLoadBasedAssignEnable; // node load based assign enabled or not
+  private volatile float nodeLoadMemoryLimit; // max memory ratio limit of a node to assign container
+  private volatile float nodeLoadCpuLimit; // max cpu ratio limit of a node to assign container
+  private volatile float nodeLoadDiskIoLimit; // max disk io ratio limit of a node to assign container
 
   @VisibleForTesting
   boolean maxAssignDynamic;
@@ -1013,14 +1019,48 @@ public class FairScheduler extends
       long start = getClock().getTime();
       super.nodeUpdate(nm);
 
+      NodeStatus nodeStatus = nm.getNodeStatus();
+
       FSSchedulerNode fsNode = getFSSchedulerNode(nm.getNodeID());
-      attemptScheduling(fsNode);
+      if (nodeLoadBasedAssignEnable && nodeStatus != null && isNodeOverload(nodeStatus)) {
+        // not schedule this node
+      } else {
+        attemptScheduling(fsNode);
+      }
 
       long duration = getClock().getTime() - start;
       fsOpDurations.addNodeUpdateDuration(duration);
     } finally {
       writeLock.unlock();
     }
+  }
+
+  private boolean isNodeOverload(NodeStatus nodeStatus) {
+    float cpuUsage = nodeStatus.getCpuUsage();
+    float diskIoUsage = nodeStatus.getIoUsage();
+    float memoryUsage = nodeStatus.getMemUsage();
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Node " + nodeStatus.getNodeId() + ", cpu usage is " + cpuUsage
+          + ", disk io usage is " + diskIoUsage + ", memory usage is " + memoryUsage);
+    }
+
+    if (nodeLoadCpuLimit > 0 && cpuUsage > nodeLoadCpuLimit) {
+      LOG.warn("Node " + nodeStatus.getNodeId() + " is " + cpuUsage + " over cpu limit "
+          + nodeLoadCpuLimit + ", skip this heart beat by not scheduling.");
+      return true;
+    }
+    if (nodeLoadDiskIoLimit > 0 && diskIoUsage > nodeLoadDiskIoLimit) {
+      LOG.warn("Node " + nodeStatus.getNodeId() + " is " + diskIoUsage + " over disk io limit "
+          + nodeLoadDiskIoLimit + ", skip this heart beat by not scheduling.");
+      return true;
+    }
+    if (nodeLoadMemoryLimit > 0 && memoryUsage > nodeLoadMemoryLimit) {
+      LOG.warn("Node " + nodeStatus.getNodeId() + " is " + memoryUsage + " over memory limit "
+          + nodeLoadMemoryLimit + ", skip this heart beat by not scheduling.");
+      return true;
+    }
+    return false;
   }
 
   @Deprecated
@@ -1438,6 +1478,10 @@ public class FairScheduler extends
       sizeBasedWeight = this.conf.getSizeBasedWeight();
       usePortForNodeName = this.conf.getUsePortForNodeName();
       reservableNodesRatio = this.conf.getReservableNodes();
+      nodeLoadBasedAssignEnable = this.conf.getNodeLoadBasedAssignEnabled();
+      nodeLoadMemoryLimit = this.conf.getNodeLoadMemoryLimit();
+      nodeLoadCpuLimit = this.conf.getNodeLoadCpuLimit();
+      nodeLoadDiskIoLimit = this.conf.getNodeDiskIoLimit();
 
       updateInterval = this.conf.getUpdateInterval();
       if (updateInterval < 0) {
