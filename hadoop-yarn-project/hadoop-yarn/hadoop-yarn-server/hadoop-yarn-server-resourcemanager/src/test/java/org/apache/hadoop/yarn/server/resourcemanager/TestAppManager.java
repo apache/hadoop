@@ -730,6 +730,33 @@ public class TestAppManager extends AppManagerTestBase{
   }
 
   @Test
+  public void testRMAppSubmitAMContainerWithNoLabelByRMDefaultAMNodeLabel() throws Exception {
+    List<ResourceRequest> reqs = new ArrayList<>();
+    ResourceRequest anyReq = ResourceRequest.newInstance(
+        Priority.newInstance(1),
+        ResourceRequest.ANY, Resources.createResource(1024), 1, false, null,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED));
+    reqs.add(anyReq);
+    asContext.setAMContainerResourceRequests(cloneResourceRequests(reqs));
+    asContext.setNodeLabelExpression("fixed");
+
+    Configuration conf = new Configuration(false);
+    String defaultAMNodeLabel = "core";
+    conf.set(YarnConfiguration.AM_DEFAULT_NODE_LABEL, defaultAMNodeLabel);
+
+    when(mockDefaultQueueInfo.getAccessibleNodeLabels()).thenReturn(
+        new HashSet<String>() {{ add("core"); }});
+
+    TestRMAppManager newAppMonitor = createAppManager(rmContext, conf);
+    newAppMonitor.submitApplication(asContext, "test");
+
+    RMApp app = rmContext.getRMApps().get(appId);
+    waitUntilEventProcessed();
+    Assert.assertEquals(defaultAMNodeLabel,
+        app.getAMResourceRequests().get(0).getNodeLabelExpression());
+  }
+
+  @Test
   public void testRMAppSubmitResource() throws Exception {
     asContext.setResource(Resources.createResource(1024));
     asContext.setAMContainerResourceRequests(null);
@@ -836,6 +863,10 @@ public class TestAppManager extends AppManagerTestBase{
 
   private RMApp testRMAppSubmit() throws Exception {
     appMonitor.submitApplication(asContext, "test");
+    return waitUntilEventProcessed();
+  }
+
+  private RMApp waitUntilEventProcessed() throws InterruptedException {
     RMApp app = rmContext.getRMApps().get(appId);
     Assert.assertNotNull("app is null", app);
     Assert.assertEquals("app id doesn't match", appId, app.getApplicationId());
