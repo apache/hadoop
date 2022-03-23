@@ -863,7 +863,11 @@ public class EntityGroupFSTimelineStore extends CompositeService
             public int compare(FileStatus o1, FileStatus o2) {
               String[] ts1 = o1.getPath().getName().split("_");
               String[] ts2 = o2.getPath().getName().split("_");
-              return (Integer.parseInt(ts1[ts1.length - 1]) - Integer.parseInt(ts2[ts2.length - 1]));
+              if (StringUtils.isNumeric(ts1[ts1.length - 1]) && StringUtils.isNumeric(ts2[ts2.length - 1])) {
+                return (Integer.parseInt(ts1[ts1.length - 1]) - Integer.parseInt(ts2[ts2.length - 1]));
+              } else {
+                return o1.getPath().getName().compareTo(o2.getPath().getName());
+              }
             }
           });
         }
