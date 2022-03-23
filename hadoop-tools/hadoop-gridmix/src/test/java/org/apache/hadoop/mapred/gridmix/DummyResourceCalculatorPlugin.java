@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred.gridmix;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.util.NodeResource;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 /**
@@ -53,10 +52,6 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       "mapred.tasktracker.cumulativecputime.testing";
   /** CPU usage percentage for testing */
   public static final String CPU_USAGE = "mapred.tasktracker.cpuusage.testing";
-  /** Memory usage percentage for testing */
-  public static final String MEMORY_USAGE = "mapred.tasktracker.memoryusage.testing";
-  /** Disk IO usage percentage for testing */
-  public static final String IO_USAGE = "mapred.tasktracker.iousage.testing";
   /** cumulative number of bytes read over the network */
   public static final String NETWORK_BYTES_READ =
       "mapred.tasktracker.networkread.testing";
@@ -135,21 +130,6 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public float getIoUsagePercentage(String[] paths) {
-    return getConf().getFloat(IO_USAGE, -1);
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  public NodeResource getNodeResourceLastPeriod(String[] localDirs, long millis) {
-    return new NodeResource(getConf().getFloat(CPU_USAGE, -1),
-        getConf().getFloat(MEMORY_USAGE, -1),
-        getConf().getFloat(IO_USAGE, -1));
-  }
-
-
-  /** {@inheritDoc} */
-  @Override
   public long getNetworkBytesRead() {
     return getConf().getLong(NETWORK_BYTES_READ, -1);
   }
@@ -162,13 +142,13 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public long getStorageBytesRead(String[] paths) {
+  public long getStorageBytesRead() {
     return getConf().getLong(STORAGE_BYTES_READ, -1);
   }
 
   /** {@inheritDoc} */
   @Override
-  public long getStorageBytesWritten(String[] paths) {
+  public long getStorageBytesWritten() {
     return getConf().getLong(STORAGE_BYTES_WRITTEN, -1);
   }
 }

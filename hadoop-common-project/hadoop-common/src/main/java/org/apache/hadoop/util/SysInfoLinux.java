@@ -19,23 +19,14 @@
 package org.apache.hadoop.util;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,13 +34,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.fs.DF.DF_INTERVAL_DEFAULT;
 
 /**
  * Plugin to calculate resource information on Linux systems.
@@ -124,8 +111,6 @@ public class SysInfoLinux extends SysInfo {
               "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)" +
               "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)" +
               "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)");
-  private IoTimeTracker ioTimeTracker;
-
   /**
    * Pattern for parsing /sys/block/partition_name/queue/hw_sector_size.
    */
@@ -138,10 +123,6 @@ public class SysInfoLinux extends SysInfo {
   private String procfsNetFile;
   private String procfsDisksFile;
   private long jiffyLengthInMillis;
-
-  // cache mount path and disk mapping relation
-  private String[] lastPaths;
-  private List<String> mountList;
 
   private long ramSize = 0;
   private long swapSize = 0;
@@ -158,8 +139,6 @@ public class SysInfoLinux extends SysInfo {
   private int numProcessors = 0;
   /* number of physical cores on the system. */
   private int numCores = 0;
-  /* number of disks on the system. */
-  private int numDisks = 0;
   private long cpuFrequency = 0L; // CPU frequency on the system (kHz)
   private long numNetBytesRead = 0L; // aggregated bytes read from network
   private long numNetBytesWritten = 0L; // aggregated bytes written to network
@@ -175,9 +154,6 @@ public class SysInfoLinux extends SysInfo {
   public static final long PAGE_SIZE = getConf("PAGESIZE");
   public static final long JIFFY_LENGTH_IN_MILLIS =
       Math.max(Math.round(1000D / getConf("CLK_TCK")), -1);
-
-  /* map for node load sampling */
-  Map<Long, NodeResource> nodeResourceSampleMap = new ConcurrentHashMap<>();
 
   private static long getConf(String attr) {
     if(Shell.LINUX) {
@@ -231,7 +207,6 @@ public class SysInfoLinux extends SysInfo {
     this.jiffyLengthInMillis = jiffyLengthInMillis;
     this.cpuTimeTracker = new CpuTimeTracker(jiffyLengthInMillis);
     this.perDiskSectorSize = new HashMap<String, Integer>();
-    this.ioTimeTracker = new IoTimeTracker(jiffyLengthInMillis);
   }
 
   /**
@@ -505,48 +480,34 @@ public class SysInfoLinux extends SysInfo {
    * Read /proc/diskstats file, parse and calculate amount
    * of bytes read and written from/to disks.
    */
-  private void readProcDisksInfoFile(String[] paths) {
+  private void readProcDisksInfoFile() {
 
     numDisksBytesRead = 0L;
     numDisksBytesWritten = 0L;
 
     // Read "/proc/diskstats" file
-    Matcher mat;
-    try (BufferedReader in = new BufferedReader(new InputStreamReader(
-        new FileInputStream(procfsDisksFile), StandardCharsets.UTF_8))){
-      numDisks = 0;
-      ioTimeTracker.cumulativeIoTime = BigInteger.ZERO;
-      if (paths != null && !Arrays.equals(lastPaths, paths) || mountList.size() != paths.length) {
-        mountList = new ArrayList<>(paths.length);
-        for (String path : paths) {
-          try {
-            DF df = new DF(new File(path), DF_INTERVAL_DEFAULT);
-            mountList.add(df.getFilesystem());
-          } catch (Throwable t) {
-            // path may not exist for unhealthy disks etc.
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Read disk path " + path + " error.", t);
-            }
-          }
-        }
-        lastPaths = paths;
-      }
+    BufferedReader in;
+    try {
+      in = new BufferedReader(new InputStreamReader(
+          Files.newInputStream(Paths.get(procfsDisksFile)),
+          Charset.forName("UTF-8")));
+    } catch (IOException f) {
+      return;
+    }
 
+    Matcher mat;
+    try {
       String str = in.readLine();
-      long totalIoPerDisk = 0;
       while (str != null) {
         mat = PROCFS_DISKSFILE_FORMAT.matcher(str);
         if (mat.find()) {
-          String diskName = mat.group(3);
+          String diskName = mat.group(4);
           assert diskName != null;
           // ignore loop or ram partitions
           if (diskName.contains("loop") || diskName.contains("ram")) {
             str = in.readLine();
             continue;
           }
-
-          numDisks++;
-          totalIoPerDisk += Long.parseLong(mat.group(13));
 
           Integer sectorSize;
           synchronized (perDiskSectorSize) {
@@ -569,12 +530,15 @@ public class SysInfoLinux extends SysInfo {
         }
         str = in.readLine();
       }
-
-      ioTimeTracker.updateElapsedJiffies(
-          BigInteger.valueOf(totalIoPerDisk),
-          getCurrentTime());
     } catch (IOException e) {
       LOG.warn("Error reading the stream " + procfsDisksFile, e);
+    } finally {
+      // Close the streams
+      try {
+        in.close();
+      } catch (IOException e) {
+        LOG.warn("Error closing the stream " + procfsDisksFile, e);
+      }
     }
   }
 
@@ -696,59 +660,6 @@ public class SysInfoLinux extends SysInfo {
     return overallCpuUsage;
   }
 
-
-  /** {@inheritDoc} */
-  @Override
-  public float getIoUsagePercentage(String[] paths) {
-    readProcDisksInfoFile(paths);
-    float overallIoUsage = ioTimeTracker.getIoTrackerUsagePercent();
-    if (overallIoUsage != IoTimeTracker.UNAVAILABLE && numDisks != 0) {
-      overallIoUsage = overallIoUsage / numDisks;
-    }
-    return overallIoUsage;
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  public NodeResource getNodeResourceLastPeriod(String[] localDirs, long millis) {
-
-    // trigger collect and obtain the latest NodeResource
-    NodeResource nowNodeResource = new NodeResource(
-        getCpuUsagePercentage(),
-        getIoUsagePercentage(localDirs),
-        1 - (float) getAvailablePhysicalMemorySize() / getPhysicalMemorySize());
-
-    int nums = 0;
-    NodeResource totalResource = new NodeResource(0F, 0F, 0F);
-    Iterator<Map.Entry<Long, NodeResource>> it = nodeResourceSampleMap.entrySet().iterator();
-    while (it.hasNext()) {
-      Map.Entry<Long, NodeResource> entry = it.next();
-      long delta = System.currentTimeMillis() - millis;
-      NodeResource oldNodeResource = entry.getValue();
-      if (delta <= entry.getKey()) {
-        nums++;
-        totalResource.setCpuUsage(totalResource.cpuUsage + oldNodeResource.cpuUsage);
-        totalResource.setIoUsage(totalResource.ioUsage + oldNodeResource.ioUsage);
-        totalResource.setMemoryUsage(totalResource.memoryUsage + oldNodeResource.memoryUsage);
-      } else {
-        // remove outdated records
-        it.remove();
-      }
-    }
-
-    if (nums > 1) {
-      totalResource.setCpuUsage(totalResource.cpuUsage / nums);
-      totalResource.setIoUsage(totalResource.ioUsage / nums);
-      totalResource.setMemoryUsage(totalResource.memoryUsage / nums);
-    }
-
-    if (nowNodeResource.cpuUsage >= 0 && nowNodeResource.ioUsage >= 0
-        && nowNodeResource.memoryUsage >= 0) {
-      nodeResourceSampleMap.put(ioTimeTracker.sampleTime, nowNodeResource);
-    }
-    return totalResource;
-  }
-
   /** {@inheritDoc} */
   @Override
   public float getNumVCoresUsed() {
@@ -775,14 +686,14 @@ public class SysInfoLinux extends SysInfo {
   }
 
   @Override
-  public long getStorageBytesRead(String[] paths) {
-    readProcDisksInfoFile(paths);
+  public long getStorageBytesRead() {
+    readProcDisksInfoFile();
     return numDisksBytesRead;
   }
 
   @Override
-  public long getStorageBytesWritten(String[] paths) {
-    readProcDisksInfoFile(paths);
+  public long getStorageBytesWritten() {
+    readProcDisksInfoFile();
     return numDisksBytesWritten;
   }
 
