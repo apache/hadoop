@@ -223,13 +223,13 @@ framework, which can be obtained at:
   * HOMEPAGE:
     * http://commons.apache.org/logging/
 
-This product optionally depends on 'Apache Log4J', a logging framework, which
+This product optionally depends on 'reload4j', a logging framework, which
 can be obtained at:
 
   * LICENSE:
-    * license/LICENSE.log4j.txt (Apache License 2.0)
+    * license/LICENSE.reload4j.txt (Apache License 2.0)
   * HOMEPAGE:
-    * http://logging.apache.org/log4j/
+    * https://reload4j.qos.ch/
 
 This product optionally depends on 'Aalto XML', an ultra-high performance
 non-blocking XML processor, which can be obtained at:
@@ -278,7 +278,7 @@ which has the following notices:
  * This product includes software from the Spring Framework,under the Apache License 2.0 (see: StringUtils.containsWhitespace())
 
 The binary distribution of this product bundles binaries of
-Apache Log4j 1.2.17,
+reload4j 1.2.18.3,
 which has the following notices:
  * ResolverUtil.java
     Copyright 2005-2006 Tim Fennell
