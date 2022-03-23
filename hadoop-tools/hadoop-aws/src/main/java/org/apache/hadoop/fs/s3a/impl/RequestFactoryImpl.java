@@ -107,13 +107,6 @@ public class RequestFactoryImpl implements RequestFactory {
   private final long multipartPartCountLimit;
 
   /**
-   * Requester Pays.
-   * This is to be wired up in a PR with its
-   * own tests and docs.
-   */
-  private final boolean requesterPays;
-
-  /**
    * Callback to prepare requests.
    */
   private final PrepareRequest requestPreparer;
@@ -133,7 +126,6 @@ public class RequestFactoryImpl implements RequestFactory {
     this.cannedACL = builder.cannedACL;
     this.encryptionSecrets = builder.encryptionSecrets;
     this.multipartPartCountLimit = builder.multipartPartCountLimit;
-    this.requesterPays = builder.requesterPays;
     this.requestPreparer = builder.requestPreparer;
     this.contentEncoding = builder.contentEncoding;
   }
@@ -615,9 +607,6 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     private CannedAccessControlList cannedACL = null;
 
-    /** Requester Pays flag. */
-    private boolean requesterPays = false;
-
     /** Content Encoding. */
     private String contentEncoding;
 
@@ -681,17 +670,6 @@ public class RequestFactoryImpl implements RequestFactory {
     public RequestFactoryBuilder withCannedACL(
         final CannedAccessControlList value) {
       cannedACL = value;
-      return this;
-    }
-
-    /**
-     * Requester Pays flag.
-     * @param value new value
-     * @return the builder
-     */
-    public RequestFactoryBuilder withRequesterPays(
-        final boolean value) {
-      requesterPays = value;
       return this;
     }
 
