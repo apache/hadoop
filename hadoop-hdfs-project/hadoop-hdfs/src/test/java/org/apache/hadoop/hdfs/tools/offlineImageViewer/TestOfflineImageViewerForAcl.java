@@ -239,7 +239,7 @@ public class TestOfflineImageViewerForAcl {
     try (PrintStream o = new PrintStream(output)) {
       PBImageDelimitedTextWriter v =
           new PBImageDelimitedTextWriter(o, DELIMITER, "");  // run in memory.
-      v.visit(originalFsimage.getAbsolutePath());
+      v.visit(new RandomAccessFile(originalFsimage, "r"));
     }
 
     try (
