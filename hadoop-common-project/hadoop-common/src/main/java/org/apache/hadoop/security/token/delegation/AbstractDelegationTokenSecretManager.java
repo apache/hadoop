@@ -453,7 +453,7 @@ extends AbstractDelegationTokenIdentifier>
           ioe);
     } finally {
       if (metrics != null) {
-        metrics.storeToken.add(Time.monotonicNow() - start);
+        metrics.addStoreToken(Time.monotonicNow() - start);
       }
     }
     return password;
@@ -581,7 +581,7 @@ extends AbstractDelegationTokenIdentifier>
       updateToken(id, info);
     } finally {
       if (metrics != null) {
-        metrics.updateToken.add(Time.monotonicNow() - start);
+        metrics.addUpdateToken(Time.monotonicNow() - start);
       }
     }
     return renewTime;
@@ -625,7 +625,7 @@ extends AbstractDelegationTokenIdentifier>
       removeStoredToken(id);
     } finally {
       if (metrics != null) {
-        metrics.removeToken.add(Time.monotonicNow() - start);
+        metrics.addRemoveToken(Time.monotonicNow() - start);
       }
     }
     return id;
