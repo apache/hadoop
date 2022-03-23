@@ -1974,6 +1974,11 @@ public class YarnConfiguration extends Configuration {
   @Deprecated
   public final static int DEFAULT_NM_CONTAINER_MON_INTERVAL_MS = 3000;
 
+  /** How long is the NM resource sample period.*/
+  public final static String NM_RESOURCE_SAMPLE_PERIOD_MS =
+      NM_PREFIX + "resource.sample.period-ms";
+  public final static long DEFAULT_NM_RESOURCE_SAMPLE_PERIOD_MS = 10000;
+
   /** Class that calculates current resource utilization.*/
   public static final String NM_MON_RESOURCE_CALCULATOR =
       NM_PREFIX + "resource-calculator.class";
