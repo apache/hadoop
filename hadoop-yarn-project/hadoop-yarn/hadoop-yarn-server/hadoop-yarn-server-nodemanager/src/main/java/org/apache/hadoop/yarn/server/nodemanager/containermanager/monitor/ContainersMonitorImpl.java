@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 
 import java.util.Arrays;
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Map.Entry;
@@ -108,6 +109,11 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   private static final long UNKNOWN_MEMORY_LIMIT = -1L;
   private int nodeCpuPercentageForYARN;
+
+  private boolean pcoreCheckEnabled;
+  private float cpuLimitRatio;
+  private int cpuLimitTimes;
+  private Map<ContainerId,Integer> cpuExceedTimesMap = new HashMap<>();
 
   /**
    * Type of container metric.
@@ -209,6 +215,16 @@ public class ContainersMonitorImpl extends AbstractService implements
     LOG.info("Virtual memory check enabled: {}", vmemCheckEnabled);
     LOG.info("Elastic memory control enabled: {}", elasticMemoryEnforcement);
     LOG.info("Strict memory control enabled: {}", strictMemoryEnforcement);
+
+    pcoreCheckEnabled = conf.getBoolean(YarnConfiguration.NM_PCORE_CHECK_ENABLED,
+        YarnConfiguration.DEFAULT_NM_PCORE_CHECK_ENABLED);
+
+    // if cpuLimitRatio is 3.0, it means currentPcoreUsagePercentage shouldn't exceed 300
+    cpuLimitRatio = conf.getFloat(YarnConfiguration.NM_PCORE_LIMIT_RATIO,
+        YarnConfiguration.DEFAULT_NM_PCORE_LIMIT_RATIO);
+    cpuLimitTimes = conf.getInt(YarnConfiguration.NM_PCORE_LIMIT_TIMES,
+        YarnConfiguration.DEFAULT_NM_PCORE_LIMIT_TIMES);
+    LOG.info("Physical core check enabled: " + pcoreCheckEnabled);
 
     if (elasticMemoryEnforcement) {
       if (!CGroupElasticMemoryController.isAvailable()) {
@@ -463,17 +479,48 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     if (currentMemUsage > (2 * memLimit)) {
       LOG.warn("Process tree for container: {} running over twice "
-          + "the configured limit. Limit={}, current usage = {}",
+          + "the configured memory limit. Limit={}, current memory usage = {}",
           containerId, memLimit, currentMemUsage);
       isOverLimit = true;
     } else if (curMemUsageOfAgedProcesses > memLimit) {
       LOG.warn("Process tree for container: {} has processes older than 1 "
-          + "iteration running over the configured limit. "
-          + "Limit={}, current usage = {}",
+          + "iteration running over the configured memory limit. "
+          + "Limit={}, current memory usage = {}",
           containerId, memLimit, curMemUsageOfAgedProcesses);
       isOverLimit = true;
     }
 
+    return isOverLimit;
+  }
+
+  /**
+   * Container exceeding cpu limit `cpuLimitRatio` for more than
+   * yarn.nodemanager.pcore-limit-times * yarn.nodemanager.container-monitor.interval-ms,
+   * will be killed automatically.
+   */
+  boolean isProcessTreeOverLimit(
+      ContainerId containerId, float currentPcoreUsagePercentage) {
+    boolean isOverLimit = false;
+    if (currentPcoreUsagePercentage > 100 * cpuLimitRatio) {
+      int cpuExceedTimes =
+          cpuExceedTimesMap.getOrDefault(containerId, 0);
+      cpuExceedTimes++;
+      LOG.warn("Process tree for container: " + containerId
+          + " running over " + "the configured CPU limit. Limit="
+          + 100 * cpuLimitRatio + ", current usage = "
+          + currentPcoreUsagePercentage + ", cpuExceedTimes ="
+          + cpuExceedTimes);
+      if (cpuExceedTimes >= cpuLimitTimes) {
+        isOverLimit = true;
+        cpuExceedTimesMap.remove(containerId);
+        LOG.warn("Container " + containerId +
+            " meets the max cpu limit times " + cpuLimitTimes);
+      } else {
+        cpuExceedTimesMap.put(containerId, cpuExceedTimes);
+      }
+    } else {
+      cpuExceedTimesMap.remove(containerId);
+    }
     return isOverLimit;
   }
 
@@ -537,6 +584,8 @@ public class ContainersMonitorImpl extends AbstractService implements
             pTree.updateProcessTree();    // update process-tree
             long currentVmemUsage = pTree.getVirtualMemorySize();
             long currentPmemUsage = pTree.getRssMemorySize();
+            float currentPcoreUsagePercentage =
+                pTree.getCpuUsagePercent() / ptInfo.getCpuVcores();
             if (currentVmemUsage < 0 || currentPmemUsage < 0) {
               // YARN-6862/YARN-5021 If the container just exited or for
               // another reason the physical/virtual memory is UNAVAILABLE (-1)
@@ -556,6 +605,12 @@ public class ContainersMonitorImpl extends AbstractService implements
               LOG.info("Skipping monitoring container {} since "
                   + "CPU usage is not yet available.", containerId);
               continue;
+            } else {
+              LOG.info(String.format(
+                  "CPU usage of ProcessTree %s for container-id %s: ",
+                  pId, containerId.toString()) +
+                  String.format("%s of %s per physical core used; ",
+                      currentPcoreUsagePercentage, 100 * cpuLimitRatio));
             }
 
             recordUsage(containerId, pId, pTree, ptInfo, currentVmemUsage,
@@ -598,6 +653,10 @@ public class ContainersMonitorImpl extends AbstractService implements
           nmMetrics.setContainerCpuUtilization(
               trackedContainersUtilization.getCPU());
         }
+
+        // Remove the outdated key
+        cpuExceedTimesMap.entrySet().removeIf(
+            e -> !trackingContainers.containsKey(e.getKey()));
 
         try {
           Thread.sleep(monitoringInterval);
@@ -752,6 +811,7 @@ public class ContainersMonitorImpl extends AbstractService implements
         return;
       }
       boolean isMemoryOverLimit = false;
+      boolean isCpuOverLimit = false;
       String msg = "";
       int containerExitStatus = ContainerExitStatus.INVALID;
 
@@ -761,6 +821,9 @@ public class ContainersMonitorImpl extends AbstractService implements
       // are processes more than 1 iteration old.
       long curMemUsageOfAgedProcesses = pTree.getVirtualMemorySize(1);
       long curRssMemUsageOfAgedProcesses = pTree.getRssMemorySize(1);
+      float currentPcoreUsagePercentage =
+          pTree.getCpuUsagePercent() / ptInfo.getCpuVcores() *
+          maxVCoresAllottedForContainers / resourceCalculatorPlugin.getNumProcessors();
       if (isVmemCheckEnabled()
           && isProcessTreeOverLimit(containerId.toString(),
           currentVmemUsage, curMemUsageOfAgedProcesses, vmemLimit)) {
@@ -771,7 +834,7 @@ public class ContainersMonitorImpl extends AbstractService implements
         // Container (the root process) is still alive and overflowing
         // memory.
         // Dump the process-tree and then clean it up.
-        msg = formatErrorMessage("virtual",
+        msg = formatMemoryErrorMessage("virtual",
             formatUsageString(currentVmemUsage, vmemLimit,
                 currentPmemUsage, pmemLimit),
             pId, containerId, pTree, delta);
@@ -788,19 +851,28 @@ public class ContainersMonitorImpl extends AbstractService implements
         // Container (the root process) is still alive and overflowing
         // memory.
         // Dump the process-tree and then clean it up.
-        msg = formatErrorMessage("physical",
+        msg = formatMemoryErrorMessage("physical",
             formatUsageString(currentVmemUsage, vmemLimit,
                 currentPmemUsage, pmemLimit),
             pId, containerId, pTree, delta);
         isMemoryOverLimit = true;
         containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
+      } else if (isPcoreCheckEnabled()
+          && isProcessTreeOverLimit(containerId,
+          currentPcoreUsagePercentage)) {
+        // Container (the root process) is still alive and exceed cpu limit.
+        // Dump the process-tree and then clean it up.
+        msg = formatCpuErrorMessage(currentPcoreUsagePercentage, cpuLimitRatio,
+            pId, containerId, pTree);
+        isCpuOverLimit = true;
+        containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PCORE;
       }
 
-      if (isMemoryOverLimit
+
+      if ((isMemoryOverLimit || isCpuOverLimit)
           && trackingContainers.remove(containerId) != null) {
-        // Virtual or physical memory over limit. Fail the container and
-        // remove
-        // the corresponding process tree
+        // Virtual or physical memory or physical core over limit.
+        // Fail the container and remove the corresponding process tree.
         LOG.warn(msg);
         // warn if not a leader
         if (!pTree.checkPidPgrpidForMatch()) {
@@ -846,7 +918,7 @@ public class ContainersMonitorImpl extends AbstractService implements
      * @param pTree process tree to dump full resource utilization graph
      * @return formatted resource usage information
      */
-    private String formatErrorMessage(String memTypeExceeded,
+    private String formatMemoryErrorMessage(String memTypeExceeded,
         String usageString, String pId, ContainerId containerId,
         ResourceCalculatorProcessTree pTree, long delta) {
       return
@@ -858,6 +930,28 @@ public class ContainersMonitorImpl extends AbstractService implements
         "Dump of the process-tree for " + containerId + " :\n" +
         pTree.getProcessTreeDump();
     }
+
+    /**
+     * Format string when memory limit has been exceeded.
+     * @param currentPcoreUsagePercentage current pcore usage
+     * @param pcoreLimitRatio pcore limit threshold
+     * @param pId process id
+     * @param containerId container id
+     * @param pTree process tree to dump full resource utilization graph
+     * @return formatted resource usage information
+     */
+    private String formatCpuErrorMessage(
+        float currentPcoreUsagePercentage, float pcoreLimitRatio,
+        String pId, ContainerId containerId, ResourceCalculatorProcessTree pTree) {
+      return
+        String.format("Container [pid=%s,containerID=%s] is running beyond %s cpu limits. ",
+            pId, containerId, pcoreLimitRatio * 100) +
+            "Current usage: " + currentPcoreUsagePercentage +
+        ". Killing container.\n" +
+        "Dump of the process-tree for " + containerId + " :\n" +
+        pTree.getProcessTreeDump();
+    }
+
 
     /**
      * Format memory usage string for reporting.
@@ -1011,6 +1105,16 @@ public class ContainersMonitorImpl extends AbstractService implements
   @Override
   public boolean isPmemCheckEnabled() {
     return this.pmemCheckEnabled;
+  }
+
+  /**
+   * Is the total physical core check enabled?
+   *
+   * @return true if total physical core check is enabled.
+   */
+  @Override
+  public boolean isPcoreCheckEnabled() {
+    return this.pcoreCheckEnabled;
   }
 
   @Override
