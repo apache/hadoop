@@ -43,6 +43,11 @@ message RefreshNodesRequestProto {
 message RefreshNodesResponseProto {
 }
 
+message RefreshLoadConfRequestProto {
+}
+message RefreshLoadConfResponseProto {
+}
+
 message RefreshSuperUserGroupsConfigurationRequestProto {
 }
 message RefreshSuperUserGroupsConfigurationResponseProto {

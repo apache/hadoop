@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetGr
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.NodesToAttributesMappingRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshAdminAclsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshClusterMaxPriorityRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshLoadConfRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshNodesResourcesRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshQueuesRequestProto;
@@ -57,6 +58,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
@@ -85,6 +88,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshAdminAcl
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshAdminAclsResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshClusterMaxPriorityRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshClusterMaxPriorityResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshLoadConfRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshLoadConfResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshNodesRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshNodesResourcesRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshNodesResourcesResponsePBImpl;
@@ -134,6 +139,20 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
     try {
       return new RefreshQueuesResponsePBImpl(
           proxy.refreshQueues(null, requestProto));
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
+    }
+  }
+
+  @Override
+  public RefreshLoadConfResponse refreshLoadConf(RefreshLoadConfRequest request)
+      throws YarnException, IOException {
+    RefreshLoadConfRequestProto requestProto =
+        ((RefreshLoadConfRequestPBImpl)request).getProto();
+    try {
+      return new RefreshLoadConfResponsePBImpl(
+          proxy.refreshLoadConf(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;

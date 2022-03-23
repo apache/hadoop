@@ -33,6 +33,7 @@ import "server/yarn_server_resourcemanager_service_protos.proto";
 
 service ResourceManagerAdministrationProtocolService {
   rpc refreshQueues(RefreshQueuesRequestProto) returns (RefreshQueuesResponseProto);
+  rpc refreshLoadConf(RefreshLoadConfRequestProto) returns (RefreshLoadConfResponseProto);
   rpc refreshNodes(RefreshNodesRequestProto) returns (RefreshNodesResponseProto);
   rpc refreshSuperUserGroupsConfiguration(RefreshSuperUserGroupsConfigurationRequestProto) returns (RefreshSuperUserGroupsConfigurationResponseProto);
   rpc refreshUserToGroupsMappings(RefreshUserToGroupsMappingsRequestProto) returns (RefreshUserToGroupsMappingsResponseProto);

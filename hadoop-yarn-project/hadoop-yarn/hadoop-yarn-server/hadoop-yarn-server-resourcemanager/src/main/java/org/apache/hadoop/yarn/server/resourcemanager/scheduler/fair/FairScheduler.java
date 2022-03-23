@@ -1737,6 +1737,18 @@ public class FairScheduler extends
     }
   }
 
+  /**
+   * Reload yarn.scheduler.fair.node*
+   * @param conf new conf read from yarn-site.xml
+   */
+  public void refreshLoadConf(Configuration conf) {
+    FairSchedulerConfiguration fsConf = new FairSchedulerConfiguration(conf);
+    nodeLoadBasedAssignEnable = fsConf.getNodeLoadBasedAssignEnabled();
+    nodeLoadMemoryLimit = fsConf.getNodeLoadMemoryLimit();
+    nodeLoadCpuLimit = fsConf.getNodeLoadCpuLimit();
+    nodeLoadDiskIoLimit = fsConf.getNodeDiskIoLimit();
+  }
+
   @Override
   public List<ApplicationAttemptId> getAppsInQueue(String queueName) {
     FSQueue queue = queueMgr.getQueue(queueName);

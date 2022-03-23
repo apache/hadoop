@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
@@ -130,6 +132,12 @@ public class DefaultRMAdminRequestInterceptor
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
       throws StandbyException, YarnException, IOException {
     return rmAdminProxy.refreshQueues(request);
+  }
+
+  @Override
+  public RefreshLoadConfResponse refreshLoadConf(RefreshLoadConfRequest request)
+      throws StandbyException, YarnException, IOException {
+    return rmAdminProxy.refreshLoadConf(request);
   }
 
   @Override

@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
@@ -68,6 +70,11 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Private
   @Idempotent
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
+  throws StandbyException, YarnException, IOException;
+
+  @Private
+  @Idempotent
+  public RefreshLoadConfResponse refreshLoadConf(RefreshLoadConfRequest request)
   throws StandbyException, YarnException, IOException;
 
   @Private

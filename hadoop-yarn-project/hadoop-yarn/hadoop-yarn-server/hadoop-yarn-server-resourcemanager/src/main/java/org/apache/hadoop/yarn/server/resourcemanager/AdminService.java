@@ -77,6 +77,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
@@ -100,6 +102,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
@@ -448,6 +451,33 @@ public class AdminService extends CompositeService implements
     ResourceScheduler scheduler = rm.getRMContext().getScheduler();
     return (scheduler instanceof MutableConfScheduler
         && ((MutableConfScheduler) scheduler).isConfigurationMutable());
+  }
+
+  @Override
+  public RefreshLoadConfResponse refreshLoadConf(RefreshLoadConfRequest request)
+      throws IOException, YarnException {
+    String argName = "refreshLoadConf";
+    final String msg = "refresh load configuration.";
+    UserGroupInformation user = checkAcls("refreshLoadConf");
+
+    checkRMStatus(user.getShortUserName(), argName, msg);
+
+    try {
+      if (rm.getRMContext().getScheduler() instanceof FairScheduler) {
+        Configuration conf = getConfiguration(new Configuration(false),
+            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+        FairScheduler scheduler = (FairScheduler) rm.getRMContext().getScheduler();
+        scheduler.refreshLoadConf(conf);
+        RMAuditLogger.logSuccess(user.getShortUserName(), argName,
+            "AdminService");
+      } else {
+        LOG.warn("Scheduler " + rm.getRMContext().getScheduler().getClass()
+            + " is not supported for load conf reload.");
+      }
+      return recordFactory.newRecordInstance(RefreshLoadConfResponse.class);
+    } catch (IOException ioe) {
+      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
+    }
   }
 
   @Override

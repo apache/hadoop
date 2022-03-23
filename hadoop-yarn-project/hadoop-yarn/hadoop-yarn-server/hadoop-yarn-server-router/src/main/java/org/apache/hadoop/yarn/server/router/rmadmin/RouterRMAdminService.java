@@ -55,6 +55,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshLoadConfResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
@@ -337,6 +339,13 @@ public class RouterRMAdminService extends AbstractService
     RequestInterceptorChainWrapper pipeline = getInterceptorChain();
     return pipeline.getRootInterceptor().refreshQueues(request);
 
+  }
+
+  @Override
+  public RefreshLoadConfResponse refreshLoadConf(RefreshLoadConfRequest request)
+      throws StandbyException, YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().refreshLoadConf(request);
   }
 
   @Override
