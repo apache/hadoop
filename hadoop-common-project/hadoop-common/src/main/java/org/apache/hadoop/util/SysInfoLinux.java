@@ -810,9 +810,9 @@ public class SysInfoLinux extends SysInfo {
     System.out.println("Total network written (bytes) : "
             + plugin.getNetworkBytesWritten());
     System.out.println("Total storage read (bytes) : "
-            + plugin.getStorageBytesRead());
+            + plugin.getStorageBytesRead(null));
     System.out.println("Total storage written (bytes) : "
-            + plugin.getStorageBytesWritten());
+            + plugin.getStorageBytesWritten(null));
     try {
       // Sleep so we can compute the CPU usage
       Thread.sleep(500L);

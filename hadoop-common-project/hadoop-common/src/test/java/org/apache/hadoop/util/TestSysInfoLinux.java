@@ -573,8 +573,8 @@ public class TestSysInfoLinux {
     // use non-default sector size
     int diskSectorSize = FakeLinuxResourceCalculatorPlugin.SECTORSIZE;
     assertEquals(expectedNumSectorsRead * diskSectorSize,
-        plugin.getStorageBytesRead());
+        plugin.getStorageBytesRead(null));
     assertEquals(expectedNumSectorsWritten * diskSectorSize,
-        plugin.getStorageBytesWritten());
+        plugin.getStorageBytesWritten(null));
   }
 }
