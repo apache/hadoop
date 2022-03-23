@@ -293,7 +293,7 @@ public class VolumeScanner extends Thread {
             volume, block);
         return;
       }
-      LOG.warn("Reporting bad {} on {}", block, volume);
+      LOG.warn("Reporting bad {} on {}", block, volume, e);
       scanner.datanode.handleBadBlock(block, e, true);
     }
   }
