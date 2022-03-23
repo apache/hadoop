@@ -185,7 +185,7 @@ public class TestViewFsLinkFallback {
   }
 
   /**
-   * Test getDelegationToken when fallback is configured
+   * Test getDelegationToken when fallback is configured.
    */
   @Test
   public void testGetDelegationToken() throws IOException {
