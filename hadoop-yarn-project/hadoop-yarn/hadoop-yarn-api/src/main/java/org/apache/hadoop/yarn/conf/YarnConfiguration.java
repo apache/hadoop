@@ -4412,6 +4412,9 @@ public class YarnConfiguration extends Configuration {
   public static final String AM_DEFAULT_NODE_LABEL =
       RM_NODE_LABELS_PREFIX + "am.default-node-label-expression";
 
+  public static final String ALLOWED_AM_NON_EXCLUSIVE_ALLOCATION =
+      RM_NODE_LABELS_PREFIX + "am.allowed-non-exclusive-allocation";
+
   public static final String RM_NODE_LABELS_PROVIDER_CONFIG =
       RM_NODE_LABELS_PREFIX + "provider";
 
