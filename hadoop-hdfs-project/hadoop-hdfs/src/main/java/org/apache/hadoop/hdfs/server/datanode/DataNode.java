@@ -470,6 +470,9 @@ public class DataNode extends ReconfigurableBase
 
   private long startTime = 0;
 
+  private DataTransferThrottler ecReconstuctReadThrottler;
+  private DataTransferThrottler ecReconstuctWriteThrottler;
+
   /**
    * Creates a dummy DataNode for testing purpose.
    */
@@ -584,6 +587,16 @@ public class DataNode extends ReconfigurableBase
 
     initOOBTimeout();
     this.storageLocationChecker = storageLocationChecker;
+    long ecReconstuctReadBandwidth = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_DEFAULT);
+    long ecReconstuctWriteBandwidth = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_DEFAULT);
+    this.ecReconstuctReadThrottler = ecReconstuctReadBandwidth > 0 ?
+        new DataTransferThrottler(100, ecReconstuctReadBandwidth) : null;
+    this.ecReconstuctWriteThrottler = ecReconstuctWriteBandwidth > 0 ?
+        new DataTransferThrottler(100, ecReconstuctWriteBandwidth) : null;
   }
 
   @Override  // ReconfigurableBase
@@ -3828,6 +3841,14 @@ public class DataNode extends ReconfigurableBase
 
   public ShortCircuitRegistry getShortCircuitRegistry() {
     return shortCircuitRegistry;
+  }
+
+  public DataTransferThrottler getEcReconstuctReadThrottler() {
+    return ecReconstuctReadThrottler;
+  }
+
+  public DataTransferThrottler getEcReconstuctWriteThrottler() {
+    return ecReconstuctWriteThrottler;
   }
 
   /**
