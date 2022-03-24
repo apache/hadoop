@@ -66,7 +66,7 @@ public class S3ObjectAttributes {
   /**
    * Construct from the result of a copy and those parameters
    * which aren't included in an AWS SDK response.
-   * @param path
+   * @param path path
    * @param copyResult copy result.
    * @param serverSideEncryptionAlgorithm current encryption algorithm
    * @param serverSideEncryptionKey any server side encryption key?

@@ -4409,6 +4409,9 @@ public class YarnConfiguration extends Configuration {
   private static final String RM_NODE_LABELS_PREFIX = RM_PREFIX
       + "node-labels.";
 
+  public static final String AM_DEFAULT_NODE_LABEL =
+      RM_NODE_LABELS_PREFIX + "am.default-node-label-expression";
+
   public static final String RM_NODE_LABELS_PROVIDER_CONFIG =
       RM_NODE_LABELS_PREFIX + "provider";
 
@@ -4422,6 +4425,12 @@ public class YarnConfiguration extends Configuration {
   //once in 30 mins
   public static final long DEFAULT_RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
       30 * 60 * 1000;
+
+  public static final String RM_NODE_LABELS_PROVIDER_UPDATE_NEWLY_REGISTERED_INTERVAL_MS =
+      RM_NODE_LABELS_PROVIDER_PREFIX + "update-newly-registered-nodes-interval-ms";
+
+  public static final long DEFAULT_RM_NODE_LABELS_PROVIDER_UPDATE_NEWLY_REGISTERED_INTERVAL_MS =
+      30 * 1000;
 
   @Private
   /**

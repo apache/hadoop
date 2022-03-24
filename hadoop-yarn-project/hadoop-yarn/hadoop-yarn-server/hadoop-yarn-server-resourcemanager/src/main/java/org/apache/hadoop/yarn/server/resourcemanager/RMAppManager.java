@@ -83,6 +83,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.yarn.util.StringHelper;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang.StringUtils.isNotEmpty;
+
 /**
  * This class manages the list of applications for the resource manager.
  */
@@ -106,6 +109,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private boolean timelineServiceV2Enabled;
   private boolean nodeLabelsEnabled;
   private Set<String> exclusiveEnforcedPartitions;
+  private String amDefaultNodeLabel;
 
   private static final String USER_ID_PREFIX = "userid=";
 
@@ -134,6 +138,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
     this.exclusiveEnforcedPartitions = YarnConfiguration
         .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
+    this.amDefaultNodeLabel = conf
+        .get(YarnConfiguration.AM_DEFAULT_NODE_LABEL, null);
   }
 
   /**
@@ -294,7 +300,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   protected void writeAuditLog(ApplicationId appId) {
     RMApp app = rmContext.getRMApps().get(appId);
-    String operation = "UNKONWN";
+    String operation = "UNKNOWN";
     boolean success = false;
     switch (app.getState()) {
       case FAILED:
@@ -622,9 +628,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         }
 
         // set label expression for AM ANY request if not set
-        if (null == anyReq.getNodeLabelExpression()) {
-          anyReq.setNodeLabelExpression(submissionContext
-              .getNodeLabelExpression());
+        if (isEmpty(anyReq.getNodeLabelExpression())) {
+          if (isNotEmpty(amDefaultNodeLabel)) {
+            anyReq.setNodeLabelExpression(amDefaultNodeLabel);
+          } else {
+            anyReq.setNodeLabelExpression(submissionContext.getNodeLabelExpression());
+          }
         }
 
         // Put ANY request at the front

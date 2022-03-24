@@ -83,8 +83,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
+import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.net.NetUtils;
@@ -122,6 +124,7 @@ import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_NAME;
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY;
@@ -186,6 +189,12 @@ public class TestOfflineImageViewer {
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
           "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
+      // fsimage with sub-section conf
+      conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, "true");
+      conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY, "1");
+      conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY, "4");
+      conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY, "4");
+
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       DistributedFileSystem hdfs = cluster.getFileSystem();
@@ -792,6 +801,13 @@ public class TestOfflineImageViewer {
   }
 
   @Test
+  public void testParallelPBDelimitedWriter() throws Exception {
+    testParallelPBDelimitedWriter("");  // Test in memory db.
+    testParallelPBDelimitedWriter(new FileSystemTestHelper().getTestRootDir()
+        + "/parallel-delimited.db");
+  }
+
+  @Test
   public void testCorruptionOutputEntryBuilder() throws IOException {
     PBImageCorruptionDetector corrDetector =
         new PBImageCorruptionDetector(null, ",", "");
@@ -882,11 +898,10 @@ public class TestOfflineImageViewer {
     final String DELIMITER = "\t";
     ByteArrayOutputStream output = new ByteArrayOutputStream();
 
-    try (PrintStream o = new PrintStream(output);
-        RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
+    try (PrintStream o = new PrintStream(output)) {
       PBImageDelimitedTextWriter v =
           new PBImageDelimitedTextWriter(o, DELIMITER, db);
-      v.visit(r);
+      v.visit(originalFsimage.getAbsolutePath());
     }
 
     Set<String> fileNames = new HashSet<>();
@@ -920,6 +935,37 @@ public class TestOfflineImageViewer {
     assertEquals(writtenFiles.keySet(), fileNames);
   }
 
+  private void testParallelPBDelimitedWriter(String db) throws Exception{
+    String delimiter = "\t";
+    int numThreads = 4;
+
+    File parallelDelimitedOut = new File(tempDir, "parallelDelimitedOut");
+    if (OfflineImageViewerPB.run(new String[] {"-p", "Delimited",
+        "-i", originalFsimage.getAbsolutePath(),
+        "-o", parallelDelimitedOut.getAbsolutePath(),
+        "-delimiter", delimiter,
+        "-t", db,
+        "-m", String.valueOf(numThreads)}) != 0) {
+      throw new IOException("oiv returned failure outputting in parallel.");
+    }
+    MD5Hash parallelMd5 = MD5FileUtils.computeMd5ForFile(parallelDelimitedOut);
+
+    File serialDelimitedOut = new File(tempDir, "serialDelimitedOut");
+    if (db != "") {
+      db = db + "/../serial.db";
+    }
+    if (OfflineImageViewerPB.run(new String[] {"-p", "Delimited",
+        "-i", originalFsimage.getAbsolutePath(),
+        "-o", serialDelimitedOut.getAbsolutePath(),
+        "-t", db,
+        "-delimiter", delimiter}) != 0) {
+      throw new IOException("oiv returned failure outputting in serial.");
+    }
+    MD5Hash serialMd5 = MD5FileUtils.computeMd5ForFile(serialDelimitedOut);
+
+    assertEquals(parallelMd5, serialMd5);
+  }
+
   private void testPBCorruptionDetector(String db)
       throws IOException, InterruptedException {
     final String delimiter = "\t";
@@ -928,7 +974,7 @@ public class TestOfflineImageViewer {
     try (PrintStream o = new PrintStream(output)) {
       PBImageCorruptionDetector v =
           new PBImageCorruptionDetector(o, delimiter, db);
-      v.visit(new RandomAccessFile(originalFsimage, "r"));
+      v.visit(originalFsimage.getAbsolutePath());
     }
 
     try (
@@ -1024,7 +1070,7 @@ public class TestOfflineImageViewer {
     try (PrintStream o = new PrintStream(output)) {
       PBImageCorruptionDetector v =
           new PBImageCorruptionDetector(o, ",", db);
-      v.visit(new RandomAccessFile(corruptedImage, "r"));
+      v.visit(corruptedImage.getAbsolutePath());
     }
     return output.toString();
   }
@@ -1212,6 +1258,9 @@ public class TestOfflineImageViewer {
   public void testFileDistributionCalculatorForException() throws Exception {
     File fsimageFile = null;
     Configuration conf = new Configuration();
+    // Avoid using the same cluster dir to cause the global originalFsimage
+    // file to be cleared.
+    conf.set(HDFS_MINIDFS_BASEDIR, GenericTestUtils.getRandomizedTempPath());
     HashMap<String, FileStatus> files = Maps.newHashMap();
 
     // Create a initial fsimage file

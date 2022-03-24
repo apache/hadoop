@@ -113,6 +113,9 @@ public final class StoreStatisticNames {
   public static final String OP_MODIFY_ACL_ENTRIES = "op_modify_acl_entries";
 
   /** {@value}. */
+  public static final String OP_MSYNC = "op_msync";
+
+  /** {@value}. */
   public static final String OP_OPEN = "op_open";
 
   /** {@value}. */
@@ -171,6 +174,9 @@ public final class StoreStatisticNames {
   /** Requests throttled and retried: {@value}. */
   public static final String STORE_IO_THROTTLED
       = "store_io_throttled";
+
+  /** Rate limiting was reported {@value}. */
+  public static final String STORE_IO_RATE_LIMITED = "store_io_rate_limited";
 
   /** Requests made of a store: {@value}. */
   public static final String STORE_IO_REQUEST

@@ -566,6 +566,17 @@
 </property>
 
 <property>
+   <name>dfs.namenode.ip-proxy-users</name>
+   <value></value>
+   <description>A comma separated list of user names that are allowed by the
+     NameNode to specify a different client IP address in the caller context.
+     This is used by Router-Based Federation (RBF) to provide the actual client's
+     IP address to the NameNode, which is critical to preserve data locality when
+     using RBF. If you are using RBF, add the user that runs the routers.
+   </description>
+</property>
+
+<property>
   <name>dfs.namenode.acls.enabled</name>
   <value>true</value>
   <description>
@@ -4117,6 +4128,14 @@
     a NameNode per second. Values less than or equal to 0 disable throttling.
     This affects anything that uses a NameNodeConnector, i.e., the Balancer,
     Mover, and StoragePolicySatisfier.
+  </description>
+</property>
+<property>
+  <name>dfs.namenode.get-blocks.check.operation</name>
+  <value>true</value>
+  <description>
+    Set false to disable checkOperation and getBlocks for Balancer
+    will route to Standby NameNode for HA mode setup.
   </description>
 </property>
 <property>

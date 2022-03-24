@@ -74,6 +74,10 @@
           <artifactId>paranamer-ant</artifactId>
           <groupId>com.thoughtworks.paranamer</groupId>
         </exclusion>
+        <exclusion>
+          <groupId>org.xerial.snappy</groupId>
+          <artifactId>snappy-java</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

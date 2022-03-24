@@ -98,6 +98,17 @@ public interface S3ATestConstants {
   String DEFAULT_CSVTEST_FILE = LANDSAT_BUCKET + "scene_list.gz";
 
   /**
+   * Configuration key for an existing object in a requester pays bucket: {@value}.
+   * If not set, defaults to {@value DEFAULT_REQUESTER_PAYS_FILE}.
+   */
+  String KEY_REQUESTER_PAYS_FILE = TEST_FS_S3A + "requester.pays.file";
+
+  /**
+   * Default path for an S3 object inside a requester pays enabled bucket: {@value}.
+   */
+  String DEFAULT_REQUESTER_PAYS_FILE = "s3a://usgs-landsat/collection02/catalog.json";
+
+  /**
    * Name of the property to define the timeout for scale tests: {@value}.
    * Measured in seconds.
    */

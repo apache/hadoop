@@ -307,6 +307,8 @@ public class TestNameNodeReconfigure {
         StoragePolicySatisfierMode.EXTERNAL.toString(),
         nameNode.getConf().get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
             DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT));
+    assertNotNull("SPS Manager should be created",
+        nameNode.getNamesystem().getBlockManager().getSPSManager());
   }
 
   /**
@@ -322,6 +324,8 @@ public class TestNameNodeReconfigure {
         StoragePolicySatisfierMode.NONE.toString());
     verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE, false);
+    assertNull("SPS Manager should be null",
+        nameNode.getNamesystem().getBlockManager().getSPSManager());
 
     Path filePath = new Path("/testSPS");
     DistributedFileSystem fileSystem = cluster.getFileSystem();
@@ -345,7 +349,7 @@ public class TestNameNodeReconfigure {
             .getNamesystem().getBlockManager().getSPSManager();
     boolean isSPSRunning = spsMgr != null ? spsMgr.isSatisfierRunning()
         : false;
-    assertEquals(property + " has wrong value", isSPSRunning, isSPSRunning);
+    assertEquals(property + " has wrong value", isSatisfierRunning, isSPSRunning);
     String actual = nameNode.getConf().get(property,
         DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
     assertEquals(property + " has wrong value", expected,
@@ -447,6 +451,37 @@ public class TestNameNodeReconfigure {
 
     // Assert DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY is 10.
     assertEquals(10, datanodeManager.getMaxSlowpeerCollectNodes());
+  }
+
+  @Test
+  public void testBlockInvalidateLimit() throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager = nameNode.namesystem
+        .getBlockManager().getDatanodeManager();
+
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not correctly set",
+        customizedBlockInvalidateLimit, datanodeManager.getBlockInvalidateLimit());
+
+    try {
+      nameNode.reconfigureProperty(DFS_BLOCK_INVALIDATE_LIMIT_KEY, "non-numeric");
+      fail("Should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals(
+          "Could not change property dfs.block.invalidate.limit from '500' to 'non-numeric'",
+          e.getMessage());
+    }
+
+    nameNode.reconfigureProperty(DFS_BLOCK_INVALIDATE_LIMIT_KEY, "2500");
+
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not honored after reconfiguration", 2500,
+        datanodeManager.getBlockInvalidateLimit());
+
+    nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY, "500");
+
+    // 20 * 500 (10000) > 2500
+    // Hence, invalid block limit should be reset to 10000
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not reconfigured correctly", 10000,
+        datanodeManager.getBlockInvalidateLimit());
   }
 
   @After

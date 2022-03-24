@@ -100,10 +100,14 @@
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
       <exclusions>
-      <exclusion>
-      <groupId>jdk.tools</groupId>
-      <artifactId>jdk.tools</artifactId>
-      </exclusion>
+        <exclusion>
+          <groupId>jdk.tools</groupId>
+          <artifactId>jdk.tools</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.javassist</groupId>
+          <artifactId>javassist</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

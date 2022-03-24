@@ -41,15 +41,13 @@ add_subdirectory(hdfs-chown)
 
 add_subdirectory(hdfs-chmod)
 
-add_executable(hdfs_find hdfs_find.cc)
-target_link_libraries(hdfs_find tools_common hdfspp_static)
+add_subdirectory(hdfs-find)
 
 add_subdirectory(hdfs-mkdir)
 
 add_subdirectory(hdfs-rm)
 
-add_executable(hdfs_ls hdfs_ls.cc)
-target_link_libraries(hdfs_ls tools_common hdfspp_static)
+add_subdirectory(hdfs-ls)
 
 add_executable(hdfs_stat hdfs_stat.cc)
 target_link_libraries(hdfs_stat tools_common hdfspp_static)
@@ -60,8 +58,7 @@ add_subdirectory(hdfs-df)
 
 add_subdirectory(hdfs-du)
 
-add_executable(hdfs_get hdfs_get.cc)
-target_link_libraries(hdfs_get tools_common hdfspp_static)
+add_subdirectory(hdfs-get)
 
 add_subdirectory(hdfs-copy-to-local)
 
