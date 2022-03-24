@@ -21,10 +21,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_IO_UTIL_PREFERENCE_ENABLE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_IO_UTIL_PREFERENCE_ENABLE_KEY;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -55,6 +59,8 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
   
   private long balancedSpaceThreshold = DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_DEFAULT;
   private float balancedPreferencePercent = DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
+  private boolean ioUtilPreferenceEnable =
+      DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_IO_UTIL_PREFERENCE_ENABLE_DEFAULT;
 
   AvailableSpaceVolumeChoosingPolicy(Random random) {
     this.random = random;
@@ -81,12 +87,17 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
     balancedPreferencePercent = conf.getFloat(
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
+    ioUtilPreferenceEnable = conf.getBoolean(
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_IO_UTIL_PREFERENCE_ENABLE_KEY,
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_IO_UTIL_PREFERENCE_ENABLE_DEFAULT);
     
     LOG.info("Available space volume choosing policy initialized: " +
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY +
         " = " + balancedSpaceThreshold + ", " +
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY +
-        " = " + balancedPreferencePercent);
+        " = " + balancedPreferencePercent + ", " +
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_IO_UTIL_PREFERENCE_ENABLE_KEY +
+        " = " + ioUtilPreferenceEnable);
 
     if (balancedPreferencePercent > 1.0) {
       LOG.warn("The value of " + DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY +
@@ -135,9 +146,22 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
         new AvailableSpaceVolumeList(volumes);
     
     if (volumesWithSpaces.areAllVolumesWithinFreeSpaceThreshold()) {
+      V volume;
+      if (ioUtilPreferenceEnable) {
+        IOUtilVolumeList volumesWithIOUtils = new IOUtilVolumeList(volumes);
+        volume = volumesWithIOUtils.getFirstVolumesWithLowIOUtilAndHighAvailableSpace(replicaSize);
+        if (volume != null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("All volumes are within the configured free space balance " +
+                "threshold and prefer low io util. Selecting " + volume +
+                " for write of block size " + replicaSize);
+          }
+          return volume;
+        }
+      }
       // If they're actually not too far out of whack, fall back on pure round
       // robin.
-      V volume = roundRobinPolicyBalanced.chooseVolume(volumes, replicaSize,
+      volume = roundRobinPolicyBalanced.chooseVolume(volumes, replicaSize,
           storageId);
       if (LOG.isDebugEnabled()) {
         LOG.debug("All volumes are within the configured free space balance " +
@@ -165,6 +189,21 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
           preferencePercentScaler;
       if (mostAvailableAmongLowVolumes < replicaSize ||
           random.nextFloat() < scaledPreferencePercent) {
+        if (ioUtilPreferenceEnable) {
+          IOUtilVolumeList volumesWithIOUtils = new IOUtilVolumeList(highAvailableVolumes);
+          volume =
+              volumesWithIOUtils.getFirstVolumesWithLowIOUtilAndHighAvailableSpace(replicaSize);
+          if (volume != null) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Volumes are imbalanced. Selecting " + volume +
+                  " from high available space and low io util volumes for write of block size "
+                  + replicaSize);
+            }
+            return volume;
+          } else {
+            volumesWithIOUtils.chooseVolumeByIOUtilFailed(replicaSize);
+          }
+        }
         volume = roundRobinPolicyHighAvailable.chooseVolume(
             highAvailableVolumes, replicaSize, storageId);
         if (LOG.isDebugEnabled()) {
@@ -173,6 +212,19 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
               + replicaSize);
         }
       } else {
+        if (ioUtilPreferenceEnable) {
+          IOUtilVolumeList volumesWithIOUtils = new IOUtilVolumeList(lowAvailableVolumes);
+          volume =
+              volumesWithIOUtils.getFirstVolumesWithLowIOUtilAndHighAvailableSpace(replicaSize);
+          if (volume != null) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Volumes are imbalanced. Selecting " + volume +
+                  " from low available space and low io util volumes for write of block size "
+                  + replicaSize);
+            }
+            return volume;
+          }
+        }
         volume = roundRobinPolicyLowAvailable.chooseVolume(
             lowAvailableVolumes, replicaSize, storageId);
         if (LOG.isDebugEnabled()) {
@@ -296,4 +348,127 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
     return ret;
   }
 
+  /**
+   * Used to keep track of the list of volumes we're choosing from.
+   */
+  private class IOUtilVolumeList {
+    private final List<IOUtilVolumePair> volumes;
+    private long avgAvailableSpace;
+
+    IOUtilVolumeList(List<V> volumes) throws IOException {
+      long allAvailableSpace = 0;
+      this.volumes = new ArrayList<IOUtilVolumePair>();
+      for (V volume : volumes) {
+        this.volumes.add(new IOUtilVolumePair(volume));
+        allAvailableSpace += volume.getAvailable();
+      }
+      this.avgAvailableSpace = allAvailableSpace / volumes.size();
+      Collections.sort(this.volumes);
+      if (LOG.isDebugEnabled()) {
+        for (IOUtilVolumePair pair : this.volumes) {
+          LOG.debug(String.valueOf(pair));
+        }
+      }
+    }
+
+    public V getFirstVolumesWithLowIOUtilAndHighAvailableSpace(long replicaSize) {
+      // Volumes has sorted by io util
+      for (IOUtilVolumePair pair : volumes) {
+        //Available space is not enough to store the new replica.
+        if (pair.getAvailableSpace() < replicaSize) {
+          continue;
+        }
+        //Volume's available space is too low.
+        if (pair.getAvailableSpace() < balancedSpaceThreshold) {
+          continue;
+        } else {
+          // got the first volume with low io util and high available space
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("choose volume：" + pair);
+          }
+          return pair.getVolume();
+        }
+      }
+      return null;
+    }
+
+    void chooseVolumeByIOUtilFailed(long replicaSize) {
+      StringBuilder str = new StringBuilder();
+      str.append("Choose volume failed, " +
+          "replica size:" + replicaSize +
+          " average available space:" + avgAvailableSpace + " volumes:");
+      str.append(System.lineSeparator());
+      for (IOUtilVolumePair pair: volumes) {
+        str.append(pair.toString());
+        str.append(System.lineSeparator());
+      }
+      LOG.warn(str.toString());
+    }
+  }
+
+  /**
+   * Used so that we only check the available space on a given volume once, at
+   * the beginning of
+   * {@link AvailableSpaceVolumeChoosingPolicy#chooseVolume}.
+   */
+  private class IOUtilVolumePair implements Comparable<IOUtilVolumePair>{
+    private final V volume;
+    private final int ioUtil;
+    private final long availableSpace;
+
+    IOUtilVolumePair(V volume) throws IOException {
+      this.volume = volume;
+      this.ioUtil = volume.getVolumeIOUtil();
+      this.availableSpace = volume.getAvailable();
+    }
+
+    public V getVolume() {
+      return volume;
+    }
+
+    public int getIoUtil() {
+      return ioUtil;
+    }
+
+    public long getAvailableSpace() {
+      return availableSpace;
+    }
+
+    @Override
+    public String toString() {
+      return volume.toString() + " io util:" + ioUtil + " available space:" + availableSpace;
+    }
+
+    @Override
+    public int compareTo(IOUtilVolumePair o) {
+      if (this.ioUtil != o.ioUtil) {
+        return this.ioUtil - o.ioUtil;
+      } else {
+        if (this.availableSpace < o.availableSpace) {
+          return 1;
+        } else if (this.availableSpace == o.availableSpace) {
+          return 0;
+        } else {
+          return -1;
+        }
+      }
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (!(other instanceof AvailableSpaceVolumeChoosingPolicy.IOUtilVolumePair)) {
+        return false;
+      }
+      IOUtilVolumePair o = (IOUtilVolumePair) other;
+      return this.volume.equals(o.getVolume()) &&
+          this.ioUtil == o.getIoUtil() &&
+          this.availableSpace == o.getAvailableSpace();
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(this.volume, this.ioUtil, this.availableSpace);
+    }
+
+  }
 }

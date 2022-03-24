@@ -2705,6 +2705,25 @@
 </property>
 
 <property>
+  <name>dfs.datanode.available-space-volume-choosing-policy.io.util.preference.enable</name>
+  <value>false</value>
+  <description>
+    Only used when the dfs.datanode.fsdataset.volume.choosing.policy is set to
+    org.apache.hadoop.hdfs.server.datanode.fsdataset.AvailableSpaceVolumeChoosingPolicy.
+    If set to true, busy disks will be filtered as much as possible when data is written.
+    The default is false.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.disk.stat.interval.seconds</name>
+  <value>1</value>
+  <description>
+    How often does DiskIOUtilManager collect ioutil metrics.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.round-robin-volume-choosing-policy.additional-available-space</name>
   <value>1073741824</value> <!-- 1 GB -->
   <description>

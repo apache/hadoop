@@ -473,4 +473,9 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public List<FsVolumeImpl> getVolumeList() {
     return null;
   }
+
+  @Override
+  public int getStorageLocationDiskUtil(StorageLocation location) {
+    return 0;
+  }
 }

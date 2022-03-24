@@ -223,6 +223,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  @Override
+  public int getStorageLocationDiskUtil(StorageLocation location) {
+    return datanode.getStorageLocationDiskUtil(location);
+  }
+
   /**
    * This should be primarily used for testing.
    * @return clone of replica store in datanode memory

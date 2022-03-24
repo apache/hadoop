@@ -1409,6 +1409,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return metrics;
   }
 
+  @Override
+  public int getVolumeIOUtil() {
+    return dataset.getStorageLocationDiskUtil(storageLocation);
+  }
+
   /**
    * Filter for block file names stored on the file system volumes.
    */

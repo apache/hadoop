@@ -443,6 +443,7 @@ public class DataNode extends ReconfigurableBase
   private static final double CONGESTION_RATIO = 1.5;
   private DiskBalancer diskBalancer;
   private DataSetLockManager dataSetLockManager;
+  private DiskIOUtilManager diskIOUtilManager;
 
   private final ExecutorService xferService;
 
@@ -490,6 +491,11 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+    if (Shell.LINUX) {
+      this.diskIOUtilManager = new DiskIOUtilManager(conf);
+    } else {
+      LOG.info("Disk io util manager does not start, only Linux OS release support!");
+    }
   }
 
   /**
@@ -1190,6 +1196,9 @@ public class DataNode extends ReconfigurableBase
         conf.set(DFS_DATANODE_DATA_DIR_KEY,
             Joiner.on(",").join(effectiveVolumes));
         dataDirs = getStorageLocations(conf);
+        if (diskIOUtilManager != null) {
+          diskIOUtilManager.setStorageLocations(dataDirs);
+        }
       }
     }
   }
@@ -1708,6 +1717,10 @@ public class DataNode extends ReconfigurableBase
     this.secureResources = resources;
     synchronized (this) {
       this.dataDirs = dataDirectories;
+    }
+    if (diskIOUtilManager != null) {
+      this.diskIOUtilManager.setStorageLocations(dataDirectories);
+      this.diskIOUtilManager.start();
     }
     this.dnConf = new DNConf(this);
     checkSecureConfig(dnConf, getConf(), resources);
@@ -2505,6 +2518,10 @@ public class DataNode extends ReconfigurableBase
       dataNodeInfoBeanName = null;
     }
     if (shortCircuitRegistry != null) shortCircuitRegistry.shutdown();
+    if (diskIOUtilManager != null) {
+      diskIOUtilManager.stop();
+      diskIOUtilManager = null;
+    }
     LOG.info("Shutdown complete.");
     synchronized(this) {
       // it is already false, but setting it again to avoid a findbug warning.
@@ -4157,5 +4174,10 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   public BlockPoolManager getBlockPoolManager() {
     return blockPoolManager;
+  }
+
+  public int getStorageLocationDiskUtil(StorageLocation location) {
+    return diskIOUtilManager != null ?
+        diskIOUtilManager.getStorageLocationDiskIOUtil(location) : 0;
   }
 }

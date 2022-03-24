@@ -685,4 +685,12 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Get the volume list.
    */
   List<FsVolumeImpl> getVolumeList();
+
+  /**
+   * Get the utility of storage location.
+   *
+   * @param location
+   * @return The utility of storage location.
+   */
+  int getStorageLocationDiskUtil(StorageLocation location);
 }

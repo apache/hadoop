@@ -137,6 +137,11 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
   }
 
   @Override
+  public int getVolumeIOUtil() {
+    return 0;
+  }
+
+  @Override
   public VolumeCheckResult check(VolumeCheckContext context)
       throws Exception {
     return VolumeCheckResult.HEALTHY;

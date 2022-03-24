@@ -2007,5 +2007,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
+  public static final String DFS_DATANODE_DISK_STAT_INTERVAL_SECONDS_KEY =
+      "dfs.datanode.disk.stat.interval.seconds";
+  public static final long DFS_DATANODE_DISK_STAT_INTERVAL_SECONDS_DEFAULT = 1L;
 
+  public static final String
+      DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_IO_UTIL_PREFERENCE_ENABLE_KEY =
+      "dfs.datanode.available-space-volume-choosing-policy.io.util.preference.enable";
+  public static final boolean
+      DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_IO_UTIL_PREFERENCE_ENABLE_DEFAULT = false;
 }
