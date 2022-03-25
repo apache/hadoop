@@ -155,6 +155,42 @@ public class TestDelegationToken {
       return allKeys.get(id.getMasterKeyId());
     }
   }
+
+  public static class TestFailureDelegationTokenSecretManager extends TestDelegationTokenSecretManager {
+    private boolean throwError = false;
+
+    public TestFailureDelegationTokenSecretManager() {
+      super(24*60*60*1000, 10*1000, 1*1000, 3600000);
+    }
+
+    public void setThrowError(boolean throwError) {
+      this.throwError = throwError;
+    }
+
+    @Override
+    protected void storeNewToken(TestDelegationTokenIdentifier ident, long renewDate) throws IOException {
+      if (throwError) {
+        throw new IOException("Test exception");
+      }
+      super.storeNewToken(ident, renewDate);
+    }
+
+    @Override
+    protected void removeStoredToken(TestDelegationTokenIdentifier ident) throws IOException {
+      if (throwError) {
+        throw new IOException("Test exception");
+      }
+      super.removeStoredToken(ident);
+    }
+
+    @Override
+    protected void updateStoredToken(TestDelegationTokenIdentifier ident, long renewDate) throws IOException {
+      if (throwError) {
+        throw new IOException("Test exception");
+      }
+      super.updateStoredToken(ident, renewDate);
+    }
+  }
   
   public static class TokenSelector extends 
   AbstractDelegationTokenSelector<TestDelegationTokenIdentifier>{
@@ -600,6 +636,42 @@ public class TestDelegationToken {
       Assert.assertEquals(0, dtSecretManager.metrics.removeToken.lastStat().numSamples());
       dtSecretManager.cancelToken(token, "JobTracker");
       Assert.assertEquals(1, dtSecretManager.metrics.removeToken.lastStat().numSamples());
+    } finally {
+      dtSecretManager.stopThreads();
+    }
+  }
+
+  @Test
+  public void testDelegationTokenSecretManagerMetricsFailures() throws Exception {
+    TestFailureDelegationTokenSecretManager dtSecretManager = new TestFailureDelegationTokenSecretManager();
+
+    try {
+      dtSecretManager.startThreads();
+
+      final Token<TestDelegationTokenIdentifier> token =
+          generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
+
+      dtSecretManager.setThrowError(true);
+
+      Assert.assertEquals(0, dtSecretManager.metrics.tokenFailure.value());
+      generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
+      Assert.assertEquals(1, dtSecretManager.metrics.tokenFailure.value());
+
+      try {
+        dtSecretManager.renewToken(token, "JobTracker");
+        Assert.fail("Expected exception");
+      } catch (Exception ex) {
+        // Expected exception
+      }
+      Assert.assertEquals(2, dtSecretManager.metrics.tokenFailure.value());
+
+      try {
+        dtSecretManager.cancelToken(token, "JobTracker");
+        Assert.fail("Expected exception");
+      } catch (Exception ex) {
+        // Expected exception
+      }
+      Assert.assertEquals(3, dtSecretManager.metrics.tokenFailure.value());
     } finally {
       dtSecretManager.stopThreads();
     }

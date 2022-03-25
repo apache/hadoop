@@ -44,6 +44,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
 import org.apache.hadoop.metrics2.util.Metrics2Util.TopN;
@@ -446,14 +447,16 @@ extends AbstractDelegationTokenIdentifier>
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
     long start = Time.monotonicNow();
+    boolean success = false;
     try {
       storeToken(identifier, tokenInfo);
+      success = true;
     } catch (IOException ioe) {
       LOG.error("Could not store token " + formatTokenId(identifier) + "!!",
           ioe);
     } finally {
       if (metrics != null) {
-        metrics.addStoreToken(Time.monotonicNow() - start);
+        metrics.addStoreToken(success, Time.monotonicNow() - start);
       }
     }
     return password;
@@ -577,11 +580,13 @@ extends AbstractDelegationTokenIdentifier>
           + formatTokenId(id));
     }
     long start = Time.monotonicNow();
+    boolean success = false;
     try {
       updateToken(id, info);
+      success = true;
     } finally {
       if (metrics != null) {
-        metrics.addUpdateToken(Time.monotonicNow() - start);
+        metrics.addUpdateToken(success, Time.monotonicNow() - start);
       }
     }
     return renewTime;
@@ -620,12 +625,14 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("Token not found " + formatTokenId(id));
     }
     long start = Time.monotonicNow();
+    boolean success = false;
     try {
       removeTokenForOwnerStats(id);
       removeStoredToken(id);
+      success = true;
     } finally {
       if (metrics != null) {
-        metrics.addRemoveToken(Time.monotonicNow() - start);
+        metrics.addRemoveToken(success, Time.monotonicNow() - start);
       }
     }
     return id;
@@ -867,11 +874,14 @@ extends AbstractDelegationTokenIdentifier>
    */
   @Metrics(about="Delegation token secret manager metrics", context="token")
   static class DelegationTokenSecretManagerMetrics implements IOStatisticsSource {
+    private static final Logger LOG = LoggerFactory.getLogger(DelegationTokenSecretManagerMetrics.class);
+
     final static String STORE_TOKEN_STAT = "storeToken";
     final static String UPDATE_TOKEN_STAT = "updateToken";
     final static String REMOVE_TOKEN_STAT = "removeToken";
+    final static String TOKEN_FAILURE_STAT = "tokenFailure";
 
-    final MetricsRegistry registry = new MetricsRegistry("DelegationTokenSecretManagerMetrics");
+    final MetricsRegistry registry;
     final IOStatisticsStore ioStatistics;
 
     @Metric("Rate of storage of delegation tokens and latency (milliseconds)")
@@ -880,6 +890,8 @@ extends AbstractDelegationTokenIdentifier>
     MutableRate updateToken;
     @Metric("Rate of removal of delegation tokens and latency (milliseconds)")
     MutableRate removeToken;
+    @Metric("Counter of delegation tokens operation failures")
+    MutableCounterLong tokenFailure;
 
     static DelegationTokenSecretManagerMetrics create() {
       return DefaultMetricsSystem.instance().register(new DelegationTokenSecretManagerMetrics());
@@ -888,22 +900,40 @@ extends AbstractDelegationTokenIdentifier>
     public DelegationTokenSecretManagerMetrics() {
       ioStatistics = iostatisticsStore()
           .withDurationTracking(STORE_TOKEN_STAT, UPDATE_TOKEN_STAT, REMOVE_TOKEN_STAT)
+          .withCounters(TOKEN_FAILURE_STAT)
           .build();
+      registry = new MetricsRegistry("DelegationTokenSecretManagerMetrics");
+      LOG.debug("Initialized {}", registry);
     }
 
-    public void addStoreToken(long value) {
-      storeToken.add(value);
-      ioStatistics.addTimedOperation(STORE_TOKEN_STAT, value);
+    public void addStoreToken(boolean success, long value) {
+      if (success) {
+        storeToken.add(value);
+        ioStatistics.addTimedOperation(STORE_TOKEN_STAT, value);
+      } else {
+        tokenFailure.incr();
+        ioStatistics.incrementCounter(TOKEN_FAILURE_STAT);
+      }
     }
 
-    public void addUpdateToken(long value) {
-      updateToken.add(value);
-      ioStatistics.addTimedOperation(UPDATE_TOKEN_STAT, value);
+    public void addUpdateToken(boolean success, long value) {
+      if (success) {
+        updateToken.add(value);
+        ioStatistics.addTimedOperation(UPDATE_TOKEN_STAT, value);
+      } else {
+        tokenFailure.incr();
+        ioStatistics.incrementCounter(TOKEN_FAILURE_STAT);
+      }
     }
 
-    public void addRemoveToken(long value) {
-      removeToken.add(value);
-      ioStatistics.addTimedOperation(REMOVE_TOKEN_STAT, value);
+    public void addRemoveToken(boolean success, long value) {
+      if (success) {
+        removeToken.add(value);
+        ioStatistics.addTimedOperation(REMOVE_TOKEN_STAT, value);
+      } else {
+        tokenFailure.incr();
+        ioStatistics.incrementCounter(TOKEN_FAILURE_STAT);
+      }
     }
 
     @Override
