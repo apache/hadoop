@@ -40,8 +40,6 @@ import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
-
 /**
  * Encapsulates low level interactions with S3 object on AWS.
  */
@@ -88,11 +86,11 @@ public class S3File implements Closeable {
       S3AInputStreamStatistics streamStatistics,
       ChangeTracker changeTracker) {
 
-    checkNotNull(context, "context");
-    checkNotNull(s3Attributes, "s3Attributes");
-    checkNotNull(client, "client");
-    checkNotNull(streamStatistics, "streamStatistics");
-    checkNotNull(changeTracker, "changeTracker");
+    Validate.checkNotNull(context, "context");
+    Validate.checkNotNull(s3Attributes, "s3Attributes");
+    Validate.checkNotNull(client, "client");
+    Validate.checkNotNull(streamStatistics, "streamStatistics");
+    Validate.checkNotNull(changeTracker, "changeTracker");
 
     this.context = context;
     this.s3Attributes = s3Attributes;

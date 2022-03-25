@@ -22,9 +22,6 @@ package org.apache.hadoop.fs.common;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public final class ExceptionAsserts {
   private ExceptionAsserts() {}

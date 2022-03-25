@@ -19,15 +19,15 @@
 
 package org.apache.hadoop.fs.common;
 
-import com.twitter.util.Future;
-import com.twitter.util.Awaitable.CanAwait;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.CRC32;
+
+import com.twitter.util.Awaitable.CanAwait;
+import com.twitter.util.Future;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Holds the state of a ByteBuffer that is in use by {@code CachingBlockManager}.

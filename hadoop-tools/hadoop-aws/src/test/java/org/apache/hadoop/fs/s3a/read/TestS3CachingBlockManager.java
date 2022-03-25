@@ -19,21 +19,21 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import static org.junit.Assert.*;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import com.twitter.util.ExecutorServiceFuturePool;
+import com.twitter.util.FuturePool;
+import org.junit.Test;
 
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.BufferData;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import com.twitter.util.ExecutorServiceFuturePool;
-import com.twitter.util.FuturePool;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import static org.junit.Assert.assertEquals;
 
 public class TestS3CachingBlockManager extends AbstractHadoopTestBase {
   static final int FILE_SIZE = 15;

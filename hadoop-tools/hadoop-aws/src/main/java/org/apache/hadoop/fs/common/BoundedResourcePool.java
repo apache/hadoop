@@ -24,8 +24,6 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
-
 /**
  * Manages a fixed pool of resources.
  *
@@ -81,7 +79,7 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
    */
   @Override
   public void release(T item) {
-    checkNotNull(item, "item");
+    Validate.checkNotNull(item, "item");
 
     synchronized (this.createdItems) {
       if (!this.createdItems.contains(item)) {

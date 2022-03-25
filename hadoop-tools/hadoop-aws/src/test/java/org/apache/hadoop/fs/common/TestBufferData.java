@@ -52,22 +52,22 @@ public class TestBufferData extends AbstractHadoopTestBase {
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "buffer",
+        "'buffer' must not be null",
         () -> new BufferData(1, null));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "actionFuture",
+        "'actionFuture' must not be null",
         () -> data.setPrefetch(null));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "actionFuture",
+        "'actionFuture' must not be null",
         () -> data.setCaching(null));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "states",
+        "'states' must not be null",
         () -> data.throwIfStateIncorrect((BufferData.State[]) null));
 
     ExceptionAsserts.assertThrows(

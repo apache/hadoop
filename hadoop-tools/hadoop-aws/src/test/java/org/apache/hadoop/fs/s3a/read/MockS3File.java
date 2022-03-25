@@ -19,15 +19,16 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import org.apache.hadoop.fs.common.Validate;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
-import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
+
+import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 
 /**
  * A mock s3 file with some fault injection.

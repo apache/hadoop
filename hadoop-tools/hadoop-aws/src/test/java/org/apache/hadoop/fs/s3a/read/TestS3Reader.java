@@ -19,14 +19,14 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import static org.junit.Assert.*;
+import java.nio.ByteBuffer;
+
+import org.junit.Test;
 
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import org.junit.Test;
-
-import java.nio.ByteBuffer;
+import static org.junit.Assert.assertEquals;
 
 public class TestS3Reader extends AbstractHadoopTestBase {
 

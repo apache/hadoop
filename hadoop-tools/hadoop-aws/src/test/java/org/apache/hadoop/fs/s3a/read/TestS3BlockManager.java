@@ -19,17 +19,17 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import static org.junit.Assert.*;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import org.junit.Test;
 
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.BufferData;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import org.junit.Test;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import static org.junit.Assert.assertEquals;
 
 public class TestS3BlockManager extends AbstractHadoopTestBase {
 
@@ -47,22 +47,22 @@ public class TestS3BlockManager extends AbstractHadoopTestBase {
 
     // Verify it throws correctly.
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+        IllegalArgumentException.class,
         "'reader' must not be null",
         () -> new S3BlockManager(null, blockData));
 
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+        IllegalArgumentException.class,
         "'blockData' must not be null",
         () -> new S3BlockManager(reader, null));
 
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+        IllegalArgumentException.class,
         "'blockNumber' must not be negative",
         () -> new S3BlockManager(reader, blockData).get(-1));
 
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+        IllegalArgumentException.class,
         "'data' must not be null",
         () -> new S3BlockManager(reader, blockData).release(null));
   }

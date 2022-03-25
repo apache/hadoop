@@ -24,8 +24,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.BlockManager;
-
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import org.apache.hadoop.fs.common.Validate;
 
 /**
  * Provides read access to S3 file one block at a time.
@@ -52,7 +51,9 @@ public class S3BlockManager extends BlockManager {
   public S3BlockManager(S3Reader reader, BlockData blockData) {
     super(blockData);
 
-    this.reader = checkNotNull(reader, "reader");
+    Validate.checkNotNull(reader, "reader");
+
+    this.reader = reader;
   }
 
   /**

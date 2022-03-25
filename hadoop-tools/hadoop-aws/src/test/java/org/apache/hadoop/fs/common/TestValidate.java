@@ -300,7 +300,7 @@ public class TestValidate extends AbstractHadoopTestBase {
 
     // Verify it throws.
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+        IllegalArgumentException.class,
         "'nullArg' must not be null",
         () -> Validate.checkPathExists(null, "nullArg"));
 

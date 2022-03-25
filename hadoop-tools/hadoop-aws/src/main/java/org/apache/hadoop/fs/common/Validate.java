@@ -23,8 +23,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 
-import org.apache.hadoop.util.Preconditions;
-
 /**
  * A superset of Validate class in Apache commons lang3.
  *
@@ -42,7 +40,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkNotNull(Object obj, String argName) {
-    Preconditions.checkNotNull(obj != null, "'%s' must not be null.", argName);
+    checkArgument(obj != null, "'%s' must not be null.", argName);
   }
 
   /**
@@ -52,7 +50,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkPositiveInteger(long value, String argName) {
-    Preconditions.checkArgument(value > 0, "'%s' must be a positive integer.", argName);
+    checkArgument(value > 0, "'%s' must be a positive integer.", argName);
   }
 
   /**
@@ -62,7 +60,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkNotNegative(long value, String argName) {
-    Preconditions.checkArgument(value >= 0, "'%s' must not be negative.", argName);
+    checkArgument(value >= 0, "'%s' must not be negative.", argName);
   }
 
   /*
@@ -72,7 +70,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkRequired(boolean isPresent, String argName) {
-    Preconditions.checkArgument(isPresent, "'%s' is required.", argName);
+    checkArgument(isPresent, "'%s' is required.", argName);
   }
 
   /**
@@ -82,7 +80,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkValid(boolean isValid, String argName) {
-    Preconditions.checkArgument(isValid, "'%s' is invalid.", argName);
+    checkArgument(isValid, "'%s' is invalid.", argName);
   }
 
   /**
@@ -387,16 +385,19 @@ public final class Validate {
    */
   public static void checkPathExistsAsFile(Path path, String argName) {
     checkPathExists(path, argName);
-    Preconditions.checkArgument(Files.isRegularFile(path),
-        "Path %s (%s) must point to a file.", argName, path);
+    checkArgument(Files.isRegularFile(path), "Path %s (%s) must point to a file.", argName, path);
   }
 
   public static void checkArgument(boolean expression, String format, Object... args) {
-    Preconditions.checkArgument(expression, format, args);
+    org.apache.commons.lang3.Validate.isTrue(expression, format, args);
+  }
+
+  public static void checkState(boolean expression, String format, Object... args) {
+    org.apache.commons.lang3.Validate.validState(expression, format, args);
   }
 
   private static void checkNotEmpty(int arraySize, String argName) {
-    Preconditions.checkArgument(
+    Validate.checkArgument(
         arraySize > 0,
         "'%s' must have at least one element.",
         argName);

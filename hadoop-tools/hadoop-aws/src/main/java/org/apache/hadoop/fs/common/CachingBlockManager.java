@@ -19,17 +19,17 @@
 
 package org.apache.hadoop.fs.common;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.twitter.util.Await;
 import com.twitter.util.ExceptionalFunction0;
 import com.twitter.util.Future;
 import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Provides read access to the underlying file one block at a time.

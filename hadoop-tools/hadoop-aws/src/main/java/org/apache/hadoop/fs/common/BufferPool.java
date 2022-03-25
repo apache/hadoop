@@ -19,10 +19,6 @@
 
 package org.apache.hadoop.fs.common;
 
-import com.twitter.util.Future;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -32,9 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 
-import static org.apache.hadoop.util.Preconditions.checkArgument;
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
-import static org.apache.hadoop.util.Preconditions.checkState;
+import com.twitter.util.Future;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages a fixed pool of {@code ByteBuffer} instances.
@@ -155,7 +151,7 @@ public class BufferPool implements Closeable {
     data = new BufferData(blockNumber, buffer.duplicate());
 
     synchronized (this.allocated) {
-      checkState(this.find(blockNumber) == null, "buffer data already exists");
+      Validate.checkState(this.find(blockNumber) == null, "buffer data already exists");
 
       this.allocated.put(data, buffer);
     }
@@ -212,10 +208,10 @@ public class BufferPool implements Closeable {
    * @throws IllegalArgumentException if data cannot be released due to its state.
    */
   public synchronized void release(BufferData data) {
-    checkNotNull(data, "data");
+    Validate.checkNotNull(data, "data");
 
     synchronized (data) {
-      checkArgument(
+      Validate.checkArgument(
           this.canRelease(data),
           String.format("Unable to release buffer: %s", data));
 

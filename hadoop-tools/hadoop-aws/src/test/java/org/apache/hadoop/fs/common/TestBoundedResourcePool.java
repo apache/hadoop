@@ -65,8 +65,8 @@ public class TestBoundedResourcePool extends AbstractHadoopTestBase {
         () -> new BufferPool(0));
 
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
-        "item",
+        IllegalArgumentException.class,
+        "'item' must not be null",
         () -> pool.release(null));
 
     ExceptionAsserts.assertThrows(

@@ -19,8 +19,13 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import com.twitter.util.ExecutorServiceFuturePool;
 import com.twitter.util.FuturePool;
+import org.junit.Test;
+
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
@@ -28,11 +33,6 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
-
-import org.junit.Test;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class TestS3File extends AbstractHadoopTestBase {
   private final ExecutorService threadPool = Executors.newFixedThreadPool(1);

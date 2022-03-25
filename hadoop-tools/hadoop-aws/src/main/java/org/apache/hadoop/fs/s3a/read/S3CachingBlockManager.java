@@ -28,8 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.CachingBlockManager;
-
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import org.apache.hadoop.fs.common.Validate;
 
 /**
  * Provides access to S3 file one block at a time.
@@ -59,7 +58,9 @@ public class S3CachingBlockManager extends CachingBlockManager {
       int bufferPoolSize) {
     super(futurePool, blockData, bufferPoolSize);
 
-    this.reader = checkNotNull(reader, "reader");
+    Validate.checkNotNull(reader, "reader");
+
+    this.reader = reader;
   }
 
   protected S3Reader getReader() {

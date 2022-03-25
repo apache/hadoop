@@ -71,8 +71,8 @@ public class TestBufferPool extends AbstractHadoopTestBase {
         () -> pool.tryAcquire(-1));
 
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
-        "data",
+        IllegalArgumentException.class,
+        "'data' must not be null",
         () -> pool.release((BufferData) null));
   }
 

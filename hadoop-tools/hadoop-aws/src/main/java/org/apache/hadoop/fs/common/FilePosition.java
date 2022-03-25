@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.common;
 
 import java.nio.ByteBuffer;
 
-import static org.apache.hadoop.util.Preconditions.checkState;
-
 /**
  * Provides functionality related to tracking the position within a file.
  *
@@ -278,7 +276,7 @@ public class FilePosition {
 
   private void throwIfInvalidBuffer() {
     if (!this.isValid()) {
-      checkState(buffer != null, "'buffer' must not be null");
+      Validate.checkState(buffer != null, "'buffer' must not be null");
     }
   }
 }

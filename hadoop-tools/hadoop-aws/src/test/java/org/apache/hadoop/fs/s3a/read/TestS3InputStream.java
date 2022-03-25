@@ -19,10 +19,15 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import static org.junit.Assert.*;
+import java.io.EOFException;
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.twitter.util.ExecutorServiceFuturePool;
 import com.twitter.util.FuturePool;
+import org.junit.Test;
+
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -30,12 +35,7 @@ import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import org.junit.Test;
-
-import java.io.EOFException;
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Applies the same set of tests to both S3CachingInputStream and S3InMemoryInputStream.
@@ -57,17 +57,17 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
     new S3CachingInputStream(readContext, attrs, client);
 
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+        IllegalArgumentException.class,
         "'context' must not be null",
         () -> new S3CachingInputStream(null, attrs, client));
 
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+        IllegalArgumentException.class,
         "'s3Attributes' must not be null",
         () -> new S3CachingInputStream(readContext, null, client));
 
     ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+        IllegalArgumentException.class,
         "'client' must not be null",
         () -> new S3CachingInputStream(readContext, attrs, null));
   }
