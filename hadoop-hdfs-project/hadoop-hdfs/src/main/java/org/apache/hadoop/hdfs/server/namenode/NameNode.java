@@ -2454,7 +2454,7 @@ public class NameNode extends ReconfigurableBase implements
     } catch (NumberFormatException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("reconfigureBlockInvalidateLimit");
     }
   }
 
