@@ -37,7 +37,7 @@ public final class AMDefinitionFactory {
 
   private AMDefinitionFactory() {}
 
-  public static AMDefinitionSLS createFromSlsTrace(Map<?, ?> jsonJob,
+  public static AMDefinitionSLS createFromSlsTrace(Map<String, String> jsonJob,
       SLSRunner slsRunner) throws YarnException {
     AMDefinitionSLS amDefinition = AMDefinitionSLS.Builder.create(jsonJob)
         .withAmType(SLSConfiguration.AM_TYPE)
@@ -94,7 +94,7 @@ public final class AMDefinitionFactory {
     return amDefinition;
   }
 
-  private static Resource getAMContainerResourceSLS(Map<?, ?> jsonJob,
+  private static Resource getAMContainerResourceSLS(Map<String, String> jsonJob,
       Configured configured) {
     Resource amContainerResource =
         SLSConfiguration.getAMContainerResource(configured.getConf());
@@ -106,7 +106,7 @@ public final class AMDefinitionFactory {
     for (ResourceInformation info : infors) {
       String key = SLSConfiguration.JOB_AM_PREFIX + info.getName();
       if (jsonJob.containsKey(key)) {
-        long value = Long.parseLong(jsonJob.get(key).toString());
+        long value = Long.parseLong(jsonJob.get(key));
         amContainerResource.setResourceValue(info.getName(), value);
       }
     }

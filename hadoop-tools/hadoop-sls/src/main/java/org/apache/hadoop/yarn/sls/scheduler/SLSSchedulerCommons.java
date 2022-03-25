@@ -54,22 +54,19 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SLSSchedulerCommons {
   private static final Logger LOG = LoggerFactory.getLogger(SLSSchedulerCommons.class);
 
-  private AbstractYarnScheduler scheduler;
+  private final AbstractYarnScheduler<?, ?> scheduler;
   private boolean metricsON;
   private SchedulerMetrics schedulerMetrics;
-  private Map<ContainerId, Resource> preemptionContainerMap =
-      new ConcurrentHashMap<>();
-
-  private Map<ApplicationAttemptId, String> appQueueMap =
-      new ConcurrentHashMap<>();
-  private Tracker tracker;
+  private final Map<ContainerId, Resource> preemptionContainerMap = new ConcurrentHashMap<>();
+  private final Map<ApplicationAttemptId, String> appQueueMap = new ConcurrentHashMap<>();
+  private final Tracker tracker;
   
   public SLSSchedulerCommons(AbstractYarnScheduler scheduler) {
     this.scheduler = scheduler;
     this.tracker = new Tracker();
   }
 
-  public void initMetrics(Class<? extends AbstractYarnScheduler> schedulerClass, Configuration conf) {
+  public void initMetrics(Class<? extends AbstractYarnScheduler<?, ?>> schedulerClass, Configuration conf) {
     metricsON = conf.getBoolean(SLSConfiguration.METRICS_SWITCH, true);
     if (metricsON) {
       try {

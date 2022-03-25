@@ -88,9 +88,9 @@ public class TaskContainerDefinition {
       return new Builder();
     }
 
-    public Builder withDuration(Map<?, ?> jsonTask, String key) {
+    public Builder withDuration(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        this.duration = Integer.parseInt(jsonTask.get(key).toString());
+        this.duration = Integer.parseInt(jsonTask.get(key));
       }
       return this;
     }
@@ -106,23 +106,23 @@ public class TaskContainerDefinition {
      * @param key The json key.
      * @return the builder
      */
-    public Builder withDurationLegacy(Map<?, ?> jsonTask, String key) {
+    public Builder withDurationLegacy(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        this.durationLegacy = Integer.parseInt(jsonTask.get(key).toString());
+        this.durationLegacy = Integer.parseInt(jsonTask.get(key));
       }
       return this;
     }
 
-    public Builder withTaskStart(Map<?, ?> jsonTask, String key) {
+    public Builder withTaskStart(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        this.taskStart = Long.parseLong(jsonTask.get(key).toString());
+        this.taskStart = Long.parseLong(jsonTask.get(key));
       }
       return this;
     }
 
-    public Builder withTaskFinish(Map<?, ?> jsonTask, String key) {
+    public Builder withTaskFinish(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        this.taskFinish = Long.parseLong(jsonTask.get(key).toString());
+        this.taskFinish = Long.parseLong(jsonTask.get(key));
       }
       return this;
     }
@@ -132,9 +132,9 @@ public class TaskContainerDefinition {
       return this;
     }
 
-    public Builder withPriority(Map<?, ?> jsonTask, String key) {
+    public Builder withPriority(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        this.priority = Integer.parseInt(jsonTask.get(key).toString());
+        this.priority = Integer.parseInt(jsonTask.get(key));
       }
       return this;
     }
@@ -144,9 +144,9 @@ public class TaskContainerDefinition {
       return this;
     }
 
-    public Builder withType(Map<?, ?> jsonTask, String key) {
+    public Builder withType(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        this.type = jsonTask.get(key).toString();
+        this.type = jsonTask.get(key);
       }
       return this;
     }
@@ -156,9 +156,9 @@ public class TaskContainerDefinition {
       return this;
     }
 
-    public Builder withCount(Map<?, ?> jsonTask, String key) {
+    public Builder withCount(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        count = Integer.parseInt(jsonTask.get(key).toString());
+        count = Integer.parseInt(jsonTask.get(key));
         count = Math.max(count, 1);
       }
       return this;
@@ -169,10 +169,9 @@ public class TaskContainerDefinition {
       return this;
     }
 
-    public Builder withExecutionType(Map<?, ?> jsonTask, String key) {
+    public Builder withExecutionType(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        this.executionType = ExecutionType.valueOf(
-            jsonTask.get(key).toString());
+        this.executionType = ExecutionType.valueOf(jsonTask.get(key));
       }
       return this;
     }
@@ -182,9 +181,9 @@ public class TaskContainerDefinition {
       return this;
     }
 
-    public Builder withAllocationId(Map<?, ?> jsonTask, String key) {
+    public Builder withAllocationId(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        this.allocationId = Long.parseLong(jsonTask.get(key).toString());
+        this.allocationId = Long.parseLong(jsonTask.get(key));
       }
       return this;
     }
@@ -194,9 +193,9 @@ public class TaskContainerDefinition {
       return this;
     }
 
-    public Builder withRequestDelay(Map<?, ?> jsonTask, String key) {
+    public Builder withRequestDelay(Map<String, String> jsonTask, String key) {
       if (jsonTask.containsKey(key)) {
-        requestDelay = Long.parseLong(jsonTask.get(key).toString());
+        requestDelay = Long.parseLong(jsonTask.get(key));
         requestDelay = Math.max(requestDelay, 0);
       }
       return this;

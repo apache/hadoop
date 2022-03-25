@@ -22,12 +22,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.Collections;
@@ -37,6 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.cli.CommandLine;
@@ -126,8 +129,7 @@ public class SLSRunner extends Configured implements Tool {
   private long maxRuntime;
   private String tableMapping;
 
-  private final static Map<String, Object> simulateInfoMap =
-          new HashMap<String, Object>();
+  private final static Map<String, Object> simulateInfoMap = new HashMap<>();
 
   // logger
   public final static Logger LOG = LoggerFactory.getLogger(SLSRunner.class);
@@ -227,7 +229,7 @@ public class SLSRunner extends Configured implements Tool {
 
   public void setSimulationParams(TraceType inType, String[] inTraces,
       String nodes, String outDir, Set<String> trackApps,
-      boolean printsimulation) throws IOException, ClassNotFoundException {
+      boolean printsimulation) {
 
     this.inputType = inType;
     this.inputTraces = inTraces.clone();
@@ -420,7 +422,6 @@ public class SLSRunner extends Configured implements Tool {
         System.currentTimeMillis() - startTimeMS);
   }
 
-  @SuppressWarnings("unchecked")
   private void startAM() throws YarnException, IOException {
     switch (inputType) {
     case SLS:
@@ -449,21 +450,21 @@ public class SLSRunner extends Configured implements Tool {
   /**
    * Parse workload from a SLS trace file.
    */
-  @SuppressWarnings("unchecked")
   private void startAMFromSLSTrace(String inputTrace) throws IOException {
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
 
     try (Reader input = new InputStreamReader(
-        new FileInputStream(inputTrace), "UTF-8")) {
-      Iterator<Map> jobIter = mapper.readValues(
-          jsonF.createParser(input), Map.class);
+        new FileInputStream(inputTrace), StandardCharsets.UTF_8)) {
+      JavaType type = mapper.getTypeFactory().
+          constructMapType(Map.class, String.class, String.class);
+      Iterator<Map<String, String>> jobIter = mapper.readValues(
+          jsonF.createParser(input), type);
 
       while (jobIter.hasNext()) {
         try {
-          Map jsonJob = jobIter.next();
-          AMDefinitionSLS amDef = AMDefinitionFactory.createFromSlsTrace(
-              jsonJob, this);
+          Map<String, String> jsonJob = jobIter.next();
+          AMDefinitionSLS amDef = AMDefinitionFactory.createFromSlsTrace(jsonJob, this);
           startAMs(amDef);
         } catch (Exception e) {
           LOG.error("Failed to create an AM: {}", e.getMessage());
@@ -500,7 +501,6 @@ public class SLSRunner extends Configured implements Tool {
   /**
    * Parse workload from a rumen trace file.
    */
-  @SuppressWarnings("unchecked")
   private void startAMFromRumenTrace(String inputTrace, long baselineTimeMS)
       throws IOException {
     Configuration conf = new Configuration();
@@ -536,7 +536,6 @@ public class SLSRunner extends Configured implements Tool {
   /**
    * parse workload information from synth-generator trace files.
    */
-  @SuppressWarnings("unchecked")
   private void startAMFromSynthGenerator() throws YarnException, IOException {
     Configuration localConf = new Configuration();
     localConf.set("fs.defaultFS", "file:///");
@@ -729,17 +728,17 @@ public class SLSRunner extends Configured implements Tool {
       throw new YarnException("Cannot create output directory");
     }
 
-    Set<String> trackedJobSet = new HashSet<String>();
+    Set<String> trackedJobSet = new HashSet<>();
     if (cmd.hasOption("trackjobs")) {
       String trackjobs = cmd.getOptionValue("trackjobs");
-      String jobIds[] = trackjobs.split(",");
+      String[] jobIds = trackjobs.split(",");
       trackedJobSet.addAll(Arrays.asList(jobIds));
     }
 
     String tempNodeFile =
         cmd.hasOption("nodes") ? cmd.getOptionValue("nodes") : "";
 
-    TraceType tempTraceType = TraceType.SLS;
+    TraceType tempTraceType;
     switch (traceType) {
     case "SLS":
       tempTraceType = TraceType.SLS;
@@ -834,9 +833,7 @@ public class SLSRunner extends Configured implements Tool {
       NodeDetails that = (NodeDetails) o;
 
       return StringUtils.equals(hostname, that.hostname) && (
-          nodeResource == null ?
-              that.nodeResource == null :
-              nodeResource.equals(that.nodeResource)) && SetUtils
+          Objects.equals(nodeResource, that.nodeResource)) && SetUtils
           .isEqualSet(labels, that.labels);
     }
 
