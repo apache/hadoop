@@ -949,7 +949,7 @@ public class TestMover {
               {StorageType.ARCHIVE, StorageType.ARCHIVE},
               {StorageType.ARCHIVE, StorageType.ARCHIVE},
               {StorageType.ARCHIVE, StorageType.ARCHIVE}},
-          true, null, null, null,capacities, null, false, false, false, null, null, null);
+          true, null, null, null, capacities, null, false, false, false, null, null, null);
       cluster.triggerHeartbeats();
 
       // move file to ARCHIVE
