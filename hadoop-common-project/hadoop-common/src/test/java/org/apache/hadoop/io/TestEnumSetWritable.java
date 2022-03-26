@@ -119,7 +119,7 @@ public class TestEnumSetWritable {
   public void testAvroReflect() throws Exception {
     String schema = "{\"type\":\"array\",\"items\":{\"type\":\"enum\","
         + "\"name\":\"TestEnumSet\","
-        + "\"namespace\":\"org.apache.hadoop.io.TestEnumSetWritable$\","
+        + "\"namespace\":\"org.apache.hadoop.io.TestEnumSetWritable\","
         + "\"symbols\":[\"CREATE\",\"OVERWRITE\",\"APPEND\"]},"
         + "\"java-class\":\"org.apache.hadoop.io.EnumSetWritable\"}";
     Type type =
