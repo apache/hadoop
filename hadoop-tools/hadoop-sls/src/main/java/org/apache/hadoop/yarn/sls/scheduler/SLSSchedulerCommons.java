@@ -100,7 +100,8 @@ public class SLSSchedulerCommons {
           .time();
       Allocation allocation = null;
       try {
-        allocation = scheduler.allocate(attemptId, resourceRequests,
+        allocation = ((SchedulerWrapper)scheduler).allocatePropagated(
+            attemptId, resourceRequests,
             schedulingRequests, containerIds,
             blacklistAdditions, blacklistRemovals, updateRequests);
         return allocation;
@@ -118,7 +119,8 @@ public class SLSSchedulerCommons {
         }
       }
     } else {
-      return scheduler.allocate(attemptId, resourceRequests, schedulingRequests,
+      return ((SchedulerWrapper)scheduler).allocatePropagated(
+          attemptId, resourceRequests, schedulingRequests,
           containerIds,
           blacklistAdditions, blacklistRemovals, updateRequests);
     }
@@ -204,7 +206,7 @@ public class SLSSchedulerCommons {
 
   public void handle(SchedulerEvent schedulerEvent) {
     if (!metricsON) {
-      scheduler.handle(schedulerEvent);
+      ((SchedulerWrapper)scheduler).propagatedHandle(schedulerEvent);
       return;
     }
 
@@ -245,7 +247,7 @@ public class SLSSchedulerCommons {
       operationTimer = schedulerMetrics.getSchedulerHandleTimer(
           schedulerEvent.getType()).time();
 
-      scheduler.handle(schedulerEvent);
+      ((SchedulerWrapper)scheduler).propagatedHandle(schedulerEvent);
     } finally {
       if (handlerTimer != null) {
         handlerTimer.stop();

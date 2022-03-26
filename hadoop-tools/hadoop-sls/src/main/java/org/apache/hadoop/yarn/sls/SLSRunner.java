@@ -175,11 +175,12 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   private void init(Configuration tempConf) throws ClassNotFoundException {
+    // runner configuration
+    setConf(tempConf);
+
     nmMap = new ConcurrentHashMap<>();
     queueAppNumMap = new HashMap<>();
     amRunner = new AMRunner(runner, this);
-    // runner configuration
-    setConf(tempConf);
 
     // runner
     poolSize = tempConf.getInt(SLSConfiguration.RUNNER_POOL_SIZE,

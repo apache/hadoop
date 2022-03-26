@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 @Private
 @Unstable
 public class SLSCapacityScheduler extends CapacityScheduler implements
-        SchedulerWrapper,Configurable {
+        SchedulerWrapper, Configurable {
 
   private final SLSSchedulerCommons schedulerCommons;
   private Configuration conf;
@@ -65,6 +65,15 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
         containerIds, blacklistAdditions, blacklistRemovals, updateRequests);
   }
 
+  @Override
+  public Allocation allocatePropagated(ApplicationAttemptId attemptId,
+      List<ResourceRequest> resourceRequests,
+      List<SchedulingRequest> schedulingRequests,
+      List<ContainerId> containerIds, List<String> blacklistAdditions,
+      List<String> blacklistRemovals, ContainerUpdates updateRequests) {
+    return super.allocate(attemptId, resourceRequests, schedulingRequests,
+        containerIds, blacklistAdditions, blacklistRemovals, updateRequests);
+  }
 
   @Override
   public boolean tryCommit(Resource cluster, ResourceCommitRequest r,
@@ -95,6 +104,11 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   @Override
   public void handle(SchedulerEvent schedulerEvent) {
     schedulerCommons.handle(schedulerEvent);
+  }
+
+  @Override
+  public void propagatedHandle(SchedulerEvent schedulerEvent) {
+    super.handle(schedulerEvent);
   }
 
   @Override

@@ -64,6 +64,21 @@ public class SLSFairScheduler extends FairScheduler
   }
 
   @Override
+  public void propagatedHandle(SchedulerEvent schedulerEvent) {
+    super.handle(schedulerEvent);
+  }
+
+  @Override
+  public Allocation allocatePropagated(ApplicationAttemptId attemptId,
+      List<ResourceRequest> resourceRequests,
+      List<SchedulingRequest> schedulingRequests,
+      List<ContainerId> containerIds, List<String> blacklistAdditions,
+      List<String> blacklistRemovals, ContainerUpdates updateRequests) {
+    return super.allocate(attemptId, resourceRequests, schedulingRequests,
+        containerIds, blacklistAdditions, blacklistRemovals, updateRequests);
+  }
+
+  @Override
   public void serviceStop() throws Exception {
     schedulerCommons.stopMetrics();
     super.serviceStop();
