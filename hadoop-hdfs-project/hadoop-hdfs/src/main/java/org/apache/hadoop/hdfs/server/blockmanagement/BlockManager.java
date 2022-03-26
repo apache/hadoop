@@ -2752,11 +2752,7 @@ public class BlockManager implements BlockStatsMXBean {
     }
     DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
     if (node == null) {
-      final UnregisteredNodeException e = new UnregisteredNodeException(nodeID, null);
-      NameNode.stateChangeLog.error("BLOCK* NameSystem.getDatanode: " + "Data node " + nodeID +
-          " is attempting to report storage ID " + nodeID.getDatanodeUuid() +
-          ". But this node is not registered.");
-      throw e;
+      throw new UnregisteredNodeException(nodeID, null);
     }
     final long startTime = Time.monotonicNow();
     return blockReportLeaseManager.checkLease(node, startTime,
