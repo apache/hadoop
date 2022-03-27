@@ -24,8 +24,8 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
-import com.twitter.util.ExceptionalFunction0;
 import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -246,7 +246,7 @@ public abstract class CachingBlockManager extends BlockManager {
 
       BlockOperations.Operation op = this.ops.requestPrefetch(blockNumber);
       PrefetchTask prefetchTask = new PrefetchTask(data, this);
-      com.twitter.util.Future<Void> prefetchFuture = this.futurePool.apply(prefetchTask);
+      com.twitter.util.Future<Void> prefetchFuture = this.futurePool.apply(com.twitter.util.Function.func0(prefetchTask));
       data.setPrefetch(prefetchFuture.toCompletableFuture());
       this.ops.end(op);
     }
@@ -343,7 +343,7 @@ public abstract class CachingBlockManager extends BlockManager {
   /**
    * Read task that is submitted to the future pool.
    */
-  private static class PrefetchTask extends ExceptionalFunction0<Void> {
+  private static class PrefetchTask implements Supplier<Void> {
     private final BufferData data;
     private final CachingBlockManager blockManager;
 
@@ -353,7 +353,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     @Override
-    public Void applyE() {
+    public Void get() {
       try {
         this.blockManager.prefetch(data);
       } catch (Exception e) {
@@ -415,7 +415,7 @@ public abstract class CachingBlockManager extends BlockManager {
       }
 
       CachePutTask task = new CachePutTask(data, blockFuture, this);
-      com.twitter.util.Future<Void> actionFuture = this.futurePool.apply(task);
+      com.twitter.util.Future<Void> actionFuture = this.futurePool.apply(com.twitter.util.Function.func0(task));
       data.setCaching(actionFuture.toCompletableFuture());
       this.ops.end(op);
     }
@@ -499,7 +499,7 @@ public abstract class CachingBlockManager extends BlockManager {
     this.cache.put(blockNumber, buffer);
   }
 
-  private static class CachePutTask extends ExceptionalFunction0<Void> {
+  private static class CachePutTask implements Supplier<Void> {
     private final BufferData data;
 
     // Block being asynchronously fetched.
@@ -518,7 +518,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     @Override
-    public Void applyE() {
+    public Void get() {
       this.blockManager.addToCacheAndRelease(this.data, this.blockFuture);
       return null;
     }
