@@ -363,7 +363,7 @@ public class AbstractPreemptableResourceCalculator {
   }
 
   /**
-   * Computes the normalized guaranteed capacity based on the weight of a queue's abs capacity
+   * Computes the normalized guaranteed capacity based on the weight of a queue's abs capacity.
    *
    * Example:
    *  There are two active queues: queueA & queueB, and
@@ -387,8 +387,9 @@ public class AbstractPreemptableResourceCalculator {
       q.normalizedGuarantee[resourceTypeIdx] = q.getAbsCapacity() / activeTotalAbsCap;
     }
   }
+
   /**
-   * Computes the normalized guaranteed capacity evenly based on num of active queues
+   * Computes the normalized guaranteed capacity evenly based on num of active queues.
    *
    * @param q
    *          the queue to consider
@@ -404,7 +405,7 @@ public class AbstractPreemptableResourceCalculator {
   }
 
   /**
-   * The default way to compute a queue's normalized guaranteed capacity
+   * The default way to compute a queue's normalized guaranteed capacity.
    *
    * For each resource type, divide a queue's configured guaranteed amount (MBs/Vcores) by
    * the total amount of guaranteed resource of all active queues
