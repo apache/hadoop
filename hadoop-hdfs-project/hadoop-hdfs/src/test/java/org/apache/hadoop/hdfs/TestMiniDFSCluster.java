@@ -328,6 +328,9 @@ public class TestMiniDFSCluster {
     }
   }
 
+  // There is a possibility that this test might fail if any other concurrently running
+  // test could bind same port as one of the ports returned by NetUtils.getFreeSocketPorts(6)
+  // before datanodes are started.
   @Test
   public void testStartStopWithPorts() throws Exception {
     Configuration conf = new Configuration();
