@@ -1651,7 +1651,7 @@
   <name>dfs.block.scanner.volume.bytes.per.second</name>
   <value>1048576</value>
   <description>
-        If this is 0, the DataNode's block scanner will be disabled.  If this
+        If this is configured less than or equal to zero, the DataNode's block scanner will be disabled.  If this
         is positive, this is the number of bytes per second that the DataNode's
         block scanner will try to scan from each volume.
   </description>
