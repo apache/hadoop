@@ -21,12 +21,11 @@ package org.apache.hadoop.fs.common;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.twitter.util.Await;
 import com.twitter.util.ExceptionalFunction0;
-import com.twitter.util.Future;
 import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -247,8 +246,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
       BlockOperations.Operation op = this.ops.requestPrefetch(blockNumber);
       PrefetchTask prefetchTask = new PrefetchTask(data, this);
-      Future<Void> prefetchFuture = this.futurePool.apply(prefetchTask);
-      data.setPrefetch(prefetchFuture);
+      com.twitter.util.Future<Void> prefetchFuture = this.futurePool.apply(prefetchTask);
+      data.setPrefetch(prefetchFuture.toCompletableFuture());
       this.ops.end(op);
     }
   }
@@ -412,12 +411,12 @@ public abstract class CachingBlockManager extends BlockManager {
       if (state == BufferData.State.PREFETCHING) {
         blockFuture = data.getActionFuture();
       } else {
-        blockFuture = Future.value(null);
+        blockFuture = (Future<Void>) com.twitter.util.Future.value(null).toJavaFuture();
       }
 
       CachePutTask task = new CachePutTask(data, blockFuture, this);
-      Future<Void> actionFuture = this.futurePool.apply(task);
-      data.setCaching(actionFuture);
+      com.twitter.util.Future<Void> actionFuture = this.futurePool.apply(task);
+      data.setCaching(actionFuture.toCompletableFuture());
       this.ops.end(op);
     }
   }
@@ -433,7 +432,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     try {
-      Await.result(blockFuture);
+      blockFuture.get();
       if (data.stateEqualsOneOf(BufferData.State.DONE)) {
         // There was an error during prefetch.
         return;

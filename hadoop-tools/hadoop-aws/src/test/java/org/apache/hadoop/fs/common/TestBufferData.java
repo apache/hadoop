@@ -24,8 +24,8 @@ import java.nio.ReadOnlyBufferException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-import com.twitter.util.Future;
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -83,13 +83,15 @@ public class TestBufferData extends AbstractHadoopTestBase {
 
     assertEquals(BufferData.State.BLANK, data.getState());
 
-    Future<Void> actionFuture = Future.value(null);
+    CompletableFuture<Void> actionFuture = new CompletableFuture<>();
+    actionFuture.complete(null);
     data.setPrefetch(actionFuture);
     assertEquals(BufferData.State.PREFETCHING, data.getState());
     assertNotNull(data.getActionFuture());
     assertSame(actionFuture, data.getActionFuture());
 
-    Future<Void> actionFuture2 = Future.value(null);
+    CompletableFuture<Void> actionFuture2 = new CompletableFuture<>();
+    actionFuture.complete(null);
     data.setCaching(actionFuture2);
     assertEquals(BufferData.State.CACHING, data.getState());
     assertNotNull(data.getActionFuture());
@@ -117,7 +119,8 @@ public class TestBufferData extends AbstractHadoopTestBase {
 
   @Test
   public void testInvalidStateUpdates() throws Exception {
-    Future<Void> actionFuture = Future.value(null);
+    CompletableFuture<Void> actionFuture = new CompletableFuture<>();
+    actionFuture.complete(null);
     testInvalidStateUpdatesHelper(
         (d) -> d.setPrefetch(actionFuture),
         BufferData.State.BLANK,
