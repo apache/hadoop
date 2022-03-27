@@ -282,11 +282,17 @@ public class TestBlockScanner {
   public void testDisableVolumeScanner() throws Exception {
     Configuration conf = new Configuration();
     disableBlockScanner(conf);
-    TestContext ctx = new TestContext(conf, 1);
-    try {
-      Assert.assertFalse(ctx.datanode.getBlockScanner().isEnabled());
-    } finally {
-      ctx.close();
+    try(TestContext ctx = new TestContext(conf, 1)) {
+      assertFalse(ctx.datanode.getBlockScanner().isEnabled());
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testDisableVolumeScanner2() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setLong(DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND, -1L);
+    try(TestContext ctx = new TestContext(conf, 1)) {
+      assertFalse(ctx.datanode.getBlockScanner().isEnabled());
     }
   }
 
