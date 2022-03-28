@@ -248,7 +248,7 @@ public abstract class CachingBlockManager extends BlockManager {
 
       BlockOperations.Operation op = this.ops.requestPrefetch(blockNumber);
       PrefetchTask prefetchTask = new PrefetchTask(data, this);
-      Future<Void> prefetchFuture = this.futurePool.apply(prefetchTask);
+      Future<Void> prefetchFuture = this.futurePool.executeFunction(prefetchTask);
       data.setPrefetch(prefetchFuture);
       this.ops.end(op);
     }
@@ -419,7 +419,7 @@ public abstract class CachingBlockManager extends BlockManager {
       }
 
       CachePutTask task = new CachePutTask(data, blockFuture, this);
-      Future<Void> actionFuture = this.futurePool.apply(task);
+      Future<Void> actionFuture = this.futurePool.executeFunction(task);
       data.setCaching(actionFuture);
       this.ops.end(op);
     }

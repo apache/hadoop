@@ -48,7 +48,7 @@ public class ExecutorServiceFuturePool {
      * @throws java.util.concurrent.RejectedExecutionException can be thrown
      * @throws NullPointerException if f param is null
      */
-    public Future<Void> apply(final Supplier<Void> f) {
+    public Future<Void> executeFunction(final Supplier<Void> f) {
         return executor.submit(f::get);
     }
 
@@ -58,7 +58,7 @@ public class ExecutorServiceFuturePool {
      * @throws java.util.concurrent.RejectedExecutionException can be thrown
      * @throws NullPointerException if f param is null
      */
-    public Future<Void> apply(final Runnable r) {
+    public Future<Void> executeRunnable(final Runnable r) {
         return (Future<Void>) executor.submit(() -> r.run());
     }
 

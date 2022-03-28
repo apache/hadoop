@@ -27,7 +27,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -39,7 +38,7 @@ public class TestExecutorServiceFuturePool {
         try {
             ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
             final AtomicBoolean atomicBoolean = new AtomicBoolean(false);
-            Future<Void> future = futurePool.apply(() -> atomicBoolean.set(true));
+            Future<Void> future = futurePool.executeRunnable(() -> atomicBoolean.set(true));
             future.get(30, TimeUnit.SECONDS);
             assertTrue(atomicBoolean.get());
         } finally {
@@ -53,7 +52,7 @@ public class TestExecutorServiceFuturePool {
         try {
             ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
             final AtomicBoolean atomicBoolean = new AtomicBoolean(false);
-            Future<Void> future = futurePool.apply(() -> {
+            Future<Void> future = futurePool.executeFunction(() -> {
                 atomicBoolean.set(true);
                 return null;
             });
@@ -69,7 +68,7 @@ public class TestExecutorServiceFuturePool {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
         try {
             ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
-            Future<Void> future = futurePool.apply((Runnable) () -> {
+            Future<Void> future = futurePool.executeRunnable(() -> {
                 throw new IllegalStateException("deliberate");
             });
             assertThrows(ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
@@ -83,11 +82,8 @@ public class TestExecutorServiceFuturePool {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
         try {
             ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
-            Future<Void> future = futurePool.apply(new Supplier<Void>() {
-                @Override
-                public Void get() {
-                    throw new IllegalStateException("deliberate");
-                }
+            Future<Void> future = futurePool.executeFunction(() -> {
+                throw new IllegalStateException("deliberate");
             });
             assertThrows(ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
         } finally {
