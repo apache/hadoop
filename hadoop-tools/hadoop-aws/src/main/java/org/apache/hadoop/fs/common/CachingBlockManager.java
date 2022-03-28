@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class CachingBlockManager extends BlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(CachingBlockManager.class);
+  private static final int TIMEOUT_MINUTES = 60;
 
   // Asynchronous tasks are performed in this pool.
   private final ExecutorServiceFuturePool futurePool;
@@ -434,7 +436,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     try {
-      blockFuture.get(); //TODO consider calling get(long timeout, TimeUnit unit) instead
+      blockFuture.get(TIMEOUT_MINUTES, TimeUnit.MINUTES);
       if (data.stateEqualsOneOf(BufferData.State.DONE)) {
         // There was an error during prefetch.
         return;
