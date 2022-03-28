@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.common;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -410,7 +411,9 @@ public abstract class CachingBlockManager extends BlockManager {
       if (state == BufferData.State.PREFETCHING) {
         blockFuture = data.getActionFuture();
       } else {
-        blockFuture = (Future<Void>) com.twitter.util.Future.value(null).toJavaFuture();
+        CompletableFuture cf = new CompletableFuture<>();
+        cf.complete(null);
+        blockFuture = cf;
       }
 
       CachePutTask task = new CachePutTask(data, blockFuture, this);
