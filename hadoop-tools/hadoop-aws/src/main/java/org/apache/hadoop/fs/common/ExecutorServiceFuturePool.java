@@ -56,7 +56,7 @@ public class ExecutorServiceFuturePool {
      * @param r runnable to run in future on executor pool
      * @return future
      * @throws java.util.concurrent.RejectedExecutionException can be thrown
-     * @throws NullPointerException if f param is null
+     * @throws NullPointerException if r param is null
      */
     public Future<Void> executeRunnable(final Runnable r) {
         return (Future<Void>) executor.submit(() -> r.run());
