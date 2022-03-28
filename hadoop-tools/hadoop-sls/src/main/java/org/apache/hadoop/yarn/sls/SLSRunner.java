@@ -162,6 +162,7 @@ public class SLSRunner extends Configured implements Tool {
 
     nmMap = new ConcurrentHashMap<>();
     amRunner = new AMRunner(runner, this);
+    rmRunner = new RMRunner(tempConf, this);
 
     // runner
     poolSize = tempConf.getInt(SLSConfiguration.RUNNER_POOL_SIZE,
@@ -626,6 +627,10 @@ public class SLSRunner extends Configured implements Tool {
 
   public SynthTraceJobProducer getStjp() {
     return stjp;
+  }
+
+  public void setStjp(SynthTraceJobProducer stjp) {
+    this.stjp = stjp;
   }
 
   public AMSimulator getAMSimulatorByAppId(ApplicationId appId) {

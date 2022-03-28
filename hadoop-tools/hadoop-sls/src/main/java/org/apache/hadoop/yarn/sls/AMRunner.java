@@ -151,6 +151,7 @@ public class AMRunner {
     // if we use the nodeFile this could have been not initialized yet.
     if (stjp == null) {
       stjp = new SynthTraceJobProducer(conf, new Path(inputTraces[0]));
+      slsRunner.setStjp(stjp);
     }
 
     SynthJob job;
