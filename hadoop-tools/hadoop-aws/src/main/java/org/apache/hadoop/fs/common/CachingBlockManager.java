@@ -411,7 +411,7 @@ public abstract class CachingBlockManager extends BlockManager {
       if (state == BufferData.State.PREFETCHING) {
         blockFuture = data.getActionFuture();
       } else {
-        CompletableFuture cf = new CompletableFuture<>();
+        CompletableFuture<Void> cf = new CompletableFuture<>();
         cf.complete(null);
         blockFuture = cf;
       }
