@@ -434,7 +434,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     try {
-      blockFuture.get();
+      blockFuture.get(); //TODO consider calling get(long timeout, TimeUnit unit) instead
       if (data.stateEqualsOneOf(BufferData.State.DONE)) {
         // There was an error during prefetch.
         return;
