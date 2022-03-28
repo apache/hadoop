@@ -25,8 +25,8 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.read.S3PrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,7 +162,15 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
    */
   protected S3AInputStreamStatistics getInputStreamStatistics(
       FSDataInputStream in) {
-    return getS3AInputStream(in).getS3AStreamStatistics();
+
+    InputStream inner = in.getWrappedStream();
+    if (inner instanceof S3AInputStream) {
+      return ((S3AInputStream) inner).getS3AStreamStatistics();
+    } else if (inner instanceof S3PrefetchingInputStream) {
+      return ((S3PrefetchingInputStream) inner).getS3AStreamStatistics();
+    } else {
+      throw new AssertionError("Not an S3AInputStream or S3PrefetchingInputStream: " + inner);
+    }
   }
 
   /**
