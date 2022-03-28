@@ -58,6 +58,7 @@ public class ExecutorServiceFuturePool {
      * @throws java.util.concurrent.RejectedExecutionException can be thrown
      * @throws NullPointerException if r param is null
      */
+    @SuppressWarnings("unchecked")
     public Future<Void> executeRunnable(final Runnable r) {
         return (Future<Void>) executor.submit(() -> r.run());
     }
