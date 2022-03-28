@@ -27,19 +27,23 @@ import java.util.function.Supplier;
 
 public class ExecutorServiceFuturePool {
     private ExecutorService executor;
-    private final boolean interruptible = false;
 
     public ExecutorServiceFuturePool(ExecutorService executor) {
         this.executor = executor;
     }
 
+    /**
+     * @param f function to run in future on executor pool
+     * @return future
+     * @throws java.util.concurrent.RejectedExecutionException can be thrown
+     * @throws NullPointerException if f param is null
+     */
     public Future<Void> apply(final Supplier<Void> f) {
         return executor.submit(f::get);
     }
 
     public String toString() {
-        return String.format(Locale.ROOT,"ExecutorServiceFuturePool(interruptible=%s, executor=%s)",
-                interruptible, executor);
+        return String.format(Locale.ROOT,"ExecutorServiceFuturePool(executor=%s)", executor);
     }
 
     public int poolSize() {
