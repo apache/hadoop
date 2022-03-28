@@ -34,11 +34,11 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.twitter.util.FuturePool;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.common.BlockCache;
 import org.apache.hadoop.fs.common.BlockData;
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.common.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
@@ -109,7 +109,7 @@ public final class Fakes {
   }
 
   public static S3AReadOpContext createReadContext(
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       String key,
       int fileSize,
       int prefetchBlockSize,
@@ -195,7 +195,7 @@ public final class Fakes {
 
   public static S3InputStream createInputStream(
       Class<? extends S3InputStream> clazz,
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       String bucket,
       String key,
       int fileSize,
@@ -225,7 +225,7 @@ public final class Fakes {
   }
 
   public static TestS3InMemoryInputStream createS3InMemoryInputStream(
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       String bucket,
       String key,
       int fileSize) {
@@ -235,7 +235,7 @@ public final class Fakes {
   }
 
   public static TestS3CachingInputStream createS3CachingInputStream(
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       String bucket,
       String key,
       int fileSize,
@@ -322,7 +322,7 @@ public final class Fakes {
 
   public static class TestS3CachingBlockManager extends S3CachingBlockManager {
     public TestS3CachingBlockManager(
-        FuturePool futurePool,
+        ExecutorServiceFuturePool futurePool,
         S3Reader reader,
         BlockData blockData,
         int bufferPoolSize) {
@@ -359,7 +359,7 @@ public final class Fakes {
 
     @Override
     protected S3CachingBlockManager createBlockManager(
-        FuturePool futurePool,
+        ExecutorServiceFuturePool futurePool,
         S3Reader reader,
         BlockData blockData,
         int bufferPoolSize) {

@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +37,7 @@ public abstract class CachingBlockManager extends BlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(CachingBlockManager.class);
 
   // Asynchronous tasks are performed in this pool.
-  private final FuturePool futurePool;
+  private final ExecutorServiceFuturePool futurePool;
 
   // Pool of shared ByteBuffer instances.
   private BufferPool bufferPool;
@@ -77,7 +76,7 @@ public abstract class CachingBlockManager extends BlockManager {
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       BlockData blockData,
       int bufferPoolSize) {
     super(blockData);
@@ -246,8 +245,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
       BlockOperations.Operation op = this.ops.requestPrefetch(blockNumber);
       PrefetchTask prefetchTask = new PrefetchTask(data, this);
-      com.twitter.util.Future<Void> prefetchFuture = this.futurePool.apply(com.twitter.util.Function.func0(prefetchTask));
-      data.setPrefetch(prefetchFuture.toCompletableFuture());
+      Future<Void> prefetchFuture = this.futurePool.apply(prefetchTask);
+      data.setPrefetch(prefetchFuture);
       this.ops.end(op);
     }
   }
@@ -415,8 +414,8 @@ public abstract class CachingBlockManager extends BlockManager {
       }
 
       CachePutTask task = new CachePutTask(data, blockFuture, this);
-      com.twitter.util.Future<Void> actionFuture = this.futurePool.apply(com.twitter.util.Function.func0(task));
-      data.setCaching(actionFuture.toCompletableFuture());
+      Future<Void> actionFuture = this.futurePool.apply(task);
+      data.setCaching(actionFuture);
       this.ops.end(op);
     }
   }
