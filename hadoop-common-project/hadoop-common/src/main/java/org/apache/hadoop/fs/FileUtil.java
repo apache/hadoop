@@ -683,28 +683,46 @@ public class FileUtil {
     }
   }
 
-  public static Set<PosixFilePermission> permissionsFromMode(int mode) {
+  /**
+   * The permission operation of this method only involves users, user groups, and others.
+   * If SUID is set, only executable permissions are reserved.
+   * @param mode Permissions are represented by numerical values
+   * @return The original permissions for files are stored in collections
+   */
+  private static Set<PosixFilePermission> permissionsFromMode(int mode) {
     EnumSet<PosixFilePermission> permissions =
-            EnumSet.noneOf(PosixFilePermission.class);
-    addPermissions(permissions, "OTHERS", (long) mode);
-    addPermissions(permissions, "GROUP", (long) mode >> 3);
-    addPermissions(permissions, "OWNER", (long) mode >> 6);
+        EnumSet.noneOf(PosixFilePermission.class);
+    addPermissions(permissions, mode, PosixFilePermission.OTHERS_READ,
+        PosixFilePermission.OTHERS_WRITE, PosixFilePermission.OTHERS_EXECUTE);
+    addPermissions(permissions, mode >> 3, PosixFilePermission.GROUP_READ,
+        PosixFilePermission.GROUP_WRITE, PosixFilePermission.GROUP_EXECUTE);
+    addPermissions(permissions, mode >> 6, PosixFilePermission.OWNER_READ,
+        PosixFilePermission.OWNER_WRITE, PosixFilePermission.OWNER_EXECUTE);
     return permissions;
   }
 
-  /** Assign the original permissions to the file */
-  public static void  addPermissions(
-          Set<PosixFilePermission> permissions,
-          String prefix,
-          Long mode) {
+  /**
+   * Assign the original permissions to the file
+   * @param permissions The original permissions for files are stored in collections
+   * @param mode Use a value of type int to indicate permissions
+   * @param r Read permission
+   * @param w Write permission
+   * @param x Execute permission
+   */
+  private static void addPermissions(
+      Set<PosixFilePermission> permissions,
+      int mode,
+      PosixFilePermission r,
+      PosixFilePermission w,
+      PosixFilePermission x) {
     if ((mode & 1L) == 1L) {
-      permissions.add(PosixFilePermission.valueOf(prefix + "_EXECUTE"));
+      permissions.add(x);
     }
     if ((mode & 2L) == 2L) {
-      permissions.add(PosixFilePermission.valueOf(prefix + "_WRITE"));
+      permissions.add(w);
     }
     if ((mode & 4L) == 4L) {
-      permissions.add(PosixFilePermission.valueOf(prefix + "_READ"));
+      permissions.add(r);
     }
   }
 

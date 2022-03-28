@@ -775,7 +775,7 @@ public class TestFileUtil {
     final File simpleZip = new File(del, FILE);
     try (OutputStream os = new FileOutputStream(simpleZip);
          ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os)) {
-      ZipArchiveEntry ze = new  ZipArchiveEntry("foo");
+      ZipArchiveEntry ze = new ZipArchiveEntry("foo");
       ze.setUnixMode(0555);
       byte[] data = "some-content".getBytes("UTF-8");
       ze.setSize(data.length);
