@@ -21,13 +21,12 @@ package org.apache.hadoop.fs.common;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
-import com.twitter.util.Await;
-import com.twitter.util.ExceptionalFunction0;
-import com.twitter.util.Future;
-import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +38,7 @@ public abstract class CachingBlockManager extends BlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(CachingBlockManager.class);
 
   // Asynchronous tasks are performed in this pool.
-  private final FuturePool futurePool;
+  private final ExecutorServiceFuturePool futurePool;
 
   // Pool of shared ByteBuffer instances.
   private BufferPool bufferPool;
@@ -78,7 +77,7 @@ public abstract class CachingBlockManager extends BlockManager {
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       BlockData blockData,
       int bufferPoolSize) {
     super(blockData);
@@ -344,7 +343,7 @@ public abstract class CachingBlockManager extends BlockManager {
   /**
    * Read task that is submitted to the future pool.
    */
-  private static class PrefetchTask extends ExceptionalFunction0<Void> {
+  private static class PrefetchTask implements Supplier<Void> {
     private final BufferData data;
     private final CachingBlockManager blockManager;
 
@@ -354,7 +353,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     @Override
-    public Void applyE() {
+    public Void get() {
       try {
         this.blockManager.prefetch(data);
       } catch (Exception e) {
@@ -412,7 +411,9 @@ public abstract class CachingBlockManager extends BlockManager {
       if (state == BufferData.State.PREFETCHING) {
         blockFuture = data.getActionFuture();
       } else {
-        blockFuture = Future.value(null);
+        CompletableFuture<Void> cf = new CompletableFuture<>();
+        cf.complete(null);
+        blockFuture = cf;
       }
 
       CachePutTask task = new CachePutTask(data, blockFuture, this);
@@ -433,13 +434,13 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     try {
-      Await.result(blockFuture);
+      blockFuture.get(); //TODO consider calling get(long timeout, TimeUnit unit) instead
       if (data.stateEqualsOneOf(BufferData.State.DONE)) {
         // There was an error during prefetch.
         return;
       }
     } catch (Exception e) {
-      String message = String.format("error waitng on blockFuture: %s", data);
+      String message = String.format("error waiting on blockFuture: %s", data);
       LOG.error(message, e);
       data.setDone();
       return;
@@ -500,7 +501,7 @@ public abstract class CachingBlockManager extends BlockManager {
     this.cache.put(blockNumber, buffer);
   }
 
-  private static class CachePutTask extends ExceptionalFunction0<Void> {
+  private static class CachePutTask implements Supplier<Void> {
     private final BufferData data;
 
     // Block being asynchronously fetched.
@@ -519,7 +520,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     @Override
-    public Void applyE() {
+    public Void get() {
       this.blockManager.addToCacheAndRelease(this.data, this.blockFuture);
       return null;
     }

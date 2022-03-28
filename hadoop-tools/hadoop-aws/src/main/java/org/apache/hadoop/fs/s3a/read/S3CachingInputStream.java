@@ -21,13 +21,13 @@ package org.apache.hadoop.fs.s3a.read;
 
 import java.io.IOException;
 
-import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.BlockManager;
 import org.apache.hadoop.fs.common.BufferData;
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
@@ -186,7 +186,7 @@ public class S3CachingInputStream extends S3InputStream {
   }
 
   protected BlockManager createBlockManager(
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       S3Reader reader,
       BlockData blockData,
       int bufferPoolSize) {

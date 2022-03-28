@@ -22,7 +22,7 @@ package org.apache.hadoop.fs.s3a.read;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.twitter.util.FuturePool;
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +52,7 @@ public class S3CachingBlockManager extends CachingBlockManager {
    * @throws IllegalArgumentException if reader is null.
    */
   public S3CachingBlockManager(
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       S3Reader reader,
       BlockData blockData,
       int bufferPoolSize) {

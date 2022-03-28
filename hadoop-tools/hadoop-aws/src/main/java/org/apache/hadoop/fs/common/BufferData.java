@@ -22,10 +22,9 @@ package org.apache.hadoop.fs.common;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.zip.CRC32;
 
-import com.twitter.util.Awaitable.CanAwait;
-import com.twitter.util.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -263,8 +262,6 @@ public class BufferData {
     return false;
   }
 
-  private static final CanAwait CAN_AWAIT = () -> false;
-
   public String toString() {
 
     return String.format(
@@ -281,7 +278,7 @@ public class BufferData {
     if (f == null) {
       return "--";
     } else {
-      return this.action.isReady(CAN_AWAIT) ? "done" : "not done";
+      return this.action.isDone() ? "done" : "not done";
     }
   }
 
