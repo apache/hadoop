@@ -1509,22 +1509,18 @@ public class FSEditLog implements LogsPurgeable {
    * effect.
    */
   @Override
-  public synchronized void purgeLogsOlderThan(long minTxIdToKeep) {
+  public synchronized void purgeLogsOlderThan(final long minTxIdToKeep) {
     // Should not purge logs unless they are open for write.
     // This prevents the SBN from purging logs on shared storage, for example.
     if (!isOpenForWrite()) {
       return;
     }
 
-    // Reset purgeLogsFrom to avoid purging edit log which is in progress.
-    if (isSegmentOpen()) {
-      minTxIdToKeep = minTxIdToKeep > curSegmentTxId ? curSegmentTxId : minTxIdToKeep;
-    }
-
-    assert curSegmentTxId == HdfsServerConstants.INVALID_TXID || // on format this is no-op
-      minTxIdToKeep <= curSegmentTxId :
-      "cannot purge logs older than txid " + minTxIdToKeep +
-      " when current segment starts at " + curSegmentTxId;
+    Preconditions.checkArgument(
+        curSegmentTxId == HdfsServerConstants.INVALID_TXID || // on format this is no-op
+        minTxIdToKeep <= curSegmentTxId,
+        "cannot purge logs older than txid " + minTxIdToKeep +
+        " when current segment starts at " + curSegmentTxId);
     if (minTxIdToKeep == 0) {
       return;
     }
