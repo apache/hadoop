@@ -36,34 +36,34 @@ import java.util.function.Supplier;
  *
  */
 public class ExecutorServiceFuturePool {
-    private ExecutorService executor;
+  private ExecutorService executor;
 
-    public ExecutorServiceFuturePool(ExecutorService executor) {
-        this.executor = executor;
-    }
+  public ExecutorServiceFuturePool(ExecutorService executor) {
+    this.executor = executor;
+  }
 
-    /**
-     * @param f function to run in future on executor pool
-     * @return future
-     * @throws java.util.concurrent.RejectedExecutionException can be thrown
-     * @throws NullPointerException if f param is null
-     */
-    public Future<Void> executeFunction(final Supplier<Void> f) {
-        return executor.submit(f::get);
-    }
+  /**
+   * @param f function to run in future on executor pool
+   * @return future
+   * @throws java.util.concurrent.RejectedExecutionException can be thrown
+   * @throws NullPointerException if f param is null
+   */
+  public Future<Void> executeFunction(final Supplier<Void> f) {
+    return executor.submit(f::get);
+  }
 
-    /**
-     * @param r runnable to run in future on executor pool
-     * @return future
-     * @throws java.util.concurrent.RejectedExecutionException can be thrown
-     * @throws NullPointerException if r param is null
-     */
-    @SuppressWarnings("unchecked")
-    public Future<Void> executeRunnable(final Runnable r) {
-        return (Future<Void>) executor.submit(() -> r.run());
-    }
+  /**
+   * @param r runnable to run in future on executor pool
+   * @return future
+   * @throws java.util.concurrent.RejectedExecutionException can be thrown
+   * @throws NullPointerException if r param is null
+   */
+  @SuppressWarnings("unchecked")
+  public Future<Void> executeRunnable(final Runnable r) {
+    return (Future<Void>) executor.submit(() -> r.run());
+  }
 
-    public String toString() {
-        return String.format(Locale.ROOT,"ExecutorServiceFuturePool(executor=%s)", executor);
-    }
+  public String toString() {
+    return String.format(Locale.ROOT,"ExecutorServiceFuturePool(executor=%s)", executor);
+  }
 }
