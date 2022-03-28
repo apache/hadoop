@@ -440,7 +440,7 @@ public abstract class CachingBlockManager extends BlockManager {
         return;
       }
     } catch (Exception e) {
-      String message = String.format("error waitng on blockFuture: %s", data);
+      String message = String.format("error waiting on blockFuture: %s", data);
       LOG.error(message, e);
       data.setDone();
       return;
