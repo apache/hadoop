@@ -11,12 +11,8 @@ public class ExecutorServiceFuturePool {
     private ExecutorService executor;
     private boolean interruptible = false;
 
-    public ExecutorServiceFuturePool(ExecutorService executor, boolean interruptible) {
-        this.executor = executor;
-    }
-
     public ExecutorServiceFuturePool(ExecutorService executor) {
-        this(executor, false);
+        this.executor = executor;
     }
 
     public Future<Void> apply(final Supplier<Void> f) {
