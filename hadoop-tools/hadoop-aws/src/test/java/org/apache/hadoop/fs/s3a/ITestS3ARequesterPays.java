@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -78,11 +79,16 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
       inputStream.seek(0);
       inputStream.readByte();
 
-      // Verify > 1 call was made, so we're sure it is correctly configured for each request
-      IOStatisticAssertions
-          .assertThatStatisticCounter(inputStream.getIOStatistics(),
-              StreamStatisticNames.STREAM_READ_OPENED)
-          .isGreaterThan(1);
+      if (conf.getBoolean(PREFETCH_ENABLED_KEY, true)) {
+        // For S3PrefetchingInputStream, verify a call was made
+        IOStatisticAssertions.assertThatStatisticCounter(inputStream.getIOStatistics(),
+            StreamStatisticNames.STREAM_READ_OPENED).isEqualTo(1);
+      } else {
+        // For S3AInputStream, verify > 1 call was made,
+        // so we're sure it is correctly configured for each request
+        IOStatisticAssertions.assertThatStatisticCounter(inputStream.getIOStatistics(),
+            StreamStatisticNames.STREAM_READ_OPENED).isGreaterThan(1);
+      }
 
       // Check list calls work without error
       fs.listFiles(requesterPaysPath.getParent(), false);
