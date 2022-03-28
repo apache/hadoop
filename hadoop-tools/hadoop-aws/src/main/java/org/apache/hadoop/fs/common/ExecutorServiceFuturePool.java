@@ -24,6 +24,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
+/**
+ * A FuturePool implementation backed by a java.util.concurrent.ExecutorService.
+ *
+ * If a piece of work has started, it cannot (currently) be cancelled.
+ *
+ * This class is a simplified version of <code>com.twitter:util-core_2.11</code> ExecutorServiceFuturePool
+ * designed to avoid depending on that Scala library. One problem with using a Scala library is that many
+ * downstream projects (eg Apache Spark) use Scala and they might want to use a different version of Scala
+ * from the version that Hadoop chooses to use.
+ *
+ */
 public class ExecutorServiceFuturePool {
     private ExecutorService executor;
 
