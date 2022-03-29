@@ -1481,6 +1481,11 @@
         <artifactId>leveldbjni-all</artifactId>
         <version>1.8</version>
       </dependency>
+      <dependency>
+        <groupId>org.fusesource.hawtjni</groupId>
+        <artifactId>hawtjni-runtime</artifactId>
+        <version>1.11</version>
+      </dependency>
 
       <dependency>
         <groupId>com.microsoft.azure</groupId>
