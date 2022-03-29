@@ -99,6 +99,9 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
     if (cluster != null) {
       cluster.shutdown();
     }
+    if (webhdfs != null) {
+      webhdfs.close();
+    }
   }
 
   @Test(timeout=10000)
