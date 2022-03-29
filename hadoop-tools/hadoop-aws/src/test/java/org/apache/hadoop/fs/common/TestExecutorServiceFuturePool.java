@@ -20,6 +20,7 @@
 package org.apache.hadoop.fs.common;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,7 +32,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public class TestExecutorServiceFuturePool extends AbstractHadoopTestBase {
@@ -72,22 +72,20 @@ public class TestExecutorServiceFuturePool extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testRunnableFails() {
+  public void testRunnableFails() throws Exception {
     ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
     Future<Void> future = futurePool.executeRunnable(() -> {
       throw new IllegalStateException("deliberate");
     });
-    assertThrows("future failed with ExecutionException?",
-        ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
+    LambdaTestUtils.intercept(ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
   }
 
   @Test
-  public void testSupplierFails() {
+  public void testSupplierFails() throws Exception {
     ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
     Future<Void> future = futurePool.executeFunction(() -> {
       throw new IllegalStateException("deliberate");
     });
-    assertThrows("future failed with ExecutionException?",
-        ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
+    LambdaTestUtils.intercept(ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
   }
 }
