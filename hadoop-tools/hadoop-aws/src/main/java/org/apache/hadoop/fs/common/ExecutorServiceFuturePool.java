@@ -29,9 +29,10 @@ import java.util.function.Supplier;
  *
  * If a piece of work has started, it cannot (currently) be cancelled.
  *
- * This class is a simplified version of <code>com.twitter:util-core_2.11</code> ExecutorServiceFuturePool
- * designed to avoid depending on that Scala library. One problem with using a Scala library is that many
- * downstream projects (eg Apache Spark) use Scala and they might want to use a different version of Scala
+ * This class is a simplified version of <code>com.twitter:util-core_2.11</code>
+ * ExecutorServiceFuturePool designed to avoid depending on that Scala library.
+ * One problem with using a Scala library is that many downstream projects
+ * (eg Apache Spark) use Scala, and they might want to use a different version of Scala
  * from the version that Hadoop chooses to use.
  *
  */
@@ -64,6 +65,6 @@ public class ExecutorServiceFuturePool {
   }
 
   public String toString() {
-    return String.format(Locale.ROOT,"ExecutorServiceFuturePool(executor=%s)", executor);
+    return String.format(Locale.ROOT, "ExecutorServiceFuturePool(executor=%s)", executor);
   }
 }
