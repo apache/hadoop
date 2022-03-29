@@ -197,7 +197,11 @@ public class SLSRunner extends Configured implements Tool {
     String tableMapping = metricsOutputDir + "/tableMapping.csv";
     this.rmRunner.setTableMapping(tableMapping);
     this.nmRunner.setTableMapping(tableMapping);
-    this.stjp = getSynthJobTraceProducer();
+    
+    //We need this.inputTraces to set before creating SynthTraceJobProducer
+    if (inType == TraceType.SYNTH) {
+      this.stjp = getSynthJobTraceProducer();
+    }
   }
 
   public void start() throws IOException, ClassNotFoundException, YarnException,
@@ -206,6 +210,7 @@ public class SLSRunner extends Configured implements Tool {
 
     // start resource manager
     rmRunner.startRM();
+    nmRunner.setRm(rmRunner.getRm());
     amRunner.setResourceManager(rmRunner.getRm());
     
     // start node managers
@@ -503,10 +508,9 @@ public class SLSRunner extends Configured implements Tool {
     return stjp;
   }
 
-  //TODO
-//  public void setStjp(SynthTraceJobProducer stjp) {
-//    this.stjp = stjp;
-//  }
+  public void setStjp(SynthTraceJobProducer stjp) {
+    this.stjp = stjp;
+  }
 
   public AMSimulator getAMSimulatorByAppId(ApplicationId appId) {
     return amRunner.getAMSimulator(appId);

@@ -186,7 +186,6 @@ public class NodeInfo {
 
     @Override
     public List<Container> pullNewlyIncreasedContainers() {
-      // TODO Auto-generated method stub
       return null;
     }
 

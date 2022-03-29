@@ -147,12 +147,10 @@ public class AMRunner {
   private void startAMFromSynthGenerator() throws YarnException, IOException {
     Configuration localConf = new Configuration();
     localConf.set("fs.defaultFS", "file:///");
-    //TODO
     //if we use the nodeFile this could have been not initialized yet.
-//    if (stjp == null) {
-//      stjp = new SynthTraceJobProducer(conf, new Path(inputTraces[0]));
-//      slsRunner.setStjp(stjp);
-//    }
+    if (slsRunner.getStjp() == null) {
+      slsRunner.setStjp(new SynthTraceJobProducer(conf, new Path(inputTraces[0])));
+    }
 
     SynthJob job;
     // we use stjp, a reference to the job producer instantiated during node

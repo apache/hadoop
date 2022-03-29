@@ -60,7 +60,7 @@ public class NMRunner {
   private Configuration conf;
   private ResourceManager rm;
   private String tableMapping;
-  private int thredPoolSize;
+  private int threadPoolSize;
   private TraceType inputType;
   private String[] inputTraces;
   private SynthTraceJobProducer stjp;
@@ -70,7 +70,7 @@ public class NMRunner {
     this.conf = conf;
     this.rm = rm;
     this.tableMapping = tableMapping;
-    this.thredPoolSize = threadPoolSize;
+    this.threadPoolSize = threadPoolSize;
     this.nmMap = new ConcurrentHashMap<>();
     this.nodeManagerResource = getNodeManagerResourceFromConf();
   }
@@ -119,7 +119,7 @@ public class NMRunner {
     // create NM simulators
     Random random = new Random();
     Set<String> rackSet = ConcurrentHashMap.newKeySet();
-    int threadPoolSize = Math.max(thredPoolSize,
+    int threadPoolSize = Math.max(this.threadPoolSize,
         SLSConfiguration.RUNNER_POOL_SIZE_DEFAULT);
     ExecutorService executorService = Executors.
         newFixedThreadPool(threadPoolSize);
@@ -230,5 +230,9 @@ public class NMRunner {
 
   public void setTableMapping(String tableMapping) {
     this.tableMapping = tableMapping;
+  }
+
+  public void setRm(ResourceManager rm) {
+    this.rm = rm;
   }
 }
