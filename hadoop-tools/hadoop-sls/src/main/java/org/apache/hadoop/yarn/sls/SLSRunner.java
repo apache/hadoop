@@ -18,16 +18,11 @@
 package org.apache.hadoop.yarn.sls;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -37,10 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -73,20 +64,10 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.security.Security;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 @Private
 @Unstable
 public class SLSRunner extends Configured implements Tool {
-  private static TaskRunner runner = new TaskRunner();
+  private static final TaskRunner runner = new TaskRunner();
   private String[] inputTraces;
 
   // metrics
@@ -103,6 +84,7 @@ public class SLSRunner extends Configured implements Tool {
   private RMRunner rmRunner;
   private NMRunner nmRunner;
 
+  private TraceType inputType;
   private SynthTraceJobProducer stjp;
 
   /**
@@ -117,7 +99,7 @@ public class SLSRunner extends Configured implements Tool {
       "networkaddress.cache.negative.ttl";
 
   public static int getRemainingApps() {
-    return AMRunner.REMAINING_APPS;
+    return AMRunner.remainingApps;
   }
 
   public SLSRunner() throws ClassNotFoundException, YarnException {
@@ -175,31 +157,32 @@ public class SLSRunner extends Configured implements Tool {
 
   /**
    * This is invoked before start.
-   * @param inType
-   * @param inTraces
-   * @param nodes
-   * @param metricsOutputDir
-   * @param trackApps
-   * @param printsimulation
+   * @param inputType The trace type
+   * @param inTraces Input traces
+   * @param nodes The node file
+   * @param metricsOutputDir Output dir for metrics
+   * @param trackApps Track these applications
+   * @param printSimulation Whether to print the simulation
    */
-  public void setSimulationParams(TraceType inType, String[] inTraces,
+  public void setSimulationParams(TraceType inputType, String[] inTraces,
       String nodes, String metricsOutputDir, Set<String> trackApps,
-      boolean printsimulation) throws YarnException {
+      boolean printSimulation) throws YarnException {
+    this.inputType = inputType;
     this.inputTraces = inTraces.clone();
-    this.amRunner.setInputType(inType);
+    this.amRunner.setInputType(inputType);
     this.amRunner.setInputTraces(this.inputTraces);
     this.amRunner.setTrackedApps(trackApps);
     this.nmRunner.setNodeFile(nodes);
-    this.nmRunner.setInputType(inType);
+    this.nmRunner.setInputType(inputType);
     this.nmRunner.setInputTraces(this.inputTraces);
-    this.printSimulation = printsimulation;
+    this.printSimulation = printSimulation;
     this.rmRunner.setMetricsOutputDir(metricsOutputDir);
     String tableMapping = metricsOutputDir + "/tableMapping.csv";
     this.rmRunner.setTableMapping(tableMapping);
     this.nmRunner.setTableMapping(tableMapping);
     
     //We need this.inputTraces to set before creating SynthTraceJobProducer
-    if (inType == TraceType.SYNTH) {
+    if (inputType == TraceType.SYNTH) {
       this.stjp = getSynthJobTraceProducer();
     }
   }
@@ -319,8 +302,8 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   public static void decreaseRemainingApps() {
-    AMRunner.REMAINING_APPS--;
-    if (AMRunner.REMAINING_APPS == 0) {
+    AMRunner.remainingApps--;
+    if (AMRunner.remainingApps == 0) {
       exitSLSRunner();
     }
   }
@@ -359,24 +342,15 @@ public class SLSRunner extends Configured implements Tool {
     CommandLineParser parser = new GnuParser();
     CommandLine cmd = parser.parse(options, argv);
 
-    String traceType = null;
-    String traceLocation = null;
-
     // compatibility with old commandline
-    if (cmd.hasOption("inputrumen")) {
-      traceType = "RUMEN";
-      traceLocation = cmd.getOptionValue("inputrumen");
-    }
-    if (cmd.hasOption("inputsls")) {
-      traceType = "SLS";
-      traceLocation = cmd.getOptionValue("inputsls");
-    }
-
-    if (cmd.hasOption("tracetype")) {
-      traceType = cmd.getOptionValue("tracetype");
-      traceLocation = cmd.getOptionValue("tracelocation");
-    }
-
+    boolean hasInputRumenOption = cmd.hasOption("inputrumen");
+    boolean hasInputSlsOption = cmd.hasOption("inputsls");
+    boolean hasTraceTypeOption = cmd.hasOption("tracetype");
+    TraceType traceType = determineTraceType(cmd, hasInputRumenOption,
+        hasInputSlsOption, hasTraceTypeOption);
+    String traceLocation = determineTraceLocation(cmd, hasInputRumenOption,
+        hasInputSlsOption, hasTraceTypeOption);
+    
     String output = cmd.getOptionValue("output");
 
     File outputFile = new File(output);
@@ -396,30 +370,56 @@ public class SLSRunner extends Configured implements Tool {
     String tempNodeFile =
         cmd.hasOption("nodes") ? cmd.getOptionValue("nodes") : "";
 
-    TraceType tempTraceType;
-    switch (traceType) {
-    case "SLS":
-      tempTraceType = TraceType.SLS;
-      break;
-    case "RUMEN":
-      tempTraceType = TraceType.RUMEN;
-      break;
-    case "SYNTH":
-      tempTraceType = TraceType.SYNTH;
-      break;
-    default:
-      printUsage();
-      throw new YarnException("Misconfigured input");
-    }
-
     String[] inputFiles = traceLocation.split(",");
 
-    setSimulationParams(tempTraceType, inputFiles, tempNodeFile, output,
+    setSimulationParams(traceType, inputFiles, tempNodeFile, output,
         trackedJobSet, cmd.hasOption("printsimulation"));
     
     start();
 
     return 0;
+  }
+
+  private TraceType determineTraceType(CommandLine cmd, boolean hasInputRumenOption,
+      boolean hasInputSlsOption, boolean hasTraceTypeOption) throws YarnException {
+    String traceType = null;
+    if (hasInputRumenOption) {
+      traceType = "RUMEN";
+    }
+    if (hasInputSlsOption) {
+      traceType = "SLS";
+    }
+    if (hasTraceTypeOption) {
+      traceType = cmd.getOptionValue("tracetype");
+    }
+    if (traceType == null) {
+      throw new YarnException("Misconfigured input");
+    }
+    switch (traceType) {
+    case "SLS":
+      return TraceType.SLS;
+    case "RUMEN":
+      return TraceType.RUMEN;
+    case "SYNTH":
+      return TraceType.SYNTH;
+    default:
+      printUsage();
+      throw new YarnException("Misconfigured input");
+    }
+  }
+
+  private String determineTraceLocation(CommandLine cmd, boolean hasInputRumenOption,
+      boolean hasInputSlsOption, boolean hasTraceTypeOption) throws YarnException {
+    if (hasInputRumenOption) {
+      return cmd.getOptionValue("inputrumen");
+    }
+    if (hasInputSlsOption) {
+      return cmd.getOptionValue("inputsls");
+    }
+    if (hasTraceTypeOption) {
+      return cmd.getOptionValue("tracelocation");
+    }
+    throw new YarnException("Misconfigured input! ");
   }
 
   public static void main(String[] argv) throws Exception {

@@ -61,7 +61,7 @@ public class SLSSchedulerCommons {
   private final Map<ApplicationAttemptId, String> appQueueMap = new ConcurrentHashMap<>();
   private final Tracker tracker;
   
-  public SLSSchedulerCommons(AbstractYarnScheduler scheduler) {
+  public SLSSchedulerCommons(AbstractYarnScheduler<?, ?> scheduler) {
     this.scheduler = scheduler;
     this.tracker = new Tracker();
   }
@@ -174,7 +174,7 @@ public class SLSSchedulerCommons {
       }
     }
     // containers released/preemption from scheduler
-    Set<ContainerId> preemptionContainers = new HashSet<ContainerId>();
+    Set<ContainerId> preemptionContainers = new HashSet<>();
     if (allocation.getContainerPreemptions() != null) {
       preemptionContainers.addAll(allocation.getContainerPreemptions());
     }
@@ -277,7 +277,7 @@ public class SLSSchedulerCommons {
         AppAttemptAddedSchedulerEvent appAddEvent =
             (AppAttemptAddedSchedulerEvent) schedulerEvent;
         SchedulerApplication app =
-            (SchedulerApplication) scheduler.getSchedulerApplications()
+            scheduler.getSchedulerApplications()
                 .get(appAddEvent.getApplicationAttemptId().getApplicationId());
         appQueueMap.put(appAddEvent.getApplicationAttemptId(), app.getQueue()
             .getQueueName());

@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptI
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.appmaster.AMSimulator;
 
-import java.util.Map;
 
 public class MockAMLauncher extends ApplicationMasterLauncher
     implements EventHandler<AMLauncherEvent> {

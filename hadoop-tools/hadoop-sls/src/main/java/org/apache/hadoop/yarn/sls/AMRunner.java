@@ -53,7 +53,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AMRunner {
   private static final Logger LOG = LoggerFactory.getLogger(AMRunner.class);
-  static int REMAINING_APPS = 0;
+  static int remainingApps = 0;
 
   private final Configuration conf;
   private int AM_ID;
@@ -63,8 +63,8 @@ public class AMRunner {
   private Map<String, Class> amClassMap;
   private TraceType inputType;
   private String[] inputTraces;
-  private TaskRunner runner;
-  private SLSRunner slsRunner;
+  private final TaskRunner runner;
+  private final SLSRunner slsRunner;
   private int numAMs, numTasks;
   private long maxRuntime;
   private ResourceManager rm;
@@ -81,8 +81,8 @@ public class AMRunner {
     amClassMap = new HashMap<>();
     appIdAMSim = new ConcurrentHashMap<>();
     // <AMType, Class> map
-    for (Map.Entry e : conf) {
-      String key = e.getKey().toString();
+    for (Map.Entry<String, String> e : conf) {
+      String key = e.getKey();
       if (key.startsWith(SLSConfiguration.AM_TYPE_PREFIX)) {
         String amType = key.substring(SLSConfiguration.AM_TYPE_PREFIX.length());
         amClassMap.put(amType, Class.forName(conf.get(key)));
@@ -112,7 +112,7 @@ public class AMRunner {
     }
 
     numAMs = amMap.size();
-    REMAINING_APPS = numAMs;
+    remainingApps = numAMs;
   }
 
   /**

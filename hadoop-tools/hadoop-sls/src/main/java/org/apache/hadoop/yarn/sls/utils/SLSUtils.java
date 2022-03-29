@@ -85,7 +85,7 @@ public class SLSUtils {
     JobTraceReader reader = new JobTraceReader(
             new Path(fin.getAbsolutePath()), conf);
     try {
-      LoggedJob job = null;
+      LoggedJob job;
       while ((job = reader.getNext()) != null) {
         for(LoggedTask mapTask : job.getMapTasks()) {
           // select the last attempt
@@ -123,7 +123,7 @@ public class SLSUtils {
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
-        new InputStreamReader(new FileInputStream(jobTrace), "UTF-8");
+        new InputStreamReader(new FileInputStream(jobTrace), StandardCharsets.UTF_8);
     try {
       Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {
@@ -170,7 +170,7 @@ public class SLSUtils {
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
-        new InputStreamReader(new FileInputStream(nodeFile), "UTF-8");
+        new InputStreamReader(new FileInputStream(nodeFile), StandardCharsets.UTF_8);
     try {
       Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {
