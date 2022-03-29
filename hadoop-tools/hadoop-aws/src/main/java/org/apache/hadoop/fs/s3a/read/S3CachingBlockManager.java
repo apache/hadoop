@@ -22,12 +22,12 @@ package org.apache.hadoop.fs.s3a.read;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.CachingBlockManager;
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.common.Validate;
 
 /**

@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.fs.common;
 
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -31,63 +34,60 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-public class TestExecutorServiceFuturePool {
-  @Test
-  public void testRunnableSucceeds() throws Exception {
-    ExecutorService executorService = Executors.newFixedThreadPool(3);
-    try {
-      ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
-      final AtomicBoolean atomicBoolean = new AtomicBoolean(false);
-      Future<Void> future = futurePool.executeRunnable(() -> atomicBoolean.set(true));
-      future.get(30, TimeUnit.SECONDS);
-      assertTrue(atomicBoolean.get());
-    } finally {
+public class TestExecutorServiceFuturePool extends AbstractHadoopTestBase {
+
+  private ExecutorService executorService;
+
+  @Before
+  public void setUp() {
+    executorService = Executors.newFixedThreadPool(3);
+  }
+
+  @After
+  public void tearDown() {
+    if (executorService != null) {
       executorService.shutdownNow();
     }
+  }
+
+  @Test
+  public void testRunnableSucceeds() throws Exception {
+    ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
+    final AtomicBoolean atomicBoolean = new AtomicBoolean(false);
+    Future<Void> future = futurePool.executeRunnable(() -> atomicBoolean.set(true));
+    future.get(30, TimeUnit.SECONDS);
+    assertTrue("atomicBoolean set to true?", atomicBoolean.get());
   }
 
   @Test
   public void testSupplierSucceeds() throws Exception {
-    ExecutorService executorService = Executors.newFixedThreadPool(3);
-    try {
-      ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
-      final AtomicBoolean atomicBoolean = new AtomicBoolean(false);
-      Future<Void> future = futurePool.executeFunction(() -> {
-        atomicBoolean.set(true);
-        return null;
-      });
-      future.get(30, TimeUnit.SECONDS);
-      assertTrue(atomicBoolean.get());
-    } finally {
-      executorService.shutdownNow();
-    }
+    ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
+    final AtomicBoolean atomicBoolean = new AtomicBoolean(false);
+    Future<Void> future = futurePool.executeFunction(() -> {
+      atomicBoolean.set(true);
+      return null;
+    });
+    future.get(30, TimeUnit.SECONDS);
+    assertTrue("atomicBoolean set to true?", atomicBoolean.get());
   }
 
   @Test
-  public void testRunnableFails() throws Exception {
-    ExecutorService executorService = Executors.newFixedThreadPool(3);
-    try {
-      ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
-      Future<Void> future = futurePool.executeRunnable(() -> {
-        throw new IllegalStateException("deliberate");
-      });
-      assertThrows(ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
-    } finally {
-      executorService.shutdownNow();
-    }
+  public void testRunnableFails() {
+    ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
+    Future<Void> future = futurePool.executeRunnable(() -> {
+      throw new IllegalStateException("deliberate");
+    });
+    assertThrows("future failed with ExecutionException?",
+        ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
   }
 
   @Test
-  public void testSupplierFails() throws Exception {
-    ExecutorService executorService = Executors.newFixedThreadPool(3);
-    try {
-      ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
-      Future<Void> future = futurePool.executeFunction(() -> {
-        throw new IllegalStateException("deliberate");
-      });
-      assertThrows(ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
-    } finally {
-      executorService.shutdownNow();
-    }
+  public void testSupplierFails() {
+    ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(executorService);
+    Future<Void> future = futurePool.executeFunction(() -> {
+      throw new IllegalStateException("deliberate");
+    });
+    assertThrows("future failed with ExecutionException?",
+        ExecutionException.class, () -> future.get(30, TimeUnit.SECONDS));
   }
 }
