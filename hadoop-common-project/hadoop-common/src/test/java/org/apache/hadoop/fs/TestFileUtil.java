@@ -775,12 +775,18 @@ public class TestFileUtil {
     final File simpleZip = new File(del, FILE);
     try (OutputStream os = new FileOutputStream(simpleZip);
          ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os)) {
-      ZipArchiveEntry ze = new ZipArchiveEntry("foo");
-      ze.setUnixMode(0555);
-      byte[] data = "some-content".getBytes("UTF-8");
-      ze.setSize(data.length);
-      tos.putArchiveEntry(ze);
-      tos.write(data);
+      List<ZipArchiveEntry> ZipArchiveList = new ArrayList<>(7);
+      int count = 0;
+      // create 7 files to verify permissions
+      for (int i = 0; i < 7; i++) {
+        ZipArchiveList.add(new ZipArchiveEntry("foo_" + i));
+        ZipArchiveEntry archiveEntry = ZipArchiveList.get(i);
+        archiveEntry.setUnixMode(count += 0100);
+        byte[] data = "some-content".getBytes("UTF-8");
+        archiveEntry.setSize(data.length);
+        tos.putArchiveEntry(archiveEntry);
+        tos.write(data);
+      }
       tos.closeArchiveEntry();
       tos.flush();
       tos.finish();
@@ -789,11 +795,42 @@ public class TestFileUtil {
     // successfully unzip it into an existing dir:
     FileUtil.unZip(simpleZip, tmp);
     // check result:
-    assertTrue(new File(tmp, "foo").exists());
-    assertEquals(12, new File(tmp, "foo").length());
-    assertTrue("file lacks execute permissions", new File(tmp, "foo").canExecute());
-    assertFalse("file has write permissions", new File(tmp, "foo").canWrite());
-    assertTrue("file lacks read permissions", new File(tmp, "foo").canRead());
+    assertTrue(new File(tmp, "foo_0").exists());
+    assertTrue(new File(tmp, "foo_1").exists());
+    assertTrue(new File(tmp, "foo_2").exists());
+    assertTrue(new File(tmp, "foo_3").exists());
+    assertTrue(new File(tmp, "foo_4").exists());
+    assertTrue(new File(tmp, "foo_5").exists());
+    assertTrue(new File(tmp, "foo_6").exists());
+    assertEquals(12, new File(tmp, "foo_0").length());
+    // tests whether file foo_0 has executable permissions
+    assertTrue("file lacks execute permissions", new File(tmp, "foo_0").canExecute());
+    assertFalse("file has write permissions", new File(tmp, "foo_0").canWrite());
+    assertFalse("file has read permissions", new File(tmp, "foo_0").canRead());
+    // tests whether file foo_1 has writable permissions
+    assertFalse("file has execute permissions", new File(tmp, "foo_1").canExecute());
+    assertTrue("file lacks write permissions", new File(tmp, "foo_1").canWrite());
+    assertFalse("file has read permissions", new File(tmp, "foo_1").canRead());
+    // tests whether file foo_2 has executable and writable permissions
+    assertTrue("file lacks execute permissions", new File(tmp, "foo_2").canExecute());
+    assertTrue("file lacks write permissions", new File(tmp, "foo_2").canWrite());
+    assertFalse("file has read permissions", new File(tmp, "foo_2").canRead());
+    // tests whether file foo_3 has readable permissions
+    assertFalse("file has execute permissions", new File(tmp, "foo_3").canExecute());
+    assertFalse("file has write permissions", new File(tmp, "foo_3").canWrite());
+    assertTrue("file lacks read permissions", new File(tmp, "foo_3").canRead());
+    // tests whether file foo_4 has readable and executable permissions
+    assertTrue("file lacks execute permissions", new File(tmp, "foo_4").canExecute());
+    assertFalse("file has write permissions", new File(tmp, "foo_4").canWrite());
+    assertTrue("file lacks read permissions", new File(tmp, "foo_4").canRead());
+    // tests whether file foo_5 has readable and writable permissions
+    assertFalse("file has execute permissions", new File(tmp, "foo_5").canExecute());
+    assertTrue("file lacks write permissions", new File(tmp, "foo_5").canWrite());
+    assertTrue("file lacks read permissions", new File(tmp, "foo_5").canRead());
+    // tests whether file foo_6 has readable, writable and executable permissions
+    assertTrue("file lacks execute permissions", new File(tmp, "foo_6").canExecute());
+    assertTrue("file lacks write permissions", new File(tmp, "foo_6").canWrite());
+    assertTrue("file lacks read permissions", new File(tmp, "foo_6").canRead());
 
     final File regularFile =
         Verify.createNewFile(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
