@@ -18,16 +18,11 @@
 package org.apache.hadoop.yarn.sls;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -37,10 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -73,20 +64,10 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.security.Security;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 @Private
 @Unstable
 public class SLSRunner extends Configured implements Tool {
-  private static TaskRunner runner = new TaskRunner();
+  private static final TaskRunner runner = new TaskRunner();
   private String[] inputTraces;
 
   // metrics
@@ -103,6 +84,7 @@ public class SLSRunner extends Configured implements Tool {
   private RMRunner rmRunner;
   private NMRunner nmRunner;
 
+  private TraceType inputType;
   private SynthTraceJobProducer stjp;
 
   /**
@@ -117,7 +99,7 @@ public class SLSRunner extends Configured implements Tool {
       "networkaddress.cache.negative.ttl";
 
   public static int getRemainingApps() {
-    return AMRunner.REMAINING_APPS;
+    return AMRunner.remainingApps.get();
   }
 
   public SLSRunner() throws ClassNotFoundException, YarnException {
@@ -175,31 +157,32 @@ public class SLSRunner extends Configured implements Tool {
 
   /**
    * This is invoked before start.
-   * @param inType
-   * @param inTraces
-   * @param nodes
-   * @param metricsOutputDir
-   * @param trackApps
-   * @param printsimulation
+   * @param inputType The trace type
+   * @param inTraces Input traces
+   * @param nodes The node file
+   * @param metricsOutputDir Output dir for metrics
+   * @param trackApps Track these applications
+   * @param printSimulation Whether to print the simulation
    */
-  public void setSimulationParams(TraceType inType, String[] inTraces,
+  public void setSimulationParams(TraceType inputType, String[] inTraces,
       String nodes, String metricsOutputDir, Set<String> trackApps,
-      boolean printsimulation) throws YarnException {
+      boolean printSimulation) throws YarnException {
+    this.inputType = inputType;
     this.inputTraces = inTraces.clone();
-    this.amRunner.setInputType(inType);
+    this.amRunner.setInputType(inputType);
     this.amRunner.setInputTraces(this.inputTraces);
     this.amRunner.setTrackedApps(trackApps);
     this.nmRunner.setNodeFile(nodes);
-    this.nmRunner.setInputType(inType);
+    this.nmRunner.setInputType(inputType);
     this.nmRunner.setInputTraces(this.inputTraces);
-    this.printSimulation = printsimulation;
+    this.printSimulation = printSimulation;
     this.rmRunner.setMetricsOutputDir(metricsOutputDir);
     String tableMapping = metricsOutputDir + "/tableMapping.csv";
     this.rmRunner.setTableMapping(tableMapping);
     this.nmRunner.setTableMapping(tableMapping);
     
     //We need this.inputTraces to set before creating SynthTraceJobProducer
-    if (inType == TraceType.SYNTH) {
+    if (inputType == TraceType.SYNTH) {
       this.stjp = getSynthJobTraceProducer();
     }
   }
@@ -319,8 +302,8 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   public static void decreaseRemainingApps() {
-    AMRunner.REMAINING_APPS--;
-    if (AMRunner.REMAINING_APPS == 0) {
+    AMRunner.remainingApps.decrementAndGet();
+    if (AMRunner.remainingApps.get() == 0) {
       exitSLSRunner();
     }
   }
