@@ -60,7 +60,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.ALLOWED_AM_NON_EXCLUSIVE_ALLOCATION;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.AM_ALLOW_NON_EXCLUSIVE_ALLOCATION;
 
 /**
  * Allocate normal (new) containers, considers locality/label, etc. Using
@@ -125,7 +125,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
       if (application.isWaitingForAMContainer() && !rmContext.getYarnConfiguration()
-          .getBoolean(ALLOWED_AM_NON_EXCLUSIVE_ALLOCATION, false)) {
+          .getBoolean(AM_ALLOW_NON_EXCLUSIVE_ALLOCATION, false)) {
         LOG.debug("Skip allocating AM container to app_attempt={},"
             + " don't allow to allocate AM container in non-exclusive mode",
             application.getApplicationAttemptId());

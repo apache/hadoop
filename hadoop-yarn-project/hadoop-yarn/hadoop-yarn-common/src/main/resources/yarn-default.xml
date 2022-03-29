@@ -3463,8 +3463,9 @@
   <property>
     <description>
       Flag to indicate whether the AM can be allocated to non-exclusive nodes or not.
+      Default is false.
     </description>
-    <name>yarn.resourcemanager.node-labels.am.allowed-non-exclusive-allocation</name>
+    <name>yarn.resourcemanager.node-labels.am.allow-non-exclusive-allocation</name>
     <value>false</value>
   </property>
 
