@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AMRunner {
   private static final Logger LOG = LoggerFactory.getLogger(AMRunner.class);
-  static AtomicInteger remainingApps = new AtomicInteger(0);
+  static int remainingApps = 0;
 
   private final Configuration conf;
   private int AM_ID;
@@ -113,7 +113,7 @@ public class AMRunner {
     }
 
     numAMs = amMap.size();
-    remainingApps.set(numAMs);
+    remainingApps = numAMs;
   }
 
   /**

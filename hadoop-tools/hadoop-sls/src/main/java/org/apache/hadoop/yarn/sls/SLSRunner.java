@@ -99,7 +99,7 @@ public class SLSRunner extends Configured implements Tool {
       "networkaddress.cache.negative.ttl";
 
   public static int getRemainingApps() {
-    return AMRunner.remainingApps.get();
+    return AMRunner.remainingApps;
   }
 
   public SLSRunner() throws ClassNotFoundException, YarnException {
@@ -302,8 +302,8 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   public static void decreaseRemainingApps() {
-    AMRunner.remainingApps.decrementAndGet();
-    if (AMRunner.remainingApps.get() == 0) {
+    AMRunner.remainingApps--;
+    if (AMRunner.remainingApps == 0) {
       exitSLSRunner();
     }
   }
