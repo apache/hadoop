@@ -258,9 +258,8 @@ public class NodeInfo {
                               final Resource resource, int port) {
     final NodeId nodeId = newNodeID(hostName, port);
     final String nodeAddr = hostName + ":" + port;
-    final String httpAddress = hostName;
-    
-    return new FakeRMNodeImpl(nodeId, nodeAddr, httpAddress,
+
+    return new FakeRMNodeImpl(nodeId, nodeAddr, hostName,
         resource, rackName, "Me good",
         port, hostName, null);
   }
