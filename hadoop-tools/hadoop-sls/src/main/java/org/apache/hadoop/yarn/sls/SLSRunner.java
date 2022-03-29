@@ -342,24 +342,15 @@ public class SLSRunner extends Configured implements Tool {
     CommandLineParser parser = new GnuParser();
     CommandLine cmd = parser.parse(options, argv);
 
-    String traceType = null;
-    String traceLocation = null;
-
     // compatibility with old commandline
-    if (cmd.hasOption("inputrumen")) {
-      traceType = "RUMEN";
-      traceLocation = cmd.getOptionValue("inputrumen");
-    }
-    if (cmd.hasOption("inputsls")) {
-      traceType = "SLS";
-      traceLocation = cmd.getOptionValue("inputsls");
-    }
-
-    if (cmd.hasOption("tracetype")) {
-      traceType = cmd.getOptionValue("tracetype");
-      traceLocation = cmd.getOptionValue("tracelocation");
-    }
-
+    boolean hasInputRumenOption = cmd.hasOption("inputrumen");
+    boolean hasInputSlsOption = cmd.hasOption("inputsls");
+    boolean hasTraceTypeOption = cmd.hasOption("tracetype");
+    TraceType traceType = determineTraceType(cmd, hasInputRumenOption,
+        hasInputSlsOption, hasTraceTypeOption);
+    String traceLocation = determineTraceLocation(cmd, hasInputRumenOption,
+        hasInputSlsOption, hasTraceTypeOption);
+    
     String output = cmd.getOptionValue("output");
 
     File outputFile = new File(output);
@@ -379,30 +370,56 @@ public class SLSRunner extends Configured implements Tool {
     String tempNodeFile =
         cmd.hasOption("nodes") ? cmd.getOptionValue("nodes") : "";
 
-    TraceType tempTraceType;
-    switch (traceType) {
-    case "SLS":
-      tempTraceType = TraceType.SLS;
-      break;
-    case "RUMEN":
-      tempTraceType = TraceType.RUMEN;
-      break;
-    case "SYNTH":
-      tempTraceType = TraceType.SYNTH;
-      break;
-    default:
-      printUsage();
-      throw new YarnException("Misconfigured input");
-    }
-
     String[] inputFiles = traceLocation.split(",");
 
-    setSimulationParams(tempTraceType, inputFiles, tempNodeFile, output,
+    setSimulationParams(traceType, inputFiles, tempNodeFile, output,
         trackedJobSet, cmd.hasOption("printsimulation"));
     
     start();
 
     return 0;
+  }
+
+  private TraceType determineTraceType(CommandLine cmd, boolean hasInputRumenOption,
+      boolean hasInputSlsOption, boolean hasTraceTypeOption) throws YarnException {
+    String traceType = null;
+    if (hasInputRumenOption) {
+      traceType = "RUMEN";
+    }
+    if (hasInputSlsOption) {
+      traceType = "SLS";
+    }
+    if (hasTraceTypeOption) {
+      traceType = cmd.getOptionValue("tracetype");
+    }
+    if (traceType == null) {
+      throw new YarnException("Misconfigured input");
+    }
+    switch (traceType) {
+      case "SLS":
+        return TraceType.SLS;
+      case "RUMEN":
+        return TraceType.RUMEN;
+      case "SYNTH":
+        return TraceType.SYNTH;
+      default:
+        printUsage();
+        throw new YarnException("Misconfigured input");
+    }
+  }
+
+  private String determineTraceLocation(CommandLine cmd, boolean hasInputRumenOption,
+      boolean hasInputSlsOption, boolean hasTraceTypeOption) throws YarnException {
+    if (hasInputRumenOption) {
+      return cmd.getOptionValue("inputrumen");
+    }
+    if (hasInputSlsOption) {
+      return cmd.getOptionValue("inputsls");
+    }
+    if (hasTraceTypeOption) {
+      return cmd.getOptionValue("tracelocation");
+    }
+    throw new YarnException("Misconfigured input! ");
   }
 
   public static void main(String[] argv) throws Exception {
