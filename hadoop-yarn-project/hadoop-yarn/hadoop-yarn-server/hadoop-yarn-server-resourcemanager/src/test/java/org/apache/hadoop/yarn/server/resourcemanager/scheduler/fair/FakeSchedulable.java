@@ -150,6 +150,11 @@ public class FakeSchedulable implements Schedulable {
   }
 
   @Override
+  public float getMaxAppShare() {
+    return -1.0f;
+  }
+
+  @Override
   public void updateDemand() {}
 
   @Override

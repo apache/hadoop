@@ -861,6 +861,16 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       reservedContainer = node.getReservedContainer().getContainer();
     }
 
+    FSLeafQueue queue = getQueue();
+    if (queue.scheduler.appResourceLimitEnabled) {
+      Resource usagePlusAddition =
+          Resources.add(getResourceUsage(), capability);
+      if (!Resources.fitsInMultiplyMemory(usagePlusAddition,
+          queue.getSteadyFairShare(), queue.getMaxAppShare())) {
+        return Resources.none();
+      }
+    }
+
     // Can we allocate a container on this node?
     if (Resources.fitsIn(capability, available)) {
       // Inform the application of the new container for this request
@@ -890,7 +900,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       // usage
       if (!isAmRunning() && !getUnmanagedAM()) {
         setAMResource(capability);
-        getQueue().addAMResourceUsage(capability);
+        queue.addAMResourceUsage(capability);
         setAmRunning(true);
       }
 
@@ -944,6 +954,21 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       }
     }
     return false;
+  }
+
+  /**
+   * Whether the used resource for this app is over maxAppShare limit.
+   */
+  static boolean isOverAppShareLimit(
+      FSAppAttempt fsAppAttempt, Resource additionalResource) {
+    FSQueue queue = fsAppAttempt.getQueue();
+    if (queue.scheduler.appResourceLimitEnabled) {
+      Resource usagePlusAddition =
+          Resources.add(fsAppAttempt.getResourceUsage(), additionalResource);
+      return Resources.fitsInMultiplyMemory(usagePlusAddition,
+          queue.getSteadyFairShare(), queue.getMaxAppShare());
+    }
+    return true;
   }
 
   @SuppressWarnings("deprecation")
@@ -1316,6 +1341,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   @Override
+  public float getMaxAppShare() {
+    return scheduler.getAllocationConfiguration().getQueueMaxAppShare(getName());
+  }
+
+  @Override
   public Resource getResourceUsage() {
     return getCurrentConsumption();
   }
@@ -1380,6 +1410,16 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
             + getQueue().dumpState());
       }
       return Resources.none();
+    }
+
+    PendingAsk nextAsk = appSchedulingInfo.getNextPendingAsk();
+    if (isOverAppShareLimit(this, nextAsk.getPerAllocationResource())) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Container resource request: " + nextAsk.getPerAllocationResource()
+            + " exceeds maximum app resource limit allowed, "
+            + getQueue().dumpState());
+        return Resources.none();
+      }
     }
     return assignContainer(node, false);
   }

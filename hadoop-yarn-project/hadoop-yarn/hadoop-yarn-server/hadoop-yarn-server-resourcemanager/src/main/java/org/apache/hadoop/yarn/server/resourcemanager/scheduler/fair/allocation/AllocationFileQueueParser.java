@@ -51,6 +51,7 @@ public class AllocationFileQueueParser {
   private static final String MAX_CHILD_RESOURCES = "maxChildResources";
   private static final String MAX_RUNNING_APPS = "maxRunningApps";
   private static final String MAX_AMSHARE = "maxAMShare";
+  private static final String MAX_APPSHARE = "maxAppShare";
   public static final String MAX_CONTAINER_ALLOCATION =
       "maxContainerAllocation";
   private static final String WEIGHT = "weight";
@@ -159,6 +160,11 @@ public class AllocationFileQueueParser {
         val = Math.min(val, 1.0f);
         builder.queueMaxAMShares(queueName, val);
         isMaxAMShareSet = true;
+      } else if (MAX_APPSHARE.equals(field.getTagName())) {
+        String text = getTrimmedTextData(field);
+        float val = Float.parseFloat(text);
+        val = Math.max(Math.min(val, 1.0f), 0f);
+        builder.queueMaxAppShares(queueName, val);
       } else if (MAX_CONTAINER_ALLOCATION.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);
         ConfigurableResource val =

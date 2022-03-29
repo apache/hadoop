@@ -62,6 +62,8 @@ public class AllocationFileParser {
       "defaultFairSharePreemptionThreshold";
   private static final String QUEUE_MAX_AM_SHARE_DEFAULT =
       "queueMaxAMShareDefault";
+  private static final String QUEUE_MAX_APP_SHARE_DEFAULT =
+      "queueMaxAppShareDefault";
   private static final String RESERVATION_PLANNER = "reservation-planner";
   private static final String RESERVATION_AGENT = "reservation-agent";
   private static final String RESERVATION_ADMISSION_POLICY =
@@ -82,8 +84,8 @@ public class AllocationFileParser {
           DEFAULT_FAIR_SHARE_PREEMPTION_TIMEOUT, FAIR_SHARE_PREEMPTION_TIMEOUT,
           DEFAULT_MIN_SHARE_PREEMPTION_TIMEOUT, QUEUE_MAX_APPS_DEFAULT,
           DEFAULT_FAIR_SHARE_PREEMPTION_THRESHOLD, QUEUE_MAX_AM_SHARE_DEFAULT,
-          RESERVATION_PLANNER, RESERVATION_AGENT, RESERVATION_ADMISSION_POLICY,
-          QUEUE_PLACEMENT_POLICY, QUEUE, POOL, USER,
+          QUEUE_MAX_APP_SHARE_DEFAULT, RESERVATION_PLANNER, RESERVATION_AGENT,
+          RESERVATION_ADMISSION_POLICY, QUEUE_PLACEMENT_POLICY, QUEUE, POOL, USER,
           DEFAULT_QUEUE_SCHEDULING_POLICY, DEFAULT_QUEUE_SCHEDULING_MODE);
 
   private final NodeList elements;
@@ -218,6 +220,15 @@ public class AllocationFileParser {
       return Math.min(val, 1.0f);
     }
     return 0.5f;
+  }
+
+  public float getQueueMaxAppShareDefault() {
+    Optional<String> value = getTextValue(QUEUE_MAX_APP_SHARE_DEFAULT);
+    if (value.isPresent()) {
+      float val = Float.parseFloat(value.get());
+      return Math.max(Math.min(val, 1.0f), 0f);
+    }
+    return 1.0f;
   }
 
   // Reservation global configuration knobs
