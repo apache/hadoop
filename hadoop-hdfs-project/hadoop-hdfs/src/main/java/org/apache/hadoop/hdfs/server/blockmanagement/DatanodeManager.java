@@ -2198,5 +2198,10 @@ public class DatanodeManager {
     }
     return reports;
   }
+
+  @VisibleForTesting
+  public Map<String, DatanodeDescriptor> getDatanodeMap() {
+    return datanodeMap;
+  }
 }
 
