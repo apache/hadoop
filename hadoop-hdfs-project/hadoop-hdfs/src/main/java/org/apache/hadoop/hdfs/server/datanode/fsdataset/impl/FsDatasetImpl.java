@@ -3431,5 +3431,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
   }
+
+  @Override
+  public List<FsVolumeImpl> getVolumeList() {
+    return volumes.getVolumes();
+  }
 }
 
