@@ -155,6 +155,7 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
   /**
    * How long in between runs of the background refresh.
    */
+  @VisibleForTesting
   public long getRefreshInterval() {
     return refreshInterval;
   }

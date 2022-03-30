@@ -878,8 +878,8 @@ public class DataNode extends ReconfigurableBase
         List<FsVolumeImpl> volumeList = data.getVolumeList();
         for (FsVolumeImpl fsVolume : volumeList) {
           Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
-          for (Entry<String, BlockPoolSlice> entry : blockPoolSlices.entrySet()) {
-            entry.getValue().updateDfsUsageConfig(interval, null);
+          for (BlockPoolSlice value : blockPoolSlices.values()) {
+            value.updateDfsUsageConfig(interval, null);
           }
         }
       } else if (property.equals(FS_GETSPACEUSED_JITTER_KEY)) {
@@ -890,8 +890,8 @@ public class DataNode extends ReconfigurableBase
         List<FsVolumeImpl> volumeList = data.getVolumeList();
         for (FsVolumeImpl fsVolume : volumeList) {
           Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
-          for (Entry<String, BlockPoolSlice> entry : blockPoolSlices.entrySet()) {
-            entry.getValue().updateDfsUsageConfig(null, jitter);
+          for (BlockPoolSlice value : blockPoolSlices.values()) {
+            value.updateDfsUsageConfig(null, jitter);
           }
         }
       }
