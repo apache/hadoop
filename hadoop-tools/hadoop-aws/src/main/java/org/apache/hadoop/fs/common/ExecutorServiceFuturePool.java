@@ -61,7 +61,7 @@ public class ExecutorServiceFuturePool {
    */
   @SuppressWarnings("unchecked")
   public Future<Void> executeRunnable(final Runnable r) {
-    return (Future<Void>) executor.submit(() -> r.run());
+    return (Future<Void>) executor.submit(r::run);
   }
 
   public String toString() {
