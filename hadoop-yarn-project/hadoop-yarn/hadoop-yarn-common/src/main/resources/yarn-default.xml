@@ -3452,6 +3452,14 @@
     <value>30000</value>
   </property>
 
+  <property>
+    <description>
+      Overwrites default-node-label-expression only for the ApplicationMaster
+      container. It is disabled by default.
+    </description>
+    <name>yarn.resourcemanager.node-labels.am.default-node-label-expression</name>
+  </property>
+
   <!-- Distributed Node Attributes Configuration -->
   <property>
     <description>
