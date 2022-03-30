@@ -653,7 +653,7 @@ public class AbfsClient implements Closeable {
               ((AbfsRestOperationException) e).getStatusCode() < HttpURLConnection.HTTP_INTERNAL_ERROR) &&
               reqParams.getIsExpectHeaderEnabled()) {
         reqParams.setExpectHeaderEnabled(false);
-        this.append(path, buffer, reqParams, cachedSasToken, tracingContext);
+        return this.append(path, buffer, reqParams, cachedSasToken, tracingContext);
       }
       // If we have no HTTP response, throw the original exception.
       if (!op.hasResult()) {
