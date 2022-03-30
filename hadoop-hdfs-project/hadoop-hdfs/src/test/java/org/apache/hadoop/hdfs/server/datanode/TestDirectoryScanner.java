@@ -1265,6 +1265,6 @@ public class TestDirectoryScanner {
   public void testDefaultDirectoryScanThrottle() {
     Configuration conf = new Configuration(getConfiguration());
     assertEquals(Integer.parseInt(
-            conf.get(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY)), -1);
+            conf.get(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY)), 1000);
   }
 }
