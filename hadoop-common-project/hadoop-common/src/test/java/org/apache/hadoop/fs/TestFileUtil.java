@@ -794,43 +794,50 @@ public class TestFileUtil {
 
     // successfully unzip it into an existing dir:
     FileUtil.unZip(simpleZip, tmp);
+    File foo0 = new File(tmp, "foo_0");
+    File foo1 = new File(tmp, "foo_1");
+    File foo2 = new File(tmp, "foo_2");
+    File foo3 = new File(tmp, "foo_3");
+    File foo4 = new File(tmp, "foo_4");
+    File foo5 = new File(tmp, "foo_5");
+    File foo6 = new File(tmp, "foo_6");
     // check result:
-    assertTrue(new File(tmp, "foo_0").exists());
-    assertTrue(new File(tmp, "foo_1").exists());
-    assertTrue(new File(tmp, "foo_2").exists());
-    assertTrue(new File(tmp, "foo_3").exists());
-    assertTrue(new File(tmp, "foo_4").exists());
-    assertTrue(new File(tmp, "foo_5").exists());
-    assertTrue(new File(tmp, "foo_6").exists());
-    assertEquals(12, new File(tmp, "foo_0").length());
+    assertTrue(foo0.exists());
+    assertTrue(foo1.exists());
+    assertTrue(foo2.exists());
+    assertTrue(foo3.exists());
+    assertTrue(foo4.exists());
+    assertTrue(foo5.exists());
+    assertTrue(foo6.exists());
+    assertEquals(12, foo0.length());
     // tests whether file foo_0 has executable permissions
-    assertTrue("file lacks execute permissions", new File(tmp, "foo_0").canExecute());
-    assertFalse("file has write permissions", new File(tmp, "foo_0").canWrite());
-    assertFalse("file has read permissions", new File(tmp, "foo_0").canRead());
+    assertTrue("file lacks execute permissions", foo0.canExecute());
+    assertFalse("file has write permissions", foo0.canWrite());
+    assertFalse("file has read permissions", foo0.canRead());
     // tests whether file foo_1 has writable permissions
-    assertFalse("file has execute permissions", new File(tmp, "foo_1").canExecute());
-    assertTrue("file lacks write permissions", new File(tmp, "foo_1").canWrite());
-    assertFalse("file has read permissions", new File(tmp, "foo_1").canRead());
+    assertFalse("file has execute permissions", foo1.canExecute());
+    assertTrue("file lacks write permissions", foo1.canWrite());
+    assertFalse("file has read permissions", foo1.canRead());
     // tests whether file foo_2 has executable and writable permissions
-    assertTrue("file lacks execute permissions", new File(tmp, "foo_2").canExecute());
-    assertTrue("file lacks write permissions", new File(tmp, "foo_2").canWrite());
-    assertFalse("file has read permissions", new File(tmp, "foo_2").canRead());
+    assertTrue("file lacks execute permissions", foo2.canExecute());
+    assertTrue("file lacks write permissions", foo2.canWrite());
+    assertFalse("file has read permissions", foo2.canRead());
     // tests whether file foo_3 has readable permissions
-    assertFalse("file has execute permissions", new File(tmp, "foo_3").canExecute());
-    assertFalse("file has write permissions", new File(tmp, "foo_3").canWrite());
-    assertTrue("file lacks read permissions", new File(tmp, "foo_3").canRead());
+    assertFalse("file has execute permissions", foo3.canExecute());
+    assertFalse("file has write permissions", foo3.canWrite());
+    assertTrue("file lacks read permissions", foo3.canRead());
     // tests whether file foo_4 has readable and executable permissions
-    assertTrue("file lacks execute permissions", new File(tmp, "foo_4").canExecute());
-    assertFalse("file has write permissions", new File(tmp, "foo_4").canWrite());
-    assertTrue("file lacks read permissions", new File(tmp, "foo_4").canRead());
+    assertTrue("file lacks execute permissions", foo4.canExecute());
+    assertFalse("file has write permissions", foo4.canWrite());
+    assertTrue("file lacks read permissions", foo4.canRead());
     // tests whether file foo_5 has readable and writable permissions
-    assertFalse("file has execute permissions", new File(tmp, "foo_5").canExecute());
-    assertTrue("file lacks write permissions", new File(tmp, "foo_5").canWrite());
-    assertTrue("file lacks read permissions", new File(tmp, "foo_5").canRead());
+    assertFalse("file has execute permissions", foo5.canExecute());
+    assertTrue("file lacks write permissions", foo5.canWrite());
+    assertTrue("file lacks read permissions", foo5.canRead());
     // tests whether file foo_6 has readable, writable and executable permissions
-    assertTrue("file lacks execute permissions", new File(tmp, "foo_6").canExecute());
-    assertTrue("file lacks write permissions", new File(tmp, "foo_6").canWrite());
-    assertTrue("file lacks read permissions", new File(tmp, "foo_6").canRead());
+    assertTrue("file lacks execute permissions", foo6.canExecute());
+    assertTrue("file lacks write permissions", foo6.canWrite());
+    assertTrue("file lacks read permissions", foo6.canRead());
 
     final File regularFile =
         Verify.createNewFile(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
