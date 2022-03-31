@@ -125,4 +125,11 @@ public interface Constants {
       "fs.viewfs.ignore.port.in.mount.table.name";
 
   boolean CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT = false;
+
+  /**
+   * Force ViewFileSystem to return a trashRoot that is inside a mount point.
+   */
+  String CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT =
+      "fs.viewfs.trash.force-inside-mount-point";
+  boolean CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT = false;
 }
