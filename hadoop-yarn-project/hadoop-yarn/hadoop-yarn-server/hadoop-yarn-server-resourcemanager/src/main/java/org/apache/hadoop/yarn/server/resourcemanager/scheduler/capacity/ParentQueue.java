@@ -78,6 +78,8 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
+
 @Private
 @Evolving
 public class ParentQueue extends AbstractCSQueue {
@@ -185,6 +187,16 @@ public class ParentQueue extends AbstractCSQueue {
           + ", allowZeroCapacitySum=" + allowZeroCapacitySum);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  @Override
+  protected void setDynamicQueueACLProperties() {
+    super.setDynamicQueueACLProperties();
+
+    if (parent instanceof ParentQueue) {
+      acls.putAll(getACLsForFlexibleAutoCreatedParentQueue(
+          ((ParentQueue) parent).getAutoCreatedQueueTemplate()));
     }
   }
 
@@ -465,7 +477,7 @@ public class ParentQueue extends AbstractCSQueue {
         "numChildQueue= " + childQueues.size() + ", " +
         getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
-        "usedResources=" + usageTracker.getQueueUsage().getUsed() +
+        "usedResources=" + usageTracker.getQueueUsage().getUsed() + ", " +
         "usedCapacity=" + getUsedCapacity() + ", " +
         "numApps=" + getNumApplications() + ", " +
         "numContainers=" + getNumContainers();
@@ -1148,7 +1160,7 @@ public class ParentQueue extends AbstractCSQueue {
     StringBuilder sb = new StringBuilder();
     for (CSQueue q : childQueues) {
       sb.append(q.getQueuePath() + 
-          "usedCapacity=(" + q.getUsedCapacity() + "), " + 
+          " usedCapacity=(" + q.getUsedCapacity() + "), " +
           " label=("
           + StringUtils.join(q.getAccessibleNodeLabels().iterator(), ",") 
           + ")");
@@ -1280,7 +1292,7 @@ public class ParentQueue extends AbstractCSQueue {
           labelManager.getResourceByLabel(null, clusterResource),
           RMNodeLabelsManager.NO_LABEL, this);
     } catch (IOException e) {
-      LOG.error("Fatal issue found: e", e);
+      LOG.error("Error during updating cluster resource: ", e);
       throw new YarnRuntimeException("Fatal issue during scheduling", e);
     } finally {
       writeLock.unlock();

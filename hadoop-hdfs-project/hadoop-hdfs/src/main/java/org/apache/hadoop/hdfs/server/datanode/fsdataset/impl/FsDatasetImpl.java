@@ -3576,11 +3576,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
-  public List<FsVolumeImpl> getVolumeList() {
-    return volumes.getVolumes();
-  }
-
-  @Override
   public boolean isDeletingBlock(String bpid, long blockId) {
     synchronized(deletingBlock) {
       Set<Long> s = deletingBlock.get(bpid);
@@ -3692,6 +3687,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         });
       }
     }
+  }
+
+  @Override
+  public List<FsVolumeImpl> getVolumeList() {
+    return volumes.getVolumes();
   }
 }
 

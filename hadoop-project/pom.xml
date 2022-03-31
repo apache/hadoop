@@ -63,7 +63,7 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.7.7</avro.version>
+    <avro.version>1.9.2</avro.version>
 
     <!-- jersey version -->
     <jersey.version>1.19</jersey.version>
@@ -382,6 +382,13 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-core</artifactId>
         <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-core</artifactId>
+        <version>${hadoop.version}</version>
+        <type>test-jar</type>
       </dependency>
 
       <dependency>
@@ -1473,6 +1480,11 @@
         <groupId>${leveldbjni.group}</groupId>
         <artifactId>leveldbjni-all</artifactId>
         <version>1.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.fusesource.hawtjni</groupId>
+        <artifactId>hawtjni-runtime</artifactId>
+        <version>1.11</version>
       </dependency>
 
       <dependency>

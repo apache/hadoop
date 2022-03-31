@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -146,8 +144,9 @@ public class TestBalancerWithHANameNodes {
     TestBalancer.createFile(cluster, TestBalancer.filePath, totalUsedSpace
         / numOfDatanodes, (short) numOfDatanodes, 0);
 
-    boolean isRequestStandby = conf.getBoolean(
-        DFS_HA_ALLOW_STALE_READ_KEY, DFS_HA_ALLOW_STALE_READ_DEFAULT);
+    boolean isRequestStandby = !conf.getBoolean(
+        DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+        DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
     if (isRequestStandby) {
       HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
           cluster.getNameNode(1));
@@ -182,7 +181,7 @@ public class TestBalancerWithHANameNodes {
   @Test(timeout = 60000)
   public void testBalancerRequestSBNWithHA() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFS_HA_ALLOW_STALE_READ_KEY, true);
+    conf.setBoolean(DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY, false);
     conf.setLong(DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     //conf.setBoolean(DFS_HA_BALANCER_REQUEST_STANDBY_KEY, true);
     TestBalancer.initConf(conf);
@@ -329,8 +328,8 @@ public class TestBalancerWithHANameNodes {
       nncActive.close();
 
       // Request to standby namenode.
-      conf.setBoolean(DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY,
-          true);
+      conf.setBoolean(DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+          false);
       NameNodeConnector nncStandby = new NameNodeConnector(
           "nncStandby", namenode,
           nsId, new Path("/test"),

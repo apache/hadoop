@@ -57,8 +57,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Private
 @Unstable
 public class SLSUtils {
-  public final static String DEFAULT_JOB_TYPE = "mapreduce";
-
   private static final String LABEL_FORMAT_ERR_MSG =
       "Input format for adding node-labels is not correct, it should be "
           + "labelName1[(exclusive=true/false)],labelName2[] ..";

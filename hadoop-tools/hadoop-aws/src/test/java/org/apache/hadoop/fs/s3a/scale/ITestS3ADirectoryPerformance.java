@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -153,6 +154,38 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           listContinueRequests,
           listStatusCalls,
           getFileStatusCalls);
+
+      describe("Get content summary for directory");
+
+      NanoTimer getContentSummaryTimer = new NanoTimer();
+
+      ContentSummary rootPathSummary = fs.getContentSummary(scaleTestDir);
+      ContentSummary testPathSummary = fs.getContentSummary(listDir);
+
+      getContentSummaryTimer.end("getContentSummary of %s", created);
+
+      // only two list operations should have taken place
+      print(LOG,
+          metadataRequests,
+          listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
+      assertEquals(listRequests.toString(), 2, listRequests.diff());
+      reset(metadataRequests,
+          listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
+
+      assertTrue("Root directory count should be > test path",
+          rootPathSummary.getDirectoryCount() > testPathSummary.getDirectoryCount());
+      assertTrue("Root file count should be >= to test path",
+          rootPathSummary.getFileCount() >= testPathSummary.getFileCount());
+      assertEquals("Incorrect directory count", created.getDirCount() + 1,
+          testPathSummary.getDirectoryCount());
+      assertEquals("Incorrect file count", created.getFileCount(),
+          testPathSummary.getFileCount());
 
     } finally {
       describe("deletion");

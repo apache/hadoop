@@ -55,6 +55,7 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -401,6 +402,9 @@ public class NamenodeWebHdfsMethods {
       final String path, final HttpOpParam.Op op, final long openOffset,
       final long blocksize, final String excludeDatanodes,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
+    if (!DFSUtil.isValidName(path)) {
+      throw new InvalidPathException(path);
+    }
     final DatanodeInfo dn;
     final NamenodeProtocols np = getRPCServer(namenode);
     HdfsFileStatus status = null;

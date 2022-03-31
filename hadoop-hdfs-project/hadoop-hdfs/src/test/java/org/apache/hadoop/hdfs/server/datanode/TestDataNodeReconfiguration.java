@@ -21,6 +21,10 @@ package org.apache.hadoop.hdfs.server.datanode;
 import org.apache.hadoop.fs.CachingGetSpaceUsed;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_JITTER_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_JITTER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY;
@@ -51,15 +55,20 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.BlockPoolSlice;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -678,6 +687,79 @@ public class TestDataNodeReconfiguration {
     }
   }
 
+  @Test
+  public void testDfsUsageParameters() throws ReconfigurationException {
+    String[] dfsUsageParameters = {
+        FS_DU_INTERVAL_KEY,
+        FS_GETSPACEUSED_JITTER_KEY};
+
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Try invalid values.
+      for (String parameter : dfsUsageParameters) {
+        try {
+          dn.reconfigureProperty(parameter, "text");
+          fail("ReconfigurationException expected");
+        } catch (ReconfigurationException expected) {
+          assertTrue("expecting NumberFormatException",
+              expected.getCause() instanceof NumberFormatException);
+        }
+
+        try {
+          dn.reconfigureProperty(parameter, String.valueOf(-1));
+          fail("ReconfigurationException expected");
+        } catch (ReconfigurationException expected) {
+          assertTrue("expecting IllegalArgumentException",
+              expected.getCause() instanceof IllegalArgumentException);
+        }
+      }
+
+      // Change and verify properties.
+      for (String parameter : dfsUsageParameters) {
+        dn.reconfigureProperty(parameter, "99");
+      }
+      List<FsVolumeImpl> volumeList = dn.data.getVolumeList();
+      for (FsVolumeImpl fsVolume : volumeList) {
+        Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
+        for (Map.Entry<String, BlockPoolSlice> entry : blockPoolSlices.entrySet()) {
+          GetSpaceUsed dfsUsage = entry.getValue().getDfsUsage();
+          if (dfsUsage instanceof CachingGetSpaceUsed) {
+            assertEquals(99,
+                ((CachingGetSpaceUsed) entry.getValue().getDfsUsage()).getRefreshInterval());
+            assertEquals(99,
+                ((CachingGetSpaceUsed) entry.getValue().getDfsUsage()).getJitter());
+          }
+        }
+      }
+
+      // Revert to default and verify.
+      for (String parameter : dfsUsageParameters) {
+        dn.reconfigureProperty(parameter, null);
+      }
+      for (FsVolumeImpl fsVolume : volumeList) {
+        Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
+        for (Map.Entry<String, BlockPoolSlice> entry : blockPoolSlices.entrySet()) {
+          GetSpaceUsed dfsUsage = entry.getValue().getDfsUsage();
+          if (dfsUsage instanceof CachingGetSpaceUsed) {
+            assertEquals(String.format("expect %s is not configured",
+                FS_DU_INTERVAL_KEY), FS_DU_INTERVAL_DEFAULT,
+                ((CachingGetSpaceUsed) entry.getValue().getDfsUsage()).getRefreshInterval());
+            assertEquals(String.format("expect %s is not configured",
+                FS_GETSPACEUSED_JITTER_KEY), FS_GETSPACEUSED_JITTER_DEFAULT,
+                ((CachingGetSpaceUsed) entry.getValue().getDfsUsage()).getJitter());
+          }
+          assertEquals(String.format("expect %s is not configured",
+              FS_DU_INTERVAL_KEY), null,
+              dn.getConf().get(FS_DU_INTERVAL_KEY));
+          assertEquals(String.format("expect %s is not configured",
+              FS_GETSPACEUSED_JITTER_KEY), null,
+              dn.getConf().get(FS_GETSPACEUSED_JITTER_KEY));
+        }
+      }
+    }
+  }
+
   public static class DummyCachingGetSpaceUsed extends CachingGetSpaceUsed {
     public DummyCachingGetSpaceUsed(Builder builder) throws IOException {
       super(builder.setInterval(1000).setJitter(0L));
@@ -690,7 +772,7 @@ public class TestDataNodeReconfiguration {
   }
 
   @Test
-  public void testDfsUsageParameters() throws IOException, ReconfigurationException,
+  public void testDfsUsageKlass() throws IOException, ReconfigurationException,
           InterruptedException {
 
     long lastCounter = counter;
@@ -705,5 +787,5 @@ public class TestDataNodeReconfiguration {
     lastCounter = counter;
     Thread.sleep(5000);
     assertEquals(lastCounter, counter);
-  }
+ }
 }

@@ -216,11 +216,11 @@ public class ViewFileSystem extends FileSystem {
     /**
      * Array of target FileSystem URIs.
      */
-    private final URI[] targetFileSystemURIs;
+    private final String[] targetFileSystemPaths;
 
-    MountPoint(Path srcPath, URI[] targetFs) {
+    MountPoint(Path srcPath, String[] targetFs) {
       mountedOnPath = srcPath;
-      targetFileSystemURIs = targetFs;
+      targetFileSystemPaths = targetFs;
     }
 
     public Path getMountedOnPath() {
@@ -228,7 +228,15 @@ public class ViewFileSystem extends FileSystem {
     }
 
     public URI[] getTargetFileSystemURIs() {
-      return targetFileSystemURIs;
+      URI[] targetUris = new URI[targetFileSystemPaths.length];
+      for (int i = 0; i < targetFileSystemPaths.length; i++) {
+        targetUris[i] = URI.create(targetFileSystemPaths[i]);
+      }
+      return targetUris;
+    }
+
+    public String[] getTargetFileSystemPaths() {
+      return targetFileSystemPaths;
     }
   }
 

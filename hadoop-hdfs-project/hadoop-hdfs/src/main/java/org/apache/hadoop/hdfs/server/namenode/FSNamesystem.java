@@ -401,7 +401,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
 
-  private static final String CLIENT_PORT_STR = "clientPort";
   private final String contextFieldSeparator;
 
   boolean isAuditEnabled() {
@@ -467,7 +466,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
       CallerContext.setCurrent(
           new CallerContext.Builder(origContext, contextFieldSeparator)
-              .append(CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
+              .append(CallerContext.CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
               .setSignature(origSignature)
               .build());
     }
@@ -475,7 +474,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private boolean isClientPortInfoAbsent(CallerContext ctx){
     return ctx == null || ctx.getContext() == null
-        || !ctx.getContext().contains(CLIENT_PORT_STR);
+        || !ctx.getContext().contains(CallerContext.CLIENT_PORT_STR);
   }
 
   /**
@@ -504,6 +503,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final boolean isSnapshotTrashRootEnabled;
   private final int snapshotDiffReportLimit;
   private final int blockDeletionIncrement;
+
+  /**
+   * Whether enable checkOperation when call getBlocks.
+   * It is enabled  by default.
+   */
+  private final boolean isGetBlocksCheckOperationEnabled;
 
   /** Interval between each check of lease to release. */
   private final long leaseRecheckIntervalMs;
@@ -1066,6 +1071,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Preconditions.checkArgument(blockDeletionIncrement > 0,
           DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY +
               " must be a positive integer.");
+      this.isGetBlocksCheckOperationEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+          DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
+
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -1789,6 +1798,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.fsLock.readUnlock();
   }
 
+  @Override
   public void readUnlock(String opName) {
     this.fsLock.readUnlock(opName);
   }
@@ -1813,6 +1823,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.fsLock.writeUnlock();
   }
 
+  @Override
   public void writeUnlock(String opName) {
     this.fsLock.writeUnlock(opName);
   }
@@ -1938,10 +1949,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
       minimumBlockSize, long timeInterval) throws IOException {
-    checkOperation(OperationCategory.READ);
+    OperationCategory checkOp =
+        isGetBlocksCheckOperationEnabled ? OperationCategory.READ :
+            OperationCategory.UNCHECKED;
+    checkOperation(checkOp);
     readLock();
     try {
-      checkOperation(OperationCategory.READ);
+      checkOperation(checkOp);
       return getBlockManager().getBlocksWithLocations(datanode, size,
           minimumBlockSize, timeInterval);
     } finally {
