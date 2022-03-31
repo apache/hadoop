@@ -59,9 +59,9 @@ import org.slf4j.LoggerFactory;
  * {@link #resolve(String, boolean)}
  */
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Unstable
-abstract class InodeTree<T> {
+public abstract class InodeTree<T> {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(InodeTree.class.getName());
 
@@ -458,11 +458,11 @@ abstract class InodeTree<T> {
    * there will be root to root mapping. So, root does not represent as
    * internalDir.
    */
-  protected boolean isRootInternalDir() {
+  public boolean isRootInternalDir() {
     return root.isInternalDir();
   }
 
-  protected INodeLink<T> getRootFallbackLink() {
+  public INodeLink<T> getRootFallbackLink() {
     Preconditions.checkState(root.isInternalDir());
     return rootFallbackLink;
   }
