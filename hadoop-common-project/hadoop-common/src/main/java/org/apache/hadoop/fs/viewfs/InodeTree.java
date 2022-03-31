@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * {@link #resolve(String, boolean)}
  */
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
 public abstract class InodeTree<T> {
   private static final Logger LOGGER =
