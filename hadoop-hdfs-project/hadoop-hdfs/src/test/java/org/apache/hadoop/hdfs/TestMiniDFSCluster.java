@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
@@ -372,10 +372,7 @@ public class TestMiniDFSCluster {
     final Set<Integer> httpAndIpcPorts = NetUtils.getFreeSocketPorts(6);
     LOG.info("Free socket ports: {}", httpAndIpcPorts);
 
-    for (Integer httpAndIpcPort : httpAndIpcPorts) {
-      assertNotEquals("None of the acquired socket port should not be zero", 0,
-          httpAndIpcPort.intValue());
-    }
+    assertThat(httpAndIpcPorts).doesNotContain(0);
 
     final int[] httpPorts = new int[3];
     final int[] ipcPorts = new int[3];
