@@ -21,6 +21,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.fs.DF;
@@ -600,6 +604,53 @@ public class TestFsDatasetImpl {
     }
     assertEquals("The replica infos on this volume has been removed from the "
         + "volumeMap.", 0, totalNumReplicas);
+  }
+
+  @Test(timeout = 30000)
+  public void testConcurrentWriteAndDeleteBlock() throws Exception {
+    // Feed FsDataset with block metadata.
+    final int numBlocks = 1000;
+    final int threadCount = 10;
+    // Generate data blocks.
+    ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+    List<Future<?>> futureList = new ArrayList<>();
+    Random random = new Random();
+    // Random write block and delete half of them.
+    for (int i = 0; i < threadCount; i++) {
+      Thread thread = new Thread() {
+        @Override
+        public void run() {
+          try {
+            String bpid = BLOCK_POOL_IDS[random.nextInt(BLOCK_POOL_IDS.length)];
+            for (int blockId = 0; blockId < numBlocks; blockId++) {
+              ExtendedBlock eb = new ExtendedBlock(bpid, blockId);
+              ReplicaHandler replica = null;
+              try {
+                replica = dataset.createRbw(StorageType.DEFAULT, null, eb,
+                    false);
+                if (blockId % 2 > 0) {
+                  dataset.invalidate(bpid, new Block[]{eb.getLocalBlock()});
+                }
+              } finally {
+                if (replica != null) {
+                  replica.close();
+                }
+              }
+            }
+            // Just keep final consistency no need to care exception.
+          } catch (Exception ignore) {}
+        }
+      };
+      thread.setName("AddBlock" + i);
+      futureList.add(pool.submit(thread));
+    }
+    // Wait for data generation
+    for (Future<?> f : futureList) {
+      f.get();
+    }
+    for (String bpid : dataset.volumeMap.getBlockPoolList()) {
+      assertEquals(numBlocks / 2, dataset.volumeMap.size(bpid));
+    }
   }
 
   @Test(timeout = 5000)
