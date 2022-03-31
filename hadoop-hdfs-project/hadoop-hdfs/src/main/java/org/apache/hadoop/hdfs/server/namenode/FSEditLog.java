@@ -1512,11 +1512,12 @@ public class FSEditLog implements LogsPurgeable {
     if (!isOpenForWrite()) {
       return;
     }
-    
-    assert curSegmentTxId == HdfsServerConstants.INVALID_TXID || // on format this is no-op
-      minTxIdToKeep <= curSegmentTxId :
-      "cannot purge logs older than txid " + minTxIdToKeep +
-      " when current segment starts at " + curSegmentTxId;
+
+    Preconditions.checkArgument(
+        curSegmentTxId == HdfsServerConstants.INVALID_TXID || // on format this is no-op
+        minTxIdToKeep <= curSegmentTxId,
+        "cannot purge logs older than txid " + minTxIdToKeep +
+        " when current segment starts at " + curSegmentTxId);
     if (minTxIdToKeep == 0) {
       return;
     }
