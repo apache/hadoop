@@ -21,29 +21,51 @@
 
 #include <functional>
 #include <mutex>
-#include <utility>
 
 #include "hdfspp/hdfspp.h"
 
 namespace hdfs::tools {
+/**
+ * {@class SetReplicationState} helps in handling the intermediate results while
+ * running {@link Setrep}.
+ */
 struct SetReplicationState {
+  SetReplicationState(const uint16_t replication,
+                      std::function<void(const hdfs::Status &)> handler,
+                      const uint64_t request_counter, const bool find_is_done)
+      : replication{replication}, handler{std::move(handler)},
+        request_counter{request_counter}, find_is_done{find_is_done} {}
+
+  /**
+   * The replication factor.
+   */
   const uint16_t replication;
+
+  /**
+   * Handle the given {@link hdfs::Status}.
+   */
   const std::function<void(const hdfs::Status &)> handler;
-  // The request counter is incremented once every time SetReplication async
-  // call is made
+
+  /**
+   * The request counter is incremented once every time SetReplication async
+   * call is made.
+   */
   uint64_t request_counter;
-  // This boolean will be set when find returns the last result
+
+  /**
+   * This boolean will be set when find returns the last result.
+   */
   bool find_is_done;
-  // Final status to be returned
+
+  /**
+   * Final status to be returned.
+   */
   hdfs::Status status;
-  // Shared variables will need protection with a lock
+
+  /**
+   * Shared variables will need protection with a lock.
+   */
   std::mutex lock;
-  SetReplicationState(const uint16_t replication_,
-                      const std::function<void(const hdfs::Status &)> &handler_,
-                      uint64_t request_counter_, bool find_is_done_)
-      : replication(replication_), handler(handler_),
-        request_counter(request_counter_), find_is_done(find_is_done_),
-        status(), lock() {}
 };
 } // namespace hdfs::tools
 

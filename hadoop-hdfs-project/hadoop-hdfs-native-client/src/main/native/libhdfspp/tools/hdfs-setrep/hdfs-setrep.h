@@ -27,8 +27,10 @@
 
 namespace hdfs::tools {
 /**
- * {@class Setrep} is an {@class HdfsTool} that displays the size of the
- * directories and files.
+ * {@class Setrep} is an {@class HdfsTool} that changes the replication factor
+ * of a file at a given path. If the path is a directory, then it recursively
+ * changes the replication factor of all files under the directory tree rooted
+ * at the given path.
  */
 class Setrep : public HdfsTool {
 public:
@@ -74,8 +76,8 @@ protected:
    * Handle the path argument that's passed to this tool.
    *
    * @param path The path to the directory for which we need setrep info.
-   * @param recursive A boolean indicating whether setrep needs to be
-   * performed recursively for the given path.
+   * @param replication_factor The replication factor to set to given path and
+   * its children.
    *
    * @return A boolean indicating the result of this operation.
    */

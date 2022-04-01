@@ -33,12 +33,14 @@ Setrep::Setrep(const int argc, char **argv) : HdfsTool(argc, argv) {}
 bool Setrep::Initialize() {
   auto add_options = opt_desc_.add_options();
   add_options("help,h",
-              "Displays sizes of files and directories contained in the given "
-              "PATH or the length of a file in case PATH is just a file");
-  add_options("replication-factor", po::value<std::string>(),
-              "The replication factor");
+              "Changes the replication factor of a file at PATH. If PATH is a "
+              "directory then the command recursively changes the replication "
+              "factor of all files under the directory tree rooted at PATH.");
+  add_options(
+      "replication-factor", po::value<std::string>(),
+      "The replication factor to set for the given path and its children.");
   add_options("path", po::value<std::string>(),
-              "The path indicating the filesystem that needs to be setrep-ed");
+              "The path for which the replication factor needs to be set.");
 
   // We allow only one positional argument to be passed to this tool. An
   // exception is thrown if multiple arguments are passed.
@@ -55,12 +57,12 @@ bool Setrep::Initialize() {
 }
 
 bool Setrep::ValidateConstraints() const {
-  // Only "help" is allowed as single argument
+  // Only "help" is allowed as single argument.
   if (argc_ == 2) {
     return opt_val_.count("help");
   }
 
-  // Rest of the cases must contain more than 2 arguments on the command line
+  // Rest of the cases must contain more than 2 arguments on the command line.
   return argc_ > 2;
 }
 
@@ -162,19 +164,20 @@ bool Setrep::HandlePath(const std::string &path,
         [state](const hdfs::Status &status_set_replication) {
           std::lock_guard guard(state->lock);
 
-          // Decrement the counter once since we are done with this async call
+          // Decrement the counter once since we are done with this async call.
           if (!status_set_replication.ok() && state->status.ok()) {
-            // We make sure we set state->status only on the first error
+            // We make sure we set state->status only on the first error.
             state->status = status_set_replication;
           }
           state->request_counter--;
           if (state->request_counter == 0 && state->find_is_done) {
-            state->handler(state->status); // exit
+            state->handler(state->status); // Exit.
           }
         };
     if (!stat_infos.empty() && state->status.ok()) {
       for (hdfs::StatInfo const &stat_info : stat_infos) {
-        // Launch an asynchronous call to SetReplication for every returned file
+        // Launch an asynchronous call to SetReplication for every returned
+        // file.
         if (stat_info.file_type == hdfs::StatInfo::IS_FILE) {
           state->request_counter++;
           fs->SetReplication(stat_info.full_path, state->replication,
@@ -195,18 +198,18 @@ bool Setrep::HandlePath(const std::string &path,
     if (!has_more_results) {
       state->find_is_done = true;
       if (state->request_counter == 0) {
-        state->handler(state->status); // exit
+        state->handler(state->status); // Exit.
       }
       return false;
     }
     return true;
   };
 
-  // Asynchronous call to Find
+  // Asynchronous call to Find.
   fs->Find(uri.get_path(), "*", hdfs::FileSystem::GetDefaultFindMaxDepth(),
            handler_find);
 
-  /* block until promise is set */
+  // Block until promise is set.
   const auto status = future.get();
   if (!status.ok()) {
     std::cerr << "Error: " << status.ToString() << std::endl;
