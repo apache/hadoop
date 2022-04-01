@@ -879,24 +879,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Open the file as a blocking call to {@link #open(Path, int)}.
-   *
-   * {@inheritDoc}
-   */
-  @Override
-  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
-      final Path path,
-      final OpenFileParameters parameters) throws IOException {
-    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
-        parameters.getMandatoryKeys(),
-        FS_OPTION_OPENFILE_STANDARD_OPTIONS,
-        "for " + path);
-    return LambdaUtils.eval(
-        new CompletableFuture<>(),
-        () -> open(path, parameters.getBufferSize()));
-  }
-
-  /**
    * This is overridden to ensure that this class's create() method is
    * ultimately called.
    *
