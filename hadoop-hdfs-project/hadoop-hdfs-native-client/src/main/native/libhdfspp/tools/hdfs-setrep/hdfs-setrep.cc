@@ -35,6 +35,8 @@ bool Setrep::Initialize() {
   add_options("help,h",
               "Displays sizes of files and directories contained in the given "
               "PATH or the length of a file in case PATH is just a file");
+  add_options("replication-factor", po::value<std::string>(),
+              "The replication factor");
   add_options("path", po::value<std::string>(),
               "The path indicating the filesystem that needs to be setrep-ed");
 
@@ -52,21 +54,33 @@ bool Setrep::Initialize() {
   return true;
 }
 
+bool Setrep::ValidateConstraints() const {
+  // Only "help" is allowed as single argument
+  if (argc_ == 2) {
+    return opt_val_.count("help");
+  }
+
+  // Rest of the cases must contain more than 2 arguments on the command line
+  return argc_ > 2;
+}
+
 std::string Setrep::GetDescription() const {
   std::stringstream desc;
-  desc << "Usage: hdfs_setrep [OPTION] PATH" << std::endl
+  desc << "Usage: hdfs_setrep [OPTION] NUM_REPLICAS PATH" << std::endl
        << std::endl
-       << "Displays sizes of files and directories contained in the given PATH"
+       << "Changes the replication factor of a file at PATH. If PATH is a "
+          "directory then the command"
        << std::endl
-       << "or the length of a file in case PATH is just a file" << std::endl
+       << "recursively changes the replication factor of all files under the "
+          "directory tree rooted at PATH."
        << std::endl
-       << "  -R        operate on files and directories recursively"
        << std::endl
-       << "  -h        display this help and exit" << std::endl
+       << "  -h  display this help and exit" << std::endl
        << std::endl
        << "Examples:" << std::endl
-       << "hdfs_setrep hdfs://localhost.localdomain:8020/dir/file" << std::endl
-       << "hdfs_setrep -R /dir1/dir2" << std::endl;
+       << "hdfs_setrep 5 hdfs://localhost.localdomain:8020/dir/file"
+       << std::endl
+       << "hdfs_setrep 3 /dir1/dir2" << std::endl;
   return desc.str();
 }
 
@@ -85,7 +99,7 @@ bool Setrep::Do() {
     return HandleHelp();
   }
 
-  if (opt_val_.count("path") > 0) {
+  if (opt_val_.count("path") > 0 && opt_val_.count("replication-factor") > 0) {
     const auto replication_factor =
         opt_val_["replication-factor"].as<std::string>();
     const auto path = opt_val_["path"].as<std::string>();
