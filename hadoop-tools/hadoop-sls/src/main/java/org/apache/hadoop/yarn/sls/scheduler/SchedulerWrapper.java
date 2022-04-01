@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.sls.SLSRunner;
 
 import java.util.List;
 
@@ -48,4 +49,8 @@ public interface SchedulerWrapper {
       List<String> blacklistAdditions,
       List<String> blacklistRemovals,
       ContainerUpdates updateRequests);
+
+  void setSLSRunner(SLSRunner runner);
+
+  SLSRunner getSLSRunner();
 }
