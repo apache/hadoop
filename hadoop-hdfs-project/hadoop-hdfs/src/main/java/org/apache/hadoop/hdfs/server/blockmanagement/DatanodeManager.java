@@ -233,7 +233,6 @@ public class DatanodeManager {
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
-
     this.useDfsNetworkTopology = conf.getBoolean(
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);
@@ -593,11 +592,14 @@ public class DatanodeManager {
    */
   private void sortLocatedBlock(final LocatedBlock lb, String targetHost,
       Comparator<DatanodeInfo> comparator) {
-    // As it is possible for the separation of node manager and datanode, 
-    // here we should get node but not datanode only .
+    // Resolving topology is expensive especially by calling external script.
+    // If datanode and nodemanager are not colocated, we can disable resolving topology
+    // since they will not locate on the same host and rack.
+    // Otherwise, it resolves nodemanager topology and compares/sorts the datanodes
+    // by comparing the distances between nodemanager and the datanodes.
     boolean nonDatanodeReader = false;
     Node client = getDatanodeByHost(targetHost);
-    if (client == null) {
+    if (client == null && !blockManager.isTopologySortDisabled()) {
       nonDatanodeReader = true;
       List<String> hosts = new ArrayList<>(1);
       hosts.add(targetHost);

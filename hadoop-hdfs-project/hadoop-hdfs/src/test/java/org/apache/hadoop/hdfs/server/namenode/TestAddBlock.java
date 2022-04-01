@@ -18,21 +18,35 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.anyList;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.EnumSet;
 
+import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.EnumSetWritable;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -154,5 +168,49 @@ public class TestAddBlock {
         out.close();
       }
     }
+  }
+
+  @Test
+  public void testAddBlockWithoutTopology() throws Exception {
+    final String src = "/testAddBlockWithoutTopology";
+
+    final FSNamesystem ns = cluster.getNamesystem();
+    final NamenodeProtocols nn = cluster.getNameNodeRpc();
+
+    // create file
+    HdfsFileStatus fileStatus = nn.create(src, FsPermission.getFileDefault(),
+            "clientName",
+            new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)),
+            true, (short) 1, 1024, null, null, null);
+
+    FieldUtils.writeField(ns.getBlockManager(), "topologySortDisabled", true, true);
+    DNSToSwitchMapping mockMapping = mock(DNSToSwitchMapping.class);
+    DNSToSwitchMapping origMapping = (DNSToSwitchMapping) FieldUtils.readField(
+            ns.getBlockManager().getDatanodeManager(),
+            "dnsToSwitchMapping",
+            true);
+    FieldUtils.writeField(ns.getBlockManager().getDatanodeManager(),
+            "dnsToSwitchMapping",
+            mockMapping,
+            true);
+
+    LocatedBlock locatedBlock = nn.addBlock(src, "clientName", null, null,
+            HdfsConstants.GRANDFATHER_INODE_ID, null, null);
+
+    assertEquals(1, locatedBlock.getLocations().length);
+
+    LocatedBlock additionalLocatedBlock = nn.getAdditionalDatanode(
+            src, fileStatus.getFileId(), locatedBlock.getBlock(),
+            locatedBlock.getLocations(), locatedBlock.getStorageIDs(),
+            new DatanodeInfo[0],2, "clientName");
+
+    assertEquals(3, additionalLocatedBlock.getLocations().length);
+
+    verify(mockMapping, never()).resolve(anyList());
+    FieldUtils.writeField(ns.getBlockManager().getDatanodeManager(),
+            "dnsToSwitchMapping",
+            origMapping,
+            true);
+    FieldUtils.writeField(ns.getBlockManager(), "topologySortDisabled", false, true);
   }
 }

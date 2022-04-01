@@ -3136,7 +3136,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       readUnlock("getAdditionalDatanode");
     }
 
-    if (clientnode == null) {
+    if (clientnode == null && !blockManager.isTopologySortDisabled()) {
       clientnode = FSDirWriteFileOp.getClientNode(blockManager, clientMachine);
     }
 
