@@ -264,7 +264,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        return dnd3.isDecommissioned() == true;
+        return dnd3.isDecommissioned();
       }
     }, 1000, 10 * 1000);
 
