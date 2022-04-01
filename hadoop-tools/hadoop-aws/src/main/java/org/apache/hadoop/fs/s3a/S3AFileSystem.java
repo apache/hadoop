@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -117,7 +118,6 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
-import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -191,7 +191,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -302,7 +301,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /** Storage Statistics Bonded to the instrumentation. */
   private S3AStorageStatistics storageStatistics;
 
+  /**
+   * Default stream readahead.
+   */
   private long readAhead;
+  /**
+   * Threshold for stream reads to switch to
+   * asynchronous draining.
+   */
+  private long asyncDrainThreshold;
   private S3AInputPolicy inputPolicy;
   private ChangeDetectionPolicy changeDetectionPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -477,6 +484,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       readAhead = longBytesOption(conf, READAHEAD_RANGE,
           DEFAULT_READAHEAD_RANGE, 0);
+      asyncDrainThreshold = longBytesOption(conf, ASYNC_DRAIN_THRESHOLD,
+          DEFAULT_ASYNC_DRAIN_THRESHOLD, 0);
 
       initThreadPools(conf);
 
@@ -572,7 +581,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           readAhead,
           username,
           intOption(getConf(), IO_FILE_BUFFER_SIZE_KEY,
-              IO_FILE_BUFFER_SIZE_DEFAULT, 0));
+              IO_FILE_BUFFER_SIZE_DEFAULT, 0), asyncDrainThreshold);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -1429,7 +1438,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private FSDataInputStream executeOpen(
       final Path path,
-      final PrepareToOpenFile.FileInformation fileInformation)
+      final PrepareToOpenFile.OpenFileInformation fileInformation)
       throws IOException {
     // create the input stream statistics before opening
     // the file so that the time to prepare to open the file is included.
@@ -1450,7 +1459,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Opening '{}'", readContext);
     return new FSDataInputStream(
         new S3AInputStream(
-            readContext,
+            readContext.build(),
             createObjectAttributes(path, fileStatus),
             createInputStreamCallbacks(auditSpan),
             inputStreamStats));
@@ -1507,6 +1516,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         return s3.getObject(request);
       }
     }
+
+    @Override
+    public <T> Future<T> submit(final CallableRaisingIOE<T> operation) {
+      CompletableFuture<T> result = new CompletableFuture<>();
+      unboundedThreadPool.submit(() ->
+          LambdaUtils.eval(result, () -> {
+            try (AuditSpan span = auditSpan.activate()) {
+              return operation.apply();
+            }
+          }));
+      return result;
+    }
   }
 
   /**
@@ -1530,11 +1551,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         invoker,
         statistics,
         statisticsContext,
-        fileStatus,
-        seekPolicy,
-        changePolicy,
-        readAheadRange,
-        auditSpan);
+        fileStatus)
+        .withInputPolicy(seekPolicy)
+        .withChangeDetectionPolicy(changePolicy)
+        .withReadahead(readAheadRange)
+        .withAuditSpan(auditSpan)
+        .withAsyncDrainThreshold(asyncDrainThreshold)
+        .build();
   }
 
   /**
@@ -4809,7 +4832,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @AuditEntryPoint
   private FSDataInputStream select(final Path source,
       final Configuration options,
-      final PrepareToOpenFile.FileInformation fileInformation)
+      final PrepareToOpenFile.OpenFileInformation fileInformation)
       throws IOException {
     requireSelectSupport(source);
     final AuditSpan auditSpan = entryPoint(OBJECT_SELECT_REQUESTS, source);
@@ -4889,7 +4912,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private S3AFileStatus extractOrFetchSimpleFileStatus(
       final Path path,
-      final PrepareToOpenFile.FileInformation fileInformation)
+      final PrepareToOpenFile.OpenFileInformation fileInformation)
       throws IOException {
     S3AFileStatus fileStatus = fileInformation.getStatus();
     if (fileStatus == null) {
@@ -4925,7 +4948,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Path rawPath,
       final OpenFileParameters parameters) throws IOException {
     final Path path = qualify(rawPath);
-    PrepareToOpenFile.FileInformation fileInformation =
+    PrepareToOpenFile.OpenFileInformation fileInformation =
         openFileHelper.prepareToOpenFile(
             path,
             parameters,

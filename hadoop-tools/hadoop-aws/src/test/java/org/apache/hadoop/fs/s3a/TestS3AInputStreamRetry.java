@@ -22,6 +22,8 @@ import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -35,8 +37,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.lang.Math.min;
+import static org.apache.hadoop.util.functional.FutureIO.eval;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
@@ -152,6 +156,11 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
       @Override
       public GetObjectRequest newGetRequest(String key) {
         return new GetObjectRequest(fs.getBucket(), key);
+      }
+
+      @Override
+      public <T> Future<T> submit(final CallableRaisingIOE<T> operation) {
+        return eval(operation);
       }
 
       @Override

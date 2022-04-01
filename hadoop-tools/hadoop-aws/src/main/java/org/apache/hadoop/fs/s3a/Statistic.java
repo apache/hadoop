@@ -304,6 +304,15 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_OPERATIONS,
       "Count of read() operations in an input stream",
       TYPE_COUNTER),
+  STREAM_READ_REMOTE_STREAM_ABORTED(
+      StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
+      "Count/duration of aborting a remote stream during stream IO",
+      TYPE_DURATION),
+  STREAM_READ_REMOTE_STREAM_CLOSED(
+      StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
+      "Count/duration of closing a remote stream during stream IO",
+      TYPE_DURATION),
+
   STREAM_READ_OPERATIONS_INCOMPLETE(
       StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
       "Count of incomplete read() operations in an input stream",

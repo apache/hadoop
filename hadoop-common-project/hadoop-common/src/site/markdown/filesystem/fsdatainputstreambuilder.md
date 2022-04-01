@@ -313,14 +313,14 @@ performance -and vice versa.
    subsystems.
 1. If a policy is not recognized, the filesystem client MUST ignore it.
 
-| Policy | Meaning |
-| -------|---------|
-| `adaptive` | Any adaptive policy implemented by the store. |
-| `default` | The default policy for this store. Generally "adaptive". |
-| `random` | Optimize for random acdess. |
-| `sequential` | Optimize for sequential access. |
-| `vector` | The Vectored IO API is intended to be used. |
-| `whole-file` | The whole file will be read. |
+| Policy       | Meaning                                                  |
+|--------------|----------------------------------------------------------|
+| `adaptive`   | Any adaptive policy implemented by the store.            |
+| `default`    | The default policy for this store. Generally "adaptive". |
+| `random`     | Optimize for random acdess.                              |
+| `sequential` | Optimize for sequential access.                          |
+| `vector`     | The Vectored IO API is intended to be used.              |
+| `whole-file` | The whole file will be read.                             |
 
 Choosing the wrong read policy for an input source may be inefficient.
 
@@ -420,9 +420,10 @@ through the `withFileStatus()` option.
 If supported by a filesystem connector, this option MUST be interpreted as
 declaring the minimum length of the file:
 
-1. It SHALL NOT be an error if the actual length of the file is greater than
+1. If the value is negative, the option SHALL be considered unset.
+2. It SHALL NOT be an error if the actual length of the file is greater than
    this value.
-1. `read()`, `seek()` and positioned read calls MAY use a position across/beyond
+3. `read()`, `seek()` and positioned read calls MAY use a position across/beyond
    this length but below the actual length of the file. Implementations MAY
    raise `EOFExceptions` in such cases, or they MAY return data.
 
@@ -439,6 +440,7 @@ If this option is used by the FileSystem implementation
 Declare the start and end of the split when a file has been split for processing
 in pieces.
 
+1. If a value is negative, the option SHALL be considered unset.
 1. Filesystems MAY assume that the length of the file is greater than or equal
    to the value of `fs.option.openfile.split.end`.
 1. And that they MAY raise an exception if the client application reads past the
@@ -466,10 +468,11 @@ than that value.
 
 The S3A Connector supports custom options for readahead and seek policy.
 
-|  Name | Type | Meaning |
-|-------|------|---------|
-| `fs.s3a.readahead.range` | `long` | readahead range in bytes  |
-| `fs.s3a.experimental.input.fadvise` | `String` | seek policy. Superceded by `fs.option.openfile.read.policy` |
+| Name                                 | Type     | Meaning                                                     |
+|--------------------------------------|----------|-------------------------------------------------------------|
+| `fs.s3a.readahead.range`             | `long`   | readahead range in bytes                                    |
+| `fs.s3a.input.async.drain.threshold` | `long`   | threshold to switch to asynchronous draining of the stream  |
+| `fs.s3a.experimental.input.fadvise`  | `String` | seek policy. Superceded by `fs.option.openfile.read.policy` |
 
 If the option set contains a SQL statement in the `fs.s3a.select.sql` statement,
 then the file is opened as an S3 Select query.
@@ -479,9 +482,9 @@ Consult the S3A documentation for more details.
 
 The ABFS Connector supports custom input stream options.
 
-|  Name | Type | Meaning |
-|-------|------|---------|
-| `fs.azure.buffered.pread.disable` | `boolean` | disable caching on the positioned read operations.  |
+| Name                              | Type      | Meaning                                            |
+|-----------------------------------|-----------|----------------------------------------------------|
+| `fs.azure.buffered.pread.disable` | `boolean` | disable caching on the positioned read operations. |
 
 
 Disables caching on data read through the [PositionedReadable](fsdatainputstream.html#PositionedReadable)

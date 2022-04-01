@@ -48,6 +48,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ASYNC_DRAIN_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -82,11 +83,12 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
           CHANGE_POLICY,
           READ_AHEAD_RANGE,
           USERNAME,
-          IO_FILE_BUFFER_SIZE_DEFAULT);
+          IO_FILE_BUFFER_SIZE_DEFAULT,
+          DEFAULT_ASYNC_DRAIN_THRESHOLD);
 
   @Test
   public void testSimpleFile() throws Throwable {
-    ObjectAssert<PrepareToOpenFile.FileInformation>
+    ObjectAssert<PrepareToOpenFile.OpenFileInformation>
         asst = assertFileInfo(
         PREPARE.openSimpleFile(1024, INPUT_POLICY));
 
@@ -103,8 +105,8 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    * @param fi file info
    * @return an assert stream.
    */
-  private ObjectAssert<PrepareToOpenFile.FileInformation> assertFileInfo(
-      final PrepareToOpenFile.FileInformation fi) {
+  private ObjectAssert<PrepareToOpenFile.OpenFileInformation> assertFileInfo(
+      final PrepareToOpenFile.OpenFileInformation fi) {
     return Assertions.assertThat(fi)
         .describedAs("File Information %s", fi);
   }
@@ -114,9 +116,9 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    * with the given key/value option.
    * @param key key to set.
    * @param option option value.
-   * @return the constructed FileInformation.
+   * @return the constructed OpenFileInformation.
    */
-  public ObjectAssert<PrepareToOpenFile.FileInformation> assertOpenFile(
+  public ObjectAssert<PrepareToOpenFile.OpenFileInformation> assertOpenFile(
       final String key,
       final String option) throws IOException {
     return assertFileInfo(prepareToOpenFile(params(key, option)));
@@ -258,7 +260,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
   @Test
   public void testStatusWithValidFilename() throws Throwable {
     Path p = new Path("file:///tmp/" + TESTPATH.getName());
-    ObjectAssert<PrepareToOpenFile.FileInformation> asst =
+    ObjectAssert<PrepareToOpenFile.OpenFileInformation> asst =
         assertFileInfo(prepareToOpenFile(
             params(FS_OPTION_OPENFILE_LENGTH, "32")
                 .withStatus(status(p, 4096))));
@@ -276,7 +278,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
   @Test
   public void testLocatedStatus() throws Throwable {
     Path p = new Path("file:///tmp/" + TESTPATH.getName());
-    ObjectAssert<PrepareToOpenFile.FileInformation> asst =
+    ObjectAssert<PrepareToOpenFile.OpenFileInformation> asst =
         assertFileInfo(
             prepareToOpenFile(
                 params(FS_OPTION_OPENFILE_LENGTH, "32")
@@ -319,7 +321,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    * @return
    * @throws IOException
    */
-  public PrepareToOpenFile.FileInformation prepareToOpenFile(
+  public PrepareToOpenFile.OpenFileInformation prepareToOpenFile(
       final OpenFileParameters parameters)
       throws IOException {
     return PREPARE.prepareToOpenFile(TESTPATH,
@@ -334,7 +336,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    */
   @Test
   public void testFileLength() throws Throwable {
-    ObjectAssert<PrepareToOpenFile.FileInformation> asst =
+    ObjectAssert<PrepareToOpenFile.OpenFileInformation> asst =
         assertFileInfo(prepareToOpenFile(
             params(FS_OPTION_OPENFILE_LENGTH, "8192")
                 .withStatus(null)));

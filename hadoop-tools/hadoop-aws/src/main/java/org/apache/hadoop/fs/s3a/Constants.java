@@ -604,6 +604,20 @@ public final class Constants {
   public static final long DEFAULT_READAHEAD_RANGE = 64 * 1024;
 
   /**
+   * The threshold at which drain operations switch
+   * to being asynchronous with the schedule/wait overhead
+   * compared to synchronous.
+   */
+  public static final String ASYNC_DRAIN_THRESHOLD = "fs.s3a.input.async.drain.threshold";
+
+  /**
+   * This is a number based purely on experimentation in
+   * {@code ITestS3AInputStreamPerformance} so may be
+   * inappropriate.
+   */
+  public static int DEFAULT_ASYNC_DRAIN_THRESHOLD = 16_000;
+
+  /**
    * Which input strategy to use for buffering, seeking and similar when
    * reading data.
    * Value: {@value}

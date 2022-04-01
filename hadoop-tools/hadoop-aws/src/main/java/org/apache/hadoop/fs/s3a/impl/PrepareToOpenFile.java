@@ -42,6 +42,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
+import static org.apache.hadoop.fs.s3a.Constants.ASYNC_DRAIN_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -83,21 +84,30 @@ public class PrepareToOpenFile {
   private final int defaultBufferSize;
 
   /**
+   * Threshold for stream reads to switch to
+   * asynchronous draining.
+   */
+  private final long defaultAsyncDrainThreshold;
+
+  /**
    * Instantiate with the default options from the filesystem.
    * @param changePolicy change detection policy
    * @param defaultReadAhead read ahead range
    * @param username username
    * @param defaultBufferSize buffer size
+   * @param defaultAsyncDrainThreshold
    */
   public PrepareToOpenFile(
       final ChangeDetectionPolicy changePolicy,
       final long defaultReadAhead,
       final String username,
-      final int defaultBufferSize) {
+      final int defaultBufferSize,
+      final long defaultAsyncDrainThreshold) {
     this.changePolicy = changePolicy;
     this.defaultReadAhead = defaultReadAhead;
     this.username = username;
     this.defaultBufferSize = defaultBufferSize;
+    this.defaultAsyncDrainThreshold = defaultAsyncDrainThreshold;
   }
 
   /**
@@ -111,7 +121,7 @@ public class PrepareToOpenFile {
    * @throws IllegalArgumentException unknown mandatory key
    */
   @SuppressWarnings("ChainOfInstanceofChecks")
-  public FileInformation prepareToOpenFile(
+  public OpenFileInformation prepareToOpenFile(
       final Path path,
       final OpenFileParameters parameters,
       final long blockSize,
@@ -204,7 +214,7 @@ public class PrepareToOpenFile {
     // split end
     long splitEnd = options.getLong(FS_OPTION_OPENFILE_SPLIT_END,
         LENGTH_UNKNOWN);
-    if (splitStart > splitEnd) {
+    if (splitStart > 0 && splitStart > splitEnd) {
       LOG.warn("Split start {} is greater than split end {}, resetting",
           splitStart, splitEnd);
       splitStart = 0;
@@ -229,21 +239,20 @@ public class PrepareToOpenFile {
       policies = options.getStringCollection(INPUT_FADVISE);
     }
     // get the first known policy
-    S3AInputPolicy seekPolicy = S3AInputPolicy.getFirstSupportedPolicy(policies,
-        inputPolicy);
     // readahead range
-    long readAhead = options.getLong(READAHEAD_RANGE, defaultReadAhead);
     // buffer size
-    int bufferSize = options.getInt(FS_OPTION_OPENFILE_BUFFER_SIZE,
-        defaultBufferSize);
-    return new FileInformation()
+    return new OpenFileInformation()
         .withS3Select(isSelect)
         .withSql(sql)
-        .withBufferSize(bufferSize)
+        .withBufferSize(
+            options.getInt(FS_OPTION_OPENFILE_BUFFER_SIZE, defaultBufferSize))
         .withChangePolicy(changePolicy)
-        .withReadAheadRange(readAhead)
+        .withReadAheadRange(options.getLong(READAHEAD_RANGE, defaultReadAhead))
+        .withAsyncDrainThreshold(options.getLong(ASYNC_DRAIN_THRESHOLD,
+            defaultReadAhead))
         .withFileLength(fileLength)
-        .withInputPolicy(seekPolicy)
+        .withInputPolicy(
+            S3AInputPolicy.getFirstSupportedPolicy(policies, inputPolicy))
         .withSplitStart(splitStart)
         .withSplitEnd(splitEnd)
         .withStatus(fileStatus)
@@ -276,9 +285,9 @@ public class PrepareToOpenFile {
      * @param bufferSize  buffer size
      * @param inputPolicy input policy.
      */
-  public FileInformation openSimpleFile(final int bufferSize,
+  public OpenFileInformation openSimpleFile(final int bufferSize,
       final S3AInputPolicy inputPolicy) {
-    return new FileInformation()
+    return new OpenFileInformation()
         .withS3Select(false)
         .withBufferSize(bufferSize)
         .withChangePolicy(changePolicy)
@@ -293,7 +302,7 @@ public class PrepareToOpenFile {
   /**
    * The information on a file needed to open it.
    */
-  public static final class FileInformation {
+  public static final class OpenFileInformation {
 
     /** Is this SQL? */
     private boolean isS3Select;
@@ -325,25 +334,31 @@ public class PrepareToOpenFile {
      * What is the split end?
      * Negative if not known.
      */
-    private long splitEnd;
+    private long splitEnd = -1;
 
     /**
      * What is the file length?
      * Negative if not known.
      */
-    private long fileLength;
+    private long fileLength = -1;
+
+    /**
+     * Threshold for stream reads to switch to
+     * asynchronous draining.
+     */
+    private long asyncDrainThreshold;
 
     /**
      * Constructor.
      */
-    public FileInformation() {
+    public OpenFileInformation() {
     }
 
     /**
      * Build.
      * @return this object
      */
-    public FileInformation build() {
+    public OpenFileInformation build() {
       return this;
     }
 
@@ -385,7 +400,7 @@ public class PrepareToOpenFile {
 
     @Override
     public String toString() {
-      return "FileInformation{" +
+      return "OpenFileInformation{" +
           "isSql=" + isS3Select +
           ", status=" + status +
           ", sql='" + sql + '\'' +
@@ -395,9 +410,14 @@ public class PrepareToOpenFile {
           ", splitStart=" + splitStart +
           ", splitEnd=" + splitEnd +
           ", bufferSize=" + bufferSize +
+          ", drainThreshold=" + asyncDrainThreshold +
           '}';
     }
 
+    /**
+     * Get the file length.
+     * @return the file length; -1 if not known.
+     */
     public long getFileLength() {
       return fileLength;
     }
@@ -407,7 +427,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withS3Select(final boolean value) {
+    public OpenFileInformation withS3Select(final boolean value) {
       isS3Select = value;
       return this;
     }
@@ -417,7 +437,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withStatus(final S3AFileStatus value) {
+    public OpenFileInformation withStatus(final S3AFileStatus value) {
       status = value;
       return this;
     }
@@ -427,7 +447,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withSql(final String value) {
+    public OpenFileInformation withSql(final String value) {
       sql = value;
       return this;
     }
@@ -437,7 +457,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withInputPolicy(final S3AInputPolicy value) {
+    public OpenFileInformation withInputPolicy(final S3AInputPolicy value) {
       inputPolicy = value;
       return this;
     }
@@ -447,7 +467,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withChangePolicy(final ChangeDetectionPolicy value) {
+    public OpenFileInformation withChangePolicy(final ChangeDetectionPolicy value) {
       changePolicy = value;
       return this;
     }
@@ -457,7 +477,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withReadAheadRange(final long value) {
+    public OpenFileInformation withReadAheadRange(final long value) {
       readAheadRange = value;
       return this;
     }
@@ -467,7 +487,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withBufferSize(final int value) {
+    public OpenFileInformation withBufferSize(final int value) {
       bufferSize = value;
       return this;
     }
@@ -477,7 +497,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withSplitStart(final long value) {
+    public OpenFileInformation withSplitStart(final long value) {
       splitStart = value;
       return this;
     }
@@ -487,7 +507,7 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withSplitEnd(final long value) {
+    public OpenFileInformation withSplitEnd(final long value) {
       splitEnd = value;
       return this;
     }
@@ -497,8 +517,18 @@ public class PrepareToOpenFile {
      * @param value new value
      * @return the builder
      */
-    public FileInformation withFileLength(final long value) {
+    public OpenFileInformation withFileLength(final long value) {
       fileLength = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public OpenFileInformation withAsyncDrainThreshold(final long value) {
+      asyncDrainThreshold = value;
       return this;
     }
   }
