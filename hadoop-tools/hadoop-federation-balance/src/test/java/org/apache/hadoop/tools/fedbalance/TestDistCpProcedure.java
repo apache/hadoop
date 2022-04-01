@@ -33,7 +33,9 @@ import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedure.RetryExcept
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,6 +46,7 @@ import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
@@ -74,6 +77,9 @@ public class TestDistCpProcedure {
           new FileEntry(SRCDAT + "/b/c", false)};
   private static String nnUri;
 
+  @Rule
+  public Timeout globalTimeout = new Timeout(180000, TimeUnit.MILLISECONDS);
+
   @BeforeClass
   public static void beforeClass() throws IOException {
     DistCpProcedure.enableForTest();
@@ -98,7 +104,7 @@ public class TestDistCpProcedure {
     }
   }
 
-  @Test(timeout = 90000)
+  @Test
   public void testSuccessfulDistCpProcedure() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -140,7 +146,7 @@ public class TestDistCpProcedure {
     cleanup(fs, new Path(testRoot));
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testInitDistCp() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -198,7 +204,7 @@ public class TestDistCpProcedure {
     cleanup(fs, new Path(testRoot));
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testDiffDistCp() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -235,7 +241,7 @@ public class TestDistCpProcedure {
     cleanup(fs, new Path(testRoot));
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testStageFinalDistCp() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -260,7 +266,7 @@ public class TestDistCpProcedure {
     cleanup(fs, new Path(testRoot));
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testStageFinish() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -293,7 +299,7 @@ public class TestDistCpProcedure {
     cleanup(fs, new Path(testRoot));
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testRecoveryByStage() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -334,7 +340,7 @@ public class TestDistCpProcedure {
     cleanup(fs, new Path(testRoot));
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testShutdown() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -359,7 +365,7 @@ public class TestDistCpProcedure {
     cleanup(fs, new Path(testRoot));
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testDisableWrite() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
