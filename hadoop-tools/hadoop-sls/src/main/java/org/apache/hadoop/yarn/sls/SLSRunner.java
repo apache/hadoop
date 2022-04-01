@@ -98,8 +98,8 @@ public class SLSRunner extends Configured implements Tool {
   public static final String NETWORK_NEGATIVE_CACHE_TTL =
       "networkaddress.cache.negative.ttl";
 
-  public static int getRemainingApps() {
-    return AMRunner.remainingApps;
+  public int getRemainingApps() {
+    return amRunner.remainingApps;
   }
 
   public SLSRunner() throws ClassNotFoundException, YarnException {
@@ -204,6 +204,7 @@ public class SLSRunner extends Configured implements Tool {
     // set queue & tracked apps information
     SchedulerWrapper resourceScheduler =
         (SchedulerWrapper) rmRunner.getRm().getResourceScheduler();
+    resourceScheduler.setSLSRunner(this);
     Tracker tracker = resourceScheduler.getTracker();
     tracker.setQueueSet(rmRunner.getQueueAppNumMap().keySet());
     tracker.setTrackedAppSet(amRunner.getTrackedApps());
@@ -301,9 +302,9 @@ public class SLSRunner extends Configured implements Tool {
     return nmRunner.getNmMap();
   }
 
-  public static void decreaseRemainingApps() {
-    AMRunner.remainingApps--;
-    if (AMRunner.remainingApps == 0) {
+  public void decreaseRemainingApps() {
+    amRunner.remainingApps--;
+    if (amRunner.remainingApps == 0) {
       exitSLSRunner();
     }
   }

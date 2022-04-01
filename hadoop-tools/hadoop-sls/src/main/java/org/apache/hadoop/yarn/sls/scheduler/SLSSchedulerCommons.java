@@ -205,6 +205,7 @@ public class SLSSchedulerCommons {
   }
 
   public void handle(SchedulerEvent schedulerEvent) {
+    SchedulerWrapper wrapper = (SchedulerWrapper) scheduler;
     if (!metricsON) {
       ((SchedulerWrapper)scheduler).propagatedHandle(schedulerEvent);
       return;
@@ -259,11 +260,11 @@ public class SLSSchedulerCommons {
 
       if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_REMOVED
           && schedulerEvent instanceof AppAttemptRemovedSchedulerEvent) {
-        SLSRunner.decreaseRemainingApps();
+        wrapper.getSLSRunner().decreaseRemainingApps();
         AppAttemptRemovedSchedulerEvent appRemoveEvent =
             (AppAttemptRemovedSchedulerEvent) schedulerEvent;
         appQueueMap.remove(appRemoveEvent.getApplicationAttemptID());
-        if (SLSRunner.getRemainingApps() == 0) {
+        if (wrapper.getSLSRunner().getRemainingApps() == 0) {
           try {
             schedulerMetrics.tearDown();
             SLSRunner.exitSLSRunner();
