@@ -363,6 +363,16 @@ public class NamenodeBeanMetrics
   }
 
   @Override
+  public int getPendingRecoveryBlocks() {
+    try {
+      return getRBFMetrics().getNumOfBlocksPendingRecovery();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of blocks pending recovery", e);
+    }
+    return 0;
+  }
+
+  @Override
   public long getScheduledReplicationBlocks() {
     try {
       return getRBFMetrics().getScheduledReplicationBlocks();

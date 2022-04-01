@@ -39,6 +39,7 @@ message NamenodeMembershipStatsRecordProto {
   optional uint64 numOfBlocksPendingReplication = 13;
   optional uint64 numOfBlocksUnderReplicated = 14;
   optional uint64 numOfBlocksPendingDeletion = 15;
+  optional uint32 numOfBlocksPendingRecovery = 16;
 
   optional uint32 numOfActiveDatanodes = 20;
   optional uint32 numOfDeadDatanodes = 21;

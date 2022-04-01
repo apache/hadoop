@@ -264,6 +264,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `CorruptBlocks` | Current number of blocks with corrupt replicas. |
 | `ScheduledReplicationBlocks` | Current number of blocks scheduled for replications |
 | `PendingDeletionBlocks` | Current number of blocks pending deletion |
+| `PendingRecoveryBlocks` | Current number of blocks currently undergoing or about to recover |
 | `ExcessBlocks` | Current number of excess blocks |
 | `PostponedMisreplicatedBlocks` | (HA-only) Current number of blocks postponed to replicate |
 | `PendingDataNodeMessageCount` | (HA-only) Current number of pending block-related messages for later processing in the standby NameNode |
@@ -534,6 +535,7 @@ RBFMetrics shows the metrics which are the aggregated values of sub-clusters' in
 | `NumOfBlocksPendingReplication` | Current number of blocks pending to be replicated |
 | `NumOfBlocksUnderReplicated` | Current number of blocks under replicated |
 | `NumOfBlocksPendingDeletion` | Current number of blocks pending deletion |
+| `NumOfBlocksPendingRecovery` | Current number of blocks currently undergoing or about to recover |
 | `ProvidedSpace` | The total remote storage capacity mounted in the federated cluster |
 | `NumInMaintenanceLiveDataNodes` | Number of live Datanodes which are in maintenance state |
 | `NumInMaintenanceDeadDataNodes` | Number of dead Datanodes which are in maintenance state |

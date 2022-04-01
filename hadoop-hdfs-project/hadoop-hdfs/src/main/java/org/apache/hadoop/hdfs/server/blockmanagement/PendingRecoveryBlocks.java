@@ -54,6 +54,14 @@ class PendingRecoveryBlocks {
   }
 
   /**
+   * Get how many blocks are currently undergoing or about to recover.
+   * @return number of blocks currently undergoing or about to recover
+   */
+  public int size() {
+    return recoveryTimeouts.size();
+  }
+
+  /**
    * Checks whether a recovery attempt has been made for the given block.
    * If so, checks whether that attempt has timed out.
    * @param block block for which recovery is being attempted

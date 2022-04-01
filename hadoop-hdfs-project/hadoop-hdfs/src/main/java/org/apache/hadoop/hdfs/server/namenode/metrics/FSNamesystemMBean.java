@@ -191,6 +191,12 @@ public interface FSNamesystemMBean {
   long getPendingDeletionBlocks();
 
   /**
+   * Number of blocks currently undergoing or about to recover.
+   * @return number of blocks currently undergoing or about to recover
+   */
+  int getPendingRecoveryBlocks();
+
+  /**
    * Time when block deletions will begin
    * @return time when block deletions will begin
    */

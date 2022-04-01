@@ -616,6 +616,13 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
+  @Metric({"NumOfBlocksPendingRecovery", "Number of blocks pending recovery"})
+  public int getNumOfBlocksPendingRecovery() {
+    return getNameserviceAggregatedInt(
+        MembershipStats::getNumOfBlocksPendingRecovery);
+  }
+
+  @Override
   @Metric({"NumFiles", "Number of files"})
   public long getNumFiles() {
     return getNameserviceAggregatedLong(MembershipStats::getNumOfFiles);

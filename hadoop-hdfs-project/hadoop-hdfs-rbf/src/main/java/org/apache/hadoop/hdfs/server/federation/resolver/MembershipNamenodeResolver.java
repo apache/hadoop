@@ -281,6 +281,8 @@ public class MembershipNamenodeResolver
           report.getNumOfBlocksUnderReplicated());
       stats.setNumOfBlocksPendingDeletion(
           report.getNumOfBlocksPendingDeletion());
+      stats.setNumOfBlocksPendingRecovery(
+          report.getNumOfBlocksPendingRecovery());
       stats.setAvailableSpace(report.getAvailableSpace());
       stats.setTotalSpace(report.getTotalSpace());
       stats.setProvidedSpace(report.getProvidedSpace());

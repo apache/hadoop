@@ -5380,6 +5380,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return blockManager.getPendingDeletionBlocksCount();
   }
 
+  @Override
+  @Metric
+  public int getPendingRecoveryBlocks() {
+    return blockManager.getPendingRecoveryBlocksCount();
+  }
+
   @Override // ReplicatedBlocksMBean
   @Metric({"LowRedundancyReplicatedBlocks",
       "Number of low redundancy replicated blocks"})

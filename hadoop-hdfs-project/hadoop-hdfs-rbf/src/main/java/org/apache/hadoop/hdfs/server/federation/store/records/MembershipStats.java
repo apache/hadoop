@@ -73,6 +73,10 @@ public abstract class MembershipStats extends BaseRecord {
 
   public abstract long getNumOfBlocksPendingDeletion();
 
+  public abstract void setNumOfBlocksPendingRecovery(int blocks);
+
+  public abstract int getNumOfBlocksPendingRecovery();
+
   public abstract void setNumOfActiveDatanodes(int nodes);
 
   public abstract int getNumOfActiveDatanodes();
