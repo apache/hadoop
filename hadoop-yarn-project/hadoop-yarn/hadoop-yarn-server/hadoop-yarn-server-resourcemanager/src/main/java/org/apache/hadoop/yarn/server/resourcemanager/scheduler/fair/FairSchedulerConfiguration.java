@@ -443,22 +443,6 @@ public class FairSchedulerConfiguration extends Configuration {
     return getFloat(PREEMPTION_THRESHOLD, DEFAULT_PREEMPTION_THRESHOLD);
   }
 
-  public boolean getNodeLoadBasedAssignEnabled() {
-    return getBoolean(NODE_LOAD_BASED_ASSIGN_ENABLE, DEFAULT_NODE_LOAD_BASED_ASSIGN_ENABLE);
-  }
-
-  public float getNodeLoadMemoryLimit() {
-    return getFloat(NODE_LOAD_MEMORY_LIMIT, DEFAULT_NODE_LOAD_MEMORY_LIMIT);
-  }
-
-  public float getNodeLoadCpuLimit() {
-    return getFloat(NODE_LOAD_CPU_LIMIT, DEFAULT_NODE_LOAD_CPU_LIMIT);
-  }
-
-  public float getNodeDiskIoLimit() {
-    return getFloat(NODE_LOAD_DISK_IO_LIMIT, DEFAULT_NODE_LOAD_DISK_IO_LIMIT);
-  }
-
   public boolean getAssignMultiple() {
     return getBoolean(ASSIGN_MULTIPLE, DEFAULT_ASSIGN_MULTIPLE);
   }

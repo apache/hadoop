@@ -202,11 +202,6 @@ public class FairScheduler extends
   protected boolean assignMultiple; // Allocate multiple containers per
                                     // heartbeat
 
-  protected volatile boolean nodeLoadBasedAssignEnable; // node load based assign enabled or not
-  private volatile float nodeLoadMemoryLimit; // max memory ratio limit of a node to assign container
-  private volatile float nodeLoadCpuLimit; // max cpu ratio limit of a node to assign container
-  private volatile float nodeLoadDiskIoLimit; // max disk io ratio limit of a node to assign container
-
   @VisibleForTesting
   boolean maxAssignDynamic;
   protected int maxAssign; // Max containers to assign per heartbeat
@@ -1022,7 +1017,8 @@ public class FairScheduler extends
       NodeStatus nodeStatus = nm.getNodeStatus();
 
       FSSchedulerNode fsNode = getFSSchedulerNode(nm.getNodeID());
-      if (nodeLoadBasedAssignEnable && nodeStatus != null && isNodeOverload(nodeStatus)) {
+      if (nodeLoadBasedAssignEnable && nodeStatus != null
+          && isNodeOverload(nodeStatus, true)) {
         // not schedule this node
       } else {
         attemptScheduling(fsNode);
@@ -1033,34 +1029,6 @@ public class FairScheduler extends
     } finally {
       writeLock.unlock();
     }
-  }
-
-  private boolean isNodeOverload(NodeStatus nodeStatus) {
-    float cpuUsage = nodeStatus.getCpuUsage();
-    float diskIoUsage = nodeStatus.getIoUsage();
-    float memoryUsage = nodeStatus.getMemUsage();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Node " + nodeStatus.getNodeId() + ", cpu usage is " + cpuUsage
-          + ", disk io usage is " + diskIoUsage + ", memory usage is " + memoryUsage);
-    }
-
-    if (nodeLoadCpuLimit > 0 && cpuUsage > nodeLoadCpuLimit) {
-      LOG.warn("Node " + nodeStatus.getNodeId() + " is " + cpuUsage + " over cpu limit "
-          + nodeLoadCpuLimit + ", skip this heart beat by not scheduling.");
-      return true;
-    }
-    if (nodeLoadDiskIoLimit > 0 && diskIoUsage > nodeLoadDiskIoLimit) {
-      LOG.warn("Node " + nodeStatus.getNodeId() + " is " + diskIoUsage + " over disk io limit "
-          + nodeLoadDiskIoLimit + ", skip this heart beat by not scheduling.");
-      return true;
-    }
-    if (nodeLoadMemoryLimit > 0 && memoryUsage > nodeLoadMemoryLimit) {
-      LOG.warn("Node " + nodeStatus.getNodeId() + " is " + memoryUsage + " over memory limit "
-          + nodeLoadMemoryLimit + ", skip this heart beat by not scheduling.");
-      return true;
-    }
-    return false;
   }
 
   @Deprecated
@@ -1478,10 +1446,6 @@ public class FairScheduler extends
       sizeBasedWeight = this.conf.getSizeBasedWeight();
       usePortForNodeName = this.conf.getUsePortForNodeName();
       reservableNodesRatio = this.conf.getReservableNodes();
-      nodeLoadBasedAssignEnable = this.conf.getNodeLoadBasedAssignEnabled();
-      nodeLoadMemoryLimit = this.conf.getNodeLoadMemoryLimit();
-      nodeLoadCpuLimit = this.conf.getNodeLoadCpuLimit();
-      nodeLoadDiskIoLimit = this.conf.getNodeDiskIoLimit();
 
       updateInterval = this.conf.getUpdateInterval();
       if (updateInterval < 0) {
