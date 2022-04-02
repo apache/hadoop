@@ -27,12 +27,17 @@ import java.io.IOException;
  */
 public class ExternalSPSFaultInjector {
   @VisibleForTesting
-  public static ExternalSPSFaultInjector instance =
+  private static ExternalSPSFaultInjector instance =
       new ExternalSPSFaultInjector();
 
   @VisibleForTesting
   public static ExternalSPSFaultInjector getInstance() {
     return instance;
+  }
+
+  @VisibleForTesting
+  public static void setInstance(ExternalSPSFaultInjector instance) {
+    ExternalSPSFaultInjector.instance = instance;
   }
 
   @VisibleForTesting

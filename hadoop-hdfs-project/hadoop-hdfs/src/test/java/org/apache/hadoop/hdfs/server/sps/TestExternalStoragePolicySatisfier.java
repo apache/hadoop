@@ -485,7 +485,7 @@ public class TestExternalStoragePolicySatisfier {
     try {
       createCluster();
       // Mock an IOException 3 times, and moving tasks should succeed finally.
-      ExternalSPSFaultInjector.instance = injector;
+      ExternalSPSFaultInjector.setInstance(injector);
       doTestWhenStoragePolicySetToCOLD();
     } finally {
       shutdownCluster();
