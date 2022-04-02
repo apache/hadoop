@@ -4875,6 +4875,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         dtSecretManager.getCurrentTokensSize() : -1;
   }
 
+  @Override
+  @Metric({"PendingSPSPaths", "The number of paths to be processed by storage policy satisfier"})
+  public int getPendingSPSPaths() {
+    return blockManager.getPendingSPSPaths();
+  }
+
   /**
    * Returns the length of the wait Queue for the FSNameSystemLock.
    *

@@ -298,6 +298,14 @@ public class BlockManager implements BlockStatsMXBean {
     return blocksMap.getECBlockGroups();
   }
 
+  /** Used by metrics. */
+  public int getPendingSPSPaths() {
+    if (spsManager != null) {
+      return spsManager.getPendingSPSPaths();
+    }
+    return 0;
+  }
+
   /**
    * redundancyRecheckInterval is how often namenode checks for new
    * reconstruction work.
