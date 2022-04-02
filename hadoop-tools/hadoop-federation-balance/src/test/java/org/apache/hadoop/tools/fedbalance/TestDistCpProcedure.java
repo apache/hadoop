@@ -78,6 +78,8 @@ public class TestDistCpProcedure {
   private static String nnUri;
 
   @Rule
+  // There are multiple unit tests with different timeouts that fail multiple times because of
+  // DataStreamer#waitAndQueuePacket, so we set a larger global timeout.
   public Timeout globalTimeout = new Timeout(180000, TimeUnit.MILLISECONDS);
 
   @BeforeClass
