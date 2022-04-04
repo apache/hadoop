@@ -24,13 +24,12 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.twitter.util.ExecutorServiceFuturePool;
-import com.twitter.util.FuturePool;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.BufferData;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.junit.Assert.assertEquals;
@@ -41,7 +40,7 @@ public class TestS3CachingBlockManager extends AbstractHadoopTestBase {
   static final int POOL_SIZE = 3;
 
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
-  private final FuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
+  private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
 
   private final BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
 
@@ -106,7 +105,7 @@ public class TestS3CachingBlockManager extends AbstractHadoopTestBase {
    */
   static class TestBlockManager extends S3CachingBlockManager {
     TestBlockManager(
-        FuturePool futurePool,
+        ExecutorServiceFuturePool futurePool,
         S3Reader reader,
         BlockData blockData,
         int bufferPoolSize) {

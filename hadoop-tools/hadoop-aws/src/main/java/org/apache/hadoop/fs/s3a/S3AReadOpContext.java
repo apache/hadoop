@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.twitter.util.FuturePool;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
@@ -61,7 +60,7 @@ public class S3AReadOpContext extends S3AOpContext {
   private final AuditSpan auditSpan;
 
   // S3 reads are prefetched asynchronously using this future pool.
-  private FuturePool futurePool;
+  private ExecutorServiceFuturePool futurePool;
 
   // Size in bytes of a single prefetch block.
   private final int prefetchBlockSize;
@@ -80,7 +79,7 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param changeDetectionPolicy change detection policy.
    * @param readahead readahead for GET operations/skip, etc.
    * @param auditSpan active audit
-   * @param futurePool the FuturePool instance used by async prefetches.
+   * @param futurePool the ExecutorServiceFuturePool instance used by async prefetches.
    * @param prefetchBlockSize the size (in number of bytes) of each prefetched block.
    * @param prefetchBlockCount maximum number of prefetched blocks.
    */
@@ -94,7 +93,7 @@ public class S3AReadOpContext extends S3AOpContext {
       ChangeDetectionPolicy changeDetectionPolicy,
       final long readahead,
       final AuditSpan auditSpan,
-      FuturePool futurePool,
+      ExecutorServiceFuturePool futurePool,
       int prefetchBlockSize,
       int prefetchBlockCount) {
 
@@ -161,11 +160,11 @@ public class S3AReadOpContext extends S3AOpContext {
   }
 
   /**
-   * Gets the {@code FuturePool} used for asynchronous prefetches.
+   * Gets the {@code ExecutorServiceFuturePool} used for asynchronous prefetches.
    *
-   * @return the {@code FuturePool} used for asynchronous prefetches.
+   * @return the {@code ExecutorServiceFuturePool} used for asynchronous prefetches.
    */
-  public FuturePool getFuturePool() {
+  public ExecutorServiceFuturePool getFuturePool() {
     return this.futurePool;
   }
 
