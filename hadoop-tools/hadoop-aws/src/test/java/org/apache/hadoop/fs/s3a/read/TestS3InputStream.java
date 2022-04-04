@@ -24,12 +24,11 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.twitter.util.ExecutorServiceFuturePool;
-import com.twitter.util.FuturePool;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
@@ -45,7 +44,7 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
   private static final int FILE_SIZE = 10;
 
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
-  private final FuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
+  private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
   private final S3AInputStream.InputStreamCallbacks client = MockS3File.createClient("bucket");
 
   @Test

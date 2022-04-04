@@ -76,8 +76,7 @@ import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
-import com.twitter.util.ExecutorServiceFuturePool;
-import com.twitter.util.FuturePool;
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -286,7 +285,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ThreadPoolExecutor unboundedThreadPool;
 
   // S3 reads are prefetched asynchronously using this future pool.
-  private FuturePool futurePool;
+  private ExecutorServiceFuturePool futurePool;
 
   // If true, the prefetching input stream is used for reads.
   private boolean prefetchEnabled;
