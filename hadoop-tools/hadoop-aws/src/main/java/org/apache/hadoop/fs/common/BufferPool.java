@@ -26,9 +26,8 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
+import java.util.concurrent.Future;
 
-import com.twitter.util.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -233,7 +232,7 @@ public class BufferPool implements Closeable {
     for (BufferData data : this.getAll()) {
       Future<Void> actionFuture = data.getActionFuture();
       if (actionFuture != null) {
-        actionFuture.raise(new CancellationException("BufferPool is closing."));
+        actionFuture.cancel(true);
       }
     }
 
