@@ -150,7 +150,7 @@
                       <exclude>org.slf4j:slf4j-api</exclude>
                       <!-- Leave commons-logging unshaded so downstream users can configure logging. -->
                       <exclude>commons-logging:commons-logging</exclude>
-                      <!-- Leave log4j unshaded so downstream users can configure logging. -->
+                      <!-- Leave reload4j unshaded so downstream users can configure logging. -->
                       <exclude>ch.qos.reload4j:reload4j</exclude>
                       <!-- Leave javax APIs that are stable -->
                       <!-- the jdk ships part of the javax.annotation namespace, so if we want to relocate this we'll have to care it out by class :( -->
