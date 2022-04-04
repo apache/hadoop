@@ -147,9 +147,6 @@ public class TouchCommands extends FsCommand {
 
     @Override
     protected void processPath(PathData item) throws IOException {
-      if (item.stat.isDirectory()) {
-        throw new PathIsDirectoryException(item.toString());
-      }
       touch(item);
     }
 
