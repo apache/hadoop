@@ -315,7 +315,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
    * worrying about setup costs.
    */
   @Test
-  public void testRunLimitedLandsatAudit() throws Throwable {
+  public void testRunAuditManyObjectsInBucket() throws Throwable {
     describe("Audit a few thousand objects");
     final File audit = tempAuditFile();
 
