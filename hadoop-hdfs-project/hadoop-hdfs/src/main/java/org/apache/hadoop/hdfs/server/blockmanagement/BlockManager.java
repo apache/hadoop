@@ -2166,7 +2166,9 @@ public class BlockManager implements BlockStatsMXBean {
     // skip if source datanodes for reconstructing ec block are not enough
     if (block.isStriped()) {
       BlockInfoStriped stripedBlock = (BlockInfoStriped) block;
-      if (stripedBlock.getDataBlockNum() > srcNodes.length) {
+      int cellsNum = (int) ((stripedBlock.getNumBytes() - 1) / stripedBlock.getCellSize() + 1);
+      int minRequiredSources = Math.min(cellsNum, stripedBlock.getDataBlockNum());
+      if (minRequiredSources > srcNodes.length) {
         LOG.debug("Block {} cannot be reconstructed due to shortage of source datanodes ", block);
         return null;
       }

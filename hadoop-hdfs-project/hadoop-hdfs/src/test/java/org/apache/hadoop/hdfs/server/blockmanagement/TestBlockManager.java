@@ -858,10 +858,12 @@ public class TestBlockManager {
     // RS-3-2 EC policy
     ErasureCodingPolicy ecPolicy =
         SystemErasureCodingPolicies.getPolicies().get(1);
-    // striped blockInfo
+
+    // striped blockInfo: 3 data blocks + 2 parity blocks
     Block aBlock = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
     BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
-    // ec storageInfo
+
+    // create 4 storageInfo, which means 1 block is missing
     DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
         "storage1", "1.1.1.1", "rack1", "host1");
     DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
@@ -884,10 +886,60 @@ public class TestBlockManager {
     BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
     assertNotNull(work);
 
-    // simulate the 3 nodes reach maxReplicationStreams
+    // simulate the 2 nodes reach maxReplicationStreams
     for(int i = 0; i < bm.maxReplicationStreams; i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
       ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+    }
+
+    // reconstruction should be skipped since the number of non-busy nodes are not enough
+    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    assertNull(work);
+  }
+
+  @Test
+  public void testSkipReconstructionWithManyBusyNodes2() {
+    long blockId = -9223372036854775776L; // real ec block id
+    // RS-3-2 EC policy
+    ErasureCodingPolicy ecPolicy =
+        SystemErasureCodingPolicies.getPolicies().get(1);
+
+    // striped blockInfo: 2 data blocks + 2 paritys
+    Block aBlock = new Block(blockId, ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1), 0);
+    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
+
+    // create 3 storageInfo, which means 1 block is missing
+    DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage1", "1.1.1.1", "rack1", "host1");
+    DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage2", "2.2.2.2", "rack2", "host2");
+    DatanodeStorageInfo ds3 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage3", "3.3.3.3", "rack3", "host3");
+
+    // link block with storage
+    aBlockInfoStriped.addStorage(ds1, aBlock);
+    aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
+    aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
+
+    addEcBlockToBM(blockId, ecPolicy);
+    aBlockInfoStriped.setBlockCollectionId(mockINodeId);
+
+    // reconstruction should be scheduled
+    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    assertNotNull(work);
+
+    // simulate the 1 node reaches maxReplicationStreams
+    for(int i = 0; i < bm.maxReplicationStreams; i++){
+      ds2.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+    }
+
+    // reconstruction should still be scheduled since there are 2 source nodes to create 2 blocks
+    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    assertNotNull(work);
+
+    // simulate the 1 more node reaches maxReplicationStreams
+    for(int i = 0; i < bm.maxReplicationStreams; i++){
+      ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
     // reconstruction should be skipped since the number of non-busy nodes are not enough
