@@ -1518,7 +1518,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public <T> Future<T> submit(final CallableRaisingIOE<T> operation) {
+    public <T> CompletableFuture<T> submit(final CallableRaisingIOE<T> operation) {
       CompletableFuture<T> result = new CompletableFuture<>();
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result, () -> {
@@ -1580,8 +1580,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         encryptionSecrets.getEncryptionKey(),
         eTag,
         versionId,
-        len,
-        0,
         len);
   }
 

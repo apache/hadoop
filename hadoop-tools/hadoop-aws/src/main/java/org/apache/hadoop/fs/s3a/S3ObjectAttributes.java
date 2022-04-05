@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 
 /**
- * This class holds attributed of an object independent of the
+ * This class holds attributes of an object independent of the
  * file status type.
  * It is used in {@link S3AInputStream} and the select equivalent.
  * as a way to reduce parameters being passed
@@ -43,9 +43,18 @@ public class S3ObjectAttributes {
   private final String eTag;
   private final String versionId;
   private final long len;
-  private final long readStart;
-  private final long readEnd;
 
+  /**
+   * Constructor.
+   * @param bucket s3 bucket
+   * @param path path
+   * @param key object key
+   * @param serverSideEncryptionAlgorithm current encryption algorithm
+   * @param serverSideEncryptionKey any server side encryption key?
+   * @param len object length
+   * @param eTag optional etag
+   * @param versionId optional version id
+   */
   public S3ObjectAttributes(
       String bucket,
       Path path,
@@ -54,9 +63,7 @@ public class S3ObjectAttributes {
       String serverSideEncryptionKey,
       String eTag,
       String versionId,
-      long len,
-      long readStart,
-      long readEnd) {
+      long len) {
     this.bucket = bucket;
     this.path = path;
     this.key = key;
@@ -65,8 +72,6 @@ public class S3ObjectAttributes {
     this.eTag = eTag;
     this.versionId = versionId;
     this.len = len;
-    this.readStart = readStart;
-    this.readEnd = readEnd;
   }
 
   /**
@@ -76,7 +81,7 @@ public class S3ObjectAttributes {
    * @param copyResult copy result.
    * @param serverSideEncryptionAlgorithm current encryption algorithm
    * @param serverSideEncryptionKey any server side encryption key?
-   * @param len
+   * @param len object length
    */
   public S3ObjectAttributes(
       final Path path,
@@ -92,8 +97,6 @@ public class S3ObjectAttributes {
     this.eTag = copyResult.getETag();
     this.versionId = copyResult.getVersionId();
     this.len = len;
-    this.readStart = 0;
-    this.readEnd = len;
   }
 
   public String getBucket() {
@@ -126,13 +129,5 @@ public class S3ObjectAttributes {
 
   public Path getPath() {
     return path;
-  }
-
-  public long getReadStart() {
-    return readStart;
-  }
-
-  public long getReadEnd() {
-    return readEnd;
   }
 }

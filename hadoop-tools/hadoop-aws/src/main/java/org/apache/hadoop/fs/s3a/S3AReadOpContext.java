@@ -71,10 +71,6 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param stats Fileystem statistics (may be null)
    * @param instrumentation statistics context
    * @param dstFileStatus target file status
-   * @param inputPolicy the input policy
-   * @param changeDetectionPolicy change detection policy.
-   * @param readahead readahead for GET operations/skip, etc.
-   * @param auditSpan active audit
    */
   public S3AReadOpContext(
       final Path path,

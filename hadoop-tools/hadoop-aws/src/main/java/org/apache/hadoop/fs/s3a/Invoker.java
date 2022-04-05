@@ -105,50 +105,49 @@ public class Invoker {
     return retryCallback;
   }
 
-    /**
-     * Execute a function, translating any exception into an IOException.
-     * @param action action to execute (used in error messages)
-     * @param path path of work (used in error messages)
-     * @param operation operation to execute
-     * @param <T> type of return value
-     * @return the result of the function call
-     * @throws IOException any IOE raised, or translated exception
-     */
-    @Retries.OnceTranslated
-    public static <T> T once(String action, String path,
-        CallableRaisingIOE<T> operation)
-        throws IOException {
-      try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
-        return operation.apply();
-      } catch (AmazonClientException e) {
-        throw S3AUtils.translateException(action, path, e);
-      }
+  /**
+   * Execute a function, translating any exception into an IOException.
+   * @param action action to execute (used in error messages)
+   * @param path path of work (used in error messages)
+   * @param operation operation to execute
+   * @param <T> type of return value
+   * @return the result of the function call
+   * @throws IOException any IOE raised, or translated exception
+   */
+  @Retries.OnceTranslated
+  public static <T> T once(String action, String path,
+      CallableRaisingIOE<T> operation)
+      throws IOException {
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
+      return operation.apply();
+    } catch (AmazonClientException e) {
+      throw S3AUtils.translateException(action, path, e);
     }
-    /**
-     * Execute a function, translating any exception into an IOException.
-     * The supplied duration tracker instance is updated with success/failure.
-     * @param action action to execute (used in error messages)
-     * @param path path of work (used in error messages)
-     * @param operation operation to execute
-     * @param <T> type of return value
-     * @return the result of the function call
-     * @throws IOException any IOE raised, or translated exception
-     */
-    @Retries.OnceTranslated
-    public static <T> T onceTrackingDuration(
-        final String action,
-        final String path,
-        final DurationTracker tracker,
-        final CallableRaisingIOE<T> operation)
-        throws IOException {
-      try {
-        return invokeTrackingDuration(tracker, operation);
-      } catch (AmazonClientException e) {
-        throw S3AUtils.translateException(action, path, e);
-      }
+  }
+
+  /**
+   * Execute a function, translating any exception into an IOException.
+   * The supplied duration tracker instance is updated with success/failure.
+   * @param action action to execute (used in error messages)
+   * @param path path of work (used in error messages)
+   * @param operation operation to execute
+   * @param <T> type of return value
+   * @return the result of the function call
+   * @throws IOException any IOE raised, or translated exception
+   */
+  @Retries.OnceTranslated
+  public static <T> T onceTrackingDuration(
+      final String action,
+      final String path,
+      final DurationTracker tracker,
+      final CallableRaisingIOE<T> operation)
+      throws IOException {
+    try {
+      return invokeTrackingDuration(tracker, operation);
+    } catch (AmazonClientException e) {
+      throw S3AUtils.translateException(action, path, e);
     }
-
-
+  }
 
   /**
    * Execute an operation with no result.

@@ -527,7 +527,7 @@ public final class IOStatisticsBinding {
 
   /**
    * Given an IOException raising callable/lambda expression,
-   * execute it, updating the tracker on success/failure
+   * execute it, updating the tracker on success/failure.
    * @param tracker duration tracker.
    * @param input input callable.
    * @param <B> return type.

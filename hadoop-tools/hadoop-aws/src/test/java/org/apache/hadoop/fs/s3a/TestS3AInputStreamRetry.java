@@ -22,8 +22,7 @@ import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -58,7 +57,6 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   @Test
   public void testInputStreamReadRetryForException() throws IOException {
     S3AInputStream s3AInputStream = getMockedS3AInputStream();
-
     assertEquals("'a' from the test input stream 'ab' should be the first " +
         "character being read", INPUT.charAt(0), s3AInputStream.read());
     assertEquals("'b' from the test input stream 'ab' should be the second " +
@@ -104,9 +102,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         new EncryptionSecrets().getEncryptionKey(),
         eTag,
         versionId,
-        INPUT.length(),
-        0,
-        0);
+        INPUT.length());
 
     S3AReadOpContext s3AReadOpContext = fs.createReadContext(
         s3AFileStatus, S3AInputPolicy.Normal,
@@ -159,7 +155,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
       }
 
       @Override
-      public <T> Future<T> submit(final CallableRaisingIOE<T> operation) {
+      public <T> CompletableFuture<T> submit(final CallableRaisingIOE<T> operation) {
         return eval(operation);
       }
 

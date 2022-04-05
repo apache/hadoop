@@ -607,15 +607,16 @@ public final class Constants {
    * The threshold at which drain operations switch
    * to being asynchronous with the schedule/wait overhead
    * compared to synchronous.
+   * Value: {@value}
    */
   public static final String ASYNC_DRAIN_THRESHOLD = "fs.s3a.input.async.drain.threshold";
 
   /**
    * This is a number based purely on experimentation in
-   * {@code ITestS3AInputStreamPerformance} so may be
-   * inappropriate.
+   * {@code ITestS3AInputStreamPerformance}.
+   * Value: {@value}
    */
-  public static int DEFAULT_ASYNC_DRAIN_THRESHOLD = 16_000;
+  public static final int DEFAULT_ASYNC_DRAIN_THRESHOLD = 16_000;
 
   /**
    * Which input strategy to use for buffering, seeking and similar when
