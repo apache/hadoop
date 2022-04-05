@@ -64,8 +64,7 @@ add_subdirectory(hdfs-copy-to-local)
 
 add_subdirectory(hdfs-move-to-local)
 
-add_executable(hdfs_setrep hdfs_setrep.cc)
-target_link_libraries(hdfs_setrep tools_common hdfspp_static)
+add_subdirectory(hdfs-setrep)
 
 add_subdirectory(hdfs-allow-snapshot)
 
