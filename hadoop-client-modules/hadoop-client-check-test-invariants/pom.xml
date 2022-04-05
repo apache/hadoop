@@ -88,7 +88,7 @@
                     <exclude>org.slf4j:slf4j-api</exclude>
                     <!-- Leave commons-logging unshaded so downstream users can configure logging. -->
                     <exclude>commons-logging:commons-logging</exclude>
-                    <!-- Leave log4j unshaded so downstream users can configure logging. -->
+                    <!-- Leave reload4j unshaded so downstream users can configure logging. -->
                     <exclude>ch.qos.reload4j:reload4j</exclude>
                     <!-- Leave JUnit unshaded so downstream can use our test helper classes -->
                     <exclude>junit:junit</exclude>

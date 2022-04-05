@@ -81,7 +81,7 @@
     <httpcore.version>4.4.13</httpcore.version>
 
     <!-- SLF4J/LOG4J version -->
-    <slf4j.version>1.7.35</slf4j.version>
+    <slf4j.version>1.7.36</slf4j.version>
     <reload4j.version>1.2.18.3</reload4j.version>
 
     <!-- com.google.re2j version -->
