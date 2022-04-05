@@ -121,7 +121,7 @@ public interface S3ATestConstants {
    * {@value}.
    */
   String DEFAULT_BUCKET_MANY_OBJECTS
-      = LANDSAT_BUCKET;
+      = "s3a://commoncrawl/";
 
   /**
    * Name of the property to define the timeout for scale tests: {@value}.
