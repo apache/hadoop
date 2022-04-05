@@ -111,7 +111,8 @@ public class TestDataNodeReconfiguration {
       throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
-    conf.setClass(FS_GETSPACEUSED_CLASSNAME, DummyCachingGetSpaceUsed.class, CachingGetSpaceUsed.class);
+    conf.setClass(FS_GETSPACEUSED_CLASSNAME, DummyCachingGetSpaceUsed.class,
+            CachingGetSpaceUsed.class);
 
     MiniDFSNNTopology nnTopology = MiniDFSNNTopology
         .simpleFederatedTopology(numNameNodes);
@@ -772,20 +773,20 @@ public class TestDataNodeReconfiguration {
   }
 
   @Test
-  public void testDfsUsageKlass() throws IOException, ReconfigurationException,
-          InterruptedException {
+  public void testDfsUsageKlass() throws ReconfigurationException, InterruptedException {
 
     long lastCounter = counter;
     Thread.sleep(5000);
-    assertTrue(counter > lastCounter);
+    assertEquals(lastCounter, counter);
 
     for (int i = 0; i < NUM_DATA_NODE; i++) {
       DataNode dn = cluster.getDataNodes().get(i);
-      dn.reconfigurePropertyImpl(FS_GETSPACEUSED_CLASSNAME, null);
+      dn.reconfigurePropertyImpl(FS_GETSPACEUSED_CLASSNAME,
+              DummyCachingGetSpaceUsed.class.getName());
     }
 
     lastCounter = counter;
     Thread.sleep(5000);
-    assertEquals(lastCounter, counter);
- }
+    assertTrue(counter > lastCounter);
+  }
 }

@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
+import org.apache.hadoop.fs.DU;
+import org.apache.hadoop.fs.GetSpaceUsed;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_DEFAULT;
@@ -685,29 +687,13 @@ public class DataNode extends ReconfigurableBase
       return reconfSlowDiskParameters(property, newVal);
     case FS_DU_INTERVAL_KEY:
     case FS_GETSPACEUSED_JITTER_KEY:
-      return reconfDfsUsageParameters(property, newVal);
     case FS_GETSPACEUSED_CLASSNAME:
-      reconfSpaceUsedKlass();
-      return newVal;
+      return reconfDfsUsageParameters(property, newVal);
     default:
       break;
     }
     throw new ReconfigurationException(
         property, newVal, getConf().get(property));
-  }
-
-  private void reconfSpaceUsedKlass(){
-    List<FsVolumeImpl> volumeList = data.getVolumeList();
-    for (FsVolumeImpl fsVolume : volumeList) {
-      Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
-      for (Entry<String, BlockPoolSlice> entry : blockPoolSlices.entrySet()) {
-        try {
-          entry.getValue().refreshSpaceUsedKlass(getNewConf());
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
-    }
   }
 
   private String reconfDataXceiverParameters(String property, String newVal)
@@ -898,7 +884,7 @@ public class DataNode extends ReconfigurableBase
         for (FsVolumeImpl fsVolume : volumeList) {
           Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
           for (BlockPoolSlice value : blockPoolSlices.values()) {
-            value.updateDfsUsageConfig(interval, null);
+            value.updateDfsUsageConfig(interval, null, null);
           }
         }
       } else if (property.equals(FS_GETSPACEUSED_JITTER_KEY)) {
@@ -910,13 +896,25 @@ public class DataNode extends ReconfigurableBase
         for (FsVolumeImpl fsVolume : volumeList) {
           Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
           for (BlockPoolSlice value : blockPoolSlices.values()) {
-            value.updateDfsUsageConfig(null, jitter);
+            value.updateDfsUsageConfig(null, jitter, null);
+          }
+        }
+      } else if (property.equals(FS_GETSPACEUSED_CLASSNAME)) {
+        Preconditions.checkNotNull(data, "FsDatasetSpi has not been initialized.");
+        Class<? extends GetSpaceUsed> klass = (newVal == null ? DU.class :
+                Class.forName(newVal).asSubclass(GetSpaceUsed.class));
+        result = klass.getName();
+        List<FsVolumeImpl> volumeList = data.getVolumeList();
+        for (FsVolumeImpl fsVolume : volumeList) {
+          Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
+          for (BlockPoolSlice value : blockPoolSlices.values()) {
+            value.updateDfsUsageConfig(null, null, klass);
           }
         }
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
-    } catch (IllegalArgumentException | IOException e) {
+    } catch (IllegalArgumentException | IOException | ClassNotFoundException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     }
   }
