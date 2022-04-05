@@ -28,10 +28,12 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
@@ -307,22 +309,25 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   }
 
   /**
-   * Run an audit against the landsat bucket.
+   * Run an audit against a bucket with a large number of objects.
    * <p></p>
    * This tests paging/scale against a larger bucket without
    * worrying about setup costs.
    */
   @Test
   public void testRunLimitedLandsatAudit() throws Throwable {
-    describe("Audit a few thousand landsat objects");
+    describe("Audit a few thousand objects");
     final File audit = tempAuditFile();
+
+    Configuration conf = super.createConfiguration();
+    String bucketUri = getBucketUriWithLargeNumberOfObjects(conf);
 
     runToFailure(EXIT_INTERRUPTED,
         MARKERS,
         AUDIT,
         m(OPT_LIMIT), 3000,
         m(OPT_OUT), audit,
-        LANDSAT_BUCKET);
+        bucketUri);
     readOutput(audit);
   }
 
@@ -544,6 +549,23 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     for (String p : createdPaths.filesUnderBase) {
       assertIsFile(toPath(dest, p));
     }
+  }
+
+  /**
+   * Get s3a URI of a bucket/prefix with a large number of objects from config.
+   * @param conf Apache Hadoop configuration
+   * @return s3a URI with large number of objects
+   */
+  private String getBucketUriWithLargeNumberOfObjects(Configuration conf) {
+    String bucket = conf
+        .getTrimmed(KEY_BUCKET_WITH_MANY_OBJECTS, DEFAULT_BUCKET_MANY_OBJECTS);
+
+    S3ATestUtils.assume(
+        "Empty test property: " + KEY_BUCKET_WITH_MANY_OBJECTS,
+        !bucket.isEmpty()
+    );
+
+    return bucket;
   }
 
 }

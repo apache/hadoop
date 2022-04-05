@@ -109,6 +109,21 @@ public interface S3ATestConstants {
   String DEFAULT_REQUESTER_PAYS_FILE = "s3a://usgs-landsat/collection02/catalog.json";
 
   /**
+   * Configuration key for an existing bucket with many objects: {@value}.
+   *
+   * This is used for tests depending on buckets with a large number of keys.
+   */
+  String KEY_BUCKET_WITH_MANY_OBJECTS
+      = TEST_FS_S3A + "bucket-with-many-objects";
+
+  /**
+   * Default bucket for when {@value KEY_BUCKET_WITH_MANY_OBJECTS} is not set:
+   * {@value}.
+   */
+  String DEFAULT_BUCKET_MANY_OBJECTS
+      = LANDSAT_BUCKET;
+
+  /**
    * Name of the property to define the timeout for scale tests: {@value}.
    * Measured in seconds.
    */
