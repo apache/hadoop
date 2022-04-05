@@ -853,6 +853,49 @@ public class TestBlockManager {
   }
 
   @Test
+  public void testSkipReconstructionWithManyBusyNodes() {
+    long blockId = -9223372036854775776L; // real ec block id
+    // RS-3-2 EC policy
+    ErasureCodingPolicy ecPolicy =
+        SystemErasureCodingPolicies.getPolicies().get(1);
+    // striped blockInfo
+    Block aBlock = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
+    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
+    // ec storageInfo
+    DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage1", "1.1.1.1", "rack1", "host1");
+    DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage2", "2.2.2.2", "rack2", "host2");
+    DatanodeStorageInfo ds3 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage3", "3.3.3.3", "rack3", "host3");
+    DatanodeStorageInfo ds4 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage4", "4.4.4.4", "rack4", "host4");
+
+    // link block with storage
+    aBlockInfoStriped.addStorage(ds1, aBlock);
+    aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
+    aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
+    aBlockInfoStriped.addStorage(ds4, new Block(blockId + 3, 0, 0));
+
+    addEcBlockToBM(blockId, ecPolicy);
+    aBlockInfoStriped.setBlockCollectionId(mockINodeId);
+
+    // reconstruction should be scheduled
+    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    assertNotNull(work);
+
+    // simulate the 3 nodes reach maxReplicationStreams
+    for(int i = 0; i < bm.maxReplicationStreams; i++){
+      ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+      ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+    }
+
+    // reconstruction should be skipped since the number of non-busy nodes are not enough
+    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    assertNull(work);
+  }
+
+  @Test
   public void testFavorDecomUntilHardLimit() throws Exception {
     bm.maxReplicationStreams = 0;
     bm.replicationStreamsHardLimit = 1;
