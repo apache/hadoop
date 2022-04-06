@@ -39,6 +39,7 @@
 #include "hdfs-rename-snapshot-mock.h"
 #include "hdfs-rm-mock.h"
 #include "hdfs-setrep-mock.h"
+#include "hdfs-stat-mock.h"
 #include "hdfs-tool-test-fixtures.h"
 #include "hdfs-tool-tests.h"
 
