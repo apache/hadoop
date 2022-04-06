@@ -887,7 +887,7 @@ public class TestMover {
               {StorageType.ARCHIVE, StorageType.ARCHIVE},
               {StorageType.ARCHIVE, StorageType.ARCHIVE},
               {StorageType.ARCHIVE, StorageType.ARCHIVE}},
-          true, null, null, null,capacities, null, false, false, false, null);
+          true, null, null, null, capacities, null, false, false, false, null, null, null);
       cluster.triggerHeartbeats();
 
       // move file to ARCHIVE
@@ -921,7 +921,7 @@ public class TestMover {
               { StorageType.SSD, StorageType.DISK },
               { StorageType.SSD, StorageType.DISK },
               { StorageType.SSD, StorageType.DISK } },
-          true, null, null, null, capacities, null, false, false, false, null);
+          true, null, null, null, capacities, null, false, false, false, null, null, null);
       cluster.triggerHeartbeats();
 
       // move file blocks to ONE_SSD policy
@@ -1221,7 +1221,7 @@ public class TestMover {
       final MiniDFSCluster cluster) throws IOException {
 
     cluster.startDataNodes(conf, newNodesRequired, newTypes, true, null, null,
-        null, null, null, false, false, false, null);
+        null, null, null, false, false, false, null, null, null);
     cluster.triggerHeartbeats();
   }
 }
