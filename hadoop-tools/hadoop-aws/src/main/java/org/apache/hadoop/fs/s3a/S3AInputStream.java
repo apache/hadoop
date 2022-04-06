@@ -85,6 +85,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public static final String OPERATION_REOPEN = "re-open";
 
   /**
+   * size of a buffer to create when draining the stream.
+   */
+  private static final int DRAIN_BUFFER_SIZE = 16384;
+
+  /**
    * This is the public position; the one set in {@link #seek(long)}
    * and returned in {@link #getPos()}.
    */
@@ -693,7 +698,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
         // explicitly drain the stream
         long drained = 0;
-        byte[] buffer = new byte[16384];
+        byte[] buffer = new byte[DRAIN_BUFFER_SIZE];
         while (true) {
           final int count = inner.read(buffer);
           if (count < 0) {

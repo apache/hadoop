@@ -54,10 +54,10 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Unit tests for {@link PrepareToOpenFile} and the associated
+ * Unit tests for {@link OpenFileSupport} and the associated
  * seek policy lookup in {@link S3AInputPolicy}.
  */
-public class TestPrepareToOpenFile extends HadoopTestBase {
+public class TestOpenFileSupport extends HadoopTestBase {
 
   private static final ChangeDetectionPolicy CHANGE_POLICY =
       ChangeDetectionPolicy.createPolicy(
@@ -76,21 +76,22 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
   private static final Path TESTPATH = new Path(TESTFILE);
 
   /**
-   * Create a PrepareToOpenFile instance.
+   * Create a OpenFileSupport instance.
    */
-  private static final PrepareToOpenFile PREPARE =
-      new PrepareToOpenFile(
+  private static final OpenFileSupport PREPARE =
+      new OpenFileSupport(
           CHANGE_POLICY,
           READ_AHEAD_RANGE,
           USERNAME,
           IO_FILE_BUFFER_SIZE_DEFAULT,
-          DEFAULT_ASYNC_DRAIN_THRESHOLD);
+          DEFAULT_ASYNC_DRAIN_THRESHOLD,
+          INPUT_POLICY);
 
   @Test
   public void testSimpleFile() throws Throwable {
-    ObjectAssert<PrepareToOpenFile.OpenFileInformation>
+    ObjectAssert<OpenFileSupport.OpenFileInformation>
         asst = assertFileInfo(
-        PREPARE.openSimpleFile(1024, INPUT_POLICY));
+            PREPARE.openSimpleFile(1024));
 
     asst.extracting(f -> f.getChangePolicy())
         .isEqualTo(CHANGE_POLICY);
@@ -105,8 +106,8 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    * @param fi file info
    * @return an assert stream.
    */
-  private ObjectAssert<PrepareToOpenFile.OpenFileInformation> assertFileInfo(
-      final PrepareToOpenFile.OpenFileInformation fi) {
+  private ObjectAssert<OpenFileSupport.OpenFileInformation> assertFileInfo(
+      final OpenFileSupport.OpenFileInformation fi) {
     return Assertions.assertThat(fi)
         .describedAs("File Information %s", fi);
   }
@@ -118,7 +119,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    * @param option option value.
    * @return the constructed OpenFileInformation.
    */
-  public ObjectAssert<PrepareToOpenFile.OpenFileInformation> assertOpenFile(
+  public ObjectAssert<OpenFileSupport.OpenFileInformation> assertOpenFile(
       final String key,
       final String option) throws IOException {
     return assertFileInfo(prepareToOpenFile(params(key, option)));
@@ -260,7 +261,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
   @Test
   public void testStatusWithValidFilename() throws Throwable {
     Path p = new Path("file:///tmp/" + TESTPATH.getName());
-    ObjectAssert<PrepareToOpenFile.OpenFileInformation> asst =
+    ObjectAssert<OpenFileSupport.OpenFileInformation> asst =
         assertFileInfo(prepareToOpenFile(
             params(FS_OPTION_OPENFILE_LENGTH, "32")
                 .withStatus(status(p, 4096))));
@@ -278,7 +279,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
   @Test
   public void testLocatedStatus() throws Throwable {
     Path p = new Path("file:///tmp/" + TESTPATH.getName());
-    ObjectAssert<PrepareToOpenFile.OpenFileInformation> asst =
+    ObjectAssert<OpenFileSupport.OpenFileInformation> asst =
         assertFileInfo(
             prepareToOpenFile(
                 params(FS_OPTION_OPENFILE_LENGTH, "32")
@@ -321,13 +322,13 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    * @return
    * @throws IOException
    */
-  public PrepareToOpenFile.OpenFileInformation prepareToOpenFile(
+  public OpenFileSupport.OpenFileInformation prepareToOpenFile(
       final OpenFileParameters parameters)
       throws IOException {
     return PREPARE.prepareToOpenFile(TESTPATH,
         parameters,
-        IO_FILE_BUFFER_SIZE_DEFAULT,
-        INPUT_POLICY);
+        IO_FILE_BUFFER_SIZE_DEFAULT
+    );
   }
 
   /**
@@ -336,7 +337,7 @@ public class TestPrepareToOpenFile extends HadoopTestBase {
    */
   @Test
   public void testFileLength() throws Throwable {
-    ObjectAssert<PrepareToOpenFile.OpenFileInformation> asst =
+    ObjectAssert<OpenFileSupport.OpenFileInformation> asst =
         assertFileInfo(prepareToOpenFile(
             params(FS_OPTION_OPENFILE_LENGTH, "8192")
                 .withStatus(null)));

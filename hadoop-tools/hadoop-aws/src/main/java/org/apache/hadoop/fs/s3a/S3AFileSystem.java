@@ -38,7 +38,6 @@ import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -110,7 +109,7 @@ import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.MkdirOperation;
-import org.apache.hadoop.fs.s3a.impl.PrepareToOpenFile;
+import org.apache.hadoop.fs.s3a.impl.OpenFileSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
@@ -302,14 +301,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3AStorageStatistics storageStatistics;
 
   /**
-   * Default stream readahead.
+   * Default input policy; may be overridden in
+   * {@code openFile()}
    */
-  private long readAhead;
-  /**
-   * Threshold for stream reads to switch to
-   * asynchronous draining.
-   */
-  private long asyncDrainThreshold;
   private S3AInputPolicy inputPolicy;
   private ChangeDetectionPolicy changeDetectionPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -342,7 +336,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Helper for the openFile() method.
    */
-  private PrepareToOpenFile openFileHelper;
+  private OpenFileSupport openFileHelper;
 
   /**
    * Directory policy.
@@ -482,11 +476,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
-      readAhead = longBytesOption(conf, READAHEAD_RANGE,
-          DEFAULT_READAHEAD_RANGE, 0);
-      asyncDrainThreshold = longBytesOption(conf, ASYNC_DRAIN_THRESHOLD,
-          DEFAULT_ASYNC_DRAIN_THRESHOLD, 0);
-
       initThreadPools(conf);
 
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
@@ -576,12 +565,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               "page size out of range: %s", pageSize);
       listing = new Listing(listingOperationCallbacks, createStoreContext());
       // now the open file logic
-      openFileHelper = new PrepareToOpenFile(
+      openFileHelper = new OpenFileSupport(
           changeDetectionPolicy,
-          readAhead,
+          longBytesOption(conf, READAHEAD_RANGE,
+              DEFAULT_READAHEAD_RANGE, 0),
           username,
-          intOption(getConf(), IO_FILE_BUFFER_SIZE_KEY,
-              IO_FILE_BUFFER_SIZE_DEFAULT, 0), asyncDrainThreshold);
+          intOption(conf, IO_FILE_BUFFER_SIZE_KEY,
+              IO_FILE_BUFFER_SIZE_DEFAULT, 0),
+          longBytesOption(conf, ASYNC_DRAIN_THRESHOLD,
+                        DEFAULT_ASYNC_DRAIN_THRESHOLD, 0),
+          inputPolicy);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -1206,15 +1199,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Returns the read ahead range value used by this filesystem.
-   * @return the readahead range
-   */
-  @VisibleForTesting
-  long getReadAheadRange() {
-    return readAhead;
-  }
-
-  /**
    * Get the input policy for this FS instance.
    * @return the input policy
    */
@@ -1295,15 +1279,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Change the input policy for this FS.
+   * This is now a no-op, retained in case some application
+   * or external test invokes it.
+   *
    * @deprecated use openFile() options
    * @param inputPolicy new policy
    */
   @InterfaceStability.Unstable
   @Deprecated
   public void setInputPolicy(S3AInputPolicy inputPolicy) {
-    Objects.requireNonNull(inputPolicy, "Null inputStrategy");
-    LOG.debug("Setting input strategy: {}", inputPolicy);
-    this.inputPolicy = inputPolicy;
+    LOG.warn("setInputPolicy is no longer supported");
   }
 
   /**
@@ -1422,7 +1407,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
     return executeOpen(qualify(f),
-        openFileHelper.openSimpleFile(bufferSize, inputPolicy));
+        openFileHelper.openSimpleFile(bufferSize));
   }
 
   /**
@@ -1438,7 +1423,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private FSDataInputStream executeOpen(
       final Path path,
-      final PrepareToOpenFile.OpenFileInformation fileInformation)
+      final OpenFileSupport.OpenFileInformation fileInformation)
       throws IOException {
     // create the input stream statistics before opening
     // the file so that the time to prepare to open the file is included.
@@ -1452,10 +1437,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             extractOrFetchSimpleFileStatus(path, fileInformation));
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
-        fileInformation.getInputPolicy(),
-        fileInformation.getChangePolicy(),
-        fileInformation.getReadAheadRange(),
         auditSpan);
+    fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
     return new FSDataInputStream(
         new S3AInputStream(
@@ -1534,30 +1517,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Create the read context for reading from the referenced file,
    * using FS state as well as the status.
    * @param fileStatus file status.
-   * @param seekPolicy input policy for this operation
-   * @param changePolicy change policy for this operation.
-   * @param readAheadRange readahead value.
    * @param auditSpan audit span.
    * @return a context for read and select operations.
    */
   @VisibleForTesting
   protected S3AReadOpContext createReadContext(
       final FileStatus fileStatus,
-      final S3AInputPolicy seekPolicy,
-      final ChangeDetectionPolicy changePolicy,
-      final long readAheadRange,
       final AuditSpan auditSpan) {
-    return new S3AReadOpContext(fileStatus.getPath(),
+    final S3AReadOpContext roc = new S3AReadOpContext(
+        fileStatus.getPath(),
         invoker,
         statistics,
         statisticsContext,
         fileStatus)
-        .withInputPolicy(seekPolicy)
-        .withChangeDetectionPolicy(changePolicy)
-        .withReadahead(readAheadRange)
-        .withAuditSpan(auditSpan)
-        .withAsyncDrainThreshold(asyncDrainThreshold)
-        .build();
+        .withAuditSpan(auditSpan);
+    openFileHelper.applyDefaultOptions(roc);
+    return roc.build();
   }
 
   /**
@@ -2018,9 +1993,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public S3AReadOpContext createReadContext(final FileStatus fileStatus) {
       return S3AFileSystem.this.createReadContext(fileStatus,
-          inputPolicy,
-          changeDetectionPolicy,
-          readAhead,
           auditSpan);
     }
 
@@ -4136,14 +4108,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         "S3AFileSystem{");
     sb.append("uri=").append(uri);
     sb.append(", workingDir=").append(workingDir);
-    sb.append(", inputPolicy=").append(inputPolicy);
     sb.append(", partSize=").append(partSize);
     sb.append(", enableMultiObjectsDelete=").append(enableMultiObjectsDelete);
     sb.append(", maxKeys=").append(maxKeys);
     if (cannedACL != null) {
-      sb.append(", cannedACL=").append(cannedACL.toString());
+      sb.append(", cannedACL=").append(cannedACL);
     }
-    sb.append(", readAhead=").append(readAhead);
+    if (openFileHelper != null) {
+      sb.append(", ").append(openFileHelper);
+    }
     if (getConf() != null) {
       sb.append(", blockSize=").append(getDefaultBlockSize());
     }
@@ -4830,7 +4803,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @AuditEntryPoint
   private FSDataInputStream select(final Path source,
       final Configuration options,
-      final PrepareToOpenFile.OpenFileInformation fileInformation)
+      final OpenFileSupport.OpenFileInformation fileInformation)
       throws IOException {
     requireSelectSupport(source);
     final AuditSpan auditSpan = entryPoint(OBJECT_SELECT_REQUESTS, source);
@@ -4845,10 +4818,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ChangeDetectionPolicy changePolicy = fileInformation.getChangePolicy();
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
-        fileInformation.getInputPolicy(),
-        changePolicy,
-        fileInformation.getReadAheadRange(),
         auditSpan);
+    fileInformation.applyOptions(readContext);
 
     if (changePolicy.getSource() != ChangeDetectionPolicy.Source.None
         && fileStatus.getEtag() != null) {
@@ -4910,7 +4881,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private S3AFileStatus extractOrFetchSimpleFileStatus(
       final Path path,
-      final PrepareToOpenFile.OpenFileInformation fileInformation)
+      final OpenFileSupport.OpenFileInformation fileInformation)
       throws IOException {
     S3AFileStatus fileStatus = fileInformation.getStatus();
     if (fileStatus == null) {
@@ -4946,12 +4917,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Path rawPath,
       final OpenFileParameters parameters) throws IOException {
     final Path path = qualify(rawPath);
-    PrepareToOpenFile.OpenFileInformation fileInformation =
+    OpenFileSupport.OpenFileInformation fileInformation =
         openFileHelper.prepareToOpenFile(
             path,
             parameters,
-            getDefaultBlockSize(),
-            inputPolicy);
+            getDefaultBlockSize());
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
     if (!fileInformation.isS3Select()) {
       // normal path.

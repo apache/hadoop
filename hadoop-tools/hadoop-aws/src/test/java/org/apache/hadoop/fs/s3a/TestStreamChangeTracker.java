@@ -79,7 +79,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
   public void testVersionCheckingHandlingNoVersionsVersionRequired()
       throws Throwable {
     LOG.info("If an endpoint doesn't return versions but we are configured to"
-        + "require them");
+        + " require them");
     ChangeTracker tracker = newTracker(
         ChangeDetectionPolicy.Mode.Client,
         ChangeDetectionPolicy.Source.VersionId,
@@ -442,6 +442,6 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         null,
         etag,
         versionId,
-        0, 0, 0);
+        0);
   }
 }

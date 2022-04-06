@@ -33,12 +33,13 @@ import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
+import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
@@ -61,10 +62,10 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
  *   set.
  * </p>
  */
-public class PrepareToOpenFile {
+public class OpenFileSupport {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(PrepareToOpenFile.class);
+      LoggerFactory.getLogger(OpenFileSupport.class);
 
   /**
    * For use when a value of an split/file length is unknown.
@@ -90,24 +91,63 @@ public class PrepareToOpenFile {
   private final long defaultAsyncDrainThreshold;
 
   /**
+   * Default input policy; may be overridden in
+   * {@code openFile()}
+   */
+  private final S3AInputPolicy defaultInputPolicy;
+
+  /**
    * Instantiate with the default options from the filesystem.
    * @param changePolicy change detection policy
    * @param defaultReadAhead read ahead range
    * @param username username
    * @param defaultBufferSize buffer size
-   * @param defaultAsyncDrainThreshold
+   * @param defaultAsyncDrainThreshold drain threshold
+   * @param defaultInputPolicy input policy
    */
-  public PrepareToOpenFile(
+  public OpenFileSupport(
       final ChangeDetectionPolicy changePolicy,
       final long defaultReadAhead,
       final String username,
       final int defaultBufferSize,
-      final long defaultAsyncDrainThreshold) {
+      final long defaultAsyncDrainThreshold,
+      final S3AInputPolicy defaultInputPolicy) {
     this.changePolicy = changePolicy;
     this.defaultReadAhead = defaultReadAhead;
     this.username = username;
     this.defaultBufferSize = defaultBufferSize;
     this.defaultAsyncDrainThreshold = defaultAsyncDrainThreshold;
+    this.defaultInputPolicy = defaultInputPolicy;
+  }
+
+  public ChangeDetectionPolicy getChangePolicy() {
+    return changePolicy;
+  }
+
+  public long getDefaultReadAhead() {
+    return defaultReadAhead;
+  }
+
+  public int getDefaultBufferSize() {
+    return defaultBufferSize;
+  }
+
+  public long getDefaultAsyncDrainThreshold() {
+    return defaultAsyncDrainThreshold;
+  }
+
+  /**
+   * Propagate the default options to the operation context
+   * being built up.
+   * @param roc context
+   * @return the context
+   */
+  public S3AReadOpContext applyDefaultOptions(S3AReadOpContext roc) {
+    return roc
+        .withInputPolicy(defaultInputPolicy)
+        .withChangeDetectionPolicy(changePolicy)
+        .withAsyncDrainThreshold(defaultAsyncDrainThreshold)
+        .withReadahead(defaultReadAhead);
   }
 
   /**
@@ -115,7 +155,6 @@ public class PrepareToOpenFile {
    * @param path path to the file
    * @param parameters open file parameters from the builder.
    * @param blockSize for fileStatus
-   * @param inputPolicy default input policy.
    * @return open file options
    * @throws IOException failure to resolve the link.
    * @throws IllegalArgumentException unknown mandatory key
@@ -124,8 +163,7 @@ public class PrepareToOpenFile {
   public OpenFileInformation prepareToOpenFile(
       final Path path,
       final OpenFileParameters parameters,
-      final long blockSize,
-      final S3AInputPolicy inputPolicy) throws IOException {
+      final long blockSize) throws IOException {
     Configuration options = parameters.getOptions();
     Set<String> mandatoryKeys = parameters.getMandatoryKeys();
     String sql = options.get(SelectConstants.SELECT_SQL, null);
@@ -188,7 +226,7 @@ public class PrepareToOpenFile {
         //  S3ALocatedFileStatus instance may supply etag and version.
         S3ALocatedFileStatus st = (S3ALocatedFileStatus) providedStatus;
         versionId = st.getVersionId();
-        eTag = st.getETag();
+        eTag = st.getEtag();
       } else {
         // it is another type.
         // build a status struct without etag or version.
@@ -238,21 +276,21 @@ public class PrepareToOpenFile {
       // fall back to looking at the S3A-specific option.
       policies = options.getStringCollection(INPUT_FADVISE);
     }
-    // get the first known policy
-    // readahead range
-    // buffer size
+
     return new OpenFileInformation()
         .withS3Select(isSelect)
         .withSql(sql)
+        .withAsyncDrainThreshold(
+            options.getLong(ASYNC_DRAIN_THRESHOLD,
+                defaultReadAhead))
         .withBufferSize(
             options.getInt(FS_OPTION_OPENFILE_BUFFER_SIZE, defaultBufferSize))
         .withChangePolicy(changePolicy)
-        .withReadAheadRange(options.getLong(READAHEAD_RANGE, defaultReadAhead))
-        .withAsyncDrainThreshold(options.getLong(ASYNC_DRAIN_THRESHOLD,
-            defaultReadAhead))
         .withFileLength(fileLength)
         .withInputPolicy(
-            S3AInputPolicy.getFirstSupportedPolicy(policies, inputPolicy))
+            S3AInputPolicy.getFirstSupportedPolicy(policies, defaultInputPolicy))
+        .withReadAheadRange(
+            options.getLong(READAHEAD_RANGE, defaultReadAhead))
         .withSplitStart(splitStart)
         .withSplitEnd(splitEnd)
         .withStatus(fileStatus)
@@ -278,25 +316,36 @@ public class PrepareToOpenFile {
         null);
   }
 
-    /**
-     * Open a simple file.
-     * @return the parameters needed to open a file through
-     * {@code open(path, bufferSize)}.
-     * @param bufferSize  buffer size
-     * @param inputPolicy input policy.
-     */
-  public OpenFileInformation openSimpleFile(final int bufferSize,
-      final S3AInputPolicy inputPolicy) {
+  /**
+   * Open a simple file, using all the default
+   * options.
+   * @return the parameters needed to open a file through
+   * {@code open(path, bufferSize)}.
+   * @param bufferSize  buffer size
+   */
+  public OpenFileInformation openSimpleFile(final int bufferSize) {
     return new OpenFileInformation()
         .withS3Select(false)
+        .withAsyncDrainThreshold(defaultAsyncDrainThreshold)
         .withBufferSize(bufferSize)
         .withChangePolicy(changePolicy)
-        .withReadAheadRange(defaultReadAhead)
         .withFileLength(LENGTH_UNKNOWN)
-        .withInputPolicy(inputPolicy)
+        .withInputPolicy(defaultInputPolicy)
+        .withReadAheadRange(defaultReadAhead)
         .withSplitStart(0)
         .withSplitEnd(LENGTH_UNKNOWN)
         .build();
+  }
+
+  @Override
+  public String toString() {
+    return "OpenFileSupport{" +
+        "changePolicy=" + changePolicy +
+        ", defaultReadAhead=" + defaultReadAhead +
+        ", defaultBufferSize=" + defaultBufferSize +
+        ", defaultAsyncDrainThreshold=" + defaultAsyncDrainThreshold +
+        ", defaultInputPolicy=" + defaultInputPolicy +
+        '}';
   }
 
   /**
@@ -531,6 +580,21 @@ public class PrepareToOpenFile {
       asyncDrainThreshold = value;
       return this;
     }
+
+    /**
+     * Propagate the options to the operation context
+     * being built up.
+     * @param roc context
+     * @return the context
+     */
+    public S3AReadOpContext applyOptions(S3AReadOpContext roc) {
+      return roc
+          .withInputPolicy(inputPolicy)
+          .withChangeDetectionPolicy(changePolicy)
+          .withAsyncDrainThreshold(asyncDrainThreshold)
+          .withReadahead(readAheadRange);
+    }
+
   }
 
 }

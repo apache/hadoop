@@ -35,7 +35,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.lang.Math.min;
@@ -105,8 +104,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         INPUT.length());
 
     S3AReadOpContext s3AReadOpContext = fs.createReadContext(
-        s3AFileStatus, S3AInputPolicy.Normal,
-        ChangeDetectionPolicy.getPolicy(fs.getConf()), 100, NoopSpan.INSTANCE);
+        s3AFileStatus,
+        NoopSpan.INSTANCE);
 
     return new S3AInputStream(
         s3AReadOpContext,

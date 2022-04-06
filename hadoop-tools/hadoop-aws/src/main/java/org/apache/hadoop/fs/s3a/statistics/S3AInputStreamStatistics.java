@@ -190,6 +190,7 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
 
   /**
    * Initiate a stream close/abort.
+   * @param abort was the stream aborted?
    * @return duration tracker;
    */
   DurationTracker initiateInnerStreamClose(boolean abort);

@@ -130,6 +130,7 @@ public class Invoker {
    * The supplied duration tracker instance is updated with success/failure.
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
+   * @param tracker tracker to update
    * @param operation operation to execute
    * @param <T> type of return value
    * @return the result of the function call
