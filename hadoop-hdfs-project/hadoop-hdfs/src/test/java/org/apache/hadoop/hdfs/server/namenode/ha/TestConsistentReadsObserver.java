@@ -108,8 +108,6 @@ public class TestConsistentReadsObserver {
 
   @Test
   public void testRequeueCall() throws Exception {
-    setObserverRead(true);
-
     // Update the configuration just for the observer, by enabling
     // IPC backoff and using the test scheduler class, which starts to backoff
     // after certain number of calls.
