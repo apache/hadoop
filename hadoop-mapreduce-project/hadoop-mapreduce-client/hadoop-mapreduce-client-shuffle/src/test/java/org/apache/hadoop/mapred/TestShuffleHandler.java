@@ -655,7 +655,7 @@ public class TestShuffleHandler {
   }
 
   class ShuffleHandlerForTests extends ShuffleHandler {
-    final ArrayList<Throwable> failures = new ArrayList<>();
+    public final ArrayList<Throwable> failures = new ArrayList<>();
 
     public ShuffleHandlerForTests() {
       setUseOutboundExceptionHandler(true);
@@ -908,10 +908,9 @@ public class TestShuffleHandler {
    */
   @Test (timeout = 10000)
   public void testClientClosesConnection() throws Exception {
-    final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
-    ShuffleHandler shuffleHandler = new ShuffleHandlerForTests() {
+    ShuffleHandlerForTests shuffleHandler = new ShuffleHandlerForTests() {
 
       @Override
       protected Shuffle getShuffle(Configuration conf) {
@@ -993,9 +992,10 @@ public class TestShuffleHandler {
     header.readFields(input);
     input.close();
 
-    assertEquals("sendError called when client closed connection", 0, failures.size());
-    Assert.assertEquals("Should have no caught exceptions",
-        new ArrayList<>(), failures);
+    assertEquals("sendError called when client closed connection", 0,
+        shuffleHandler.failures.size());
+    Assert.assertEquals("Should have no caught exceptions", new ArrayList<>(),
+        shuffleHandler.failures);
 
     shuffleHandler.stop();
   }

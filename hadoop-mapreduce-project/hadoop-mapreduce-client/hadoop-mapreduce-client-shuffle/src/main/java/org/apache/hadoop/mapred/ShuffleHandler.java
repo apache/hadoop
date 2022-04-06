@@ -197,7 +197,7 @@ public class ShuffleHandler extends AuxiliaryService {
   // FIXME: snemeth: need thread safety. - https://stackoverflow.com/questions/17836976/netty-4-0-instanciate-defaultchannelgroup
   private final ChannelGroup accepted =
       new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-  private final AtomicInteger acceptedConnections = new AtomicInteger();
+  private final AtomicInteger activeConnections = new AtomicInteger();
   protected HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
 
@@ -994,7 +994,7 @@ public class ShuffleHandler extends AuxiliaryService {
     public void channelActive(ChannelHandlerContext ctx)
         throws Exception {
       NettyChannelHelper.channelActive(ctx.channel());
-      int numConnections = acceptedConnections.incrementAndGet();
+      int numConnections = activeConnections.incrementAndGet();
       if ((maxShuffleConnections > 0) && (numConnections >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
             "greater than or equal to the max allowed shuffle connections (%d)", 
@@ -1011,7 +1011,7 @@ public class ShuffleHandler extends AuxiliaryService {
         super.channelActive(ctx);
         accepted.add(ctx.channel());
         LOG.debug("Added channel: {}, channel id: {}. Accepted number of connections={}",
-            ctx.channel(), ctx.channel().id(), acceptedConnections.get());
+            ctx.channel(), ctx.channel().id(), activeConnections.get());
       }
     }
 
@@ -1019,7 +1019,7 @@ public class ShuffleHandler extends AuxiliaryService {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
       NettyChannelHelper.channelInactive(ctx.channel());
       super.channelInactive(ctx);
-      int noOfConnections = acceptedConnections.decrementAndGet();
+      int noOfConnections = activeConnections.decrementAndGet();
       LOG.debug("New value of Accepted number of connections={}", noOfConnections);
     }
 
@@ -1161,8 +1161,7 @@ public class ShuffleHandler extends AuxiliaryService {
      * @param reduceContext used to call sendMapOutput with correct params.
      * @return the ChannelFuture of the sendMapOutput, can be null.
      */
-    public ChannelFuture sendMap(ReduceContext reduceContext)
-        throws Exception {
+    public ChannelFuture sendMap(ReduceContext reduceContext) {
       LOG.trace("Executing sendMap");
       ChannelFuture nextMap = null;
       if (reduceContext.getMapsToSend().get() <
@@ -1182,26 +1181,24 @@ public class ShuffleHandler extends AuxiliaryService {
               reduceContext.getCtx().channel(),
               reduceContext.getUser(), mapId,
               reduceContext.getReduceId(), info);
-          if (null == nextMap) {
+          if (nextMap == null) {
             //This can only happen if spill file was not found
             sendError(reduceContext.getCtx(), NOT_FOUND);
+            LOG.trace("Returning nextMap: null");
             return null;
           }
           nextMap.addListener(new ReduceMapFileCount(reduceContext));
         } catch (IOException e) {
           if (e instanceof DiskChecker.DiskErrorException) {
-            LOG.error("Shuffle error :" + e);
+            LOG.error("Shuffle error: " + e);
           } else {
-            LOG.error("Shuffle error :", e);
+            LOG.error("Shuffle error: ", e);
           }
           String errorMessage = getErrorMessage(e);
           sendError(reduceContext.getCtx(), errorMessage,
               INTERNAL_SERVER_ERROR);
           return null;
         }
-      }
-      if (nextMap == null) {
-        LOG.trace("Returning nextMap: null");
       }
       return nextMap;
     }
