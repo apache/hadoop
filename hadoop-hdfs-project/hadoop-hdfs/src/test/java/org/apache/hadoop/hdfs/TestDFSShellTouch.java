@@ -38,6 +38,9 @@ import org.apache.hadoop.util.StringUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Tests to perform Touch operations on DFS.
+ */
 public class TestDFSShellTouch {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDFSShellTouch.class);
@@ -147,11 +150,10 @@ public class TestDFSShellTouch {
     dfs.delete(newFile, true);
     assertThat(dfs.exists(newFile)).isFalse();
 
-    touchDirTests();
-
   }
 
-  private void touchDirTests() throws IOException, ParseException, InterruptedException {
+  @Test
+  public void testTouchDirs() throws IOException, ParseException, InterruptedException {
     final String newFileName = "dir2/newFile2";
     final Path newFile = new Path(newFileName);
     FileStatus newStatus;

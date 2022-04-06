@@ -201,16 +201,20 @@ public class TestFsShellTouch {
     assertThat(fileStatus.getAccessTime()).isEqualTo(dateObj.getTime());
     assertThat(fileStatus.getModificationTime()).isEqualTo(dateObj.getTime());
 
-    touchDirTests();
+    lfs.delete(newFile, true);
+    assertThat(lfs.exists(newFile)).isFalse();
+
   }
 
-  private void touchDirTests() throws Exception {
+  @Test
+  public void testTouchDir() throws Exception {
     String strTime;
     final String newFileName = "dir3/newFile3";
     Date dateObj;
     final Path newFile = new Path(newFileName);
     FileStatus fstatus;
     Path dirPath = new Path("dir3");
+    lfs.delete(dirPath, true);
     lfs.mkdirs(dirPath);
     lfs.delete(newFile, true);
     assertThat(lfs.exists(newFile)).isFalse();
@@ -266,6 +270,8 @@ public class TestFsShellTouch {
 
     lfs.delete(newFile, true);
     lfs.delete(dirPath, true);
+    assertThat(lfs.exists(newFile)).isFalse();
+    assertThat(lfs.exists(dirPath)).isFalse();
   }
 
   private String formatTimestamp(long timeInMillis) {
