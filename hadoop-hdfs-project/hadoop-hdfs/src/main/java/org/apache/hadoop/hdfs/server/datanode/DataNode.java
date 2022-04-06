@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.GetSpaceUsed;
+import org.apache.hadoop.fs.WindowsGetSpaceUsed;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_DEFAULT;
@@ -901,8 +902,16 @@ public class DataNode extends ReconfigurableBase
         }
       } else if (property.equals(FS_GETSPACEUSED_CLASSNAME)) {
         Preconditions.checkNotNull(data, "FsDatasetSpi has not been initialized.");
-        Class<? extends GetSpaceUsed> klass = (newVal == null ? DU.class :
-                Class.forName(newVal).asSubclass(GetSpaceUsed.class));
+        Class<? extends GetSpaceUsed> klass;
+        if (newVal == null) {
+          if (Shell.WINDOWS) {
+            klass = DU.class;
+          } else {
+            klass = WindowsGetSpaceUsed.class;
+          }
+        } else {
+          klass = Class.forName(newVal).asSubclass(GetSpaceUsed.class);
+        }
         result = klass.getName();
         List<FsVolumeImpl> volumeList = data.getVolumeList();
         for (FsVolumeImpl fsVolume : volumeList) {
