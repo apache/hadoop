@@ -58,7 +58,7 @@ import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-abstract class InodeTree<T> {
+public abstract class InodeTree<T> {
   enum ResultKind {
     INTERNAL_DIR,
     EXTERNAL_DIR
@@ -410,7 +410,16 @@ abstract class InodeTree<T> {
     return rootFallbackLink != null;
   }
 
-  protected INodeLink<T> getRootFallbackLink() {
+  /**
+   * @return true if the root represented as internalDir. In LinkMergeSlash,
+   * there will be root to root mapping. So, root does not represent as
+   * internalDir.
+   */
+  public boolean isRootInternalDir() {
+    return root.isInternalDir();
+  }
+
+  public INodeLink<T> getRootFallbackLink() {
     Preconditions.checkState(root.isInternalDir());
     return rootFallbackLink;
   }
