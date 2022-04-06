@@ -262,7 +262,7 @@ public class TestBalancerLongRunningTasks {
     long[][] storageCapacities = new long[][]{{ramDiskStorageLimit,
             diskStorageLimit}};
     cluster.startDataNodes(conf, replicationFactor, storageTypes, true, null,
-        null, null, storageCapacities, null, false, false, false, null);
+        null, null, storageCapacities, null, false, false, false, null, null, null);
 
     cluster.triggerHeartbeats();
     Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);

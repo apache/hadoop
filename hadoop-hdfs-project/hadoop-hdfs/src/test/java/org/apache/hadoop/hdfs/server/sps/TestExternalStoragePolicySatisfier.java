@@ -1712,7 +1712,7 @@ public class TestExternalStoragePolicySatisfier {
     }
 
     cluster.startDataNodes(conf, newNodesRequired, newTypes, true, null, null,
-        null, capacities, null, false, false, false, null);
+        null, capacities, null, false, false, false, null, null, null);
     cluster.triggerHeartbeats();
   }
 
