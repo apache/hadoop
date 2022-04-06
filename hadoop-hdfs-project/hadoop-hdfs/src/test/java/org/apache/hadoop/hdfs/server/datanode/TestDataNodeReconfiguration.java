@@ -111,8 +111,6 @@ public class TestDataNodeReconfiguration {
       throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
-    conf.setClass(FS_GETSPACEUSED_CLASSNAME, DummyCachingGetSpaceUsed.class,
-            CachingGetSpaceUsed.class);
 
     MiniDFSNNTopology nnTopology = MiniDFSNNTopology
         .simpleFederatedTopology(numNameNodes);
