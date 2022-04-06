@@ -275,16 +275,6 @@ public class BlockPoolSlice {
     return dfsUsage;
   }
 
-  public void refreshSpaceUsedKlass(Configuration conf) throws IOException {
-    ((CachingGetSpaceUsed) dfsUsage).close();
-    this.dfsUsage = new FSCachingGetSpaceUsed.Builder().setBpid(bpid)
-            .setVolume(volume)
-            .setPath(bpDir)
-            .setConf(conf)
-            .setInitialUsed(loadDfsUsed())
-            .build();
-  }
-
   private synchronized static void initializeAddReplicaPool(Configuration conf,
       FsDatasetImpl dataset) {
     if (addReplicaThreadPool == null) {
