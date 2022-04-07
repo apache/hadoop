@@ -68,6 +68,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -994,7 +995,7 @@ public class TestShuffleHandler {
 
     assertEquals("sendError called when client closed connection", 0,
         shuffleHandler.failures.size());
-    Assert.assertEquals("Should have no caught exceptions", new ArrayList<>(),
+    Assert.assertEquals("Should have no caught exceptions", Collections.emptyList(),
         shuffleHandler.failures);
 
     shuffleHandler.stop();
@@ -1155,7 +1156,7 @@ public class TestShuffleHandler {
     });
     if (expectedHttpStatus == HttpURLConnection.HTTP_OK) {
       HttpConnectionAssert.assertKeepAliveConnectionsAreSame(connHelper);
-      Assert.assertEquals("Unexpected ShuffleHandler failure", new ArrayList<>(), shuffleHandler.failures);
+      Assert.assertEquals("Unexpected ShuffleHandler failure", Collections.emptyList(), shuffleHandler.failures);
     }
   }
 
@@ -1201,7 +1202,7 @@ public class TestShuffleHandler {
       shuffleHandler.stop();
     }
     Assert.assertEquals("Should have no caught exceptions",
-        new ArrayList<>(), shuffleHandler.failures);
+        Collections.emptyList(), shuffleHandler.failures);
   }
 
   /**
@@ -1380,7 +1381,7 @@ public class TestShuffleHandler {
     //It's okay to get a ClosedChannelException.
     //All other kinds of exceptions means something went wrong
     Assert.assertEquals("Should have no caught exceptions",
-        new ArrayList<>(), failures.stream()
+        Collections.emptyList(), failures.stream()
             .filter(f -> !(f instanceof ClosedChannelException))
             .collect(toList()));
   }
@@ -1496,7 +1497,7 @@ public class TestShuffleHandler {
     }
 
     Assert.assertEquals("Should have no caught exceptions",
-        new ArrayList<>(), failures);
+        Collections.emptyList(), failures);
   }
 
   private static void createShuffleHandlerFiles(File logDir, String user,
@@ -1886,7 +1887,7 @@ public class TestShuffleHandler {
     sh.stop();
 
     Assert.assertEquals("Should have no caught exceptions",
-        new ArrayList<>(), sh.failures);
+        Collections.emptyList(), sh.failures);
   }
 
   @Test(timeout = 10000)
