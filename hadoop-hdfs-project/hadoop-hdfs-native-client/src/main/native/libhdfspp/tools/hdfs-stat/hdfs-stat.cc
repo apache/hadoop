@@ -31,10 +31,10 @@ Stat::Stat(const int argc, char **argv) : HdfsTool(argc, argv) {}
 
 bool Stat::Initialize() {
   auto add_options = opt_desc_.add_options();
-  add_options("help,h",
-              "Displays the stat information for the file at the given path.");
+  add_options("help,h", "Displays the stat information for the given path. The "
+                        "path can be a file or a directory.");
   add_options("path", po::value<std::string>(),
-              "The path to a file in the filesystem for which to display the "
+              "The path in the filesystem for which to display the "
               "stat information.");
 
   // We allow only one positional argument to be passed to this tool. An
@@ -54,8 +54,8 @@ std::string Stat::GetDescription() const {
   std::stringstream desc;
   desc << "Usage: hdfs_stat PATH" << std::endl
        << std::endl
-       << "Displays the stat information for the file at the given path."
-       << std::endl
+       << "Displays the stat information for the given path." << std::endl
+       << "The path can be a file or a directory." << std::endl
        << "Examples:" << std::endl
        << "hdfs_stat hdfs://localhost.localdomain:8020/dir/file" << std::endl;
   return desc.str();

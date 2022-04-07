@@ -27,8 +27,8 @@
 
 namespace hdfs::tools {
 /**
- * {@class Stat} is an {@class HdfsTool} that displays the size of the
- * directories and files.
+ * {@class Stat} is an {@class HdfsTool} that displays the stat information for
+ * the given path. The path can be a file or a directory.
  */
 class Stat : public HdfsTool {
 public:
@@ -73,7 +73,7 @@ protected:
   /**
    * Handle the path argument that's passed to this tool.
    *
-   * @param path The path to the directory for which we need stat info.
+   * @param path The path to the directory for which we need the stat info.
    *
    * @return A boolean indicating the result of this operation.
    */

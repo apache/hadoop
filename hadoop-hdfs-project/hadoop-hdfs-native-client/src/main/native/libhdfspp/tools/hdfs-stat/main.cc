@@ -30,9 +30,9 @@ int main(int argc, char *argv[]) {
     google::protobuf::ShutdownProtobufLibrary();
   });
   if (result != 0) {
-    std::cerr
-        << "Error: Unable to schestatle clean-up tasks for HDFS df tool, exiting"
-        << std::endl;
+    std::cerr << "Error: Unable to schedule the clean-up tasks for HDFS stat"
+                 "tool, exiting"
+              << std::endl;
     std::exit(EXIT_FAILURE);
   }
 
