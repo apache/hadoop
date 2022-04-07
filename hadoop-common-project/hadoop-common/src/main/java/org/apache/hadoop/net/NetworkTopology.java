@@ -102,7 +102,7 @@ public class NetworkTopology {
   /** rack counter */
   protected int numOfRacks = 0;
   /** empty rack map, rackname->nodenumber. */
-  private HashMap<String, Set<String>> emptyRackMap =
+  private HashMap<String, Set<String>> rackMap =
       new HashMap<String, Set<String>>();
   /** decommission nodes, contained stoped nodes. */
   private HashSet<String> decommissionNodes = new HashSet<>();
@@ -1031,7 +1031,7 @@ public class NetworkTopology {
   }
 
   /**
-   * Update empty rack number when add a node like recommision.
+   * Update empty rack number when add a node like recommission.
    * @param node node to be added; can be null
    */
   public void recommissionNode(Node node) {
@@ -1052,7 +1052,7 @@ public class NetworkTopology {
   }
 
   /**
-   * Update empty rack number when remove a node like decommision.
+   * Update empty rack number when remove a node like decommission.
    * @param node node to be added; can be null
    */
   public void decommissionNode(Node node) {
@@ -1082,14 +1082,14 @@ public class NetworkTopology {
       return;
     }
     String rackname = node.getNetworkLocation();
-    Set<String> nodes = emptyRackMap.get(rackname);
+    Set<String> nodes = rackMap.get(rackname);
     if (nodes == null) {
       nodes = new HashSet<String>();
     }
     if (!decommissionNodes.contains(node.getName())) {
       nodes.add(node.getName());
     }
-    emptyRackMap.put(rackname, nodes);
+    rackMap.put(rackname, nodes);
     countEmptyRacks();
   }
 
@@ -1103,16 +1103,16 @@ public class NetworkTopology {
       return;
     }
     String rackname = node.getNetworkLocation();
-    Set<String> nodes = emptyRackMap.get(rackname);
+    Set<String> nodes = rackMap.get(rackname);
     if (nodes != null) {
       InnerNode rack = (InnerNode) getNode(node.getNetworkLocation());
       if (rack == null) {
         // this node and its rack are both removed.
-        emptyRackMap.remove(rackname);
+        rackMap.remove(rackname);
       } else if (nodes.contains(node.getName())) {
         // this node is decommissioned or removed.
         nodes.remove(node.getName());
-        emptyRackMap.put(rackname, nodes);
+        rackMap.put(rackname, nodes);
       }
       countEmptyRacks();
     }
@@ -1120,7 +1120,7 @@ public class NetworkTopology {
 
   private void countEmptyRacks() {
     int count = 0;
-    for (Set<String> nodes : emptyRackMap.values()) {
+    for (Set<String> nodes : rackMap.values()) {
       if (nodes != null && nodes.isEmpty()) {
         count++;
       }

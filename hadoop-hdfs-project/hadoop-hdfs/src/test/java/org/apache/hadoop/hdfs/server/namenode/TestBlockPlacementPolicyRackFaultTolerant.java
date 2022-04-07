@@ -101,7 +101,6 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
   public void testChooseTarget() throws Exception {
     doTestChooseTargetNormalCase();
     doTestChooseTargetSpecialCase();
-    testPlacementWithOnlyOneNodeInRackDecommission();
   }
 
   private void doTestChooseTargetNormalCase() throws Exception {
@@ -182,6 +181,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
   /**
    * Verify decommission a dn which is an only node in its rack.
    */
+  @Test
   public void testPlacementWithOnlyOneNodeInRackDecommission() throws Exception {
     Configuration conf = new HdfsConfiguration();
     final String[] racks = {"/RACK0", "/RACK0", "/RACK2", "/RACK3", "/RACK4", "/RACK5", "/RACK2"};
@@ -251,7 +251,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
       dnm.getDatanodeAdminManager().stopDecommission(dnd4);
     }
 
-    //test if decommission successed
+    //test if decommission succeeded
     DatanodeDescriptor dnd3 = dnm.getDatanode(cluster.getDataNodes().get(3).getDatanodeId());
     cluster.getNamesystem().writeLock();
     try {
@@ -260,7 +260,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
       cluster.getNamesystem().writeUnlock();
     }
 
-    // make sure the decommission finishes and the block in on 6 racks
+    // make sure the decommission finishes and the block in on 4 racks
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
