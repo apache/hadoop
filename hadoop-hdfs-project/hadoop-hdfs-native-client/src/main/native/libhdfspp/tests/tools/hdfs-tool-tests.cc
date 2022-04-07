@@ -163,6 +163,11 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(CallHelp<hdfs::tools::test::SetrepMock>,
                     PassPermissionsAndAPath<hdfs::tools::test::SetrepMock>));
 
+INSTANTIATE_TEST_SUITE_P(
+    HdfsStat, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::StatMock>,
+                    PassAPath<hdfs::tools::test::StatMock>));
+
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
@@ -265,6 +270,17 @@ INSTANTIATE_TEST_SUITE_P(
         PassMPOptsPermissionsAndAPath<hdfs::tools::test::SetrepMock>,
         PassMOpt<hdfs::tools::test::SetrepMock>,
         PassNOpt<hdfs::tools::test::SetrepMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsStat, HdfsToolNegativeTestThrows,
+    testing::Values(Pass2Paths<hdfs::tools::test::StatMock>,
+                    Pass3Paths<hdfs::tools::test::StatMock>,
+                    PassRecursiveOwnerAndAPath<hdfs::tools::test::StatMock>,
+                    PassRecursive<hdfs::tools::test::StatMock>,
+                    PassRecursivePath<hdfs::tools::test::StatMock>,
+                    PassMPOptsPermissionsAndAPath<hdfs::tools::test::StatMock>,
+                    PassMOpt<hdfs::tools::test::StatMock>,
+                    PassNOpt<hdfs::tools::test::StatMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsRm, HdfsToolNegativeTestNoThrow,
