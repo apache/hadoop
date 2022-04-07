@@ -995,12 +995,12 @@ public class ShuffleHandler extends AuxiliaryService {
         throws Exception {
       NettyChannelHelper.channelActive(ctx.channel());
       int numConnections = activeConnections.incrementAndGet();
-      if ((maxShuffleConnections > 0) && (numConnections >= maxShuffleConnections)) {
+      if ((maxShuffleConnections > 0) && (numConnections > maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
-            "greater than or equal to the max allowed shuffle connections (%d)", 
+            "greater than the max allowed shuffle connections (%d)", 
             accepted.size(), maxShuffleConnections));
 
-        Map<String, String> headers = new HashMap<String, String>(1);
+        Map<String, String> headers = new HashMap<>(1);
         // notify fetchers to backoff for a while before closing the connection
         // if the shuffle connection limit is hit. Fetchers are expected to
         // handle this notification gracefully, that is, not treating this as a
