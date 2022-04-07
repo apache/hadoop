@@ -92,7 +92,7 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
@@ -194,9 +194,8 @@ public class ShuffleHandler extends AuxiliaryService {
   private EventLoopGroup workerGroup;
   private ServerBootstrap bootstrap;
   private Channel ch;
-  // FIXME: snemeth: need thread safety. - https://stackoverflow.com/questions/17836976/netty-4-0-instanciate-defaultchannelgroup
   private final ChannelGroup accepted =
-      new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+      new DefaultChannelGroup(new DefaultEventExecutorGroup(5).next());
   private final AtomicInteger activeConnections = new AtomicInteger();
   protected HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
