@@ -41,7 +41,6 @@ import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -73,7 +72,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.zip.CheckedOutputStream;
 import java.util.zip.Checksum;
@@ -287,13 +285,12 @@ public class TestShuffleHandler {
       return new Shuffle(conf) {
         @Override
         protected MapOutputInfo getMapOutputInfo(String mapId, int reduce,
-            String jobId, String user) throws IOException {
+            String jobId, String user) {
           return null;
         }
         @Override
         protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-            HttpRequest request, HttpResponse response, URL requestUri)
-            throws IOException {
+            HttpRequest request, HttpResponse response, URL requestUri) {
         }
 
         @Override
@@ -457,7 +454,7 @@ public class TestShuffleHandler {
     private final ShuffleHandler shuffleHandler;
     private final boolean disableKeepAliveConfig;
     private final ShuffleHeaderProvider shuffleHeaderProvider;
-    private ResponseConfig responseConfig;
+    private final ResponseConfig responseConfig;
 
     public HeaderPopulator(ShuffleHandler shuffleHandler,
         ResponseConfig responseConfig,
@@ -489,8 +486,8 @@ public class TestShuffleHandler {
   private static class HttpConnectionData {
     private final Map<String, List<String>> headers;
     private HttpURLConnection conn;
-    private int payloadLength;
-    private SocketAddress socket;
+    private final int payloadLength;
+    private final SocketAddress socket;
     private int responseCode = -1;
 
     private HttpConnectionData(HttpURLConnection conn, int payloadLength,
@@ -685,7 +682,7 @@ public class TestShuffleHandler {
   class MockShuffleHandler extends org.apache.hadoop.mapred.ShuffleHandler {
     final ArrayList<Throwable> failures = new ArrayList<>();
 
-    private AuxiliaryLocalPathHandler pathHandler =
+    private final AuxiliaryLocalPathHandler pathHandler =
         new TestAuxiliaryLocalPathHandler();
 
     public MockShuffleHandler() {
@@ -707,7 +704,7 @@ public class TestShuffleHandler {
         }
         @Override
         protected MapOutputInfo getMapOutputInfo(String mapId, int reduce,
-            String jobId, String user) throws IOException {
+            String jobId, String user) {
           // Do nothing.
           return null;
         }
@@ -715,7 +712,7 @@ public class TestShuffleHandler {
         protected void populateHeaders(List<String> mapIds, String jobId,
             String user, int reduce, HttpRequest request,
             HttpResponse response, boolean keepAliveParam,
-            Map<String, MapOutputInfo> infoMap) throws IOException {
+            Map<String, MapOutputInfo> infoMap) {
           // Do nothing.
         }
         @Override
@@ -754,24 +751,22 @@ public class TestShuffleHandler {
   private class TestAuxiliaryLocalPathHandler
       implements AuxiliaryLocalPathHandler {
     @Override
-    public Path getLocalPathForRead(String path) throws IOException {
+    public Path getLocalPathForRead(String path) {
       return new Path(ABS_LOG_DIR.getAbsolutePath(), path);
     }
 
     @Override
-    public Path getLocalPathForWrite(String path) throws IOException {
+    public Path getLocalPathForWrite(String path) {
       return new Path(ABS_LOG_DIR.getAbsolutePath());
     }
 
     @Override
-    public Path getLocalPathForWrite(String path, long size)
-        throws IOException {
+    public Path getLocalPathForWrite(String path, long size) {
       return new Path(ABS_LOG_DIR.getAbsolutePath());
     }
 
     @Override
-    public Iterable<Path> getAllLocalPathsForRead(String path)
-        throws IOException {
+    public Iterable<Path> getAllLocalPathsForRead(String path) {
       ArrayList<Path> paths = new ArrayList<>();
       paths.add(new Path(ABS_LOG_DIR.getAbsolutePath()));
       return paths;
@@ -797,8 +792,7 @@ public class TestShuffleHandler {
       return new Shuffle(conf) {
         @Override
         protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-            HttpRequest request, HttpResponse response, URL requestUri)
-            throws IOException {
+            HttpRequest request, HttpResponse response, URL requestUri) {
           SocketChannel channel = (SocketChannel)(ctx.channel());
           socketKeepAlive = channel.config().isKeepAlive();
         }
@@ -879,7 +873,7 @@ public class TestShuffleHandler {
     when(cf.isSuccess()).thenReturn(true).thenReturn(false);
 
     sh.metrics.shuffleConnections.incr();
-    sh.metrics.shuffleOutputBytes.incr(1*MiB);
+    sh.metrics.shuffleOutputBytes.incr(MiB);
     sh.metrics.shuffleConnections.incr();
     sh.metrics.shuffleOutputBytes.incr(2*MiB);
 
@@ -920,22 +914,21 @@ public class TestShuffleHandler {
         return new Shuffle(conf) {
           @Override
           protected MapOutputInfo getMapOutputInfo(String mapId, int reduce,
-              String jobId, String user) throws IOException {
+              String jobId, String user) {
             return null;
           }
           @Override
           protected void populateHeaders(List<String> mapIds, String jobId,
               String user, int reduce, HttpRequest request,
               HttpResponse response, boolean keepAliveParam,
-              Map<String, MapOutputInfo> infoMap) throws IOException {
+              Map<String, MapOutputInfo> infoMap) {
             // Only set response headers and skip everything else
             // send some dummy value for content-length
             super.setResponseHeaders(response, keepAliveParam, 100);
           }
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-              HttpRequest request, HttpResponse response, URL requestUri)
-                  throws IOException {
+              HttpRequest request, HttpResponse response, URL requestUri) {
           }
           @Override
           protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
@@ -1263,7 +1256,7 @@ public class TestShuffleHandler {
         return new Shuffle(conf) {
           @Override
           protected MapOutputInfo getMapOutputInfo(String mapId, int reduce,
-              String jobId, String user) throws IOException {
+              String jobId, String user) {
             // Do nothing.
             return null;
           }
@@ -1271,13 +1264,12 @@ public class TestShuffleHandler {
           protected void populateHeaders(List<String> mapIds, String jobId,
               String user, int reduce, HttpRequest request,
               HttpResponse response, boolean keepAliveParam,
-              Map<String, MapOutputInfo> infoMap) throws IOException {
+              Map<String, MapOutputInfo> infoMap) {
             // Do nothing.
           }
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-              HttpRequest request, HttpResponse response, URL requestUri)
-                  throws IOException {
+              HttpRequest request, HttpResponse response, URL requestUri) {
             // Do nothing.
           }
           @Override
@@ -1414,7 +1406,7 @@ public class TestShuffleHandler {
     String appAttemptId = "attempt_12345_1_m_1_0";
     String user = "randomUser";
     String reducerId = "0";
-    List<File> fileMap = new ArrayList<File>();
+    List<File> fileMap = new ArrayList<>();
     createShuffleHandlerFiles(ABS_LOG_DIR, user, appId.toString(), appAttemptId,
         conf, fileMap);
     ShuffleHandler shuffleHandler = new ShuffleHandler() {
@@ -1425,8 +1417,7 @@ public class TestShuffleHandler {
 
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-              HttpRequest request, HttpResponse response, URL requestUri)
-              throws IOException {
+              HttpRequest request, HttpResponse response, URL requestUri) {
             // Do nothing.
           }
 
@@ -1458,7 +1449,7 @@ public class TestShuffleHandler {
       DataOutputBuffer outputBuffer = new DataOutputBuffer();
       outputBuffer.reset();
       Token<JobTokenIdentifier> jt =
-          new Token<JobTokenIdentifier>("identifier".getBytes(),
+          new Token<>("identifier".getBytes(),
               "password".getBytes(), new Text(user), new Text("shuffleService"));
       jt.write(outputBuffer);
       shuffleHandler
@@ -1577,10 +1568,10 @@ public class TestShuffleHandler {
       shuffle.init(conf);
       shuffle.start();
 
-      // setup a shuffle token for an application
+      // set up a shuffle token for an application
       DataOutputBuffer outputBuffer = new DataOutputBuffer();
       outputBuffer.reset();
-      Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>(
+      Token<JobTokenIdentifier> jt = new Token<>(
           "identifier".getBytes(), "password".getBytes(), new Text(user),
           new Text("shuffleService"));
       jt.write(outputBuffer);
@@ -1648,10 +1639,10 @@ public class TestShuffleHandler {
       shuffle.init(conf);
       shuffle.start();
 
-      // setup a shuffle token for an application
+      // set up a shuffle token for an application
       DataOutputBuffer outputBuffer = new DataOutputBuffer();
       outputBuffer.reset();
-      Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>(
+      Token<JobTokenIdentifier> jt = new Token<>(
           "identifier".getBytes(), "password".getBytes(), new Text(user),
           new Text("shuffleService"));
       jt.write(outputBuffer);
@@ -1744,7 +1735,7 @@ public class TestShuffleHandler {
 
   @Test(timeout = 100000)
   public void testGetMapOutputInfo() throws Exception {
-    final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
+    final ArrayList<Throwable> failures = new ArrayList<>(1);
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
@@ -1756,7 +1747,7 @@ public class TestShuffleHandler {
     String appAttemptId = "attempt_12345_1_m_1_0";
     String user = "randomUser";
     String reducerId = "0";
-    List<File> fileMap = new ArrayList<File>();
+    List<File> fileMap = new ArrayList<>();
     createShuffleHandlerFiles(ABS_LOG_DIR, user, appId.toString(), appAttemptId,
         conf, fileMap);
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
@@ -1778,7 +1769,7 @@ public class TestShuffleHandler {
           @Override
           protected void verifyRequest(String appid,
               ChannelHandlerContext ctx, HttpRequest request,
-              HttpResponse response, URL requestUri) throws IOException {
+              HttpResponse response, URL requestUri) {
             // Do nothing.
           }
           @Override
@@ -1811,8 +1802,8 @@ public class TestShuffleHandler {
       DataOutputBuffer outputBuffer = new DataOutputBuffer();
       outputBuffer.reset();
       Token<JobTokenIdentifier> jt =
-          new Token<JobTokenIdentifier>("identifier".getBytes(),
-          "password".getBytes(), new Text(user), new Text("shuffleService"));
+          new Token<>("identifier".getBytes(),
+              "password".getBytes(), new Text(user), new Text("shuffleService"));
       jt.write(outputBuffer);
       shuffleHandler
           .initializeApplication(new ApplicationInitializationContext(user,
@@ -1850,7 +1841,7 @@ public class TestShuffleHandler {
   @Test(timeout = 4000)
   public void testSendMapCount() throws Exception {
     final List<ShuffleHandler.ReduceMapFileCount> listenerList =
-        new ArrayList<ShuffleHandler.ReduceMapFileCount>();
+        new ArrayList<>();
     int connectionKeepAliveTimeOut = 5; //arbitrary value
     final ChannelHandlerContext mockCtx =
         mock(ChannelHandlerContext.class);
@@ -1930,7 +1921,7 @@ public class TestShuffleHandler {
     String location = String.format("/mapOutput" +
         "?job=job_%s_1" +
         "&reduce=1" +
-        "%s", jobId, mapAttemptIds.toString());
+        "%s", jobId, mapAttemptIds);
     return shuffleBaseURL + location;
   }
 
@@ -1969,16 +1960,13 @@ public class TestShuffleHandler {
     final ChannelFuture mockFuture = mock(ChannelFuture.class);
     when(mockFuture.channel()).thenReturn(mockCh);
     Mockito.doReturn(true).when(mockFuture).isSuccess();
-    Mockito.doAnswer(new Answer() {
-      @Override
-      public Object answer(InvocationOnMock invocation) throws Throwable {
-        //Add ReduceMapFileCount listener to a list
-        if (invocation.getArguments()[0].getClass() ==
-            ShuffleHandler.ReduceMapFileCount.class)
-          listenerList.add((ShuffleHandler.ReduceMapFileCount)
-              invocation.getArguments()[0]);
-        return null;
-      }
+    Mockito.doAnswer(invocation -> {
+      //Add ReduceMapFileCount listener to a list
+      if (invocation.getArguments()[0].getClass() ==
+          ShuffleHandler.ReduceMapFileCount.class)
+        listenerList.add((ShuffleHandler.ReduceMapFileCount)
+            invocation.getArguments()[0]);
+      return null;
     }).when(mockFuture).addListener(Mockito.any(
         ShuffleHandler.ReduceMapFileCount.class));
     return mockFuture;
@@ -1987,14 +1975,11 @@ public class TestShuffleHandler {
   public HttpRequest createMockHttpRequest() {
     HttpRequest mockHttpRequest = mock(HttpRequest.class);
     Mockito.doReturn(HttpMethod.GET).when(mockHttpRequest).method();
-    Mockito.doAnswer(new Answer() {
-      @Override
-      public Object answer(InvocationOnMock invocation) throws Throwable {
-        String uri = "/mapOutput?job=job_12345_1&reduce=1";
-        for (int i = 0; i < 100; i++)
-          uri = uri.concat("&map=attempt_12345_1_m_" + i + "_0");
-        return uri;
-      }
+    Mockito.doAnswer(invocation -> {
+      String uri = "/mapOutput?job=job_12345_1&reduce=1";
+      for (int i = 0; i < 100; i++)
+        uri = uri.concat("&map=attempt_12345_1_m_" + i + "_0");
+      return uri;
     }).when(mockHttpRequest).uri();
     return mockHttpRequest;
   }
