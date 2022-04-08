@@ -387,12 +387,12 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
       throw retryInfo.getFailException();
     }
 
-    log(method, retryInfo.isFailover(), counters.failovers, retryInfo.delay, e);
+    log(method, retryInfo.isFailover(), counters.failovers, counters.retries, retryInfo.delay, e);
     return retryInfo;
   }
 
-  private void log(final Method method, final boolean isFailover,
-      final int failovers, final long delay, final Exception ex) {
+  private void log(final Method method, final boolean isFailover, final int failovers,
+      final int retries, final long delay, final Exception ex) {
     boolean info = true;
     // If this is the first failover to this proxy, skip logging at INFO level
     if (!failedAtLeastOnce.contains(proxyDescriptor.getProxyInfo().toString()))
@@ -408,13 +408,15 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     }
 
     final StringBuilder b = new StringBuilder()
-        .append(ex + ", while invoking ")
+        .append(ex)
+        .append(", while invoking ")
         .append(proxyDescriptor.getProxyInfo().getString(method.getName()));
     if (failovers > 0) {
       b.append(" after ").append(failovers).append(" failover attempts");
     }
     b.append(isFailover? ". Trying to failover ": ". Retrying ");
     b.append(delay > 0? "after sleeping for " + delay + "ms.": "immediately.");
+    b.append(" Current retry count: ").append(retries).append(".");
 
     if (info) {
       LOG.info(b.toString());
