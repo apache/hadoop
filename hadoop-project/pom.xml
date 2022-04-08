@@ -2129,27 +2129,6 @@
                 </replacements>
               </configuration>
             </execution>
-            <execution>
-              <id>replace-guava</id>
-              <phase>process-sources</phase>
-              <goals>
-                <goal>replace</goal>
-              </goals>
-              <configuration>
-                <skip>false</skip><!--This will run for all modules-->
-                <basedir>${basedir}</basedir>
-                <includes>
-                  <include>src/main/java/**/*.java</include>
-                  <include>src/test/java/**/*.java</include>
-                </includes>
-                <replacements>
-                  <replacement>
-                    <token>([^\.])com.google.common</token>
-                    <value>$1${hadoop-thirdparty-shaded-guava-prefix}</value>
-                  </replacement>
-                </replacements>
-              </configuration>
-            </execution>
           </executions>
         </plugin>
       </plugins>
