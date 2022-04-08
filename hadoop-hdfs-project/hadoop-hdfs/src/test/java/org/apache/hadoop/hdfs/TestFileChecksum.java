@@ -45,6 +45,7 @@ import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
 import static org.mockito.Mockito.doThrow;
@@ -212,6 +213,29 @@ public class TestFileChecksum {
       Assert.assertEquals(stripedFileChecksum1, replicatedFileChecksum);
     } else {
       Assert.assertNotEquals(stripedFileChecksum1, replicatedFileChecksum);
+    }
+  }
+
+  @Test(timeout = 90000)
+  public void testStripedAndReplicatedFileChecksum2() throws Exception {
+    int abnormalSize = (dataBlocks * 2 - 2) * blockSize +
+        (int) (blockSize * 0.5);
+    prepareTestFiles(abnormalSize, new String[] {stripedFile1, replicatedFile});
+
+    int loopNumber = 100;
+    while (loopNumber-- > 0) {
+      int verifyLength = ThreadLocalRandom.current()
+          .nextInt(10, abnormalSize);
+      FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1,
+          verifyLength, false);
+      FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
+          verifyLength, false);
+
+      if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
+        Assert.assertEquals(stripedFileChecksum1, replicatedFileChecksum);
+      } else {
+        Assert.assertNotEquals(stripedFileChecksum1, replicatedFileChecksum);
+      }
     }
   }
 
