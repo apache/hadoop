@@ -459,6 +459,10 @@
           <groupId>javax.enterprise</groupId>
           <artifactId>cdi-api</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>ch.qos.cal10n</groupId>
+          <artifactId>cal10n-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <!-- skip org.apache.avro:avro-ipc because it doesn't look like hadoop-common actually uses it -->
