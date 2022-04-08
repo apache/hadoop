@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.qjournal;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.FAKE_NSINFO;
 import static org.junit.Assert.fail;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -45,13 +46,16 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.test.GenericTestUtils;
 
-public class MiniJournalCluster {
+public final class MiniJournalCluster implements Closeable {
+
   public static final String CLUSTER_WAITACTIVE_URI = "waitactive";
   public static class Builder {
     private String baseDir;
     private int numJournalNodes = 3;
     private boolean format = true;
     private final Configuration conf;
+    private int[] httpPorts = null;
+    private int[] rpcPorts = null;
 
     static {
       DefaultMetricsSystem.setMiniClusterMode(true);
@@ -73,6 +77,16 @@ public class MiniJournalCluster {
 
     public Builder format(boolean f) {
       this.format = f;
+      return this;
+    }
+
+    public Builder setHttpPorts(int... ports) {
+      this.httpPorts = ports;
+      return this;
+    }
+
+    public Builder setRpcPorts(int... ports) {
+      this.rpcPorts = ports;
       return this;
     }
 
@@ -99,6 +113,19 @@ public class MiniJournalCluster {
   private final JNInfo[] nodes;
   
   private MiniJournalCluster(Builder b) throws IOException {
+
+    if (b.httpPorts != null && b.httpPorts.length != b.numJournalNodes) {
+      throw new IllegalArgumentException(
+          "Num of http ports (" + b.httpPorts.length + ") should match num of JournalNodes ("
+              + b.numJournalNodes + ")");
+    }
+
+    if (b.rpcPorts != null && b.rpcPorts.length != b.numJournalNodes) {
+      throw new IllegalArgumentException(
+          "Num of rpc ports (" + b.rpcPorts.length + ") should match num of JournalNodes ("
+              + b.numJournalNodes + ")");
+    }
+
     LOG.info("Starting MiniJournalCluster with " +
         b.numJournalNodes + " journal nodes");
     
@@ -173,8 +200,10 @@ public class MiniJournalCluster {
     Configuration conf = new Configuration(b.conf);
     File logDir = getStorageDir(idx);
     conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, logDir.toString());
-    conf.set(DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY, "localhost:0");
-    conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY, "localhost:0");
+    int httpPort = b.httpPorts != null ? b.httpPorts[idx] : 0;
+    int rpcPort = b.rpcPorts != null ? b.rpcPorts[idx] : 0;
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY, "localhost:" + rpcPort);
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY, "localhost:" + httpPort);
     return conf;
   }
 
@@ -274,4 +303,10 @@ public class MiniJournalCluster {
           .DFS_NAMENODE_SHARED_EDITS_DIR_KEY, quorumJournalURI.toString());
     }
   }
+
+  @Override
+  public void close() throws IOException {
+    this.shutdown();
+  }
+
 }

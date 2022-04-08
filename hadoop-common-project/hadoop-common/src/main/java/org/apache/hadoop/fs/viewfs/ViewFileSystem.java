@@ -25,8 +25,8 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT;
 
 import java.util.function.Function;
 import java.io.FileNotFoundException;
@@ -216,11 +216,11 @@ public class ViewFileSystem extends FileSystem {
     /**
      * Array of target FileSystem URIs.
      */
-    private final URI[] targetFileSystemURIs;
+    private final String[] targetFileSystemPaths;
 
-    MountPoint(Path srcPath, URI[] targetFs) {
+    MountPoint(Path srcPath, String[] targetFs) {
       mountedOnPath = srcPath;
-      targetFileSystemURIs = targetFs;
+      targetFileSystemPaths = targetFs;
     }
 
     public Path getMountedOnPath() {
@@ -228,7 +228,15 @@ public class ViewFileSystem extends FileSystem {
     }
 
     public URI[] getTargetFileSystemURIs() {
-      return targetFileSystemURIs;
+      URI[] targetUris = new URI[targetFileSystemPaths.length];
+      for (int i = 0; i < targetFileSystemPaths.length; i++) {
+        targetUris[i] = URI.create(targetFileSystemPaths[i]);
+      }
+      return targetUris;
+    }
+
+    public String[] getTargetFileSystemPaths() {
+      return targetFileSystemPaths;
     }
   }
 
@@ -1132,47 +1140,77 @@ public class ViewFileSystem extends FileSystem {
    * Get the trash root directory for current user when the path
    * specified is deleted.
    *
-   * If CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is not set, return
-   * the default trash root from targetFS.
+   * If FORCE_INSIDE_MOUNT_POINT flag is not set, return the default trash root
+   * from targetFS.
    *
-   * When CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH is set to true,
-   * 1) If path p is in fallback FS or from the same mount point as the default
-   *    trash root for targetFS, return the default trash root for targetFS.
-   * 2) else, return a trash root in the mounted targetFS
-   *    (/mntpoint/.Trash/{user})
+   * When FORCE_INSIDE_MOUNT_POINT is set to true,
+   * <ol>
+   *   <li>
+   *     If the trash root for path p is in the same mount point as path p,
+   *       and one of:
+   *       <ol>
+   *         <li>The mount point isn't at the top of the target fs.</li>
+   *         <li>The resolved path of path is root (in fallback FS).</li>
+   *         <li>The trash isn't in user's target fs home directory
+   *            get the corresponding viewFS path for the trash root and return
+   *            it.
+   *         </li>
+   *       </ol>
+   *   </li>
+   *   <li>
+   *     else, return the trash root under the root of the mount point
+   *     (/{mntpoint}/.Trash/{user}).
+   *   </li>
+   * </ol>
+   *
+   * These conditions handle several different important cases:
+   * <ul>
+   *   <li>File systems may need to have more local trash roots, such as
+   *         encryption zones or snapshot roots.</li>
+   *   <li>The fallback mount should use the user's home directory.</li>
+   *   <li>Cloud storage systems should not use trash in an implicity defined
+   *        home directory, per a container, unless it is the fallback fs.</li>
+   * </ul>
    *
    * @param path the trash root of the path to be determined.
    * @return the trash root path.
    */
   @Override
   public Path getTrashRoot(Path path) {
-    boolean useMountPointLocalTrash =
-        config.getBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH,
-            CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT);
 
     try {
       InodeTree.ResolveResult<FileSystem> res =
           fsState.resolve(getUriPath(path), true);
+      Path targetFSTrashRoot =
+          res.targetFileSystem.getTrashRoot(res.remainingPath);
 
-      Path trashRoot = res.targetFileSystem.getTrashRoot(res.remainingPath);
-      if (!useMountPointLocalTrash) {
-        return trashRoot;
+      // Allow clients to use old behavior of delegating to target fs.
+      if (!config.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+          CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT)) {
+        return targetFSTrashRoot;
+      }
+
+      // The trash root path from the target fs
+      String targetFSTrashRootPath = targetFSTrashRoot.toUri().getPath();
+      // The mount point path in the target fs
+      String mountTargetPath = res.targetFileSystem.getUri().getPath();
+      if (!mountTargetPath.endsWith("/")) {
+        mountTargetPath = mountTargetPath + "/";
+      }
+
+      Path targetFsUserHome = res.targetFileSystem.getHomeDirectory();
+      if (targetFSTrashRootPath.startsWith(mountTargetPath) &&
+          !(mountTargetPath.equals(ROOT_PATH.toString()) &&
+              !res.resolvedPath.equals(ROOT_PATH.toString()) &&
+              (targetFsUserHome != null && targetFSTrashRootPath.startsWith(
+                  targetFsUserHome.toUri().getPath())))) {
+        String relativeTrashRoot =
+            targetFSTrashRootPath.substring(mountTargetPath.length());
+        return makeQualified(new Path(res.resolvedPath, relativeTrashRoot));
       } else {
-        // Path p is either in a mount point or in the fallback FS
-
-        if (ROOT_PATH.equals(new Path(res.resolvedPath))
-            || trashRoot.toUri().getPath().startsWith(res.resolvedPath)) {
-          // Path p is in the fallback FS or targetFileSystem.trashRoot is in
-          // the same mount point as Path p
-          return trashRoot;
-        } else {
-          // targetFileSystem.trashRoot is in a different mount point from
-          // Path p. Return the trash root for the mount point.
-          Path mountPointRoot =
-              res.targetFileSystem.getFileStatus(new Path("/")).getPath();
-          return new Path(mountPointRoot,
-              TRASH_PREFIX + "/" + ugi.getShortUserName());
-        }
+        // Return the trash root for the mount point.
+        return makeQualified(new Path(res.resolvedPath,
+            TRASH_PREFIX + "/" + ugi.getShortUserName()));
       }
     } catch (IOException | IllegalArgumentException e) {
       throw new NotInMountpointException(path, "getTrashRoot");
@@ -1182,72 +1220,78 @@ public class ViewFileSystem extends FileSystem {
   /**
    * Get all the trash roots for current user or all users.
    *
+   * When FORCE_INSIDE_MOUNT_POINT is set to true, we also return trash roots
+   * under the root of each mount point, with their viewFS paths.
+   *
    * @param allUsers return trash roots for all users if true.
    * @return all Trash root directories.
    */
   @Override
   public Collection<FileStatus> getTrashRoots(boolean allUsers) {
-    List<FileStatus> trashRoots = new ArrayList<>();
+    // A map from targetFSPath -> FileStatus.
+    // FileStatus can be from targetFS or viewFS.
+    HashMap<Path, FileStatus> trashRoots = new HashMap<>();
     for (FileSystem fs : getChildFileSystems()) {
-      trashRoots.addAll(fs.getTrashRoots(allUsers));
+      for (FileStatus trash : fs.getTrashRoots(allUsers)) {
+        trashRoots.put(trash.getPath(), trash);
+      }
     }
 
-    // Add trash dirs for each mount point
-    boolean useMountPointLocalTrash =
-        config.getBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH,
-            CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH_DEFAULT);
-    if (useMountPointLocalTrash) {
+    // Return trashRoots if FORCE_INSIDE_MOUNT_POINT is disabled.
+    if (!config.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+        CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT)) {
+      return trashRoots.values();
+    }
 
-      Set<Path> currentTrashPaths = new HashSet<>();
-      for (FileStatus file : trashRoots) {
-        currentTrashPaths.add(file.getPath());
-      }
+    // Get trash roots in TRASH_PREFIX dir inside mount points and fallback FS.
+    List<InodeTree.MountPoint<FileSystem>> mountPoints =
+        fsState.getMountPoints();
+    // If we have a fallback FS, add a mount point for it as <"", fallback FS>.
+    // The source path of a mount point shall not end with '/', thus for
+    // fallback fs, we set its mount point src as "".
+    if (fsState.getRootFallbackLink() != null) {
+      mountPoints.add(new InodeTree.MountPoint<>("",
+          fsState.getRootFallbackLink()));
+    }
 
-      MountPoint[] mountPoints = getMountPoints();
-      try {
-        for (int i = 0; i < mountPoints.length; i++) {
-          Path trashRoot = makeQualified(
-              new Path(mountPoints[i].mountedOnPath + "/" + TRASH_PREFIX));
+    try {
+      for (InodeTree.MountPoint<FileSystem> mountPoint : mountPoints) {
 
-          // Continue if trashRoot does not exist for this filesystem
-          if (!exists(trashRoot)) {
-            continue;
+        Path trashRoot =
+            makeQualified(new Path(mountPoint.src + "/" + TRASH_PREFIX));
+
+        // Continue if trashRoot does not exist for this mount point
+        if (!exists(trashRoot)) {
+          continue;
+        }
+
+        FileSystem targetFS = mountPoint.target.getTargetFileSystem();
+        if (!allUsers) {
+          Path userTrashRoot = new Path(trashRoot, ugi.getShortUserName());
+          if (exists(userTrashRoot)) {
+            Path targetFSUserTrashRoot = targetFS.makeQualified(
+                new Path(targetFS.getUri().getPath(),
+                    TRASH_PREFIX + "/" + ugi.getShortUserName()));
+            trashRoots.put(targetFSUserTrashRoot, getFileStatus(userTrashRoot));
           }
-
-          InodeTree.ResolveResult<FileSystem> res =
-              fsState.resolve(getUriPath(trashRoot), true);
-
-          if (!allUsers) {
-            Path userTrash =
-                new Path("/" + TRASH_PREFIX + "/" + ugi.getShortUserName());
-            try {
-              FileStatus file = res.targetFileSystem.getFileStatus(userTrash);
-              if (!currentTrashPaths.contains(file.getPath())) {
-                trashRoots.add(file);
-                currentTrashPaths.add(file.getPath());
-              }
-            } catch (FileNotFoundException ignored) {
-            }
-          } else {
-            FileStatus[] targetFsTrashRoots =
-                res.targetFileSystem.listStatus(new Path("/" + TRASH_PREFIX));
-            for (FileStatus file : targetFsTrashRoots) {
-              // skip if we already include it in currentTrashPaths
-              if (currentTrashPaths.contains(file.getPath())) {
-                continue;
-              }
-
-              trashRoots.add(file);
-              currentTrashPaths.add(file.getPath());
-            }
+        } else {
+          FileStatus[] mountPointTrashRoots = listStatus(trashRoot);
+          for (FileStatus trash : mountPointTrashRoots) {
+            // Remove the mountPoint and the leading '/' to get the
+            // relative targetFsTrash path
+            String targetFsTrash = trash.getPath().toUri().getPath()
+                .substring(mountPoint.src.length() + 1);
+            Path targetFsTrashPath = targetFS.makeQualified(
+                new Path(targetFS.getUri().getPath(), targetFsTrash));
+            trashRoots.put(targetFsTrashPath, trash);
           }
         }
-      } catch (IOException e) {
-        LOG.warn("Exception in get all trash roots", e);
       }
+    } catch (IOException e) {
+      LOG.warn("Exception in get all trash roots for mount points", e);
     }
 
-    return trashRoots;
+    return trashRoots.values();
   }
 
   @Override

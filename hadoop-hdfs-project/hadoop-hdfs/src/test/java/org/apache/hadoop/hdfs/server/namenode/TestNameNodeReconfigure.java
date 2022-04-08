@@ -453,6 +453,37 @@ public class TestNameNodeReconfigure {
     assertEquals(10, datanodeManager.getMaxSlowpeerCollectNodes());
   }
 
+  @Test
+  public void testBlockInvalidateLimit() throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager = nameNode.namesystem
+        .getBlockManager().getDatanodeManager();
+
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not correctly set",
+        customizedBlockInvalidateLimit, datanodeManager.getBlockInvalidateLimit());
+
+    try {
+      nameNode.reconfigureProperty(DFS_BLOCK_INVALIDATE_LIMIT_KEY, "non-numeric");
+      fail("Should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals(
+          "Could not change property dfs.block.invalidate.limit from '500' to 'non-numeric'",
+          e.getMessage());
+    }
+
+    nameNode.reconfigureProperty(DFS_BLOCK_INVALIDATE_LIMIT_KEY, "2500");
+
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not honored after reconfiguration", 2500,
+        datanodeManager.getBlockInvalidateLimit());
+
+    nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY, "500");
+
+    // 20 * 500 (10000) > 2500
+    // Hence, invalid block limit should be reset to 10000
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not reconfigured correctly", 10000,
+        datanodeManager.getBlockInvalidateLimit());
+  }
+
   @After
   public void shutDown() throws IOException {
     if (cluster != null) {

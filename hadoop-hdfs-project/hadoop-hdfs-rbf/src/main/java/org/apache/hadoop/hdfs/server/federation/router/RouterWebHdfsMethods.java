@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
+import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -419,6 +421,9 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final DoAsParam doAsUser, final String path, final HttpOpParam.Op op,
       final long openOffset, final String excludeDatanodes,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
+    if (!DFSUtil.isValidName(path)) {
+      throw new InvalidPathException(path);
+    }
     final DatanodeInfo dn =
         chooseDatanode(router, path, op, openOffset, excludeDatanodes);
 

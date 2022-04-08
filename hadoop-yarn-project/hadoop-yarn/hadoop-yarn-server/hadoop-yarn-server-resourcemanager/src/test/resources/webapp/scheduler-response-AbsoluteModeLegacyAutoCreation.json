@@ -885,7 +885,7 @@
         "queueAcls": {"queueAcl": [
           {
             "accessType": "ADMINISTER_QUEUE",
-            "accessControlList": " "
+            "accessControlList": "admin "
           },
           {
             "accessType": "APPLICATION_MAX_PRIORITY",
@@ -893,7 +893,7 @@
           },
           {
             "accessType": "SUBMIT_APP",
-            "accessControlList": " "
+            "accessControlList": "user "
           }
         ]},
         "queuePriority": 0,
@@ -1296,10 +1296,20 @@
       "queuePriority": 0,
       "orderingPolicyInfo": "utilization",
       "autoCreateChildQueueEnabled": true,
-      "leafQueueTemplate": {"property": [{
-        "name": "leaf-queue-template.capacity",
-        "value": "[memory=2048,vcores=2]"
-      }]},
+      "leafQueueTemplate": {"property": [
+        {
+          "name": "leaf-queue-template.acl_administer_queue",
+          "value": "admin"
+        },
+        {
+          "name": "leaf-queue-template.capacity",
+          "value": "[memory=2048,vcores=2]"
+        },
+        {
+          "name": "leaf-queue-template.acl_submit_applications",
+          "value": "user"
+        }
+      ]},
       "mode": "absolute",
       "queueType": "parent",
       "creationMethod": "static",

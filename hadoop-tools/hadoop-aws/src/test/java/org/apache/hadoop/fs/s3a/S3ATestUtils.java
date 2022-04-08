@@ -52,7 +52,11 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -70,6 +74,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -78,6 +83,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
+import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -95,8 +104,23 @@ import static org.junit.Assert.*;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class S3ATestUtils {
+
   private static final Logger LOG = LoggerFactory.getLogger(
-      S3ATestUtils.class);
+          S3ATestUtils.class);
+
+  /** Many threads for scale performance: {@value}. */
+  public static final int EXECUTOR_THREAD_COUNT = 64;
+  /**
+   * For submitting work.
+   */
+  private static final ListeningExecutorService EXECUTOR =
+      MoreExecutors.listeningDecorator(
+          BlockingThreadPoolExecutorService.newInstance(
+              EXECUTOR_THREAD_COUNT,
+              EXECUTOR_THREAD_COUNT * 2,
+              30, TimeUnit.SECONDS,
+              "test-operations"));
+
 
   /**
    * Value to set a system property to (in maven) to declare that
@@ -819,6 +843,87 @@ public final class S3ATestUtils {
         .setUseListV1(false)
         .setContextAccessors(accessors)
         .build();
+  }
+
+  /**
+   * Write the text to a file asynchronously. Logs the operation duration.
+   * @param fs filesystem
+   * @param path path
+   * @return future to the patch created.
+   */
+  private static CompletableFuture<Path> put(FileSystem fs,
+      Path path, String text) {
+    return submit(EXECUTOR, () -> {
+      try (DurationInfo ignore =
+               new DurationInfo(LOG, false, "Creating %s", path)) {
+        createFile(fs, path, true, text.getBytes(Charsets.UTF_8));
+        return path;
+      }
+    });
+  }
+
+  /**
+   * Build a set of files in a directory tree.
+   * @param fs filesystem
+   * @param destDir destination
+   * @param depth file depth
+   * @param fileCount number of files to create.
+   * @param dirCount number of dirs to create at each level
+   * @return the list of files created.
+   */
+  public static List<Path> createFiles(final FileSystem fs,
+      final Path destDir,
+      final int depth,
+      final int fileCount,
+      final int dirCount) throws IOException {
+    return createDirsAndFiles(fs, destDir, depth, fileCount, dirCount,
+        new ArrayList<>(fileCount),
+        new ArrayList<>(dirCount));
+  }
+
+  /**
+   * Build a set of files in a directory tree.
+   * @param fs filesystem
+   * @param destDir destination
+   * @param depth file depth
+   * @param fileCount number of files to create.
+   * @param dirCount number of dirs to create at each level
+   * @param paths [out] list of file paths created
+   * @param dirs [out] list of directory paths created.
+   * @return the list of files created.
+   */
+  public static List<Path> createDirsAndFiles(final FileSystem fs,
+      final Path destDir,
+      final int depth,
+      final int fileCount,
+      final int dirCount,
+      final List<Path> paths,
+      final List<Path> dirs) throws IOException {
+    buildPaths(paths, dirs, destDir, depth, fileCount, dirCount);
+    List<CompletableFuture<Path>> futures = new ArrayList<>(paths.size()
+        + dirs.size());
+
+    // create directories. With dir marker retention, that adds more entries
+    // to cause deletion issues
+    try (DurationInfo ignore =
+             new DurationInfo(LOG, "Creating %d directories", dirs.size())) {
+      for (Path path : dirs) {
+        futures.add(submit(EXECUTOR, () ->{
+          fs.mkdirs(path);
+          return path;
+        }));
+      }
+      waitForCompletion(futures);
+    }
+
+    try (DurationInfo ignore =
+            new DurationInfo(LOG, "Creating %d files", paths.size())) {
+      for (Path path : paths) {
+        futures.add(put(fs, path, path.getName()));
+      }
+      waitForCompletion(futures);
+      return paths;
+    }
   }
 
   /**

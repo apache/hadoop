@@ -453,6 +453,26 @@ The function `getLocatedFileStatus(FS, d)` is as defined in
 The atomicity and consistency constraints are as for
 `listStatus(Path, PathFilter)`.
 
+
+### `ContentSummary getContentSummary(Path path)`
+
+Given a path return its content summary.
+
+`getContentSummary()` first checks if the given path is a file and if yes, it returns 0 for directory count
+and 1 for file count.
+
+#### Preconditions
+
+    exists(FS, path) else raise FileNotFoundException
+
+#### Postconditions
+
+Returns a `ContentSummary` object with information such as directory count
+and file count for a given path.
+
+The atomicity and consistency constraints are as for
+`listStatus(Path, PathFilter)`.
+
 ### `BlockLocation[] getFileBlockLocations(FileStatus f, int s, int l)`
 
 #### Preconditions

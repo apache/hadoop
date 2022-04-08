@@ -298,6 +298,14 @@ public class BlockManager implements BlockStatsMXBean {
     return blocksMap.getECBlockGroups();
   }
 
+  /** Used by metrics. */
+  public int getPendingSPSPaths() {
+    if (spsManager != null) {
+      return spsManager.getPendingSPSPaths();
+    }
+    return 0;
+  }
+
   /**
    * redundancyRecheckInterval is how often namenode checks for new
    * reconstruction work.
@@ -2017,7 +2025,7 @@ public class BlockManager implements BlockStatsMXBean {
       blocksToReconstruct = neededReconstruction
           .chooseLowRedundancyBlocks(blocksToProcess, reset);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("computeBlockReconstructionWork");
     }
     return computeReconstructionWorkForBlocks(blocksToReconstruct);
   }
@@ -2051,7 +2059,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("computeReconstructionWorkForBlocks");
     }
 
     // Step 2: choose target nodes for each reconstruction task
@@ -2092,7 +2100,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("computeReconstructionWorkForBlocks");
     }
 
     if (blockLog.isDebugEnabled()) {
@@ -2577,7 +2585,7 @@ public class BlockManager implements BlockStatsMXBean {
           }
         }
       } finally {
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("processPendingReconstructions");
       }
       /* If we know the target datanodes where the replication timedout,
        * we could invoke decBlocksScheduled() on it. Its ok for now.
@@ -2751,6 +2759,9 @@ public class BlockManager implements BlockStatsMXBean {
       return true;
     }
     DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
+    if (node == null) {
+      throw new UnregisteredNodeException(nodeID, null);
+    }
     final long startTime = Time.monotonicNow();
     return blockReportLeaseManager.checkLease(node, startTime,
         context.getLeaseId());
@@ -2826,7 +2837,7 @@ public class BlockManager implements BlockStatsMXBean {
       storageInfo.receivedBlockReport();
     } finally {
       endTime = Time.monotonicNow();
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("processReport");
     }
 
     if(blockLog.isDebugEnabled()) {
@@ -2870,7 +2881,7 @@ public class BlockManager implements BlockStatsMXBean {
             context.getTotalRpcs(), Long.toHexString(context.getReportId()));
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("removeBRLeaseIfNeeded");
     }
   }
 
@@ -2908,7 +2919,7 @@ public class BlockManager implements BlockStatsMXBean {
       postponedMisreplicatedBlocks.addAll(rescannedMisreplicatedBlocks);
       rescannedMisreplicatedBlocks.clear();
       long endSize = postponedMisreplicatedBlocks.size();
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("rescanPostponedMisreplicatedBlocks");
       LOG.info("Rescan of postponedMisreplicatedBlocks completed in {}" +
           " msecs. {} blocks are left. {} blocks were removed.",
           (Time.monotonicNow() - startTime), endSize, (startSize - endSize));
@@ -3775,7 +3786,7 @@ public class BlockManager implements BlockStatsMXBean {
           break;
         }
       } finally {
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("processMisReplicatesAsync");
         // Make sure it is out of the write lock for sufficiently long time.
         Thread.sleep(sleepDuration);
       }
@@ -3830,7 +3841,7 @@ public class BlockManager implements BlockStatsMXBean {
                     "Re-scanned block {}, result is {}", blk, r);
           }
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("processMisReplicatedBlocks");
         }
       }
     } catch (InterruptedException ex) {
@@ -4553,7 +4564,7 @@ public class BlockManager implements BlockStatsMXBean {
       // testPlacementWithLocalRackNodesDecommissioned, it is not protected by
       // lock, only when called by DatanodeManager.refreshNodes have writeLock
       if (namesystem.hasWriteLock()) {
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("processExtraRedundancyBlocksOnInService");
         try {
           Thread.sleep(1);
         } catch (InterruptedException e) {
@@ -4685,7 +4696,7 @@ public class BlockManager implements BlockStatsMXBean {
             repl.outOfServiceReplicas(), oldExpectedReplicas);
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("updateNeededReconstructions");
     }
   }
 
@@ -4742,7 +4753,7 @@ public class BlockManager implements BlockStatsMXBean {
         return 0;
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("invalidateWorkForOneNode");
     }
     blockLog.debug("BLOCK* {}: ask {} to delete {}", getClass().getSimpleName(),
         dn, toInvalidate);
@@ -4974,7 +4985,7 @@ public class BlockManager implements BlockStatsMXBean {
             }
           }
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("markedDeleteBlockScrubberThread");
         }
       }
     }
@@ -5092,7 +5103,7 @@ public class BlockManager implements BlockStatsMXBean {
       this.updateState();
       this.scheduledReplicationBlocksCount = workFound;
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("computeDatanodeWork");
     }
     workFound += this.computeInvalidateWork(nodesToProcess);
     return workFound;
@@ -5332,7 +5343,7 @@ public class BlockManager implements BlockStatsMXBean {
               action = queue.poll();
             } while (action != null);
           } finally {
-            namesystem.writeUnlock();
+            namesystem.writeUnlock("processQueue");
             metrics.addBlockOpsBatched(processed - 1);
           }
         } catch (InterruptedException e) {

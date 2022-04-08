@@ -144,8 +144,8 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
         with(INVOCATION_GET_CONTENT_SUMMARY, 1),
         withAuditCount(1),
         always(FILE_STATUS_FILE_PROBE    // look at path to see if it is a file
-            .plus(LIST_OPERATION)         // it is not: so LIST
-            .plus(LIST_OPERATION)));       // and a LIST on the child dir
+            .plus(LIST_OPERATION)));         // it is not: so LIST
+
     Assertions.assertThat(summary.getDirectoryCount())
         .as("Summary " + summary)
         .isEqualTo(2);

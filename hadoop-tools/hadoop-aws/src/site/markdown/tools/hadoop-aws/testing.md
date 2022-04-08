@@ -593,6 +593,31 @@ your `core-site.xml` file, so that trying to use S3 select fails fast with
 a meaningful error ("S3 Select not supported") rather than a generic Bad Request
 exception.
 
+### Testing Requester Pays
+
+By default, the requester pays tests will look for a bucket that exists on Amazon S3
+in us-east-1.
+
+If the endpoint does support requester pays, you can specify an alternative object.
+The test only requires an object of at least a few bytes in order
+to check that lists and basic reads work.
+
+```xml
+<property>
+  <name>test.fs.s3a.requester.pays.file</name>
+  <value>s3a://my-req-pays-enabled-bucket/on-another-endpoint.json</value>
+</property>
+```
+
+If the endpoint does not support requester pays, you can also disable the tests by configuring
+the test URI as a single space.
+
+```xml
+<property>
+  <name>test.fs.s3a.requester.pays.file</name>
+  <value> </value>
+</property>
+```
 
 ### Testing Session Credentials
 

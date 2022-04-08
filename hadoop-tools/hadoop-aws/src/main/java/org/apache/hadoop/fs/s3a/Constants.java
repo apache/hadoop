@@ -157,6 +157,15 @@ public final class Constants {
       "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
 
+  /**
+   * Configuration option for S3 Requester Pays feature: {@value}.
+   */
+  public static final String ALLOW_REQUESTER_PAYS = "fs.s3a.requester.pays.enabled";
+  /**
+   * Default configuration for {@value ALLOW_REQUESTER_PAYS}: {@value}.
+   */
+  public static final boolean DEFAULT_ALLOW_REQUESTER_PAYS = false;
+
   // use OpenSSL or JSEE for secure connections
   public static final String SSL_CHANNEL_MODE =  "fs.s3a.ssl.channel.mode";
   public static final DelegatingSSLSocketFactory.SSLChannelMode
