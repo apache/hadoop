@@ -351,7 +351,19 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         ((AbstractYarnScheduler)getScheduler())
             .getApplicationAttempt(appAttemptId).pullUpdateContainerErrors());
 
-    response.setNumClusterNodes(getScheduler().getNumClusterNodes());
+    String label="";
+    try {
+      label = rmContext.getScheduler()
+          .getQueueInfo(app.getQueue(), false, false)
+          .getDefaultNodeLabelExpression();
+    } catch (Exception e){
+    }
+
+    if (label == null || label.equals("")) {
+      response.setNumClusterNodes(getScheduler().getNumClusterNodes());
+    } else {
+      response.setNumClusterNodes(rmContext.getNodeLabelManager().getActiveNMCountPerLabel(label));
+    }
 
     // add collector address for this application
     if (timelineServiceV2Enabled) {
