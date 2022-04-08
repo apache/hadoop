@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.KerberosAuthException;
@@ -853,5 +854,20 @@ public class TestNetUtils {
         "myconfig");
     assertEquals(ipv6Address, addr.getHostName());
     assertEquals(12345, addr.getPort());
+  }
+
+  @Test
+  public void testParseAddress2IpAndPort() {
+    String ip = "10.10.10.10";
+    Pair<String, Integer> pair = NetUtils.parseAddress2IpAndPort(ip);
+    assertEquals(pair.getLeft(), ip);
+    assertEquals(pair.getRight().longValue(), 0);
+    pair = NetUtils.parseAddress2IpAndPort(ip+":8080");
+    assertEquals(pair.getLeft(), ip);
+    assertEquals(pair.getRight().longValue(), 8080);
+    ip = "10:10:10:10:10:10:10:10";
+    pair = NetUtils.parseAddress2IpAndPort(ip+":8080");
+    assertEquals(pair.getLeft(), '['+ip+']');
+    assertEquals(pair.getRight().longValue(), 8080);
   }
 }
