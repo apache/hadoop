@@ -80,6 +80,7 @@ import org.apache.hadoop.util.Timer;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_JITTER_KEY;
 
 /**
@@ -236,7 +237,8 @@ public class BlockPoolSlice {
         SHUTDOWN_HOOK_PRIORITY);
   }
 
-  public void updateDfsUsageConfig(Long interval, Long jitter) throws IOException {
+  public void updateDfsUsageConfig(Long interval, Long jitter, Class<? extends GetSpaceUsed> klass)
+          throws IOException {
     // Close the old dfsUsage if it is CachingGetSpaceUsed.
     if (dfsUsage instanceof CachingGetSpaceUsed) {
       ((CachingGetSpaceUsed) dfsUsage).close();
@@ -250,6 +252,9 @@ public class BlockPoolSlice {
       Preconditions.checkArgument(jitter >= 0,
           FS_GETSPACEUSED_JITTER_KEY + " should be larger than or equal to 0");
       config.setLong(FS_GETSPACEUSED_JITTER_KEY, jitter);
+    }
+    if (klass != null) {
+      config.setClass(FS_GETSPACEUSED_CLASSNAME, klass, CachingGetSpaceUsed.class);
     }
     // Start new dfsUsage.
     this.dfsUsage = new FSCachingGetSpaceUsed.Builder().setBpid(bpid)
