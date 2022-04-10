@@ -27,8 +27,8 @@
 
 namespace hdfs::tools {
 /**
- * {@class Tail} is an {@class HdfsTool} that displays the size of the
- * directories and files.
+ * {@class Tail} is an {@class HdfsTool} displays last kilobyte of the file to
+ * stdout.
  */
 class Tail : public HdfsTool {
 public:
@@ -73,15 +73,22 @@ protected:
   /**
    * Handle the path argument that's passed to this tool.
    *
-   * @param path The path to the directory for which we need tail info.
+   * @param path The path to the file which needs to be tailed.
+   * @param follow Append data to the output as the file grows, as in Unix.
    *
    * @return A boolean indicating the result of this operation.
    */
   [[nodiscard]] virtual bool HandlePath(const std::string &path,
                                         bool follow) const;
 
+  /**
+   * The tail size in bytes.
+   */
   static constexpr uint64_t tail_size_in_bytes{1024};
 
+  /**
+   * The refresh rate for {@link hdfs::tools::Tail} in seconds.
+   */
   static constexpr int refresh_rate_in_sec{1};
 
 private:
