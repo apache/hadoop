@@ -418,8 +418,8 @@
       </exclusions>
     </dependency>
     <dependency>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-client</artifactId>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-client</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>
@@ -430,22 +430,6 @@
         <exclusion>
           <groupId>javax.xml.bind</groupId>
           <artifactId>jaxb-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-core-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-jaxrs</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-xc</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
