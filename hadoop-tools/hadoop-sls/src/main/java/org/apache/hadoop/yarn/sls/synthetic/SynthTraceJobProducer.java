@@ -310,7 +310,6 @@ public class SynthTraceJobProducer implements JobStoryProducer {
 
       // Initialize job weights
       job_weights = new ArrayList<>();
-      job_weights = new ArrayList<>();
       for(JobDefinition j : job_classes){
         job_weights.add(j.class_weight);
       }
@@ -638,7 +637,7 @@ public class SynthTraceJobProducer implements JobStoryProducer {
     public String toString(){
       switch(mode){
       case CONST:
-        return "value: " + Double.toString(val);
+        return "value: " + val;
       case DIST:
         return "value: " + this.val + " std: " + this.std + " dist: "
             + this.dist.name();

@@ -36,15 +36,18 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,13 +56,13 @@ import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 
 import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -644,12 +647,12 @@ public class FileUtil {
    */
   public static void unZip(InputStream inputStream, File toDir)
       throws IOException {
-    try (ZipInputStream zip = new ZipInputStream(inputStream)) {
+    try (ZipArchiveInputStream zip = new ZipArchiveInputStream(inputStream)) {
       int numOfFailedLastModifiedSet = 0;
       String targetDirPath = toDir.getCanonicalPath() + File.separator;
-      for(ZipEntry entry = zip.getNextEntry();
+      for(ZipArchiveEntry entry = zip.getNextZipEntry();
           entry != null;
-          entry = zip.getNextEntry()) {
+          entry = zip.getNextZipEntry()) {
         if (!entry.isDirectory()) {
           File file = new File(toDir, entry.getName());
           if (!file.getCanonicalPath().startsWith(targetDirPath)) {
@@ -668,12 +671,58 @@ public class FileUtil {
           if (!file.setLastModified(entry.getTime())) {
             numOfFailedLastModifiedSet++;
           }
+          if (entry.getPlatform() == ZipArchiveEntry.PLATFORM_UNIX) {
+            Files.setPosixFilePermissions(file.toPath(), permissionsFromMode(entry.getUnixMode()));
+          }
         }
       }
       if (numOfFailedLastModifiedSet > 0) {
         LOG.warn("Could not set last modfied time for {} file(s)",
             numOfFailedLastModifiedSet);
       }
+    }
+  }
+
+  /**
+   * The permission operation of this method only involves users, user groups, and others.
+   * If SUID is set, only executable permissions are reserved.
+   * @param mode Permissions are represented by numerical values
+   * @return The original permissions for files are stored in collections
+   */
+  private static Set<PosixFilePermission> permissionsFromMode(int mode) {
+    EnumSet<PosixFilePermission> permissions =
+        EnumSet.noneOf(PosixFilePermission.class);
+    addPermissions(permissions, mode, PosixFilePermission.OTHERS_READ,
+        PosixFilePermission.OTHERS_WRITE, PosixFilePermission.OTHERS_EXECUTE);
+    addPermissions(permissions, mode >> 3, PosixFilePermission.GROUP_READ,
+        PosixFilePermission.GROUP_WRITE, PosixFilePermission.GROUP_EXECUTE);
+    addPermissions(permissions, mode >> 6, PosixFilePermission.OWNER_READ,
+        PosixFilePermission.OWNER_WRITE, PosixFilePermission.OWNER_EXECUTE);
+    return permissions;
+  }
+
+  /**
+   * Assign the original permissions to the file
+   * @param permissions The original permissions for files are stored in collections
+   * @param mode Use a value of type int to indicate permissions
+   * @param r Read permission
+   * @param w Write permission
+   * @param x Execute permission
+   */
+  private static void addPermissions(
+      Set<PosixFilePermission> permissions,
+      int mode,
+      PosixFilePermission r,
+      PosixFilePermission w,
+      PosixFilePermission x) {
+    if ((mode & 1L) == 1L) {
+      permissions.add(x);
+    }
+    if ((mode & 2L) == 2L) {
+      permissions.add(w);
+    }
+    if ((mode & 4L) == 4L) {
+      permissions.add(r);
     }
   }
 
@@ -685,14 +734,14 @@ public class FileUtil {
    * @throws IOException An I/O exception has occurred
    */
   public static void unZip(File inFile, File unzipDir) throws IOException {
-    Enumeration<? extends ZipEntry> entries;
+    Enumeration<? extends ZipArchiveEntry> entries;
     ZipFile zipFile = new ZipFile(inFile);
 
     try {
-      entries = zipFile.entries();
+      entries = zipFile.getEntries();
       String targetDirPath = unzipDir.getCanonicalPath() + File.separator;
       while (entries.hasMoreElements()) {
-        ZipEntry entry = entries.nextElement();
+        ZipArchiveEntry entry = entries.nextElement();
         if (!entry.isDirectory()) {
           InputStream in = zipFile.getInputStream(entry);
           try {
@@ -716,6 +765,9 @@ public class FileUtil {
               }
             } finally {
               out.close();
+            }
+            if (entry.getPlatform() == ZipArchiveEntry.PLATFORM_UNIX) {
+              Files.setPosixFilePermissions(file.toPath(), permissionsFromMode(entry.getUnixMode()));
             }
           } finally {
             in.close();
