@@ -852,7 +852,7 @@ public class DatanodeManager {
                                      + node + " does not exist");
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("removeDatanode");
     }
   }
 
@@ -1296,7 +1296,7 @@ public class DatanodeManager {
       refreshDatanodes();
       countSoftwareVersions();
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("refreshNodes");
     }
   }
 
@@ -2197,6 +2197,11 @@ public class DatanodeManager {
           d.getStorageReports());
     }
     return reports;
+  }
+
+  @VisibleForTesting
+  public Map<String, DatanodeDescriptor> getDatanodeMap() {
+    return datanodeMap;
   }
 }
 

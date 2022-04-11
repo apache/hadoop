@@ -503,7 +503,7 @@ class HeartbeatManager implements DatanodeStatistics {
         try {
           dm.removeDeadDatanode(dead, !dead.isMaintenance());
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("removeDeadDatanode");
         }
       }
       if (failedStorage != null) {
@@ -512,7 +512,7 @@ class HeartbeatManager implements DatanodeStatistics {
         try {
           blockManager.removeBlocksAssociatedTo(failedStorage);
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("removeBlocksAssociatedTo");
         }
       }
     }

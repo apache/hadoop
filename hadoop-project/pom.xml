@@ -63,15 +63,15 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.7.7</avro.version>
+    <avro.version>1.9.2</avro.version>
 
     <!-- jersey version -->
     <jersey.version>1.19</jersey.version>
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.13.0</jackson2.version>
-    <jackson2.databind.version>2.13.0</jackson2.databind.version>
+    <jackson2.version>2.13.2</jackson2.version>
+    <jackson2.databind.version>2.13.2.2</jackson2.databind.version>
 
     <!-- javax ws rs api version -->
     <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
@@ -1186,21 +1186,25 @@
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
         <version>${jackson.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-core-asl</artifactId>
         <version>${jackson.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-jaxrs</artifactId>
         <version>${jackson.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-xc</artifactId>
         <version>${jackson.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
@@ -1480,6 +1484,11 @@
         <groupId>${leveldbjni.group}</groupId>
         <artifactId>leveldbjni-all</artifactId>
         <version>1.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.fusesource.hawtjni</groupId>
+        <artifactId>hawtjni-runtime</artifactId>
+        <version>1.11</version>
       </dependency>
 
       <dependency>

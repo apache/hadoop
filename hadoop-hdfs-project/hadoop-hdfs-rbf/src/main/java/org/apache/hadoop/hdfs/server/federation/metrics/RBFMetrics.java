@@ -747,6 +747,12 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
+  public int getPendingSPSPaths() {
+    return getNameserviceAggregatedInt(
+        MembershipStats::getPendingSPSPaths);
+  }
+
+  @Override
   @Metric({"RouterFederationRenameCount", "Number of federation rename"})
   public int getRouterFederationRenameCount() {
     return this.router.getRpcServer().getRouterFederationRenameCount();

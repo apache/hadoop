@@ -162,14 +162,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     createQueue("root.auto2");
     createQueue("root.auto3");
     createQueue("root.autoParent1.auto4");
+    createQueue("root.autoParent2.auto5");
+    createQueue("root.parent.autoParent3.auto6");
 
-    /*
-     *                         root   default  test1  test2  autoParent1  auto1  auto2  auto3  auto4
-     * weight:                  1        10      4     6         1          1      1     1      1
-     * normalizedWeight:        1        0.41    0.16  0.25      1          0.04   0.04  0.04   0.04
-     * autoCreationEligibility: flexible off     off   off     flexible     off    off   off    off
-     * queueType:               parent   leaf    leaf  leaf    parent       leaf   leaf  leaf   leaf
-     */
     assertJsonResponse(sendRequest(),
         "webapp/scheduler-response-WeightModeWithAutoCreatedQueues-After.json");
   }
@@ -227,6 +222,10 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       conf.put("yarn.scheduler.capacity.root.managed.state", "RUNNING");
       conf.put("yarn.scheduler.capacity.root.managed." +
           "auto-create-child-queue.enabled", "true");
+      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_submit_applications",
+          "user");
+      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_administer_queue",
+          "admin");
       return createConfiguration(conf);
     }
 
@@ -256,17 +255,45 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
     private static Configuration createWeightConfigInternal(boolean enableAqc) {
       Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2, parent");
       conf.put("yarn.scheduler.capacity.root.capacity", "1w");
       conf.put("yarn.scheduler.capacity.root.default.capacity", "10w");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity", "4w");
-      conf.put("yarn.scheduler.capacity.root.test2.capacity", "6w");
+      conf.put("yarn.scheduler.capacity.root.test1.capacity", "5w");
+      conf.put("yarn.scheduler.capacity.root.test2.capacity", "10w");
+      conf.put("yarn.scheduler.capacity.root.parent.capacity", "20w");
       conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
       conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
 
       if (enableAqc) {
-        conf.put("yarn.scheduler.capacity.root.auto-queue-creation-v2.enabled",
-            "true");
+        final String root = "yarn.scheduler.capacity.root.";
+        conf.put(root +  "auto-queue-creation-v2.enabled", "true");
+
+        conf.put(root + "auto-queue-creation-v2.parent-template.acl_submit_applications",
+            "parentUser1");
+        conf.put(root + "auto-queue-creation-v2.parent-template.acl_administer_queue",
+            "parentAdmin1");
+
+        conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+            "user1");
+        conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+            "admin1");
+
+        conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+            "wildUser1");
+        conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+            "wildAdmin1");
+
+
+        conf.put(root + "parent.auto-queue-creation-v2.enabled", "true");
+        conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_submit_applications",
+            "parentUser2");
+        conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_administer_queue",
+            "parentAdmin2");
+
+        conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+            "wildUser2");
+        conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+            "wildAdmin2");
       }
       return createConfiguration(conf);
     }

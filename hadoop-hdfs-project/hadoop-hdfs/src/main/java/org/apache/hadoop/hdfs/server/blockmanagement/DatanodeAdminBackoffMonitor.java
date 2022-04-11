@@ -215,7 +215,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
 
         processPendingNodes();
       } finally {
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("DatanodeAdminMonitorV2Thread");
       }
       // After processing the above, various parts of the check() method will
       // take and drop the read / write lock as needed. Aside from the
@@ -345,12 +345,12 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           // which added the node to the cancelled list. Therefore expired
           // maintenance nodes do not need to be added to the toRemove list.
           dnAdmin.stopMaintenance(dn);
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("processMaintenanceNodes");
           namesystem.writeLock();
         }
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("processMaintenanceNodes");
     }
   }
 
@@ -409,7 +409,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
         }
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("processCompletedNodes");
     }
   }
 
@@ -531,7 +531,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           // replication
           if (blocksProcessed >= blocksPerLock) {
             blocksProcessed = 0;
-            namesystem.writeUnlock();
+            namesystem.writeUnlock("moveBlocksToPending");
             namesystem.writeLock();
           }
           blocksProcessed++;
@@ -553,7 +553,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
         }
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("moveBlocksToPending");
     }
     LOG.debug("{} blocks are now pending replication", pendingCount);
   }
@@ -637,7 +637,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     try {
       storage = dn.getStorageInfos();
     } finally {
-      namesystem.readUnlock();
+      namesystem.readUnlock("scanDatanodeStorage");
     }
 
     for (DatanodeStorageInfo s : storage) {
@@ -667,7 +667,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           numBlocksChecked++;
         }
       } finally {
-        namesystem.readUnlock();
+        namesystem.readUnlock("scanDatanodeStorage");
       }
     }
   }
@@ -722,7 +722,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
             suspectBlocks.getOutOfServiceBlockCount());
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("processPendingReplication");
     }
   }
 

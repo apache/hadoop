@@ -401,7 +401,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
 
-  private static final String CLIENT_PORT_STR = "clientPort";
   private final String contextFieldSeparator;
 
   boolean isAuditEnabled() {
@@ -467,7 +466,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
       CallerContext.setCurrent(
           new CallerContext.Builder(origContext, contextFieldSeparator)
-              .append(CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
+              .append(CallerContext.CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
               .setSignature(origSignature)
               .build());
     }
@@ -475,7 +474,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private boolean isClientPortInfoAbsent(CallerContext ctx){
     return ctx == null || ctx.getContext() == null
-        || !ctx.getContext().contains(CLIENT_PORT_STR);
+        || !ctx.getContext().contains(CallerContext.CLIENT_PORT_STR);
   }
 
   /**
@@ -1799,6 +1798,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.fsLock.readUnlock();
   }
 
+  @Override
   public void readUnlock(String opName) {
     this.fsLock.readUnlock(opName);
   }
@@ -1823,6 +1823,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.fsLock.writeUnlock();
   }
 
+  @Override
   public void writeUnlock(String opName) {
     this.fsLock.writeUnlock(opName);
   }
@@ -4872,6 +4873,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public long getCurrentTokensCount() {
     return dtSecretManager != null ?
         dtSecretManager.getCurrentTokensSize() : -1;
+  }
+
+  @Override
+  @Metric({"PendingSPSPaths", "The number of paths to be processed by storage policy satisfier"})
+  public int getPendingSPSPaths() {
+    return blockManager.getPendingSPSPaths();
   }
 
   /**
