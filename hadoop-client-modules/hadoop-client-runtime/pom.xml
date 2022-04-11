@@ -246,7 +246,7 @@
                     <filter>
                       <artifact>com.fasterxml.jackson.*:*</artifact>
                       <excludes>
-                        <exclude>META-INF/versions/11/module-info.class</exclude>
+                        <exclude>META-INF/versions/9/module-info.class</exclude>
                       </excludes>
                     </filter>
                   </filters>
