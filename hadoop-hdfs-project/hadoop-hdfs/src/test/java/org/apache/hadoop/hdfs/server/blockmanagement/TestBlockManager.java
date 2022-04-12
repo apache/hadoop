@@ -859,9 +859,9 @@ public class TestBlockManager {
     ErasureCodingPolicy ecPolicy =
         SystemErasureCodingPolicies.getPolicies().get(1);
 
-    // striped blockInfo: 3 data blocks + 2 parity blocks
-    Block aBlock = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
-    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
+    // create an EC block group: 3 data blocks + 2 parity blocks
+    Block aBlockGroup = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
+    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlockGroup, ecPolicy);
 
     // create 4 storageInfo, which means 1 block is missing
     DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
@@ -874,7 +874,7 @@ public class TestBlockManager {
         "storage4", "4.4.4.4", "rack4", "host4");
 
     // link block with storage
-    aBlockInfoStriped.addStorage(ds1, aBlock);
+    aBlockInfoStriped.addStorage(ds1, aBlockGroup);
     aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
     aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
     aBlockInfoStriped.addStorage(ds4, new Block(blockId + 3, 0, 0));
@@ -904,9 +904,10 @@ public class TestBlockManager {
     ErasureCodingPolicy ecPolicy =
         SystemErasureCodingPolicies.getPolicies().get(1);
 
-    // striped blockInfo: 2 data blocks + 2 parity blocks
-    Block aBlock = new Block(blockId, ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1), 0);
-    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
+    // create an EC block group: 2 data blocks + 2 parity blocks
+    Block aBlockGroup = new Block(blockId,
+        ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1), 0);
+    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlockGroup, ecPolicy);
 
     // create 3 storageInfo, which means 1 block is missing
     DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
@@ -917,7 +918,7 @@ public class TestBlockManager {
         "storage3", "3.3.3.3", "rack3", "host3");
 
     // link block with storage
-    aBlockInfoStriped.addStorage(ds1, aBlock);
+    aBlockInfoStriped.addStorage(ds1, aBlockGroup);
     aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
     aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
 
