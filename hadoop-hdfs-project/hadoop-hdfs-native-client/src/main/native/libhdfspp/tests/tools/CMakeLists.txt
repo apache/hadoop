@@ -40,6 +40,7 @@ add_executable(hdfs_tool_tests
                 hdfs-ls-mock.cc
                 hdfs-setrep-mock.cc
                 hdfs-stat-mock.cc
+                hdfs-tail-mock.cc
                 main.cc)
 target_include_directories(hdfs_tool_tests PRIVATE
                             ../tools
@@ -64,6 +65,7 @@ target_include_directories(hdfs_tool_tests PRIVATE
                             ../../tools/hdfs-ls
                             ../../tools/hdfs-setrep
                             ../../tools/hdfs-stat
+                            ../../tools/hdfs-tail
                             ../../tools/hdfs-cat)
 target_link_libraries(hdfs_tool_tests PRIVATE
                        gmock_main
@@ -87,5 +89,6 @@ target_link_libraries(hdfs_tool_tests PRIVATE
                        hdfs_ls_lib
                        hdfs_setrep_lib
                        hdfs_stat_lib
+                       hdfs_tail_lib
                        hdfs_cat_lib)
 add_test(hdfs_tool_tests hdfs_tool_tests)
