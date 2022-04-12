@@ -1990,6 +1990,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return fedRenameScheduler.getAllJobs().size();
   }
 
+  public String refreshFairnessPolicyController() {
+    Configuration conf = new Configuration();
+    return rpcClient.refreshFairnessPolicyController(conf);
+  }
+
   /**
    * Deals with loading datanode report into the cache and refresh.
    */
