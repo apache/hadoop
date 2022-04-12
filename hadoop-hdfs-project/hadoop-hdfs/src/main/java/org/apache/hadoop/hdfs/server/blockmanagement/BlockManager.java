@@ -2168,6 +2168,7 @@ public class BlockManager implements BlockStatsMXBean {
       BlockInfoStriped stripedBlock = (BlockInfoStriped) block;
       if (stripedBlock.getRealDataBlockNum() > srcNodes.length) {
         LOG.debug("Block {} cannot be reconstructed due to shortage of source datanodes ", block);
+        NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
         return null;
       }
     }
