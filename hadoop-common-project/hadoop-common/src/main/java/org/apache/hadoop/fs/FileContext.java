@@ -2942,11 +2942,9 @@ public class FileContext implements PathCapabilities {
           .withMandatoryKeys(getMandatoryKeys())
           .withOptionalKeys(getOptionalKeys())
           .withOptions(getOptions())
-          .withBufferSize(getBufferSize())
-          .withStatus(getStatus());
-      parameters.withBufferSize(
-          getOptions().getInt(FS_OPTION_OPENFILE_BUFFER_SIZE,
-              getBufferSize()));
+          .withStatus(getStatus())
+          .withBufferSize(
+              getOptions().getInt(FS_OPTION_OPENFILE_BUFFER_SIZE, getBufferSize()));
       return new FSLinkResolver<CompletableFuture<FSDataInputStream>>() {
         @Override
         public CompletableFuture<FSDataInputStream> next(

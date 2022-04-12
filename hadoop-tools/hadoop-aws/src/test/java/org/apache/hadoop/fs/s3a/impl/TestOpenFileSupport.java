@@ -166,7 +166,7 @@ public class TestOpenFileSupport extends HadoopTestBase {
 
   /**
    * Verify that an unknown seek policy falls back to
-   * {@link S3AInputPolicy#Normal}. Delete
+   * {@link S3AInputPolicy#Normal}.
    */
   @Test
   public void testUnknownSeekPolicyS3AOption() throws Throwable {
@@ -181,7 +181,7 @@ public class TestOpenFileSupport extends HadoopTestBase {
    */
   @Test
   public void testSeekPolicyListS3AOption() throws Throwable {
-    // fall back to the normal seek policy.
+    // fall back to the second seek policy if the first is unknown
     assertOpenFile(INPUT_FADVISE, "hbase, random")
         .extracting(f -> f.getInputPolicy())
         .isEqualTo(S3AInputPolicy.Random);
@@ -212,7 +212,7 @@ public class TestOpenFileSupport extends HadoopTestBase {
   @Test
   public void testUnknownSeekPolicyFallback() throws Throwable {
     Assertions.assertThat(S3AInputPolicy.getPolicy("unknown", null))
-        .describedAs("unkown policy")
+        .describedAs("unknown policy")
         .isNull();
   }
 
@@ -247,8 +247,8 @@ public class TestOpenFileSupport extends HadoopTestBase {
         .isEqualTo(4096L);
   }
 
-  /** is
-   * Verify readahead range is picked up.
+  /**
+   * Verify buffer size  is picked up.
    */
   @Test
   public void testBufferSize() throws Throwable {

@@ -147,7 +147,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         always(NO_IO),
         with(STREAM_READ_OPENED, 0));
 
-    // verify that the statistics are in rane
+    // verify that the statistics are in range
     IOStatistics ioStatistics = extractStatistics(in2);
     Object statsString = demandStringifyIOStatistics(ioStatistics);
     LOG.info("Statistics of open stream {}", statsString);

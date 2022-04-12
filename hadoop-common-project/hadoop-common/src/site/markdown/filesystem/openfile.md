@@ -66,7 +66,7 @@ actual data.
 This saves network IO on object stores.
 
 The `openFile()` operation MAY check the state of the filesystem during its
-invocation, but as the state of the filesystem may change betwen this call and
+invocation, but as the state of the filesystem may change between this call and
 the actual `build()` and `get()` operations, this file-specific
 preconditions (file exists, file is readable, etc) MUST NOT be checked here.
 
@@ -76,7 +76,7 @@ MAY postpone raising an `UnsupportedOperationException` until either the
 else they MAY fail fast in the `openFile()` call.
 
 Consult [`FutureDataInputStreamBuilder`](fsdatainputstreambuilder.html) for details
-on how to use the builder, and for standard options which may be pssed in.
+on how to use the builder, and for standard options which may be passed in.
 
 ### <a name="openfile_pathhandle_"></a> `FutureDataInputStreamBuilder openFile(PathHandle)`
 

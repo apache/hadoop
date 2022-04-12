@@ -92,7 +92,7 @@ public class OpenFileSupport {
 
   /**
    * Default input policy; may be overridden in
-   * {@code openFile()}
+   * {@code openFile()}.
    */
   private final S3AInputPolicy defaultInputPolicy;
 

@@ -120,8 +120,6 @@ ignored.
 The difference between `opt()` versus `must()` is how the FileSystem opening
 the file must react to an option which it does not recognize.
 
-* `opt(name, value)`: if `name` is not reco
-
 ```python
 
 def must(name, value):
@@ -235,8 +233,8 @@ nonexistent/unreadable files.
 ## <a name="options"></a> Standard `openFile()` options since Hadoop 3.3.3
 
 These are options which `FileSystem` and `FileContext` implementation
-MUST expected to recognise and MAY support by changing the behavior of
-their input streams as a appropriate.
+MUST recognise and MAY support by changing the behavior of
+their input streams as appropriate.
 
 Hadoop 3.3.0 added the `openFile()` API; these standard options were defined in
 a later release. Therefore, although they are "well known", unless confident that
@@ -260,7 +258,7 @@ with `fs.option.openfile.`.
 Note that while all `FileSystem`/`FileContext` instances SHALL support these
 options to the extent that `must()` declarations SHALL NOT fail, the
 implementations MAY support them to the extent of interpreting the values. This
-means that it is not a requirement for the stores to actually read the the read
+means that it is not a requirement for the stores to actually read the read
 policy or file length values and use them when opening files.
 
 Unless otherwise stated, they SHOULD be viewed as hints.
