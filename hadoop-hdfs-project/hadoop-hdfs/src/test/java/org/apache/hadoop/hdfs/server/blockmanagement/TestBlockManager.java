@@ -904,7 +904,7 @@ public class TestBlockManager {
     ErasureCodingPolicy ecPolicy =
         SystemErasureCodingPolicies.getPolicies().get(1);
 
-    // striped blockInfo: 2 data blocks + 2 paritys
+    // striped blockInfo: 2 data blocks + 2 parity blocks
     Block aBlock = new Block(blockId, ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1), 0);
     BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
 
