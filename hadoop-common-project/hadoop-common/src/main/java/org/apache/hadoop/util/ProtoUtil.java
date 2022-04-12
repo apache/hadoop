@@ -182,7 +182,7 @@ public abstract class ProtoUtil {
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
       RPCTraceInfoProto.Builder traceInfoProtoBuilder =
-          RPCTraceInfoProto.newBuilder().putAllSpanContext(
+          RPCTraceInfoProto.newBuilder().putAllOpenSpanContext(
               TraceUtils.spanContextToMap(span.getContext()));
       result.setTraceInfo(traceInfoProtoBuilder);
     }

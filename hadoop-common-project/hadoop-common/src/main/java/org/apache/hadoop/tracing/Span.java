@@ -23,7 +23,7 @@ import java.io.Closeable;
 
 /***
  * This class is a wrapper class on top of opentelemetry Span class
- * avoiding direct dependency on opentelemetry API
+ * avoiding direct dependency on opentelemetry API.
  */
 public class Span implements Closeable {
   private io.opentelemetry.api.trace.Span openSpan;

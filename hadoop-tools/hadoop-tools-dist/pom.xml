@@ -139,12 +139,6 @@
       <scope>compile</scope>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>io.opentelemetry.javaagent</groupId>
-      <artifactId>opentelemetry-javaagent</artifactId>
-      <version>${opentelemetry-instrumentation.version}</version>
-      <classifier>all</classifier>
-    </dependency>
   </dependencies>
 
   <build>
