@@ -134,6 +134,8 @@ public class ZStandardCompressor implements Compressor {
 
     compressedDirectBuf.limit(directBufferSize);
     compressedDirectBuf.position(directBufferSize);
+
+    bytesRead += len;
   }
 
   //copy enough data from userBuf to uncompressedDirectBuf
@@ -205,6 +207,7 @@ public class ZStandardCompressor implements Compressor {
     if (n > 0) {
       n = Math.min(n, len);
       compressedDirectBuf.get(b, off, n);
+      bytesWritten += n;
       return n;
     }
 
@@ -236,6 +239,7 @@ public class ZStandardCompressor implements Compressor {
 
     // Get at most 'len' bytes
     n = Math.min(n, len);
+    bytesWritten += n;
     compressedDirectBuf.get(b, off, n);
     return n;
   }

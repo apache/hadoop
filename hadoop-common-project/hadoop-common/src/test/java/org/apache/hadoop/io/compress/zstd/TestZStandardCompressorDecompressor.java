@@ -318,7 +318,7 @@ public class TestZStandardCompressorDecompressor {
         new ZStandardDecompressor(IO_FILE_BUFFER_SIZE_DEFAULT);
     assertFalse(compressor.finished());
     compressor.setInput(rawData, 0, rawData.length);
-    assertEquals(0, compressor.getBytesRead());
+    assertEquals(rawData.length, compressor.getBytesRead());
     compressor.finish();
 
     byte[] compressedResult = new byte[rawDataSize];
