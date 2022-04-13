@@ -1940,7 +1940,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public boolean isInObserverState() {
     if (haContext == null || haContext.getState() == null) {
-      return haEnabled;
+      return false;
     }
 
     return HAServiceState.OBSERVER == haContext.getState().getServiceState();
