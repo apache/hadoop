@@ -1171,6 +1171,7 @@ public class DatanodeManager {
         nodeN = null;
       }
   
+      boolean updateHost2DatanodeMap = false;
       if (nodeS != null) {
         if (nodeN == nodeS) {
           // The same datanode has been just restarted to serve the same data 
@@ -1189,7 +1190,11 @@ public class DatanodeManager {
             nodes with its data cleared (or user can just remove the StorageID
             value in "VERSION" file under the data directory of the datanode,
             but this is might not work if VERSION file format has changed 
-         */        
+         */
+          // Check if nodeS's host information is same as nodeReg's, if not,
+          // it needs to update host2DatanodeMap accordringly.
+          updateHost2DatanodeMap = !nodeS.getXferAddr().equals(nodeReg.getXferAddr());
+
           NameNode.stateChangeLog.info("BLOCK* registerDatanode: " + nodeS
               + " is replaced by " + nodeReg + " with the same storageID "
               + nodeReg.getDatanodeUuid());
@@ -1199,6 +1204,11 @@ public class DatanodeManager {
         try {
           // update cluster map
           getNetworkTopology().remove(nodeS);
+
+          // Update Host2DatanodeMap
+          if (updateHost2DatanodeMap) {
+            getHost2DatanodeMap().remove(nodeS);
+          }
           if(shouldCountVersion(nodeS)) {
             decrementVersionCount(nodeS.getSoftwareVersion());
           }
@@ -1217,6 +1227,11 @@ public class DatanodeManager {
             nodeS.setDependentHostNames(
                 getNetworkDependenciesWithDefault(nodeS));
           }
+
+          if (updateHost2DatanodeMap) {
+            getHost2DatanodeMap().add(nodeS);
+          }
+
           getNetworkTopology().add(nodeS);
           resolveUpgradeDomain(nodeS);
 
