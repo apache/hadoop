@@ -687,22 +687,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     dn.getStorageInfos()[0].addBlock(blk, blk);
 
     datanodeManager.getDatanodeAdminManager().startDecommission(dn);
-    waitNodeDecommissioned(dn);
-  }
-
-  private void waitNodeDecommissioned(DatanodeInfo node) {
-    DatanodeInfo.AdminStates state = DatanodeInfo.AdminStates.DECOMMISSIONED;
-    boolean done = (state == node.getAdminState());
-    while (!done) {
-      LOG.info("Waiting for node " + node + " to change state to "
-          + state + " current state: " + node.getAdminState());
-      try {
-        Thread.sleep(500);
-      } catch (InterruptedException e) {
-        // nothing
-      }
-      done = (state == node.getAdminState());
-    }
+    waitNodeState(dn, DatanodeInfo.AdminStates.DECOMMISSIONED);
   }
 
   private static String scanIntoString(final ByteArrayOutputStream baos) {
