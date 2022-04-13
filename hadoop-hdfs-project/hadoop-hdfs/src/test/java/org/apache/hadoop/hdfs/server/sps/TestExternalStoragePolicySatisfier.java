@@ -201,6 +201,20 @@ public class TestExternalStoragePolicySatisfier {
     }
   }
 
+  private void stopExternalSps() {
+    if (externalSps != null) {
+      externalSps.stopGracefully();
+    }
+  }
+
+  private void startExternalSps() {
+    externalSps = new StoragePolicySatisfier(getConf());
+    externalCtxt = new ExternalSPSContext(externalSps, nnc);
+
+    externalSps.init(externalCtxt);
+    externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
+  }
+
   private void createCluster() throws IOException {
     getConf().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     setCluster(startCluster(getConf(), allDiskTypes, NUM_OF_DATANODES,
@@ -1444,6 +1458,45 @@ public class TestExternalStoragePolicySatisfier {
       shutdownCluster();
     }
   }
+
+  /**
+   * Test SPS that satisfy the files and then delete the files before start SPS.
+   */
+  @Test(timeout = 300000)
+  public void testSPSSatisfyAndThenDeleteFileBeforeStartSPS() throws Exception {
+    try {
+      createCluster();
+      HdfsAdmin hdfsAdmin =
+          new HdfsAdmin(FileSystem.getDefaultUri(config), config);
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
+              {StorageType.DISK, StorageType.ARCHIVE},
+              {StorageType.DISK, StorageType.ARCHIVE}};
+      startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
+
+      stopExternalSps();
+
+      dfs.setStoragePolicy(new Path(FILE), COLD);
+      hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
+      dfs.delete(new Path(FILE), true);
+
+      startExternalSps();
+
+      String file1 = "/testMoveToSatisfyStoragePolicy_1";
+      writeContent(file1);
+      dfs.setStoragePolicy(new Path(file1), COLD);
+      hdfsAdmin.satisfyStoragePolicy(new Path(file1));
+
+      hdfsCluster.triggerHeartbeats();
+      DFSTestUtil.waitExpectedStorageType(file1, StorageType.ARCHIVE, 3, 30000,
+          dfs);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
 
   /**
    * Test SPS for directory which has multilevel directories.
