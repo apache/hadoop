@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileRange;
@@ -28,11 +33,6 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import org.junit.Test;
 
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
@@ -62,14 +62,16 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   @Test
   public void testMinSeekAndMaxSizeConfigsPropagation() throws Exception {
     Configuration conf = getFileSystem().getConf();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+            Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
+            Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE);
     S3ATestUtils.disableFilesystemCaching(conf);
     final int configuredMinSeek = 1024;
     final int configuredMaxSize = 2 * 1024;
-    conf.setInt(Constants.AWS_S3_MIN_SEEK_VECTOR_READS, configuredMinSeek);
-    conf.setInt(Constants.AWS_S3_MAX_READSIZE_VECTOR_READS, configuredMaxSize);
+    conf.setInt(Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, configuredMinSeek);
+    conf.setInt(Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, configuredMaxSize);
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
       try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
-        System.out.println(fis.toString());
         int newMinSeek = fis.minSeekForVectorReads();
         int newMaxSize = fis.maxReadSizeForVectorReads();
         assertEqual(newMinSeek, configuredMinSeek,
@@ -84,16 +86,16 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   public void testMinSeekAndMaxSizeDefaultValues() throws Exception {
     Configuration conf = getFileSystem().getConf();
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
-            Constants.AWS_S3_MIN_SEEK_VECTOR_READS,
-            Constants.AWS_S3_MAX_READSIZE_VECTOR_READS);
+            Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
+            Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE);
     S3ATestUtils.disableFilesystemCaching(conf);
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
       try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
         int minSeek = fis.minSeekForVectorReads();
         int maxSize = fis.maxReadSizeForVectorReads();
-        assertEqual(minSeek, Constants.DEFAULT_AWS_S3_MIN_SEEK_VECTOR_READS,
+        assertEqual(minSeek, Constants.DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
                 "default s3a min seek for vectored reads");
-        assertEqual(maxSize, Constants.DEFAULT_AWS_S3_MAX_READSIZE_VECTOR_READS,
+        assertEqual(maxSize, Constants.DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
                 "default s3a max read size for vectored reads");
       }
     }

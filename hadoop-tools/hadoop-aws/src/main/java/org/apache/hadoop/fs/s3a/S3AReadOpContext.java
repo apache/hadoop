@@ -75,19 +75,19 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param changeDetectionPolicy change detection policy.
    * @param readahead readahead for GET operations/skip, etc.
    * @param auditSpan active audit
-   * @param vectoredIOContext
+   * @param vectoredIOContext context for vectored read operation.
    */
   public S3AReadOpContext(
-          final Path path,
-          Invoker invoker,
-          @Nullable FileSystem.Statistics stats,
-          S3AStatisticsContext instrumentation,
-          FileStatus dstFileStatus,
-          S3AInputPolicy inputPolicy,
-          ChangeDetectionPolicy changeDetectionPolicy,
-          final long readahead,
-          final AuditSpan auditSpan,
-          VectoredIOContext vectoredIOContext) {
+        final Path path,
+        Invoker invoker,
+        @Nullable FileSystem.Statistics stats,
+        S3AStatisticsContext instrumentation,
+        FileStatus dstFileStatus,
+        S3AInputPolicy inputPolicy,
+        ChangeDetectionPolicy changeDetectionPolicy,
+        final long readahead,
+        final AuditSpan auditSpan,
+        VectoredIOContext vectoredIOContext) {
 
     super(invoker, stats, instrumentation,
         dstFileStatus);

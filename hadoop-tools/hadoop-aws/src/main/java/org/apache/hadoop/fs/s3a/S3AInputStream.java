@@ -817,7 +817,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * To override this value set property defined by
-   * {@link Constants#AWS_S3_MIN_SEEK_VECTOR_READS} in configuration.
+   * {@link Constants#AWS_S3_VECTOR_READS_MIN_SEEK_SIZE} in configuration.
    *
    * {@inheritDoc}.
    */
@@ -828,7 +828,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * To override this value set property defined by
-   * {@link Constants#AWS_S3_MAX_READSIZE_VECTOR_READS} in configuration.
+   * {@link Constants#AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE} in configuration.
    *
    * {@inheritDoc}.
    */

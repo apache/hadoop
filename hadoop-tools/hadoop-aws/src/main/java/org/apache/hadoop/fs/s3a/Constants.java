@@ -1068,27 +1068,27 @@ public final class Constants {
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
 
   /**
-   * What is the smallest reasonable seek that we should group ranges
-   * together during vectored read operation.
+   * What is the smallest reasonable seek such that we group
+   * ranges together during vectored read operation.
    * Value : {@value}.
    */
-  public static final String AWS_S3_MIN_SEEK_VECTOR_READS = "fs.s3a.min.seek.vectored.read";
+  public static final String AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = "fs.s3a.vectored.read.min.seek.size";
 
   /**
-   * What is the largest size that we should group ranges
-   * together during vectored read?
-   * Setting this value 0 will disable merging of ranges.
+   * What is the largest merged read size such that we group
+   * ranges together during vectored read.
+   * Setting this value to 0 will disable merging of ranges.
    * Value : {@value}.
    */
-  public static final String AWS_S3_MAX_READSIZE_VECTOR_READS = "fs.s3a.max.readsize.vectored.read";
+  public static final String AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = "fs.s3a.vectored.read.max.merged.size";
 
   /**
    * Default minimum seek during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_MIN_SEEK_VECTOR_READS = 4 * 1024;
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4 * 1024;
 
   /**
    * Default maximum read size during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_MAX_READSIZE_VECTOR_READS = 1024 * 1024;
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1024 * 1024;
 }

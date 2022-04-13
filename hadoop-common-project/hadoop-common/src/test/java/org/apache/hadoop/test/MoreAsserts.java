@@ -95,7 +95,7 @@ public class MoreAsserts {
    */
   public static <T> void assertEqual(T actual, T expected, String message) {
     Assertions.assertThat(actual)
-            .describedAs("Mismatch in "+ message)
+            .describedAs("Mismatch in " + message)
             .isEqualTo(expected);
   }
 }

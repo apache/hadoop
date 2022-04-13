@@ -218,18 +218,21 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
     List<CombinedFileRange> combinedFileRanges = VectoredReadUtils
             .sortAndMergeRanges(randomRanges, 1, 1, 0);
-    assertEquals("Mismatch in number of ranges post merging",
-            randomRanges.size(), combinedFileRanges.size());
+    Assertions.assertThat(combinedFileRanges)
+            .describedAs("Mismatch in number of ranges post merging")
+            .hasSize(randomRanges.size());
 
     List<CombinedFileRange> combinedFileRanges1 = VectoredReadUtils
             .sortAndMergeRanges(randomRanges, 1, 0, 0);
-    assertEquals("Mismatch in number of ranges post merging",
-            randomRanges.size(), combinedFileRanges1.size());
+    Assertions.assertThat(combinedFileRanges1)
+            .describedAs("Mismatch in number of ranges post merging")
+            .hasSize(randomRanges.size());
 
     List<CombinedFileRange> combinedFileRanges2 = VectoredReadUtils
             .sortAndMergeRanges(randomRanges, 1, 100, 0);
-    assertEquals("Mismatch in number of ranges post merging",
-            randomRanges.size(), combinedFileRanges2.size());
+    Assertions.assertThat(combinedFileRanges2)
+            .describedAs("Mismatch in number of ranges post merging")
+            .hasSize(randomRanges.size());
 
   }
 
