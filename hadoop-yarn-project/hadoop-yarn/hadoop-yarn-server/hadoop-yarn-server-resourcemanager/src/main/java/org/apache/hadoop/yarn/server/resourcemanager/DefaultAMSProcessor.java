@@ -357,6 +357,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
           .getQueueInfo(app.getQueue(), false, false)
           .getDefaultNodeLabelExpression();
     } catch (Exception e){
+      //Queue may not exist since it could be auto-created in case of
+      // dynamic queues
     }
 
     if (label == null || label.equals("")) {
