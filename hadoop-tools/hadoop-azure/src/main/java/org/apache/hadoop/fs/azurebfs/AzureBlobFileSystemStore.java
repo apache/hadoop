@@ -450,7 +450,7 @@ public class AzureBlobFileSystemStore {
         client,
         AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
         offset,
-            populateAbfsOutputStreamContext());
+        populateAbfsOutputStreamContext());
   }
 
   public void rename(final Path source, final Path destination) throws
