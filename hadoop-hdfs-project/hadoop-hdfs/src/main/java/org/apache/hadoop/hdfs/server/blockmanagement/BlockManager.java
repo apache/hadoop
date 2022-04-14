@@ -2163,6 +2163,16 @@ public class BlockManager implements BlockStatsMXBean {
       return null;
     }
 
+    // skip if source datanodes for reconstructing ec block are not enough
+    if (block.isStriped()) {
+      BlockInfoStriped stripedBlock = (BlockInfoStriped) block;
+      if (stripedBlock.getRealDataBlockNum() > srcNodes.length) {
+        LOG.debug("Block {} cannot be reconstructed due to shortage of source datanodes ", block);
+        NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
+        return null;
+      }
+    }
+
     // liveReplicaNodes can include READ_ONLY_SHARED replicas which are
     // not included in the numReplicas.liveReplicas() count
     assert liveReplicaNodes.size() >= numReplicas.liveReplicas();
