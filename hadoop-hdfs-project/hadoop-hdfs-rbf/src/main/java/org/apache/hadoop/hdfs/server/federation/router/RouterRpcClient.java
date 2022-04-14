@@ -1605,7 +1605,6 @@ public class RouterRpcClient {
     }
   }
 
-  @VisibleForTesting
   public RouterRpcFairnessPolicyController
       getRouterRpcFairnessPolicyController() {
     return routerRpcFairnessPolicyController;
@@ -1629,12 +1628,8 @@ public class RouterRpcClient {
         acceptedPermitsPerNs.get(ns).longValue() : 0L;
   }
 
-  public synchronized String refreshFairnessPolicyController(Configuration conf) {
-    if (routerRpcFairnessPolicyController != null) {
-      routerRpcFairnessPolicyController.shutdown();
-    }
-    routerRpcFairnessPolicyController =
-        FederationUtil.newFairnessPolicyController(conf);
+  public String refreshFairnessPolicyController(Configuration conf) {
+    routerRpcFairnessPolicyController = FederationUtil.newFairnessPolicyController(conf);
     return routerRpcFairnessPolicyController.getClass().getCanonicalName();
   }
 }

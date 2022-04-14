@@ -86,9 +86,9 @@ public class TestRouterRefreshFairnessPolicyController {
     }).when(client)
         .invokeMethod(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
-    final int N = 3;
-    Thread[] threadAcquirePermits = new Thread[N];
-    for (int i = 0; i < N; i++) {
+    final int nThreads = 3;
+    Thread[] threadAcquirePermits = new Thread[nThreads];
+    for (int i = 0; i < nThreads; i++) {
       Thread threadAcquirePermit = new Thread(() -> {
         try {
           client.invokeSingle("ns0", dummyMethod);
@@ -113,7 +113,7 @@ public class TestRouterRefreshFairnessPolicyController {
 
     StaticRouterRpcFairnessPolicyController controller =
         (StaticRouterRpcFairnessPolicyController) client.getRouterRpcFairnessPolicyController();
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < nThreads; i++) {
       threadAcquirePermits[i].join();
     }
 

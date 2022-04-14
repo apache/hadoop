@@ -1991,8 +1991,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   public String refreshFairnessPolicyController() {
-    Configuration conf = new Configuration();
-    return rpcClient.refreshFairnessPolicyController(conf);
+    return rpcClient.refreshFairnessPolicyController(new Configuration());
   }
 
   /**
