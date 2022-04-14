@@ -66,7 +66,7 @@ public class NameNodeLayoutVersion {
    * layout version is the earliest prior version to which a downgrade is
    * possible after initiating rolling upgrade.  If the feature cannot satisfy
    * compatibility with any prior version, then set its minimum compatible
-   * lqyout version to itself to indicate that downgrade is impossible.
+   * layout version to itself to indicate that downgrade is impossible.
    * Satisfying compatibility might require adding logic to the new feature to
    * reject operations or handle them differently while rolling upgrade is in
    * progress.  In general, it's possible to satisfy compatiblity for downgrade
