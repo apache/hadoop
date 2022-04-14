@@ -176,6 +176,8 @@ public class DatanodeAdminManager {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       // Update DN stats maintained by HeartbeatManager
       hbManager.startDecommission(node);
+      // Update cluster's emptyRack
+      blockManager.getDatanodeManager().getNetworkTopology().decommissionNode(node);
       // hbManager.startDecommission will set dead node to decommissioned.
       if (node.isDecommissionInProgress()) {
         for (DatanodeStorageInfo storage : node.getStorageInfos()) {
@@ -200,6 +202,8 @@ public class DatanodeAdminManager {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
       // Update DN stats maintained by HeartbeatManager
       hbManager.stopDecommission(node);
+      // Update cluster's emptyRack
+      blockManager.getDatanodeManager().getNetworkTopology().recommissionNode(node);
       // extra redundancy blocks will be detected and processed when
       // the dead node comes back and send in its full block report.
       if (node.isAlive()) {
