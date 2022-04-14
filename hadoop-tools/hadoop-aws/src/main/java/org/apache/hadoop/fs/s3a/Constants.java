@@ -1072,7 +1072,8 @@ public final class Constants {
    * ranges together during vectored read operation.
    * Value : {@value}.
    */
-  public static final String AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = "fs.s3a.vectored.read.min.seek.size";
+  public static final String AWS_S3_VECTOR_READS_MIN_SEEK_SIZE =
+          "fs.s3a.vectored.read.min.seek.size";
 
   /**
    * What is the largest merged read size such that we group
@@ -1080,7 +1081,8 @@ public final class Constants {
    * Setting this value to 0 will disable merging of ranges.
    * Value : {@value}.
    */
-  public static final String AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = "fs.s3a.vectored.read.max.merged.size";
+  public static final String AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE =
+          "fs.s3a.vectored.read.max.merged.size";
 
   /**
    * Default minimum seek during vectored reads : {@value}.
