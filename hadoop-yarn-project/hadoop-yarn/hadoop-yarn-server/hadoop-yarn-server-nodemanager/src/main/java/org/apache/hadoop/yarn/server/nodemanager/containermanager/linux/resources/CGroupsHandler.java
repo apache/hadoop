@@ -46,7 +46,8 @@ public interface CGroupsHandler {
     CPUACCT("cpuacct"),
     CPUSET("cpuset"),
     FREEZER("freezer"),
-    DEVICES("devices");
+    DEVICES("devices"),
+    PIDS("pids");
 
     private final String name;
 
@@ -84,7 +85,7 @@ public interface CGroupsHandler {
   String CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES = "memsw.usage_in_bytes";
   String CGROUP_NO_LIMIT = "-1";
   String UNDER_OOM = "under_oom 1";
-
+  String CGROUP_PIDS_MAX = "max";
 
   String CGROUP_CPU_PERIOD_US = "cfs_period_us";
   String CGROUP_CPU_QUOTA_US = "cfs_quota_us";
