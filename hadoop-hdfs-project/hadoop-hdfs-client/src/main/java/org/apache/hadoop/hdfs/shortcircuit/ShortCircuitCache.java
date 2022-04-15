@@ -232,7 +232,7 @@ public class ShortCircuitCache implements Closeable {
               throw new SocketException("Create domain socket failed");
             }
           }
-        }
+        } // end of while block
       } catch (IOException e) {
         LOG.warn(ShortCircuitCache.this + ": failed to release "
             + "short-circuit shared memory slot " + slot + " by sending "
@@ -248,7 +248,7 @@ public class ShortCircuitCache implements Closeable {
           pathToDomainSocket.remove(path);
         }
       }
-    }
+    } // end of run()
   }
 
   public interface ShortCircuitReplicaCreator {

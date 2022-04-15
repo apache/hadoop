@@ -958,7 +958,7 @@ public class TestShortCircuitCache {
     }
   }
 
-  // Regression test for HDFS-16473
+  // Regression test for HDFS-16535
   @Test(timeout = 60000)
   public void testDomainSocketClosedByMultipleDNs() throws Exception {
     TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
