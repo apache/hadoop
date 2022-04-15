@@ -59,7 +59,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.*;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 
 @InterfaceAudience.Public
@@ -449,7 +449,7 @@ extends AbstractDelegationTokenIdentifier>
     try {
       long start = Time.monotonicNow();
       storeToken(identifier, tokenInfo);
-      metrics.addStoreToken(Time.monotonicNow() - start);
+      metrics.addTimeStoreToken(Time.monotonicNow() - start);
     } catch (IOException ioe) {
       LOG.error("Could not store token " + formatTokenId(identifier) + "!!",
           ioe);
@@ -578,7 +578,7 @@ extends AbstractDelegationTokenIdentifier>
     try {
       long start = Time.monotonicNow();
       updateToken(id, info);
-      metrics.addUpdateToken(Time.monotonicNow() - start);
+      metrics.addTimeUpdateToken(Time.monotonicNow() - start);
     } catch (IOException ioe) {
       metrics.addTokenFailure();
       throw ioe;
@@ -622,7 +622,7 @@ extends AbstractDelegationTokenIdentifier>
       long start = Time.monotonicNow();
       removeTokenForOwnerStats(id);
       removeStoredToken(id);
-      metrics.addRemoveToken(Time.monotonicNow() - start);
+      metrics.addTimeRemoveToken(Time.monotonicNow() - start);
     } catch (IOException ioe) {
       metrics.addTokenFailure();
       throw ioe;
@@ -898,19 +898,19 @@ extends AbstractDelegationTokenIdentifier>
       LOG.debug("Initialized {}", registry);
     }
 
-    public void addStoreToken(long value) {
-      storeToken.add(value);
-      ioStatistics.addTimedOperation(STORE_TOKEN_STAT, value);
+    public void addTimeStoreToken(final long durationMillis) {
+      storeToken.add(durationMillis);
+      ioStatistics.addTimedOperation(STORE_TOKEN_STAT, durationMillis);
     }
 
-    public void addUpdateToken(long value) {
-      updateToken.add(value);
-      ioStatistics.addTimedOperation(UPDATE_TOKEN_STAT, value);
+    public void addTimeUpdateToken(final long durationMillis) {
+      updateToken.add(durationMillis);
+      ioStatistics.addTimedOperation(UPDATE_TOKEN_STAT, durationMillis);
     }
 
-    public void addRemoveToken(long value) {
-      removeToken.add(value);
-      ioStatistics.addTimedOperation(REMOVE_TOKEN_STAT, value);
+    public void addTimeRemoveToken(final long durationMillis) {
+      removeToken.add(durationMillis);
+      ioStatistics.addTimedOperation(REMOVE_TOKEN_STAT, durationMillis);
     }
 
     public void addTokenFailure() {

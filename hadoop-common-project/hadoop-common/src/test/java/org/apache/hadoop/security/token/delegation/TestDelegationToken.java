@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 
 import org.apache.hadoop.io.DataInputBuffer;
@@ -620,7 +621,7 @@ public class TestDelegationToken {
   public void testDelegationTokenSecretManagerMetrics() throws Exception {
     TestDelegationTokenSecretManager dtSecretManager =
         new TestDelegationTokenSecretManager(24*60*60*1000,
-            10*1000,1*1000,3600000);
+            10*1000, 1*1000, 60*60*1000);
     try {
       dtSecretManager.startThreads();
 
@@ -657,20 +658,10 @@ public class TestDelegationToken {
       generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
       Assert.assertEquals(1, dtSecretManager.metrics.tokenFailure.value());
 
-      try {
-        dtSecretManager.renewToken(token, "JobTracker");
-        Assert.fail("Expected exception");
-      } catch (Exception ex) {
-        // Expected exception
-      }
+      LambdaTestUtils.intercept(Exception.class, () -> dtSecretManager.renewToken(token, "JobTracker"));
       Assert.assertEquals(2, dtSecretManager.metrics.tokenFailure.value());
 
-      try {
-        dtSecretManager.cancelToken(token, "JobTracker");
-        Assert.fail("Expected exception");
-      } catch (Exception ex) {
-        // Expected exception
-      }
+      LambdaTestUtils.intercept(Exception.class, () -> dtSecretManager.cancelToken(token, "JobTracker"));
       Assert.assertEquals(3, dtSecretManager.metrics.tokenFailure.value());
     } finally {
       dtSecretManager.stopThreads();
