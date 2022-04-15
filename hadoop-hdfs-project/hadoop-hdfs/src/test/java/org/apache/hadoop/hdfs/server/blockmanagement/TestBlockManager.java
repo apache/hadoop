@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -889,6 +890,7 @@ public class TestBlockManager {
 
   @Test
   public void testSkipReconstructionWithManyBusyNodes2() {
+    NameNode.initMetrics(new Configuration(), HdfsServerConstants.NamenodeRole.NAMENODE);
     long blockId = -9223372036854775776L; // real ec block id
     // RS-3-2 EC policy
     ErasureCodingPolicy ecPolicy =

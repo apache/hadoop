@@ -175,8 +175,9 @@ public class OfflineImageViewerPB {
     String tempPath = cmd.getOptionValue("t", "");
 
     Configuration conf = new Configuration();
-    try (PrintStream out = outputFile.equals("-") ?
-        System.out : new PrintStream(outputFile, "UTF-8")) {
+    PrintStream out = null;
+    try {
+      out = outputFile.equals("-") ? System.out : new PrintStream(outputFile, "UTF-8");
       switch (StringUtils.toUpperCase(processor)) {
       case "FILEDISTRIBUTION":
         long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
@@ -223,6 +224,10 @@ public class OfflineImageViewerPB {
     } catch (IOException e) {
       System.err.println("Encountered exception.  Exiting: " + e.getMessage());
       e.printStackTrace(System.err);
+    } finally {
+      if (out != null && out != System.out) {
+        out.close();
+      }
     }
     return -1;
   }
