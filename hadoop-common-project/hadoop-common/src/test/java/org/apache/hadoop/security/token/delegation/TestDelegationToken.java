@@ -161,7 +161,7 @@ public class TestDelegationToken {
     private boolean throwError = false;
 
     public TestFailureDelegationTokenSecretManager() {
-      super(24*60*60*1000, 10*1000, 1*1000, 3600000);
+      super(24*60*60*1000, 10*1000, 1*1000, 60*60*1000);
     }
 
     public void setThrowError(boolean throwError) {
