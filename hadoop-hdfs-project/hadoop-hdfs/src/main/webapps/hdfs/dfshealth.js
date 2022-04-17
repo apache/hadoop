@@ -227,8 +227,10 @@
           var n = nodes[i];
           n.usedPercentage = Math.round((n.used + n.nonDfsUsedSpace) * 1.0 / n.capacity * 100);
 
-          var port = n.infoAddr.split(":")[1];
-          var securePort = n.infoSecureAddr.split(":")[1];
+          var array = n.infoAddr.split(":");
+          var port = array[array.length-1];
+          array = n.infoSecureAddr.split(":");
+          var securePort = array[array.length-1];
           var dnHost = n.name.split(":")[0];
           n.dnWebAddress = "http://" + dnHost + ":" + port;
           if (securePort != 0) {
