@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
+import org.apache.hadoop.hdfs.server.datanode.extdataset.ExternalVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
@@ -218,7 +219,7 @@ public class TestInterDatanodeProtocol {
   }
 
   private static ReplicaInfo createReplicaInfo(Block b) {
-    return new FinalizedReplica(b, null, null);
+    return new FinalizedReplica(b, new ExternalVolumeImpl(), null);
   }
 
   private static void assertEquals(ReplicaInfo originalInfo, ReplicaRecoveryInfo recoveryInfo) {
@@ -318,6 +319,10 @@ public class TestInterDatanodeProtocol {
            "replica.getGenerationStamp() < block.getGenerationStamp(), block=");
       }
     }
+
+    manager.lockLeakCheck();
+    // make sure no lock Leak.
+    assertNull(manager.getLastException());
   }
 
   /** 
