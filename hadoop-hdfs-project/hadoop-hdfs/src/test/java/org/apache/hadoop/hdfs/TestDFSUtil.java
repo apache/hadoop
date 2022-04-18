@@ -513,6 +513,13 @@ public class TestDFSUtil {
     assertEquals(
         URI.create("http://localhost:" + DFS_NAMENODE_HTTP_PORT_DEFAULT),
         httpAddress);
+
+    //Verify IPv6 Address
+    httpAddress = DFSUtil.getInfoServer(new InetSocketAddress(
+        "::0", 8020), conf, "http");
+    assertEquals(
+        URI.create("http://[0:0:0:0:0:0:0:0]:" + DFS_NAMENODE_HTTP_PORT_DEFAULT),
+        httpAddress);
   }
   
   @Test

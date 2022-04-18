@@ -46,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.net.SocketFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
@@ -1217,5 +1218,31 @@ public class NetUtils {
       return localAddr;
     }
     return null;
+  }
+
+  /**
+   * Parse the given address into  IP & Port number pair.
+   * @param bindAddress IP Address to parse
+   * @return Pair of IP-Address & Port number.
+   */
+  public static Pair<String, Integer> parseAddress2IpAndPort(
+      String bindAddress) {
+    String[] parts = org.apache.hadoop.util.StringUtils
+        .split(bindAddress, ':');
+    Pair <String, Integer> pair = null;
+    //If bind address is IPv6
+    if (parts.length > 2) {
+      String target = bindAddress;
+      int i = target.lastIndexOf(":");
+      String ipAddress = '['+target.substring(0, i)+']';
+      pair = Pair.of(ipAddress, Integer.parseInt(parts[parts.length-1]));
+    } else if (parts.length == 2) {
+      //Given address is IPv4 Address
+      pair = Pair.of(parts[0], Integer.parseInt(parts[1]));
+    } else {
+      //No port specified, consider port number as 0
+      pair = Pair.of(bindAddress, 0);
+    }
+    return pair;
   }
 }

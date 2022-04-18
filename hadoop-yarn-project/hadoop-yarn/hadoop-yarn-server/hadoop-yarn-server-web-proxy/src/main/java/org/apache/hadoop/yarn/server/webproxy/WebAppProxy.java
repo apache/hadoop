@@ -22,11 +22,12 @@ import java.io.IOException;
 import java.net.URI;
 
 import com.google.common.net.HostAndPort;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -79,12 +80,9 @@ public class WebAppProxy extends AbstractService {
           " is not set so the proxy will not run.");
     }
 
-    String[] parts = StringUtils.split(bindAddress, ':');
-    port = 0;
-    if (parts.length == 2) {
-      bindAddress = parts[0];
-      port = Integer.parseInt(parts[1]);
-    }
+    Pair<String, Integer> pair = NetUtils.parseAddress2IpAndPort(bindAddress);
+    bindAddress = pair.getLeft();
+    port = pair.getRight();
 
     String bindHost = conf.getTrimmed(YarnConfiguration.PROXY_BIND_HOST, null);
     if (bindHost != null) {

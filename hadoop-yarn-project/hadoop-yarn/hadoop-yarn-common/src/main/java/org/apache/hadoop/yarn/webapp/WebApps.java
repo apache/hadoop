@@ -32,12 +32,13 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServlet;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
@@ -118,12 +119,8 @@ public class WebApps {
     }
 
     public Builder<T> at(String bindAddress) {
-      String[] parts = StringUtils.split(bindAddress, ':');
-      if (parts.length == 2) {
-        int port = Integer.parseInt(parts[1]);
-        return at(parts[0], port, port == 0);
-      }
-      return at(bindAddress, 0, true);
+      Pair<String, Integer> pair = NetUtils.parseAddress2IpAndPort(bindAddress);
+      return at(pair.getLeft(), pair.getRight(), pair.getRight() == 0);
     }
 
     public Builder<T> at(int port) {
