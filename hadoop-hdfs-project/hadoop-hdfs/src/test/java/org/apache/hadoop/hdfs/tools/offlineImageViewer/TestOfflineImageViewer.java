@@ -1186,7 +1186,7 @@ public class TestOfflineImageViewer {
       writer.println("<?xml version=\"1.0\"?>");
       writer.println("<fsimage>");
       writer.println("<version>");
-      writer.println("<layoutVersion>-67</layoutVersion>");
+      writer.println("<layoutVersion>-66</layoutVersion>");
       writer.println("<onDiskVersion>1</onDiskVersion>");
       writer.println("<oivRevision>545bbef596c06af1c3c8dca1ce29096a64608478</oivRevision>");
       writer.println("</version>");
