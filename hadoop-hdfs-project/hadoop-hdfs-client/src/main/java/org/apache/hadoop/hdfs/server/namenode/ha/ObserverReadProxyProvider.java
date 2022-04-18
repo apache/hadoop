@@ -168,7 +168,7 @@ public class ObserverReadProxyProvider<T>
   public ObserverReadProxyProvider(
       Configuration conf, URI uri, Class<T> xface, HAProxyFactory<T> factory) {
     this(conf, uri, xface, factory,
-        new ConfiguredFailoverProxyProvider<>(conf, uri, xface, factory));
+        new ConfiguredFailoverProxyProvider<>(conf, uri, xface, factory, true));
   }
 
   @SuppressWarnings("unchecked")
@@ -189,7 +189,7 @@ public class ObserverReadProxyProvider<T>
 
     // Get all NameNode proxies
     nameNodeProxies = getProxyAddresses(uri,
-        HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+        HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, false);
 
     // Create a wrapped proxy containing all the proxies. Since this combined
     // proxy is just redirecting to other proxies, all invocations can share it.

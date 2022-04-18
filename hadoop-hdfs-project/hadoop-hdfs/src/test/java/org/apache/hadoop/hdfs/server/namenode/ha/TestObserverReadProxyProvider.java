@@ -117,9 +117,9 @@ public class TestObserverReadProxyProvider {
         })  {
       @Override
       protected List<NNProxyInfo<ClientProtocol>> getProxyAddresses(
-          URI uri, String addressKey) {
+          URI uri, String addressKey, boolean forOnnFailover2Ann) {
         List<NNProxyInfo<ClientProtocol>> nnProxies =
-            super.getProxyAddresses(uri, addressKey);
+            super.getProxyAddresses(uri, addressKey, forOnnFailover2Ann);
         return nnProxies;
       }
     };
