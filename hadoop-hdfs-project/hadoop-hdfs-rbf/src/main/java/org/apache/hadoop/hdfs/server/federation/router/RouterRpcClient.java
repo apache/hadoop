@@ -1629,6 +1629,9 @@ public class RouterRpcClient {
   }
 
   public String refreshFairnessPolicyController(Configuration conf) {
+    if (routerRpcFairnessPolicyController != null) {
+      routerRpcFairnessPolicyController.shutdown();
+    }
     routerRpcFairnessPolicyController = FederationUtil.newFairnessPolicyController(conf);
     return routerRpcFairnessPolicyController.getClass().getCanonicalName();
   }
