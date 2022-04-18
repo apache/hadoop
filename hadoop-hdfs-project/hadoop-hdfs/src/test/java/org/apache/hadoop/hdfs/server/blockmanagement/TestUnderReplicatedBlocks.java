@@ -37,7 +37,7 @@ import java.util.Iterator;
 
 
 public class TestUnderReplicatedBlocks {
-  @Test(timeout=120000) // 1 min timeout
+  @Test(timeout=180000) // 3 minutes timeout
   public void testSetRepIncWithUnderReplicatedBlocks() throws Exception {
     Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = 2;
