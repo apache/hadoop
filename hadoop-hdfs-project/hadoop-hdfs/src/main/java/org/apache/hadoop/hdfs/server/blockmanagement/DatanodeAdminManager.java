@@ -751,8 +751,10 @@ public class DatanodeAdminManager {
         // Remove the block from the list if it's no longer in the block map,
         // e.g. the containing file has been deleted
         if (blockManager.blocksMap.getStoredBlock(block) == null) {
-          LOG.trace("Removing unknown block {}", block);
-          it.remove();
+          if (pruneReliableBlocks) {
+            LOG.trace("Removing unknown block {}", block);
+            it.remove();
+          }
           continue;
         }
 
