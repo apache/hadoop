@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -58,8 +59,6 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 
 @InterfaceAudience.Public
@@ -109,7 +108,7 @@ extends AbstractDelegationTokenIdentifier>
    */
   private DelegationKey currentKey;
   /**
-   * Metrics to track token management operations
+   * Metrics to track token management operations.
    */
   protected DelegationTokenSecretManagerMetrics metrics;
   
@@ -890,7 +889,7 @@ extends AbstractDelegationTokenIdentifier>
     }
 
     public DelegationTokenSecretManagerMetrics() {
-      ioStatistics = iostatisticsStore()
+      ioStatistics = IOStatisticsBinding.iostatisticsStore()
           .withDurationTracking(STORE_TOKEN_STAT, UPDATE_TOKEN_STAT, REMOVE_TOKEN_STAT)
           .withCounters(TOKEN_FAILURE_STAT)
           .build();

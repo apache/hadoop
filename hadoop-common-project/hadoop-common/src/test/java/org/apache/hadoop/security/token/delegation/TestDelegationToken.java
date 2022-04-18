@@ -30,6 +30,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.Callable;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 
@@ -625,18 +628,12 @@ public class TestDelegationToken {
     try {
       dtSecretManager.startThreads();
 
-      Assert.assertEquals(0, dtSecretManager.metrics.storeToken.lastStat().numSamples());
-      final Token<TestDelegationTokenIdentifier> token =
-          generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
-      Assert.assertEquals(1, dtSecretManager.metrics.storeToken.lastStat().numSamples());
+      final Token<TestDelegationTokenIdentifier> token = callAndValidateMetrics(dtSecretManager.metrics.storeToken,
+          () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"), 1);
 
-      Assert.assertEquals(0, dtSecretManager.metrics.updateToken.lastStat().numSamples());
-      dtSecretManager.renewToken(token, "JobTracker");
-      Assert.assertEquals(1, dtSecretManager.metrics.updateToken.lastStat().numSamples());
+      callAndValidateMetrics(dtSecretManager.metrics.updateToken, () -> dtSecretManager.renewToken(token, "JobTracker"), 1);
 
-      Assert.assertEquals(0, dtSecretManager.metrics.removeToken.lastStat().numSamples());
-      dtSecretManager.cancelToken(token, "JobTracker");
-      Assert.assertEquals(1, dtSecretManager.metrics.removeToken.lastStat().numSamples());
+      callAndValidateMetrics(dtSecretManager.metrics.removeToken, () -> dtSecretManager.cancelToken(token, "JobTracker"), 1);
     } finally {
       dtSecretManager.stopThreads();
     }
@@ -654,17 +651,32 @@ public class TestDelegationToken {
 
       dtSecretManager.setThrowError(true);
 
-      Assert.assertEquals(0, dtSecretManager.metrics.tokenFailure.value());
-      generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
-      Assert.assertEquals(1, dtSecretManager.metrics.tokenFailure.value());
+      callAndValidateMetrics(dtSecretManager.metrics.tokenFailure,
+          () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"), 1, false);
 
-      LambdaTestUtils.intercept(Exception.class, () -> dtSecretManager.renewToken(token, "JobTracker"));
-      Assert.assertEquals(2, dtSecretManager.metrics.tokenFailure.value());
+      callAndValidateMetrics(dtSecretManager.metrics.tokenFailure, () -> dtSecretManager.renewToken(token, "JobTracker"), 2, true);
 
-      LambdaTestUtils.intercept(Exception.class, () -> dtSecretManager.cancelToken(token, "JobTracker"));
-      Assert.assertEquals(3, dtSecretManager.metrics.tokenFailure.value());
+      callAndValidateMetrics(dtSecretManager.metrics.tokenFailure, () -> dtSecretManager.cancelToken(token, "JobTracker"), 3, true);
     } finally {
       dtSecretManager.stopThreads();
     }
+  }
+
+  private <T> T callAndValidateMetrics(MutableRate metric, Callable<T> callable, int expectedCount) throws Exception {
+    Assert.assertEquals(expectedCount - 1, metric.lastStat().numSamples());
+    T returnedObject = callable.call();
+    Assert.assertEquals(expectedCount, metric.lastStat().numSamples());
+    return returnedObject;
+  }
+
+  private <T> void callAndValidateMetrics(MutableCounterLong counter, Callable<T> callable, int expectedCount, boolean expectError)
+      throws Exception {
+    Assert.assertEquals(expectedCount - 1, counter.value());
+    if (expectError) {
+      LambdaTestUtils.intercept(IOException.class, callable);
+    } else {
+      callable.call();
+    }
+    Assert.assertEquals(expectedCount, counter.value());
   }
 }
