@@ -23,11 +23,6 @@
   </property>
 
   <property>
-    <name>fs.contract.supports-root-delete</name>
-    <value>true</value>
-  </property>
-
-  <property>
     <name>fs.contract.test.supports-concat</name>
     <value>true</value>
   </property>

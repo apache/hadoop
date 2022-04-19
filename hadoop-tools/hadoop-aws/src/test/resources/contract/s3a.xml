@@ -28,11 +28,6 @@
   </property>
 
   <property>
-    <name>fs.contract.supports-root-delete</name>
-    <value>false</value>
-  </property>
-
-  <property>
     <name>fs.contract.test.random-seek-count</name>
     <value>10</value>
   </property>
@@ -152,4 +147,8 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.contract.supports-root-delete</name>
+    <value>false</value>
+  </property>
 </configuration>
