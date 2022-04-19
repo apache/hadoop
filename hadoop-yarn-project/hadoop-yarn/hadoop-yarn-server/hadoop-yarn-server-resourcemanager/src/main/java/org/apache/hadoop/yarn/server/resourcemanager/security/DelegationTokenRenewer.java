@@ -528,7 +528,8 @@ public class DelegationTokenRenewer extends AbstractService {
           long expirationDate = now;
           if (tokenIdentifier instanceof AbstractDelegationTokenIdentifier) {
             // cast to abstract
-            AbstractDelegationTokenIdentifier tmpIdentifier = (AbstractDelegationTokenIdentifier) tokenIdentifier;
+            AbstractDelegationTokenIdentifier tmpIdentifier =
+                    (AbstractDelegationTokenIdentifier) tokenIdentifier;
             expirationDate = tmpIdentifier.getMaxDate();
           }
           dttr = new DelegationTokenToRenew(Collections.singletonList(applicationId), token,
