@@ -919,7 +919,7 @@
       <dependency>
         <groupId>cglib</groupId>
         <artifactId>cglib</artifactId>
-        <version>3.2.0</version>
+        <version>3.3.0</version>
       </dependency>
 
       <dependency>
@@ -2246,7 +2246,7 @@
                   </excludes>
                   <includes>
                     <!-- for JDK 8 support -->
-                    <include>cglib:cglib:3.2.0</include>
+                    <include>cglib:cglib:3.3.0</include>
                     <include>com.google.inject:guice:4.0</include>
                     <include>com.sun.jersey:jersey-core:1.19</include>
                     <include>com.sun.jersey:jersey-servlet:1.19</include>
