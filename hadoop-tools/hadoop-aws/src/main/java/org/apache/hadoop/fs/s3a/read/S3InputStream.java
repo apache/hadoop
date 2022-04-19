@@ -254,6 +254,10 @@ public abstract class S3InputStream
   public int read() throws IOException {
     this.throwIfClosed();
 
+    if (this.s3File.size() == 0 || this.seekTargetPos >= this.s3File.size()) {
+      return -1;
+    }
+
     if (!ensureCurrentBuffer()) {
       return -1;
     }
@@ -427,18 +431,8 @@ public abstract class S3InputStream
   }
 
   protected void throwIfInvalidSeek(long pos) throws EOFException {
-    long fileSize = this.s3File.size();
     if (pos < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK + " " + pos);
-    } else {
-      if (fileSize == 0 && pos == 0) {
-        // Do nothing. Valid combination.
-        return;
-      }
-
-      if (pos >= fileSize) {
-        throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF + " " + pos);
-      }
     }
   }
 
