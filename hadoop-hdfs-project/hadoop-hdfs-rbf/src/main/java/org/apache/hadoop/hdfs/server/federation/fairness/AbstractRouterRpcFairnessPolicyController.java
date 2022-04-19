@@ -22,10 +22,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.utils.AdjustableSemaphore;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +43,9 @@ public class AbstractRouterRpcFairnessPolicyController
       LoggerFactory.getLogger(AbstractRouterRpcFairnessPolicyController.class);
 
   /** Hash table to hold semaphore for each configured name service. */
-  private Map<String, Semaphore> permits;
+  protected Map<String, AdjustableSemaphore> permits;
+  protected Map<String, LongAdder> rejectedPermitsPerNs;
+  protected Map<String, LongAdder> acceptedPermitsPerNs;
 
   public void init(Configuration conf) {
     this.permits = new HashMap<>();
@@ -71,7 +76,7 @@ public class AbstractRouterRpcFairnessPolicyController
   }
 
   protected void insertNameServiceWithPermits(String nsId, int maxPermits) {
-    this.permits.put(nsId, new Semaphore(maxPermits));
+    this.permits.put(nsId, new AdjustableSemaphore(maxPermits));
   }
 
   protected int getAvailablePermits(String nsId) {
@@ -81,7 +86,7 @@ public class AbstractRouterRpcFairnessPolicyController
   @Override
   public String getAvailableHandlerOnPerNs() {
     JSONObject json = new JSONObject();
-    for (Map.Entry<String, Semaphore> entry : permits.entrySet()) {
+    for (Map.Entry<String, AdjustableSemaphore> entry : permits.entrySet()) {
       try {
         String nsId = entry.getKey();
         int availableHandler = entry.getValue().availablePermits();
@@ -91,5 +96,12 @@ public class AbstractRouterRpcFairnessPolicyController
       }
     }
     return json.toString();
+  }
+
+  @Override
+  public void setMetrics(Map<String, LongAdder> rejectedPermitsPerNs,
+      Map<String, LongAdder> acceptedPermitsPerNs) {
+    this.rejectedPermitsPerNs = rejectedPermitsPerNs;
+    this.acceptedPermitsPerNs = acceptedPermitsPerNs;
   }
 }

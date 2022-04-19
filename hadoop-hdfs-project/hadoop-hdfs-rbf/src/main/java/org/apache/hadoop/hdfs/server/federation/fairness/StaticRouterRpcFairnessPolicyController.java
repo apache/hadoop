@@ -23,6 +23,8 @@ import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -45,6 +47,8 @@ public class StaticRouterRpcFairnessPolicyController extends
   public static final String ERROR_MSG = "Configured handlers "
       + DFS_ROUTER_HANDLER_COUNT_KEY + '='
       + " %d is less than the minimum required handlers %d";
+
+  protected Map<String, Integer> permitSizes = new HashMap<>();
 
   public StaticRouterRpcFairnessPolicyController(Configuration conf) {
     init(conf);
@@ -78,6 +82,7 @@ public class StaticRouterRpcFairnessPolicyController extends
         handlerCount -= dedicatedHandlers;
         insertNameServiceWithPermits(nsId, dedicatedHandlers);
         logAssignment(nsId, dedicatedHandlers);
+        permitSizes.put(nsId, dedicatedHandlers);
       } else {
         unassignedNS.add(nsId);
       }
@@ -92,6 +97,7 @@ public class StaticRouterRpcFairnessPolicyController extends
       for (String nsId : unassignedNS) {
         insertNameServiceWithPermits(nsId, handlersPerNS);
         logAssignment(nsId, handlersPerNS);
+        permitSizes.put(nsId, handlersPerNS);
       }
     }
 
@@ -103,6 +109,7 @@ public class StaticRouterRpcFairnessPolicyController extends
       LOG.info("Assigned extra {} handlers to commons pool", leftOverHandlers);
       insertNameServiceWithPermits(CONCURRENT_NS,
           existingPermits + leftOverHandlers);
+      permitSizes.put(CONCURRENT_NS, existingPermits + leftOverHandlers);
     }
     LOG.info("Final permit allocation for concurrent ns: {}",
         getAvailablePermits(CONCURRENT_NS));

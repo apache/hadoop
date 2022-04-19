@@ -354,6 +354,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       NoRouterRpcFairnessPolicyController.class;
   public static final String DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX =
       FEDERATION_ROUTER_FAIRNESS_PREFIX + "handler.count.";
+  public static final long DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_DEFAULT =
+      600000;
+  public static final String DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_KEY =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "policy.controller.dynamic.refresh.interval";
 
   // HDFS Router Federation Rename.
   public static final String DFS_ROUTER_FEDERATION_RENAME_PREFIX =
