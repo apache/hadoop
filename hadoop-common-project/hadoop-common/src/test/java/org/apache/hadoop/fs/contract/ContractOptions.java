@@ -235,10 +235,10 @@ public interface ContractOptions {
   String TEST_ROOT_TESTS_ENABLED = "test.root-tests-enabled";
 
   /**
-   * Does the FS support root directory delete?
+   * Indicates that FS is incompatible with root delete.
    * {@value}
    */
-  String SUPPORTS_ROOT_DELETE = "supports-root-delete";
+  String ROOT_DELETE_INCOMPATIBLE_FS = "root-delete-incompatible-fs";
 
   /**
    * Limit for #of random seeks to perform.

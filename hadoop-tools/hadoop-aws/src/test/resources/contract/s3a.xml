@@ -148,7 +148,7 @@
   </property>
 
   <property>
-    <name>fs.contract.supports-root-delete</name>
-    <value>false</value>
+    <name>fs.contract.root-delete-incompatible-fs</name>
+    <value>true</value>
   </property>
 </configuration>
