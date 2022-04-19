@@ -313,11 +313,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
               <artifactId>wagon-ssh</artifactId>
               <version>${wagon-ssh.version}</version>
             </dependency>
-            <dependency>
-              <groupId>org.apache.maven.doxia</groupId>
-              <artifactId>doxia-module-markdown</artifactId>
-              <version>1.8</version>
-            </dependency>
           </dependencies>
         </plugin>
         <!--This plugin's configuration is used to store Eclipse m2e settings only.
