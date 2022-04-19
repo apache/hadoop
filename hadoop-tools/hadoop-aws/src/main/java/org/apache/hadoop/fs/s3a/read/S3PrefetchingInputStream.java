@@ -103,8 +103,7 @@ public class S3PrefetchingInputStream
    */
   @Override
   public synchronized long getPos() throws IOException {
-    this.throwIfClosed();
-    return this.inputStream.getPos();
+    return this.isClosed() ? 0 : this.inputStream.getPos();
   }
 
   /**
