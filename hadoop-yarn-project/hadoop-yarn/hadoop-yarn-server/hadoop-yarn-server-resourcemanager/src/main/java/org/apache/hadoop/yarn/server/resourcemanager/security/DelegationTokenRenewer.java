@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -522,10 +523,22 @@ public class DelegationTokenRenewer extends AbstractService {
           }  else {
             tokenConf = getConfig();
           }
-          dttr = new DelegationTokenToRenew(Arrays.asList(applicationId), token,
-              tokenConf, now, shouldCancelAtEnd, evt.getUser());
+          // decode identify to get maxDate.
+          TokenIdentifier tokenIdentifier = token.decodeIdentifier();
+          long expirationDate = now;
+          if (tokenIdentifier instanceof AbstractDelegationTokenIdentifier) {
+            // cast to abstract
+            AbstractDelegationTokenIdentifier tmpIdentifier = (AbstractDelegationTokenIdentifier) tokenIdentifier;
+            expirationDate = tmpIdentifier.getMaxDate();
+          }
+          dttr = new DelegationTokenToRenew(Collections.singletonList(applicationId), token,
+              tokenConf, expirationDate, shouldCancelAtEnd, evt.getUser());
+
           try {
-            renewToken(dttr);
+            // if expire date is not greater than now, renew token.
+            if (expirationDate <= now) {
+              renewToken(dttr);
+            }
           } catch (IOException ioe) {
             if (ioe instanceof SecretManager.InvalidToken
                 && dttr.maxDate < Time.now()
@@ -535,7 +548,7 @@ public class DelegationTokenRenewer extends AbstractService {
                   + " on recovery as it expired, requesting new hdfs token for "
                   + applicationId + ", user=" + evt.getUser(), ioe);
               requestNewHdfsDelegationTokenAsProxyUser(
-                  Arrays.asList(applicationId), evt.getUser(),
+                      Collections.singletonList(applicationId), evt.getUser(),
                   evt.shouldCancelAtEnd());
               continue;
             }
