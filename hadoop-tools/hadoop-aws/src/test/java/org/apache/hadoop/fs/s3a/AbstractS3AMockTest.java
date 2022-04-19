@@ -73,7 +73,7 @@ public abstract class AbstractS3AMockTest {
     // this is so stream draining is always blocking, allowing
     // assertions to be safely made without worrying
     // about any race conditions
-    conf.setInt(ASYNC_DRAIN_THRESHOLD, 128_000);
+    conf.setInt(ASYNC_DRAIN_THRESHOLD, Integer.MAX_VALUE);
     return conf;
   }
 

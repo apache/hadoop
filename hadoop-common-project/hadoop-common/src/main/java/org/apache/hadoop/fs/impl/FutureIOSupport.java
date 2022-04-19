@@ -36,14 +36,16 @@ import org.apache.hadoop.util.functional.FutureIO;
 
 /**
  * Support for future IO and the FS Builder subclasses.
- * If methods in here are needed for applications, promote
- * to {@link FutureIO} for public use -with the original
- * method relaying to it. This is to ensure that external
- * filesystem implementations can safely use these methods
+ * All methods in this class have been superceded by those in
+ * {@link FutureIO}.
+ * The methods here are retained but all marked as deprecated.
+ * This is to ensure that any external
+ * filesystem implementations can still use these methods
  * without linkage problems surfacing.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 public final class FutureIOSupport {
 
   private FutureIOSupport() {
@@ -60,7 +62,8 @@ public final class FutureIOSupport {
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    */
-  public static <T> T  awaitFuture(final Future<T> future)
+  @Deprecated
+  public static <T> T awaitFuture(final Future<T> future)
       throws InterruptedIOException, IOException, RuntimeException {
     return FutureIO.awaitFuture(future);
   }
@@ -78,6 +81,7 @@ public final class FutureIOSupport {
    * @throws RuntimeException any nested RTE thrown
    * @throws TimeoutException the future timed out.
    */
+  @Deprecated
   public static <T> T awaitFuture(final Future<T> future,
       final long timeout,
       final TimeUnit unit)
@@ -97,6 +101,7 @@ public final class FutureIOSupport {
    * any non-Runtime-Exception
    * @throws RuntimeException if that is the inner cause.
    */
+  @Deprecated
   public static <T> T raiseInnerCause(final ExecutionException e)
       throws IOException {
     return FutureIO.raiseInnerCause(e);
@@ -113,6 +118,7 @@ public final class FutureIOSupport {
    * any non-Runtime-Exception
    * @throws RuntimeException if that is the inner cause.
    */
+  @Deprecated
   public static <T> T raiseInnerCause(final CompletionException e)
       throws IOException {
     return FutureIO.raiseInnerCause(e);

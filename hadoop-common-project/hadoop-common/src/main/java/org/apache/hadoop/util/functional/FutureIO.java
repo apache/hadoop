@@ -90,6 +90,8 @@ public final class FutureIO {
    * extracted and rethrown.
    * </p>
    * @param future future to evaluate
+   * @param timeout timeout to wait
+   * @param unit time unit.
    * @param <T> type of the result.
    * @return the result, if all went well.
    * @throws InterruptedIOException future was interrupted

@@ -40,7 +40,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES_READ_CLOSE;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_OPENED;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_SEEK_BYTES_SKIPPED;
-import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_IO;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertDurationRange;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
@@ -115,13 +115,13 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
                 .withFileStatus(st2)
                 .build()
                 .get(),
-        always(NO_IO),
+        always(NO_HEAD_OR_LIST),
         with(STREAM_READ_OPENED, 0));
 
     // the stream gets opened during read
     long readLen = verifyMetrics(() ->
             readStream(in),
-        always(NO_IO),
+        always(NO_HEAD_OR_LIST),
         with(STREAM_READ_OPENED, 1));
     assertEquals("bytes read from file", fileLength, readLen);
   }
@@ -144,7 +144,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
                 .opt(FS_OPTION_OPENFILE_LENGTH, shortLen)
                 .build()
                 .get(),
-        always(NO_IO),
+        always(NO_HEAD_OR_LIST),
         with(STREAM_READ_OPENED, 0));
 
     // verify that the statistics are in range
@@ -158,7 +158,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     // now read it
     long r2 = verifyMetrics(() ->
             readStream(in2),
-        always(NO_IO),
+        always(NO_HEAD_OR_LIST),
         with(STREAM_READ_OPENED, 1),
         with(STREAM_READ_BYTES_READ_CLOSE, 0),
         with(STREAM_READ_SEEK_BYTES_SKIPPED, 0));
@@ -166,16 +166,18 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     LOG.info("Statistics of read stream {}", statsString);
 
     assertEquals("bytes read from file", shortLen, r2);
-    // the read has been ranged
+    // no bytes were discarded.
     bytesDiscarded.assertDiffEquals(0);
   }
 
   @Test
   public void testOpenFileLongerLength() throws Throwable {
-    // do a second read with the length declared as short.
-    // we now expect the bytes read to be shorter.
+    // do a second read with the length declared as longer
+    // than it is.
+    // An EOF will be read on readFully(), -1 on a read()
+
     S3AFileSystem fs = getFileSystem();
-    // now set a length past the actual file length
+    // set a length past the actual file length
     long longLen = fileLength + 10;
     FSDataInputStream in3 = verifyMetrics(() ->
             fs.openFile(testFile)
@@ -184,10 +186,10 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
                 .must(FS_OPTION_OPENFILE_LENGTH, longLen)
                 .build()
                 .get(),
-        always(NO_IO));
+        always(NO_HEAD_OR_LIST));
 
-    // shows that irrespective of the declared length, you can read past it,
-    // and an EOFException is raised
+    // assert behaviors of seeking/reading past the file length.
+    // there is no attempt at recovery.
     verifyMetrics(() -> {
       byte[] out = new byte[(int) longLen];
       intercept(EOFException.class,

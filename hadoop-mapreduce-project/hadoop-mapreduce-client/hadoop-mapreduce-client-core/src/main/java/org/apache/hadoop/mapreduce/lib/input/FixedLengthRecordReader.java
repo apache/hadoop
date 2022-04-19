@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.functional.FutureIO;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

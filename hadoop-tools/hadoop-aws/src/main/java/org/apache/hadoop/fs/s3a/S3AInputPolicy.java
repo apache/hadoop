@@ -40,8 +40,8 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 public enum S3AInputPolicy {
 
   Normal(FS_OPTION_OPENFILE_READ_POLICY_DEFAULT, false, true),
-  Random(FS_OPTION_OPENFILE_READ_POLICY_RANDOM, false, false),
-  Sequential(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL, true, false);
+  Random(FS_OPTION_OPENFILE_READ_POLICY_RANDOM, true, false),
+  Sequential(FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL, false, false);
 
   /** Policy name. */
   private final String policy;

@@ -630,6 +630,9 @@ public final class Constants {
    * The default value for this FS.
    * Which for S3A, is adaptive.
    * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
    */
   public static final String INPUT_FADV_DEFAULT =
       Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
@@ -645,6 +648,9 @@ public final class Constants {
   /**
    * Optimized for sequential access.
    * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
    */
   public static final String INPUT_FADV_SEQUENTIAL =
       Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
@@ -654,6 +660,9 @@ public final class Constants {
    * The performance of sequential IO may be reduced in exchange for
    * more efficient {@code seek()} operations.
    * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
    */
   public static final String INPUT_FADV_RANDOM =
       Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
