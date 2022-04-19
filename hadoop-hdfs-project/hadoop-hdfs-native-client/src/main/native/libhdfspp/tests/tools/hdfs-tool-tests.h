@@ -69,6 +69,19 @@ template <class T> std::unique_ptr<T> PassRecursivePath() {
   return hdfs_tool;
 }
 
+template <class T> std::unique_ptr<T> PassFOptAndAPath() {
+  constexpr auto argc = 3;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-f");
+  static std::string arg2("a/b/c");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassFOptAndAPath<T>, {arg1, arg2});
+  return hdfs_tool;
+}
+
 template <class T> std::unique_ptr<T> CallHelp() {
   constexpr auto argc = 2;
   static std::string exe("hdfs_tool_name");
@@ -223,6 +236,18 @@ template <class T> std::unique_ptr<T> PassMOpt() {
 
   auto hdfs_tool = std::make_unique<T>(argc, argv);
   hdfs_tool->SetExpectations(PassMOpt<T>, {arg1});
+  return hdfs_tool;
+}
+
+template <class T> std::unique_ptr<T> PassFOpt() {
+  constexpr auto argc = 2;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-f");
+
+  static char *argv[] = {exe.data(), arg1.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassFOpt<T>, {arg1});
   return hdfs_tool;
 }
 

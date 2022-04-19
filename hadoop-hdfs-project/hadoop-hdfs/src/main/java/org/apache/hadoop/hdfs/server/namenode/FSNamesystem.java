@@ -2448,7 +2448,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean setReplication(final String src, final short replication)
       throws IOException {
     final String operationName = "setReplication";
-    boolean success = false;
+    FSDirAttrOp.SetRepStatus status;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
@@ -2457,7 +2457,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot set replication for " + src);
-        success = FSDirAttrOp.setReplication(dir, pc, blockManager, src,
+        status = FSDirAttrOp.setReplication(dir, pc, blockManager, src,
             replication);
       } finally {
         writeUnlock(operationName, getLockReportInfoSupplier(src));
@@ -2466,11 +2466,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (success) {
+    if (status == FSDirAttrOp.SetRepStatus.SUCCESS) {
       getEditLog().logSync();
-      logAuditEvent(true, operationName, src);
     }
-    return success;
+    logAuditEvent(status != FSDirAttrOp.SetRepStatus.INVALID,
+        operationName, src);
+    return status != FSDirAttrOp.SetRepStatus.INVALID;
   }
 
   /**
@@ -4873,6 +4874,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public long getCurrentTokensCount() {
     return dtSecretManager != null ?
         dtSecretManager.getCurrentTokensSize() : -1;
+  }
+
+  @Override
+  @Metric({"PendingSPSPaths", "The number of paths to be processed by storage policy satisfier"})
+  public int getPendingSPSPaths() {
+    return blockManager.getPendingSPSPaths();
   }
 
   /**
@@ -8399,7 +8406,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             getBlockManager().getDatanodeManager().getNumOfDataNodes();
         int numOfRacks =
             getBlockManager().getDatanodeManager().getNetworkTopology()
-                .getNumOfRacks();
+                .getNumOfNonEmptyRacks();
         result = ECTopologyVerifier
             .getECTopologyVerifierResult(numOfRacks, numOfDataNodes, policies);
       }
@@ -8944,7 +8951,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     int numOfDataNodes =
         getBlockManager().getDatanodeManager().getNumOfDataNodes();
     int numOfRacks = getBlockManager().getDatanodeManager().getNetworkTopology()
-        .getNumOfRacks();
+        .getNumOfNonEmptyRacks();
     ErasureCodingPolicy[] enabledEcPolicies =
         getErasureCodingPolicyManager().getCopyOfEnabledPolicies();
     return ECTopologyVerifier
@@ -9006,4 +9013,3 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 }
-

@@ -44,6 +44,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.BLOCK_SIZE;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.CELL_SIZE;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.NUM_DATA_UNITS;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.NUM_PARITY_UNITS;
@@ -163,6 +164,23 @@ public class TestReadStripedFileWithDecoding {
           blks[0].getLocations()[0], b) || dnd.containsInvalidateBlock(b));
     } finally {
       DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
+    }
+  }
+
+  @Test
+  public void testMoreThanOneCorruptedBlock() throws IOException {
+    final Path file = new Path("/corrupted");
+    final int length = BLOCK_SIZE * NUM_DATA_UNITS;
+    final byte[] bytes = StripedFileTestUtil.generateBytes(length);
+    DFSTestUtil.writeFile(dfs, file, bytes);
+
+    // read the file with more than one corrupted data block
+    byte[] buffer = new byte[length + 100];
+    for (int count = 2; count < NUM_PARITY_UNITS; ++count) {
+      ReadStripedFileWithDecodingHelper.corruptBlocks(cluster, dfs, file, count, 0,
+          false);
+      StripedFileTestUtil.verifyStatefulRead(dfs, file, length, bytes,
+          buffer);
     }
   }
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.sls.SLSRunner;
 
 @Private
 @Unstable
@@ -43,6 +44,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
 
   private final SLSSchedulerCommons schedulerCommons;
   private Configuration conf;
+  private SLSRunner runner;
 
   public SLSCapacityScheduler() {
     schedulerCommons = new SLSSchedulerCommons(this);
@@ -137,6 +139,16 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
 
   public Tracker getTracker() {
     return schedulerCommons.getTracker();
+  }
+
+  @Override
+  public void setSLSRunner(SLSRunner runner) {
+    this.runner = runner;
+  }
+
+  @Override
+  public SLSRunner getSLSRunner() {
+    return this.runner;
   }
 }
 

@@ -205,7 +205,7 @@ public class NMRunner {
   }
 
   public void setInputTraces(String[] inputTraces) {
-    this.inputTraces = inputTraces;
+    this.inputTraces = inputTraces.clone();
   }
 
   public int getNumNMs() {
