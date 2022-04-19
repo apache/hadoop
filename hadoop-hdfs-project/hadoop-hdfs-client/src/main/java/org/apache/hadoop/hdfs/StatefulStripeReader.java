@@ -52,7 +52,9 @@ class StatefulStripeReader extends StripeReader {
       cur = dfsStripedInputStream.getCurStripeBuf().duplicate();
     }
 
-    this.decodeInputs = new ECChunk[dataBlkNum + parityBlkNum];
+    if (this.decodeInputs == null) {
+      this.decodeInputs = new ECChunk[dataBlkNum + parityBlkNum];
+    }
     int bufLen = (int) alignedStripe.getSpanInBlock();
     int bufOff = (int) alignedStripe.getOffsetInBlock();
     for (int i = 0; i < dataBlkNum; i++) {
