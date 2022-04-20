@@ -2370,7 +2370,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean setReplication(final String src, final short replication)
       throws IOException {
     final String operationName = "setReplication";
-    FSDirAttrOp.SetRepStatus status;
+    boolean success = false;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
@@ -2379,7 +2379,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot set replication for " + src);
-        status = FSDirAttrOp.setReplication(dir, pc, blockManager, src,
+        success = FSDirAttrOp.setReplication(dir, pc, blockManager, src,
             replication);
       } finally {
         writeUnlock(operationName);
@@ -2388,12 +2388,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (status == FSDirAttrOp.SetRepStatus.SUCCESS) {
+    if (success) {
       getEditLog().logSync();
+      logAuditEvent(true, operationName, src);
     }
-    logAuditEvent(status != FSDirAttrOp.SetRepStatus.INVALID,
-        operationName, src);
-    return status != FSDirAttrOp.SetRepStatus.INVALID;
+    return success;
   }
 
   /**

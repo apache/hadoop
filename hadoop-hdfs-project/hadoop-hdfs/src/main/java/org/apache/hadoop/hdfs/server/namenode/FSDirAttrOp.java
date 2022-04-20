@@ -49,11 +49,6 @@ import java.util.List;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 
 public class FSDirAttrOp {
-
-  protected enum SetRepStatus {
-    UNCHANGED, INVALID, SUCCESS
-  }
-
   static FileStatus setPermission(
       FSDirectory fsd, FSPermissionChecker pc, final String src,
       FsPermission permission) throws IOException {
@@ -134,11 +129,11 @@ public class FSDirAttrOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static SetRepStatus setReplication(
+  static boolean setReplication(
       FSDirectory fsd, FSPermissionChecker pc, BlockManager bm, String src,
       final short replication) throws IOException {
     bm.verifyReplication(src, replication, null);
-    final SetRepStatus status;
+    final boolean isFile;
     fsd.writeLock();
     try {
       final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
@@ -146,14 +141,16 @@ public class FSDirAttrOp {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
 
-      status = unprotectedSetReplication(fsd, iip, replication);
-      if (status == SetRepStatus.SUCCESS) {
+      final BlockInfo[] blocks = unprotectedSetReplication(fsd, iip,
+                                                           replication);
+      isFile = blocks != null;
+      if (isFile) {
         fsd.getEditLog().logSetReplication(iip.getPath(), replication);
       }
     } finally {
       fsd.writeUnlock();
     }
-    return status;
+    return isFile;
   }
 
   static FileStatus unsetStoragePolicy(FSDirectory fsd, FSPermissionChecker pc,
@@ -377,7 +374,7 @@ public class FSDirAttrOp {
     return dirNode;
   }
 
-  static SetRepStatus unprotectedSetReplication(
+  static BlockInfo[] unprotectedSetReplication(
       FSDirectory fsd, INodesInPath iip, short replication)
       throws QuotaExceededException, UnresolvedLinkException,
       SnapshotAccessControlException, UnsupportedActionException {
@@ -387,20 +384,12 @@ public class FSDirAttrOp {
     final INode inode = iip.getLastINode();
     if (inode == null || !inode.isFile() || inode.asFile().isStriped()) {
       // TODO we do not support replication on stripe layout files yet
-      // We return invalid here, so we skip writing an edit, but also write an
-      // unsuccessful audit message.
-      return SetRepStatus.INVALID;
+      return null;
     }
 
     INodeFile file = inode.asFile();
     // Make sure the directory has sufficient quotas
     short oldBR = file.getPreferredBlockReplication();
-    if (oldBR == replication) {
-      // No need to do anything as the requested rep factor is the same as
-      // existing. Returning UNCHANGED to we can skip writing edits, but still
-      // log a successful audit message.
-      return SetRepStatus.UNCHANGED;
-    }
 
     long size = file.computeFileSize(true, true);
     // Ensure the quota does not exceed
@@ -431,7 +420,7 @@ public class FSDirAttrOp {
                              oldBR, iip.getPath());
       }
     }
-    return SetRepStatus.SUCCESS;
+    return file.getBlocks();
   }
 
   static void unprotectedSetStoragePolicy(FSDirectory fsd, BlockManager bm,
