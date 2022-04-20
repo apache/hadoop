@@ -28,6 +28,7 @@
 
 #include "bad_datanode_tracker.h"
 #include "ClientNamenodeProtocol.pb.h"
+#include "x-platform/types.h"
 
 #include <memory>
 #include <mutex>
@@ -135,7 +136,7 @@ private:
   const std::shared_ptr<std::string> client_name_;
   const std::shared_ptr<const struct FileInfo> file_info_;
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
-  bool CheckSeekBounds(ssize_t desired_position);
+  bool CheckSeekBounds(XPlatform::ssize_t desired_position);
   off_t offset_;
   CancelHandle cancel_state_;
   ReaderGroup readers_;

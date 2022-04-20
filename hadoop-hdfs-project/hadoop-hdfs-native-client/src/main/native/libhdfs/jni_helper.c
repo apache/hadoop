@@ -23,6 +23,7 @@
 #include "platform.h"
 #include "os/mutexes.h"
 #include "os/thread_local_storage.h"
+#include "x-platform/c-api/types.h"
 
 #include <errno.h>
 #include <dirent.h>
@@ -380,11 +381,11 @@ done:
  * expanded path is returned, which includes space at the end for either a
  * PATH_SEPARATOR or null terminator.
  */
-static ssize_t wildcard_expandPath(const char* path, char* expanded)
-{
+static x_platform_ssize_t wildcard_expandPath(const char *path,
+                                              char *expanded) {
     struct dirent* file;
     char* dest = expanded;
-    ssize_t length = 0;
+    x_platform_ssize_t length = 0;
     size_t pathLength = strlen(path);
     DIR* dir;
 
@@ -487,10 +488,10 @@ static ssize_t wildcard_expandPath(const char* path, char* expanded)
  * allocated after using this function with expandedClasspath=NULL to get the
  * right size.
  */
-static ssize_t getClassPath_helper(const char *classpath, char* expandedClasspath)
+static x_platform_ssize_t getClassPath_helper(const char *classpath, char* expandedClasspath)
 {
-    ssize_t length;
-    ssize_t retval;
+    x_platform_ssize_t length;
+    x_platform_ssize_t retval;
     char* expandedCP_curr;
     char* cp_token;
     char* classpath_dup;
@@ -567,8 +568,8 @@ static char* getClassPath()
 {
     char* classpath;
     char* expandedClasspath;
-    ssize_t length;
-    ssize_t retval;
+    x_platform_ssize_t length;
+    x_platform_ssize_t retval;
 
     classpath = getenv("CLASSPATH");
     if (classpath == NULL) {
