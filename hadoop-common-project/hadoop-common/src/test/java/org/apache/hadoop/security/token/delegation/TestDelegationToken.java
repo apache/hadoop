@@ -160,7 +160,8 @@ public class TestDelegationToken {
     }
   }
 
-  public static class TestFailureDelegationTokenSecretManager extends TestDelegationTokenSecretManager {
+  public static class TestFailureDelegationTokenSecretManager
+      extends TestDelegationTokenSecretManager {
     private boolean throwError = false;
 
     public TestFailureDelegationTokenSecretManager() {
@@ -172,7 +173,8 @@ public class TestDelegationToken {
     }
 
     @Override
-    protected void storeNewToken(TestDelegationTokenIdentifier ident, long renewDate) throws IOException {
+    protected void storeNewToken(TestDelegationTokenIdentifier ident,long renewDate)
+        throws IOException {
       if (throwError) {
         throw new IOException("Test exception");
       }
@@ -188,7 +190,8 @@ public class TestDelegationToken {
     }
 
     @Override
-    protected void updateStoredToken(TestDelegationTokenIdentifier ident, long renewDate) throws IOException {
+    protected void updateStoredToken(TestDelegationTokenIdentifier ident, long renewDate)
+        throws IOException {
       if (throwError) {
         throw new IOException("Test exception");
       }
@@ -628,12 +631,15 @@ public class TestDelegationToken {
     try {
       dtSecretManager.startThreads();
 
-      final Token<TestDelegationTokenIdentifier> token = callAndValidateMetrics(dtSecretManager.metrics.storeToken,
+      final Token<TestDelegationTokenIdentifier> token = callAndValidateMetrics(
+          dtSecretManager.getMetrics().getStoreToken(),
           () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"), 1);
 
-      callAndValidateMetrics(dtSecretManager.metrics.updateToken, () -> dtSecretManager.renewToken(token, "JobTracker"), 1);
+      callAndValidateMetrics(dtSecretManager.getMetrics().getUpdateToken(),
+          () -> dtSecretManager.renewToken(token, "JobTracker"), 1);
 
-      callAndValidateMetrics(dtSecretManager.metrics.removeToken, () -> dtSecretManager.cancelToken(token, "JobTracker"), 1);
+      callAndValidateMetrics(dtSecretManager.getMetrics().getRemoveToken(),
+          () -> dtSecretManager.cancelToken(token, "JobTracker"), 1);
     } finally {
       dtSecretManager.stopThreads();
     }
@@ -641,7 +647,8 @@ public class TestDelegationToken {
 
   @Test
   public void testDelegationTokenSecretManagerMetricsFailures() throws Exception {
-    TestFailureDelegationTokenSecretManager dtSecretManager = new TestFailureDelegationTokenSecretManager();
+    TestFailureDelegationTokenSecretManager dtSecretManager =
+        new TestFailureDelegationTokenSecretManager();
 
     try {
       dtSecretManager.startThreads();
@@ -651,26 +658,29 @@ public class TestDelegationToken {
 
       dtSecretManager.setThrowError(true);
 
-      callAndValidateMetrics(dtSecretManager.metrics.tokenFailure,
+      callAndValidateMetrics(dtSecretManager.getMetrics().getTokenFailure(),
           () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"), 1, false);
 
-      callAndValidateMetrics(dtSecretManager.metrics.tokenFailure, () -> dtSecretManager.renewToken(token, "JobTracker"), 2, true);
+      callAndValidateMetrics(dtSecretManager.getMetrics().getTokenFailure(),
+          () -> dtSecretManager.renewToken(token, "JobTracker"), 2, true);
 
-      callAndValidateMetrics(dtSecretManager.metrics.tokenFailure, () -> dtSecretManager.cancelToken(token, "JobTracker"), 3, true);
+      callAndValidateMetrics(dtSecretManager.getMetrics().getTokenFailure(),
+          () -> dtSecretManager.cancelToken(token, "JobTracker"), 3, true);
     } finally {
       dtSecretManager.stopThreads();
     }
   }
 
-  private <T> T callAndValidateMetrics(MutableRate metric, Callable<T> callable, int expectedCount) throws Exception {
+  private <T> T callAndValidateMetrics(MutableRate metric, Callable<T> callable,
+      int expectedCount) throws Exception {
     Assert.assertEquals(expectedCount - 1, metric.lastStat().numSamples());
     T returnedObject = callable.call();
     Assert.assertEquals(expectedCount, metric.lastStat().numSamples());
     return returnedObject;
   }
 
-  private <T> void callAndValidateMetrics(MutableCounterLong counter, Callable<T> callable, int expectedCount, boolean expectError)
-      throws Exception {
+  private <T> void callAndValidateMetrics(MutableCounterLong counter, Callable<T> callable,
+      int expectedCount, boolean expectError) throws Exception {
     Assert.assertEquals(expectedCount - 1, counter.value());
     if (expectError) {
       LambdaTestUtils.intercept(IOException.class, callable);

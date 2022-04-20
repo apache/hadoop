@@ -110,7 +110,7 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Metrics to track token management operations.
    */
-  protected DelegationTokenSecretManagerMetrics metrics;
+  private DelegationTokenSecretManagerMetrics metrics;
   
   private long keyUpdateInterval;
   private long tokenMaxLifetime;
@@ -859,36 +859,41 @@ extends AbstractDelegationTokenIdentifier>
     }
   }
 
+  protected DelegationTokenSecretManagerMetrics getMetrics() {
+    return metrics;
+  }
+
   /**
    * DelegationTokenSecretManagerMetrics tracks token management operations
    * and publishes them through the metrics interfaces.
    */
   @Metrics(about="Delegation token secret manager metrics", context="token")
   static class DelegationTokenSecretManagerMetrics implements IOStatisticsSource {
-    private static final Logger LOG = LoggerFactory.getLogger(DelegationTokenSecretManagerMetrics.class);
+    private static final Logger LOG = LoggerFactory.getLogger(
+        DelegationTokenSecretManagerMetrics.class);
 
     final static String STORE_TOKEN_STAT = "storeToken";
     final static String UPDATE_TOKEN_STAT = "updateToken";
     final static String REMOVE_TOKEN_STAT = "removeToken";
     final static String TOKEN_FAILURE_STAT = "tokenFailure";
 
-    final MetricsRegistry registry;
-    final IOStatisticsStore ioStatistics;
+    private final MetricsRegistry registry;
+    private final IOStatisticsStore ioStatistics;
 
     @Metric("Rate of storage of delegation tokens and latency (milliseconds)")
-    MutableRate storeToken;
+    private MutableRate storeToken;
     @Metric("Rate of update of delegation tokens and latency (milliseconds)")
-    MutableRate updateToken;
+    private MutableRate updateToken;
     @Metric("Rate of removal of delegation tokens and latency (milliseconds)")
-    MutableRate removeToken;
+    private MutableRate removeToken;
     @Metric("Counter of delegation tokens operation failures")
-    MutableCounterLong tokenFailure;
+    private MutableCounterLong tokenFailure;
 
     static DelegationTokenSecretManagerMetrics create() {
       return DefaultMetricsSystem.instance().register(new DelegationTokenSecretManagerMetrics());
     }
 
-    public DelegationTokenSecretManagerMetrics() {
+    DelegationTokenSecretManagerMetrics() {
       ioStatistics = IOStatisticsBinding.iostatisticsStore()
           .withDurationTracking(STORE_TOKEN_STAT, UPDATE_TOKEN_STAT, REMOVE_TOKEN_STAT)
           .withCounters(TOKEN_FAILURE_STAT)
@@ -915,6 +920,22 @@ extends AbstractDelegationTokenIdentifier>
     public void addTokenFailure() {
       tokenFailure.incr();
       ioStatistics.incrementCounter(TOKEN_FAILURE_STAT);
+    }
+
+    public MutableRate getStoreToken() {
+      return storeToken;
+    }
+
+    public MutableRate getUpdateToken() {
+      return updateToken;
+    }
+
+    public MutableRate getRemoveToken() {
+      return removeToken;
+    }
+
+    public MutableCounterLong getTokenFailure() {
+      return tokenFailure;
     }
 
     @Override
