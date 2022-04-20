@@ -82,12 +82,6 @@ public class TestSetrepIncreasing {
   public void testSetrepIncreasing() throws IOException {
     setrep(3, 7, false);
   }
-
-  @Test(timeout=120000)
-  public void testSetrepSameRepValue() throws IOException {
-    setrep(3, 3, false);
-  }
-
   @Test(timeout=120000)
   public void testSetrepIncreasingSimulatedStorage() throws IOException {
     setrep(3, 7, true);
