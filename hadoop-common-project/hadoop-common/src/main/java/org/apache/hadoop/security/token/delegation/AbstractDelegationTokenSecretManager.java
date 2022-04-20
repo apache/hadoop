@@ -36,8 +36,8 @@ import javax.crypto.SecretKey;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.Text;
@@ -57,6 +57,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -446,17 +447,14 @@ extends AbstractDelegationTokenIdentifier>
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
     try {
-      long start = Time.monotonicNow();
-      storeToken(identifier, tokenInfo);
-      metrics.addTimeStoreToken(Time.monotonicNow() - start);
+      metrics.trackStoreToken(() -> storeToken(identifier, tokenInfo));
     } catch (IOException ioe) {
       LOG.error("Could not store token " + formatTokenId(identifier) + "!!",
           ioe);
-      metrics.addTokenFailure();
     }
     return password;
   }
-  
+
 
 
   /**
@@ -574,14 +572,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("Renewal request for unknown token "
           + formatTokenId(id));
     }
-    try {
-      long start = Time.monotonicNow();
-      updateToken(id, info);
-      metrics.addTimeUpdateToken(Time.monotonicNow() - start);
-    } catch (IOException ioe) {
-      metrics.addTokenFailure();
-      throw ioe;
-    }
+    metrics.trackUpdateToken(() -> updateToken(id, info));
     return renewTime;
   }
   
@@ -617,15 +608,10 @@ extends AbstractDelegationTokenIdentifier>
     if (info == null) {
       throw new InvalidToken("Token not found " + formatTokenId(id));
     }
-    try {
-      long start = Time.monotonicNow();
+    metrics.trackRemoveToken(() -> {
       removeTokenForOwnerStats(id);
       removeStoredToken(id);
-      metrics.addTimeRemoveToken(Time.monotonicNow() - start);
-    } catch (IOException ioe) {
-      metrics.addTokenFailure();
-      throw ioe;
-    }
+    });
     return id;
   }
   
@@ -868,7 +854,7 @@ extends AbstractDelegationTokenIdentifier>
    * and publishes them through the metrics interfaces.
    */
   @Metrics(about="Delegation token secret manager metrics", context="token")
-  static class DelegationTokenSecretManagerMetrics implements IOStatisticsSource {
+  static class DelegationTokenSecretManagerMetrics implements DurationTrackerFactory {
     private static final Logger LOG = LoggerFactory.getLogger(
         DelegationTokenSecretManagerMetrics.class);
 
@@ -902,44 +888,52 @@ extends AbstractDelegationTokenIdentifier>
       LOG.debug("Initialized {}", registry);
     }
 
-    public void addTimeStoreToken(final long durationMillis) {
-      storeToken.add(durationMillis);
-      ioStatistics.addTimedOperation(STORE_TOKEN_STAT, durationMillis);
+    public void trackStoreToken(InvocationRaisingIOE invocation) throws IOException {
+      trackInvocation(invocation, STORE_TOKEN_STAT, storeToken);
     }
 
-    public void addTimeUpdateToken(final long durationMillis) {
-      updateToken.add(durationMillis);
-      ioStatistics.addTimedOperation(UPDATE_TOKEN_STAT, durationMillis);
+    public void trackUpdateToken(InvocationRaisingIOE invocation) throws IOException {
+      trackInvocation(invocation, UPDATE_TOKEN_STAT, updateToken);
     }
 
-    public void addTimeRemoveToken(final long durationMillis) {
-      removeToken.add(durationMillis);
-      ioStatistics.addTimedOperation(REMOVE_TOKEN_STAT, durationMillis);
+    public void trackRemoveToken(InvocationRaisingIOE invocation) throws IOException {
+      trackInvocation(invocation, REMOVE_TOKEN_STAT, removeToken);
     }
 
-    public void addTokenFailure() {
-      tokenFailure.incr();
-      ioStatistics.incrementCounter(TOKEN_FAILURE_STAT);
-    }
-
-    public MutableRate getStoreToken() {
-      return storeToken;
-    }
-
-    public MutableRate getUpdateToken() {
-      return updateToken;
-    }
-
-    public MutableRate getRemoveToken() {
-      return removeToken;
-    }
-
-    public MutableCounterLong getTokenFailure() {
-      return tokenFailure;
+    public void trackInvocation(InvocationRaisingIOE invocation, String statistic,
+        MutableRate metric) throws IOException {
+      try {
+        long start = Time.monotonicNow();
+        IOStatisticsBinding.trackDurationOfInvocation(this, statistic, invocation);
+        metric.add(Time.monotonicNow() - start);
+      } catch (Exception ex) {
+        tokenFailure.incr();
+        throw ex;
+      }
     }
 
     @Override
-    public IOStatistics getIOStatistics() {
+    public DurationTracker trackDuration(String key, long count) {
+      return ioStatistics.trackDuration(key, count);
+    }
+
+    protected MutableRate getStoreToken() {
+      return storeToken;
+    }
+
+    protected MutableRate getUpdateToken() {
+      return updateToken;
+    }
+
+    protected MutableRate getRemoveToken() {
+      return removeToken;
+    }
+
+    protected MutableCounterLong getTokenFailure() {
+      return tokenFailure;
+    }
+
+    protected IOStatisticsStore getIoStatistics() {
       return ioStatistics;
     }
   }
