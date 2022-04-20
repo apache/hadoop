@@ -73,7 +73,7 @@ public abstract class InodeTree<T> {
   private final String homedirPrefix;
   private List<MountPoint<T>> mountPoints = new ArrayList<MountPoint<T>>();
 
-  public static class MountPoint<T> {
+  static class MountPoint<T> {
     String src;
     INodeLink<T> target;
 
@@ -229,7 +229,7 @@ public abstract class InodeTree<T> {
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)
    */
-  public static class INodeLink<T> extends INode<T> {
+  static class INodeLink<T> extends INode<T> {
     final String[] targetDirLinkList;
     private T targetFileSystem;   // file system object created from the link.
     // Function to initialize file system. Only applicable for simple links
@@ -408,15 +408,6 @@ public abstract class InodeTree<T> {
 
   private boolean hasFallbackLink() {
     return rootFallbackLink != null;
-  }
-
-  /**
-   * @return true if the root represented as internalDir. In LinkMergeSlash,
-   * there will be root to root mapping. So, root does not represent as
-   * internalDir.
-   */
-  public boolean isRootInternalDir() {
-    return root.isInternalDir();
   }
 
   public INodeLink<T> getRootFallbackLink() {
@@ -756,7 +747,7 @@ public abstract class InodeTree<T> {
     return res;
   }
 
-  public List<MountPoint<T>> getMountPoints() {
+  List<MountPoint<T>> getMountPoints() {
     return mountPoints;
   }
 
