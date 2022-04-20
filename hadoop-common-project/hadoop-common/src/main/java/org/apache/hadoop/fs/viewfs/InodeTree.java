@@ -58,7 +58,7 @@ import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-abstract class InodeTree<T> {
+public abstract class InodeTree<T> {
   enum ResultKind {
     INTERNAL_DIR,
     EXTERNAL_DIR
@@ -410,7 +410,7 @@ abstract class InodeTree<T> {
     return rootFallbackLink != null;
   }
 
-  protected INodeLink<T> getRootFallbackLink() {
+  public INodeLink<T> getRootFallbackLink() {
     Preconditions.checkState(root.isInternalDir());
     return rootFallbackLink;
   }
@@ -627,7 +627,7 @@ abstract class InodeTree<T> {
    * If the input pathname leads to an internal mount-table entry then
    * the target file system is one that represents the internal inode.
    */
-  static class ResolveResult<T> {
+  public static class ResolveResult<T> {
     final ResultKind kind;
     final T targetFileSystem;
     final String resolvedPath;
@@ -654,7 +654,7 @@ abstract class InodeTree<T> {
    * @return ResolveResult which allows further resolution of the remaining path
    * @throws FileNotFoundException
    */
-  ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
+  public ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
       throws IOException {
     // TO DO: - more efficient to not split the path, but simply compare
     String[] path = breakIntoPathComponents(p); 
@@ -756,7 +756,7 @@ abstract class InodeTree<T> {
    * @return home dir value from mount table; null if no config value
    * was found.
    */
-  String getHomeDirPrefixValue() {
+  public String getHomeDirPrefixValue() {
     return homedirPrefix;
   }
 }
