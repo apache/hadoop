@@ -47,7 +47,7 @@ public class TestAppCatalogSolrClient {
     String targetLocation = EmbeddedSolrServerFactory.class
         .getProtectionDomain().getCodeSource().getLocation().getFile() + "/..";
 
-    String solrHome = targetLocation + "/solr";
+    String solrHome = targetLocation.split("/test-classes")[0] + "/solr";
     solrClient = EmbeddedSolrServerFactory.create(solrHome, CONFIGSET_DIR,
         "exampleCollection");
     spy = PowerMockito.spy(new AppCatalogSolrClient());
