@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-abstract class InodeTree<T> {
+public abstract class InodeTree<T> {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(InodeTree.class.getName());
 
@@ -458,11 +458,11 @@ abstract class InodeTree<T> {
    * there will be root to root mapping. So, root does not represent as
    * internalDir.
    */
-  protected boolean isRootInternalDir() {
+  public boolean isRootInternalDir() {
     return root.isInternalDir();
   }
 
-  protected INodeLink<T> getRootFallbackLink() {
+  public INodeLink<T> getRootFallbackLink() {
     Preconditions.checkState(root.isInternalDir());
     return rootFallbackLink;
   }
@@ -742,7 +742,7 @@ abstract class InodeTree<T> {
    * If the input pathname leads to an internal mount-table entry then
    * the target file system is one that represents the internal inode.
    */
-  static class ResolveResult<T> {
+  public static class ResolveResult<T> {
     final ResultKind kind;
     final T targetFileSystem;
     final String resolvedPath;
@@ -777,7 +777,7 @@ abstract class InodeTree<T> {
    * @return ResolveResult which allows further resolution of the remaining path
    * @throws IOException
    */
-  ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
+  public ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
       throws IOException {
     ResolveResult<T> resolveResult = null;
     String[] path = breakIntoPathComponents(p);
@@ -957,7 +957,7 @@ abstract class InodeTree<T> {
    * @return home dir value from mount table; null if no config value
    * was found.
    */
-  String getHomeDirPrefixValue() {
+  public String getHomeDirPrefixValue() {
     return homedirPrefix;
   }
 }
