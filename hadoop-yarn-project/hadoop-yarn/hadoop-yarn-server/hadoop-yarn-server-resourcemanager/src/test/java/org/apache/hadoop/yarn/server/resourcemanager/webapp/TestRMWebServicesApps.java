@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -1968,6 +1969,92 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("enforceExecutionType does not match",
         request.getExecutionTypeRequest().getEnforceExecutionType(),
         enforceExecutionType);
+  }
+
+  @Test
+  public void testAppsQueryByQueueShortname() throws Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    RMApp finishedApp = MockRMAppSubmitter.submit(rm, 
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("root.default")
+            .build());
+    RMApp runningApp = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("default")
+            .build());
+    amNodeManager.nodeHeartbeat(true);
+
+    finishApp(amNodeManager, finishedApp);
+
+    WebResource r = resource();
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps")
+        .queryParam("queue", "default")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+
+    JSONArray array = apps.getJSONArray("app");
+
+    Set<String> appIds = getApplicationIds(array);
+    assertTrue("Running app should be in the result list!",
+        appIds.contains(runningApp.getApplicationId().toString()));
+    assertTrue("Finished app should be in the result list!",
+        appIds.contains(finishedApp.getApplicationId().toString()));
+    assertEquals("incorrect number of elements", 2, array.length());
+
+    rm.stop();
+  }
+
+  @Test
+  public void testAppsQueryByQueueFullname() throws Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    RMApp finishedApp = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("root.default")
+            .build());
+    RMApp runningApp = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("default")
+            .build());
+    amNodeManager.nodeHeartbeat(true);
+
+    finishApp(amNodeManager, finishedApp);
+
+    WebResource r = resource();
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps")
+        .queryParam("queue", "root.default")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+
+    JSONArray array = apps.getJSONArray("app");
+
+    Set<String> appIds = getApplicationIds(array);
+    assertTrue("Finished app should be in the result list!",
+        appIds.contains(finishedApp.getApplicationId().toString()));
+    assertTrue("Running app should be in the result list!",
+        appIds.contains(runningApp.getApplicationId().toString()));
+    assertEquals("incorrect number of elements", 2, array.length());
+
+    rm.stop();
   }
 
 }
