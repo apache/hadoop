@@ -61,7 +61,6 @@ import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract 
@@ -454,7 +453,6 @@ extends AbstractDelegationTokenIdentifier>
     }
     return password;
   }
-
 
 
   /**
