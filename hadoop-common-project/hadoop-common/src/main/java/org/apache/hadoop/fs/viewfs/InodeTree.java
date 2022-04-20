@@ -73,7 +73,7 @@ public abstract class InodeTree<T> {
   private final String homedirPrefix;
   private List<MountPoint<T>> mountPoints = new ArrayList<MountPoint<T>>();
 
-  static class MountPoint<T> {
+  public static class MountPoint<T> {
     String src;
     INodeLink<T> target;
 
@@ -229,7 +229,7 @@ public abstract class InodeTree<T> {
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)
    */
-  static class INodeLink<T> extends INode<T> {
+  public static class INodeLink<T> extends INode<T> {
     final String[] targetDirLinkList;
     private T targetFileSystem;   // file system object created from the link.
     // Function to initialize file system. Only applicable for simple links
@@ -636,7 +636,7 @@ public abstract class InodeTree<T> {
    * If the input pathname leads to an internal mount-table entry then
    * the target file system is one that represents the internal inode.
    */
-  static class ResolveResult<T> {
+  public static class ResolveResult<T> {
     final ResultKind kind;
     final T targetFileSystem;
     final String resolvedPath;
@@ -663,7 +663,7 @@ public abstract class InodeTree<T> {
    * @return ResolveResult which allows further resolution of the remaining path
    * @throws FileNotFoundException
    */
-  ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
+  public ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
       throws IOException {
     // TO DO: - more efficient to not split the path, but simply compare
     String[] path = breakIntoPathComponents(p); 
@@ -756,7 +756,7 @@ public abstract class InodeTree<T> {
     return res;
   }
 
-  List<MountPoint<T>> getMountPoints() {
+  public List<MountPoint<T>> getMountPoints() {
     return mountPoints;
   }
 
@@ -765,7 +765,7 @@ public abstract class InodeTree<T> {
    * @return home dir value from mount table; null if no config value
    * was found.
    */
-  String getHomeDirPrefixValue() {
+  public String getHomeDirPrefixValue() {
     return homedirPrefix;
   }
 }
