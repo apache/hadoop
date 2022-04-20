@@ -59,7 +59,7 @@ public class TestUnderReplicatedBlocks {
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       DatanodeDescriptor dn = bm.blocksMap.getStorages(b.getLocalBlock())
           .iterator().next().getDatanodeDescriptor();
-      bm.addToInvalidates(b.getLocalBlock(), dn);
+      bm.addToInvalidates(b.getLocalBlock(), dn, 0);
 
 
       // Compute the invalidate work in NN, and trigger the heartbeat from DN

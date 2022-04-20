@@ -25,10 +25,12 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -241,6 +243,59 @@ public class TestLightWeightHashSet{
     Iterator<Integer> iter = set.iterator();
     assertFalse(iter.hasNext());
     LOG.info("Test poll all - DONE");
+  }
+
+  @Test
+  public void testPollNWithFilter() {
+    LOG.info("Test pollNWithFilter");
+
+    Set<Integer> allowed = new HashSet<>();
+    int count = 0;
+    for (Integer i : list) {
+      if (count++ % 2 == 0) {
+        allowed.add(i);
+      }
+      assertTrue(set.add(i));
+    }
+
+    List<Integer> poll = set.pollNWithFilter(NUM, allowed::contains);
+    assertTrue(allowed.containsAll(poll));
+    assertTrue(poll.containsAll(allowed));
+
+    assertEquals(NUM / 2, set.size);
+
+    poll = set.pollNWithFilter(NUM, allowed::contains);
+
+    // shouldn't have matched anything, so nothing returned and size unchanged
+    assertTrue(poll.isEmpty());
+    assertEquals(NUM / 2, set.size());
+
+    allowed.clear();
+    count = 0;
+
+    // allow half of the remaining
+    for (int i = 0; i < NUM; i++) {
+      Integer integer = list.get(i);
+      if (set.contains(integer) && count++ % 2 == 0) {
+        allowed.add(integer);
+      }
+    }
+
+    // just poll 1, which is less than size
+    poll = set.pollNWithFilter(1, allowed::contains);
+    assertEquals(1, poll.size());
+    assertTrue(allowed.containsAll(poll));
+    assertFalse(set.isEmpty());
+
+    poll = set.pollNWithFilter(NUM, allowed::contains);
+    assertEquals(allowed.size() - 1, poll.size());
+    assertTrue(allowed.containsAll(poll));
+    assertFalse(set.isEmpty());
+
+    int remaining = set.size();
+    poll = set.pollNWithFilter(remaining, (item) -> true);
+    assertEquals(remaining, poll.size());
+    assertTrue(set.isEmpty());
   }
 
   @Test

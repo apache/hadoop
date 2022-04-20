@@ -129,6 +129,19 @@ public class TestComputeInvalidateWork {
    */
   @Test(timeout=120000)
   public void testComputeInvalidateReplicas() throws Exception {
+    testComputeInvalidateReplica(0);
+  }
+
+  /**
+   * Test if {@link BlockManager#computeInvalidateWork(int)}
+   * can schedule invalidate work correctly for replicas with grace period
+   */
+  @Test(timeout = 120000)
+  public void testComputeInvalidateReplicasWithGracePeriod() throws Exception {
+    testComputeInvalidateReplica(5000);
+  }
+
+  private void testComputeInvalidateReplica(long gracePeriod) throws InterruptedException {
     final int blockInvalidateLimit = bm.getDatanodeManager()
         .getBlockInvalidateLimit();
     namesystem.writeLock();
@@ -137,8 +150,12 @@ public class TestComputeInvalidateWork {
         for(int j=0; j<3*blockInvalidateLimit+1; j++) {
           Block block = new Block(i*(blockInvalidateLimit+1)+j, 0,
               GenerationStamp.LAST_RESERVED_STAMP);
-          bm.addToInvalidates(block, nodes[i]);
+          bm.addToInvalidates(block, nodes[i], gracePeriod);
         }
+      }
+      if (gracePeriod > 0) {
+        assertEquals(0, bm.computeInvalidateWork(NUM_OF_DATANODES + 1));
+        Thread.sleep(gracePeriod);
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
@@ -152,6 +169,20 @@ public class TestComputeInvalidateWork {
    */
   @Test(timeout=120000)
   public void testComputeInvalidateStripedBlockGroups() throws Exception {
+    testComputeInvalidateStripedBlockGroups(0);
+  }
+
+  /**
+   * Test if {@link BlockManager#computeInvalidateWork(int)}
+   * can schedule invalidate work correctly for the striped block groups,
+   * with grace period.
+   */
+  @Test(timeout=120000)
+  public void testComputeInvalidateStripedBlockGroupsWithGracePeriod() throws Exception {
+    testComputeInvalidateStripedBlockGroups(5000);
+  }
+
+  private void testComputeInvalidateStripedBlockGroups(long gracePeriod) throws InterruptedException {
     final int blockInvalidateLimit =
         bm.getDatanodeManager().getBlockInvalidateLimit();
     namesystem.writeLock();
@@ -162,8 +193,12 @@ public class TestComputeInvalidateWork {
           Block blk = new Block(locatedStripedBlock.getBlock().getBlockId() +
               (i * 10 + j), stripesPerBlock * cellSize,
               locatedStripedBlock.getBlock().getGenerationStamp());
-          bm.addToInvalidates(blk, nodes[i]);
+          bm.addToInvalidates(blk, nodes[i], gracePeriod);
         }
+      }
+      if (gracePeriod > 0) {
+        assertEquals(0, bm.computeInvalidateWork(NUM_OF_DATANODES + 1));
+        Thread.sleep(gracePeriod);
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
@@ -178,6 +213,20 @@ public class TestComputeInvalidateWork {
    */
   @Test(timeout=120000)
   public void testComputeInvalidate() throws Exception {
+    testComputeInvalidate(0);
+  }
+
+  /**
+   * Test if {@link BlockManager#computeInvalidateWork(int)}
+   * can schedule invalidate work correctly for both replicas and striped
+   * block groups, combined, with grace period.
+   */
+  @Test(timeout=120000)
+  public void testComputeInvalidateWithGracePeriod() throws Exception {
+    testComputeInvalidate(5000);
+  }
+
+  private void testComputeInvalidate(long gracePeriod) throws InterruptedException {
     final int blockInvalidateLimit =
         bm.getDatanodeManager().getBlockInvalidateLimit();
     final Random random = new Random(System.currentTimeMillis());
@@ -191,13 +240,17 @@ public class TestComputeInvalidateWork {
                 locatedStripedBlock.getBlock().getBlockId() + (i * 10 + j),
                 stripesPerBlock * cellSize,
                 locatedStripedBlock.getBlock().getGenerationStamp());
-            bm.addToInvalidates(stripedBlock, nodes[i]);
+            bm.addToInvalidates(stripedBlock, nodes[i], gracePeriod);
           } else {
             Block replica = new Block(i * (blockInvalidateLimit + 1) + j, 0,
                 GenerationStamp.LAST_RESERVED_STAMP);
-            bm.addToInvalidates(replica, nodes[i]);
+            bm.addToInvalidates(replica, nodes[i], gracePeriod);
           }
         }
+      }
+      if (gracePeriod > 0) {
+        assertEquals(0, bm.computeInvalidateWork(NUM_OF_DATANODES + 1));
+        Thread.sleep(gracePeriod);
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
@@ -222,12 +275,12 @@ public class TestComputeInvalidateWork {
       cluster.stopDataNode(nodes[0].getXferAddr());
 
       Block block = new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP);
-      bm.addToInvalidates(block, nodes[0]);
+      bm.addToInvalidates(block, nodes[0], 0);
       Block stripedBlock = new Block(
           locatedStripedBlock.getBlock().getBlockId() + 100,
           stripesPerBlock * cellSize,
           locatedStripedBlock.getBlock().getGenerationStamp());
-      bm.addToInvalidates(stripedBlock, nodes[0]);
+      bm.addToInvalidates(stripedBlock, nodes[0], 0);
       bm.getDatanodeManager().registerDatanode(dnr);
 
       // Since UUID has changed, the invalidation work should be skipped

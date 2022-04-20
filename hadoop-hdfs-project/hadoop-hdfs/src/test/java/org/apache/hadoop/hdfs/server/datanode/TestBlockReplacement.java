@@ -66,6 +66,8 @@ public class TestBlockReplacement {
   private static final Logger LOG = LoggerFactory.getLogger(
   "org.apache.hadoop.hdfs.TestBlockReplacement");
 
+  private static final long TIMEOUT = 20000L;
+
   MiniDFSCluster cluster;
   @Test
   public void testThrottler() throws IOException {
@@ -92,6 +94,15 @@ public class TestBlockReplacement {
   
   @Test
   public void testBlockReplacement() throws Exception {
+    testBlockReplacement(false);
+  }
+
+  @Test
+  public void testBlockReplacementWithGracePeriod() throws Exception {
+    testBlockReplacement(true);
+  }
+
+  private void testBlockReplacement(boolean gracePeriod) throws Exception {
     final Configuration CONF = new HdfsConfiguration();
     final String[] INITIAL_RACKS = {"/RACK0", "/RACK1", "/RACK2"};
     final String[] NEW_RACKS = {"/RACK2"};
@@ -99,7 +110,15 @@ public class TestBlockReplacement {
     final short REPLICATION_FACTOR = (short)3;
     final int DEFAULT_BLOCK_SIZE = 1024;
     final Random r = new Random();
-    
+
+    long gracePeriodMs = 0;
+    if (gracePeriod) {
+      // make the grace period a little longer than the timeout so that the first call to checkBlocks
+      // below will fail gracefully
+      gracePeriodMs = Math.round(TIMEOUT * 1.1);
+    }
+
+    CONF.setLong(DFSConfigKeys.DFS_NAMENODE_BLOCK_REPLACE_GRACE_PERIOD_MS_KEY, gracePeriodMs);
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     CONF.setInt(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE/2);
     CONF.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,500);
@@ -180,28 +199,56 @@ public class TestBlockReplacement {
       // case 3: correct case
       LOG.info("Testcase 3: Source=" + source + " Proxy=" + 
           proxies.get(0) + " Destination=" + newNode );
+
+      // prior to the replace, there should be zero pending
+      assertEquals(0, cluster.getNamesystem().getBlockManager().getPendingDeletionReplicatedBlocks());
       assertTrue(replaceBlock(b, source, proxies.get(0), newNode));
+
+      if (gracePeriod) {
+        // we should reach timeout here, but fail gracefully because we are in grace period
+        assertFalse(checkBlocks(
+            new DatanodeInfo[]{newNode, proxies.get(0), proxies.get(1)},
+            fileName.toString(),
+            DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client, true));
+
+        assertTrue("Expected greater than 0 pending delete blocks",
+            cluster.getNamesystem().getBlockManager().getPendingDeletionReplicatedBlocks() > 0);
+      }
+
       // after cluster has time to resolve the over-replication,
       // block locations should contain two proxies and newNode
       // but not source
       checkBlocks(new DatanodeInfo[]{newNode, proxies.get(0), proxies.get(1)},
           fileName.toString(), 
-          DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client);
+          DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client, false);
       // case 4: proxies.get(0) is not a valid del hint
       // expect either source or newNode replica to be deleted instead
       LOG.info("Testcase 4: invalid del hint " + proxies.get(0) );
       assertTrue(replaceBlock(b, proxies.get(0), proxies.get(1), source));
+
+      if (gracePeriod) {
+        // we should reach timeout here, but fail gracefully because we are in grace period
+        assertFalse(checkBlocks(
+            new DatanodeInfo[]{newNode, proxies.get(0), proxies.get(1)},
+            fileName.toString(),
+            DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client, true));
+
+        assertTrue("Expected greater than 0 pending delete blocks",
+            cluster.getNamesystem().getBlockManager().getPendingDeletionReplicatedBlocks() > 0);
+      }
+
       // after cluster has time to resolve the over-replication,
       // block locations should contain any 3 of the blocks, since after the
       // deletion the number of racks is still >=2 for sure.
       // See HDFS-9314 for details, espacially the comment on 18/Nov/15 14:09.
       checkBlocks(new DatanodeInfo[]{},
           fileName.toString(), 
-          DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client);
+          DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client, false);
     } finally {
       cluster.shutdown();
     }
   }
+
 
   /**
    * Test to verify that the copying of pinned block to a different destination
@@ -311,11 +358,11 @@ public class TestBlockReplacement {
   /* check if file's blocks have expected number of replicas,
    * and exist at all of includeNodes
    */
-  private void checkBlocks(DatanodeInfo[] includeNodes, String fileName, 
-      long fileLen, short replFactor, DFSClient client) 
+  private boolean checkBlocks(DatanodeInfo[] includeNodes, String fileName,
+      long fileLen, short replFactor, DFSClient client, boolean isGracePeriod)
       throws IOException, TimeoutException {
     boolean notDone;
-    final long TIMEOUT = 20000L;
+
     long starttime = Time.monotonicNow();
     long failtime = starttime + TIMEOUT;
     do {
@@ -350,13 +397,22 @@ public class TestBlockReplacement {
           currentNodesList += dn + ", ";
         LOG.info("Expected replica nodes are: " + expectedNodesList);
         LOG.info("Current actual replica nodes are: " + currentNodesList);
+
+        if (isGracePeriod) {
+          LOG.info("Ran out of time waiting for expected replicas, but we are in grace period");
+          return false;
+        }
+
         throw new TimeoutException(
             "Did not achieve expected replication to expected nodes "
             + "after more than " + TIMEOUT + " msec.  See logs for details.");
       }
     } while(notDone);
+
     LOG.info("Achieved expected replication values in "
         + (Time.now() - starttime) + " msec.");
+
+    return true;
   }
 
   /* Copy a block from sourceProxy to destination. If the block becomes

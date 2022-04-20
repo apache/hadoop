@@ -20,10 +20,12 @@ package org.apache.hadoop.hdfs.util;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -338,32 +340,77 @@ public class LightWeightHashSet<T> implements Collection<T> {
    * @return first element
    */
   public List<T> pollN(int n) {
-    if (n >= size) {
+    return pollNWithFilter(n, null);
+  }
+
+  /**
+   * Remove and return n matching (per includeFilter) elements from the hashtable.
+   * The order in which entries are removed is unspecified,
+   * and may not correspond to the order in which they were inserted.
+   *
+   * May return fewer than n elements if n is greater than the size of the set,
+   * or if fewer than n elements match the includeFilter.
+   *
+   * @param n number of elements to return
+   * @param includeFilter filter that returned elements should match
+   * @return up to the first n matching elements
+   */
+  public List<T> pollNWithFilter(int n, Predicate<T> includeFilter) {
+    if (size == 0) {
+      return Collections.emptyList();
+    }
+
+    if (n >= size && includeFilter == null) {
       return pollAll();
     }
+
     List<T> retList = new ArrayList<T>(n);
     if (n == 0) {
       return retList;
     }
+
+    if (includeFilter == null) {
+      includeFilter = unused -> true;
+    }
+
     boolean done = false;
     int currentBucketIndex = 0;
 
-    while (!done) {
+    while (!done && currentBucketIndex < entries.length) {
+      LinkedElement<T> previous = null;
       LinkedElement<T> current = entries[currentBucketIndex];
+
       while (current != null) {
-        retList.add(current.element);
-        current = current.next;
-        entries[currentBucketIndex] = current;
-        size--;
-        modification++;
-        if (--n == 0) {
-          done = true;
-          break;
+        if (includeFilter.test(current.element)) {
+          retList.add(current.element);
+          current = current.next;
+
+          if (previous == null) {
+            entries[currentBucketIndex] = current;
+          } else {
+            previous.next = current;
+          }
+
+          size--;
+          modification++;
+          if (--n == 0 || size == 0) {
+            done = true;
+            break;
+          }
+        } else {
+          previous = current;
+          current = current.next;
         }
       }
       currentBucketIndex++;
     }
-    shrinkIfNecessary();
+
+    if (size == 0) {
+      clear();
+    } else {
+      shrinkIfNecessary();
+    }
+
     return retList;
   }
 
