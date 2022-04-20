@@ -553,6 +553,7 @@ public class TestBalancer {
 
     Set<String> nodesToBeExcluded = new HashSet<String>();
     Set<String> nodesToBeIncluded = new HashSet<String>();
+    private String rack;
 
      abstract String[] getNames();
      abstract int getNumberofNewNodes();
@@ -565,6 +566,14 @@ public class TestBalancer {
      public Set<String> getNodesToBeExcluded() {
        return nodesToBeExcluded;
      }
+
+    public String getRack() {
+      return rack;
+    }
+
+    public void setRack(String dataCenter) {
+      this.rack = dataCenter;
+    }
   }
 
   /**
@@ -640,10 +649,18 @@ public class TestBalancer {
   private void doTest(Configuration conf, long[] capacities, String[] racks,
       long newCapacity, String newRack, NewNodeInfo nodes,
       boolean useTool, boolean useFile) throws Exception {
-    doTest(conf, capacities, racks, newCapacity, newRack, nodes,
-        useTool, useFile, false, 0.3);
+    doTest(conf, capacities, racks, newCapacity, newRack, nodes, useTool,
+        useFile, false, 0.3, false);
   }
 
+  private void doTest(Configuration conf, long[] capacities, String[] racks,
+      long newCapacity, String newRack, NewNodeInfo nodes, boolean useTool,
+      boolean useFile, boolean useNamesystemSpy, double clusterUtilization,
+      boolean enableRackBasedBalance) throws Exception {
+    doTest(conf, capacities, racks, newCapacity, newRack, nodes, useTool,
+        useFile, useNamesystemSpy, clusterUtilization, null,
+        enableRackBasedBalance);
+  }
   /** This test start a cluster with specified number of nodes,
    * and fills it to be 30% full (with a single file replicated identically
    * to all datanodes);
@@ -666,8 +683,9 @@ public class TestBalancer {
    */
   private void doTest(Configuration conf, long[] capacities,
       String[] racks, long newCapacity, String newRack, NewNodeInfo nodes,
-      boolean useTool, boolean useFile,
-      boolean useNamesystemSpy, double clusterUtilization) throws Exception {
+      boolean useTool, boolean useFile, boolean useNamesystemSpy,
+      double clusterUtilization, String includeRack,
+      boolean enableRackBasedBalance) throws Exception {
     LOG.info("capacities = " +  long2String(capacities));
     LOG.info("racks      = " +  Arrays.asList(racks));
     LOG.info("newCapacity= " +  newCapacity);
@@ -758,6 +776,7 @@ public class TestBalancer {
         pBuilder.setExcludedNodes(nodes.getNodesToBeExcluded());
         pBuilder.setIncludedNodes(nodes.getNodesToBeIncluded());
         pBuilder.setRunDuringUpgrade(false);
+        pBuilder.setRack(nodes.getRack());
       }
       BalancerParameters p = pBuilder.build();
 
@@ -773,9 +792,13 @@ public class TestBalancer {
 
       // run balancer and validate results
       if (useTool) {
-        runBalancerCli(conf, totalUsedSpace, totalCapacity, p, useFile, expectedExcludedNodes);
+        runBalancerCli(conf, totalUsedSpace, totalCapacity, p, useFile,
+            expectedExcludedNodes, includeRack);
       } else {
-        runBalancer(conf, totalUsedSpace, totalCapacity, p, expectedExcludedNodes);
+        runBalancer(conf, totalUsedSpace, totalCapacity, p,
+            expectedExcludedNodes, enableRackBasedBalance,
+            null == nodes || StringUtils
+                .equalsIgnoreCase(nodes.getRack(), newRack));
       }
     } finally {
       if(cluster != null) {
@@ -787,18 +810,21 @@ public class TestBalancer {
   private void runBalancer(Configuration conf, long totalUsedSpace,
       long totalCapacity) throws Exception {
     runBalancer(conf, totalUsedSpace, totalCapacity,
-        BalancerParameters.DEFAULT, 0);
+        BalancerParameters.DEFAULT, 0, false, true);
   }
 
   private void runBalancer(Configuration conf, long totalUsedSpace,
-      long totalCapacity, BalancerParameters p, int excludedNodes)
+      long totalCapacity, BalancerParameters p, int excludedNodes, boolean enableRackBasedBalance,
+      boolean isSameRack)
       throws Exception {
-    runBalancer(conf, totalUsedSpace, totalCapacity, p, excludedNodes, true);
+    runBalancer(conf, totalUsedSpace, totalCapacity, p, excludedNodes, true,
+        enableRackBasedBalance, isSameRack);
   }
 
   private void runBalancer(Configuration conf, long totalUsedSpace,
       long totalCapacity, BalancerParameters p, int excludedNodes,
-      boolean checkExcludeNodesUtilization) throws Exception {
+      boolean checkExcludeNodesUtilization, boolean enableRackBasedBalance,
+      boolean isSameRack) throws Exception {
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
 
     int retry = 5;
@@ -812,6 +838,9 @@ public class TestBalancer {
           == 0) {
         assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), run);
         return;
+      } else if (enableRackBasedBalance && !isSameRack) {
+        assertEquals(ExitStatus.ILLEGAL_ARGUMENTS.getExitCode(), run);
+        break;
       } else {
         assertEquals(ExitStatus.SUCCESS.getExitCode(), run);
       }
@@ -893,11 +922,15 @@ public class TestBalancer {
 
   private void runBalancerCli(Configuration conf, long totalUsedSpace,
       long totalCapacity, BalancerParameters p, boolean useFile,
-      int expectedExcludedNodes) throws Exception {
+      int expectedExcludedNodes, String includeRack) throws Exception {
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
     List <String> args = new ArrayList<String>();
     args.add("-policy");
     args.add("datanode");
+    if (null != includeRack) {
+      args.add("-includeRack");
+      args.add(includeRack);
+    }
 
     File excludeHostsFile = null;
     if (!p.getExcludedNodes().isEmpty()) {
@@ -1685,7 +1718,7 @@ public class TestBalancer {
 
       // run balancer and validate results
       BalancerParameters p = BalancerParameters.DEFAULT;
-      runBalancer(conf, totalUsedSpace, totalCapacity, p, 0);
+      runBalancer(conf, totalUsedSpace, totalCapacity, p, 0, false, true);
 
       // namenode will ask datanode to delete replicas in heartbeat response
       cluster.triggerHeartbeats();
@@ -1773,7 +1806,7 @@ public class TestBalancer {
 
       // start balancer and check the failed num of moving task
       runBalancer(conf, totalUsedSpace, totalCapacity, pBuilder.build(),
-          excludedList.size(), false);
+          excludedList.size(), false, false, true);
 
       // check total blocks, max wait time 60s
       final long blocksBeforeBalancer = totalBlocks;
@@ -1891,13 +1924,13 @@ public class TestBalancer {
       racks[i] = (i < numDNs/2 ? RACK0 : RACK1);
     }
     doTest(conf, capacities, racks, CAPACITY, RACK2,
+        new PortNumberBasedNodes(3, 0, 0), false, false, true, 0.5, false);
         // Use only 1 node and set the starting capacity to 50% to allow the
         // balancing to complete in only one iteration. This is necessary
         // because the startGetBlocksTime and endGetBlocksTime measures across
         // all get block calls, so if two iterations are performed, the duration
         // also includes the time it took to perform the block move ops in the
         // first iteration
-        new PortNumberBasedNodes(1, 0, 0), false, false, true, 0.5);
     assertTrue("Number of getBlocks should be not less than " +
         getBlocksMaxQps, numGetBlocksCalls.get() >= getBlocksMaxQps);
     long durationMs = 1 + endGetBlocksTime.get() - startGetBlocksTime.get();
@@ -1907,6 +1940,87 @@ public class TestBalancer {
     long getBlockCallsPerSecond = numGetBlocksCalls.get() / durationSec;
     assertTrue("Expected balancer getBlocks calls per second <= " +
         getBlocksMaxQps, getBlockCallsPerSecond <= getBlocksMaxQps);
+  }
+
+  @Test(timeout = 100000) public void testBalancerWithRackSameLocation()
+      throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+
+    Set<String> excludeHosts = new HashSet<String>();
+
+    String[] hostnames = new String[] {"datanodeX", "datanodeY", "datanodeZ" };
+    HostNameBasedNodes nodes = new HostNameBasedNodes(hostnames, excludeHosts,
+        BalancerParameters.DEFAULT.getIncludedNodes());
+    nodes.setRack(RACK0);
+    doTest(conf, new long[] {CAPACITY }, new String[] {RACK0 }, CAPACITY / 2,
+        RACK0, nodes, false, false, true, 0.3, false);
+  }
+
+  @Test(timeout = 100000) public void testBalancerWithRackDiffLocation()
+      throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+
+    String[] hostnames = new String[] {"datanodeX", "datanodeY", "datanodeZ" };
+    HostNameBasedNodes nodes =
+        new HostNameBasedNodes(hostnames, Collections.emptySet(),
+            BalancerParameters.DEFAULT.getIncludedNodes());
+    nodes.setRack(RACK1);
+    doTest(conf, new long[] {CAPACITY }, new String[] {RACK0 }, CAPACITY / 2,
+        RACK0, nodes, false, false, true, 0.3, true);
+  }
+
+  @Test//TODO
+  public void testBalancerCliParseRackConf() {
+
+    String[] parameters = new String[] {"-includeRack", "/rack" };
+    BalancerParameters p = Balancer.Cli.parse(parameters);
+    assertEquals("/rack", p.getRack());
+
+    parameters = new String[] {"-includeRack", "/dc1/rack1" };
+    p = Balancer.Cli.parse(parameters);
+    assertEquals("/dc1/rack1", p.getRack());
+
+    parameters = new String[] {"-includeRack" };
+    try {
+      p = Balancer.Cli.parse(parameters);
+      assertTrue("Validation failed for 'DataCenter' configuration", false);
+    } catch (IllegalArgumentException e) {
+      assertTrue(true);
+    }
+  }
+
+  /**
+   * Test a cluster with multiple racks and specify a rack to balance. Only
+   * includeRack should get balance and other racks should be ingored.
+   */
+  @Test(timeout = 100000) public void testBalancerWithRackNameInvalid()
+      throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    // add an empty node with half of the capacities(4 * CAPACITY) & the same
+    // rack
+    long[] capacities = new long[] {4 * CAPACITY };
+    String[] racks = new String[] {RACK1 };
+    long newCapacity = 2 * CAPACITY;
+    String newRack = RACK2;
+    LOG.info("capacities = " + long2String(capacities));
+    LOG.info("racks      = " + Arrays.asList(racks));
+    LOG.info("newCapacity= " + newCapacity);
+    LOG.info("newRack    = " + newRack);
+    LOG.info("useTool    = " + false);
+    assertEquals(capacities.length, racks.length);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(capacities.length)
+        .racks(racks).simulatedCapacities(capacities).build();
+    cluster.waitActive();
+
+    // start rebalancing
+    Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+    int exitCode = Balancer
+        .run(namenodes, new BalancerParameters.Builder().setRack(RACK0).build(),
+            conf);
+    assertEquals(ExitStatus.ILLEGAL_ARGUMENTS.getExitCode(), exitCode);
   }
 
   /**

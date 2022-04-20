@@ -52,6 +52,11 @@ final class BalancerParameters {
 
   static final BalancerParameters DEFAULT = new BalancerParameters();
 
+  /**
+   * Rack / Available Zone name
+   */
+  private String rack;
+
   private BalancerParameters() {
     this(new Builder());
   }
@@ -65,6 +70,7 @@ final class BalancerParameters {
     this.sourceNodes = builder.sourceNodes;
     this.blockpools = builder.blockpools;
     this.runDuringUpgrade = builder.runDuringUpgrade;
+    this.rack = builder.rack;
     this.runAsService = builder.runAsService;
     this.sortTopNodes = builder.sortTopNodes;
     this.hotBlockTimeInterval = builder.hotBlockTimeInterval;
@@ -119,13 +125,18 @@ final class BalancerParameters {
     return String.format("%s.%s [%s," + " threshold = %s,"
         + " max idle iteration = %s," + " #excluded nodes = %s,"
         + " #included nodes = %s," + " #source nodes = %s,"
+        + " #includeRack = %s,"
         + " #blockpools = %s," + " run during upgrade = %s,"
         + " sort top nodes = %s,"
         + " hot block time interval = %s]",
         Balancer.class.getSimpleName(), getClass().getSimpleName(), policy,
         threshold, maxIdleIteration, excludedNodes.size(),
         includedNodes.size(), sourceNodes.size(), blockpools.size(),
-        runDuringUpgrade, sortTopNodes, hotBlockTimeInterval);
+        runDuringUpgrade, sortTopNodes, hotBlockTimeInterval, rack);
+  }
+
+  public String getRack() {
+    return rack;
   }
 
   static class Builder {
@@ -142,6 +153,8 @@ final class BalancerParameters {
     private boolean runAsService = false;
     private boolean sortTopNodes = false;
     private long hotBlockTimeInterval = 0;
+    //Rack / Available Zone name
+    private String rack;
 
     Builder() {
     }
@@ -178,6 +191,11 @@ final class BalancerParameters {
 
     Builder setSourceNodes(Set<String> nodes) {
       this.sourceNodes = nodes;
+      return this;
+    }
+
+    Builder setRack(String rackName) {
+      this.rack = rackName;
       return this;
     }
 

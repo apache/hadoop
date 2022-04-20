@@ -142,7 +142,8 @@ public class Dispatcher {
   private BlockPlacementPolicies placementPolicies;
 
   private long maxIterationTime;
-
+  //Rack / Available Zone name
+  private String rack;
   static class Allocator {
     private final int max;
     private int count = 0;
@@ -881,15 +882,31 @@ public class Dispatcher {
             List<Integer> adjustList = new ArrayList<>();
             final String[] datanodeUuids = blkLocs.getDatanodeUuids();
             final StorageType[] storageTypes = blkLocs.getStorageTypes();
+            ArrayList<Byte> indicesList = new ArrayList<Byte>();
             for (int i = 0; i < datanodeUuids.length; i++) {
               final StorageGroup g = storageGroupMap.get(
                   datanodeUuids[i], storageTypes[i]);
               if (g != null) { // not unknown
                 block.addLocation(g);
+                if (blkLocs instanceof StripedBlockWithLocations) {
+                  indicesList.add(
+                      ((StripedBlockWithLocations) blkLocs).getIndices()[i]);
+                }
               } else if (blkLocs instanceof StripedBlockWithLocations) {
                 // some datanode may not in storageGroupMap due to decommission operation
                 // or balancer cli with "-exclude" parameter
                 adjustList.add(i);
+              }
+            }
+            if (blkLocs instanceof StripedBlockWithLocations) {
+              byte[] indices =
+                  ((StripedBlockWithLocations) blkLocs).getIndices();
+              // Rack level balancing has some locations null, so re-assign the
+              // correct indices
+              if (indicesList.size() != indices.length) {
+                for (int i = 0; i < indicesList.size(); i++) {
+                  indices[i] = indicesList.get(i);
+                }
               }
             }
 
@@ -1164,12 +1181,18 @@ public class Dispatcher {
     // ignore nodes not in the include list (if include list is not empty)
     final boolean notIncluded = !Util.isIncluded(includedNodes, dn);
 
-    if (outOfService || excluded || notIncluded) {
+    // ignore the datanodes belongs to other Rack / Network location AND data
+    // center feature is enabled in the cluster
+    String loc = dn.getNetworkLocation();
+    final boolean partOfRack = (null == this.rack) || loc.contains(this.rack);
+
+    if (outOfService || excluded || notIncluded || !partOfRack) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Excluding datanode " + dn
             + ": outOfService=" + outOfService
             + ", excluded=" + excluded
-            + ", notIncluded=" + notIncluded);
+            + ", notIncluded=" + notIncluded
+            + ", not part of rack " + this.rack);
       }
       return true;
     }
@@ -1431,6 +1454,10 @@ public class Dispatcher {
     if (dispatchExecutor != null) {
       dispatchExecutor.shutdownNow();
     }
+  }
+
+  public void setRack(String rack) {
+    this.rack = rack;
   }
 
   static class Util {

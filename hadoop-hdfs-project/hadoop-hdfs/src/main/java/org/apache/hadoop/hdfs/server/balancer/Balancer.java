@@ -193,6 +193,8 @@ public class Balancer {
       + "\tExcludes the specified datanodes."
       + "\n\t[-include [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tIncludes only the specified datanodes."
+      + "\n\t[-includeRack <Rackname> ]"
+      + "\tSpecify the rack to be balanced."
       + "\n\t[-source [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tPick only the specified datanodes as source nodes."
       + "\n\t[-blockpools <comma-separated list of blockpool ids>]"
@@ -352,6 +354,7 @@ public class Balancer {
     this.sourceNodes = p.getSourceNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
     this.sortTopNodes = p.getSortTopNodes();
+    dispatcher.setRack(p.getRack());
 
     this.maxSizeToMove = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
@@ -721,6 +724,9 @@ public class Balancer {
     try {
       metrics.setIterateRunning(true);
       final List<DatanodeStorageReport> reports = dispatcher.init();
+      if (reports.size() == 0) {
+        return newResult(ExitStatus.ILLEGAL_ARGUMENTS, 0, 0);
+      }
       final long bytesLeftToMove = init(reports);
       metrics.setBytesLeftToMove(bytesLeftToMove);
       if (bytesLeftToMove == 0) {
@@ -804,6 +810,8 @@ public class Balancer {
     LOG.info("included nodes = " + p.getIncludedNodes());
     LOG.info("excluded nodes = " + p.getExcludedNodes());
     LOG.info("source nodes = " + p.getSourceNodes());
+    LOG.info("included rack = "+ p.getRack());
+
     checkKeytabAndInit(conf);
     System.out.println("Time Stamp               Iteration#"
         + "  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved"
@@ -818,11 +826,29 @@ public class Balancer {
       for(int iteration = 0; !done; iteration++) {
         done = true;
         Collections.shuffle(connectors);
+        int connectorCount = connectors.size();
         for(NameNodeConnector nnc : connectors) {
           if (p.getBlockPools().size() == 0
               || p.getBlockPools().contains(nnc.getBlockpoolID())) {
             final Balancer b = new Balancer(nnc, p, conf);
             final Result r = b.runOneIteration();
+            if (r.exitStatus == ExitStatus.ILLEGAL_ARGUMENTS) {
+              if (LOG.isWarnEnabled()) {
+                LOG.warn("No datanodes matched for the NamenodeUri = "
+                    + nnc.getNameNodeUri() + ", includeRack = " + p.getRack()
+                    + ", balancer ignored.");
+              }
+              done = false;
+              // Decrement the connector count, once all connectors identified
+              // to be ignored then balancer can be stopped.
+              if (--connectorCount <= 0) {
+                // Invalid configuration, there is no data identified to move
+                // across nodes
+                return r.exitStatus.getExitCode();
+              }
+              //There is no matching data nodes for the current NamenodeURI
+              continue;
+            }
             r.print(iteration, nnc, System.out);
 
             // clean all lists
@@ -1034,6 +1060,11 @@ public class Balancer {
               Set<String> sourceNodes = new HashSet<>();
               i = processHostList(args, i, "source", sourceNodes);
               b.setSourceNodes(sourceNodes);
+            } else if ("-includeRack".equalsIgnoreCase(args[i])) {
+              String rackName = parseRack(args, i, "includeRack");
+              i++;
+              //Rack name / Available Zone name.
+              b.setRack(rackName);
             } else if ("-blockpools".equalsIgnoreCase(args[i])) {
               Preconditions.checkArgument(
                   ++i < args.length,
@@ -1108,6 +1139,12 @@ public class Balancer {
         nodes.addAll(Arrays.asList(addresses));
       }
       return i;
+    }
+
+    private static String parseRack(String[] args, int i, String type) {
+      Preconditions.checkArgument(++i < args.length,
+          "Rack name is missing: args=%s", type, Arrays.toString(args));
+      return args[i];
     }
 
     private static Set<String> parseBlockPoolList(String string) {
