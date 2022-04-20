@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -182,5 +184,41 @@ public class TestReadStripedFileWithDecoding {
       StripedFileTestUtil.verifyStatefulRead(dfs, file, length, bytes,
           buffer);
     }
+  }
+
+  @Test
+  public void testReadWithCorruptedDataBlockAndParityBlock() throws IOException {
+    final Path file = new Path("/corruptedDataBlockAndParityBlock");
+    final int length = BLOCK_SIZE * NUM_DATA_UNITS;
+    final byte[] bytes = StripedFileTestUtil.generateBytes(length);
+    DFSTestUtil.writeFile(dfs, file, bytes);
+
+    // set one dataBlock and the first parityBlock corrupted
+    int dataBlkDelNum = 1;
+    int parityBlkDelNum = 1;
+    int recoverBlkNum = dataBlkDelNum + parityBlkDelNum;
+    int[] dataBlkIndices = {0};
+    int[] parityBlkIndices = {6};
+
+    LocatedBlocks locatedBlocks = ReadStripedFileWithDecodingHelper.getLocatedBlocks(dfs, file);
+    LocatedStripedBlock lastBlock =
+        (LocatedStripedBlock)locatedBlocks.getLastLocatedBlock();
+
+    int[] delBlkIndices = new int[recoverBlkNum];
+    System.arraycopy(dataBlkIndices, 0,
+        delBlkIndices, 0, dataBlkIndices.length);
+    System.arraycopy(parityBlkIndices, 0,
+        delBlkIndices, dataBlkIndices.length, parityBlkIndices.length);
+    ExtendedBlock[] delBlocks = new ExtendedBlock[recoverBlkNum];
+    for (int i = 0; i < recoverBlkNum; i++) {
+      delBlocks[i] = StripedBlockUtil
+          .constructInternalBlock(lastBlock.getBlock(),
+              CELL_SIZE, NUM_DATA_UNITS, delBlkIndices[i]);
+      cluster.corruptBlockOnDataNodes(delBlocks[i]);
+    }
+
+    byte[] buffer = new byte[length + 100];
+    StripedFileTestUtil.verifyStatefulRead(dfs, file, length, bytes,
+        buffer);
   }
 }
