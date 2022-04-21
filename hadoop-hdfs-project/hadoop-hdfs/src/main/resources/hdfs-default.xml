@@ -6137,6 +6137,25 @@
   </property>
 
   <property>
+    <name>dfs.namenode.block.deletion.lock.threshold.ms</name>
+    <value>50</value>
+    <description>
+      The limit of single time lock holding duration for the block asynchronous
+      deletion thread.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.block.deletion.unlock.interval.ms</name>
+    <value>10</value>
+    <description>
+      The sleep interval for yield lock.
+      When the single time lock holding duration of the block asynchronous deletion
+      thread exceeds limit, sleeping to yield lock.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.rpc-address.auxiliary-ports</name>
     <value></value>
     <description>
