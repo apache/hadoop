@@ -132,7 +132,7 @@ public class RouterRpcClient {
       Pattern.compile("\\tat (.*)\\.(.*)\\((.*):(\\d*)\\)");
 
   /** Fairness manager to control handlers assigned per NS. */
-  private RouterRpcFairnessPolicyController routerRpcFairnessPolicyController;
+  private volatile RouterRpcFairnessPolicyController routerRpcFairnessPolicyController;
   private Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
   private Map<String, LongAdder> acceptedPermitsPerNs = new ConcurrentHashMap<>();
 
@@ -1628,11 +1628,34 @@ public class RouterRpcClient {
         acceptedPermitsPerNs.get(ns).longValue() : 0L;
   }
 
-  public String refreshFairnessPolicyController(Configuration conf) {
-    if (routerRpcFairnessPolicyController != null) {
-      routerRpcFairnessPolicyController.shutdown();
+  /**
+   * Refreshes/changes the fairness policy controller implementation if possible
+   * and returns the controller class name
+   * @param conf Configuration
+   * @return New controller class name if successfully refreshed, else old controller class name
+   */
+  public synchronized String refreshFairnessPolicyController(Configuration conf) {
+    RouterRpcFairnessPolicyController newController;
+    try {
+      newController = FederationUtil.newFairnessPolicyController(conf);
+    } catch (RuntimeException e) {
+      LOG.error("Failed to create router fairness policy controller", e);
+      return getCurrentFairnessPolicyControllerClassName();
     }
-    routerRpcFairnessPolicyController = FederationUtil.newFairnessPolicyController(conf);
-    return routerRpcFairnessPolicyController.getClass().getCanonicalName();
+
+    if (newController != null) {
+      if (routerRpcFairnessPolicyController != null) {
+        routerRpcFairnessPolicyController.shutdown();
+      }
+      routerRpcFairnessPolicyController = newController;
+    }
+    return getCurrentFairnessPolicyControllerClassName();
+  }
+
+  private String getCurrentFairnessPolicyControllerClassName() {
+    if (routerRpcFairnessPolicyController != null) {
+      return routerRpcFairnessPolicyController.getClass().getCanonicalName();
+    }
+    return null;
   }
 }
