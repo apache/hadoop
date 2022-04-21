@@ -32,7 +32,6 @@ import java.util.Map;
 
 import java.util.concurrent.Callable;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
@@ -186,7 +185,7 @@ public class TestDelegationToken {
     }
 
     @Override
-    protected void storeNewToken(TestDelegationTokenIdentifier ident,long renewDate)
+    protected void storeNewToken(TestDelegationTokenIdentifier ident, long renewDate)
         throws IOException {
       if (throwError) {
         sleepAndThrow();
@@ -673,7 +672,8 @@ public class TestDelegationToken {
       dtSecretManager.setThrowError(true);
 
       callAndValidateFailureMetrics(dtSecretManager, "storeToken", 1, 1, false,
-          errorSleepMillis, () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"));
+          errorSleepMillis,
+          () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"));
 
       callAndValidateFailureMetrics(dtSecretManager, "updateToken", 1, 2, true,
           errorSleepMillis, () -> dtSecretManager.renewToken(token, "JobTracker"));
