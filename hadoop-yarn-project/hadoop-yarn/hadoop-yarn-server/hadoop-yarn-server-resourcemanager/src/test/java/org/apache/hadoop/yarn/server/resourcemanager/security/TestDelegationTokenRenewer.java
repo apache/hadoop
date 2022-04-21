@@ -502,7 +502,7 @@ public class TestDelegationTokenRenewer {
     
     LOG.info("dfs=" + dfs.hashCode() + 
         ";Counter = " + Renewer.counter + ";t="+  Renewer.lastRenewed);
-    assertEquals("renew wasn't called as many times as expected(1):",
+    assertEquals("renew wasn't called as many times as expected(2):",
         numberOfExpectedRenewals, Renewer.counter);
     assertEquals("most recently renewed token mismatch", Renewer.lastRenewed, 
         token1);
