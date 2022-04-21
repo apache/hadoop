@@ -300,6 +300,10 @@ public abstract class S3InputStream
       return 0;
     }
 
+    if (this.s3File.size() == 0 || this.seekTargetPos >= this.s3File.size()) {
+      return -1;
+    }
+
     if (!ensureCurrentBuffer()) {
       return -1;
     }
