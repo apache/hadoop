@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.io.compress.snappy;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -31,6 +30,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.io.DataInputBuffer;
@@ -303,7 +303,7 @@ public class TestSnappyCompressorDecompressor {
       out.write(buffer, 0, len);
     }
     byte[] compressed = out.toByteArray();
-    assertThat(compressed).hasSizeGreaterThan(0);
+    assertTrue(compressed.length > 0);
     out.reset();
 
     SnappyDecompressor decompressor = new SnappyDecompressor();
@@ -314,7 +314,7 @@ public class TestSnappyCompressorDecompressor {
     }
     byte[] decompressed = out.toByteArray();
 
-    assertThat(decompressed).isEqualTo(input);
+    assertTrue(Arrays.equals(decompressed, input));
   }
 
   private void compressDecompressLoop(int rawDataSize) throws IOException {
