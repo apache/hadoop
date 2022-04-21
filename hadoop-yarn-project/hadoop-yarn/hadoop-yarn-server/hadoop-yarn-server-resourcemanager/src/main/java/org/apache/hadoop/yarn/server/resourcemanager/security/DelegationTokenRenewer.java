@@ -43,14 +43,12 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -59,8 +57,10 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -73,9 +73,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 /**
  * Service to renew application delegation tokens.
  */
@@ -492,12 +492,13 @@ public class DelegationTokenRenewer extends AbstractService {
     Set<DelegationTokenToRenew> tokenList = new HashSet<DelegationTokenToRenew>();
     boolean hasHdfsToken = false;
     for (Token<?> token : tokens) {
+      AtomicLong tokenExpiredTime = new AtomicLong(now);
       if (token.isManaged()) {
         if (token.getKind().equals(HDFS_DELEGATION_KIND)) {
           LOG.info(applicationId + " found existing hdfs token " + token);
           hasHdfsToken = true;
         }
-        if (skipTokenRenewal(token)) {
+        if (skipTokenRenewal(token, tokenExpiredTime)) {
           continue;
         }
 
@@ -523,21 +524,12 @@ public class DelegationTokenRenewer extends AbstractService {
           }  else {
             tokenConf = getConfig();
           }
-          // decode identify to get maxDate.
-          TokenIdentifier tokenIdentifier = token.decodeIdentifier();
-          long expirationDate = now;
-          if (tokenIdentifier instanceof AbstractDelegationTokenIdentifier) {
-            // cast to abstract
-            AbstractDelegationTokenIdentifier tmpIdentifier =
-                    (AbstractDelegationTokenIdentifier) tokenIdentifier;
-            expirationDate = tmpIdentifier.getMaxDate();
-          }
           dttr = new DelegationTokenToRenew(Collections.singletonList(applicationId), token,
-              tokenConf, expirationDate, shouldCancelAtEnd, evt.getUser());
+              tokenConf, tokenExpiredTime.get(), shouldCancelAtEnd, evt.getUser());
 
           try {
             // if expire date is not greater than now, renew token.
-            if (expirationDate <= now) {
+            if (tokenExpiredTime.get() <= now) {
               renewToken(dttr);
             }
           } catch (IOException ioe) {
@@ -631,8 +623,9 @@ public class DelegationTokenRenewer extends AbstractService {
    * Skip renewing token if the renewer of the token is set to ""
    * Caller is expected to have examined that token.isManaged() returns
    * true before calling this method.
+   * if renewer is not empty, get the max expired time from token identifier.
    */
-  private boolean skipTokenRenewal(Token<?> token)
+  private boolean skipTokenRenewal(Token<?> token, AtomicLong expiredTime)
       throws IOException {
 
     @SuppressWarnings("unchecked")
@@ -641,6 +634,7 @@ public class DelegationTokenRenewer extends AbstractService {
     if (identifier == null) {
       return false;
     }
+    expiredTime.set(identifier.getMaxDate());
     Text renewer = identifier.getRenewer();
     return (renewer != null && renewer.toString().equals(""));
   }

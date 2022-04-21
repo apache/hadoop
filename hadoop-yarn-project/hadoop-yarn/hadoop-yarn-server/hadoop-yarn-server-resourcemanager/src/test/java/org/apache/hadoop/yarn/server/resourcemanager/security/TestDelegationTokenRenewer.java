@@ -184,7 +184,7 @@ public class TestDelegationTokenRenewer {
     }
 
     @Override
-    public void cancel(Token<?> t, Configuration conf) {
+    public void cancel(Token<?> t, Configuration conf) throws IOException {
       cancelled = true;
       if (t instanceof MyToken) {
         MyToken token = (MyToken) t;
@@ -308,7 +308,12 @@ public class TestDelegationTokenRenewer {
     
     public boolean isCanceled() {return status.equals(CANCELED);}
     
-    public void cancelToken() {this.status=CANCELED;}
+    public void cancelToken() throws IOException {
+      this.status=CANCELED;
+      DelegationTokenIdentifier tokenIdentifier = this.decodeIdentifier();
+      tokenIdentifier.setMaxDate(0);
+      this.setID(tokenIdentifier.getBytes());
+    }
 
     @Override
     public long renew(Configuration conf) throws IOException,
