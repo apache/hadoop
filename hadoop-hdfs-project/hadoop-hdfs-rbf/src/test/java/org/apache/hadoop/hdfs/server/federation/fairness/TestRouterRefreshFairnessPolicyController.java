@@ -100,8 +100,8 @@ public class TestRouterRefreshFairnessPolicyController {
   @Test
   public void testRefreshClassDoesNotImplementControllerInterface() {
     MiniRouterDFSCluster.RouterContext routerContext = cluster.getRandomRouter();
-    routerContext.getConf().set(RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS,
-        "org.apache.hadoop.hdfs.server.federation.fairness.TestRouterRefreshFairnessPolicyController");
+    routerContext.getConf()
+        .set(RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS, "java.lang.String");
     assertEquals(StaticRouterRpcFairnessPolicyController.class.getCanonicalName(),
         routerContext.getRouterRpcClient()
             .refreshFairnessPolicyController(routerContext.getConf()));
