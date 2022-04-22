@@ -684,7 +684,7 @@ public final class DistCpOptions {
       return this;
     }
 
-    public Builder withCRC(boolean newSkipCRC) {
+    public Builder withSkipCRC(boolean newSkipCRC) {
       this.skipCRC = newSkipCRC;
       return this;
     }
