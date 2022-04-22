@@ -51,7 +51,6 @@ public class TestLargeDirectoryDelete {
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
-    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY, 1);
   }
   
   /** create a file with a length of <code>filelen</code> */
