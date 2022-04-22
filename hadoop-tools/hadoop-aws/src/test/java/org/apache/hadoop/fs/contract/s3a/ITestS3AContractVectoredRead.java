@@ -88,7 +88,6 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
             Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
             Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE);
-    S3ATestUtils.disableFilesystemCaching(conf);
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
       try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
         int minSeek = fis.minSeekForVectorReads();

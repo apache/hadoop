@@ -59,7 +59,7 @@ To make most efficient use of S3, care is needed.
 The S3A FileSystem supports implementation of vectored read api using which
 a client can provide a list of file ranges to read returning a future read
 object associated with each range. For full api specification please see
-[FSDataInputStream](hadoop-common-project/hadoop-common/src/site/markdown/filesystem/fsdatainputstream.md).
+[FSDataInputStream](../../hadoop-common-project/hadoop-common/filesystem/fsdatainputstream.html).
 
 The following properties can be configured to optimise vectored reads based
 on the client requirements.
@@ -67,18 +67,19 @@ on the client requirements.
 ```xml
 <property>
   <name>fs.s3a.vectored.read.min.seek.size</name>
-  <value>4 * 1024</value>
+  <value>4K</value>
   <description>
-     What is the smallest reasonable seek such that we group
-     ranges together during vectored read operation.
+     What is the smallest reasonable seek in bytes such
+     that we group ranges together during vectored
+     read operation.
    </description>
 </property>
 <property>
 <name>fs.s3a.vectored.read.max.merged.size</name>
-<value>1024 * 1024</value>
+<value>1M</value>
 <description>
-   What is the largest merged read size such that we group
-   ranges together during vectored read.
+   What is the largest merged read size in bytes such
+   that we group ranges together during vectored read.
    Setting this value to 0 will disable merging of ranges.
 </description>
 </property>

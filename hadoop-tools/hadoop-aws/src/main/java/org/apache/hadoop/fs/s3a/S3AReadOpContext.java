@@ -98,7 +98,7 @@ public class S3AReadOpContext extends S3AOpContext {
     this.inputPolicy = checkNotNull(inputPolicy);
     this.changeDetectionPolicy = checkNotNull(changeDetectionPolicy);
     this.readahead = readahead;
-    this.vectoredIOContext = vectoredIOContext;
+    this.vectoredIOContext = checkNotNull(vectoredIOContext);
   }
 
   /**

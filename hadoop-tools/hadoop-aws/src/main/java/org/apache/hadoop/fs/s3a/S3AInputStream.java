@@ -138,7 +138,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
 
   /** Vectored IO context. */
-  private VectoredIOContext vectoredIOContext;
+  private final VectoredIOContext vectoredIOContext;
 
   /**
    * This is the actual position within the object, used by
@@ -816,9 +816,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
-   * To override this value set property defined by
-   * {@link Constants#AWS_S3_VECTOR_READS_MIN_SEEK_SIZE} in configuration.
-   *
    * {@inheritDoc}.
    */
   @Override
@@ -827,9 +824,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
-   * To override this value set property defined by
-   * {@link Constants#AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE} in configuration.
-   *
    * {@inheritDoc}.
    */
   @Override

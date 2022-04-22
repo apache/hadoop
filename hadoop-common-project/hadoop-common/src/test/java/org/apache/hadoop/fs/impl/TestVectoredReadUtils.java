@@ -215,25 +215,20 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             new FileRangeImpl(3000, 100),
             new FileRangeImpl(2100, 100)
     );
+    assertEqualRangeCountsAfterMerging(randomRanges, 1, 1, 0);
+    assertEqualRangeCountsAfterMerging(randomRanges, 1, 0, 0);
+    assertEqualRangeCountsAfterMerging(randomRanges, 1, 100, 0);
+  }
 
+  private void assertEqualRangeCountsAfterMerging(List<FileRange> inputRanges,
+                                                  int chunkSize,
+                                                  int minimumSeek,
+                                                  int maxSize) {
     List<CombinedFileRange> combinedFileRanges = VectoredReadUtils
-            .sortAndMergeRanges(randomRanges, 1, 1, 0);
+            .sortAndMergeRanges(inputRanges, chunkSize, minimumSeek, maxSize);
     Assertions.assertThat(combinedFileRanges)
             .describedAs("Mismatch in number of ranges post merging")
-            .hasSize(randomRanges.size());
-
-    List<CombinedFileRange> combinedFileRanges1 = VectoredReadUtils
-            .sortAndMergeRanges(randomRanges, 1, 0, 0);
-    Assertions.assertThat(combinedFileRanges1)
-            .describedAs("Mismatch in number of ranges post merging")
-            .hasSize(randomRanges.size());
-
-    List<CombinedFileRange> combinedFileRanges2 = VectoredReadUtils
-            .sortAndMergeRanges(randomRanges, 1, 100, 0);
-    Assertions.assertThat(combinedFileRanges2)
-            .describedAs("Mismatch in number of ranges post merging")
-            .hasSize(randomRanges.size());
-
+            .hasSize(inputRanges.size());
   }
 
   interface Stream extends PositionedReadable, ByteBufferPositionedReadable {
