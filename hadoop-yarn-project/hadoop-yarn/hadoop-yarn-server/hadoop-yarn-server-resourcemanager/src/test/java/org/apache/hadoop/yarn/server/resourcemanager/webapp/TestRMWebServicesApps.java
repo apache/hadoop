@@ -91,7 +91,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       Configuration conf = new Configuration();
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
           ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
@@ -1980,10 +1980,16 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             .createWithMemory(CONTAINER_MB, rm)
             .withQueue("root.default")
             .build());
-    RMApp runningApp = MockRMAppSubmitter.submit(rm,
+    RMApp runningApp1 = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder
             .createWithMemory(CONTAINER_MB, rm)
             .withQueue("default")
+            .build());
+
+    RMApp runningApp2 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("root.default")
             .build());
     amNodeManager.nodeHeartbeat(true);
 
@@ -2005,9 +2011,12 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     JSONArray array = apps.getJSONArray("app");
 
     Set<String> appIds = getApplicationIds(array);
-    assertTrue("Running app should be in the result list!",
-        appIds.contains(runningApp.getApplicationId().toString()));
-    assertTrue("Finished app should be in the result list!",
+    assertTrue("Running 1 app should be in the result list!",
+        appIds.contains(runningApp1.getApplicationId().toString()));
+    assertTrue("Running 2 app should be in the result list!",
+        appIds.contains(runningApp2.getApplicationId().toString()));
+    assertFalse("Finished app should not be in the result list " +
+            "as it was submitted to 'root.default' but the query is for 'default'",
         appIds.contains(finishedApp.getApplicationId().toString()));
     assertEquals("incorrect number of elements", 2, array.length());
 
@@ -2023,10 +2032,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             .createWithMemory(CONTAINER_MB, rm)
             .withQueue("root.default")
             .build());
-    RMApp runningApp = MockRMAppSubmitter.submit(rm,
+    RMApp runningApp1 = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder
             .createWithMemory(CONTAINER_MB, rm)
             .withQueue("default")
+            .build());
+    RMApp runningApp2 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("root.default")
             .build());
     amNodeManager.nodeHeartbeat(true);
 
@@ -2048,11 +2062,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     JSONArray array = apps.getJSONArray("app");
 
     Set<String> appIds = getApplicationIds(array);
+    assertTrue("Running app 1 should be in the result list!",
+        appIds.contains(runningApp1.getApplicationId().toString()));
+    assertTrue("Running app 2 should be in the result list!",
+        appIds.contains(runningApp2.getApplicationId().toString()));
     assertTrue("Finished app should be in the result list!",
         appIds.contains(finishedApp.getApplicationId().toString()));
-    assertTrue("Running app should be in the result list!",
-        appIds.contains(runningApp.getApplicationId().toString()));
-    assertEquals("incorrect number of elements", 2, array.length());
+    assertEquals("incorrect number of elements", 3, array.length());
 
     rm.stop();
   }
