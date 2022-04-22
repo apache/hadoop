@@ -690,11 +690,11 @@ public class TestDelegationToken {
       throws Exception {
     MeanStatistic stat = IOStatisticAssertions.lookupMeanStatistic(
         dtSecretManager.getMetrics().getIoStatistics(), statName + ".mean");
-    Assert.assertEquals(expectedCount - 1, metric.lastStat().numSamples());
-    Assert.assertEquals(expectedCount - 1, stat.getSamples());
+    assertEquals(expectedCount - 1, metric.lastStat().numSamples());
+    assertEquals(expectedCount - 1, stat.getSamples());
     T returnedObject = callable.call();
-    Assert.assertEquals(expectedCount, metric.lastStat().numSamples());
-    Assert.assertEquals(expectedCount, stat.getSamples());
+    assertEquals(expectedCount, metric.lastStat().numSamples());
+    assertEquals(expectedCount, stat.getSamples());
     return returnedObject;
   }
 
@@ -704,15 +704,15 @@ public class TestDelegationToken {
     MutableCounterLong counter = dtSecretManager.getMetrics().getTokenFailure();
     MeanStatistic failureStat = IOStatisticAssertions.lookupMeanStatistic(
         dtSecretManager.getMetrics().getIoStatistics(), statName + ".failures.mean");
-    Assert.assertEquals(expectedMetricCount - 1, counter.value());
-    Assert.assertEquals(expectedStatCount - 1, failureStat.getSamples());
+    assertEquals(expectedMetricCount - 1, counter.value());
+    assertEquals(expectedStatCount - 1, failureStat.getSamples());
     if (expectError) {
       LambdaTestUtils.intercept(IOException.class, callable);
     } else {
       callable.call();
     }
-    Assert.assertEquals(expectedMetricCount, counter.value());
-    Assert.assertEquals(expectedStatCount, failureStat.getSamples());
-    Assert.assertTrue(failureStat.getSum() >= errorSleepMillis);
+    assertEquals(expectedMetricCount, counter.value());
+    assertEquals(expectedStatCount, failureStat.getSamples());
+    assertTrue(failureStat.getSum() >= errorSleepMillis);
   }
 }
