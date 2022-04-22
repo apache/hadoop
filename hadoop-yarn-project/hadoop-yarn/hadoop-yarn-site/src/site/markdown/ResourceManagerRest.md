@@ -1605,11 +1605,11 @@ Current supported items:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| resouceRequests | comma separated string | Skip resource requests of application in return |
+| resourceRequests | comma separated string | Skip resource requests of application in return |
 
 e.g:
 
-      * http://rm-http-address:port/ws/v1/cluster/apps?deSelects=resouceRequests
+      * http://rm-http-address:port/ws/v1/cluster/apps?deSelects=resourceRequests
 
 
 ### Response Examples
