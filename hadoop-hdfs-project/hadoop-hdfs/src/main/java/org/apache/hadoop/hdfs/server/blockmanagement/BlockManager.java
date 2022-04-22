@@ -612,12 +612,13 @@ public class BlockManager implements BlockStatsMXBean {
           + DFSConfigKeys.DFS_REPLICATION_MAX_KEY
           + " = " + maxR + " > " + Short.MAX_VALUE);
     }
-    if (minReplication > maxR)
+    if (minReplication > maxR) {
       throw new IOException("Unexpected configuration parameters: "
           + DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY
           + " = " + minReplication + " > "
           + DFSConfigKeys.DFS_REPLICATION_MAX_KEY
           + " = " + maxR);
+    }
     return maxR;
   }
 
