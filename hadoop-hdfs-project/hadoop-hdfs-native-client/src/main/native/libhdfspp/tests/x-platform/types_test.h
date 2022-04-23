@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef LIBHDFSPP_X_PLATFORM_TYPES_TEST
-#define LIBHDFSPP_X_PLATFORM_TYPES_TEST
+#ifndef LIBHDFSPP_CROSS_PLATFORM_TYPES_TEST
+#define LIBHDFSPP_CROSS_PLATFORM_TYPES_TEST
 
 #include <limits>
 
