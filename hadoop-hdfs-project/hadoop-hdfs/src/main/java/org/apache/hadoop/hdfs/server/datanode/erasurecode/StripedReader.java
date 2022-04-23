@@ -508,4 +508,9 @@ class StripedReader {
   int getXmits() {
     return xmits;
   }
+
+  public int getMinRequiredSources() {
+    return minRequiredSources;
+  }
+
 }

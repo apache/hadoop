@@ -4635,6 +4635,24 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.datanode.ec.reconstruct.read.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the EC reconstruction can utilize for reading.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.ec.reconstruct.write.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the EC reconstruction can utilize for writing.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
 <property>
   <name>dfs.datanode.fsdataset.factory</name>
   <value></value>
