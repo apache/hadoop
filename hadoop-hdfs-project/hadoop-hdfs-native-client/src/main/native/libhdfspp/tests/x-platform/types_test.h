@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
+#ifndef LIBHDFSPP_X_PLATFORM_TYPES_TEST
+#define LIBHDFSPP_X_PLATFORM_TYPES_TEST
+
 #include <limits>
 
 #include <gtest/gtest.h>
-
-#include "x-platform/c-api/types.h"
-#include "x-platform/types.h"
 
 /**
  * {@class XPlatformTypesTest} tests the types defined in the XPlatform library.
@@ -60,5 +60,4 @@ TYPED_TEST_P(XPlatformTypesTest, SSizeTCanHoldInts) {
 REGISTER_TYPED_TEST_SUITE_P(XPlatformTypesTest, SSizeTMinusOne,
                             SSizeTCanHoldInts);
 
-using XPlatformTypes = ::testing::Types<XPlatform::ssize_t, x_platform_ssize_t>;
-INSTANTIATE_TYPED_TEST_SUITE_P(TypesTest, XPlatformTypesTest, XPlatformTypes);
+#endif
