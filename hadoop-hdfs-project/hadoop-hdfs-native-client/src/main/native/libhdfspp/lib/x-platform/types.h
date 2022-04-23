@@ -19,13 +19,24 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
 
-#ifdef WIN32
+namespace XPlatform {
+#if _WIN32 || _WIN64
+
+// Windows system
+#if _WIN64
+// Windows 64-bit
+using ssize_t = long int;
 #else
-#include <sys/types.h>
+// Windows 64-bit
+using ssize_t = int;
 #endif
 
-namespace XPlatform {
+#else
+// Non-Windows system
+#include <sys/types.h>
+
 using ssize_t = ssize_t;
-}
+#endif
+} // namespace XPlatform
 
 #endif
