@@ -59,6 +59,7 @@ import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.FutureIO;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import org.assertj.core.api.Assertions;
@@ -91,7 +92,6 @@ import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
@@ -1257,7 +1257,7 @@ public final class S3ATestUtils {
             .withFileStatus(status)
             .build();
 
-    try (FSDataInputStream in = awaitFuture(future)) {
+    try (FSDataInputStream in = FutureIO.awaitFuture(future)) {
       byte[] buf = new byte[(int) status.getLen()];
       in.readFully(0, buf);
       return new String(buf);
