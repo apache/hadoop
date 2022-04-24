@@ -1823,7 +1823,7 @@ public class TestExternalStoragePolicySatisfier {
   }
 
   @Test(timeout = 300000)
-  public void testExternalSPSMetrics() throws Exception {
+  public void testExternalSPSMetricsExposedToJMX() throws Exception {
     try {
       createCluster();
       // Start JMX but stop SPS thread to prevent mock data from being consumed.
