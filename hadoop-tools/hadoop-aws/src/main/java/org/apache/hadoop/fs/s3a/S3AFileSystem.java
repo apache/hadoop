@@ -3335,6 +3335,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   S3AFileStatus innerGetFileStatus(final Path f,
       final boolean needEmptyDirectoryFlag,
       final Set<StatusProbeEnum> probes) throws IOException {
+
     final Path path = qualify(f);
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({}); needEmptyDirectory={}",
@@ -3405,6 +3406,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             + " does not request a list probe", path);
     if (key.isEmpty() && !needEmptyDirectoryFlag) {
       return new S3AFileStatus(Tristate.UNKNOWN, path, username);
+    }
+
+    // get file status without a probe
+    if (!key.isEmpty() && !key.endsWith("/")
+            && probes.isEmpty()) {
+      // use negative value for length
+      // to tell that object length is unknown
+      // it will be updated on first read
+      // also no information about modification time, etag and version id
+      return new S3AFileStatus(-1,
+              0L,
+              path,
+              getDefaultBlockSize(path),
+              username,
+              null,
+              null);
     }
 
     if (!key.isEmpty() && !key.endsWith("/")
@@ -4885,11 +4902,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         throw new FileNotFoundException(path.toString() + " is a directory");
       }
     } else {
-      // Executes a HEAD only.
-      // therefore: if there is is a dir marker, this
-      // will raise a FileNotFoundException
+      // Get simple file status without a probe
+      // therefore: no content length, modification time, etag or version id
       fileStatus = innerGetFileStatus(path, false,
-          StatusProbeEnum.HEAD_ONLY);
+          StatusProbeEnum.NONE);
     }
 
     return fileStatus;

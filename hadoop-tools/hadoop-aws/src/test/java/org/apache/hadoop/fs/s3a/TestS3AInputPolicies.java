@@ -64,18 +64,27 @@ public class TestS3AInputPolicies {
     return Arrays.asList(new Object[][]{
         {S3AInputPolicy.Normal, 0, -1, 0, _64K, 0},
         {S3AInputPolicy.Normal, 0, -1, _10MB, _64K, _10MB},
+        {S3AInputPolicy.Normal, 0, -1, -1, _64K, _64K},
         {S3AInputPolicy.Normal, _64K, _64K, _10MB, _64K, _10MB},
         {S3AInputPolicy.Sequential, 0, -1, 0, _64K, 0},
         {S3AInputPolicy.Sequential, 0, -1, _10MB, _64K, _10MB},
+        {S3AInputPolicy.Sequential, 0, -1, -1, _64K, _64K},
         {S3AInputPolicy.Random, 0, -1, 0, _64K, 0},
         {S3AInputPolicy.Random, 0, -1, _10MB, _64K, _10MB},
+        {S3AInputPolicy.Random, 0, -1, -1, _64K, _64K},
         {S3AInputPolicy.Random, 0, _128K, _10MB, _64K, _128K},
         {S3AInputPolicy.Random, 0, _128K, _10MB, _256K, _256K},
+        {S3AInputPolicy.Random, 0, _128K, -1, _64K, _128K},
+        {S3AInputPolicy.Random, 0, _128K, -1, _256K, _256K},
         {S3AInputPolicy.Random, 0, 0, _10MB, _256K, _256K},
         {S3AInputPolicy.Random, 0, 1, _10MB, _256K, _256K},
         {S3AInputPolicy.Random, 0, _1MB, _10MB, _256K, _1MB},
         {S3AInputPolicy.Random, 0, _1MB, _10MB, 0, _1MB},
+        {S3AInputPolicy.Random, 0, _1MB, -1, _256K, _1MB},
+        {S3AInputPolicy.Random, 0, _1MB, -1, 0, _1MB},
         {S3AInputPolicy.Random, _10MB + _64K, _1MB, _10MB, _256K, _10MB},
+        {S3AInputPolicy.Random, _10MB, _64K, -1, _256K, _10MB + _256K},
+        {S3AInputPolicy.Random, _10MB, _1MB, -1, _256K, _10MB + _1MB},
     });
   }
 

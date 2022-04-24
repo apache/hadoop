@@ -52,6 +52,7 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
     Path path = new Path("/file");
     ObjectMetadata meta = mock(ObjectMetadata.class);
     when(meta.getContentLength()).thenReturn(1L);
+    when(meta.getRawMetadataValue("Content-Range")).thenReturn("bytes 0-0/1");
     when(meta.getLastModified()).thenReturn(new Date(2L));
     when(meta.getETag()).thenReturn("mock-etag");
     when(s3.getObjectMetadata(any())).thenReturn(meta);

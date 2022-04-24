@@ -48,6 +48,12 @@ public enum StatusProbeEnum {
   public static final Set<StatusProbeEnum> LIST_ONLY =
       EnumSet.of(List);
 
+  /**
+   * No probe.
+   */
+  public static final Set<StatusProbeEnum> NONE =
+      EnumSet.noneOf(StatusProbeEnum.class);
+
   /** Look for files and directories. */
   public static final Set<StatusProbeEnum> FILE =
       HEAD_ONLY;
