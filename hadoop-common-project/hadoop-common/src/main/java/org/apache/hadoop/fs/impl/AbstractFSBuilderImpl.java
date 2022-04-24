@@ -46,7 +46,7 @@ import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.
  * <code>
  *   .opt("foofs:option.a", true)
  *   .opt("foofs:option.b", "value")
- *   .opt("barfs:cache", true)
+ *   .opt("fs.s3a.open.option.etag", "9fe4c37c25b")
  *   .must("foofs:cache", true)
  *   .must("barfs:cache-size", 256 * 1024 * 1024)
  *   .build();
@@ -87,6 +87,9 @@ public abstract class
 
   /** Keep track of the keys for mandatory options. */
   private final Set<String> mandatoryKeys = new HashSet<>();
+
+  /** Keep track of the optional keys. */
+  private final Set<String> optionalKeys = new HashSet<>();
 
   /**
    * Constructor with both optional path and path handle.
@@ -163,6 +166,7 @@ public abstract class
   @Override
   public B opt(@Nonnull final String key, @Nonnull final String value) {
     mandatoryKeys.remove(key);
+    optionalKeys.add(key);
     options.set(key, value);
     return getThisBuilder();
   }
@@ -175,6 +179,7 @@ public abstract class
   @Override
   public B opt(@Nonnull final String key, boolean value) {
     mandatoryKeys.remove(key);
+    optionalKeys.add(key);
     options.setBoolean(key, value);
     return getThisBuilder();
   }
@@ -187,7 +192,16 @@ public abstract class
   @Override
   public B opt(@Nonnull final String key, int value) {
     mandatoryKeys.remove(key);
+    optionalKeys.add(key);
     options.setInt(key, value);
+    return getThisBuilder();
+  }
+
+  @Override
+  public B opt(@Nonnull final String key, final long value) {
+    mandatoryKeys.remove(key);
+    optionalKeys.add(key);
+    options.setLong(key, value);
     return getThisBuilder();
   }
 
@@ -199,6 +213,7 @@ public abstract class
   @Override
   public B opt(@Nonnull final String key, float value) {
     mandatoryKeys.remove(key);
+    optionalKeys.add(key);
     options.setFloat(key, value);
     return getThisBuilder();
   }
@@ -211,6 +226,7 @@ public abstract class
   @Override
   public B opt(@Nonnull final String key, double value) {
     mandatoryKeys.remove(key);
+    optionalKeys.add(key);
     options.setDouble(key, value);
     return getThisBuilder();
   }
@@ -223,6 +239,7 @@ public abstract class
   @Override
   public B opt(@Nonnull final String key, @Nonnull final String... values) {
     mandatoryKeys.remove(key);
+    optionalKeys.add(key);
     options.setStrings(key, values);
     return getThisBuilder();
   }
@@ -248,6 +265,7 @@ public abstract class
   @Override
   public B must(@Nonnull final String key, boolean value) {
     mandatoryKeys.add(key);
+    optionalKeys.remove(key);
     options.setBoolean(key, value);
     return getThisBuilder();
   }
@@ -260,7 +278,16 @@ public abstract class
   @Override
   public B must(@Nonnull final String key, int value) {
     mandatoryKeys.add(key);
+    optionalKeys.remove(key);
     options.setInt(key, value);
+    return getThisBuilder();
+  }
+
+  @Override
+  public B must(@Nonnull final String key, final long value) {
+    mandatoryKeys.add(key);
+    optionalKeys.remove(key);
+    options.setLong(key, value);
     return getThisBuilder();
   }
 
@@ -272,6 +299,7 @@ public abstract class
   @Override
   public B must(@Nonnull final String key, float value) {
     mandatoryKeys.add(key);
+    optionalKeys.remove(key);
     options.setFloat(key, value);
     return getThisBuilder();
   }
@@ -284,6 +312,7 @@ public abstract class
   @Override
   public B must(@Nonnull final String key, double value) {
     mandatoryKeys.add(key);
+    optionalKeys.remove(key);
     options.setDouble(key, value);
     return getThisBuilder();
   }
@@ -296,6 +325,7 @@ public abstract class
   @Override
   public B must(@Nonnull final String key, @Nonnull final String... values) {
     mandatoryKeys.add(key);
+    optionalKeys.remove(key);
     options.setStrings(key, values);
     return getThisBuilder();
   }
@@ -313,6 +343,12 @@ public abstract class
    */
   public Set<String> getMandatoryKeys() {
     return Collections.unmodifiableSet(mandatoryKeys);
+  }
+  /**
+   * Get all the keys that are set as optional keys.
+   */
+  public Set<String> getOptionalKeys() {
+    return Collections.unmodifiableSet(optionalKeys);
   }
 
   /**

@@ -50,6 +50,8 @@ import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
@@ -266,7 +268,9 @@ public class JsonSerialization<T> {
     if (status != null && status.getLen() == 0) {
       throw new EOFException("No data in " + path);
     }
-    FutureDataInputStreamBuilder builder = fs.openFile(path);
+    FutureDataInputStreamBuilder builder = fs.openFile(path)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY,
+            FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE);
     if (status != null) {
       builder.withFileStatus(status);
     }
