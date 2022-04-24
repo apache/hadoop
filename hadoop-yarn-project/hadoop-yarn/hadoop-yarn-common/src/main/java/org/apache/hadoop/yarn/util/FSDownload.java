@@ -25,26 +25,24 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -289,6 +287,75 @@ public class FSDownload implements Callable<Path> {
   }
 
   /**
+   * Partitions {@code FileStatus} array into numOfParts parts.
+   * @param fileStatuses input FileStatus array
+   * @param numOfParts number of partitions to be created
+   * @return {@code Collection} of partitions as {@code List} objects
+   */
+  private Collection<List<FileStatus>> partitionInputList(
+                                                      FileStatus[] fileStatuses,
+                                                      int numOfParts){
+    int chunkSize = (int) Math.ceil((float) fileStatuses.length / numOfParts);
+    final AtomicInteger counter = new AtomicInteger();
+    return Arrays.stream(fileStatuses)
+                 .collect(Collectors.groupingBy(it ->
+                            counter.getAndIncrement() / chunkSize))
+                 .values();
+  }
+
+  /**
+   * Split directory's contents in groups and localize them in parallel.
+   * @param sourceFileSystem Source filesystem
+   * @param destinationFileSystem Destination filesystem
+   * @param source source path to copy. Typically HDFS
+   * @param destination destination path. Typically local filesystem
+   * @exception YarnException Any error has occurred
+   */
+  private void localizeDirectoryInParallel(FileSystem sourceFileSystem,
+                                           FileSystem destinationFileSystem,
+                                           Path source, Path destination)
+          throws YarnException {
+    FileStatus[] fileStatuses;
+    try {
+      fileStatuses = sourceFileSystem.listStatus(source);
+    }catch (Exception e) {
+      throw new YarnException("Download and unpack failed", e);
+    }
+    int nThreads = conf.getInt(
+            YarnConfiguration.NM_LOCALIZER_FETCH_THREAD_COUNT,
+            YarnConfiguration.DEFAULT_NM_LOCALIZER_FETCH_THREAD_COUNT);
+    AtomicReference<IOException> ioException = new AtomicReference<>();
+    ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+    List<Callable<Object>> callableList = new ArrayList<>();
+    for (List<FileStatus> part : partitionInputList(fileStatuses, nThreads)) {
+      callableList.add(() -> {
+        try {
+          Path[] sourcePaths = part.stream()
+                                   .map(FileStatus::getPath)
+                                   .toArray(Path[]::new);
+          FileUtil.copy(sourceFileSystem, sourcePaths, destinationFileSystem,
+                  destination, false, true, conf);
+        } catch (IOException e) {
+          ioException.set(e);
+        }
+        return null;
+      });
+    }
+    try {
+      executorService.invokeAll(callableList);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new AssertionError(e);
+    } finally {
+      executorService.shutdown();
+    }
+
+    if (ioException.get() != null){
+      throw new YarnException("Download and unpack failed", ioException.get());
+    }
+  }
+
+  /**
    * Copy source path to destination with localization rules.
    * @param source source path to copy. Typically HDFS
    * @param destination destination path. Typically local filesystem
@@ -299,11 +366,12 @@ public class FSDownload implements Callable<Path> {
     try {
       FileSystem sourceFileSystem = source.getFileSystem(conf);
       FileSystem destinationFileSystem = destination.getFileSystem(conf);
-      if (sourceFileSystem.getFileStatus(source).isDirectory()) {
-        FileUtil.copy(
-            sourceFileSystem, source,
-            destinationFileSystem, destination, false,
-            true, conf);
+      FileStatus sourceFileStatus = sourceFileSystem.getFileStatus(source);
+      if (sourceFileStatus.isDirectory()) {
+        destinationFileSystem.mkdirs(destination,
+                sourceFileStatus.getPermission());
+        localizeDirectoryInParallel(sourceFileSystem, destinationFileSystem,
+                source, destination);
       } else {
         unpack(source, destination, sourceFileSystem, destinationFileSystem);
       }

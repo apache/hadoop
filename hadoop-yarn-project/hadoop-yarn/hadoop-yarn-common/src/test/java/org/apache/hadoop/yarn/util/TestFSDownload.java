@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -615,7 +616,8 @@ public class TestFSDownload {
   }
 
   @Test (timeout=10000)
-  public void testDirDownload() throws IOException, InterruptedException {
+  public void testDownloadToDirectory()
+          throws IOException, InterruptedException {
     FileContext files = FileContext.getLocalFSFileContext(conf);
     final Path basedir = files.makeQualified(new Path("target",
       TestFSDownload.class.getSimpleName()));
@@ -672,6 +674,91 @@ public class TestFSDownload {
         
         verifyPermsRecursively(localized.getFileSystem(conf),
             files, localized, rsrcVis.get(p.getKey()));
+      }
+    } catch (ExecutionException e) {
+      throw new IOException("Failed exec", e);
+    }
+  }
+
+  /**
+   * Download a directory to test parallel directory download.
+   */
+  @Test (timeout=10000)
+  public void testDirectoryDownload() throws IOException, InterruptedException {
+    FileContext files = FileContext.getLocalFSFileContext(conf);
+    Path baseDirectory = files.makeQualified(new Path("target",
+            TestFSDownload.class.getSimpleName()));
+    Path sourceBaseDirectory = new Path(baseDirectory,
+            Long.toString(uniqueNumberGenerator.incrementAndGet()));
+    files.mkdir(sourceBaseDirectory, null, true);
+    conf.setStrings(TestFSDownload.class.getName(),
+            sourceBaseDirectory.toString());
+
+    Map<LocalResource, LocalResourceVisibility> rsrcVis = new HashMap<>();
+    Random rand = new Random();
+    rand.setSeed(rand.nextLong());
+    Map<LocalResource, Future<Path>> pending = new HashMap<>();
+
+    ExecutorService exec = HadoopExecutors.newSingleThreadExecutor();
+    LocalDirAllocator dirs =
+            new LocalDirAllocator(TestFSDownload.class.getName());
+    LocalResourceVisibility vis;
+    LocalResource rsrc;
+    Path newFilePath;
+    for (int i = 0; i < 5; i++) {
+      vis = (i % 2 == 1) ? LocalResourceVisibility.APPLICATION :
+              LocalResourceVisibility.PRIVATE;
+      newFilePath = new Path(sourceBaseDirectory,
+              (char) ('a' + i) + "Dir" + i + ".jar");
+      rsrc = createJar(files, newFilePath, vis);
+      rsrcVis.put(rsrc, vis);
+    }
+    rsrc = recordFactory.newRecordInstance(LocalResource.class);
+    newFilePath = new Path(sourceBaseDirectory, "subDirectory");
+    rsrc.setResource(URL.fromPath(newFilePath));
+    File newDirectory = new File((files.makeQualified(newFilePath)).toUri());
+    Files.createDirectory(newDirectory.toPath());
+    FileStatus sourceFileStatus = files.getFileStatus(newFilePath);
+
+    for (int i = 0; i < 5; i++) {
+      vis = (i % 2 == 1) ? LocalResourceVisibility.PRIVATE :
+              LocalResourceVisibility.APPLICATION;
+      newFilePath = new Path(newDirectory.toString(),
+              "file" + (char) ('A' + i) + ".jar");
+      createJar(files, newFilePath, vis);
+    }
+
+    vis = LocalResourceVisibility.APPLICATION;
+    rsrc = recordFactory.newRecordInstance(LocalResource.class);
+    rsrc.setResource(URL.fromPath(sourceBaseDirectory));
+    rsrc.setSize(sourceFileStatus.getLen());
+    rsrc.setTimestamp(sourceFileStatus.getModificationTime());
+    rsrc.setType(LocalResourceType.ARCHIVE);
+    rsrc.setVisibility(vis);
+    rsrcVis.put(rsrc, vis);
+
+    Path destPath = dirs.getLocalPathForWrite(baseDirectory.toString(), conf);
+    destPath = new Path(destPath,
+            Long.toString(uniqueNumberGenerator.incrementAndGet()));
+    FSDownload directoryFsd =
+            new FSDownload(files, UserGroupInformation.getCurrentUser(),
+                    conf, destPath, rsrc);
+    pending.put(rsrc, exec.submit(directoryFsd));
+
+    exec.shutdown();
+    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS));
+    for (Future<Path> path: pending.values()) {
+      Assert.assertTrue(path.isDone());
+    }
+    try {
+      for (Map.Entry<LocalResource, Future<Path>> p : pending.entrySet()) {
+        Path localized = p.getValue().get();
+        FileStatus status = files.getFileStatus(localized);
+        assert(status.isDirectory());
+        assert(rsrcVis.containsKey(p.getKey()));
+
+        verifyPermsRecursively(localized.getFileSystem(conf),
+                files, localized, rsrcVis.get(p.getKey()));
       }
     } catch (ExecutionException e) {
       throw new IOException("Failed exec", e);
