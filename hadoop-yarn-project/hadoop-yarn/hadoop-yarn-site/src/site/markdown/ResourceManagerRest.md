@@ -3645,7 +3645,7 @@ Request Body:
 
 Response Header:
 
-    HTTP/1.1 403 Unauthorized
+    HTTP/1.1 401 Unauthorized
     Server: Jetty(6.1.26)
 
 **Bad Request Error Response**
