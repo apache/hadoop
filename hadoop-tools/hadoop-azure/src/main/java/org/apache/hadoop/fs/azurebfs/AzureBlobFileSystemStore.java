@@ -766,7 +766,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         eTag = ((VersionedFileStatus) fileStatus).getVersion();
       } else {
         if (fileStatus != null) {
-          LOG.warn(
+          LOG.debug(
               "Fallback to getPathStatus REST call as provided filestatus "
                   + "is not of type VersionedFileStatus");
         }
