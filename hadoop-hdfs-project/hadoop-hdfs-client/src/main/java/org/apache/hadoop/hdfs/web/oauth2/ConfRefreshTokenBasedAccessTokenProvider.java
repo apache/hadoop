@@ -120,18 +120,24 @@ public class ConfRefreshTokenBasedAccessTokenProvider
           .build();
       Response responseBody = client.newCall(request).execute();
 
+      if (!responseBody.isSuccessful()) throw new IOException("Unexpected code " + responseBody);
+
       if (responseBody.code() != HttpStatus.SC_OK) {
         throw new IllegalArgumentException("Received invalid http response: "
             + responseBody.code() + ", text = " + responseBody.toString());
       }
 
-      Map<?, ?> response = JsonSerialization.mapReader().readValue(
-          responseBody.body().string());
+      Map<?, ?> response = null;
+      if (responseBody.body() != null) {
+        response = JsonSerialization.mapReader().readValue(
+            responseBody.body().string());
 
-      String newExpiresIn = response.get(EXPIRES_IN).toString();
-      accessTokenTimer.setExpiresIn(newExpiresIn);
+        String newExpiresIn = response.get(EXPIRES_IN).toString();
+        accessTokenTimer.setExpiresIn(newExpiresIn);
 
-      accessToken = response.get(ACCESS_TOKEN).toString();
+        accessToken = response.get(ACCESS_TOKEN).toString();
+      }
+
     } catch (Exception e) {
       throw new IOException("Exception while refreshing access token", e);
     }
