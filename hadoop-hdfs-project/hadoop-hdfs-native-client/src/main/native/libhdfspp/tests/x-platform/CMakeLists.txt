@@ -18,7 +18,7 @@
 
 if(WIN32)
     add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_obj> utils_common_test.cc utils_test_main.cc utils_win_test.cc)
-    add_executable(x_platform_syscall_test $<TARGET_OBJECTS:x_platform_obj> syscall_common_test.cc utils_test_main.cc syscall_win_test.cc)    
+    add_executable(x_platform_syscall_test $<TARGET_OBJECTS:x_platform_obj> syscall_common_test.cc utils_test_main.cc syscall_win_test.cc)
 else(WIN32)
     add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_obj> utils_common_test.cc utils_test_main.cc utils_nix_test.cc)
     add_executable(x_platform_syscall_test $<TARGET_OBJECTS:x_platform_obj> syscall_common_test.cc utils_test_main.cc syscall_nix_test.cc)
