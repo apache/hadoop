@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -40,12 +39,10 @@ import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.Context;
 import org.apache.hadoop.hdfs.server.namenode.sps.FileCollector;
 import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeMap;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeWithStorage;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
-import org.apache.hadoop.hdfs.server.sps.metrics.ExternalSPSBeanMetrics;
 import org.apache.hadoop.net.NetworkTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +62,6 @@ public class ExternalSPSContext implements Context {
   private final FileCollector fileCollector;
   private final BlockMoveTaskHandler externalHandler;
   private final BlockMovementListener blkMovementListener;
-  private ExternalSPSBeanMetrics spsBeanMetrics;
 
   public ExternalSPSContext(SPSService service, NameNodeConnector nnc) {
     this.service = service;
@@ -211,18 +207,5 @@ public class ExternalSPSContext implements Context {
       }
       LOG.info("Movement attempted blocks", actualBlockMovements);
     }
-  }
-
-  public void initMetrics(StoragePolicySatisfier sps) {
-    spsBeanMetrics = new ExternalSPSBeanMetrics(sps);
-  }
-
-  public void closeMetrics() {
-    spsBeanMetrics.close();
-  }
-
-  @VisibleForTesting
-  public ExternalSPSBeanMetrics getSpsBeanMetrics() {
-    return spsBeanMetrics;
   }
 }

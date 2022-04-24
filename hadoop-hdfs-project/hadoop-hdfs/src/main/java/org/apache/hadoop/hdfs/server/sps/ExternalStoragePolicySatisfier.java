@@ -48,7 +48,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public final class ExternalStoragePolicySatisfier {
-  public static final Logger LOG = LoggerFactory.getLogger(ExternalStoragePolicySatisfier.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(ExternalStoragePolicySatisfier.class);
 
   private ExternalStoragePolicySatisfier() {
     // This is just a class to start and run external sps.
@@ -59,7 +60,6 @@ public final class ExternalStoragePolicySatisfier {
    */
   public static void main(String[] args) throws Exception {
     NameNodeConnector nnc = null;
-    ExternalSPSContext context = null;
     try {
       StringUtils.startupShutdownMessage(StoragePolicySatisfier.class, args,
           LOG);
@@ -69,10 +69,9 @@ public final class ExternalStoragePolicySatisfier {
       StoragePolicySatisfier sps = new StoragePolicySatisfier(spsConf);
       nnc = getNameNodeConnector(spsConf);
 
-      context = new ExternalSPSContext(sps, nnc);
+      ExternalSPSContext context = new ExternalSPSContext(sps, nnc);
       sps.init(context);
       sps.start(StoragePolicySatisfierMode.EXTERNAL);
-      context.initMetrics(sps);
       if (sps != null) {
         sps.join();
       }
@@ -82,11 +81,6 @@ public final class ExternalStoragePolicySatisfier {
     } finally {
       if (nnc != null) {
         nnc.close();
-      }
-      if (context!= null) {
-        if (context.getSpsBeanMetrics() != null) {
-          context.closeMetrics();
-        }
       }
     }
   }

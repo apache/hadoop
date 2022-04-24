@@ -1077,7 +1077,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
    * attempted or reported time stamp. This is used by
    * {@link BlockStorageMovementAttemptedItems#storageMovementAttemptedItems}.
    */
-  public final static class AttemptedItemInfo extends ItemInfo {
+  final static class AttemptedItemInfo extends ItemInfo {
     private long lastAttemptedOrReportedTime;
     private final Set<Block> blocks;
 
@@ -1095,7 +1095,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
      * @param retryCount
      *          file retry count
      */
-    public AttemptedItemInfo(long rootId, long trackId,
+    AttemptedItemInfo(long rootId, long trackId,
         long lastAttemptedOrReportedTime,
         Set<Block> blocks, int retryCount) {
       super(rootId, trackId, retryCount);
