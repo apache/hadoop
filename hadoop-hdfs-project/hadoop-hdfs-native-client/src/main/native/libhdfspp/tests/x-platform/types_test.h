@@ -57,7 +57,22 @@ TYPED_TEST_P(XPlatformTypesTest, SSizeTCanHoldInts) {
   ASSERT_GE(actual, expected);
 }
 
+// For 64-bit systems.
+#if _WIN64 || __x86_64__ || __ppc64__
+/**
+ * Tests whether ssize_t can hold at least a long int.
+ */
+TYPED_TEST_P(XPlatformTypesTest, SSizeTCanHoldLongInts) {
+  constexpr auto actual = std::numeric_limits<TypeParam>::max();
+  constexpr auto expected = std::numeric_limits<long int>::max();
+  ASSERT_GE(actual, expected);
+}
+
+REGISTER_TYPED_TEST_SUITE_P(XPlatformTypesTest, SSizeTMinusOne,
+                            SSizeTCanHoldInts, SSizeTCanHoldLongInts);
+#else
 REGISTER_TYPED_TEST_SUITE_P(XPlatformTypesTest, SSizeTMinusOne,
                             SSizeTCanHoldInts);
+#endif
 
 #endif
