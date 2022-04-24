@@ -24,10 +24,10 @@
 
 #if _WIN64
 // Windows 64-bit.
-typedef ssize_t long int;
+typedef long int x_platform_ssize_t;
 #else
 // Windows 32-bit.
-typedef ssize_t int;
+typedef int x_platform_ssize_t;
 #endif
 
 #else
