@@ -497,11 +497,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     int bytesRead = invoker.retry("read", pathStr, true,
         () -> {
           int bytes;
-          // When exception happens before re-setting wrappedStream in "reopen" called
-          // by onReadFailure, then wrappedStream will be null. But the **retry** may
-          // re-execute this block and cause NPE if we don't check wrappedStream
+          // When exception happens, onReadFailure closes the stream and
+          // sets wrappedStream to null. In this case, do not reopen the stream.
           if (wrappedStream == null) {
-            reopen("failure recovery", getPos(), 1, false);
+            return 0;
           }
           try {
             bytes = wrappedStream.read(buf, off, len);
