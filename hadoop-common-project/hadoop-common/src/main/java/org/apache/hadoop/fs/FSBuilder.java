@@ -62,6 +62,13 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
   B opt(@Nonnull String key, float value);
 
   /**
+   * Set optional long parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  B opt(@Nonnull String key, long value);
+
+  /**
    * Set optional double parameter for the Builder.
    *
    * @see #opt(String, String)
@@ -103,6 +110,13 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @see #must(String, String)
    */
   B must(@Nonnull String key, float value);
+
+  /**
+   * Set mandatory long option.
+   *
+   * @see #must(String, String)
+   */
+  B must(@Nonnull String key, long value);
 
   /**
    * Set mandatory double option.
