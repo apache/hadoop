@@ -457,17 +457,6 @@ public class ITestS3AConfiguration {
   }
 
   @Test
-  public void testReadAheadRange() throws Exception {
-    conf = new Configuration();
-    conf.set(Constants.READAHEAD_RANGE, "300K");
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    assertNotNull(fs);
-    long readAheadRange = fs.getReadAheadRange();
-    assertNotNull(readAheadRange);
-    assertEquals("Read Ahead Range Incorrect.", 300 * 1024, readAheadRange);
-  }
-
-  @Test
   public void testUsernameFromUGI() throws Throwable {
     final String alice = "alice";
     UserGroupInformation fakeUser =

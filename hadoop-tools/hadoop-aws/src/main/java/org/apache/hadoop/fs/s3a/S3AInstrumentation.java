@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
@@ -837,7 +838,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_UNBUFFERED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
-          .withDurationTracking(ACTION_HTTP_GET_REQUEST)
+          .withDurationTracking(ACTION_HTTP_GET_REQUEST,
+              StoreStatisticNames.ACTION_FILE_OPENED,
+              StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
+              StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED)
           .build();
       setIOStatistics(st);
       aborted = st.getCounterReference(
@@ -1271,6 +1275,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return trackDuration(ACTION_HTTP_GET_REQUEST);
     }
 
+    @Override
+    public DurationTracker initiateInnerStreamClose(final boolean abort) {
+      return trackDuration(abort
+          ? StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED
+          : StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED);
+    }
   }
 
   /**

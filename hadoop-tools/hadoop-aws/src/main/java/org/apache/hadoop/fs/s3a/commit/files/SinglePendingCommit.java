@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit.files;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -38,6 +39,7 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
@@ -152,7 +154,23 @@ public class SinglePendingCommit extends PersistentCommitData
    */
   public static SinglePendingCommit load(FileSystem fs, Path path)
       throws IOException {
-    SinglePendingCommit instance = serializer().load(fs, path);
+    return load(fs, path, null);
+  }
+
+  /**
+   * Load an instance from a file, then validate it.
+   * @param fs filesystem
+   * @param path path
+   * @param status status of file to load or null
+   * @return the loaded instance
+   * @throws IOException IO failure
+   * @throws ValidationFailure if the data is invalid
+   */
+  public static SinglePendingCommit load(FileSystem fs,
+      Path path,
+      @Nullable FileStatus status)
+      throws IOException {
+    SinglePendingCommit instance = serializer().load(fs, path, status);
     instance.filename = path.toString();
     instance.validate();
     return instance;
