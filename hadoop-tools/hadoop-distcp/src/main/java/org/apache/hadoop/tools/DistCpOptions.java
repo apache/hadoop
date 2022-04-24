@@ -686,6 +686,8 @@ public final class DistCpOptions {
 
     /**
      * whether builder with crc
+     * @param newSkipCRC whether to skip crc check
+     * @return  Builder object whether to skip crc check                
      * @deprecated Use {@link #withSkipCRC(boolean)} instead.
      */
     @Deprecated
@@ -693,7 +695,7 @@ public final class DistCpOptions {
         this.skipCRC = newSkipCRC;
         return this;
     }
-    
+
     public Builder withSkipCRC(boolean newSkipCRC) {
       this.skipCRC = newSkipCRC;
       return this;
