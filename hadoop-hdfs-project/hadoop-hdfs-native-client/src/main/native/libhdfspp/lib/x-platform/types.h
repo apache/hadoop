@@ -21,18 +21,19 @@
 
 namespace XPlatform {
 #if _WIN32 || _WIN64
+// Windows system.
 
-// Windows system
 #if _WIN64
-// Windows 64-bit
+// Windows 64-bit.
 using ssize_t = long int;
 #else
-// Windows 64-bit
+// Windows 32-bit.
 using ssize_t = int;
 #endif
 
 #else
-// Non-Windows system
+// ssize_t is correctly defined by taking bit-ness into account on non-Windows
+// systems.
 #include <sys/types.h>
 
 using ssize_t = ssize_t;

@@ -20,18 +20,19 @@
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_TYPES
 
 #if _WIN32 || _WIN64
+// Windows system.
 
-// Windows system
 #if _WIN64
-// Windows 64-bit
+// Windows 64-bit.
 typedef ssize_t long int;
 #else
-// Windows 64-bit
+// Windows 32-bit.
 typedef ssize_t int;
 #endif
 
 #else
-// Non-Windows system
+// ssize_t is correctly defined by taking bit-ness into account on non-Windows
+// systems.
 #include <sys/types.h>
 
 typedef ssize_t x_platform_ssize_t;
