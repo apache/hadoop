@@ -103,13 +103,15 @@ public class ConfRefreshTokenBasedAccessTokenProvider
 
   void refresh() throws IOException {
     try {
-      OkHttpClient client = new OkHttpClient.Builder().connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
-                                                              TimeUnit.MILLISECONDS)
-                                                      .readTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
-                                                              TimeUnit.MILLISECONDS)
-                                                      .build();
+      OkHttpClient client =
+          new OkHttpClient.Builder().connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+                  TimeUnit.MILLISECONDS)
+              .readTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
+              .build();
 
-      String bodyString = Utils.postBody(GRANT_TYPE, REFRESH_TOKEN, REFRESH_TOKEN, refreshToken, CLIENT_ID, clientId);
+      String bodyString = Utils.postBody(GRANT_TYPE, REFRESH_TOKEN,
+          REFRESH_TOKEN, refreshToken,
+          CLIENT_ID, clientId);
 
       RequestBody body = RequestBody.create(URLENCODED, bodyString);
 
