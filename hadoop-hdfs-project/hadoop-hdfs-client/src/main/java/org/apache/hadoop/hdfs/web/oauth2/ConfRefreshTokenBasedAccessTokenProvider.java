@@ -32,6 +32,7 @@ import org.apache.http.HttpStatus;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_CLIENT_ID_KEY;
@@ -103,39 +104,37 @@ public class ConfRefreshTokenBasedAccessTokenProvider
 
   void refresh() throws IOException {
     try {
-      OkHttpClient client = new OkHttpClient.Builder()
-              .connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
+      OkHttpClient client =
+          new OkHttpClient.Builder().connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+                  TimeUnit.MILLISECONDS)
               .readTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
               .build();
 
-      String bodyString = Utils.postBody(GRANT_TYPE, REFRESH_TOKEN,
-          REFRESH_TOKEN, refreshToken,
-          CLIENT_ID, clientId);
+      String bodyString =
+          Utils.postBody(GRANT_TYPE, REFRESH_TOKEN, REFRESH_TOKEN, refreshToken, CLIENT_ID,
+              clientId);
 
       RequestBody body = RequestBody.create(URLENCODED, bodyString);
 
-      Request request = new Request.Builder()
-          .url(refreshURL)
-          .post(body)
-          .build();
+      Request request = new Request.Builder().url(refreshURL).post(body).build();
       Response responseBody = client.newCall(request).execute();
 
-      if (!responseBody.isSuccessful()) throw new IOException("Unexpected code " + responseBody);
+      if (responseBody != null) {
 
-      if (responseBody.code() != HttpStatus.SC_OK) {
-        throw new IllegalArgumentException("Received invalid http response: "
-            + responseBody.code() + ", text = " + responseBody.toString());
-      }
+        if (responseBody.code() != HttpStatus.SC_OK) {
+          throw new IllegalArgumentException(
+              "Received invalid http response: " + responseBody.code() + ", text = "
+                  + responseBody);
+        }
 
-      Map<?, ?> response = null;
-      if (responseBody.body() != null) {
-        response = JsonSerialization.mapReader().readValue(
-            responseBody.body().string());
+        Map<?, ?> response = JsonSerialization.mapReader()
+            .readValue(Objects.requireNonNull(responseBody.body()).string());
 
         String newExpiresIn = response.get(EXPIRES_IN).toString();
         accessTokenTimer.setExpiresIn(newExpiresIn);
 
         accessToken = response.get(ACCESS_TOKEN).toString();
+
       }
 
     } catch (Exception e) {
