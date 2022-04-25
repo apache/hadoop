@@ -57,7 +57,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -498,7 +497,7 @@ public class DelegationTokenRenewer extends AbstractService {
           LOG.info(applicationId + " found existing hdfs token " + token);
           hasHdfsToken = true;
         }
-        if (skipTokenRenewal(token, tokenExpiredTime)) {
+        if (skipTokenRenewalAndUpdateExpiredTime(token, tokenExpiredTime)) {
           continue;
         }
 
@@ -524,7 +523,7 @@ public class DelegationTokenRenewer extends AbstractService {
           }  else {
             tokenConf = getConfig();
           }
-          dttr = new DelegationTokenToRenew(Collections.singletonList(applicationId), token,
+          dttr = new DelegationTokenToRenew(Arrays.asList(applicationId), token,
               tokenConf, tokenExpiredTime.get(), shouldCancelAtEnd, evt.getUser());
 
           try {
@@ -541,7 +540,7 @@ public class DelegationTokenRenewer extends AbstractService {
                   + " on recovery as it expired, requesting new hdfs token for "
                   + applicationId + ", user=" + evt.getUser(), ioe);
               requestNewHdfsDelegationTokenAsProxyUser(
-                      Collections.singletonList(applicationId), evt.getUser(),
+                      Arrays.asList(applicationId), evt.getUser(),
                   evt.shouldCancelAtEnd());
               continue;
             }
@@ -623,9 +622,9 @@ public class DelegationTokenRenewer extends AbstractService {
    * Skip renewing token if the renewer of the token is set to ""
    * Caller is expected to have examined that token.isManaged() returns
    * true before calling this method.
-   * if renewer is not empty, get the max expired time from token identifier.
+   * if identifier is not null, get the max expired time from token identifier.
    */
-  private boolean skipTokenRenewal(Token<?> token, AtomicLong expiredTime)
+  private boolean skipTokenRenewalAndUpdateExpiredTime(Token<?> token, AtomicLong expiredTime)
       throws IOException {
 
     @SuppressWarnings("unchecked")
