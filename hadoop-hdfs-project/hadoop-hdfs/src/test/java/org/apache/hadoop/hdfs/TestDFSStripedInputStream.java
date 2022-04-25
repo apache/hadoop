@@ -702,7 +702,8 @@ public class TestDFSStripedInputStream {
     List<String> ranges = new ArrayList<>(); // range format: chunkIndex_offset_len
     DFSClientFaultInjector.set(new DFSClientFaultInjector() {
       @Override
-      public void onCreateBlockReader(LocatedBlock block, int chunkIndex, long offset, long length) {
+      public void onCreateBlockReader(LocatedBlock block, int chunkIndex,
+                                      long offset, long length) {
         ranges.add(String.format("%s_%s_%s", chunkIndex, offset, length));
       }
     });
@@ -717,7 +718,8 @@ public class TestDFSStripedInputStream {
     List<String> ranges = new ArrayList<>(); // range format: chunkIndex_offset_len
     DFSClientFaultInjector.set(new DFSClientFaultInjector() {
       @Override
-      public void onCreateBlockReader(LocatedBlock block, int chunkIndex, long offset, long length) {
+      public void onCreateBlockReader(LocatedBlock block, int chunkIndex,
+                                      long offset, long length) {
         ranges.add(String.format("%s_%s_%s", chunkIndex, offset, length));
       }
     });
