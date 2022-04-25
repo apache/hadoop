@@ -3196,14 +3196,14 @@ Elements of the *am-container-spec* object
 
 The am-container-spec object should be used to provide the container launch context for the application master.
 
-| Item | Data Type | Description                                                                                                                         |
-|:---- |:---- |:------------------------------------------------------------------------------------------------------------------------------------|
-| local-resources | object | Object describing the resources that need to be localized, described below                                                          |
-| environment | object | Environment variables for your containers, specified as key value pairs                                                             |
-| commands | object | The commands for launching your container, in the order in which they should be executed                                            |
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| local-resources | object | Object describing the resources that need to be localized, described below |
+| environment | object | Environment variables for your containers, specified as key value pairs |
+| commands | object | The commands for launching your container, in the order in which they should be executed |
 | service-data | object | Application specific service data; key is the name of the auxiliary service, value is base-64 encoding of the data you wish to pass |
-| credentials | object | The credentials required for your application to run, described below                                                               |
-| application-acls | objec | ACLs for your application; the key can be "VIEW\_APP" or "MODIFY\_APP", the value is the list of users with the permissions         |
+| credentials | object | The credentials required for your application to run, described below |
+| application-acls | objec | ACLs for your application; the key can be "VIEW\_APP" or "MODIFY\_APP", the value is the list of users with the permissions |
 
 Elements of the *local-resources* object
 
