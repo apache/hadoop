@@ -19,7 +19,7 @@ This document explains the `S3PrefetchingInputStream` and the various components
 This input stream implements prefetching and caching to improve read performance of the input
 stream. A high level overview of this feature was published in
 [Pinterest Engineering's blog post titled "Improving efficiency and reducing runtime using S3 read optimization"](https://medium.com/pinterest-engineering/improving-efficiency-and-reducing-runtime-using-s3-read-optimization-b31da4b60fa0)
-blogpost.
+.
 
 With prefetching, the input stream divides the remote file into blocks of a fixed size, associates
 buffers to these blocks and then reads data into these buffers asynchronously. It also potentially
