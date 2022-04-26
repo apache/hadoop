@@ -73,7 +73,7 @@ Initial state of a buffer is blank.
 `CachingBlockManager` - Implements reading data into the buffer, prefetching and caching.
 
 `BufferPool` - Manages a fixed sized pool of buffers.
-It’s used by `CachingBlockManager` to acquire buffers.
+It's used by `CachingBlockManager` to acquire buffers.
 
 `S3File` - Implements operations to interact with S3 such as opening and closing the input stream to
 the remote file in S3.
@@ -118,7 +118,7 @@ The `ensureCurrentBuffer()` then:
 The read operation now just gets the required bytes from the buffer in `FilePosition`.
 
 When the second read is issued, there is already a valid buffer which can be used.
-Don’t do anything else, just read the required bytes from this buffer.
+Don't do anything else, just read the required bytes from this buffer.
 
 #### S3CachingInputStream
 
