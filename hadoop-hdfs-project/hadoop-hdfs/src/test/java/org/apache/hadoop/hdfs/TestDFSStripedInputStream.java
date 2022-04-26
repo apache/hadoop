@@ -669,10 +669,11 @@ public class TestDFSStripedInputStream {
 
   @Test
   public void testBlockReader() throws Exception {
+    ecPolicy = StripedFileTestUtil.getDefaultECPolicy(); // RS-6-3-1024k
     int fileSize = 19 * cellSize + 100;
     long stripeSize = (long) dataBlocks * cellSize;
     byte[] bytes = StripedFileTestUtil.generateBytes(fileSize);
-    DFSTestUtil.writeFile(fs, filePath, new String(bytes)); // RS-6-3-1024k
+    DFSTestUtil.writeFile(fs, filePath, new String(bytes));
 
     try (DFSStripedInputStream in =
              (DFSStripedInputStream) fs.getClient().open(filePath.toString())) {
