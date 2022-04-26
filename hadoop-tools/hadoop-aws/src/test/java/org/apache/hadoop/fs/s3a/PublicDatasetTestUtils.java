@@ -49,9 +49,12 @@ public class PublicDatasetTestUtils {
 
   /**
    * Default bucket for an S3A file system with many objects: {@value}.
+   *
+   * We use a subdirectory to ensure we have permissions on all objects
+   * contained within as well as permission to inspect the directory itself.
    */
   private static final String DEFAULT_BUCKET_WITH_MANY_OBJECTS
-      = "s3a://common-crawl/";
+      = "s3a://usgs-landsat/collection02/level-1/";
 
   /**
    * Provide a URI for a directory containing many objects.
