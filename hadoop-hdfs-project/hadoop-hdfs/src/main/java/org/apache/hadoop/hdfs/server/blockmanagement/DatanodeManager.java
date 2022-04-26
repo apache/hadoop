@@ -194,10 +194,6 @@ public class DatanodeManager {
     new HashMap<>(4, 0.75f);
 
   /**
-   * True if we should process latency metrics from downstream peers.
-   */
-  private boolean dataNodePeerStatsEnabled;
-  /**
    *  True if we should process latency metrics from individual DN disks.
    */
   private final boolean dataNodeDiskStatsEnabled;
@@ -211,7 +207,6 @@ public class DatanodeManager {
 
   @Nullable
   private SlowPeerTracker slowPeerTracker;
-  private final Object slowPeerTrackerLock;
   private static Set<String> slowNodesUuidSet = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
@@ -234,7 +229,6 @@ public class DatanodeManager {
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
-    slowPeerTrackerLock = new Object();
 
     this.useDfsNetworkTopology = conf.getBoolean(
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
@@ -265,10 +259,8 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
-    synchronized (slowPeerTrackerLock) {
-      if (slowPeerTracker != null) {
-        startSlowPeerCollector();
-      }
+    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
+      startSlowPeerCollector();
     }
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
         new SlowDiskTracker(conf, timer) : null;
@@ -375,14 +367,13 @@ public class DatanodeManager {
    *
    * @param conf The configuration to use while initializing slowPeerTracker.
    * @param timer Timer object for slowPeerTracker.
-   * @param dataNodePeerStatsEnabledVal To determine whether slow peer tracking should be enabled.
+   * @param dataNodePeerStatsEnabled To determine whether slow peer tracking should be enabled.
    */
   public void initSlowPeerTracker(Configuration conf, Timer timer,
-      boolean dataNodePeerStatsEnabledVal) {
-    synchronized (slowPeerTrackerLock) {
-      this.dataNodePeerStatsEnabled = dataNodePeerStatsEnabledVal;
-      this.slowPeerTracker = dataNodePeerStatsEnabled ? new SlowPeerTracker(conf, timer) : null;
-    }
+      boolean dataNodePeerStatsEnabled) {
+    this.slowPeerTracker = dataNodePeerStatsEnabled ?
+        new SlowPeerTracker(conf, timer) :
+        new SlowPeerDisabledTracker(conf, timer);
   }
 
   private void startSlowPeerCollector() {
@@ -1875,16 +1866,16 @@ public class DatanodeManager {
       nodeinfo.setBalancerBandwidth(0);
     }
 
-    synchronized (slowPeerTrackerLock) {
-      if (slowPeerTracker != null) {
-        final Map<String, Double> slowPeersMap = slowPeers.getSlowPeers();
-        if (!slowPeersMap.isEmpty()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("DataNode " + nodeReg + " reported slow peers: " + slowPeersMap);
-          }
-          for (String slowNodeId : slowPeersMap.keySet()) {
-            slowPeerTracker.addReport(slowNodeId, nodeReg.getIpcAddr(false));
-          }
+    Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
+
+    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
+      final Map<String, Double> slowPeersMap = slowPeers.getSlowPeers();
+      if (!slowPeersMap.isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("DataNode " + nodeReg + " reported slow peers: " + slowPeersMap);
+        }
+        for (String slowNodeId : slowPeersMap.keySet()) {
+          slowPeerTracker.addReport(slowNodeId, nodeReg.getIpcAddr(false));
         }
       }
     }
@@ -2129,9 +2120,8 @@ public class DatanodeManager {
    * @return
    */
   public String getSlowPeersReport() {
-    synchronized (slowPeerTrackerLock) {
-      return slowPeerTracker != null ? slowPeerTracker.getJson() : null;
-    }
+    Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
+    return slowPeerTracker.getJson();
   }
 
   /**
@@ -2141,12 +2131,8 @@ public class DatanodeManager {
   public Set<String> getSlowPeersUuidSet() {
     Set<String> slowPeersUuidSet = Sets.newConcurrentHashSet();
     List<String> slowNodes;
-    synchronized (slowPeerTrackerLock) {
-      if (slowPeerTracker == null) {
-        return slowPeersUuidSet;
-      }
-      slowNodes = slowPeerTracker.getSlowNodes(maxSlowPeerReportNodes);
-    }
+    Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
+    slowNodes = slowPeerTracker.getSlowNodes(maxSlowPeerReportNodes);
     for (String slowNode : slowNodes) {
       if (StringUtils.isBlank(slowNode)
               || !slowNode.contains(IP_PORT_SEPARATOR)) {
@@ -2175,9 +2161,7 @@ public class DatanodeManager {
    */
   @VisibleForTesting
   public SlowPeerTracker getSlowPeerTracker() {
-    synchronized (slowPeerTrackerLock) {
-      return slowPeerTracker;
-    }
+    return slowPeerTracker;
   }
 
   /**
