@@ -537,7 +537,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   /**
-   * Get the active namenode resolver
+   * Get the active namenode resolver.
    *
    * @return Active namenode resolver.
    */
