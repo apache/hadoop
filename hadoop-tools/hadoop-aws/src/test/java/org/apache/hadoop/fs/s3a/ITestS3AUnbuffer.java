@@ -74,9 +74,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     IOStatisticsSnapshot iostats = new IOStatisticsSnapshot();
     // Open file, read half the data, and then call unbuffer
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
-      if (!inputStream.hasCapability(StreamCapabilities.UNBUFFER)) {
-        skip("input stream does not support unbuffer");
-      }
+      skipIfCannotUnbuffer(inputStream);
       assertTrue(inputStream.getWrappedStream() instanceof S3AInputStream);
       int bytesToRead = 8;
       readAndAssertBytesRead(inputStream, bytesToRead);
@@ -143,9 +141,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     Object streamStatsStr;
     try {
       inputStream = fs.open(dest);
-      if (!inputStream.hasCapability(StreamCapabilities.UNBUFFER)) {
-        skip("input stream does not support unbuffer");
-      }
+      skipIfCannotUnbuffer(inputStream);
       streamStatsStr = demandStringifyIOStatisticsSource(inputStream);
 
       LOG.info("initial stream statistics {}", streamStatsStr);
@@ -198,6 +194,12 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
 
   private boolean isObjectStreamOpen(FSDataInputStream inputStream) {
     return ((S3AInputStream) inputStream.getWrappedStream()).isObjectStreamOpen();
+  }
+
+  private void skipIfCannotUnbuffer(FSDataInputStream inputStream) {
+    if (!inputStream.hasCapability(StreamCapabilities.UNBUFFER)) {
+      skip("input stream does not support unbuffer");
+    }
   }
 
   /**
