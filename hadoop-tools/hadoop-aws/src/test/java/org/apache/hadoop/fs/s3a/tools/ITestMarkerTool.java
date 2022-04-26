@@ -32,8 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.PublicDatasetTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
@@ -320,7 +320,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     final File audit = tempAuditFile();
 
     Configuration conf = super.createConfiguration();
-    String bucketUri = getBucketUriWithLargeNumberOfObjects(conf);
+    String bucketUri = PublicDatasetTestUtils.getBucketPrefixWithManyObjects(conf);
 
     runToFailure(EXIT_INTERRUPTED,
         MARKERS,
@@ -549,23 +549,6 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     for (String p : createdPaths.filesUnderBase) {
       assertIsFile(toPath(dest, p));
     }
-  }
-
-  /**
-   * Get s3a URI of a bucket/prefix with a large number of objects from config.
-   * @param conf Apache Hadoop configuration
-   * @return s3a URI with large number of objects
-   */
-  private String getBucketUriWithLargeNumberOfObjects(Configuration conf) {
-    String bucket = conf
-        .getTrimmed(KEY_BUCKET_WITH_MANY_OBJECTS, DEFAULT_BUCKET_MANY_OBJECTS);
-
-    S3ATestUtils.assume(
-        "Empty test property: " + KEY_BUCKET_WITH_MANY_OBJECTS,
-        !bucket.isEmpty()
-    );
-
-    return bucket;
   }
 
 }

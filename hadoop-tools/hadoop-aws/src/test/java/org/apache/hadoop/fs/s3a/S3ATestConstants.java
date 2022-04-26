@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
+
 import java.time.Duration;
 
 /**
@@ -115,13 +117,6 @@ public interface S3ATestConstants {
    */
   String KEY_BUCKET_WITH_MANY_OBJECTS
       = TEST_FS_S3A + "bucket-with-many-objects";
-
-  /**
-   * Default bucket for when {@value KEY_BUCKET_WITH_MANY_OBJECTS} is not set:
-   * {@value}.
-   */
-  String DEFAULT_BUCKET_MANY_OBJECTS
-      = "s3a://commoncrawl/";
 
   /**
    * Name of the property to define the timeout for scale tests: {@value}.
