@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_BUCKET_WITH_MANY_OBJECTS;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_CSVTEST_FILE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_REQUESTER_PAYS_FILE;
 
 /**
@@ -57,6 +58,12 @@ public class PublicDatasetTestUtils {
       = "s3a://usgs-landsat/collection02/level-1/";
 
   /**
+   * Default path for the multi MB test file: {@value}.
+   */
+  private static final String DEFAULT_MB_OBJECT
+      = "s3a://landsat-pds/scene_list.gz";
+
+  /**
    * Provide a URI for a directory containing many objects.
    *
    * Unless otherwise configured,
@@ -68,6 +75,19 @@ public class PublicDatasetTestUtils {
   public static String getBucketPrefixWithManyObjects(Configuration conf) {
     return fetchFromConfig(conf,
         KEY_BUCKET_WITH_MANY_OBJECTS, DEFAULT_BUCKET_WITH_MANY_OBJECTS);
+  }
+
+  /**
+   * Provide a URI to a large (multi MB) object.
+   *
+   * Unless otherwise configured,
+   * this will be {@value DEFAULT_MB_OBJECT}.
+   *
+   * @param conf Hadoop configuration
+   * @return S3A FS URI
+   */
+  public static String getLargeTextObject(Configuration conf) {
+    return fetchFromConfig(conf, KEY_CSVTEST_FILE, DEFAULT_MB_OBJECT);
   }
 
   /**
