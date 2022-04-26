@@ -96,24 +96,22 @@ public abstract class CredentialBasedAccessTokenProvider
   }
 
   void refresh() throws IOException {
-    try {
-      OkHttpClient client = new OkHttpClient.Builder()
-              .connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
-              .readTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
-              .build();
+    OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
+            .readTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
+            .build();
 
-      String bodyString = Utils.postBody(CLIENT_SECRET, getCredential(),
-          GRANT_TYPE, CLIENT_CREDENTIALS,
-          CLIENT_ID, clientId);
+    String bodyString = Utils.postBody(CLIENT_SECRET, getCredential(),
+        GRANT_TYPE, CLIENT_CREDENTIALS,
+        CLIENT_ID, clientId);
 
-      RequestBody body = RequestBody.create(URLENCODED, bodyString);
+    RequestBody body = RequestBody.create(URLENCODED, bodyString);
 
-      Request request = new Request.Builder()
-          .url(refreshURL)
-          .post(body)
-          .build();
-      Response responseBody = client.newCall(request).execute();
-
+    Request request = new Request.Builder()
+        .url(refreshURL)
+        .post(body)
+        .build();
+    try (Response responseBody = client.newCall(request).execute()) {
       if (responseBody.code() != HttpStatus.SC_OK) {
         throw new IllegalArgumentException("Received invalid http response: "
             + responseBody.code() + ", text = " + responseBody.toString());
@@ -126,7 +124,6 @@ public abstract class CredentialBasedAccessTokenProvider
       timer.setExpiresIn(newExpiresIn);
 
       accessToken = response.get(ACCESS_TOKEN).toString();
-
     } catch (Exception e) {
       throw new IOException("Unable to obtain access token from credential", e);
     }
