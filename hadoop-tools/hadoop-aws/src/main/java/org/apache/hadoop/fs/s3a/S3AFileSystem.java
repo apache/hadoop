@@ -575,10 +575,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return VectoredIOContext.
    */
   private VectoredIOContext populateVectoredIOContext(Configuration conf) {
-    final int minSeekVectored = conf.getInt(AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
-            DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE);
-    final int maxReadSizeVectored = conf.getInt(AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
-            DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE);
+    final int minSeekVectored = (int) longBytesOption(conf, AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
+            DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, 0);
+    final int maxReadSizeVectored = (int) longBytesOption(conf, AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
+            DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, 0);
     return new VectoredIOContext()
             .setMinSeekForVectoredReads(minSeekVectored)
             .setMaxReadSizeForVectoredReads(maxReadSizeVectored)

@@ -66,10 +66,10 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
             Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
             Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE);
     S3ATestUtils.disableFilesystemCaching(conf);
-    final int configuredMinSeek = 1024;
-    final int configuredMaxSize = 2 * 1024;
-    conf.setInt(Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, configuredMinSeek);
-    conf.setInt(Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, configuredMaxSize);
+    final int configuredMinSeek = 2 * 1024;
+    final int configuredMaxSize = 10 * 1024 * 1024;
+    conf.set(Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, "2K");
+    conf.set(Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, "10M");
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
       try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
         int newMinSeek = fis.minSeekForVectorReads();
