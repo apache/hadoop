@@ -364,7 +364,7 @@ public class AzureBlobFileSystemStore {
         client,
         AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
         0,
-            populateAbfsOutputStreamContext());
+        populateAbfsOutputStreamContext());
   }
 
   private AbfsOutputStreamContext populateAbfsOutputStreamContext() {
