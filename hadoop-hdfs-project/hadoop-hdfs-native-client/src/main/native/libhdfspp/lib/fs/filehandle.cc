@@ -157,8 +157,8 @@ Status FileHandleImpl::Seek(off_t *offset, std::ios_base::seekdir whence) {
 }
 
 /* return false if seek will be out of bounds */
-bool FileHandleImpl::CheckSeekBounds(XPlatform::ssize_t desired_position) {
-  const XPlatform::ssize_t file_length = file_info_->file_length_;
+bool FileHandleImpl::CheckSeekBounds(ssize_t desired_position) {
+  ssize_t file_length = file_info_->file_length_;
 
   if (desired_position < 0 || desired_position > file_length) {
     return false;

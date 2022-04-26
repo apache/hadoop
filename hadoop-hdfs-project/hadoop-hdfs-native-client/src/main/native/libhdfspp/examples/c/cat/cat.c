@@ -28,7 +28,7 @@
 #include "hdfspp/hdfs_ext.h"
 #include "uriparser2/uriparser2.h"
 #include "common/util_c.h"
-#include "x-platform/c-api/types.h"
+#include "x-platform/types.h"
 
 #define SCHEME "hdfs"
 #define BUF_SIZE 1048576 //1 MB
@@ -87,8 +87,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  x_platform_ssize_t read_bytes_count = 0;
-  x_platform_ssize_t last_read_bytes = 0;
+  ssize_t read_bytes_count = 0;
+  ssize_t last_read_bytes = 0;
 
   while (0 < (last_read_bytes =
                   hdfsPread(fs, file, read_bytes_count, input_buffer, sizeof(input_buffer)))) {

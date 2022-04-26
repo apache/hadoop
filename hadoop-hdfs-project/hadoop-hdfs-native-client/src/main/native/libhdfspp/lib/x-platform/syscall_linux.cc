@@ -42,7 +42,7 @@ bool XPlatform::Syscall::FnMatch(const std::string& pattern,
 bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
   const auto message_len = strlen(message);
   const auto result = write(1, message, message_len);
-  return result == static_cast<XPlatform::ssize_t>(message_len);
+  return result == static_cast<ssize_t>(message_len);
 }
 
 void XPlatform::Syscall::ClearBufferSafely(void* buffer,

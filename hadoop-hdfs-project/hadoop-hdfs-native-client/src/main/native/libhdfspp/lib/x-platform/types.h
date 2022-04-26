@@ -19,25 +19,21 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
 
-namespace XPlatform {
 #if _WIN32 || _WIN64
 // Windows system.
 
 #if _WIN64
 // Windows 64-bit.
-using ssize_t = long int;
+typedef long int ssize_t;
 #else
 // Windows 32-bit.
-using ssize_t = int;
+typedef int ssize_t;
 #endif
 
 #else
 // ssize_t is correctly defined by taking bit-ness into account on non-Windows
-// systems.
+// systems. So we just include the header file where ssize_t is defined.
 #include <sys/types.h>
-
-using ssize_t = ssize_t;
 #endif
-} // namespace XPlatform
 
 #endif

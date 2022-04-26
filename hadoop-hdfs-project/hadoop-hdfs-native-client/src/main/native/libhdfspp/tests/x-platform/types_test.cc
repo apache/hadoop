@@ -17,10 +17,6 @@
  */
 
 #include "types_test.h"
-#include "x-platform/c-api/types.h"
 #include "x-platform/types.h"
 
-using XPlatformSsizeTTypes =
-    ::testing::Types<XPlatform::ssize_t, x_platform_ssize_t>;
-INSTANTIATE_TYPED_TEST_SUITE_P(TypesTest, XPlatformTypesTest,
-                               XPlatformSsizeTTypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(TypesTest, XPlatformTypesTest, ssize_t);
