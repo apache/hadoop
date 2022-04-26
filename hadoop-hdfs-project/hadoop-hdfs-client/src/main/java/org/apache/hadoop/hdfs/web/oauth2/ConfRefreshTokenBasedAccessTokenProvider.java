@@ -111,7 +111,7 @@ public class ConfRefreshTokenBasedAccessTokenProvider
     String bodyString =
         Utils.postBody(GRANT_TYPE, REFRESH_TOKEN, REFRESH_TOKEN, refreshToken, CLIENT_ID, clientId);
 
-    RequestBody body = RequestBody.create(URLENCODED, bodyString);
+    RequestBody body = RequestBody.create(bodyString, URLENCODED);
 
     Request request = new Request.Builder().url(refreshURL).post(body).build();
     try (Response responseBody = client.newCall(request).execute()) {

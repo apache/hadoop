@@ -105,13 +105,17 @@ public abstract class CredentialBasedAccessTokenProvider
         GRANT_TYPE, CLIENT_CREDENTIALS,
         CLIENT_ID, clientId);
 
-    RequestBody body = RequestBody.create(URLENCODED, bodyString);
+    RequestBody body = RequestBody.create(bodyString, URLENCODED);
 
     Request request = new Request.Builder()
         .url(refreshURL)
         .post(body)
         .build();
     try (Response responseBody = client.newCall(request).execute()) {
+      if (!responseBody.isSuccessful()) {
+        throw new IOException("Unexpected code " + responseBody);
+      }
+
       if (responseBody.code() != HttpStatus.SC_OK) {
         throw new IllegalArgumentException("Received invalid http response: "
             + responseBody.code() + ", text = " + responseBody.toString());
