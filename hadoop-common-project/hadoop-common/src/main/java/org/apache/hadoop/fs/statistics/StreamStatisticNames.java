@@ -76,7 +76,7 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_CLOSED = "stream_read_closed";
 
   /**
-   * Total count of times an attempt to close an input stream was made
+   * Total count of times an attempt to close an input stream was made.
    * Value: {@value}.
    */
   public static final String STREAM_READ_CLOSE_OPERATIONS
@@ -117,6 +117,23 @@ public final class StreamStatisticNames {
    */
   public static final String STREAM_READ_OPERATIONS_INCOMPLETE
       = "stream_read_operations_incomplete";
+
+  /**
+   * count/duration of aborting a remote stream during stream IO
+   * IO.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_REMOTE_STREAM_ABORTED
+      = "stream_read_remote_stream_aborted";
+
+  /**
+   * count/duration of closing a remote stream,
+   * possibly including draining the stream to recycle
+   * the HTTP connection.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_REMOTE_STREAM_DRAINED
+      = "stream_read_remote_stream_drain";
 
   /**
    * Count of version mismatches encountered while reading an input stream.

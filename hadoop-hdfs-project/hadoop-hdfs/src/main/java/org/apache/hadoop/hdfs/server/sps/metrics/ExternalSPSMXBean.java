@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,37 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.server.sps.metrics;
 
-package org.apache.hadoop.fs.impl;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * A wrapper for an IOException.
- *
- * The constructor signature guarantees the cause will be an IOException,
- * and as it checks for a null-argument, non-null.
- * @deprecated use the {@code UncheckedIOException} directly.]
+ * This is the JMX management interface for ExternalSPS information.
+ * End users shouldn't be implementing these interfaces, and instead
+ * access this information through the JMX APIs.
  */
-@Deprecated
 @InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class WrappedIOException extends UncheckedIOException {
-
-  private static final long serialVersionUID = 2510210974235779294L;
+@InterfaceStability.Stable
+public interface ExternalSPSMXBean {
 
   /**
-   * Construct from a non-null IOException.
-   * @param cause inner cause
-   * @throws NullPointerException if the cause is null.
+   * Gets the queue size of StorageMovementNeeded.
+   *
+   * @return the queue size of StorageMovementNeeded.
    */
-  public WrappedIOException(final IOException cause) {
-    super(Preconditions.checkNotNull(cause));
-  }
+  int getProcessingQueueSize();
 
+  /**
+   * Gets the count of movement finished blocks.
+   *
+   * @return the count of movement finished blocks.
+   */
+  int getMovementFinishedBlocksCount();
+
+  /**
+   * Gets the count of attempted items.
+   *
+   * @return the count of attempted items.
+   */
+  int getAttemptedItemsCount();
 }

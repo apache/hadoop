@@ -535,6 +535,10 @@ function makearelease
 
   big_console_header "Cleaning the Source Tree"
 
+  # Since CVE-2022-24765 in April 2022, git refuses to work in directories
+  # whose owner != the current user, unless explicitly told to trust it.
+  git config --global --add safe.directory /build/source
+
   # git clean to clear any remnants from previous build
   run "${GIT}" clean -xdf -e /patchprocess
 
