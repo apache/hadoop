@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_BUCKET_WITH_MANY_OBJECTS;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_REQUESTER_PAYS_FILE;
 
 /**
  * Provides S3A filesystem URIs for public data sets for specific use cases.
@@ -39,6 +40,12 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_BUCKET_WITH_MANY_OBJ
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class PublicDatasetTestUtils {
+
+  /**
+   * Default path for an object inside a requester pays bucket: {@value}.
+   */
+  private static final String DEFAULT_REQUESTER_PAYS_FILE
+      = "s3a://usgs-landsat/collection02/catalog.json";
 
   /**
    * Default bucket for an S3A file system with many objects: {@value}.
@@ -58,6 +65,20 @@ public class PublicDatasetTestUtils {
   public static String getBucketPrefixWithManyObjects(Configuration conf) {
     return fetchFromConfig(conf,
         KEY_BUCKET_WITH_MANY_OBJECTS, DEFAULT_BUCKET_WITH_MANY_OBJECTS);
+  }
+
+  /**
+   * Provide a URI to an object within a requester pays enabled bucket.
+   *
+   * Unless otherwise configured,
+   * this will be {@value DEFAULT_REQUESTER_PAYS_FILE}.
+   *
+   * @param conf Hadoop configuration
+   * @return S3A FS URI
+   */
+  public static String getRequesterPaysObject(Configuration conf) {
+    return fetchFromConfig(conf,
+        KEY_REQUESTER_PAYS_FILE, DEFAULT_REQUESTER_PAYS_FILE);
   }
 
   private static String fetchFromConfig(Configuration conf, String key, String defaultValue) {

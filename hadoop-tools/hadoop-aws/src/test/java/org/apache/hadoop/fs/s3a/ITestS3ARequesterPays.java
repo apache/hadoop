@@ -101,13 +101,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
   }
 
   private Path getRequesterPaysPath(Configuration conf) {
-    String requesterPaysFile =
-        conf.getTrimmed(KEY_REQUESTER_PAYS_FILE, DEFAULT_REQUESTER_PAYS_FILE);
-    S3ATestUtils.assume(
-        "Empty test property: " + KEY_REQUESTER_PAYS_FILE,
-        !requesterPaysFile.isEmpty()
-    );
-    return new Path(requesterPaysFile);
+    return new Path(PublicDatasetTestUtils.getRequesterPaysObject(conf));
   }
 
 }
