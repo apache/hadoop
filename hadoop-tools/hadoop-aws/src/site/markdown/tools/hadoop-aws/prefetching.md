@@ -28,6 +28,7 @@ caches these blocks.
 ### Basic Concepts
 
 * **Remote File**: A binary blob of data stored on some storage device.
+* **Block File**: Local file containing a block of the remote file.
 * **Block**: A file is divided into a number of blocks. The size of the first n-1 blocks is same,
   and the size of the last block may be same or smaller.
 * **Block based reading**: The granularity of read is one block. That is, either an entire block is
@@ -81,7 +82,7 @@ blocks of 64KB.
 access to the current buffer in use.
 
 `SingleFilePerBlockCache` - Responsible for caching blocks to the local file system. Each cache
-block is stored on the local disk as a separate file.
+block is stored on the local disk as a separate block file.
 
 ### Operation
 
@@ -181,7 +182,5 @@ For the above read sequence, when the `seek(10MB)` call is issued, block 0 has n
 completely so cache it as the caller will probably want to read from it again.
 
 When `seek(2MB)` is called, the position is back inside block 0. The next read can now be satisfied
-from the locally cached block, which is typically orders of magnitude faster than a network based
-read.
-
-
+from the locally cached block file, which is typically orders of magnitude faster than a network
+based read.
