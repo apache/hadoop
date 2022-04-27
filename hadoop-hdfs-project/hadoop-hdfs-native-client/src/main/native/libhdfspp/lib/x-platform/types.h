@@ -19,17 +19,12 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
 
-#if _WIN32 || _WIN64
-// Windows system.
-
 #if _WIN64
 // Windows 64-bit.
 typedef long int ssize_t;
-#else
+#elif _WIN32
 // Windows 32-bit.
 typedef int ssize_t;
-#endif
-
 #else
 // ssize_t is correctly defined by taking bit-ness into account on non-Windows
 // systems. So we just include the header file where ssize_t is defined.
