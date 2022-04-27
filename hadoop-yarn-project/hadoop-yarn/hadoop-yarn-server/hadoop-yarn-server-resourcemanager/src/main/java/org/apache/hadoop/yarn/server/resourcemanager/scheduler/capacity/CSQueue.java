@@ -95,6 +95,13 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   QueuePath getQueuePathObject();
 
+  /**
+   * Checks whether the queue is a dynamic queue (created dynamically in the fashion of auto queue
+   * creation v2).
+   * @return true, if it is a dynamic queue, false otherwise
+   */
+  boolean isDynamicQueue();
+
   public PrivilegedEntity getPrivilegedEntity();
 
   Resource getMaximumAllocation();

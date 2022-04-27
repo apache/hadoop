@@ -121,6 +121,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT;
@@ -337,7 +338,8 @@ public class NameNode extends ReconfigurableBase implements
           DFS_IMAGE_PARALLEL_LOAD_KEY,
           DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY,
           DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
-          DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY));
+          DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY,
+          DFS_BLOCK_INVALIDATE_LIMIT_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2088,7 +2090,7 @@ public class NameNode extends ReconfigurableBase implements
     @Override
     public void writeUnlock() {
       namesystem.unlockRetryCache();
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("HAState");
     }
     
     /** Check if an operation of given category is allowed */
@@ -2210,6 +2212,8 @@ public class NameNode extends ReconfigurableBase implements
           || (property.equals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY))
           || (property.equals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY))) {
       return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
+    } else if (property.equals(DFS_BLOCK_INVALIDATE_LIMIT_KEY)) {
+      return reconfigureBlockInvalidateLimit(datanodeManager, property, newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2250,7 +2254,7 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), e);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("reconfReplicationParameters");
     }
   }
 
@@ -2287,7 +2291,7 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), nfe);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("reconfHeartbeatInterval");
       LOG.info("RECONFIGURE* changed heartbeatInterval to "
           + datanodeManager.getHeartbeatInterval());
     }
@@ -2311,7 +2315,7 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), nfe);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("reconfHeartbeatRecheckInterval");
       LOG.info("RECONFIGURE* changed heartbeatRecheckInterval to "
           + datanodeManager.getHeartbeatRecheckInterval());
     }
@@ -2430,9 +2434,30 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), e);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("reconfigureSlowNodesParameters");
     }
   }
+
+  private String reconfigureBlockInvalidateLimit(final DatanodeManager datanodeManager,
+      final String property, final String newVal) throws ReconfigurationException {
+    namesystem.writeLock();
+    try {
+      if (newVal == null) {
+        datanodeManager.setBlockInvalidateLimit(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
+      } else {
+        datanodeManager.setBlockInvalidateLimit(Integer.parseInt(newVal));
+      }
+      final String updatedBlockInvalidateLimit =
+          String.valueOf(datanodeManager.getBlockInvalidateLimit());
+      LOG.info("RECONFIGURE* changed blockInvalidateLimit to {}", updatedBlockInvalidateLimit);
+      return updatedBlockInvalidateLimit;
+    } catch (NumberFormatException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    } finally {
+      namesystem.writeUnlock("reconfigureBlockInvalidateLimit");
+    }
+  }
+
 
   @Override  // ReconfigurableBase
   protected Configuration getNewConf() {

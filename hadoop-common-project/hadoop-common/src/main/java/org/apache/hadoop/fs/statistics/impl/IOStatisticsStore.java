@@ -255,4 +255,15 @@ public interface IOStatisticsStore extends IOStatistics,
    */
   void addTimedOperation(String prefix, Duration duration);
 
+  /**
+   * Add a statistics sample as a min, max and mean and count.
+   * @param key key to add.
+   * @param count count.
+   */
+  default void addSample(String key, long count) {
+    incrementCounter(key, count);
+    addMeanStatisticSample(key, count);
+    addMaximumSample(key, count);
+    addMinimumSample(key, count);
+  }
 }

@@ -123,6 +123,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.data.write.bandwidthPerSec";
   // A value of zero indicates no limit
   public static final long DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT = 0;
+  public static final String DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_KEY =
+      "dfs.datanode.ec.reconstruct.read.bandwidthPerSec";
+  public static final long DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_DEFAULT =
+      0; // A value of zero indicates no limit
+  public static final String DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_KEY =
+      "dfs.datanode.ec.reconstruct.write.bandwidthPerSec";
+  public static final long DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_DEFAULT =
+      0; // A value of zero indicates no limit
   @Deprecated
   public static final String  DFS_DATANODE_READAHEAD_BYTES_KEY =
       HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY;
@@ -476,10 +484,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY = "dfs.namenode.startup.delay.block.deletion.sec";
   public static final long    DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT = 0L;
 
-  /** Block deletion increment. */
-  public static final String DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY =
-      "dfs.namenode.block.deletion.increment";
-  public static final int DFS_NAMENODE_BLOCK_DELETION_INCREMENT_DEFAULT = 1000;
+  /** The limit of single lock holding duration.*/
+  public static final String DFS_NAMENODE_BLOCK_DELETION_LOCK_THRESHOLD_MS =
+      "dfs.namenode.block.deletion.lock.threshold.ms";
+  public static final int DFS_NAMENODE_BLOCK_DELETION_LOCK_THRESHOLD_MS_DEFAULT =
+      50;
+  /** The sleep interval for releasing lock.*/
+  public static final String DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS =
+      "dfs.namenode.block.deletion.unlock.interval.ms";
+  public static final int DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS_DEFAULT =
+      10;
 
   public static final String DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES =
       HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES;
@@ -746,6 +760,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
    */
   public static final String  DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY = "dfs.namenode.get-blocks.max-qps";
   public static final int     DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT = 20;
+  public static final String  DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY
+      = "dfs.namenode.get-blocks.check.operation";
+  public static final boolean  DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT
+      = true;
 
   public static final String  DFS_BALANCER_MOVEDWINWIDTH_KEY = "dfs.balancer.movedWinWidth";
   public static final long    DFS_BALANCER_MOVEDWINWIDTH_DEFAULT = 5400*1000L;
@@ -822,6 +840,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY =
       "dfs.storage.policy.satisfier.retry.max.attempts";
   public static final int DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT =
+      3;
+  public static final String DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_KEY =
+      "dfs.storage.policy.satisfier.move.task.retry.max.attempts";
+  public static final int DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT =
       3;
   public static final String DFS_STORAGE_DEFAULT_POLICY =
       "dfs.storage.default.policy";
@@ -987,6 +1009,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.lifeline.handler.count";
   public static final String  DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY = "dfs.namenode.service.handler.count";
   public static final int     DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT = 10;
+  // List of users that can override their client ip
+  public static final String  DFS_NAMENODE_IP_PROXY_USERS = "dfs.namenode.ip-proxy-users";
   public static final String  DFS_HTTP_POLICY_KEY = "dfs.http.policy";
   public static final String  DFS_HTTP_POLICY_DEFAULT =  HttpConfig.Policy.HTTP_ONLY.name();
   public static final String  DFS_DATANODE_HTTPSERVER_FILTER_HANDLERS = "dfs.datanode.httpserver.filter.handlers";

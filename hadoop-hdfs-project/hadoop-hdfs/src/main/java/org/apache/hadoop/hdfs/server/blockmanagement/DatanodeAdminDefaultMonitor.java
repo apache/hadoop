@@ -158,7 +158,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       LOG.warn("DatanodeAdminMonitor caught exception when processing node.",
           e);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("DatanodeAdminMonitorThread");
     }
     if (numBlocksChecked + numNodesChecked > 0) {
       LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
@@ -373,7 +373,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // lock.
         // Yielding is required in case of block number is greater than the
         // configured per-iteration-limit.
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("processBlocksInternal");
         try {
           LOG.debug("Yielded lock during decommission/maintenance check");
           Thread.sleep(0, 500);
@@ -390,8 +390,10 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       // Remove the block from the list if it's no longer in the block map,
       // e.g. the containing file has been deleted
       if (blockManager.blocksMap.getStoredBlock(block) == null) {
-        LOG.trace("Removing unknown block {}", block);
-        it.remove();
+        if (pruneReliableBlocks) {
+          LOG.trace("Removing unknown block {}", block);
+          it.remove();
+        }
         continue;
       }
 

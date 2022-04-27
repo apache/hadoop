@@ -399,6 +399,8 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String ZK_ACL_DEFAULT = "world:anyone:rwcda";
   /** Authentication for the ZooKeeper ensemble. */
   public static final String ZK_AUTH = ZK_PREFIX + "auth";
+  /** Principal name for zookeeper servers. */
+  public static final String ZK_SERVER_PRINCIPAL = ZK_PREFIX + "server.principal";
 
   /** Address of the ZooKeeper ensemble. */
   public static final String ZK_ADDRESS = ZK_PREFIX + "address";

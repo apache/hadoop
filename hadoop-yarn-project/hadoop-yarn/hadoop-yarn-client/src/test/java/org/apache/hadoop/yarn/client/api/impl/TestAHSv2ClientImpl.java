@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
@@ -46,11 +45,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -109,72 +105,6 @@ public class TestAHSv2ClientImpl {
     assertThat(report.getFinishTime()).isEqualTo(Integer.MAX_VALUE + 2L);
     assertThat(report.getOriginalTrackingUrl()).
         isEqualTo("test original tracking url");
-  }
-
-  @Test
-  public void testGetContainerByAppAttempt() throws IOException, YarnException {
-    int applicationId = 1;
-    ApplicationId appId = ApplicationId.newInstance(0, applicationId);
-
-    ApplicationAttemptId appAttemptId =
-            ApplicationAttemptId.newInstance(appId, 1);
-
-    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
-
-    when(spyTimelineReaderClient.getContainerEntities(
-            appId, "ALL",
-            ImmutableMap.of("appattemptId", appAttemptId.toString()),
-            0, null))
-            .thenReturn(Arrays.asList(createContainerEntity(containerId)));
-
-    when(spyTimelineReaderClient.getApplicationEntity(appId, "ALL", null))
-            .thenReturn(createApplicationTimelineEntity(appId, true,
-                    false));
-
-    List<ContainerReport> containerList = client.getContainers(appAttemptId);
-
-    assertThat(containerList.size()).isEqualTo(1);
-
-    assertThat(containerList.get(0).getContainerId().getApplicationAttemptId()
-            .getApplicationId().getId()).isEqualTo(applicationId);
-  }
-
-  @Test
-  public void testGetMultipleContainersByAppAttempt() throws IOException, YarnException {
-    int numContainers = 4;
-    int applicationId = 3;
-    int applicationAttemptId = 3;
-    ApplicationId appMultiple = ApplicationId.newInstance(0, applicationId);
-    ApplicationAttemptId appAttemptIdMultiple =
-            ApplicationAttemptId.newInstance(appMultiple, applicationAttemptId);
-
-    List<TimelineEntity> containerEntities = new ArrayList<>();
-    for (int containerId = 0; containerId < numContainers; ++containerId) {
-      containerEntities.add(createContainerEntity(ContainerId.newContainerId(
-              appAttemptIdMultiple, containerId)));
-    }
-
-    when(spyTimelineReaderClient.getContainerEntities(
-            appMultiple, "ALL",
-            ImmutableMap.of("appattemptId", appAttemptIdMultiple.toString()),
-            0, null))
-            .thenReturn(containerEntities);
-
-    when(spyTimelineReaderClient.getApplicationEntity(appMultiple, "ALL", null))
-            .thenReturn(createApplicationTimelineEntity(appMultiple, true,
-                    false));
-
-    List<ContainerReport> containerListMultiple = client.getContainers(appAttemptIdMultiple);
-
-    assertThat(containerListMultiple.size()).isEqualTo(numContainers);
-    for (int containerIdx = 0; containerIdx < containerListMultiple.size(); ++containerIdx) {
-      ContainerReport report = containerListMultiple.get(containerIdx);
-      assertThat(report.getContainerId().getContainerId()).isEqualTo(containerIdx);
-      assertThat(report.getContainerId().getApplicationAttemptId().getAttemptId())
-              .isEqualTo(applicationAttemptId);
-      assertThat(report.getContainerId().getApplicationAttemptId().getApplicationId().getId())
-              .isEqualTo(applicationId);
-    }
   }
 
   @Test

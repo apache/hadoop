@@ -147,11 +147,11 @@ public class NameNodeConnector implements Closeable {
 
   private final BalancerProtocols namenode;
   /**
-   * If set requestToStandby true, Balancer will getBlocks from
+   * If set getBlocksToStandby true, Balancer will getBlocks from
    * Standby NameNode only and it can reduce the performance impact of Active
    * NameNode, especially in a busy HA mode cluster.
    */
-  private boolean requestToStandby;
+  private boolean getBlocksToStandby;
   private String nsId;
   private Configuration config;
   private final KeyManager keyManager;
@@ -191,9 +191,9 @@ public class NameNodeConnector implements Closeable {
 
     this.namenode = NameNodeProxies.createProxy(conf, nameNodeUri,
         BalancerProtocols.class, fallbackToSimpleAuth).getProxy();
-    this.requestToStandby = conf.getBoolean(
-        DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY,
-        DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_DEFAULT);
+    this.getBlocksToStandby = !conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
     this.config = conf;
 
     this.fs = (DistributedFileSystem)FileSystem.get(nameNodeUri, conf);
@@ -318,7 +318,7 @@ public class NameNodeConnector implements Closeable {
   private ProxyPair getProxy() throws IOException {
     boolean isRequestStandby = false;
     ClientProtocol clientProtocol = null;
-    if (requestToStandby && nsId != null
+    if (getBlocksToStandby && nsId != null
         && HAUtil.isHAEnabled(config, nsId)) {
       List<ClientProtocol> namenodes =
           HAUtil.getProxiesForAllNameNodesInNameservice(config, nsId);

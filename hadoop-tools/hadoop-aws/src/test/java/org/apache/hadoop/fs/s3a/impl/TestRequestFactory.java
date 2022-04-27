@@ -164,7 +164,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         new ArrayList<>()));
     a(factory.newCopyObjectRequest(path, path2, md));
     a(factory.newDeleteObjectRequest(path));
-    a(factory.newBulkDeleteRequest(new ArrayList<>(), true));
+    a(factory.newBulkDeleteRequest(new ArrayList<>()));
     a(factory.newDirectoryMarkerRequest(path));
     a(factory.newGetObjectRequest(path));
     a(factory.newGetObjectMetadataRequest(path));

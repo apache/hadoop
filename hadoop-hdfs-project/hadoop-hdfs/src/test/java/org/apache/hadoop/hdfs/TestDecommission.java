@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -671,6 +673,21 @@ public class TestDecommission extends AdminStatesBaseTest {
     }
 
     fdos.close();
+  }
+
+  @Test(timeout = 20000)
+  public void testDecommissionWithUnknownBlock() throws IOException {
+    startCluster(1, 3);
+
+    FSNamesystem ns = getCluster().getNamesystem(0);
+    DatanodeManager datanodeManager = ns.getBlockManager().getDatanodeManager();
+
+    BlockInfo blk = new BlockInfoContiguous(new Block(1L), (short) 1);
+    DatanodeDescriptor dn = datanodeManager.getDatanodes().iterator().next();
+    dn.getStorageInfos()[0].addBlock(blk, blk);
+
+    datanodeManager.getDatanodeAdminManager().startDecommission(dn);
+    waitNodeState(dn, DatanodeInfo.AdminStates.DECOMMISSIONED);
   }
 
   private static String scanIntoString(final ByteArrayOutputStream baos) {
