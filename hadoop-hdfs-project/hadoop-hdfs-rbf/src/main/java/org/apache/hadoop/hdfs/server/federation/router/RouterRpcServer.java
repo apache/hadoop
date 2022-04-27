@@ -537,7 +537,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   /**
-   * Get the active namenode resolver
+   * Get the active namenode resolver.
    *
    * @return Active namenode resolver.
    */
@@ -1988,6 +1988,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       return 0;
     }
     return fedRenameScheduler.getAllJobs().size();
+  }
+
+  public String refreshFairnessPolicyController() {
+    return rpcClient.refreshFairnessPolicyController(new Configuration());
   }
 
   /**

@@ -35,14 +35,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.sls.SLSRunner;
 
 @Private
 @Unstable
 public class SLSCapacityScheduler extends CapacityScheduler implements
-        SchedulerWrapper,Configurable {
+        SchedulerWrapper, Configurable {
 
   private final SLSSchedulerCommons schedulerCommons;
   private Configuration conf;
+  private SLSRunner runner;
 
   public SLSCapacityScheduler() {
     schedulerCommons = new SLSSchedulerCommons(this);
@@ -65,6 +67,15 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
         containerIds, blacklistAdditions, blacklistRemovals, updateRequests);
   }
 
+  @Override
+  public Allocation allocatePropagated(ApplicationAttemptId attemptId,
+      List<ResourceRequest> resourceRequests,
+      List<SchedulingRequest> schedulingRequests,
+      List<ContainerId> containerIds, List<String> blacklistAdditions,
+      List<String> blacklistRemovals, ContainerUpdates updateRequests) {
+    return super.allocate(attemptId, resourceRequests, schedulingRequests,
+        containerIds, blacklistAdditions, blacklistRemovals, updateRequests);
+  }
 
   @Override
   public boolean tryCommit(Resource cluster, ResourceCommitRequest r,
@@ -98,6 +109,11 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   }
 
   @Override
+  public void propagatedHandle(SchedulerEvent schedulerEvent) {
+    super.handle(schedulerEvent);
+  }
+
+  @Override
   public void serviceStop() throws Exception {
     schedulerCommons.stopMetrics();
     super.serviceStop();
@@ -123,6 +139,16 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
 
   public Tracker getTracker() {
     return schedulerCommons.getTracker();
+  }
+
+  @Override
+  public void setSLSRunner(SLSRunner runner) {
+    this.runner = runner;
+  }
+
+  @Override
+  public SLSRunner getSLSRunner() {
+    return this.runner;
   }
 }
 

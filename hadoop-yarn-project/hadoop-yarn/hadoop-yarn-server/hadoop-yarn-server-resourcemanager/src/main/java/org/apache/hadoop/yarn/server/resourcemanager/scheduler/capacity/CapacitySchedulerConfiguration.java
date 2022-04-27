@@ -941,6 +941,90 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return "acl_" + StringUtils.toLowerCase(acl.toString());
   }
 
+  /**
+   * Creates a mapping of queue ACLs for a Legacy Auto Created Leaf Queue.
+   *
+   * @param parentQueuePath the parent's queue path
+   * @return A mapping of the queue ACLs.
+   */
+  public Map<AccessType, AccessControlList> getACLsForLegacyAutoCreatedLeafQueue(
+      String parentQueuePath) {
+    final String prefix =
+        getQueuePrefix(getAutoCreatedQueueTemplateConfPrefix(
+            parentQueuePath));
+
+    Map<String, String> properties = new HashMap<>();
+    for (QueueACL acl : QueueACL.values()) {
+      final String key = getAclKey(acl);
+      final String value = get(prefix + key);
+      if (value != null) {
+        properties.put(key, get(prefix + key));
+      }
+    }
+    return getACLsFromProperties(properties);
+  }
+
+  /**
+   * Creates a mapping of queue ACLs for a Flexible Auto Created Parent Queue.
+   * The .parent-template is preferred to .template ACLs.
+   *
+   * @param aqc The AQC templates to use.
+   * @return A mapping of the queue ACLs.
+   */
+  public static Map<AccessType, AccessControlList> getACLsForFlexibleAutoCreatedParentQueue(
+      AutoCreatedQueueTemplate aqc) {
+    return getACLsFromProperties(aqc.getParentOnlyProperties(),
+        aqc.getTemplateProperties());
+  }
+
+  /**
+   * Creates a mapping of queue ACLs for a Flexible Auto Created Leaf Queue.
+   * The .leaf-template is preferred to .template ACLs.
+   *
+   * @param aqc The AQC templates to use.
+   * @return A mapping of the queue ACLs.
+   */
+  public static Map<AccessType, AccessControlList> getACLsForFlexibleAutoCreatedLeafQueue(
+      AutoCreatedQueueTemplate aqc) {
+    return getACLsFromProperties(aqc.getLeafOnlyProperties(),
+        aqc.getTemplateProperties());
+  }
+
+  /**
+   * Transforms the string ACL properties to AccessType and AccessControlList mapping.
+   *
+   * @param properties The ACL properties.
+   * @return A mapping of the queue ACLs.
+   */
+  private static Map<AccessType, AccessControlList> getACLsFromProperties(
+      Map<String, String> properties) {
+    return getACLsFromProperties(properties, new HashMap<>());
+  }
+
+  /**
+   * Transforms the string ACL properties to AccessType and AccessControlList mapping.
+   *
+   * @param properties The ACL properties.
+   * @param fallbackProperties The fallback properties to use.
+   * @return A mapping of the queue ACLs.
+   */
+  private static Map<AccessType, AccessControlList> getACLsFromProperties(
+      Map<String, String> properties, Map<String, String> fallbackProperties) {
+    Map<AccessType, AccessControlList> acls = new HashMap<>();
+    for (QueueACL acl : QueueACL.values()) {
+      String aclStr = properties.get(getAclKey(acl));
+      if (aclStr == null) {
+        aclStr = fallbackProperties.get(getAclKey(acl));
+        if (aclStr == null) {
+          aclStr = NONE_ACL;
+        }
+      }
+      acls.put(SchedulerUtils.toAccessType(acl),
+          new AccessControlList(aclStr));
+    }
+    return acls;
+  }
+
   @Override
   public Map<ReservationACL, AccessControlList> getReservationAcls(String
         queue) {

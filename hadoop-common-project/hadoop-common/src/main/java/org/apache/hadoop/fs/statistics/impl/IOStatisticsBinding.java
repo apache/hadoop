@@ -521,21 +521,37 @@ public final class IOStatisticsBinding {
       // create the tracker outside try-with-resources so
       // that failures can be set in the catcher.
       DurationTracker tracker = createTracker(factory, statistic);
-      try {
-        // exec the input function and return its value
-        return input.apply();
-      } catch (IOException | RuntimeException e) {
-        // input function failed: note it
-        tracker.failed();
-        // and rethrow
-        throw e;
-      } finally {
-        // update the tracker.
-        // this is called after the catch() call would have
-        // set the failed flag.
-        tracker.close();
-      }
+      return invokeTrackingDuration(tracker, input);
     };
+  }
+
+  /**
+   * Given an IOException raising callable/lambda expression,
+   * execute it, updating the tracker on success/failure.
+   * @param tracker duration tracker.
+   * @param input input callable.
+   * @param <B> return type.
+   * @return the result of the invocation
+   * @throws IOException on failure.
+   */
+  public static <B> B invokeTrackingDuration(
+      final DurationTracker tracker,
+      final CallableRaisingIOE<B> input)
+      throws IOException {
+    try {
+      // exec the input function and return its value
+      return input.apply();
+    } catch (IOException | RuntimeException e) {
+      // input function failed: note it
+      tracker.failed();
+      // and rethrow
+      throw e;
+    } finally {
+      // update the tracker.
+      // this is called after the catch() call would have
+      // set the failed flag.
+      tracker.close();
+    }
   }
 
   /**

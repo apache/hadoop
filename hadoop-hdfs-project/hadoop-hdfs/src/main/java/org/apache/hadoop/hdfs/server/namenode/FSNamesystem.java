@@ -502,7 +502,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final boolean standbyShouldCheckpoint;
   private final boolean isSnapshotTrashRootEnabled;
   private final int snapshotDiffReportLimit;
-  private final int blockDeletionIncrement;
 
   /**
    * Whether enable checkOperation when call getBlocks.
@@ -1065,12 +1064,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.allowOwnerSetQuota = conf.getBoolean(
           DFSConfigKeys.DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_KEY,
           DFSConfigKeys.DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_DEFAULT);
-      this.blockDeletionIncrement = conf.getInt(
-          DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY,
-          DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_DEFAULT);
-      Preconditions.checkArgument(blockDeletionIncrement > 0,
-          DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY +
-              " must be a positive integer.");
       this.isGetBlocksCheckOperationEnabled = conf.getBoolean(
           DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
           DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
@@ -4875,6 +4868,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         dtSecretManager.getCurrentTokensSize() : -1;
   }
 
+  @Override
+  @Metric({"PendingSPSPaths", "The number of paths to be processed by storage policy satisfier"})
+  public int getPendingSPSPaths() {
+    return blockManager.getPendingSPSPaths();
+  }
+
   /**
    * Returns the length of the wait Queue for the FSNameSystemLock.
    *
@@ -8399,7 +8398,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             getBlockManager().getDatanodeManager().getNumOfDataNodes();
         int numOfRacks =
             getBlockManager().getDatanodeManager().getNetworkTopology()
-                .getNumOfRacks();
+                .getNumOfNonEmptyRacks();
         result = ECTopologyVerifier
             .getECTopologyVerifierResult(numOfRacks, numOfDataNodes, policies);
       }
@@ -8944,7 +8943,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     int numOfDataNodes =
         getBlockManager().getDatanodeManager().getNumOfDataNodes();
     int numOfRacks = getBlockManager().getDatanodeManager().getNetworkTopology()
-        .getNumOfRacks();
+        .getNumOfNonEmptyRacks();
     ErasureCodingPolicy[] enabledEcPolicies =
         getErasureCodingPolicyManager().getCopyOfEnabledPolicies();
     return ECTopologyVerifier
@@ -9006,4 +9005,3 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 }
-

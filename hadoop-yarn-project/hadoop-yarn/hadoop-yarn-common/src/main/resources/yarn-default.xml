@@ -3452,6 +3452,23 @@
     <value>30000</value>
   </property>
 
+  <property>
+    <description>
+      Overwrites default-node-label-expression only for the ApplicationMaster
+      container. It is disabled by default.
+    </description>
+    <name>yarn.resourcemanager.node-labels.am.default-node-label-expression</name>
+  </property>
+
+  <property>
+    <description>
+      Flag to indicate whether the AM can be allocated to non-exclusive nodes or not.
+      Default is false.
+    </description>
+    <name>yarn.resourcemanager.node-labels.am.allow-non-exclusive-allocation</name>
+    <value>false</value>
+  </property>
+
   <!-- Distributed Node Attributes Configuration -->
   <property>
     <description>

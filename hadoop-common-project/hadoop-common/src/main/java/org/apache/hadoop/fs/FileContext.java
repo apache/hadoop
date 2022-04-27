@@ -70,7 +70,12 @@ import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
  * The FileContext class provides an interface for users of the Hadoop
@@ -2198,7 +2203,12 @@ public class FileContext implements PathCapabilities {
         EnumSet<CreateFlag> createFlag = overwrite ? EnumSet.of(
             CreateFlag.CREATE, CreateFlag.OVERWRITE) :
             EnumSet.of(CreateFlag.CREATE);
-        InputStream in = open(qSrc);
+        InputStream in = awaitFuture(openFile(qSrc)
+            .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
+            .opt(FS_OPTION_OPENFILE_LENGTH,
+                fs.getLen())   // file length hint for object stores
+            .build());
         try (OutputStream out = create(qDst, createFlag)) {
           IOUtils.copyBytes(in, out, conf, true);
         } finally {
@@ -2930,9 +2940,11 @@ public class FileContext implements PathCapabilities {
       final Path absF = fixRelativePart(getPath());
       OpenFileParameters parameters = new OpenFileParameters()
           .withMandatoryKeys(getMandatoryKeys())
+          .withOptionalKeys(getOptionalKeys())
           .withOptions(getOptions())
-          .withBufferSize(getBufferSize())
-          .withStatus(getStatus());
+          .withStatus(getStatus())
+          .withBufferSize(
+              getOptions().getInt(FS_OPTION_OPENFILE_BUFFER_SIZE, getBufferSize()));
       return new FSLinkResolver<CompletableFuture<FSDataInputStream>>() {
         @Override
         public CompletableFuture<FSDataInputStream> next(

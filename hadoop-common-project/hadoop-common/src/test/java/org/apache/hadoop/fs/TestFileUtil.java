@@ -53,11 +53,11 @@ import java.util.Objects;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -773,26 +773,71 @@ public class TestFileUtil {
   public void testUnZip() throws Exception {
     // make sa simple zip
     final File simpleZip = new File(del, FILE);
-    OutputStream os = new FileOutputStream(simpleZip); 
-    ZipOutputStream tos = new ZipOutputStream(os);
-    try {
-      ZipEntry ze = new ZipEntry("foo");
-      byte[] data = "some-content".getBytes("UTF-8");
-      ze.setSize(data.length);
-      tos.putNextEntry(ze);
-      tos.write(data);
-      tos.closeEntry();
+    try (OutputStream os = new FileOutputStream(simpleZip);
+         ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os)) {
+      List<ZipArchiveEntry> ZipArchiveList = new ArrayList<>(7);
+      int count = 0;
+      // create 7 files to verify permissions
+      for (int i = 0; i < 7; i++) {
+        ZipArchiveList.add(new ZipArchiveEntry("foo_" + i));
+        ZipArchiveEntry archiveEntry = ZipArchiveList.get(i);
+        archiveEntry.setUnixMode(count += 0100);
+        byte[] data = "some-content".getBytes("UTF-8");
+        archiveEntry.setSize(data.length);
+        tos.putArchiveEntry(archiveEntry);
+        tos.write(data);
+      }
+      tos.closeArchiveEntry();
       tos.flush();
       tos.finish();
-    } finally {
-      tos.close();
     }
-    
+
     // successfully unzip it into an existing dir:
     FileUtil.unZip(simpleZip, tmp);
+    File foo0 = new File(tmp, "foo_0");
+    File foo1 = new File(tmp, "foo_1");
+    File foo2 = new File(tmp, "foo_2");
+    File foo3 = new File(tmp, "foo_3");
+    File foo4 = new File(tmp, "foo_4");
+    File foo5 = new File(tmp, "foo_5");
+    File foo6 = new File(tmp, "foo_6");
     // check result:
-    Verify.exists(new File(tmp, "foo"));
-    assertEquals(12, new File(tmp, "foo").length());
+    assertTrue(foo0.exists());
+    assertTrue(foo1.exists());
+    assertTrue(foo2.exists());
+    assertTrue(foo3.exists());
+    assertTrue(foo4.exists());
+    assertTrue(foo5.exists());
+    assertTrue(foo6.exists());
+    assertEquals(12, foo0.length());
+    // tests whether file foo_0 has executable permissions
+    assertTrue("file lacks execute permissions", foo0.canExecute());
+    assertFalse("file has write permissions", foo0.canWrite());
+    assertFalse("file has read permissions", foo0.canRead());
+    // tests whether file foo_1 has writable permissions
+    assertFalse("file has execute permissions", foo1.canExecute());
+    assertTrue("file lacks write permissions", foo1.canWrite());
+    assertFalse("file has read permissions", foo1.canRead());
+    // tests whether file foo_2 has executable and writable permissions
+    assertTrue("file lacks execute permissions", foo2.canExecute());
+    assertTrue("file lacks write permissions", foo2.canWrite());
+    assertFalse("file has read permissions", foo2.canRead());
+    // tests whether file foo_3 has readable permissions
+    assertFalse("file has execute permissions", foo3.canExecute());
+    assertFalse("file has write permissions", foo3.canWrite());
+    assertTrue("file lacks read permissions", foo3.canRead());
+    // tests whether file foo_4 has readable and executable permissions
+    assertTrue("file lacks execute permissions", foo4.canExecute());
+    assertFalse("file has write permissions", foo4.canWrite());
+    assertTrue("file lacks read permissions", foo4.canRead());
+    // tests whether file foo_5 has readable and writable permissions
+    assertFalse("file has execute permissions", foo5.canExecute());
+    assertTrue("file lacks write permissions", foo5.canWrite());
+    assertTrue("file lacks read permissions", foo5.canRead());
+    // tests whether file foo_6 has readable, writable and executable permissions
+    assertTrue("file lacks execute permissions", foo6.canExecute());
+    assertTrue("file lacks write permissions", foo6.canWrite());
+    assertTrue("file lacks read permissions", foo6.canRead());
 
     final File regularFile =
         Verify.createNewFile(new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog"));
@@ -804,14 +849,14 @@ public class TestFileUtil {
     // make a simple zip
     final File simpleZip = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleZip);
-    try (ZipOutputStream tos = new ZipOutputStream(os)) {
+    try (ZipArchiveOutputStream tos = new ZipArchiveOutputStream(os)) {
       // Add an entry that contains invalid filename
-      ZipEntry ze = new ZipEntry("../foo");
+      ZipArchiveEntry ze = new ZipArchiveEntry("../foo");
       byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
       ze.setSize(data.length);
-      tos.putNextEntry(ze);
+      tos.putArchiveEntry(ze);
       tos.write(data);
-      tos.closeEntry();
+      tos.closeArchiveEntry();
       tos.flush();
       tos.finish();
     }

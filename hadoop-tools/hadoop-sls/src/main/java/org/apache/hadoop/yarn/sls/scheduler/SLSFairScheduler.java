@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.sls.SLSRunner;
+
 import java.util.List;
 
 @Private
@@ -37,6 +39,7 @@ import java.util.List;
 public class SLSFairScheduler extends FairScheduler
     implements SchedulerWrapper, Configurable {
   private final SLSSchedulerCommons schedulerCommons;
+  private SLSRunner runner;
 
   public SLSFairScheduler() {
     schedulerCommons = new SLSSchedulerCommons(this);
@@ -64,6 +67,21 @@ public class SLSFairScheduler extends FairScheduler
   }
 
   @Override
+  public void propagatedHandle(SchedulerEvent schedulerEvent) {
+    super.handle(schedulerEvent);
+  }
+
+  @Override
+  public Allocation allocatePropagated(ApplicationAttemptId attemptId,
+      List<ResourceRequest> resourceRequests,
+      List<SchedulingRequest> schedulingRequests,
+      List<ContainerId> containerIds, List<String> blacklistAdditions,
+      List<String> blacklistRemovals, ContainerUpdates updateRequests) {
+    return super.allocate(attemptId, resourceRequests, schedulingRequests,
+        containerIds, blacklistAdditions, blacklistRemovals, updateRequests);
+  }
+
+  @Override
   public void serviceStop() throws Exception {
     schedulerCommons.stopMetrics();
     super.serviceStop();
@@ -83,5 +101,15 @@ public class SLSFairScheduler extends FairScheduler
 
   public Tracker getTracker() {
     return schedulerCommons.getTracker();
+  }
+
+  @Override
+  public void setSLSRunner(SLSRunner runner) {
+    this.runner = runner;
+  }
+
+  @Override
+  public SLSRunner getSLSRunner() {
+    return this.runner;
   }
 }

@@ -61,7 +61,7 @@ public class SLSSchedulerCommons {
   private final Map<ApplicationAttemptId, String> appQueueMap = new ConcurrentHashMap<>();
   private final Tracker tracker;
   
-  public SLSSchedulerCommons(AbstractYarnScheduler scheduler) {
+  public SLSSchedulerCommons(AbstractYarnScheduler<?, ?> scheduler) {
     this.scheduler = scheduler;
     this.tracker = new Tracker();
   }
@@ -100,7 +100,8 @@ public class SLSSchedulerCommons {
           .time();
       Allocation allocation = null;
       try {
-        allocation = scheduler.allocate(attemptId, resourceRequests,
+        allocation = ((SchedulerWrapper)scheduler).allocatePropagated(
+            attemptId, resourceRequests,
             schedulingRequests, containerIds,
             blacklistAdditions, blacklistRemovals, updateRequests);
         return allocation;
@@ -118,7 +119,8 @@ public class SLSSchedulerCommons {
         }
       }
     } else {
-      return scheduler.allocate(attemptId, resourceRequests, schedulingRequests,
+      return ((SchedulerWrapper)scheduler).allocatePropagated(
+          attemptId, resourceRequests, schedulingRequests,
           containerIds,
           blacklistAdditions, blacklistRemovals, updateRequests);
     }
@@ -172,7 +174,7 @@ public class SLSSchedulerCommons {
       }
     }
     // containers released/preemption from scheduler
-    Set<ContainerId> preemptionContainers = new HashSet<ContainerId>();
+    Set<ContainerId> preemptionContainers = new HashSet<>();
     if (allocation.getContainerPreemptions() != null) {
       preemptionContainers.addAll(allocation.getContainerPreemptions());
     }
@@ -203,8 +205,9 @@ public class SLSSchedulerCommons {
   }
 
   public void handle(SchedulerEvent schedulerEvent) {
+    SchedulerWrapper wrapper = (SchedulerWrapper) scheduler;
     if (!metricsON) {
-      scheduler.handle(schedulerEvent);
+      ((SchedulerWrapper)scheduler).propagatedHandle(schedulerEvent);
       return;
     }
 
@@ -245,7 +248,7 @@ public class SLSSchedulerCommons {
       operationTimer = schedulerMetrics.getSchedulerHandleTimer(
           schedulerEvent.getType()).time();
 
-      scheduler.handle(schedulerEvent);
+      ((SchedulerWrapper)scheduler).propagatedHandle(schedulerEvent);
     } finally {
       if (handlerTimer != null) {
         handlerTimer.stop();
@@ -257,11 +260,11 @@ public class SLSSchedulerCommons {
 
       if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_REMOVED
           && schedulerEvent instanceof AppAttemptRemovedSchedulerEvent) {
-        SLSRunner.decreaseRemainingApps();
+        wrapper.getSLSRunner().decreaseRemainingApps();
         AppAttemptRemovedSchedulerEvent appRemoveEvent =
             (AppAttemptRemovedSchedulerEvent) schedulerEvent;
         appQueueMap.remove(appRemoveEvent.getApplicationAttemptID());
-        if (SLSRunner.getRemainingApps() == 0) {
+        if (wrapper.getSLSRunner().getRemainingApps() == 0) {
           try {
             schedulerMetrics.tearDown();
             SLSRunner.exitSLSRunner();
@@ -275,7 +278,7 @@ public class SLSSchedulerCommons {
         AppAttemptAddedSchedulerEvent appAddEvent =
             (AppAttemptAddedSchedulerEvent) schedulerEvent;
         SchedulerApplication app =
-            (SchedulerApplication) scheduler.getSchedulerApplications()
+            scheduler.getSchedulerApplications()
                 .get(appAddEvent.getApplicationAttemptId().getApplicationId());
         appQueueMap.put(appAddEvent.getApplicationAttemptId(), app.getQueue()
             .getQueueName());

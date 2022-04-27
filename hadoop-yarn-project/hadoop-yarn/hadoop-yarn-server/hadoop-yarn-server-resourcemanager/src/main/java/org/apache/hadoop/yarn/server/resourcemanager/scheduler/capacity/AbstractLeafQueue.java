@@ -86,6 +86,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
+
 public class AbstractLeafQueue extends AbstractCSQueue {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractLeafQueue.class);
@@ -1695,6 +1697,19 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     queueContext.getConfiguration().setMaximumApplicationMasterResourcePerQueuePercent(
         getQueuePath(), 1f);
     super.setDynamicQueueProperties();
+  }
+
+  @Override
+  protected void setDynamicQueueACLProperties() {
+    super.setDynamicQueueACLProperties();
+
+    if (parent instanceof AbstractManagedParentQueue) {
+      acls.putAll(queueContext.getConfiguration().getACLsForLegacyAutoCreatedLeafQueue(
+          parent.getQueuePath()));
+    } else if (parent instanceof ParentQueue) {
+      acls.putAll(getACLsForFlexibleAutoCreatedLeafQueue(
+          ((ParentQueue) parent).getAutoCreatedQueueTemplate()));
+    }
   }
 
   private void updateSchedulerHealthForCompletedContainer(

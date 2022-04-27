@@ -192,8 +192,8 @@ public class BlockManager implements BlockStatsMXBean {
   private volatile long lowRedundancyBlocksCount = 0L;
   private volatile long scheduledReplicationBlocksCount = 0L;
 
-  private final long deleteBlockLockTimeMs = 500;
-  private final long deleteBlockUnlockIntervalTimeMs = 100;
+  private final long deleteBlockLockTimeMs;
+  private final long deleteBlockUnlockIntervalTimeMs;
 
   /** flag indicating whether replication queues have been initialized */
   private boolean initializedReplQueues;
@@ -296,6 +296,14 @@ public class BlockManager implements BlockStatsMXBean {
   /** Used by metrics. */
   public long getTotalECBlockGroups() {
     return blocksMap.getECBlockGroups();
+  }
+
+  /** Used by metrics. */
+  public int getPendingSPSPaths() {
+    if (spsManager != null) {
+      return spsManager.getPendingSPSPaths();
+    }
+    return 0;
   }
 
   /**
@@ -487,6 +495,12 @@ public class BlockManager implements BlockStatsMXBean {
     startupDelayBlockDeletionInMs = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT) * 1000L;
+    deleteBlockLockTimeMs = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_LOCK_THRESHOLD_MS,
+        DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_LOCK_THRESHOLD_MS_DEFAULT);
+    deleteBlockUnlockIntervalTimeMs = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS,
+        DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS_DEFAULT);
     invalidateBlocks = new InvalidateBlocks(
         datanodeManager.getBlockInvalidateLimit(),
         startupDelayBlockDeletionInMs,
@@ -2155,6 +2169,16 @@ public class BlockManager implements BlockStatsMXBean {
       return null;
     }
 
+    // skip if source datanodes for reconstructing ec block are not enough
+    if (block.isStriped()) {
+      BlockInfoStriped stripedBlock = (BlockInfoStriped) block;
+      if (stripedBlock.getRealDataBlockNum() > srcNodes.length) {
+        LOG.debug("Block {} cannot be reconstructed due to shortage of source datanodes ", block);
+        NameNode.getNameNodeMetrics().incNumTimesReReplicationNotScheduled();
+        return null;
+      }
+    }
+
     // liveReplicaNodes can include READ_ONLY_SHARED replicas which are
     // not included in the numReplicas.liveReplicas() count
     assert liveReplicaNodes.size() >= numReplicas.liveReplicas();
@@ -2435,6 +2459,10 @@ public class BlockManager implements BlockStatsMXBean {
    *                    replicas of the given block.
    * @param liveBlockIndices List to be populated with indices of healthy
    *                         blocks in a striped block group
+   * @param liveBusyBlockIndices List to be populated with indices of healthy
+   *                             blocks in a striped block group in busy DN,
+   *                             which the recovery work have reached their
+   *                             replication limits
    * @param priority integer representing replication priority of the given
    *                 block
    * @return the array of DatanodeDescriptor of the chosen nodes from which to
@@ -2751,6 +2779,9 @@ public class BlockManager implements BlockStatsMXBean {
       return true;
     }
     DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
+    if (node == null) {
+      throw new UnregisteredNodeException(nodeID, null);
+    }
     final long startTime = Time.monotonicNow();
     return blockReportLeaseManager.checkLease(node, startTime,
         context.getLeaseId());
