@@ -19,4 +19,4 @@
 #include "types_test.h"
 #include "x-platform/types.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(TypesTest, XPlatformTypesTest, ssize_t);
+INSTANTIATE_TYPED_TEST_SUITE_P(SSizeTTest, XPlatformTypesTest, ssize_t);
