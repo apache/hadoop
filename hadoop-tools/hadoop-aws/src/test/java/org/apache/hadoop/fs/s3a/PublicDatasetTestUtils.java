@@ -39,7 +39,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_REQUESTER_PAYS_FILE;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class PublicDatasetTestUtils {
+public final class PublicDatasetTestUtils {
 
   /**
    * Private constructor for utility class.
