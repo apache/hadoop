@@ -152,7 +152,6 @@ public class TestJobSubmissionFiles {
         .createUserForTesting(USER_1_SHORT_NAME, GROUP_NAMES);
       Path stagingPath = new Path(fs.getUri().toString() + "/testDirPermission");
 
-      fs.create(stagingPath);
       when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
       Path res = JobSubmissionFiles.getStagingDir(cluster, CONF, user);
       assertEquals(new FsPermission(0700),fs.getFileStatus(res).getPermission());
