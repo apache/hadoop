@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
-import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -105,7 +104,6 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
         requesterPaysBucketName,
         conf,
         ALLOW_REQUESTER_PAYS,
-        ENDPOINT,
         S3A_BUCKET_PROBE);
     conf.setBoolean(ALLOW_REQUESTER_PAYS, requesterPaysEnabled);
     // Enable bucket exists check, the first failure point people may encounter
