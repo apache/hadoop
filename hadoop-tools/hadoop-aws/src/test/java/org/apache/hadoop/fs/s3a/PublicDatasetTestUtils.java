@@ -42,6 +42,11 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_REQUESTER_PAYS_FILE;
 public class PublicDatasetTestUtils {
 
   /**
+   * Private constructor for utility class.
+   */
+  private PublicDatasetTestUtils() {}
+
+  /**
    * Default path for an object inside a requester pays bucket: {@value}.
    */
   private static final String DEFAULT_REQUESTER_PAYS_FILE
