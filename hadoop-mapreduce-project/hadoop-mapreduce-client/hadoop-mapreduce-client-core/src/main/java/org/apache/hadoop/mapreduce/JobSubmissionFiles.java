@@ -160,6 +160,7 @@ public class JobSubmissionFiles {
       }
     } catch (FileNotFoundException e) {
       fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION));
+      fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
     }
     return stagingArea;
   }
