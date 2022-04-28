@@ -38,12 +38,30 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestS3ARequesterPays extends AbstractS3ATestBase {
 
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+
+    Path requesterPaysPath = getRequesterPaysPath(conf);
+    String requesterPaysBucketName = requesterPaysPath.toUri().getHost();
+    S3ATestUtils.removeBaseAndBucketOverrides(
+        requesterPaysBucketName,
+        conf,
+        ALLOW_REQUESTER_PAYS,
+        S3A_BUCKET_PROBE);
+
+    return conf;
+  }
+
   @Test
   public void testRequesterPaysOptionSuccess() throws Throwable {
     describe("Test requester pays enabled case by reading last then first byte");
 
     Configuration conf = this.createConfiguration();
-    updateConf(conf, true);
+    conf.setBoolean(ALLOW_REQUESTER_PAYS, true);
+    // Enable bucket exists check, the first failure point people may encounter
+    conf.setInt(S3A_BUCKET_PROBE, 2);
+
     Path requesterPaysPath = getRequesterPaysPath(conf);
 
     try (
@@ -75,7 +93,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
     describe("Verify expected failure for requester pays buckets when client has it disabled");
 
     Configuration conf = this.createConfiguration();
-    updateConf(conf, false);
+    conf.setBoolean(ALLOW_REQUESTER_PAYS, false);
     Path requesterPaysPath = getRequesterPaysPath(conf);
 
     try (FileSystem fs = requesterPaysPath.getFileSystem(conf)) {
@@ -86,27 +104,6 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
           () -> fs.open(requesterPaysPath).close()
       );
     }
-  }
-
-  /**
-   * Update configuration with specific test overrides
-   * @param conf Hadoop configuration
-   * @param requesterPaysEnabled Indicate if requester pays be on or off
-   */
-  private static void updateConf(
-      Configuration conf,
-      boolean requesterPaysEnabled
-  ) {
-    Path requesterPaysPath = getRequesterPaysPath(conf);
-    String requesterPaysBucketName = requesterPaysPath.toUri().getHost();
-    S3ATestUtils.removeBaseAndBucketOverrides(
-        requesterPaysBucketName,
-        conf,
-        ALLOW_REQUESTER_PAYS,
-        S3A_BUCKET_PROBE);
-    conf.setBoolean(ALLOW_REQUESTER_PAYS, requesterPaysEnabled);
-    // Enable bucket exists check, the first failure point people may encounter
-    conf.setInt(S3A_BUCKET_PROBE, 2);
   }
 
   private static Path getRequesterPaysPath(Configuration conf) {
