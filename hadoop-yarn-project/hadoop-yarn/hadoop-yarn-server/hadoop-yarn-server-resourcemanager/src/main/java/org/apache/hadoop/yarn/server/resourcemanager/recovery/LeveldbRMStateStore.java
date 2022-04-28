@@ -155,7 +155,7 @@ public class LeveldbRMStateStore extends RMStateStore {
     FileSystem fs = FileSystem.getLocal(getConfig());
     FsPermission perm = new FsPermission((short)0700);
     fs.mkdirs(root, perm);
-    if (!perms.equals(perms.applyUMask(fs.getUMask()))) {
+    if (!perm.equals(perm.applyUMask(FsPermission.getUMask(getConfig())))) {
       fs.setPermission(root, perm);
     }
     return root;
