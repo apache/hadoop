@@ -21,7 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -38,10 +41,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 public class TestAMRMRPCNodeUpdates {
   private MockRM rm;
@@ -82,6 +83,18 @@ public class TestAMRMRPCNodeUpdates {
     rm.drainEvents();
   }
 
+  private void syncNodeGracefulDecommission(MockNM nm) throws Exception {
+    rm.sendNodeEvent(nm, RMNodeEventType.GRACEFUL_DECOMMISSION);
+    rm.waitForState(nm.getNodeId(), NodeState.DECOMMISSIONING);
+    rm.drainEvents();
+  }
+
+  private void syncNodeRecommissioning(MockNM nm) throws Exception {
+    rm.sendNodeEvent(nm, RMNodeEventType.RECOMMISSION);
+    rm.waitForState(nm.getNodeId(), NodeState.RUNNING);
+    rm.drainEvents();
+  }
+
   private AllocateResponse allocate(final ApplicationAttemptId attemptId,
       final AllocateRequest req) throws Exception {
     UserGroupInformation ugi =
@@ -96,6 +109,47 @@ public class TestAMRMRPCNodeUpdates {
         return amService.allocate(req);
       }
     });
+  }
+
+  @Test
+  public void testAMRMRecommissioningNodes() throws Exception {
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
+    rm.drainEvents();
+
+    RMApp app1 = rm.submitApp(2000);
+
+    // Trigger the scheduling so the AM gets 'launched' on nm1
+    nm1.nodeHeartbeat(true);
+
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+
+    // register AM returns no unusable node
+    am1.registerAppAttempt();
+
+    // DECOMMISSION nm2
+    syncNodeGracefulDecommission(nm2);
+
+    AllocateRequest allocateRequest1 =
+            AllocateRequest.newInstance(0, 0F, null, null, null);
+    AllocateResponse response1 =
+            allocate(attempt1.getAppAttemptId(), allocateRequest1);
+    List<NodeReport> updatedNodes = response1.getUpdatedNodes();
+    Assert.assertEquals(0, updatedNodes.size());
+
+    // Wait for nm2 to RECOMMISSION
+    syncNodeRecommissioning(nm2);
+
+    AllocateRequest allocateRequest2 = AllocateRequest
+            .newInstance(response1.getResponseId(), 0F, null, null, null);
+    AllocateResponse response2 =
+            allocate(attempt1.getAppAttemptId(), allocateRequest2);
+    List<NodeReport> updatedNodes2 = response2.getUpdatedNodes();
+    Assert.assertEquals(1, updatedNodes2.size());
+    NodeReport nr2 = updatedNodes2.iterator().next();
+    Assert.assertEquals(
+        NodeState.RUNNING, nr2.getNodeState());
   }
 
   @Test
