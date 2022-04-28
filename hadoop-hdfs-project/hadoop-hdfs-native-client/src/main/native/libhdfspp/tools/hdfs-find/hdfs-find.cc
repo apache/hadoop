@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include <cstdint>
 #include <future>
 #include <iostream>
 #include <memory>
@@ -40,7 +41,7 @@ bool Find::Initialize() {
       "If provided, all results will be matching the NAME pattern otherwise, "
       "the implicit '*' will be used NAME allows wild-cards");
   add_options(
-      "max-depth,m", po::value<u_int32_t>(),
+      "max-depth,m", po::value<uint32_t>(),
       "If provided, the maximum depth to recurse after the end of the path is "
       "reached will be limited by MAX_DEPTH otherwise, the maximum depth to "
       "recurse is unbound MAX_DEPTH can be set to 0 for pure globbing and "
