@@ -89,9 +89,8 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
   }
 
   /**
-   * Use this after creating the file system, as this is when bucket-specific
-   * overrides are applied.
-   * @param conf Hadoop configuration from FS to mutate
+   * Update configuration with specific test overrides
+   * @param conf Hadoop configuration
    * @param requesterPaysEnabled Indicate if requester pays be on or off
    */
   private static void updateConf(
