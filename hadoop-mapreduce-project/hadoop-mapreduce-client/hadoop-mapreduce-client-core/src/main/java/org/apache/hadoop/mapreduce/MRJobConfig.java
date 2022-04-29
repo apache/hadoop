@@ -920,9 +920,9 @@ public interface MRJobConfig {
   public static final int DEFAULT_MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS = 1000;
 
   /** Whether to consider ping from tasks in liveliness check. */
-  public static final String MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK =
+  String MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK =
       "mapreduce.task.enable.ping-for-liveliness-check";
-  public static final boolean DEFAULT_MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK
+  boolean DEFAULT_MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK
       = false;
 
   /**
