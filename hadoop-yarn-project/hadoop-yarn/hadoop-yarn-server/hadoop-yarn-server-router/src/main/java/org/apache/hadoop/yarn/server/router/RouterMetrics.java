@@ -51,6 +51,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numAppsFailedRetrieved;
   @Metric("# of multiple applications reports failed to be retrieved")
   private MutableGaugeInt numMultipleAppsFailedRetrieved;
+  @Metric("# of cluster metrics failed to be retrieved")
+  private MutableGaugeInt numClusteMetricsFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -64,6 +66,9 @@ public final class RouterMetrics {
   @Metric("Total number of successful Retrieved multiple apps reports and "
       + "latency(ms)")
   private MutableRate totalSucceededMultipleAppsRetrieved;
+  @Metric("Total number of successful Retrieved cluster metrics and "
+          + "latency(ms)")
+  private MutableRate totalSucceededClusterMetricsRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -73,6 +78,7 @@ public final class RouterMetrics {
   private MutableQuantiles killApplicationLatency;
   private MutableQuantiles getApplicationReportLatency;
   private MutableQuantiles getApplicationsReportLatency;
+  private MutableQuantiles getClusterMetricsLatency;
 
   private static volatile RouterMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -92,6 +98,8 @@ public final class RouterMetrics {
     getApplicationsReportLatency =
         registry.newQuantiles("getApplicationsReportLatency",
             "latency of get applications report", "ops", "latency", 10);
+    getClusterMetricsLatency = registry.newQuantiles("getClusterMetricsLatency",
+            "latency of get cluster metrics", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -213,6 +221,11 @@ public final class RouterMetrics {
     getApplicationsReportLatency.add(duration);
   }
 
+  public void successedClusterMetricsRetrieved(long duration) {
+    totalSucceededClusterMetricsRetrieved.add(duration);
+    getClusterMetricsLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -231,6 +244,10 @@ public final class RouterMetrics {
 
   public void incrMultipleAppsFailedRetrieved() {
     numMultipleAppsFailedRetrieved.incr();
+  }
+
+  public void incrClusterNodesFailedRetrieved() {
+    numClusteMetricsFailedRetrieved.incr();
   }
 
 }
