@@ -92,4 +92,10 @@ public class S3InMemoryInputStream extends S3InputStream {
 
     return this.getFilePosition().buffer().hasRemaining();
   }
+
+  @Override
+  public synchronized void unbuffer() {
+    super.closeStream();
+    this.getS3AStreamStatistics().unbuffered();
+  }
 }

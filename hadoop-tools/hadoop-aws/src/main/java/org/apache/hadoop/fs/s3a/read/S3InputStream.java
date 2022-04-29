@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.common.BlockData;
@@ -49,7 +50,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  */
 public abstract class S3InputStream
     extends InputStream
-    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
+    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource, CanUnbuffer {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3InputStream.class);
 
@@ -64,6 +65,9 @@ public abstract class S3InputStream
 
   // Indicates whether the stream has been closed.
   private volatile boolean closed;
+
+  // Indicates whether resources have been freed, useful when the stream is closed via unbuffer.
+  private volatile boolean streamClosed;
 
   // Current position within the file.
   private FilePosition fpos;
@@ -125,15 +129,22 @@ public abstract class S3InputStream
     setInputPolicy(context.getInputPolicy());
     setReadahead(context.getReadahead());
 
-    long fileSize = s3Attributes.getLen();
-    int bufferSize = context.getPrefetchBlockSize();
-
-    this.blockData = new BlockData(fileSize, bufferSize);
-    this.fpos = new FilePosition(fileSize, bufferSize);
     this.s3File = this.getS3File();
-    this.reader = new S3Reader(this.s3File);
+    this.initialize();
 
     this.seekTargetPos = 0;
+  }
+
+  /**
+   * Initializes those resources that the stream uses but are released during unbuffer.
+   */
+  protected void initialize() {
+    this.streamClosed = false;
+    long fileSize = s3Attributes.getLen();
+    int bufferSize = context.getPrefetchBlockSize();
+    this.reader = new S3Reader(this.s3File);
+    this.blockData = new BlockData(fileSize, bufferSize);
+    this.fpos = new FilePosition(fileSize, bufferSize);
   }
 
   /**
@@ -148,7 +159,7 @@ public abstract class S3InputStream
 
   /**
    * Access the input stream statistics.
-   * This is for internal testing and may be removed without warning.
+   *
    * @return the statistics for this input stream
    */
   @InterfaceAudience.Private
@@ -179,7 +190,8 @@ public abstract class S3InputStream
   @Override
   public boolean hasCapability(String capability) {
     return capability.equalsIgnoreCase(StreamCapabilities.IOSTATISTICS)
-        || capability.equalsIgnoreCase(StreamCapabilities.READAHEAD);
+        || capability.equalsIgnoreCase(StreamCapabilities.READAHEAD)
+        || capability.equalsIgnoreCase(StreamCapabilities.UNBUFFER);
   }
 
   /**
@@ -199,7 +211,7 @@ public abstract class S3InputStream
   public int available() throws IOException {
     this.throwIfClosed();
 
-    if (!ensureCurrentBuffer()) {
+    if (streamClosed || !ensureCurrentBuffer()) {
       return 0;
     }
 
@@ -210,10 +222,12 @@ public abstract class S3InputStream
    * Gets the current position.
    *
    * @return the current position.
-   * @throws IOException if there is an IO error during this operation.
    */
-  public long getPos() throws IOException {
-    this.throwIfClosed();
+  public long getPos()  {
+
+    if(this.closed) {
+      return 0;
+    }
 
     if (this.fpos.isValid()) {
       return this.fpos.absolute();
@@ -352,6 +366,10 @@ public abstract class S3InputStream
     return this.closed;
   }
 
+  protected  boolean isStreamClosed() {
+    return this.streamClosed;
+  }
+
   protected long getSeekTargetPos() {
     return this.seekTargetPos;
   }
@@ -398,6 +416,22 @@ public abstract class S3InputStream
     return String.format("%d:%d", blockNumber, offset);
   }
 
+
+  protected void closeStream() {
+
+    if(this.streamClosed) {
+      return;
+    }
+
+    this.streamClosed = true;
+    this.blockData = null;
+    this.reader.close();
+    this.reader = null;
+    this.seekTargetPos = this.getPos();
+
+    this.fpos.invalidate();
+  }
+
   /**
    * Closes this stream and releases all acquired resources.
    *
@@ -408,13 +442,11 @@ public abstract class S3InputStream
     if (this.closed) {
       return;
     }
-    this.closed = true;
 
-    this.blockData = null;
-    this.reader.close();
-    this.reader = null;
+    this.closed = true;
+    this.closeStream();
     this.s3File = null;
-    this.fpos.invalidate();
+
     try {
       this.client.close();
     } finally {

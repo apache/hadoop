@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
@@ -45,7 +46,7 @@ public class S3CachingInputStream extends S3InputStream {
    */
   private final int numBlocksToPrefetch;
 
-  private final BlockManager blockManager;
+  private BlockManager blockManager;
 
   /**
    * Initializes a new instance of the {@code S3CachingInputStream} class.
@@ -75,6 +76,17 @@ public class S3CachingInputStream extends S3InputStream {
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(), fileSize);
   }
 
+  @Override
+  protected void initialize() {
+    super.initialize();
+    int bufferPoolSize = this.numBlocksToPrefetch + 1;
+    this.blockManager = this.createBlockManager(
+        this.getContext().getFuturePool(),
+        this.getReader(),
+        this.getBlockData(),
+        bufferPoolSize);
+  }
+
   /**
    * Moves the current read position so that the next read will occur at {@code pos}.
    *
@@ -90,7 +102,9 @@ public class S3CachingInputStream extends S3InputStream {
     // The call to setAbsolute() returns true if the target position is valid and
     // within the current block. Therefore, no additional work is needed when we get back true.
     if (!this.getFilePosition().setAbsolute(pos)) {
-      LOG.info("seek({})", getOffsetStr(pos));
+      if (!this.isStreamClosed()) {
+        LOG.info("seek({})", getOffsetStr(pos));
+      }
       // We could be here in two cases:
       // -- the target position is invalid:
       //    We ignore this case here as the next read will return an error.
@@ -171,6 +185,13 @@ public class S3CachingInputStream extends S3InputStream {
     BufferData data = this.blockManager.get(toBlockNumber);
     this.getFilePosition().setData(data, startOffset, readPos);
     return true;
+  }
+
+  @Override
+  public synchronized void unbuffer() {
+    super.closeStream();
+    this.blockManager.close();
+    this.getS3AStreamStatistics().unbuffered();
   }
 
   @Override
