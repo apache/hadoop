@@ -17,14 +17,27 @@
  */
 package org.apache.hadoop.mapred.lib;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.StringTokenizer;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.mapred.RecordWriter;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
-
-import java.io.IOException;
-import java.util.*;
 
 /**
  * The MultipleOutputs class simplifies writing to additional outputs other
@@ -528,9 +541,13 @@ public class MultipleOutputs {
    *                             could not be closed properly.
    */
   public void close() throws IOException {
-    for (RecordWriter writer : recordWriters.values()) {
-      writer.close(null);
-    }
+    recordWriters.values().parallelStream().forEach(writer -> {
+      try {
+        writer.close(null);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
   private static class InternalFileOutputFormat extends
