@@ -75,7 +75,6 @@ public class S3CachingInputStream extends S3InputStream {
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(), fileSize);
   }
 
-  @Override
   protected void initialize() {
     super.initialize();
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
