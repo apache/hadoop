@@ -1040,11 +1040,13 @@ public class PBHelper {
 
     byte[] liveBlkIndices = blockEcReconstructionInfoProto.getLiveBlockIndices()
         .toByteArray();
+    byte[] excludeReplicatedIndices=blockEcReconstructionInfoProto.getExcludeReplicatedIndices()
+        .toByteArray();
     ErasureCodingPolicy ecPolicy =
         PBHelperClient.convertErasureCodingPolicy(
             blockEcReconstructionInfoProto.getEcPolicy());
     return new BlockECReconstructionInfo(block, sourceDnInfos, targetDnInfos,
-        targetStorageUuids, convertStorageTypes, liveBlkIndices, ecPolicy);
+        targetStorageUuids, convertStorageTypes, liveBlkIndices, excludeReplicatedIndices, ecPolicy);
   }
 
   public static BlockECReconstructionInfoProto convertBlockECRecoveryInfo(

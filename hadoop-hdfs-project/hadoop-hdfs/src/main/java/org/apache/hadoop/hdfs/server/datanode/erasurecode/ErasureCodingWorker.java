@@ -127,7 +127,7 @@ public final class ErasureCodingWorker {
             reconInfo.getExtendedBlock(), reconInfo.getErasureCodingPolicy(),
             reconInfo.getLiveBlockIndices(), reconInfo.getSourceDnInfos(),
             reconInfo.getTargetDnInfos(), reconInfo.getTargetStorageTypes(),
-            reconInfo.getTargetStorageIDs());
+            reconInfo.getTargetStorageIDs(), reconInfo.getExcludeReplicatedIndices());
         // It may throw IllegalArgumentException from task#stripedReader
         // constructor.
         final StripedBlockReconstructor task =

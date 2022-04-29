@@ -41,26 +41,27 @@ public class StripedReconstructionInfo {
   private final DatanodeInfo[] targets;
   private final StorageType[] targetStorageTypes;
   private final String[] targetStorageIds;
+  private final byte[] excludeReplicatedIndices;
 
   public StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       byte[] targetIndices) {
     this(blockGroup, ecPolicy, liveIndices, sources, targetIndices, null,
-        null, null);
+        null, null, null);
   }
 
   StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       DatanodeInfo[] targets, StorageType[] targetStorageTypes,
-      String[] targetStorageIds) {
+      String[] targetStorageIds, byte[] excludeReplicatedIndices) {
     this(blockGroup, ecPolicy, liveIndices, sources, null, targets,
-        targetStorageTypes, targetStorageIds);
+        targetStorageTypes, targetStorageIds, excludeReplicatedIndices);
   }
 
   private StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       byte[] targetIndices, DatanodeInfo[] targets,
-      StorageType[] targetStorageTypes, String[] targetStorageIds) {
+      StorageType[] targetStorageTypes, String[] targetStorageIds, byte[] excludeReplicatedIndices) {
 
     this.blockGroup = blockGroup;
     this.ecPolicy = ecPolicy;
@@ -70,6 +71,7 @@ public class StripedReconstructionInfo {
     this.targets = targets;
     this.targetStorageTypes = targetStorageTypes;
     this.targetStorageIds = targetStorageIds;
+    this.excludeReplicatedIndices=excludeReplicatedIndices;
   }
 
   ExtendedBlock getBlockGroup() {
@@ -102,6 +104,10 @@ public class StripedReconstructionInfo {
 
   String[] getTargetStorageIds() {
     return targetStorageIds;
+  }
+
+  byte[] getExcludeReplicatedIndices() {
+    return excludeReplicatedIndices;
   }
 
 }

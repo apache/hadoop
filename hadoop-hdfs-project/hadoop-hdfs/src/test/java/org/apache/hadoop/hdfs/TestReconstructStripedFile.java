@@ -471,7 +471,7 @@ public class TestReconstructStripedFile {
         targetDnInfos_1 };
 
     BlockECReconstructionInfo invalidECInfo = new BlockECReconstructionInfo(
-        new ExtendedBlock("bp-id", 123456), dataDNs, dnStorageInfo, liveIndices,
+        new ExtendedBlock("bp-id", 123456), dataDNs, dnStorageInfo, liveIndices,new byte[0],
         ecPolicy);
     List<BlockECReconstructionInfo> ecTasks = new ArrayList<>();
     ecTasks.add(invalidECInfo);
