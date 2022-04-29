@@ -1988,7 +1988,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
-    RMApp finishedApp = MockRMAppSubmitter.submit(rm, 
+    RMApp finishedApp = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder
             .createWithMemory(CONTAINER_MB, rm)
             .withQueue("root.default")

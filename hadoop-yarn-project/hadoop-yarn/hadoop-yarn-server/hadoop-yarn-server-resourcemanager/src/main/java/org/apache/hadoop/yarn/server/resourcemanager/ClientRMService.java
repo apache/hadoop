@@ -921,7 +921,7 @@ public class ClientRMService extends AbstractService implements
         List<RMApp> runningAppsById = runningAppsByQueues.stream()
             .filter(app -> app.getApplicationId().equals(application.getApplicationId()))
             .collect(Collectors.toList());
-        
+
         if (runningAppsById.isEmpty() && !queues.contains(application.getQueue())) {
           continue;
         }
@@ -1001,7 +1001,8 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
-  private Map<String, List<RMApp>> queryApplicationsByQueues(Map<ApplicationId, RMApp> apps, Set<String> queues) {
+  private Map<String, List<RMApp>> queryApplicationsByQueues(
+      Map<ApplicationId, RMApp> apps, Set<String> queues) {
     final Map<String, List<RMApp>> appsToQueues = new HashMap<>();
     for (String queue : queues) {
       List<ApplicationAttemptId> appsInQueue = scheduler.getAppsInQueue(queue);
