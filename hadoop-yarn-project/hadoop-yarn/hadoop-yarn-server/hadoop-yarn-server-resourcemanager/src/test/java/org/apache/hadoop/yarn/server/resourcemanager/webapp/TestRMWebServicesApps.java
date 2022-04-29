@@ -83,6 +83,16 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   private static final int CONTAINER_MB = 1024;
 
   private static class WebServletModule extends ServletModule {
+    private final Class<? extends AbstractYarnScheduler> scheduler;
+
+    public WebServletModule() {
+      this.scheduler = FifoScheduler.class;
+    }
+    
+    public WebServletModule(Class<? extends AbstractYarnScheduler> scheduler) {
+      this.scheduler = scheduler;
+    }
+
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
@@ -91,7 +101,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       Configuration conf = new Configuration();
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, scheduler,
           ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
@@ -1973,6 +1983,9 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testAppsQueryByQueueShortname() throws Exception {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule(CapacityScheduler.class)));
+    
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp finishedApp = MockRMAppSubmitter.submit(rm, 
@@ -2025,6 +2038,9 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testAppsQueryByQueueFullname() throws Exception {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule(CapacityScheduler.class)));
+    
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp finishedApp = MockRMAppSubmitter.submit(rm,
