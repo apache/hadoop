@@ -188,7 +188,7 @@ public class S3CachingInputStream extends S3InputStream {
 
   @Override
   public synchronized void unbuffer() {
-    super.closeStream();
+    this.closeStream();
     this.blockManager.close();
     this.getS3AStreamStatistics().unbuffered();
   }

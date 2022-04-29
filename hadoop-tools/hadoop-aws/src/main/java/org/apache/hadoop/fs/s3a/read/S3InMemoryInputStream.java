@@ -95,7 +95,7 @@ public class S3InMemoryInputStream extends S3InputStream {
 
   @Override
   public synchronized void unbuffer() {
-    super.closeStream();
+    this.closeStream();
     this.getS3AStreamStatistics().unbuffered();
   }
 }
