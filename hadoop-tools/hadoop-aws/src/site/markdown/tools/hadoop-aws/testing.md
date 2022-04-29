@@ -549,7 +549,7 @@ S3 endpoint itself.
 Some tests rely on the presence of existing public datasets available on Amazon S3.
 You may find a number of these in `org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils`.
 
-When testing against an endpoint which is not part of Amazon S3's commercial partition
+When testing against an endpoint which is not part of Amazon S3's standard commercial partition
 (`aws`) such as third-party implementations or AWS's China regions, you should replace these
 configurations with an empty space (` `) to disable the tests or an existing path in your object
 store that supports these tests.
