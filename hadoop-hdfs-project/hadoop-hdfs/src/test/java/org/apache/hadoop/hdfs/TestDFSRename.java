@@ -162,7 +162,7 @@ public class TestDFSRename {
       assertTrue(bm.getStoredBlock(lbs.getLocatedBlocks().get(0).getBlock().
           getLocalBlock()) != null);
       dfs.rename(srcPath, dstPath, Rename.OVERWRITE);
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+      BlockManagerTestUtil.waitForDeleteFinish(
           cluster.getNamesystem(0).getBlockManager());
       assertTrue(bm.getStoredBlock(lbs.getLocatedBlocks().get(0).getBlock().
           getLocalBlock()) == null);

@@ -140,7 +140,7 @@ public class TestLargeDirectoryDelete {
     
     final long start = Time.now();
     mc.getFileSystem().delete(new Path("/root"), true); // recursive delete
-    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+    BlockManagerTestUtil.waitForDeleteFinish(
         mc.getNamesystem(0).getBlockManager());
     final long end = Time.now();
     threads[0].endThread();

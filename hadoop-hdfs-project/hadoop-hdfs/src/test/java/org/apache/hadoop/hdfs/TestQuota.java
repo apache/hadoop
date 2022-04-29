@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
@@ -638,6 +639,8 @@ public class TestQuota {
 
     // 15: Delete nqdir0/qdir1/qdir20/qdir21
     dfs.delete(tempPath, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     c = dfs.getContentSummary(quotaDir2);
     compareQuotaUsage(c, dfs, quotaDir2);
     assertEquals(c.getDirectoryCount(), 2);
@@ -723,6 +726,8 @@ public class TestQuota {
     assertTrue(hasException);
     // delete nqdir33
     assertTrue(dfs.delete(new Path(quotaDir21, "nqdir33"), true));
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     c = dfs.getContentSummary(quotaDir21);
     compareQuotaUsage(c, dfs, quotaDir21);
     assertEquals(c.getSpaceConsumed(), fileSpace);
@@ -944,6 +949,8 @@ public class TestQuota {
     Path file = new Path(quotaDir20, "fileDir/file1");
     DFSTestUtil.createFile(dfs, file, fileLen * 3, replication, 0);
     dfs.delete(file, false);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     dfs.setStoragePolicy(quotaDir20, HdfsConstants.HOT_STORAGE_POLICY_NAME);
     dfs.setQuotaByStorageType(quotaDir20, StorageType.DEFAULT,
         2 * fileSpace);
@@ -955,6 +962,8 @@ public class TestQuota {
     }
     assertTrue(hasException);
     dfs.delete(file, false);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     dfs.setQuotaByStorageType(quotaDir20, StorageType.DEFAULT,
         6 * fileSpace);
   }

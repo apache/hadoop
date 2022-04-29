@@ -253,7 +253,7 @@ public class TestComputeInvalidateWork {
     }
     dfs.delete(path, false);
     dfs.delete(ecFile, false);
-    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+    BlockManagerTestUtil.waitForDeleteFinish(
         cluster.getNamesystem(0).getBlockManager());
     namesystem.writeLock();
     InvalidateBlocks invalidateBlocks;

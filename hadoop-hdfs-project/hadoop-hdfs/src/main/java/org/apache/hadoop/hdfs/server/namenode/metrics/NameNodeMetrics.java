@@ -93,6 +93,10 @@ public class NameNodeMetrics {
   MutableGaugeInt deleteBlocksQueued;
   @Metric("Number of pending deletion blocks")
   MutableGaugeInt pendingDeleteBlocksCount;
+  @Metric("Number of pending reclaim and updateQuota of inodes")
+  MutableGaugeInt pendingReclaimAndUpdateQuotaForDeleteCount;
+  @Metric("Number of pending collects block of nodes ")
+  MutableGaugeInt pendingCollectBlockForInodeQueueCount;
 
   @Metric("Number of file system operations")
   public long totalFileOps(){
@@ -355,6 +359,22 @@ public class NameNodeMetrics {
 
   public void decrPendingDeleteBlocksCount() {
     pendingDeleteBlocksCount.decr();
+  }
+
+  public void incrPendingReclaimAndUpdateQuotaForDeleteCount() {
+    pendingReclaimAndUpdateQuotaForDeleteCount.incr();
+  }
+
+  public void decrPendingReclaimAndUpdateQuotaForDeleteCount() {
+    pendingReclaimAndUpdateQuotaForDeleteCount.decr();
+  }
+
+  public void incrPendingCollectBlockForInodeQueueCount() {
+    pendingCollectBlockForInodeQueueCount.incr();
+  }
+
+  public void decrPendingCollectBlockForInodeQueueCount() {
+    pendingCollectBlockForInodeQueueCount.decr();
   }
 
   public void addBlockOpsBatched(int count) {

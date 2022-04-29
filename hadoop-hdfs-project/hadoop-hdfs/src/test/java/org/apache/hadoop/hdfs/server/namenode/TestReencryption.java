@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.ReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ReencryptionUpdater.ZoneSubmissionTracker;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
@@ -338,6 +339,8 @@ public class TestReencryption {
     waitForQueuedZones(1);
 
     fs.delete(zone, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     getEzManager().resumeReencryptForTesting();
     waitForTotalZones(0);
     assertNull(getZoneStatus(zone.toString()));
@@ -364,6 +367,8 @@ public class TestReencryption {
     waitForReencryptedFiles(zone.toString(), 5);
 
     fs.delete(zoneParent, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     getEzManager().resumeReencryptForTesting();
     waitForTotalZones(0);
     assertNull(getEzManager().getZoneStatus(zone.toString()));
@@ -896,7 +901,8 @@ public class TestReencryption {
     expected -= 2;
     fsWrapper.delete(subdir, true);
     expected -= 5;
-
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // resume re-encrypt thread which was paused after first checkpoint
     getEzManager().resumeReencryptForTesting();
     waitForZoneCompletes(zone.toString());
@@ -947,7 +953,8 @@ public class TestReencryption {
     expected -= 2;
     fsWrapper.delete(subdir, true);
     expected -= 5;
-
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // resume updater thread which was paused after first checkpoint, verify
     // deleted files are skipped.
     getEzManager().resumeReencryptUpdaterForTesting();
@@ -991,6 +998,8 @@ public class TestReencryption {
     waitForReencryptedFiles(zone.toString(), 5);
 
     fsWrapper.delete(subdir, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     expected -= 5;
 
     // resume re-encrypt thread which was paused after first checkpoint
@@ -1040,6 +1049,8 @@ public class TestReencryption {
     // give handler thread some time to process the files before deletion.
     Thread.sleep(3000);
     fsWrapper.delete(subdir, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     expected -= 5;
 
     // resume updater thread which was paused after first checkpoint, verify
@@ -1089,6 +1100,8 @@ public class TestReencryption {
       }
     }
     fsWrapper.delete(zone, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     getEzManager().resumeReencryptForTesting();
 
     // verify no running tasks
@@ -1128,6 +1141,8 @@ public class TestReencryption {
 
     final Path recreated = new Path(zone, "file9");
     fsWrapper.delete(recreated, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     DFSTestUtil.createFile(fs, recreated, len, (short) 2, 0xFEED);
     expected -= 1; // newly created files use new edek, no need to re-encrypt
 
@@ -1172,6 +1187,8 @@ public class TestReencryption {
     final FileEncryptionInfo feiOrig = getFileEncryptionInfo(recreated);
     final String contentOrig = DFSTestUtil.readFile(fs, recreated);
     fsWrapper.delete(recreated, true);
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     DFSTestUtil.createFile(fs, recreated, len, (short) 2, 0xFEED);
     expected -= 1;
 
@@ -1268,7 +1285,8 @@ public class TestReencryption {
     fsWrapper.rename(new Path(zone, "5"), new Path(zone, "5new"));
     fsWrapper.rename(new Path(zone, "6"), new Path(zone, "6new"));
     fsWrapper.delete(new Path(zone, "6new"), true);
-
+    BlockManagerTestUtil.waitForDeleteFinish(
+        cluster.getNamesystem(0).getBlockManager());
     // test re-encrypt on snapshot dir
     final Path encFile1 = new Path(zone, "0");
     final FileEncryptionInfo fei0 = getFileEncryptionInfo(encFile1);

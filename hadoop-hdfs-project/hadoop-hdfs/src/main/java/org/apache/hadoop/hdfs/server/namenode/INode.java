@@ -999,6 +999,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     protected final BlocksMapUpdateInfo collectedBlocks;
     protected final List<INode> removedINodes;
     protected final List<Long> removedUCFiles;
+    private INodesInPath iip;
     /** Used to collect quota usage delta */
     private final QuotaDelta quotaDelta;
 
@@ -1023,6 +1024,33 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       this.quotaDelta = new QuotaDelta();
     }
 
+    /**
+     * @param bsps
+     *      block storage policy suite to calculate intended storage type
+     *      usage
+     * @param collectedBlocks
+     *     blocks collected from the descents for further block
+     *     deletion/update will be added to the given map.
+     * @param removedINodes
+     *     INodes collected from the descents for further cleaning up of
+     * @param removedUCFiles INodes whose leases need to be released
+     * @param iip the INodesInPath instance containing all the INodes for updating quota usage
+     */
+    public ReclaimContext(
+        BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
+        List<INode> removedINodes, List<Long> removedUCFiles, INodesInPath iip) {
+      this.bsps = bsps;
+      this.collectedBlocks = collectedBlocks;
+      this.removedINodes = removedINodes;
+      this.removedUCFiles = removedUCFiles;
+      this.quotaDelta = new QuotaDelta();
+      this.iip = iip;
+    }
+
+    public INodesInPath getINodesInPath(){
+      return iip;
+    }
+
     public BlockStoragePolicySuite storagePolicySuite() {
       return bsps;
     }
@@ -1041,7 +1069,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      */
     public ReclaimContext getCopy() {
       return new ReclaimContext(bsps, collectedBlocks, removedINodes,
-          removedUCFiles);
+          removedUCFiles, iip);
     }
   }
 
