@@ -25,6 +25,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../libhdfs
     ${JNI_INCLUDE_DIRS}
     ${OS_DIR}
+    ../libhdfspp/lib
 )
 
 add_library(native_mini_dfs
