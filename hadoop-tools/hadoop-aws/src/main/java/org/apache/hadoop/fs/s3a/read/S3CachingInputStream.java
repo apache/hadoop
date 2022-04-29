@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
-import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
