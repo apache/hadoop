@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.conf.Configuration;
-
 import java.time.Duration;
+
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Constants for S3A Testing.
