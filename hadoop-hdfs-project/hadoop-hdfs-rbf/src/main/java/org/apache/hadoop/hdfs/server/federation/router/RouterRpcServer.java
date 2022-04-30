@@ -1095,24 +1095,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     Map<FederationNamespaceInfo, DatanodeInfo[]> results =
         rpcClient.invokeConcurrent(nss, method, requireResponse, false,
             timeOutMs, DatanodeInfo[].class);
-    for (Entry<FederationNamespaceInfo, DatanodeInfo[]> entry :
-        results.entrySet()) {
-      FederationNamespaceInfo ns = entry.getKey();
-      DatanodeInfo[] result = entry.getValue();
-      for (DatanodeInfo node : result) {
-        String nodeId = node.getXferAddr();
-        DatanodeInfo dn = datanodesMap.get(nodeId);
-        if (dn == null || node.getLastUpdate() > dn.getLastUpdate()) {
-          // Add the subcluster as a suffix to the network location
-          node.setNetworkLocation(
-              NodeBase.PATH_SEPARATOR_STR + ns.getNameserviceId() +
-              node.getNetworkLocation());
-          datanodesMap.put(nodeId, node);
-        } else {
-          LOG.debug("{} is in multiple subclusters", nodeId);
-        }
-      }
-    }
+    updateDnMap(results, datanodesMap);
     // Map -> Array
     Collection<DatanodeInfo> datanodes = datanodesMap.values();
     return toArray(datanodes, DatanodeInfo.class);
@@ -1578,6 +1561,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     clientProto.satisfyStoragePolicy(path);
   }
 
+  @Override // ClientProtocol
+  public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
+    return clientProto.getSlowDatanodeReport();
+  }
+
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
       long minBlockSize, long hotBlockTimeInterval) throws IOException {
@@ -1992,6 +1980,53 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   public String refreshFairnessPolicyController() {
     return rpcClient.refreshFairnessPolicyController(new Configuration());
+  }
+
+  /**
+   * Get the slow running datanodes report with a timeout.
+   *
+   * @param requireResponse If we require all the namespaces to report.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return List of datanodes.
+   * @throws IOException If it cannot get the report.
+   */
+  public DatanodeInfo[] getSlowDatanodeReport(boolean requireResponse, long timeOutMs)
+      throws IOException {
+    checkOperation(OperationCategory.UNCHECKED);
+
+    Map<String, DatanodeInfo> datanodesMap = new LinkedHashMap<>();
+    RemoteMethod method = new RemoteMethod("getSlowDatanodeReport");
+
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    Map<FederationNamespaceInfo, DatanodeInfo[]> results =
+        rpcClient.invokeConcurrent(nss, method, requireResponse, false,
+            timeOutMs, DatanodeInfo[].class);
+    updateDnMap(results, datanodesMap);
+    // Map -> Array
+    Collection<DatanodeInfo> datanodes = datanodesMap.values();
+    return toArray(datanodes, DatanodeInfo.class);
+  }
+
+  private void updateDnMap(Map<FederationNamespaceInfo, DatanodeInfo[]> results,
+      Map<String, DatanodeInfo> datanodesMap) {
+    for (Entry<FederationNamespaceInfo, DatanodeInfo[]> entry :
+        results.entrySet()) {
+      FederationNamespaceInfo ns = entry.getKey();
+      DatanodeInfo[] result = entry.getValue();
+      for (DatanodeInfo node : result) {
+        String nodeId = node.getXferAddr();
+        DatanodeInfo dn = datanodesMap.get(nodeId);
+        if (dn == null || node.getLastUpdate() > dn.getLastUpdate()) {
+          // Add the subcluster as a suffix to the network location
+          node.setNetworkLocation(
+              NodeBase.PATH_SEPARATOR_STR + ns.getNameserviceId() +
+                  node.getNetworkLocation());
+          datanodesMap.put(nodeId, node);
+        } else {
+          LOG.debug("{} is in multiple subclusters", nodeId);
+        }
+      }
+    }
   }
 
   /**

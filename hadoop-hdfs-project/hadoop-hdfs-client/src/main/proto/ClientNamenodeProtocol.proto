@@ -424,6 +424,13 @@ message GetPreferredBlockSizeResponseProto {
   required uint64 bsize = 1;
 }
 
+message GetSlowDatanodeReportRequestProto {
+}
+
+message GetSlowDatanodeReportResponseProto {
+  repeated DatanodeInfoProto datanodeInfoProto = 1;
+}
+
 enum SafeModeActionProto {
   SAFEMODE_LEAVE = 1;
   SAFEMODE_ENTER = 2;
@@ -1070,4 +1077,6 @@ service ClientNamenodeProtocol {
       returns(SatisfyStoragePolicyResponseProto);
   rpc getHAServiceState(HAServiceStateRequestProto)
       returns(HAServiceStateResponseProto);
+  rpc getSlowDatanodeReport(GetSlowDatanodeReportRequestProto)
+      returns(GetSlowDatanodeReportResponseProto);
 }
