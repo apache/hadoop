@@ -703,6 +703,12 @@ public class FederationClientInterceptor
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
+    if(request == null) {
+      routerMetrics.incrGetClusterMetricsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+              "Missing getClusterMetrics request.",
+              null);
+    }
     long startTime = clock.getTime();
     Map<SubClusterId, SubClusterInfo> subclusters =
         federationFacade.getSubClusters(true);

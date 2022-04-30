@@ -641,4 +641,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(responseGet);
     Assert.assertTrue(responseGet.getApplicationList().isEmpty());
   }
+
+  @Test
+  public void testGetClusterMetricsRequestNull() throws YarnException, IOException {
+    LOG.info(
+            "Test FederationClientInterceptor: GetClusterMetrics - Empty");
+    try {
+      interceptor.getClusterMetrics(null);
+      Assert.fail();
+    } catch (YarnException e) {
+      Assert.assertTrue(
+              e.getMessage().startsWith("Missing getClusterMetrics request"));
+    }
+  }
 }
