@@ -609,6 +609,7 @@ public class FederationClientInterceptor
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
     if (request == null) {
+      routerMetrics.incrClusterNodesFailedRetrieved();
       RouterServerUtil.logAndThrowException("Missing getClusterMetrics request.", null);
     }
     GetClusterMetricsResponse response = null;
