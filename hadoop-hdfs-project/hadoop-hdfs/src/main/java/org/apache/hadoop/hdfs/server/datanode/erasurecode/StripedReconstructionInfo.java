@@ -47,7 +47,7 @@ public class StripedReconstructionInfo {
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       byte[] targetIndices) {
     this(blockGroup, ecPolicy, liveIndices, sources, targetIndices, null,
-        null, null, null);
+        null, null, new byte[0]);
   }
 
   StripedReconstructionInfo(ExtendedBlock blockGroup,
