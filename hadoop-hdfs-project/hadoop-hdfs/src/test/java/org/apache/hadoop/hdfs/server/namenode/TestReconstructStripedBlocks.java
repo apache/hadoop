@@ -449,9 +449,10 @@ public class TestReconstructStripedBlocks {
   public void testReconstrutionWithBusyBlock1() throws Exception {
     //When the index of busy block is smaller than the missing block
     //[0(busy),1(busy),3,4,5,6,7,8]
-    int busyNodeIndex=0;
+    int busyNodeIndex=1;
     int busyNodeIndex2=1;
-    int deadNodeIndex=2;
+    int deadNodeIndex=0;
+    int deadNodeIndex1=2;
     final Path ecDir = new Path("/" + this.getClass().getSimpleName());
     final Path ecFile = new Path(ecDir, "testReconstrutionWithBusyBlock1");
     int writeBytes = cellSize * dataBlocks;
@@ -490,29 +491,33 @@ public class TestReconstructStripedBlocks {
     //1.Make nodes busy
     DatanodeDescriptor busyNode =bm.getDatanodeManager()
             .getDatanode(dnList[busyNodeIndex].getDatanodeUuid());
-    for (int j = 0; j < maxReplicationStreams; j++) {
+    for (int j = 0; j < replicationStreamsHardLimit; j++) {
       busyNode.incrementPendingReplicationWithoutTargets();
     }
     DatanodeDescriptor busyNode2 =bm.getDatanodeManager()
             .getDatanode(dnList[busyNodeIndex2].getDatanodeUuid());
-    for (int j = 0; j < maxReplicationStreams; j++) {
-      busyNode2.incrementPendingReplicationWithoutTargets();
+    for (int j = 0; j < replicationStreamsHardLimit; j++) {
+      //busyNode2.incrementPendingReplicationWithoutTargets();
     }
+
+
 
     //2.Make a node missing
     DataNode dn = cluster.getDataNode(dnList[deadNodeIndex].getIpcPort());
     cluster.stopDataNode(dnList[deadNodeIndex].getXferAddr());
     cluster.setDataNodeDead(dn.getDatanodeId());
 
+    DataNode dn1 = cluster.getDataNode(dnList[deadNodeIndex1].getIpcPort());
+    cluster.stopDataNode(dnList[deadNodeIndex1].getXferAddr());
+    cluster.setDataNodeDead(dn1.getDatanodeId());
+
     //3.Whether there is excess replicas or not during the recovery?
     assertEquals(8,bm.countNodes(blockInfo).liveReplicas());
 
     GenericTestUtils.waitFor(
             () -> {
-              while(bm.countNodes(blockInfo).liveReplicas()!=100) {
                 System.out.println(bm.countNodes(blockInfo).liveReplicas());
                 System.out.println(bm.countNodes(blockInfo).excessReplicas());
-              }
               return bm.countNodes(blockInfo).liveReplicas()==9||bm.countNodes(blockInfo).excessReplicas() >= 1||bm.countNodes(blockInfo).redundantInternalBlocks() >= 1;
             },
             10, 100000);

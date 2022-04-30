@@ -1072,6 +1072,9 @@ public class PBHelper {
     byte[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
     builder.setLiveBlockIndices(PBHelperClient.getByteString(liveBlockIndices));
 
+    byte[] excludeReplicatedIndices = blockEcRecoveryInfo.getExcludeReplicatedIndices();
+    builder.setExcludeReplicatedIndices(PBHelperClient.getByteString(excludeReplicatedIndices));
+
     builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
         blockEcRecoveryInfo.getErasureCodingPolicy()));
 
