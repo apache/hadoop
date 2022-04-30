@@ -32,7 +32,7 @@ import java.util.Set;
 class ErasureCodingWork extends BlockReconstructionWork {
   private final byte[] liveBlockIndices;
   private final byte[] liveBusyBlockIndices;
-  private final byte[] excludeReplicatedIndices;
+  private final byte[] excludeReconstructedIndices;
   private final String blockPoolId;
 
   public ErasureCodingWork(String blockPoolId, BlockInfo block,
@@ -42,13 +42,13 @@ class ErasureCodingWork extends BlockReconstructionWork {
       List<DatanodeStorageInfo> liveReplicaStorages,
       int additionalReplRequired, int priority,
       byte[] liveBlockIndices, byte[] liveBusyBlockIndices,
-      byte[] excludeReplicatedIndices) {
+      byte[] excludeReconstrutedIndices) {
     super(block, bc, srcNodes, containingNodes,
         liveReplicaStorages, additionalReplRequired, priority);
     this.blockPoolId = blockPoolId;
     this.liveBlockIndices = liveBlockIndices;
     this.liveBusyBlockIndices = liveBusyBlockIndices;
-    this.excludeReplicatedIndices=excludeReplicatedIndices;
+    this.excludeReconstructedIndices=excludeReconstrutedIndices;
     LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
         block);
   }
@@ -149,11 +149,10 @@ class ErasureCodingWork extends BlockReconstructionWork {
       }
     } else {
       targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
-              new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
-              liveBlockIndices, excludeReplicatedIndices, stripedBlk.getErasureCodingPolicy());
+          new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
+          liveBlockIndices, excludeReconstructedIndices, stripedBlk.getErasureCodingPolicy());
     }
   }
-
 
   private void createReplicationWork(int sourceIndex,
       DatanodeStorageInfo target) {

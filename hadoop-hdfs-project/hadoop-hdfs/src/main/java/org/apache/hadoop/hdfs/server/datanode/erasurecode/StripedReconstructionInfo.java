@@ -41,7 +41,7 @@ public class StripedReconstructionInfo {
   private final DatanodeInfo[] targets;
   private final StorageType[] targetStorageTypes;
   private final String[] targetStorageIds;
-  private final byte[] excludeReplicatedIndices;
+  private final byte[] excludeReconstructedIndices;
 
   public StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
@@ -53,15 +53,15 @@ public class StripedReconstructionInfo {
   StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       DatanodeInfo[] targets, StorageType[] targetStorageTypes,
-      String[] targetStorageIds, byte[] excludeReplicatedIndices) {
+      String[] targetStorageIds, byte[] excludeReconstructedIndices) {
     this(blockGroup, ecPolicy, liveIndices, sources, null, targets,
-        targetStorageTypes, targetStorageIds, excludeReplicatedIndices);
+        targetStorageTypes, targetStorageIds, excludeReconstructedIndices);
   }
 
   private StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       byte[] targetIndices, DatanodeInfo[] targets,
-      StorageType[] targetStorageTypes, String[] targetStorageIds, byte[] excludeReplicatedIndices) {
+      StorageType[] targetStorageTypes, String[] targetStorageIds, byte[] excludeReconstructedIndices) {
 
     this.blockGroup = blockGroup;
     this.ecPolicy = ecPolicy;
@@ -71,7 +71,7 @@ public class StripedReconstructionInfo {
     this.targets = targets;
     this.targetStorageTypes = targetStorageTypes;
     this.targetStorageIds = targetStorageIds;
-    this.excludeReplicatedIndices=excludeReplicatedIndices;
+    this.excludeReconstructedIndices = excludeReconstructedIndices;
   }
 
   ExtendedBlock getBlockGroup() {
@@ -106,8 +106,8 @@ public class StripedReconstructionInfo {
     return targetStorageIds;
   }
 
-  byte[] getExcludeReplicatedIndices() {
-    return excludeReplicatedIndices;
+  byte[] getExcludeReconstructedIndices() {
+    return excludeReconstructedIndices;
   }
 
 }

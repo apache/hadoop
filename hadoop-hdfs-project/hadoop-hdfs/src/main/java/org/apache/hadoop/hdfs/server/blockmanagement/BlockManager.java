@@ -2157,10 +2157,10 @@ public class BlockManager implements BlockStatsMXBean {
     NumberReplicas numReplicas = new NumberReplicas();
     List<Byte> liveBlockIndices = new ArrayList<>();
     List<Byte> liveBusyBlockIndices = new ArrayList<>();
-    List<Byte> ExcludeReplicated = new ArrayList<>();
+    List<Byte> ExcludeReconstructed = new ArrayList<>();
     final DatanodeDescriptor[] srcNodes = chooseSourceDatanodes(block,
         containingNodes, liveReplicaNodes, numReplicas,
-        liveBlockIndices, liveBusyBlockIndices, ExcludeReplicated, priority);
+        liveBlockIndices, liveBusyBlockIndices, ExcludeReconstructed, priority);
     short requiredRedundancy = getExpectedLiveRedundancyNum(block,
         numReplicas);
     if(srcNodes == null || srcNodes.length == 0) {
@@ -2228,13 +2228,13 @@ public class BlockManager implements BlockStatsMXBean {
       for (int i = 0; i < liveBusyBlockIndices.size(); i++) {
         busyIndices[i] = liveBusyBlockIndices.get(i);
       }
-      byte[] excludeReplicatedIndices = new byte[ExcludeReplicated.size()];
-      for (int i = 0; i < ExcludeReplicated.size(); i++) {
-        excludeReplicatedIndices[i] = ExcludeReplicated.get(i);
+      byte[] excludeReconstructedIndices = new byte[ExcludeReconstructed.size()];
+      for (int i = 0; i < ExcludeReconstructed.size(); i++) {
+        excludeReconstructedIndices[i] = ExcludeReconstructed.get(i);
       }
       return new ErasureCodingWork(getBlockPoolId(), block, bc, newSrcNodes,
           containingNodes, liveReplicaNodes, additionalReplRequired,
-          priority, newIndices, busyIndices, excludeReplicatedIndices);
+          priority, newIndices, busyIndices, excludeReconstructedIndices);
     } else {
       return new ReplicationWork(block, bc, srcNodes,
           containingNodes, liveReplicaNodes, additionalReplRequired,
@@ -2478,7 +2478,7 @@ public class BlockManager implements BlockStatsMXBean {
       List<DatanodeDescriptor> containingNodes,
       List<DatanodeStorageInfo> nodesContainingLiveReplicas,
       NumberReplicas numReplicas, List<Byte> liveBlockIndices,
-      List<Byte> liveBusyBlockIndices, List<Byte> ExcludeReplicated , int priority) {
+      List<Byte> liveBusyBlockIndices, List<Byte> ExcludeReconstructed , int priority) {
     containingNodes.clear();
     nodesContainingLiveReplicas.clear();
     List<DatanodeDescriptor> srcNodes = new ArrayList<>();
@@ -2548,11 +2548,11 @@ public class BlockManager implements BlockStatsMXBean {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
-          ExcludeReplicated.add(blockIndex);
+          //HDFS-16566 ExcludeReconstructed won't be reconstructed
+          ExcludeReconstructed.add(blockIndex);
         }
         continue; // already reached replication limit
       }
-
 
       if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
         if (isStriped && (state == StoredReplicaState.LIVE

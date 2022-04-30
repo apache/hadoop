@@ -140,8 +140,8 @@ abstract class StripedReconstructor {
     }
     excludeBitSet = new BitSet(
             ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
-    for (int i = 0; i < stripedReconInfo.getExcludeReplicatedIndices().length; i++) {
-      excludeBitSet.set(stripedReconInfo.getExcludeReplicatedIndices()[i]);
+    for (int i = 0; i < stripedReconInfo.getExcludeReconstructedIndices().length; i++) {
+      excludeBitSet.set(stripedReconInfo.getExcludeReconstructedIndices()[i]);
     }
 
     blockGroup = stripedReconInfo.getBlockGroup();

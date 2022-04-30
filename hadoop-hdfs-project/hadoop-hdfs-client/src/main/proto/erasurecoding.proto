@@ -107,7 +107,7 @@ message BlockECReconstructionInfoProto {
   required StorageUuidsProto targetStorageUuids = 4;
   required StorageTypesProto targetStorageTypes = 5;
   required bytes liveBlockIndices = 6;
-  required bytes excludeReplicatedIndices = 7;
+  required bytes excludeReconstructedIndices = 7;
   required ErasureCodingPolicyProto ecPolicy = 8;
 }
 

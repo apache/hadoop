@@ -48,12 +48,10 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.Block
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
@@ -79,8 +77,6 @@ public class TestReconstructStripedBlocks {
   private Path filePath = new Path(dirPath, "file");
   private int maxReplicationStreams =
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT;
-  private int replicationStreamsHardLimit =
-          DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT;
 
   private void initConf(Configuration conf) {
     // Large value to make sure the pending replication request can stay in
@@ -449,10 +445,9 @@ public class TestReconstructStripedBlocks {
   public void testReconstrutionWithBusyBlock1() throws Exception {
     //When the index of busy block is smaller than the missing block
     //[0(busy),1(busy),3,4,5,6,7,8]
-    int busyNodeIndex=1;
+    int busyNodeIndex1=0;
     int busyNodeIndex2=1;
-    int deadNodeIndex=0;
-    int deadNodeIndex1=2;
+    int deadNodeIndex=2;
     final Path ecDir = new Path("/" + this.getClass().getSimpleName());
     final Path ecFile = new Path(ecDir, "testReconstrutionWithBusyBlock1");
     int writeBytes = cellSize * dataBlocks;
@@ -490,26 +485,20 @@ public class TestReconstructStripedBlocks {
 
     //1.Make nodes busy
     DatanodeDescriptor busyNode =bm.getDatanodeManager()
-            .getDatanode(dnList[busyNodeIndex].getDatanodeUuid());
-    for (int j = 0; j < replicationStreamsHardLimit; j++) {
+            .getDatanode(dnList[busyNodeIndex1].getDatanodeUuid());
+    for (int j = 0; j < maxReplicationStreams; j++) {
       busyNode.incrementPendingReplicationWithoutTargets();
     }
     DatanodeDescriptor busyNode2 =bm.getDatanodeManager()
             .getDatanode(dnList[busyNodeIndex2].getDatanodeUuid());
-    for (int j = 0; j < replicationStreamsHardLimit; j++) {
-      //busyNode2.incrementPendingReplicationWithoutTargets();
+    for (int j = 0; j < maxReplicationStreams; j++) {
+      busyNode2.incrementPendingReplicationWithoutTargets();
     }
-
-
 
     //2.Make a node missing
     DataNode dn = cluster.getDataNode(dnList[deadNodeIndex].getIpcPort());
     cluster.stopDataNode(dnList[deadNodeIndex].getXferAddr());
     cluster.setDataNodeDead(dn.getDatanodeId());
-
-    DataNode dn1 = cluster.getDataNode(dnList[deadNodeIndex1].getIpcPort());
-    cluster.stopDataNode(dnList[deadNodeIndex1].getXferAddr());
-    cluster.setDataNodeDead(dn1.getDatanodeId());
 
     //3.Whether there is excess replicas or not during the recovery?
     assertEquals(8,bm.countNodes(blockInfo).liveReplicas());
