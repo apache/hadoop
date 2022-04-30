@@ -2478,7 +2478,7 @@ public class BlockManager implements BlockStatsMXBean {
       List<DatanodeDescriptor> containingNodes,
       List<DatanodeStorageInfo> nodesContainingLiveReplicas,
       NumberReplicas numReplicas, List<Byte> liveBlockIndices,
-      List<Byte> liveBusyBlockIndices, List<Byte> ExcludeReconstructed , int priority) {
+      List<Byte> liveBusyBlockIndices, List<Byte> excludeReconstructed, int priority) {
     containingNodes.clear();
     nodesContainingLiveReplicas.clear();
     List<DatanodeDescriptor> srcNodes = new ArrayList<>();
@@ -2549,7 +2549,7 @@ public class BlockManager implements BlockStatsMXBean {
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
           //HDFS-16566 ExcludeReconstructed won't be reconstructed
-          ExcludeReconstructed.add(blockIndex);
+          excludeReconstructed.add(blockIndex);
         }
         continue; // already reached replication limit
       }

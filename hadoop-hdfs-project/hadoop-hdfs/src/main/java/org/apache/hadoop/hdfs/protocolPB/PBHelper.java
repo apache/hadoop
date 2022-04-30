@@ -1040,13 +1040,16 @@ public class PBHelper {
 
     byte[] liveBlkIndices = blockEcReconstructionInfoProto.getLiveBlockIndices()
         .toByteArray();
-    byte[] excludeReconstructedIndices=blockEcReconstructionInfoProto.getExcludeReconstructedIndices()
-        .toByteArray();
+    byte[] excludeReconstructedIndices =
+            blockEcReconstructionInfoProto.getExcludeReconstructedIndices()
+            .toByteArray();
     ErasureCodingPolicy ecPolicy =
         PBHelperClient.convertErasureCodingPolicy(
             blockEcReconstructionInfoProto.getEcPolicy());
-    return new BlockECReconstructionInfo(block, sourceDnInfos, targetDnInfos,
-        targetStorageUuids, convertStorageTypes, liveBlkIndices, excludeReconstructedIndices, ecPolicy);
+    return new BlockECReconstructionInfo(
+        block, sourceDnInfos, targetDnInfos,
+        targetStorageUuids, convertStorageTypes, liveBlkIndices,
+        excludeReconstructedIndices, ecPolicy);
   }
 
   public static BlockECReconstructionInfoProto convertBlockECRecoveryInfo(
@@ -1073,7 +1076,8 @@ public class PBHelper {
     builder.setLiveBlockIndices(PBHelperClient.getByteString(liveBlockIndices));
 
     byte[] excludeReconstructedIndices = blockEcRecoveryInfo.getExcludeReconstructedIndices();
-    builder.setExcludeReconstructedIndices(PBHelperClient.getByteString(excludeReconstructedIndices));
+    builder.setExcludeReconstructedIndices(
+        PBHelperClient.getByteString(excludeReconstructedIndices));
 
     builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
         blockEcRecoveryInfo.getErasureCodingPolicy()));

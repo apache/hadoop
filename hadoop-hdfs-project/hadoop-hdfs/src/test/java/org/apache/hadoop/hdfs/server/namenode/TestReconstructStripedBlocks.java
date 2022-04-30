@@ -453,7 +453,7 @@ public class TestReconstructStripedBlocks {
     int writeBytes = cellSize * dataBlocks;
     HdfsConfiguration conf=new HdfsConfiguration();
     initConf(conf);
-    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED,false);
+    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
             2000);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
@@ -501,18 +501,16 @@ public class TestReconstructStripedBlocks {
     cluster.setDataNodeDead(dn.getDatanodeId());
 
     //3.Whether there is excess replicas or not during the recovery?
-    assertEquals(8,bm.countNodes(blockInfo).liveReplicas());
+    assertEquals(8, bm.countNodes(blockInfo).liveReplicas());
 
     GenericTestUtils.waitFor(
-            () -> {
-                System.out.println(bm.countNodes(blockInfo).liveReplicas());
-                System.out.println(bm.countNodes(blockInfo).excessReplicas());
-              return bm.countNodes(blockInfo).liveReplicas()==9||bm.countNodes(blockInfo).excessReplicas() >= 1||bm.countNodes(blockInfo).redundantInternalBlocks() >= 1;
-            },
-            10, 100000);
+      () -> {
+        return bm.countNodes(blockInfo).liveReplicas()==9||bm.countNodes(blockInfo).excessReplicas() >= 1||bm.countNodes(blockInfo).redundantInternalBlocks() >= 1;
+      },
+      10, 100000);
 
-    assertEquals(0,bm.countNodes(blockInfo).excessReplicas());
-    assertEquals(9,bm.countNodes(blockInfo).liveReplicas());
+    assertEquals(0, bm.countNodes(blockInfo).excessReplicas());
+    assertEquals(9, bm.countNodes(blockInfo).liveReplicas());
   }
 
 }

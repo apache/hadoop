@@ -61,7 +61,8 @@ public class StripedReconstructionInfo {
   private StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       byte[] targetIndices, DatanodeInfo[] targets,
-      StorageType[] targetStorageTypes, String[] targetStorageIds, byte[] excludeReconstructedIndices) {
+      StorageType[] targetStorageTypes, String[] targetStorageIds,
+      byte[] excludeReconstructedIndices) {
 
     this.blockGroup = blockGroup;
     this.ecPolicy = ecPolicy;
