@@ -2548,7 +2548,7 @@ public class BlockManager implements BlockStatsMXBean {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
-          //HDFS-16566 ExcludeReconstructed won't be reconstructed
+          //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
         continue; // already reached replication limit
@@ -2558,7 +2558,7 @@ public class BlockManager implements BlockStatsMXBean {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
-          //HDFS-16566 ExcludeReconstructed won't be reconstructed
+          //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
         continue;
