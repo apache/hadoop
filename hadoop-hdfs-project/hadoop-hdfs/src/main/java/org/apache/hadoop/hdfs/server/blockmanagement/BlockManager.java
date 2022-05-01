@@ -2157,10 +2157,10 @@ public class BlockManager implements BlockStatsMXBean {
     NumberReplicas numReplicas = new NumberReplicas();
     List<Byte> liveBlockIndices = new ArrayList<>();
     List<Byte> liveBusyBlockIndices = new ArrayList<>();
-    List<Byte> ExcludeReconstructed = new ArrayList<>();
+    List<Byte> excludeReconstructed = new ArrayList<>();
     final DatanodeDescriptor[] srcNodes = chooseSourceDatanodes(block,
         containingNodes, liveReplicaNodes, numReplicas,
-        liveBlockIndices, liveBusyBlockIndices, ExcludeReconstructed, priority);
+        liveBlockIndices, liveBusyBlockIndices, excludeReconstructed, priority);
     short requiredRedundancy = getExpectedLiveRedundancyNum(block,
         numReplicas);
     if(srcNodes == null || srcNodes.length == 0) {
@@ -2228,9 +2228,9 @@ public class BlockManager implements BlockStatsMXBean {
       for (int i = 0; i < liveBusyBlockIndices.size(); i++) {
         busyIndices[i] = liveBusyBlockIndices.get(i);
       }
-      byte[] excludeReconstructedIndices = new byte[ExcludeReconstructed.size()];
-      for (int i = 0; i < ExcludeReconstructed.size(); i++) {
-        excludeReconstructedIndices[i] = ExcludeReconstructed.get(i);
+      byte[] excludeReconstructedIndices = new byte[excludeReconstructed.size()];
+      for (int i = 0; i < excludeReconstructed.size(); i++) {
+        excludeReconstructedIndices[i] = excludeReconstructed.get(i);
       }
       return new ErasureCodingWork(getBlockPoolId(), block, bc, newSrcNodes,
           containingNodes, liveReplicaNodes, additionalReplRequired,

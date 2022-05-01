@@ -83,11 +83,12 @@ public class BlockECReconstructionCommand extends DatanodeCommand {
 
     public BlockECReconstructionInfo(ExtendedBlock block,
         DatanodeInfo[] sources, DatanodeStorageInfo[] targetDnStorageInfo,
-        byte[] liveBlockIndices,byte[] excludeReconstructedIndices, ErasureCodingPolicy ecPolicy) {
+        byte[] liveBlockIndices, byte[] excludeReconstructedIndices, ErasureCodingPolicy ecPolicy) {
       this(block, sources, DatanodeStorageInfo
           .toDatanodeInfos(targetDnStorageInfo), DatanodeStorageInfo
           .toStorageIDs(targetDnStorageInfo), DatanodeStorageInfo
-          .toStorageTypes(targetDnStorageInfo), liveBlockIndices, excludeReconstructedIndices, ecPolicy);
+          .toStorageTypes(targetDnStorageInfo), liveBlockIndices,
+          excludeReconstructedIndices, ecPolicy);
     }
 
     public BlockECReconstructionInfo(ExtendedBlock block,

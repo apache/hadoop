@@ -504,10 +504,12 @@ public class TestReconstructStripedBlocks {
     assertEquals(8, bm.countNodes(blockInfo).liveReplicas());
 
     GenericTestUtils.waitFor(
-      () -> {
-        return bm.countNodes(blockInfo).liveReplicas()==9||bm.countNodes(blockInfo).excessReplicas() >= 1||bm.countNodes(blockInfo).redundantInternalBlocks() >= 1;
-      },
-      10, 100000);
+        () -> {
+          return bm.countNodes(blockInfo).liveReplicas()==9||
+              bm.countNodes(blockInfo).excessReplicas() >= 1||
+              bm.countNodes(blockInfo).redundantInternalBlocks() >= 1;
+        },
+        10, 100000);
 
     assertEquals(0, bm.countNodes(blockInfo).excessReplicas());
     assertEquals(9, bm.countNodes(blockInfo).liveReplicas());
