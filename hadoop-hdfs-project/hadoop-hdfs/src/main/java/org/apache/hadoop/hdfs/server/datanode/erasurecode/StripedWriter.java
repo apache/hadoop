@@ -130,7 +130,7 @@ class StripedWriter {
     for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
       if (!bitset.get(i)) {
         if (reconstructor.getBlockLen(i) > 0) {
-          if (m < targets.length&& !excludebitset.get(i)) {
+          if (m < targets.length && !excludebitset.get(i)) {
             targetIndices[m++] = (short)i;
             hasValidTargets = true;
           }

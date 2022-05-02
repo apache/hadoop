@@ -102,7 +102,7 @@ public class BlockECReconstructionCommand extends DatanodeCommand {
       this.targetStorageTypes = targetStorageTypes;
       this.liveBlockIndices = liveBlockIndices == null ?
           new byte[]{} : liveBlockIndices;
-      this.excludeReconstructedIndices=excludeReconstructedIndices;
+      this.excludeReconstructedIndices = excludeReconstructedIndices;
       this.ecPolicy = ecPolicy;
     }
 

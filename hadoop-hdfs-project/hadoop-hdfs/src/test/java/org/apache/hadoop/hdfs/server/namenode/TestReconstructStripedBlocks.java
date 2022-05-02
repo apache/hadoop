@@ -445,13 +445,13 @@ public class TestReconstructStripedBlocks {
   public void testReconstrutionWithBusyBlock1() throws Exception {
     //When the index of busy block is smaller than the missing block
     //[0(busy),1(busy),3,4,5,6,7,8]
-    int busyNodeIndex1=0;
-    int busyNodeIndex2=1;
-    int deadNodeIndex=2;
-    final Path ecDir = new Path("/" + this.getClass().getSimpleName());
+    int busyNodeIndex1 = 0;
+    int busyNodeIndex2 = 1;
+    int deadNodeIndex = 2;
+    final Path ecDir = new Path(GenericTestUtils.getRandomizedTempPath());
     final Path ecFile = new Path(ecDir, "testReconstrutionWithBusyBlock1");
     int writeBytes = cellSize * dataBlocks;
-    HdfsConfiguration conf=new HdfsConfiguration();
+    HdfsConfiguration conf = new HdfsConfiguration();
     initConf(conf);
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
@@ -467,7 +467,7 @@ public class TestReconstructStripedBlocks {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 5)
             .build();
     cluster.waitActive();
-    DistributedFileSystem dfs=cluster.getFileSystem(0);
+    DistributedFileSystem dfs = cluster.getFileSystem(0);
     dfs.enableErasureCodingPolicy(
             StripedFileTestUtil.getDefaultECPolicy().getName());
     dfs.mkdirs(ecDir);
@@ -478,18 +478,18 @@ public class TestReconstructStripedBlocks {
             .getAllBlocks();
     LocatedStripedBlock lsb = (LocatedStripedBlock) lbs.get(0);
     DatanodeInfo[] dnList = lsb.getLocations();
-    BlockManager bm=cluster.getNamesystem().getBlockManager();
+    BlockManager bm = cluster.getNamesystem().getBlockManager();
     BlockInfoStriped blockInfo =
             (BlockInfoStriped) bm.getStoredBlock(
                     new Block(lsb.getBlock().getBlockId()));
 
     //1.Make nodes busy
-    DatanodeDescriptor busyNode =bm.getDatanodeManager()
+    DatanodeDescriptor busyNode = bm.getDatanodeManager()
             .getDatanode(dnList[busyNodeIndex1].getDatanodeUuid());
     for (int j = 0; j < maxReplicationStreams; j++) {
       busyNode.incrementPendingReplicationWithoutTargets();
     }
-    DatanodeDescriptor busyNode2 =bm.getDatanodeManager()
+    DatanodeDescriptor busyNode2 = bm.getDatanodeManager()
             .getDatanode(dnList[busyNodeIndex2].getDatanodeUuid());
     for (int j = 0; j < maxReplicationStreams; j++) {
       busyNode2.incrementPendingReplicationWithoutTargets();
@@ -505,7 +505,7 @@ public class TestReconstructStripedBlocks {
 
     GenericTestUtils.waitFor(
         () -> {
-          return bm.countNodes(blockInfo).liveReplicas()==9||
+          return bm.countNodes(blockInfo).liveReplicas() == 9||
               bm.countNodes(blockInfo).excessReplicas() >= 1||
               bm.countNodes(blockInfo).redundantInternalBlocks() >= 1;
         },
