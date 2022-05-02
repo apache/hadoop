@@ -1509,6 +1509,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
   }
 
+  @Override
+  public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
+    checkNNStartup();
+    return namesystem.slowDataNodesReport();
+  }
+
   @Override // ClientProtocol
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
                        StorageType type)
