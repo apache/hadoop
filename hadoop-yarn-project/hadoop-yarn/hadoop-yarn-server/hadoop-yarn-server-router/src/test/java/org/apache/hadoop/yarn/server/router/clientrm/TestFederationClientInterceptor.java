@@ -516,14 +516,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
 
   @Test
-  public void testGetClusterMetricsRequest() throws YarnException, IOException {
+  public void testGetClusterMetricsRequest() throws Exception {
     LOG.info("Test FederationClientInterceptor : Get Cluster Metrics request");
     // null request
-    GetClusterMetricsResponse response = interceptor.getClusterMetrics(null);
-    Assert.assertEquals(subClusters.size(),
-        response.getClusterMetrics().getNumNodeManagers());
+    LambdaTestUtils.intercept(YarnException.class,
+            "Missing getClusterMetrics request." ,
+            () -> interceptor.getClusterMetrics(null));
+
     // normal request.
-    response =
+    GetClusterMetricsResponse response =
         interceptor.getClusterMetrics(GetClusterMetricsRequest.newInstance());
     Assert.assertEquals(subClusters.size(),
         response.getClusterMetrics().getNumNodeManagers());
@@ -642,6 +643,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertTrue(responseGet.getApplicationList().isEmpty());
   }
 
+  /**
+   *
+   * @throws YarnException
+   * @throws IOException
+   */
   @Test
   public void testGetClusterMetricsRequestNull() throws YarnException, IOException {
     LOG.info(
