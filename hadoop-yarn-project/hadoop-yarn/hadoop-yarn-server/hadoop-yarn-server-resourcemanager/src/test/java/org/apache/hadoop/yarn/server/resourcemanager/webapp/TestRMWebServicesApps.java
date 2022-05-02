@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -130,6 +132,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     super.setUp();
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule()));
+  }
+
+  @After
+  public void tearDown() {
+    if (rm != null) {
+      rm.stop();
+    }
   }
 
   public TestRMWebServicesApps() {
@@ -1983,8 +1992,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testAppsQueryByQueueShortname() throws Exception {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule(CapacityScheduler.class)));
+//    GuiceServletConfig.setInjector(
+//        Guice.createInjector(new WebServletModule(CapacityScheduler.class)));
     
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
@@ -2051,8 +2060,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testAppsQueryByQueueFullname() throws Exception {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule(CapacityScheduler.class)));
+//    GuiceServletConfig.setInjector(
+//        Guice.createInjector(new WebServletModule(CapacityScheduler.class)));
     
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
