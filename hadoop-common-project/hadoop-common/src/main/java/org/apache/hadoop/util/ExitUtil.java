@@ -200,23 +200,48 @@ public final class ExitUtil {
    * or, if system exits are disabled, rethrow the exception.
    * @param ee exit exception
    */
-  public static synchronized void terminate(ExitException ee)
+  public static void terminate(ExitException ee)
       throws ExitException {
-    int status = ee.getExitCode();
-    String msg = ee.getMessage();
+    final int status = ee.getExitCode();
+    Error catched = null;
     if (status != 0) {
-      //exit indicates a problem, log it
-      LOG.debug("Exiting with status {}: {}",  status, msg, ee);
-      LOG.info("Exiting with status {}: {}", status, msg);
+      try {
+        //exit indicates a problem, log it
+        String msg = ee.getMessage();
+        LOG.debug("Exiting with status {}: {}",  status, msg, ee);
+        LOG.info("Exiting with status {}: {}", status, msg);
+      } catch (Error e) {
+        catched = e; // errors have higher priority than HaltException, it may be re-thrown. OOM and ThreadDeath are 2 examples of Errors to re-throw
+      } catch (Throwable t) {
+        // all other kind of throwables are supressed
+        ee.addSuppressed(t);
+      }
     }
     if (systemExitDisabled) {
-      LOG.error("Terminate called", ee);
-      if (!terminateCalled()) {
-        firstExitException = ee;
+      try {
+        LOG.error("Terminate called", ee);
+      } catch (Error e) {
+        if (catched == null) {
+          catched = e; // errors will be re-thrown
+        } else {
+          catched.addSuppressed(e); // 1st raised error has priority and will be re-thrown, so the 1st error supresses the 2nd
+        }
+      } catch (Throwable t) {
+        ee.addSuppressed(t); // all other kind of throwables are supressed
+      }
+      synchronized (ExitUtil.class) {
+        if (!terminateCalled()) {
+          firstExitException = ee;
+        }
+      }
+      if (catched != null) {
+        catched.addSuppressed(ee);
+        throw catched;
       }
       throw ee;
+    } else {
+      System.exit(status); // System.exit has higher priority than any catched error
     }
-    System.exit(status);
   }
 
   /**
@@ -226,25 +251,48 @@ public final class ExitUtil {
    * trace.
    * @throws HaltException if {@link Runtime#halt(int)} is disabled.
    */
-  public static synchronized void halt(HaltException ee) throws HaltException {
-    int status = ee.getExitCode();
-    String msg = ee.getMessage();
-    try {
-      if (status != 0) {
+  public static void halt(HaltException ee) throws HaltException {
+    final int status = ee.getExitCode();
+    Error catched = null;
+    if (status != 0) {
+      try {
         //exit indicates a problem, log it
+        String msg = ee.getMessage();
         LOG.info("Halt with status {}: {}", status, msg, ee);
+      } catch (Error e) {
+        catched = e; // errors have higher priority than HaltException, it may be re-thrown. OOM and ThreadDeath are 2 examples of Errors to re-throw
+      } catch (Throwable t) {
+        // all other kind of throwables are supressed
+        ee.addSuppressed(t);
       }
-    } catch (Exception ignored) {
-      // ignore exceptions here, as it may be due to an out of memory situation
     }
-    if (systemHaltDisabled) {
-      LOG.error("Halt called", ee);
-      if (!haltCalled()) {
-        firstHaltException = ee;
+    if (systemHaltDisabled) { // this is a volatile so reading it does not need a synchronized block
+      try {
+        LOG.error("Halt called", ee);
+      } catch (Error e) {
+        if (catched == null) {
+          catched = e; // errors will be re-thrown
+        } else {
+          catched.addSuppressed(e);
+        }
+      } catch (Throwable t) {
+        // all other kind of throwables are supressed
+        ee.addSuppressed(t);
       }
-      throw ee;
+      synchronized (ExitUtil.class) {
+        if (!haltCalled()) {
+          firstHaltException = ee;
+        }
+      }
+      if (catched != null) {
+        catched.addSuppressed(ee);
+        throw catched;
+      }
+      throw ee; // not supressed by a higher prority error
+    } else {
+      // when halt is not disabled, whatever Throwable happened, we halt the VM
+      Runtime.getRuntime().halt(status);
     }
-    Runtime.getRuntime().halt(status);
   }
 
   /**
