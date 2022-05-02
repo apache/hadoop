@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -790,8 +791,32 @@ public class FederationClientInterceptor
 
   @Override
   public GetClusterNodesResponse getClusterNodes(GetClusterNodesRequest request)
-      throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+          throws YarnException, IOException {
+    if (request == null) {
+      routerMetrics.incrClusterNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+              "Missing getClusterNodes request.", null);
+    }
+    long startTime = clock.getTime();
+    Map<SubClusterId, SubClusterInfo> subclusters =
+            federationFacade.getSubClusters(true);
+    Map<SubClusterId, GetClusterNodesResponse> clusterNodes = Maps.newHashMap();
+    for (Map.Entry<SubClusterId, SubClusterInfo> entry : subclusters.entrySet()) {
+      SubClusterId subClusterId = entry.getKey();
+      ApplicationClientProtocol client = null;
+      try {
+        client = getClientRMProxyForSubCluster(subClusterId);
+        GetClusterNodesResponse response = client.getClusterNodes(request);
+        clusterNodes.put(subClusterId, response);
+      } catch (Exception ex) {
+        routerMetrics.incrClusterNodesFailedRetrieved();
+        LOG.error("Unable to get cluster nodes due to exception.", ex);
+      }
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetClusterNodesRetrieved(stopTime - startTime);
+    // Merge the NodesResponse
+    return RouterYarnClientUtils.mergeClusterNodesResponse(clusterNodes.values());
   }
 
   @Override
