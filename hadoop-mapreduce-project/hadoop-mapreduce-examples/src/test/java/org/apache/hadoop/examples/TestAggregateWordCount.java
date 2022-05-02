@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
-import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 
 import static org.junit.Assert.assertEquals;
 
@@ -68,13 +68,13 @@ public class TestAggregateWordCount extends HadoopTestCase {
       FileUtil.write(fs, file2, "Hello Hadoop");
 
       String[] args =
-          new String[] { INPUT_PATH.toString(), OUTPUT_PATH.toString(), "1",
-              "textinputformat" };
+          new String[] {INPUT_PATH.toString(), OUTPUT_PATH.toString(), "1",
+              "textinputformat"};
 
       // Run AggregateWordCount Job.
       try {
         AggregateWordCount.main(args);
-      } catch (ExitUtil.ExitException e) {
+      } catch (ExitException e) {
         // Ignore
       }
 
@@ -106,7 +106,7 @@ public class TestAggregateWordCount extends HadoopTestCase {
     @Override
     public void checkExit(int status) {
       super.checkExit(status);
-      throw new ExitUtil.ExitException(status, "Dummy");
+      throw new ExitException(status, "Dummy");
     }
   }
 }
