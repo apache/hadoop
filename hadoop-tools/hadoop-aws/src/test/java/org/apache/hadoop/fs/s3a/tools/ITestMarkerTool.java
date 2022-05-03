@@ -28,11 +28,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
@@ -309,25 +307,22 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   }
 
   /**
-   * Run an audit against a bucket with a large number of objects.
+   * Run an audit against the landsat bucket.
    * <p></p>
    * This tests paging/scale against a larger bucket without
    * worrying about setup costs.
    */
   @Test
-  public void testRunAuditManyObjectsInBucket() throws Throwable {
-    describe("Audit a few thousand objects");
+  public void testRunLimitedLandsatAudit() throws Throwable {
+    describe("Audit a few thousand landsat objects");
     final File audit = tempAuditFile();
-
-    Configuration conf = super.createConfiguration();
-    String bucketUri = PublicDatasetTestUtils.getBucketPrefixWithManyObjects(conf);
 
     runToFailure(EXIT_INTERRUPTED,
         MARKERS,
         AUDIT,
         m(OPT_LIMIT), 3000,
         m(OPT_OUT), audit,
-        bucketUri);
+        LANDSAT_BUCKET);
     readOutput(audit);
   }
 

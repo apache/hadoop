@@ -20,9 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.time.Duration;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
-
 /**
  * Constants for S3A Testing.
  */
@@ -102,19 +99,14 @@ public interface S3ATestConstants {
 
   /**
    * Configuration key for an existing object in a requester pays bucket: {@value}.
-   *
-   * Accessible via
-   * {@link PublicDatasetTestUtils#getRequesterPaysObject(Configuration)}.
+   * If not set, defaults to {@value DEFAULT_REQUESTER_PAYS_FILE}.
    */
   String KEY_REQUESTER_PAYS_FILE = TEST_FS_S3A + "requester.pays.file";
 
   /**
-   * Configuration key for an existing bucket with many objects: {@value}.
-   *
-   * This is used for tests depending on buckets with a large number of keys.
+   * Default path for an S3 object inside a requester pays enabled bucket: {@value}.
    */
-  String KEY_BUCKET_WITH_MANY_OBJECTS
-      = TEST_FS_S3A + "bucket-with-many-objects";
+  String DEFAULT_REQUESTER_PAYS_FILE = "s3a://usgs-landsat/collection02/catalog.json";
 
   /**
    * Name of the property to define the timeout for scale tests: {@value}.
