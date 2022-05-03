@@ -429,7 +429,7 @@ public class DFSAdmin extends FsShell {
    */
   private static final String commonUsageSummary =
     "\t[-report [-live] [-dead] [-decommissioning] " +
-    "[-enteringmaintenance] [-inmaintenance]]\n" +
+      "[-enteringmaintenance] [-inmaintenance] [-slownodes]]\n" +
     "\t[-safemode <enter | leave | get | wait | forceExit>]\n" +
     "\t[-saveNamespace [-beforeShutdown]]\n" +
     "\t[-rollEdits]\n" +
@@ -582,11 +582,13 @@ public class DFSAdmin extends FsShell {
         StringUtils.popOption("-enteringmaintenance", args);
     final boolean listInMaintenance =
         StringUtils.popOption("-inmaintenance", args);
+    final boolean listSlowNodes =
+        StringUtils.popOption("-slownodes", args);
 
 
     // If no filter flags are found, then list all DN types
     boolean listAll = (!listLive && !listDead && !listDecommissioning
-        && !listEnteringMaintenance && !listInMaintenance);
+        && !listEnteringMaintenance && !listInMaintenance && !listSlowNodes);
 
     if (listAll || listLive) {
       printDataNodeReports(dfs, DatanodeReportType.LIVE, listLive, "Live");
@@ -610,12 +612,30 @@ public class DFSAdmin extends FsShell {
       printDataNodeReports(dfs, DatanodeReportType.IN_MAINTENANCE,
           listInMaintenance, "In maintenance");
     }
+
+    if (listAll || listSlowNodes) {
+      printSlowDataNodeReports(dfs, listSlowNodes, "Slow");
+    }
   }
 
   private static void printDataNodeReports(DistributedFileSystem dfs,
       DatanodeReportType type, boolean listNodes, String nodeState)
       throws IOException {
     DatanodeInfo[] nodes = dfs.getDataNodeStats(type);
+    if (nodes.length > 0 || listNodes) {
+      System.out.println(nodeState + " datanodes (" + nodes.length + "):\n");
+    }
+    if (nodes.length > 0) {
+      for (DatanodeInfo dn : nodes) {
+        System.out.println(dn.getDatanodeReport());
+        System.out.println();
+      }
+    }
+  }
+
+  private static void printSlowDataNodeReports(DistributedFileSystem dfs, boolean listNodes,
+      String nodeState) throws IOException {
+    DatanodeInfo[] nodes = dfs.getSlowDatanodeStats();
     if (nodes.length > 0 || listNodes) {
       System.out.println(nodeState + " datanodes (" + nodes.length + "):\n");
     }
@@ -1103,7 +1123,7 @@ public class DFSAdmin extends FsShell {
       commonUsageSummary;
 
     String report ="-report [-live] [-dead] [-decommissioning] "
-        + "[-enteringmaintenance] [-inmaintenance]:\n" +
+        + "[-enteringmaintenance] [-inmaintenance] [-slownodes]:\n" +
         "\tReports basic filesystem information and statistics. \n" +
         "\tThe dfs usage can be different from \"du\" usage, because it\n" +
         "\tmeasures raw space used by replication, checksums, snapshots\n" +
@@ -2073,7 +2093,7 @@ public class DFSAdmin extends FsShell {
     if ("-report".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-report] [-live] [-dead] [-decommissioning]"
-          + " [-enteringmaintenance] [-inmaintenance]");
+          + " [-enteringmaintenance] [-inmaintenance] [-slownodes]");
     } else if ("-safemode".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-safemode enter | leave | get | wait | forceExit]");
