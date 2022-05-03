@@ -18,10 +18,15 @@
  */
 package org.apache.hadoop.hdfs.web.oauth2;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -29,10 +34,6 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Timer;
 import org.apache.http.HttpStatus;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_CLIENT_ID_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_REFRESH_URL_KEY;
@@ -111,23 +112,23 @@ public abstract class CredentialBasedAccessTokenProvider
         .url(refreshURL)
         .post(body)
         .build();
-    try (Response responseBody = client.newCall(request).execute()) {
-      if (!responseBody.isSuccessful()) {
-        throw new IOException("Unexpected code " + responseBody);
+    try (Response response = client.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException("Unexpected code " + response);
       }
 
-      if (responseBody.code() != HttpStatus.SC_OK) {
+      if (response.code() != HttpStatus.SC_OK) {
         throw new IllegalArgumentException("Received invalid http response: "
-            + responseBody.code() + ", text = " + responseBody.toString());
+            + response.code() + ", text = " + response.toString());
       }
 
-      Map<?, ?> response = JsonSerialization.mapReader().readValue(
-          responseBody.body().string());
+      Map<?, ?> responseBody = JsonSerialization.mapReader().readValue(
+          response.body().string());
 
-      String newExpiresIn = response.get(EXPIRES_IN).toString();
+      String newExpiresIn = responseBody.get(EXPIRES_IN).toString();
       timer.setExpiresIn(newExpiresIn);
 
-      accessToken = response.get(ACCESS_TOKEN).toString();
+      accessToken = responseBody.get(ACCESS_TOKEN).toString();
     } catch (Exception e) {
       throw new IOException("Unable to obtain access token from credential", e);
     }
