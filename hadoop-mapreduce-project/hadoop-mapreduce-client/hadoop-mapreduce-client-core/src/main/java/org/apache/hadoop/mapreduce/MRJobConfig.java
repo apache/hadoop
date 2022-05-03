@@ -923,7 +923,7 @@ public interface MRJobConfig {
   String MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK =
       "mapreduce.task.enable.ping-for-liveliness-check";
   boolean DEFAULT_MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK
-      = false;
+      = true;
 
   /**
    * If contact with RM is lost, the AM will wait MR_AM_TO_RM_WAIT_INTERVAL_MS
