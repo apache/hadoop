@@ -18,38 +18,30 @@
 
 package org.apache.hadoop.yarn.client;
 
-import com.google.common.base.Supplier;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.CollectorInfo;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
+import com.google.common.base.Supplier;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -78,14 +70,18 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
@@ -117,6 +113,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
@@ -130,8 +127,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.Before;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 
 /**
@@ -628,7 +628,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     }
 
     public ApplicationReport createFakeAppReport() {
-      ApplicationId appId = ApplicationId.newInstance(1000l, 1);
+      ApplicationId appId = ApplicationId.newInstance(1000L, 1);
       ApplicationAttemptId attemptId =
           ApplicationAttemptId.newInstance(appId, 1);
       // create a fake application report
@@ -648,7 +648,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     }
 
     public ApplicationId createFakeAppId() {
-      return ApplicationId.newInstance(1000l, 1);
+      return ApplicationId.newInstance(1000L, 1);
     }
 
     public ApplicationAttemptId createFakeApplicationAttemptId() {
@@ -667,7 +667,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
       NodeId nodeId = NodeId.newInstance("localhost", 0);
       NodeReport report =
           NodeReport.newInstance(nodeId, NodeState.RUNNING, "localhost",
-              "rack1", null, null, 4, null, 1000l, null);
+              "rack1", null, null, 4, null, 1000L);
       List<NodeReport> reports = new ArrayList<NodeReport>();
       reports.add(report);
       return reports;
@@ -691,8 +691,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     public ApplicationAttemptReport createFakeApplicationAttemptReport() {
       return ApplicationAttemptReport.newInstance(
           createFakeApplicationAttemptId(), "localhost", 0, "", "", "",
-          YarnApplicationAttemptState.RUNNING, createFakeContainerId(), 1000l,
-          1200l);
+          YarnApplicationAttemptState.RUNNING, createFakeContainerId(), 1000L,
+          1200L);
     }
 
     public List<ApplicationAttemptReport>
@@ -705,7 +705,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
 
     public ContainerReport createFakeContainerReport() {
       return ContainerReport.newInstance(createFakeContainerId(), null,
-          NodeId.newInstance("localhost", 0), null, 1000l, 1200l, "", "", 0,
+          NodeId.newInstance("localhost", 0), null, 1000L, 1200L, "", "", 0,
           ContainerState.COMPLETE,
           "http://" + NodeId.newInstance("localhost", 0).toString());
     }
