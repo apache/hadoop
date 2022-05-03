@@ -26,11 +26,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -42,15 +42,10 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-
-    Path requesterPaysPath = getRequesterPaysPath(conf);
-    String requesterPaysBucketName = requesterPaysPath.toUri().getHost();
-    S3ATestUtils.removeBaseAndBucketOverrides(
-        requesterPaysBucketName,
-        conf,
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
         ALLOW_REQUESTER_PAYS,
+        ENDPOINT,
         S3A_BUCKET_PROBE);
-
     return conf;
   }
 
@@ -107,8 +102,14 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
     }
   }
 
-  private static Path getRequesterPaysPath(Configuration conf) {
-    return new Path(PublicDatasetTestUtils.getRequesterPaysObject(conf));
+  private Path getRequesterPaysPath(Configuration conf) {
+    String requesterPaysFile =
+        conf.getTrimmed(KEY_REQUESTER_PAYS_FILE, DEFAULT_REQUESTER_PAYS_FILE);
+    S3ATestUtils.assume(
+        "Empty test property: " + KEY_REQUESTER_PAYS_FILE,
+        !requesterPaysFile.isEmpty()
+    );
+    return new Path(requesterPaysFile);
   }
 
 }
