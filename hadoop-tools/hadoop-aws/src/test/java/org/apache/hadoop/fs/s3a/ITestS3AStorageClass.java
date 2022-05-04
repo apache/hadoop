@@ -133,7 +133,7 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
    * with completely invalid storage class
    */
   @Test
-  public void testCreateAndCopyObjectWithInvalidStorageClass() throws Throwable {
+  public void testCreateAndCopyObjectWithStorageClassInvalid() throws Throwable {
     Configuration conf = this.createConfiguration();
     conf.set(STORAGE_CLASS, "testing");
     S3AContract contract = (S3AContract) createContract(conf);
@@ -158,7 +158,7 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
    * with empty string configuration
    */
   @Test
-  public void testCreateAndCopyObjectWithEmptyStorageClass() throws Throwable {
+  public void testCreateAndCopyObjectWithStorageClassEmpty() throws Throwable {
     Configuration conf = this.createConfiguration();
     conf.set(STORAGE_CLASS, "");
     S3AContract contract = (S3AContract) createContract(conf);

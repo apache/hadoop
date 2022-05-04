@@ -46,6 +46,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -119,7 +120,7 @@ public class RequestFactoryImpl implements RequestFactory {
   /**
    * Storage class.
    */
-  private final String storageClass;
+  private final StorageClass storageClass;
 
   /**
    * Constructor.
@@ -211,7 +212,7 @@ public class RequestFactoryImpl implements RequestFactory {
    * @return storage class
    */
   @Override
-  public String getStorageClass() {
+  public StorageClass getStorageClass() {
     return storageClass;
   }
 
@@ -372,7 +373,9 @@ public class RequestFactoryImpl implements RequestFactory {
         srcfile);
     setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
-    putObjectRequest.setStorageClass(storageClass);
+    if (storageClass != null) {
+      putObjectRequest.setStorageClass(storageClass);
+    }
     putObjectRequest.setMetadata(metadata);
     return prepareRequest(putObjectRequest);
   }
@@ -447,7 +450,9 @@ public class RequestFactoryImpl implements RequestFactory {
             destKey,
             newObjectMetadata(-1));
     initiateMPURequest.setCannedACL(getCannedACL());
-    initiateMPURequest.withStorageClass(getStorageClass());
+    if (getStorageClass() != null) {
+      initiateMPURequest.withStorageClass(getStorageClass());
+    }
     setOptionalMultipartUploadRequestParameters(initiateMPURequest);
     return prepareRequest(initiateMPURequest);
   }
@@ -630,7 +635,7 @@ public class RequestFactoryImpl implements RequestFactory {
     /**
      * Storage class.
      */
-    private String storageClass;
+    private StorageClass storageClass;
 
     /**
      * Multipart limit.
@@ -668,7 +673,7 @@ public class RequestFactoryImpl implements RequestFactory {
      * @param value new value
      * @return the builder
      */
-    public RequestFactoryBuilder withStorageClass(final String value) {
+    public RequestFactoryBuilder withStorageClass(final StorageClass value) {
       storageClass = value;
       return this;
     }

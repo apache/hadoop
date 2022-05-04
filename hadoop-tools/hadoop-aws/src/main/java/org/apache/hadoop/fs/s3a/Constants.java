@@ -430,7 +430,7 @@ public final class Constants {
   public static final String CONTENT_ENCODING = "fs.s3a.object.content.encoding";
 
   /**
-   * S3 storage class: STANDARD, REDUCED_REDUNDANCY, INTELLIGENT_TIERING etc.
+   * S3 storage class: standard, reduced_redundancy, intelligent_tiering etc.
    */
   public static final String STORAGE_CLASS = "fs.s3a.storage.class";
 

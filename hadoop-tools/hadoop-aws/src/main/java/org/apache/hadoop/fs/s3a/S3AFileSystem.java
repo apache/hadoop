@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -66,6 +67,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
@@ -963,7 +965,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // Any encoding type
     String contentEncoding = getConf().getTrimmed(CONTENT_ENCODING, null);
 
-    String storageClass = getConf().getTrimmed(STORAGE_CLASS, null);
+    StorageClass storageClass;
+    try {
+      String storageClassConf = getConf()
+          .getTrimmed(STORAGE_CLASS, "")
+          .toUpperCase(Locale.US);
+      storageClass = StorageClass.fromValue(storageClassConf);
+    } catch (IllegalArgumentException e) {
+      storageClass = null;
+    }
 
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))
