@@ -45,4 +45,6 @@ public interface ByteBufferPool {
    * @param buffer    a direct bytebuffer
    */
   void putBuffer(ByteBuffer buffer);
+
+  default void release() { }
 }
