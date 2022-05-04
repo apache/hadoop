@@ -20,7 +20,6 @@ package org.apache.hadoop.examples;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.security.Permission;
 
 import org.junit.After;
 import org.junit.Test;
@@ -31,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 
 import static org.junit.Assert.assertEquals;
@@ -42,7 +42,10 @@ public class TestAggregateWordCount extends HadoopTestCase {
 
   @After
   public void tearDown() throws Exception {
-    getFileSystem().delete(TEST_DIR, true);
+    FileSystem fs = getFileSystem();
+    if (fs != null) {
+      fs.delete(TEST_DIR, true);
+    }
     super.tearDown();
   }
 
@@ -57,56 +60,32 @@ public class TestAggregateWordCount extends HadoopTestCase {
   @Test
   public void testAggregateTestCount()
       throws IOException, ClassNotFoundException, InterruptedException {
-    SecurityManager securityManager = System.getSecurityManager();
-    System.setSecurityManager(new NoExitSecurityManager());
+
+    ExitUtil.disableSystemExit();
+    FileSystem fs = getFileSystem();
+    fs.mkdirs(INPUT_PATH);
+    Path file1 = new Path(INPUT_PATH, "file1");
+    Path file2 = new Path(INPUT_PATH, "file2");
+    FileUtil.write(fs, file1, "Hello World");
+    FileUtil.write(fs, file2, "Hello Hadoop");
+
+    String[] args =
+        new String[] {INPUT_PATH.toString(), OUTPUT_PATH.toString(), "1",
+            "textinputformat"};
+
+    // Run AggregateWordCount Job.
     try {
-      FileSystem fs = getFileSystem();
-      fs.mkdirs(INPUT_PATH);
-      Path file1 = new Path(INPUT_PATH, "file1");
-      Path file2 = new Path(INPUT_PATH, "file2");
-      FileUtil.write(fs, file1, "Hello World");
-      FileUtil.write(fs, file2, "Hello Hadoop");
-
-      String[] args =
-          new String[] {INPUT_PATH.toString(), OUTPUT_PATH.toString(), "1",
-              "textinputformat"};
-
-      // Run AggregateWordCount Job.
-      try {
-        AggregateWordCount.main(args);
-      } catch (ExitException e) {
-        // Ignore
-      }
-
-      String allEntries;
-      try (FSDataInputStream stream = fs
-          .open(new Path(OUTPUT_PATH, "part-r-00000"));) {
-        allEntries = IOUtils.toString(stream, Charset.defaultCharset());
-      }
-
-      assertEquals("Hadoop\t1\n" + "Hello\t2\n" + "World\t1\n", allEntries);
-
-    } finally {
-      System.setSecurityManager(securityManager);
-    }
-  }
-
-  /**
-   * Created to avoid System.exit called in the main method to kill the JVM.
-   */
-  private static class NoExitSecurityManager extends SecurityManager {
-    @Override
-    public void checkPermission(Permission perm) {
+      AggregateWordCount.main(args);
+    } catch (ExitException e) {
+      assertEquals(0, e.status);
     }
 
-    @Override
-    public void checkPermission(Permission perm, Object context) {
+    String allEntries;
+    try (FSDataInputStream stream = fs
+        .open(new Path(OUTPUT_PATH, "part-r-00000"));) {
+      allEntries = IOUtils.toString(stream, Charset.defaultCharset());
     }
 
-    @Override
-    public void checkExit(int status) {
-      super.checkExit(status);
-      throw new ExitException(status, "Dummy");
-    }
+    assertEquals("Hadoop\t1\n" + "Hello\t2\n" + "World\t1\n", allEntries);
   }
 }
