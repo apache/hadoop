@@ -164,6 +164,7 @@ public class S3File implements Closeable {
     Validate.checkLessOrEqual(offset, "offset", size(), "size()");
     Validate.checkLessOrEqual(size, "size", size() - offset, "size() - offset");
 
+    streamStatistics.streamOpened();
     final GetObjectRequest request = client.newGetRequest(this.s3Attributes.getKey())
         .withRange(offset, offset + size - 1);
     this.changeTracker.maybeApplyConstraint(request);

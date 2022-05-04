@@ -169,11 +169,6 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
         EOFException.class,
         FSExceptionMessages.NEGATIVE_SEEK,
         () -> inputStream.seek(-1));
-
-    ExceptionAsserts.assertThrows(
-        EOFException.class,
-        FSExceptionMessages.CANNOT_SEEK_PAST_EOF,
-        () -> inputStream.seek(fileSize + 1));
   }
 
   @Test
