@@ -30,13 +30,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
-import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_STORAGE_CLASS;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Tests of storage class.
@@ -103,7 +103,7 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
    * Archive storage classes have different behavior
    * from general storage classes
    */
-  @Test(expected = AccessDeniedException.class)
+  @Test
   public void testCreateAndCopyObjectWithStorageClassGlacier() throws Throwable {
     Configuration conf = this.createConfiguration();
     conf.set(STORAGE_CLASS, StorageClass.Glacier.toString());
@@ -120,16 +120,62 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
     ContractTestUtils.touch(fs, path);
     assertObjectHasStorageClass(path, StorageClass.Glacier.toString());
     Path path2 = new Path(dir, "file2");
-    try {
-      // this is the current behavior
-      // object with archive storage class can't be read directly
-      // when trying to read it, AccessDeniedException will be thrown
-      // with message InvalidObjectState
-      fs.rename(path, path2);
-    } catch (AccessDeniedException e) {
-      GenericTestUtils.assertExceptionContains("InvalidObjectState", e);
-      throw e;
-    }
+
+    // this is the current behavior
+    // object with archive storage class can't be read directly
+    // when trying to read it, AccessDeniedException will be thrown
+    // with message InvalidObjectState
+    intercept(AccessDeniedException.class, "InvalidObjectState", () -> fs.rename(path, path2));
+  }
+
+  /*
+   * Verify object can be created and copied correctly
+   * with completely invalid storage class
+   */
+  @Test
+  public void testCreateAndCopyObjectWithInvalidStorageClass() throws Throwable {
+    Configuration conf = this.createConfiguration();
+    conf.set(STORAGE_CLASS, "testing");
+    S3AContract contract = (S3AContract) createContract(conf);
+    contract.init();
+
+    FileSystem fs = contract.getTestFileSystem();
+    Path dir = methodPath();
+    fs.mkdirs(dir);
+    // even with storage class specified
+    // directories do not have storage class
+    assertObjectHasNoStorageClass(dir);
+    Path path = new Path(dir, "file1");
+    ContractTestUtils.touch(fs, path);
+    assertObjectHasNoStorageClass(path);
+    Path path2 = new Path(dir, "file1");
+    fs.rename(path, path2);
+    assertObjectHasNoStorageClass(path2);
+  }
+
+  /*
+   * Verify object can be created and copied correctly
+   * with empty string configuration
+   */
+  @Test
+  public void testCreateAndCopyObjectWithEmptyStorageClass() throws Throwable {
+    Configuration conf = this.createConfiguration();
+    conf.set(STORAGE_CLASS, "");
+    S3AContract contract = (S3AContract) createContract(conf);
+    contract.init();
+
+    FileSystem fs = contract.getTestFileSystem();
+    Path dir = methodPath();
+    fs.mkdirs(dir);
+    // even with storage class specified
+    // directories do not have storage class
+    assertObjectHasNoStorageClass(dir);
+    Path path = new Path(dir, "file1");
+    ContractTestUtils.touch(fs, path);
+    assertObjectHasNoStorageClass(path);
+    Path path2 = new Path(dir, "file1");
+    fs.rename(path, path2);
+    assertObjectHasNoStorageClass(path2);
   }
 
   /**
