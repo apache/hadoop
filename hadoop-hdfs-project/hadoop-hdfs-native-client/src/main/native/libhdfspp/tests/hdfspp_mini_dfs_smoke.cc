@@ -34,6 +34,7 @@ TEST_F(HdfsMiniDfsSmokeTest, SmokeTest) {
   EXPECT_NE(nullptr, connection.handle());
 }
 
+
 }
 
 
