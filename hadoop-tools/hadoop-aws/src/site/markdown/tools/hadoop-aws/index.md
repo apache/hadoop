@@ -1689,6 +1689,7 @@ the storage class you want.
 ```
 
 Please note that S3A does not support reading from archive storage classes at the moment.
+`AccessDeniedException` with InvalidObjectState will be thrown if you're trying to do so.
 
 ## <a name="upload"></a>How S3A writes data to S3
 
