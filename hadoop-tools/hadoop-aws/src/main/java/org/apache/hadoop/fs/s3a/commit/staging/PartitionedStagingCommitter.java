@@ -200,7 +200,8 @@ public class PartitionedStagingCommitter extends StagingCommitter {
           .suppressExceptions(false)
           .executeWith(commitContext.getOuterSubmitter())
           .run(status -> {
-            PendingSet pendingSet = PersistentCommitData.load(sourceFS,
+            PendingSet pendingSet = PersistentCommitData.load(
+                sourceFS,
                 status,
                 commitContext.getPendingSetSerializer());
             Path lastParent = null;

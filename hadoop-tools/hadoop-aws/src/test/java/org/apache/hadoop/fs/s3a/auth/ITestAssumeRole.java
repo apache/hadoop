@@ -596,8 +596,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
           SinglePendingCommit pending =
               fullOperations.uploadFileToPendingCommit(src, dest, "",
                   uploadPartSize, progress);
-          pending.save(fs, new Path(readOnlyDir,
-              name + CommitConstants.PENDING_SUFFIX));
+          pending.save(fs,
+              new Path(readOnlyDir, name + CommitConstants.PENDING_SUFFIX),
+              SinglePendingCommit.serializer());
           assertTrue(src.delete());
         }));
     progress.assertCount("progress counter is not expected",

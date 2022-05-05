@@ -39,9 +39,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
@@ -69,8 +69,8 @@ import static org.apache.hadoop.util.StringUtils.join;
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SinglePendingCommit extends PersistentCommitData
-    implements Iterable<String>, IOStatisticsSource {
+public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommit>
+    implements Iterable<String> {
 
   /**
    * Serialization ID: {@value}.
@@ -141,7 +141,7 @@ public class SinglePendingCommit extends PersistentCommitData
    * @return a serializer.
    */
   public static JsonSerialization<SinglePendingCommit> serializer() {
-    return new JsonSerialization<>(SinglePendingCommit.class, false, true);
+    return new JsonSerialization<>(SinglePendingCommit.class, false, false);
   }
 
   /**
@@ -272,15 +272,16 @@ public class SinglePendingCommit extends PersistentCommitData
   }
 
   @Override
-  public byte[] toBytes() throws IOException {
+  public byte[] toBytes(JsonSerialization<SinglePendingCommit> serializer) throws IOException {
     validate();
-    return serializer().toBytes(this);
+    return serializer.toBytes(this);
   }
 
   @Override
-  public void save(FileSystem fs, Path path)
-      throws IOException {
-    saveFile(fs, path, this, serializer(), true);
+  public IOStatistics save(final FileSystem fs,
+      final Path path,
+      final JsonSerialization<SinglePendingCommit> serializer) throws IOException {
+    return saveFile(fs, path, this, serializer, true);
   }
 
   /**

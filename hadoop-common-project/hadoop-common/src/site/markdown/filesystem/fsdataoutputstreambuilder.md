@@ -26,7 +26,7 @@ create a new file or open an existing file on `FileSystem` for write.
 ## Invariants
 
 The `FSDataOutputStreamBuilder` interface does not validate parameters
-and modify the state of `FileSystem` until [`build()`](#Builder.build) is
+and modify the state of `FileSystem` until `build()` is
 invoked.
 
 ## Implementation-agnostic parameters.
@@ -110,7 +110,7 @@ of `FileSystem`.
 #### Implementation Notes
 
 The concrete `FileSystem` and/or `FSDataOutputStreamBuilder` implementation
-MUST verify that implementation-agnostic parameters (i.e., "syncable") or
+MUST verify that implementation-agnostic parameters (i.e., "syncable`) or
 implementation-specific parameters (i.e., "foofs:cache")
 are supported. `FileSystem` will satisfy optional parameters (via `opt(key, ...)`)
 on best effort. If the mandatory parameters (via `must(key, ...)`) can not be satisfied
@@ -169,7 +169,7 @@ The following combinations of parameters are not supported:
 
     if APPEND|OVERWRITE: raise HadoopIllegalArgumentException
     if CREATE|APPEND|OVERWRITE: raise HadoopIllegalArgumentExdeption
-
+67890-
 `FileSystem` may reject the request for other reasons and throw `IOException`,
 see `FileSystem#create(path, ...)` and `FileSystem#append()`.
 
@@ -182,3 +182,34 @@ see `FileSystem#create(path, ...)` and `FileSystem#append()`.
     result = FSDataOutputStream
 
 The result is `FSDataOutputStream` to be used to write data to filesystem.
+
+
+## <a name="s3a"></a> S3A-specific options
+
+Here are the custom options which the S3A Connector supports. 
+
+| Name                        | Type      | Meaning                                |
+|-----------------------------|-----------|----------------------------------------|
+| `fs.s3a.create.performance` | `boolean` | create a file with maximum performance |
+
+### `fs.s3a.create.performance`
+
+Prioritize file creation performance over safety checks for filesystem consistency.
+
+This
+1. Skips the LIST call which makes sure a file is being created over a directory.                                          
+   Risk: a file is created over a directory.
+1. Ignores the overwrite flag.   
+1. Never issues a DELETE call to delete parent directory markers.
+   Risk: if directory markers have not already been leaned up, such as when creating the
+   parent directory or when a least one file has been created in or under the same
+   directory using the `create()` API or `createFile()` without this option.
+   
+Using this option is the equivalent of pressing and holding down the "Electronic Stability Control"
+button on a rear-wheel drive car for five seconds: the safety checks are off.
+Things wil be faster if you know what you are doing.
+If you don't, the fact you had to hold the button down will
+be used as evidence tht the driver made a conscious decision to choose speed over
+safety.
+
+Same here. Use if and only if you are confident that the conditions are met.

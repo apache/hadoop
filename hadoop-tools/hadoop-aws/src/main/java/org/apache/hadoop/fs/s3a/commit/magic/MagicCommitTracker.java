@@ -26,24 +26,21 @@ import java.util.Map;
 
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-
-import org.apache.hadoop.fs.s3a.Retries;
-import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
-import org.apache.hadoop.util.Preconditions;
-
-import org.apache.hadoop.fs.s3a.statistics.PutTrackerStatistics;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.statistics.PutTrackerStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.util.Preconditions;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS;
@@ -163,7 +160,7 @@ public class MagicCommitTracker extends PutTracker {
     commitData.bindCommitData(parts);
     commitData.setIOStatistics(
         new IOStatisticsSnapshot(iostatistics));
-    byte[] bytes = commitData.toBytes();
+    byte[] bytes = commitData.toBytes(SinglePendingCommit.serializer());
     LOG.info("Uncommitted data pending to file {};"
             + " commit metadata for {} parts in {}. size: {} byte(s)",
         path.toUri(), parts.size(), pendingPartKey, bytesWritten);
@@ -180,7 +177,6 @@ public class MagicCommitTracker extends PutTracker {
   /**
    * PUT an object via the transfer manager.
    * @param request the request
-   * @return the result of the operation
    * @throws IOException on problems
    */
   @Retries.RetryTranslated

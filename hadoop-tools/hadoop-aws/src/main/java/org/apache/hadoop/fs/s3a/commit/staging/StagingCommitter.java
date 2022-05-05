@@ -687,7 +687,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
         LOG.debug("Saving {} pending commit(s)) to file {}",
             pendingCommits.size(),
             commitsAttemptPath);
-        pendingCommits.save(commitsFS, commitsAttemptPath);
+        pendingCommits.save(commitsFS, commitsAttemptPath,
+            commitContext.getPendingSetSerializer());
         threw = false;
 
       } finally {

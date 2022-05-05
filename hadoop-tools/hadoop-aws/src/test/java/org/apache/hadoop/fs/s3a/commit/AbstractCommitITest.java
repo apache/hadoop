@@ -38,6 +38,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
@@ -345,6 +347,13 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
           .describedAs("JobID in " + commitDetails)
           .isEqualTo(jobId);
     }
+    // also load as a manifest success data file
+    // to verify consistency and that the CLI tool works.
+    Path success = new Path(outputPath, _SUCCESS);
+    final ManifestPrinter showManifest = new ManifestPrinter();
+    ManifestSuccessData manifestSuccessData =
+        showManifest.loadAndPrintManifest(fs, success);
+
     return successData;
   }
 

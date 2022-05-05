@@ -29,14 +29,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.PersistentCommitData;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
 import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_GET_REQUEST;
@@ -58,11 +57,11 @@ import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
  * Assert cost of commit operations;
- *
- * 1. Even on marker deleting filesystems,
- *    operations under magic dirs do not trigger marker deletion.
- * 2. Loading pending files from FileStatus entries skips
- *    HEAD checks.
+ * <ol>
+ *   <li>Even on marker deleting filesystems,
+ *       operations under magic dirs do not trigger marker deletion.</li>
+ *   <li>Loading pending files from FileStatus entries skips HEAD checks.</li>
+ * </ol>
  */
 public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
@@ -98,10 +97,6 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
     }
   }
 
-  private CommitterTestHelper getTestHelper() {
-    return testHelper;
-  }
-
   /**
    * Get a method-relative path.
    * @param filename filename
@@ -121,7 +116,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
   }
 
   @Test
-  public void testMagicMkdirCost() throws Throwable {
+  public void testMagicMkdir() throws Throwable {
     describe("Mkdirs __magic always skips marker deletion");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
@@ -149,7 +144,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
    * When a magic subdir is deleted, parent dirs are not recreated.
    */
   @Test
-  public void testMagicSubdirCost() throws Throwable {
+  public void testMagicSubdir() throws Throwable {
     describe("Mkdirs __magic/subdir always skips marker deletion");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
@@ -247,15 +242,17 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
     // load the only pending commit
     SinglePendingCommit singleCommit = verifyMetrics(() ->
-            SinglePendingCommit.load(fs, pending.get(0), SinglePendingCommit.serializer()),
+            PersistentCommitData.load(fs,
+                pending.get(0),
+                SinglePendingCommit.serializer()),
         always(NO_HEAD_OR_LIST),
         with(ACTION_HTTP_GET_REQUEST, 1));
 
-    // commit it throuh the commit operations.
+    // commit it through the commit operations.
     verifyMetrics(() -> {
           commitOperations.commitOrFail(singleCommit);
-          IOStatistics st = commitOperations.getIOStatistics();
-          return ioStatisticsToPrettyString(st);
+          return ioStatisticsToPrettyString(
+              commitOperations.getIOStatistics());
     },
         always(NO_HEAD_OR_LIST),  // no probes for the dest path
         with(FAKE_DIRECTORIES_DELETED, 0),  // no fake dirs
@@ -293,7 +290,8 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
     // save the file: no checks will be made
     verifyMetrics(() -> {
-          commit.save(fs, magicDest);
+          commit.save(fs, magicDest,
+              SinglePendingCommit.serializer());
           return commit.toString();
         },
         with(COMMITTER_MAGIC_FILES_CREATED, 0),
@@ -304,14 +302,14 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
     LOG.info("File written; Validating");
     testHelper.assertFileLacksMarkerHeader(magicDest);
-    final S3AFileStatus status = (S3AFileStatus) fs.getFileStatus(magicDest);
+    FileStatus status = fs.getFileStatus(magicDest);
 
     LOG.info("Reading file {}", status);
     // opening a file with a status passed in will skip the HEAD
     verifyMetrics(() ->
-          PersistentCommitData.load(fs, status, SinglePendingCommit.serializer()),
+            PersistentCommitData.load(fs, status, SinglePendingCommit.serializer()),
         always(NO_HEAD_OR_LIST),
-        with(ACTION_HTTP_GET_REQUEST, 1)
-    );
+        with(ACTION_HTTP_GET_REQUEST, 1));
   }
+
 }

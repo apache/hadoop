@@ -35,8 +35,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
@@ -51,10 +51,24 @@ import org.apache.hadoop.util.JsonSerialization;
  *   <li>Not loadable? Something else.</li>
  * </ol>
  *
- * This is an unstable structure intended for diagnostics and testing.
- * Applications reading this data should use/check the {@link #name} field
- * to differentiate from any other JSON-based manifest and to identify
- * changes in the output format.
+ * This should be considered public, and MUST stay compatible
+ * at the JSON format level with that of
+ * {@code org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData}
+ * <p>
+ * The JSON format SHOULD be considered public and evolving
+ * with compatibility across versions.
+ * <p>
+ * All the Java serialization data is different and may change
+ * across versions with no stability guarantees other than
+ * "manifest summaries MAY be serialized between processes with
+ * the exact same version of this binary on their classpaths."
+ * That is sufficient for testing in Spark.
+ * <p>
+ * To aid with Java serialization, the maps and lists are
+ * exclusively those which serialize well.
+ * IOStatisticsSnapshot has a lot of complexity in marshalling
+ * there; this class doesn't worry about concurrent access
+ * so is simpler.
  *
  * Note: to deal with scale issues, the S3A committers do not include any
  * more than the number of objects listed in
@@ -65,8 +79,7 @@ import org.apache.hadoop.util.JsonSerialization;
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SuccessData extends PersistentCommitData
-    implements IOStatisticsSource {
+public class SuccessData extends PersistentCommitData<SuccessData> {
 
   private static final Logger LOG = LoggerFactory.getLogger(SuccessData.class);
 
@@ -153,16 +166,17 @@ public class SuccessData extends PersistentCommitData
   }
 
   @Override
-  public byte[] toBytes() throws IOException {
-    return serializer().toBytes(this);
+  public byte[] toBytes(JsonSerialization<SuccessData> serializer) throws IOException {
+    return serializer.toBytes(this);
   }
 
   @Override
-  public void save(FileSystem fs, Path path)
-      throws IOException {
+  public IOStatistics save(final FileSystem fs,
+      final Path path,
+      final JsonSerialization<SuccessData> serializer) throws IOException {
     // always set the name field before being saved.
     name = NAME;
-    saveFile(fs, path, this, serializer(), true);
+    return saveFile(fs, path, this, serializer, true);
   }
 
   @Override
@@ -250,8 +264,8 @@ public class SuccessData extends PersistentCommitData
    * Get a JSON serializer for this class.
    * @return a serializer.
    */
-  private static JsonSerialization<SuccessData> serializer() {
-    return new JsonSerialization<>(SuccessData.class, false, true);
+  public static JsonSerialization<SuccessData> serializer() {
+    return new JsonSerialization<>(SuccessData.class, false, false);
   }
 
   public String getName() {

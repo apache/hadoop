@@ -80,6 +80,7 @@ public class TestStagingPartitionedJobCommit
      * file.
      * @throws IOException IO failure
      */
+    @SuppressWarnings("CollectionDeclaredAsConcreteClass")
     @Override
     protected ActiveCommit listPendingUploadsToCommit(
         CommitContext commitContext) throws IOException {
@@ -109,7 +110,7 @@ public class TestStagingPartitionedJobCommit
         File file = File.createTempFile("staging", ".pendingset");
         file.deleteOnExit();
         Path path = new Path(file.toURI());
-        pendingSet.save(localFS, path);
+        pendingSet.save(localFS, path, PendingSet.serializer());
         activeCommit.add(localFS.getFileStatus(path));
       }
       return activeCommit;

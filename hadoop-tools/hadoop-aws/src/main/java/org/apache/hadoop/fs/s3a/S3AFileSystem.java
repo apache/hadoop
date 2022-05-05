@@ -1730,7 +1730,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return new CreateFileBuilder(this,
         qualify(path),
         new CreateFileBuilderCallbacksImpl())
-        .create().overwrite(true);
+        .create()
+        .overwrite(true);
   }
 
   /**

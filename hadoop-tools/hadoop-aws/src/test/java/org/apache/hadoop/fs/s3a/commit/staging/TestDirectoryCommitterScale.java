@@ -56,6 +56,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.JsonSerialization;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
@@ -153,7 +154,8 @@ public class TestDirectoryCommitterScale
    */
   private void createTasks() throws IOException {
     // create a stub multipart commit containing multiple files.
-
+    JsonSerialization<SinglePendingCommit> serializer =
+        SinglePendingCommit.serializer();
     // step1: a list of tags.
     // this is the md5sum of hadoop 3.2.1.tar
     String tag = "9062dcf18ffaee254821303bbd11c72b";
@@ -169,11 +171,13 @@ public class TestDirectoryCommitterScale
     base.setDestinationKey("/base");
     base.setUploadId("uploadId");
     base.setUri(outputPathUri.toString());
+    byte[] bytes = base.toBytes(serializer);
 
     SinglePendingCommit[] singles = new SinglePendingCommit[FILES_PER_TASK];
-    byte[] bytes = base.toBytes();
+
     for (int i = 0; i < FILES_PER_TASK; i++) {
-      singles[i] = SinglePendingCommit.serializer().fromBytes(bytes);
+
+      singles[i] = serializer.fromBytes(bytes);
     }
     // now create the files, using this as the template
 
@@ -203,7 +207,7 @@ public class TestDirectoryCommitterScale
       }
       Path path = new Path(stagingPath,
           String.format("task-%04d." + PENDINGSET_SUFFIX, task));
-      pending.save(localFS, path);
+      pending.save(localFS, path, PendingSet.serializer());
     }
   }
 

@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -304,10 +305,13 @@ public class ITestCommitOperations extends AbstractCommitITest {
 
     // use the builder API to verify it works exactly the
     // same.
-    try (FSDataOutputStream stream = fs.createFile(magicDest)
-        .overwrite(true)
-        .recursive()
-        .build()) {
+    FSDataOutputStreamBuilder builder = fs.createFile(magicDest)
+        .overwrite(true);
+    builder.recursive();
+    // this has a broken return type; not sure why
+    builder.must(FS_S3A_CREATE_PERFORMANCE, true);
+
+    try (FSDataOutputStream stream = builder.build()) {
       assertIsMagicStream(stream);
       stream.write(DATASET);
     }

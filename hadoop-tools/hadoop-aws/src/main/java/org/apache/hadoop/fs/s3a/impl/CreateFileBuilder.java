@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
 
@@ -35,12 +34,11 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CREATE_FILE_KEYS;
 
 /**
- * Builder used in create file; takes a callback to the method
- * which is actually invoked.
+ * Builder used in create file; takes a callback to the operation
+ * to create the file.
  */
 public class CreateFileBuilder extends
-    FSDataOutputStreamBuilder<FSDataOutputStream,
-        CreateFileBuilder> {
+    FSDataOutputStreamBuilder<FSDataOutputStream, CreateFileBuilder> {
 
   private final CreateFileBuilderCallbacks callbacks;
 

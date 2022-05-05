@@ -36,7 +36,6 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +61,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.DurationInfo;
-import org.apache.hadoop.util.JsonSerialization;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.functional.TaskPool;
 
@@ -464,7 +463,7 @@ public class CommitOperations extends AbstractStoreOperation
         successData);
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Writing success file %s", markerPath)) {
-      successData.save(fs, markerPath);
+      successData.save(fs, markerPath, SuccessData.serializer());
     }
   }
 
@@ -749,28 +748,6 @@ public class CommitOperations extends AbstractStoreOperation
      */
     public static MaybeIOE of(IOException ex) {
       return ex != null ? new MaybeIOE(ex) : NONE;
-    }
-  }
-
-  /**
-   * Thread local serializer.
-   * Making it a class allows for it to have a lifecyle matching those of the
-   * owner.
-   */
-  public static final class ThreadLocalJsonSerializer {
-    private final ThreadLocal<JsonSerialization<SinglePendingCommit>>
-        singlePendingCommitSerializer =
-        ThreadLocal.withInitial(SinglePendingCommit::serializer);
-
-    private final ThreadLocal<JsonSerialization<PendingSet>> pendingSetSerializer =
-        ThreadLocal.withInitial(PendingSet::serializer);
-
-    public JsonSerialization<SinglePendingCommit> getSinglePendingCommitSerializer() {
-      return singlePendingCommitSerializer.get();
-    }
-
-    public JsonSerialization<PendingSet> getPendingSetSerializer() {
-      return pendingSetSerializer.get();
     }
   }
 

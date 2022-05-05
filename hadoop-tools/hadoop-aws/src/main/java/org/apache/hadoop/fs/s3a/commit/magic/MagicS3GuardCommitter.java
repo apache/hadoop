@@ -224,7 +224,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
           IOStatisticsLogging.demandStringifyIOStatisticsSource(pendingSet));
       try {
         // We will overwrite if there exists a pendingSet file already
-        pendingSet.save(getDestFS(), taskOutcomePath);
+        pendingSet.save(getDestFS(), taskOutcomePath,
+            commitContext.getPendingSetSerializer());
       } catch (IOException e) {
         LOG.warn("Failed to save task commit data to {} ",
             taskOutcomePath, e);
