@@ -208,7 +208,7 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   /**
-   * Get the object storage class (e.g. STANDARD, REDUCED_REDUNDANCY) or return null if none.
+   * Get the object storage class, return null if none.
    * @return storage class
    */
   @Override
