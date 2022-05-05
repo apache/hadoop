@@ -36,7 +36,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
@@ -451,7 +456,7 @@ public class DFSAdmin extends FsShell {
     "\t[-refreshSuperUserGroupsConfiguration]\n" +
     "\t[-refreshCallQueue]\n" +
     "\t[-refresh <host:ipc_port> <key> [arg1..argn]\n" +
-    "\t[-reconfig <namenode|datanode> <host:ipc_port> " +
+    "\t[-reconfig <namenode|datanode> <host:ipc_port|livenodes> " +
       "<start|status|properties>]\n" +
     "\t[-printTopology]\n" +
       "\t[-refreshNamenodes datanode_host:ipc_port]\n" +
@@ -1244,12 +1249,14 @@ public class DFSAdmin extends FsShell {
 
     String refreshCallQueue = "-refreshCallQueue: Reload the call queue from config\n";
 
-    String reconfig = "-reconfig <namenode|datanode> <host:ipc_port> " +
+    String reconfig = "-reconfig <namenode|datanode> <host:ipc_port|livenodes> " +
         "<start|status|properties>:\n" +
         "\tStarts or gets the status of a reconfiguration operation, \n" +
         "\tor gets a list of reconfigurable properties.\n" +
-
-        "\tThe second parameter specifies the node type\n";
+        "\tThe second parameter specifies the node type\n" +
+        "\tThe third parameter specifies host address. For start or status, \n" +
+        "\tdatanode supports livenodes as third parameter, which will start \n" +
+        "\tor retrieve reconfiguration on all live datanodes.";
     String genericRefresh = "-refresh: Arguments are <hostname:ipc_port>" +
             " <resource_identifier> [arg1..argn]\n" +
             "\tTriggers a runtime-refresh of the resource specified by " +
@@ -1897,15 +1904,15 @@ public class DFSAdmin extends FsShell {
     return 0;
   }
 
-  public int reconfig(String[] argv, int i) throws IOException {
+  public int reconfig(String[] argv, int i) throws IOException, InterruptedException {
     String nodeType = argv[i];
     String address = argv[i + 1];
     String op = argv[i + 2];
 
     if ("start".equals(op)) {
-      return startReconfiguration(nodeType, address, System.out, System.err);
+      return startReconfigurationUtil(nodeType, address, System.out, System.err);
     } else if ("status".equals(op)) {
-      return getReconfigurationStatus(nodeType, address, System.out, System.err);
+      return getReconfigurationStatusUtil(nodeType, address, System.out, System.err);
     } else if ("properties".equals(op)) {
       return getReconfigurableProperties(nodeType, address, System.out,
           System.err);
@@ -1915,12 +1922,57 @@ public class DFSAdmin extends FsShell {
   }
 
   int startReconfiguration(final String nodeThpe, final String address)
-      throws IOException {
-    return startReconfiguration(nodeThpe, address, System.out, System.err);
+      throws IOException, InterruptedException {
+    return startReconfigurationUtil(nodeThpe, address, System.out, System.err);
+  }
+
+  int startReconfigurationUtil(final String nodeType, final String address, final PrintStream out,
+      final PrintStream err) throws IOException, InterruptedException {
+    if (!"livenodes".equals(address)) {
+      return startReconfiguration(nodeType, address, out, err);
+    }
+    if (!"datanode".equals(nodeType)) {
+      err.println("Only datanode type supports reconfiguration in bulk.");
+      return 1;
+    }
+    ExecutorService executorService = Executors.newFixedThreadPool(5);
+    DistributedFileSystem dfs = getDFS();
+    DatanodeInfo[] nodes = dfs.getDataNodeStats(DatanodeReportType.LIVE);
+    AtomicInteger successCount = new AtomicInteger();
+    AtomicInteger failCount = new AtomicInteger();
+    if (nodes != null) {
+      for (DatanodeInfo node : nodes) {
+        executorService.submit(() -> {
+          int status = startReconfiguration(nodeType, node.getIpcAddr(false), out, err);
+          if (status == 0) {
+            successCount.incrementAndGet();
+          } else {
+            failCount.incrementAndGet();
+          }
+        });
+      }
+      while ((successCount.get() + failCount.get()) < nodes.length) {
+        Thread.sleep(1000);
+      }
+      executorService.shutdown();
+      if (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {
+        err.println("Executor service could not be terminated in 60s. Please wait for"
+            + " sometime before the system cools down.");
+      }
+      out.println("Starting of reconfiguration task successful on " + successCount.get()
+          + " nodes, failed on " + failCount.get() + " nodes.");
+      if (failCount.get() == 0) {
+        return 0;
+      } else {
+        return 1;
+      }
+    }
+    err.println("DFS datanode stats could not be retrieved.");
+    return 1;
   }
 
   int startReconfiguration(final String nodeType, final String address,
-      final PrintStream out, final PrintStream err) throws IOException {
+      final PrintStream out, final PrintStream err) {
     String outMsg = null;
     String errMsg = null;
     int ret = 0;
@@ -1961,8 +2013,53 @@ public class DFSAdmin extends FsShell {
     }
   }
 
-  int getReconfigurationStatus(final String nodeType, final String address,
-      final PrintStream out, final PrintStream err) throws IOException {
+  int getReconfigurationStatusUtil(final String nodeType, final String address,
+      final PrintStream out, final PrintStream err) throws IOException, InterruptedException {
+    if (!"livenodes".equals(address)) {
+      return getReconfigurationStatus(nodeType, address, out, err);
+    }
+    if (!"datanode".equals(nodeType)) {
+      err.println("Only datanode type supports reconfiguration in bulk.");
+      return 1;
+    }
+    ExecutorService executorService = Executors.newFixedThreadPool(5);
+    DistributedFileSystem dfs = getDFS();
+    DatanodeInfo[] nodes = dfs.getDataNodeStats(DatanodeReportType.LIVE);
+    AtomicInteger successCount = new AtomicInteger();
+    AtomicInteger failCount = new AtomicInteger();
+    if (nodes != null) {
+      for (DatanodeInfo node : nodes) {
+        executorService.submit(() -> {
+          int status = getReconfigurationStatus(nodeType, node.getIpcAddr(false), out, err);
+          if (status == 0) {
+            successCount.incrementAndGet();
+          } else {
+            failCount.incrementAndGet();
+          }
+        });
+      }
+      while ((successCount.get() + failCount.get()) < nodes.length) {
+        Thread.sleep(1000);
+      }
+      executorService.shutdown();
+      if (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {
+        err.println("Executor service could not be terminated in 60s. Please wait for"
+            + " sometime before the system cools down.");
+      }
+      out.println("Retrieval of reconfiguration status successful on " + successCount.get()
+          + " nodes, failed on " + failCount.get() + " nodes.");
+      if (failCount.get() == 0) {
+        return 0;
+      } else {
+        return 1;
+      }
+    }
+    err.println("DFS datanode stats could not be retrieved.");
+    return 1;
+  }
+
+  int getReconfigurationStatus(final String nodeType, final String address, final PrintStream out,
+      final PrintStream err) {
     String outMsg = null;
     String errMsg = null;
     ReconfigurationTaskStatus status = null;
@@ -2208,7 +2305,7 @@ public class DFSAdmin extends FsShell {
                          + " [-refreshCallQueue]");
     } else if ("-reconfig".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-reconfig <namenode|datanode> <host:ipc_port> "
+          + " [-reconfig <namenode|datanode> <host:ipc_port|livenodes> "
           + "<start|status|properties>]");
     } else if ("-refresh".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
