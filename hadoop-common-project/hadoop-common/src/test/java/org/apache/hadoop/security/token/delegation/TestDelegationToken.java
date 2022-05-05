@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -635,6 +636,23 @@ public class TestDelegationToken {
     assertEquals(token1.encodeToUrlString(), token2.encodeToUrlString());
   }
 
+  @Test
+  public void testMultipleDelegationTokenSecretManagerMetrics() {
+    TestDelegationTokenSecretManager dtSecretManager1 =
+        new TestDelegationTokenSecretManager(0, 0, 0, 0);
+    assertNotNull(dtSecretManager1.getMetrics());
+
+    TestDelegationTokenSecretManager dtSecretManager2 =
+        new TestDelegationTokenSecretManager(0, 0, 0, 0);
+    assertNotNull(dtSecretManager2.getMetrics());
+
+    DefaultMetricsSystem.instance().init("test");
+    
+    TestDelegationTokenSecretManager dtSecretManager3 =
+        new TestDelegationTokenSecretManager(0, 0, 0, 0);
+    assertNotNull(dtSecretManager3.getMetrics());
+  }
+  
   @Test
   public void testDelegationTokenSecretManagerMetrics() throws Exception {
     TestDelegationTokenSecretManager dtSecretManager =
