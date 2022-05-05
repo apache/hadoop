@@ -647,7 +647,7 @@ public class TestDelegationToken {
     assertNotNull(dtSecretManager2.getMetrics());
 
     DefaultMetricsSystem.instance().init("test");
-    
+
     TestDelegationTokenSecretManager dtSecretManager3 =
         new TestDelegationTokenSecretManager(0, 0, 0, 0);
     assertNotNull(dtSecretManager3.getMetrics());
