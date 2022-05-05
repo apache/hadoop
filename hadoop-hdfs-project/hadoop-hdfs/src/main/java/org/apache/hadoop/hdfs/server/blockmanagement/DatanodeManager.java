@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -1650,7 +1651,17 @@ public class DatanodeManager {
     }
     return nodes;
   }
-  
+
+  public List<DatanodeDescriptor> getAllSlowDataNodes() {
+    if (slowPeerTracker == null) {
+      LOG.debug("{} is disabled. Try enabling it first to capture slow peer outliers.",
+          DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY);
+      return ImmutableList.of();
+    }
+    List<String> slowNodes = slowPeerTracker.getSlowNodes(getNumOfDataNodes());
+    return getDnDescriptorsFromIpAddr(slowNodes);
+  }
+
   /**
    * Checks if name resolution was successful for the given address.  If IP
    * address and host name are the same, then it means name resolution has
@@ -2133,19 +2144,26 @@ public class DatanodeManager {
     List<String> slowNodes;
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
     slowNodes = slowPeerTracker.getSlowNodes(maxSlowPeerReportNodes);
-    for (String slowNode : slowNodes) {
-      if (StringUtils.isBlank(slowNode)
-              || !slowNode.contains(IP_PORT_SEPARATOR)) {
+    List<DatanodeDescriptor> datanodeDescriptors = getDnDescriptorsFromIpAddr(slowNodes);
+    datanodeDescriptors.forEach(
+        datanodeDescriptor -> slowPeersUuidSet.add(datanodeDescriptor.getDatanodeUuid()));
+    return slowPeersUuidSet;
+  }
+
+  private List<DatanodeDescriptor> getDnDescriptorsFromIpAddr(List<String> nodes) {
+    List<DatanodeDescriptor> datanodeDescriptors = new ArrayList<>();
+    for (String node : nodes) {
+      if (StringUtils.isBlank(node) || !node.contains(IP_PORT_SEPARATOR)) {
         continue;
       }
-      String ipAddr = slowNode.split(IP_PORT_SEPARATOR)[0];
+      String ipAddr = node.split(IP_PORT_SEPARATOR)[0];
       DatanodeDescriptor datanodeByHost =
           host2DatanodeMap.getDatanodeByHost(ipAddr);
       if (datanodeByHost != null) {
-        slowPeersUuidSet.add(datanodeByHost.getDatanodeUuid());
+        datanodeDescriptors.add(datanodeByHost);
       }
     }
-    return slowPeersUuidSet;
+    return datanodeDescriptors;
   }
 
   /**
