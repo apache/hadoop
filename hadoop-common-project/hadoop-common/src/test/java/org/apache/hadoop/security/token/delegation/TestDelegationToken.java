@@ -652,7 +652,7 @@ public class TestDelegationToken {
         new TestDelegationTokenSecretManager(0, 0, 0, 0);
     assertNotNull(dtSecretManager3.getMetrics());
   }
-  
+
   @Test
   public void testDelegationTokenSecretManagerMetrics() throws Exception {
     TestDelegationTokenSecretManager dtSecretManager =
