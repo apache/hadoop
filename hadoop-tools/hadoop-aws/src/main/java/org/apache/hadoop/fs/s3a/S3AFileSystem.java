@@ -965,13 +965,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // Any encoding type
     String contentEncoding = getConf().getTrimmed(CONTENT_ENCODING, null);
 
+    String storageClassConf = getConf()
+        .getTrimmed(STORAGE_CLASS, "")
+        .toUpperCase(Locale.US);
     StorageClass storageClass;
     try {
-      String storageClassConf = getConf()
-          .getTrimmed(STORAGE_CLASS, "")
-          .toUpperCase(Locale.US);
       storageClass = StorageClass.fromValue(storageClassConf);
     } catch (IllegalArgumentException e) {
+      LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
+          STORAGE_CLASS, storageClassConf);
       storageClass = null;
     }
 
