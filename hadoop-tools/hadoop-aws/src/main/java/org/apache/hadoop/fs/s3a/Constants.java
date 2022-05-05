@@ -434,6 +434,19 @@ public final class Constants {
    */
   public static final String STORAGE_CLASS = "fs.s3a.storage.class";
 
+  /**
+   * All possible values for storage class.
+   */
+  public static final String STORAGE_CLASS_STANDARD = "standard";
+  public static final String STORAGE_CLASS_REDUCED_REDUNDANCY = "reduced_redundancy";
+  public static final String STORAGE_CLASS_GLACIER = "glacier";
+  public static final String STORAGE_CLASS_STANDARD_INFREQUENT_ACCESS = "standard_ia";
+  public static final String STORAGE_CLASS_ONEZONE_INFREQUENT_ACCESS = "onezone_ia";
+  public static final String STORAGE_CLASS_INTELLIGENT_TIERING = "intelligent_tiering";
+  public static final String STORAGE_CLASS_DEEP_ARCHIVE = "deep_archive";
+  public static final String STORAGE_CLASS_OUTPOSTS = "outposts";
+  public static final String STORAGE_CLASS_GLACIER_INSTANT_RETRIEVAL = "glacier_ir";
+
   // should we try to purge old multipart uploads when starting up
   public static final String PURGE_EXISTING_MULTIPART =
       "fs.s3a.multipart.purge";

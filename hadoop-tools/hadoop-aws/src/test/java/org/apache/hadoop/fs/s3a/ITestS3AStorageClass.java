@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import java.nio.file.AccessDeniedException;
 import java.util.Map;
 
-import com.amazonaws.services.s3.model.StorageClass;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -32,6 +31,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_GLACIER;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_REDUCED_REDUNDANCY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_STORAGE_CLASS;
@@ -81,7 +82,7 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
   @Test
   public void testCreateAndCopyObjectWithStorageClassReducedRedundancy() throws Throwable {
     Configuration conf = this.createConfiguration();
-    conf.set(STORAGE_CLASS, StorageClass.ReducedRedundancy.toString());
+    conf.set(STORAGE_CLASS, STORAGE_CLASS_REDUCED_REDUNDANCY);
     S3AContract contract = (S3AContract) createContract(conf);
     contract.init();
 
@@ -93,10 +94,10 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
     assertObjectHasNoStorageClass(dir);
     Path path = new Path(dir, "file1");
     ContractTestUtils.touch(fs, path);
-    assertObjectHasStorageClass(path, StorageClass.ReducedRedundancy.toString());
+    assertObjectHasStorageClass(path, STORAGE_CLASS_REDUCED_REDUNDANCY);
     Path path2 = new Path(dir, "file1");
     fs.rename(path, path2);
-    assertObjectHasStorageClass(path2, StorageClass.ReducedRedundancy.toString());
+    assertObjectHasStorageClass(path2, STORAGE_CLASS_REDUCED_REDUNDANCY);
   }
 
   /*
@@ -106,7 +107,7 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
   @Test
   public void testCreateAndCopyObjectWithStorageClassGlacier() throws Throwable {
     Configuration conf = this.createConfiguration();
-    conf.set(STORAGE_CLASS, StorageClass.Glacier.toString());
+    conf.set(STORAGE_CLASS, STORAGE_CLASS_GLACIER);
     S3AContract contract = (S3AContract) createContract(conf);
     contract.init();
 
@@ -118,7 +119,7 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
     assertObjectHasNoStorageClass(dir);
     Path path = new Path(dir, "file1");
     ContractTestUtils.touch(fs, path);
-    assertObjectHasStorageClass(path, StorageClass.Glacier.toString());
+    assertObjectHasStorageClass(path, STORAGE_CLASS_GLACIER);
     Path path2 = new Path(dir, "file2");
 
     // this is the current behavior
@@ -204,6 +205,6 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
     String actualStorageClass = decodeBytes(xAttrs.get(XA_STORAGE_CLASS));
 
     Assertions.assertThat(actualStorageClass).describedAs("Storage class of object %s", path)
-        .isEqualTo(expectedStorageClass);
+        .isEqualToIgnoringCase(expectedStorageClass);
   }
 }
