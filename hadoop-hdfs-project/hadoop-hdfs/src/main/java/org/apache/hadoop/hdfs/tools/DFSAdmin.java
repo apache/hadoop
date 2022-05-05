@@ -36,11 +36,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -456,8 +454,7 @@ public class DFSAdmin extends FsShell {
     "\t[-refreshSuperUserGroupsConfiguration]\n" +
     "\t[-refreshCallQueue]\n" +
     "\t[-refresh <host:ipc_port> <key> [arg1..argn]\n" +
-    "\t[-reconfig <namenode|datanode> <host:ipc_port|livenodes> " +
-      "<start|status|properties>]\n" +
+      "\t[-reconfig <namenode|datanode> <host:ipc_port|livenodes> <start|status|properties>]\n" +
     "\t[-printTopology]\n" +
       "\t[-refreshNamenodes datanode_host:ipc_port]\n" +
       "\t[-getVolumeReport datanode_host:ipc_port]\n" +
