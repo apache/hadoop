@@ -572,9 +572,7 @@ Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Operation is not v
 This happens when you're trying to read or copy files that have archive storage class such as
 Glacier.
 
-If you want to access the file with S3A after writes, do not set `fs.s3a.storage.class` to `glacier`
-,
-`glacier_ir` or `deep_archive`.
+If you want to access the file with S3A after writes, do not set `fs.s3a.storage.class` to `glacier` or `deep_archive`.
 
 ### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
 
