@@ -160,6 +160,7 @@ public class MagicCommitTracker extends PutTracker {
     commitData.bindCommitData(parts);
     commitData.setIOStatistics(
         new IOStatisticsSnapshot(iostatistics));
+
     byte[] bytes = commitData.toBytes(SinglePendingCommit.serializer());
     LOG.info("Uncommitted data pending to file {};"
             + " commit metadata for {} parts in {}. size: {} byte(s)",

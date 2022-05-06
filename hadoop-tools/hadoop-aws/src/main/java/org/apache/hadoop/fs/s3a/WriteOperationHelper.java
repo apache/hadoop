@@ -40,7 +40,6 @@ import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.amazonaws.services.s3.transfer.model.UploadResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -571,21 +570,22 @@ public class WriteOperationHelper implements WriteOperations {
   }
 
   /**
-   * PUT an object via the transfer manager.
+   * PUT an object.
+   *
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @return the result of the operation
+   *
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  public UploadResult uploadObject(PutObjectRequest putObjectRequest,
+  public void uploadObject(PutObjectRequest putObjectRequest,
       PutObjectOptions putOptions)
       throws IOException {
 
-    return retry("Writing Object",
+    retry("Writing Object",
         putObjectRequest.getKey(), true,
         withinAuditSpan(getAuditSpan(), () ->
-            owner.executePut(putObjectRequest, null, putOptions)));
+            owner.putObjectDirect(putObjectRequest, putOptions)));
   }
 
   /**

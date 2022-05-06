@@ -465,7 +465,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    *
    * @throws IOException IO failure
    */
-  protected SuccessData maybeCreateSuccessMarkerFromCommits(JobContext context,
+  protected SuccessData maybeCreateSuccessMarkerFromCommits(
+      JobContext context,
       ActiveCommit pending) throws IOException {
     List<String> filenames = new ArrayList<>(pending.size());
     // The list of committed objects in pending is size limited in
@@ -474,6 +475,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     // load in all the pending statistics
     IOStatisticsSnapshot snapshot = new IOStatisticsSnapshot(
         pending.getIOStatistics());
+    // and the current statistics
     snapshot.aggregate(getIOStatistics());
 
     return maybeCreateSuccessMarker(context, filenames, snapshot);
@@ -508,7 +510,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     }
     return successData;
   }
-
 
   /**
    * Create the success data structure from a job context.
@@ -718,7 +719,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     try (DurationInfo ignored =
              new DurationInfo(LOG,
                  "Loading and committing files in pendingset %s", path)) {
-      PendingSet pendingSet = PersistentCommitData.load(activeCommit.getSourceFS(),
+      PendingSet pendingSet = PersistentCommitData.load(
+          activeCommit.getSourceFS(),
           status,
           commitContext.getPendingSetSerializer());
       String jobId = pendingSet.getJobId();

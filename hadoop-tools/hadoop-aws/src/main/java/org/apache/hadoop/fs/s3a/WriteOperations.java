@@ -38,7 +38,6 @@ import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.amazonaws.services.s3.transfer.model.UploadResult;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -252,13 +251,14 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
 
   /**
    * PUT an object via the transfer manager.
+   *
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @return the result of the operation
+   *
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  UploadResult uploadObject(PutObjectRequest putObjectRequest,
+  void uploadObject(PutObjectRequest putObjectRequest,
       PutObjectOptions putOptions)
       throws IOException;
 

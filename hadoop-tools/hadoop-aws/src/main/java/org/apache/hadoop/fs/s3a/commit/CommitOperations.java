@@ -74,7 +74,6 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.XA_MAGIC_MARKER;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
-import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
  * The implementation of the various actions a committer needs.
@@ -232,9 +231,9 @@ public class CommitOperations extends AbstractStoreOperation
     // finalize the commit
     writeOperations.commitUpload(
         commit.getDestinationKey(),
-              commit.getUploadId(),
-              toPartEtags(commit.getEtags()),
-              commit.getLength());
+        commit.getUploadId(),
+        toPartEtags(commit.getEtags()),
+        commit.getLength());
     return commit.getLength();
   }
 
@@ -270,15 +269,13 @@ public class CommitOperations extends AbstractStoreOperation
       CommitContext commitContext)
       throws IOException {
 
-    List<LocatedFileStatus> statusList = toList(
-        locateAllSinglePendingCommits(pendingDir, recursive));
     PendingSet commits = new PendingSet();
     List<SinglePendingCommit> pendingFiles = Collections.synchronizedList(
         new ArrayList<>(1));
     List<Pair<LocatedFileStatus, IOException>> failures = Collections.synchronizedList(
         new ArrayList<>(1));
 
-    TaskPool.foreach(statusList)
+    TaskPool.foreach(locateAllSinglePendingCommits(pendingDir, recursive))
         //. stopOnFailure()
         .suppressExceptions(false)
         .executeWith(commitContext.getOuterSubmitter())

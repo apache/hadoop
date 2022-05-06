@@ -148,13 +148,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   @Override
   public boolean needsTaskCommit(TaskAttemptContext context)
       throws IOException {
-    Path taskAttemptPath = getTaskAttemptPath(context);
-    try (DurationInfo d = new DurationInfo(LOG,
-        "needsTaskCommit task %s", context.getTaskAttemptID())) {
-      return taskAttemptPath.getFileSystem(
-          context.getConfiguration())
-          .exists(taskAttemptPath);
-    }
+    // return true as a dir was created here in setup;
+    return true;
   }
 
   @Override
@@ -169,7 +164,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       throw e;
     } finally {
       // delete the task attempt so there's no possibility of a second attempt
-      deleteTaskAttemptPathQuietly(context);
+      //deleteTaskAttemptPathQuietly(context);
     }
     getCommitOperations().taskCompleted(true);
     LOG.debug("aggregate statistics\n{}",
@@ -195,7 +190,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     try (CommitContext commitContext = initiateTaskOperation(context)) {
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
           loaded = actions.loadSinglePendingCommits(
-          taskAttemptPath, true, commitContext);
+              taskAttemptPath, true, commitContext);
       pendingSet = loaded.getKey();
       List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
       if (!failures.isEmpty()) {
@@ -224,7 +219,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
           IOStatisticsLogging.demandStringifyIOStatisticsSource(pendingSet));
       try {
         // We will overwrite if there exists a pendingSet file already
-        pendingSet.save(getDestFS(), taskOutcomePath,
+        pendingSet.save(getDestFS(),
+            taskOutcomePath,
             commitContext.getPendingSetSerializer());
       } catch (IOException e) {
         LOG.warn("Failed to save task commit data to {} ",
