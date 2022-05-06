@@ -431,7 +431,8 @@ public class TestZKConfigurationStore extends
         Thread.sleep(100);
       }
 
-      Assert.assertFalse(flagFile.exists());
+      Assert.assertFalse("The file '" + DESERIALIZATION_VULNERABILITY_FILEPATH +
+          "' should not have been created by deserialization attack", flagFile.exists());
     }
   }
 
