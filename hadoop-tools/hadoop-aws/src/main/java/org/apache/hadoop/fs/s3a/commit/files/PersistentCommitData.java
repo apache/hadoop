@@ -116,13 +116,16 @@ public abstract class PersistentCommitData<T extends PersistentCommitData>
    * Save to a file.
    * This uses the createFile() API, which S3A supports for
    * faster load and declaring sequential access, always
+   *
    * @param <T> type of persistent format
    * @param fs filesystem
    * @param path path to save to
    * @param instance data to save
    * @param serializer serializer to use
    * @param performance skip all safety check on the write
+   *
    * @return any IOStatistics from the output stream, or null
+   *
    * @throws IOException IO failure
    */
   public static <T extends PersistentCommitData> IOStatistics saveFile(
@@ -132,7 +135,6 @@ public abstract class PersistentCommitData<T extends PersistentCommitData>
       final JsonSerialization<T> serializer,
       final boolean performance)
       throws IOException {
-
 
     FSDataOutputStreamBuilder builder = fs.createFile(path)
         .create()

@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys;
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
@@ -93,7 +95,7 @@ public class SuccessData extends PersistentCommitData<SuccessData> {
   /**
    * Serialization ID: {@value}.
    */
-  private static final long serialVersionUID = 507133045258460083L + VERSION;
+  private static final long serialVersionUID = 507133045258460084L + VERSION;
 
   /**
    * Name to include in persisted data, so as to differentiate from
@@ -105,7 +107,14 @@ public class SuccessData extends PersistentCommitData<SuccessData> {
   /**
    * Name of file; includes version marker.
    */
-  private String name;
+  private String name = NAME;
+
+  /**
+   * Did this succeed?
+   * It is implicitly true in a _SUCCESS file, but if the file
+   * is also saved to a log dir, then it depends on the outcome
+   */
+  private boolean success = true;
 
   /** Timestamp of creation. */
   private long timestamp;
@@ -155,7 +164,17 @@ public class SuccessData extends PersistentCommitData<SuccessData> {
    * IOStatistics.
    */
   @JsonProperty("iostatistics")
-  private IOStatisticsSnapshot iostats = new IOStatisticsSnapshot();
+  private IOStatisticsSnapshot iostatistics = new IOStatisticsSnapshot();
+
+  /**
+   * State (committed, aborted).
+   */
+  private String state;
+
+  /**
+   * Stage: last stage executed.
+   */
+  private String stage;
 
   @Override
   public void validate() throws ValidationFailure {
@@ -385,10 +404,59 @@ public class SuccessData extends PersistentCommitData<SuccessData> {
 
   @Override
   public IOStatisticsSnapshot getIOStatistics() {
-    return iostats;
+    return iostatistics;
   }
 
   public void setIOStatistics(final IOStatisticsSnapshot ioStatistics) {
-    this.iostats = ioStatistics;
+    this.iostatistics = ioStatistics;
+  }
+
+  /**
+   * Set the success flag.
+   * @param success did the job succeed?
+   */
+  public void setSuccess(boolean success) {
+    this.success = success;
+  }
+
+  /**
+   * Get the success flag.
+   * @return did the job succeed?
+   */
+  public boolean getSuccess() {
+    return success;
+  }
+
+  public String getState() {
+    return state;
+  }
+
+  public void setState(String state) {
+    this.state = state;
+  }
+
+  public String getStage() {
+    return stage;
+  }
+
+  /**
+   * Add a diagnostics entry.
+   * @param key name
+   * @param value value
+   */
+  public void putDiagnostic(String key, String value) {
+    diagnostics.put(key, value);
+  }
+
+  /**
+   * Note a failure by setting success flag to false,
+   * then add the exception to the diagnostics.
+   * @param thrown throwable
+   */
+  public void recordJobFailure(Throwable thrown) {
+    setSuccess(false);
+    String stacktrace = ExceptionUtils.getStackTrace(thrown);
+    diagnostics.put(DiagnosticKeys.EXCEPTION, thrown.toString());
+    diagnostics.put(DiagnosticKeys.STACKTRACE, stacktrace);
   }
 }

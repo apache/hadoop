@@ -463,7 +463,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
         "Listing pending uploads")) {
       Path wrappedJobAttemptPath = getJobAttemptPath(commitContext.getJobContext());
       final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
-          commitContext.getConfiguration());
+          commitContext.getConf());
       return ActiveCommit.fromStatusIterator(attemptFS,
           listAndFilter(attemptFS,
               wrappedJobAttemptPath, false,

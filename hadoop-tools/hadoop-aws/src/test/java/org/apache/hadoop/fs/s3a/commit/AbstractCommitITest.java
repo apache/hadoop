@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
+import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
@@ -44,6 +48,9 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 
+import static java.time.temporal.ChronoField.DAY_OF_MONTH;
+import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
+import static java.time.temporal.ChronoField.YEAR;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -63,6 +70,12 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * Helper class for commit operations and assertions.
    */
   private CommitterTestHelper testHelper;
+
+  /**
+   * Directory for job summary reports.
+   * This should be set up in test suites testing against real object stores.
+   */
+  private File reportDir;
 
   /**
    * Creates a configuration for commit operations: commit is enabled in the FS
@@ -85,6 +98,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_ARRAY);
+    // and bind the report dir
+    conf.set(OPT_SUMMARY_REPORT_DIR, reportDir.toURI().toString());
     return conf;
   }
 
@@ -96,8 +111,24 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     return LOG;
   }
 
+  /**
+   * Get directory for reports; valid after
+   * setup.
+   * @return where success/failure reports go.
+   */
+  protected File getReportDir() {
+    return reportDir;
+  }
+
   @Override
   public void setup() throws Exception {
+    // set the manifest committer to a localfs path for reports across
+    // all threads.
+    // do this before superclass setup so reportDir is non-null there
+    // and can be used in creating the configuration.
+    reportDir = new File(getProjectBuildDir(), "reports");
+    reportDir.mkdirs();
+
     super.setup();
     testHelper = new CommitterTestHelper(getFileSystem());
   }
@@ -142,7 +173,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   }
 
   /**
-   * Create a random Job ID using the fork ID as part of the number.
+   * Create a random Job ID using the fork ID and the current time.
    * @return fork ID string in a format parseable by Jobs
    * @throws Exception failure
    */
@@ -152,7 +183,14 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     String trailingDigits = testUniqueForkId.substring(l - 4, l);
     try {
       int digitValue = Integer.valueOf(trailingDigits);
-      return String.format("20070712%04d_%04d",
+      DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+          .parseCaseInsensitive()
+          .appendValue(YEAR, 4)
+          .appendValue(MONTH_OF_YEAR, 2)
+          .appendValue(DAY_OF_MONTH, 2)
+          .toFormatter();
+      return String.format("%s%04d_%04d",
+          LocalDateTime.now().format(formatter),
           (long)(Math.random() * 1000),
           digitValue);
     } catch (NumberFormatException e) {

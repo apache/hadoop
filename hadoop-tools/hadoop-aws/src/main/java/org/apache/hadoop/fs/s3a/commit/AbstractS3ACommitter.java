@@ -57,6 +57,8 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperationsThroughFileSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
@@ -79,6 +81,8 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createJobSummaryFilename;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
@@ -444,7 +448,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     LOG.warn("Cannot recover task {}", taskContext.getTaskAttemptID());
     throw new PathCommitException(outputPath,
         String.format("Unable to recover task %s",
-        taskContext.getTaskAttemptID()));
+            taskContext.getTaskAttemptID()));
   }
 
   /**
@@ -453,11 +457,15 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    *
    * While the classic committers create a 0-byte file, the S3A committers
    * PUT up a the contents of a {@link SuccessData} file.
+   *
    * @param context job context
    * @param pending the pending commits
+   *
+   * @return the success data, even if the marker wasn't created
+   *
    * @throws IOException IO failure
    */
-  protected void maybeCreateSuccessMarkerFromCommits(JobContext context,
+  protected SuccessData maybeCreateSuccessMarkerFromCommits(JobContext context,
       ActiveCommit pending) throws IOException {
     List<String> filenames = new ArrayList<>(pending.size());
     // The list of committed objects in pending is size limited in
@@ -468,7 +476,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
         pending.getIOStatistics());
     snapshot.aggregate(getIOStatistics());
 
-    maybeCreateSuccessMarker(context, filenames, snapshot);
+    return maybeCreateSuccessMarker(context, filenames, snapshot);
   }
 
   /**
@@ -485,11 +493,36 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * @throws IOException IO failure
    * @return the success data.
    */
-  protected SuccessData maybeCreateSuccessMarker(JobContext context,
-      List<String> filenames,
+  protected SuccessData maybeCreateSuccessMarker(
+      final JobContext context,
+      final List<String> filenames,
       final IOStatisticsSnapshot ioStatistics)
       throws IOException {
 
+    SuccessData successData =
+        createSuccessData(context, filenames, ioStatistics,
+            getDestFS().getConf());
+    if (createJobMarker) {
+      // save it to the job dest dir
+      commitOperations.createSuccessMarker(getOutputPath(), successData, true);
+    }
+    return successData;
+  }
+
+
+  /**
+   * Create the success data structure from a job context.
+   * @param context job context.
+   * @param filenames short list of filenames; nullable
+   * @param ioStatistics IOStatistics snapshot
+   * @param destConf config of the dest fs, can be null
+   * @return the structure
+   *
+   */
+  private SuccessData createSuccessData(final JobContext context,
+      final List<String> filenames,
+      final IOStatisticsSnapshot ioStatistics,
+      final Configuration destConf) {
     // create a success data structure
     SuccessData successData = new SuccessData();
     successData.setCommitter(getName());
@@ -500,7 +533,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     Date now = new Date();
     successData.setTimestamp(now.getTime());
     successData.setDate(now.toString());
-    successData.setFilenames(filenames);
+    if (filenames != null) {
+      successData.setFilenames(filenames);
+    }
     successData.getIOStatistics().aggregate(ioStatistics);
     // attach some config options as diagnostics to assist
     // in debugging performance issues.
@@ -510,16 +545,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
         Integer.toString(getJobCommitThreadCount(context)));
 
     // and filesystem http connection and thread pool sizes
-    final Configuration fsConf = getDestFS().getConf();
-    successData.addDiagnostic(MAXIMUM_CONNECTIONS,
-        fsConf.get(MAXIMUM_CONNECTIONS,
-            Integer.toString(DEFAULT_MAXIMUM_CONNECTIONS)));
-    successData.addDiagnostic(MAX_TOTAL_TASKS,
-        fsConf.get(MAX_TOTAL_TASKS,
-            Integer.toString(DEFAULT_MAX_TOTAL_TASKS)));
-    if (createJobMarker) {
-      // save it to the job dest dir
-      commitOperations.createSuccessMarker(getOutputPath(), successData, true);
+    if (destConf != null) {
+      successData.addDiagnostic(MAXIMUM_CONNECTIONS,
+          destConf.get(MAXIMUM_CONNECTIONS,
+              Integer.toString(DEFAULT_MAXIMUM_CONNECTIONS)));
+      successData.addDiagnostic(MAX_TOTAL_TASKS,
+          destConf.get(MAX_TOTAL_TASKS,
+              Integer.toString(DEFAULT_MAX_TOTAL_TASKS)));
     }
     return successData;
   }
@@ -950,24 +982,53 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     String id = jobIdString(context);
     // the commit context is created outside a try-with-resources block
     // so it can be used in exception handling.
-    CommitContext commitContext
-        = initiateJobOperation(context);
+    CommitContext commitContext = null;
+
+    SuccessData successData = null;
+    IOException failure = null;
+    String stage = "preparing";
     try (DurationInfo d = new DurationInfo(LOG,
         "%s: commitJob(%s)", getRole(), id)) {
-
+      commitContext = initiateJobOperation(context);
       ActiveCommit pending
           = listPendingUploadsToCommit(commitContext);
+      stage = "precommit";
       preCommitJob(commitContext, pending);
+      stage = "commit";
       commitJobInternal(commitContext, pending);
+      stage = "completed";
       jobCompleted(true);
-      maybeCreateSuccessMarkerFromCommits(context, pending);
+      stage = "marker";
+      successData = maybeCreateSuccessMarkerFromCommits(context, pending);
+      stage = "cleanup";
       cleanup(commitContext, false);
     } catch (IOException e) {
+      // failure. record it for the summary
+      failure = e;
       LOG.warn("Commit failure for job {}", id, e);
       jobCompleted(false);
       abortJobInternal(commitContext, true);
       throw e;
+    } finally {
+      // save the report summary, even on failure
+      if (commitContext != null) {
+        if (successData == null) {
+          // if the commit did not get as far as creating success data, create one.
+          successData = createSuccessData(context, null, null,
+              getDestFS().getConf());
+        }
+        // save quietly, so no exceptions are raised
+        maybeSaveSummary(stage,
+            commitContext,
+            successData,
+            failure,
+            true,
+            true);
+        // and close that commit context
+        commitContext.close();
+      }
     }
+
   }
 
   /**
@@ -1361,6 +1422,77 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       @Nullable String path2)
       throws IOException {
     return getAuditSpanSource().createSpan(name, path1, path2);
+  }
+
+
+  /**
+   * Save a summary to the report dir if the config option
+   * is set.
+   * The report will be updated with the current active stage,
+   * and if {@code thrown} is non-null, it will be added to the
+   * diagnostics (and the job tagged as a failure).
+   * Static for testability.
+   * @param activeStage active stage
+   * @param context commit context.
+   * @param report summary file.
+   * @param thrown any exception indicting failure.
+   * @param quiet should exceptions be swallowed.
+   * @param overwrite should the existing file be overwritten
+   * @return the path of a file, if successfully saved
+   * @throws IOException if a failure occured and quiet==false
+   */
+  private static Path maybeSaveSummary(
+      String activeStage,
+      CommitContext context,
+      SuccessData report,
+      Throwable thrown,
+      boolean quiet,
+      boolean overwrite) throws IOException {
+    Configuration conf = context.getConf();
+    String reportDir = conf.getTrimmed(OPT_SUMMARY_REPORT_DIR, "");
+    if (reportDir.isEmpty()) {
+      LOG.debug("No summary directory set in " + OPT_SUMMARY_REPORT_DIR);
+      return null;
+    }
+    LOG.debug("Summary directory set to {}" , reportDir);
+
+    Path reportDirPath = new Path(reportDir);
+    Path path = new Path(reportDirPath,
+        createJobSummaryFilename(context.getJobId()));
+
+    if (thrown != null) {
+      report.recordJobFailure(thrown);
+    }
+    report.putDiagnostic(STAGE, activeStage);
+    // the store operations here is explicitly created for the FS where
+    // the reports go, which may not be the target FS of the job.
+
+    final FileSystem fs = path.getFileSystem(conf);
+    try (ManifestStoreOperations operations = new ManifestStoreOperationsThroughFileSystem(
+        fs)) {
+      if (!overwrite) {
+        // check for file existence so there is no need to worry about
+        // precisely what exception is raised when overwrite=false and dest file
+        // exists
+        try {
+          FileStatus st = operations.getFileStatus(path);
+          // get here and the file exists
+          LOG.debug("Report already exists: {}", st);
+          return null;
+        } catch (FileNotFoundException ignored) {
+        }
+      }
+      report.save(fs, path, SuccessData.serializer());
+      LOG.info("Job summary saved to {}", path);
+      return path;
+    } catch (IOException e) {
+      LOG.debug("Failed to save summary to {}", path, e);
+      if (quiet) {
+        return null;
+      } else {
+        throw e;
+      }
+    }
   }
 
   /**

@@ -85,7 +85,7 @@ public final class CommitContext implements Closeable {
 
   private final WeakReferenceThreadMap<JsonSerialization<PendingSet>>
       pendingSetSerializer =
-        new WeakReferenceThreadMap<>((k) ->PendingSet.serializer(), null);
+        new WeakReferenceThreadMap<>((k) -> PendingSet.serializer(), null);
 
   private final WeakReferenceThreadMap<JsonSerialization<SinglePendingCommit>>
       singleCommitSerializer =
@@ -105,7 +105,7 @@ public final class CommitContext implements Closeable {
   /**
    * Job Configuration.
    */
-  private final Configuration configuration;
+  private final Configuration conf;
 
   /**
    * Job ID.
@@ -116,6 +116,10 @@ public final class CommitContext implements Closeable {
    * Audit context; will be reset when this is closed.
    */
   private final AuditContextUpdater auditContextUpdater;
+
+  /**
+   * Number of committer threads.
+   */
   private final int committerThreads;
 
   /**
@@ -124,12 +128,13 @@ public final class CommitContext implements Closeable {
    * @param jobContext job context
    * @param committerThreads number of commit threads
    */
-  CommitContext(final CommitOperations commitOperations,
+  CommitContext(
+      final CommitOperations commitOperations,
       final JobContext jobContext,
       final int committerThreads) {
     this.commitOperations = commitOperations;
     this.jobContext = jobContext;
-    this.configuration = jobContext.getConfiguration();
+    this.conf = jobContext.getConfiguration();
     this.jobId = jobContext.getJobID().toString();
     this.auditContextUpdater = new AuditContextUpdater(jobContext);
     this.auditContextUpdater.updateCurrentAuditContext();
@@ -143,17 +148,17 @@ public final class CommitContext implements Closeable {
    * This has no job context; instead the values
    * are set explicitly.
    * @param commitOperations commit callbacks
-   * @param configuration job conf
+   * @param conf job conf
    * @param jobId ID
    * @param committerThreads number of commit threads
    */
   CommitContext(final CommitOperations commitOperations,
-      final Configuration configuration,
+      final Configuration conf,
       final String jobId,
       final int committerThreads) {
     this.commitOperations = commitOperations;
     this.jobContext = null;
-    this.configuration = configuration;
+    this.conf = conf;
     this.jobId = jobId;
     this.auditContextUpdater = new AuditContextUpdater(jobId);
     this.auditContextUpdater.updateCurrentAuditContext();
@@ -338,8 +343,16 @@ public final class CommitContext implements Closeable {
    * Job configuration.
    * @return configuration (never null)
    */
-  public Configuration getConfiguration() {
-    return configuration;
+  public Configuration getConf() {
+    return conf;
+  }
+
+  /**
+   * Get the job ID.
+   * @return job ID.
+   */
+  public String getJobId() {
+    return jobId;
   }
 
   /**

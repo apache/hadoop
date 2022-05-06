@@ -57,6 +57,12 @@ public final class CommitConstants {
    */
   public static final String PENDINGSET_SUFFIX = ".pendingset";
 
+
+  /**
+   * Prefix to use for config options: {@value}.
+   */
+  public static final String OPT_PREFIX = "fs.s3a.committer.";
+
   /**
    * Flag to indicate whether support for the Magic committer is enabled
    * in the filesystem.
@@ -345,4 +351,15 @@ public final class CommitConstants {
    * idle. Value in seconds: {@value}.
    */
   static final long THREAD_KEEP_ALIVE_TIME = 60L;
+
+
+  /**
+   * Directory for saving job summary reports.
+   * These are the _SUCCESS files, but are saved even on
+   * job failures.
+   * Value: {@value}.
+   */
+  public static final String OPT_SUMMARY_REPORT_DIR =
+      OPT_PREFIX + "summary.report.directory";
+
 }

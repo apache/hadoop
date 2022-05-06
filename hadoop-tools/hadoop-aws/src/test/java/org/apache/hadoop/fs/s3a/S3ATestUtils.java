@@ -576,6 +576,19 @@ public final class S3ATestUtils {
   }
 
   /**
+   * build dir.
+   * @return the directory for the project's build, as set by maven,
+   * falling back to pwd + "target" if running from an IDE;
+   */
+  public static File getProjectBuildDir() {
+    String propval = System.getProperty(PROJECT_BUILD_DIRECTORY_PROPERTY);
+    if (StringUtils.isEmpty(propval)) {
+      propval = "target";
+    }
+    return new File(propval).getAbsoluteFile();
+  }
+
+  /**
    * Clear any Hadoop credential provider path.
    * This is needed if people's test setups switch to credential providers,
    * and the test case is altering FS login details: changes made in the
