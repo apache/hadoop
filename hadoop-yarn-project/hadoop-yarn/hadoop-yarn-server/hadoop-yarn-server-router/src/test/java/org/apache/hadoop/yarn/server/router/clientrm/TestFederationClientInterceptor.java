@@ -520,8 +520,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     LOG.info("Test FederationClientInterceptor : Get Cluster Metrics request");
     // null request
     LambdaTestUtils.intercept(YarnException.class,
-            "Missing getClusterMetrics request." ,
-            () -> interceptor.getClusterMetrics(null));
+            "Missing getClusterMetrics request.", () -> interceptor.getClusterMetrics(null));
 
     // normal request.
     GetClusterMetricsResponse response =
@@ -644,6 +643,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   }
 
   /**
+   * This test validates that if the request is null,
+   * calling the interface for obtaining cluster metrics should throw an exception,
+   * verifying that the exception is as expected.
    *
    * @throws YarnException
    * @throws IOException
