@@ -287,13 +287,6 @@
 </property>
 
 <property>
-  <name>mapreduce.task.enable.ping-for-liveliness-check</name>
-  <value>true</value>
-  <description>Whether to consider ping from tasks in liveliness check.
-  </description>
-</property>
-
-<property>
   <name>mapreduce.map.memory.mb</name>
   <value>-1</value>
   <description>The amount of memory to request from the scheduler for each

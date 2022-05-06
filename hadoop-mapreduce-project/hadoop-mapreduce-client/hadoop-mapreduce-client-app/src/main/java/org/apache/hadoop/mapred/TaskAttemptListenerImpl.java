@@ -410,10 +410,7 @@ public class TaskAttemptListenerImpl extends CompositeService
         LOG.debug("Ping from " + taskAttemptID.toString());
       }
       // Consider ping from the tasks for liveliness check
-      if (getConfig().getBoolean(MRJobConfig.MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK,
-          MRJobConfig.DEFAULT_MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK)) {
-        taskHeartbeatHandler.progressing(yarnAttemptID);
-      }
+      taskHeartbeatHandler.progressing(yarnAttemptID);
       return feedback;
     }
 
