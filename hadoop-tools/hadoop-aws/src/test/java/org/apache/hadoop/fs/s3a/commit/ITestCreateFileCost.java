@@ -60,9 +60,9 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     builder.must(FS_S3A_CREATE_PERFORMANCE, true);
 
     verifyMetrics(() -> {
-          FSDataOutputStream out = builder.build();
-          out.close();
-          return out;
+      FSDataOutputStream out = builder.build();
+      out.close();
+      return out;
     },
         always(NO_HEAD_OR_LIST),
         with(OBJECT_BULK_DELETE_REQUEST, 0),
@@ -79,10 +79,10 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
         .overwrite(false);
 
     verifyMetrics(() -> {
-          FSDataOutputStream out = builder.build();
-          out.close();
-          return out;
-        },
+      FSDataOutputStream out = builder.build();
+      out.close();
+      return out;
+    },
         always(CREATE_FILE_NO_OVERWRITE));
   }
 
@@ -104,9 +104,9 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
       builder.must(FS_S3A_CREATE_PERFORMANCE, true);
 
       verifyMetrics(() -> {
-            FSDataOutputStream out = builder.build();
-            out.close();
-            return out;
+        FSDataOutputStream out = builder.build();
+        out.close();
+        return out;
       },
           always(NO_HEAD_OR_LIST),
           with(OBJECT_BULK_DELETE_REQUEST, 0),

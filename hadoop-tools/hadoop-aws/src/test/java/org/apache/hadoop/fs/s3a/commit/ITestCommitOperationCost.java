@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.PersistentCommitData;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -45,12 +46,14 @@ import static org.apache.hadoop.fs.s3a.Statistic.FAKE_DIRECTORIES_DELETED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_INITIATED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
 import static org.apache.hadoop.fs.s3a.commit.CommitterTestHelper.assertIsMagicStream;
 import static org.apache.hadoop.fs.s3a.commit.CommitterTestHelper.makeMagic;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.LIST_FILES_LIST_OP;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.LIST_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
@@ -61,6 +64,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.toList;
  *   <li>Even on marker deleting filesystems,
  *       operations under magic dirs do not trigger marker deletion.</li>
  *   <li>Loading pending files from FileStatus entries skips HEAD checks.</li>
+ *   <li>Mkdir under magic dirs doesn't check ancestor or dest type</li>
  * </ol>
  */
 public class ITestCommitOperationCost extends AbstractS3ACostTest {
@@ -144,7 +148,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
    * When a magic subdir is deleted, parent dirs are not recreated.
    */
   @Test
-  public void testMagicSubdir() throws Throwable {
+  public void testMagicMkdirs() throws Throwable {
     describe("Mkdirs __magic/subdir always skips marker deletion");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
@@ -153,9 +157,10 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
     Path magicSubdir = new Path(magicDir, "subdir");
     verifyMetrics(() -> {
-      fs.mkdirs(magicSubdir);
+      fs.mkdirs(magicSubdir, FsPermission.getDirDefault());
       return "after mkdirs " + fileSystemIOStats();
     },
+        always(LIST_OPERATION),
         with(OBJECT_BULK_DELETE_REQUEST, 0),
         with(OBJECT_DELETE_REQUEST, 0),
         with(DIRECTORIES_CREATED, 1));
@@ -168,8 +173,9 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
         with(OBJECT_BULK_DELETE_REQUEST, 0),
         with(OBJECT_DELETE_REQUEST, 1),
         with(OBJECT_LIST_REQUEST, 1),
+        with(OBJECT_METADATA_REQUESTS, 1),
         with(DIRECTORIES_CREATED, 0));
-    // no marker dir recreation
+    // no marker dir creation
     assertPathDoesNotExist("magicDir", magicDir);
     assertPathDoesNotExist("baseDir", baseDir);
   }
@@ -250,9 +256,9 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
     // commit it through the commit operations.
     verifyMetrics(() -> {
-          commitOperations.commitOrFail(singleCommit);
-          return ioStatisticsToPrettyString(
-              commitOperations.getIOStatistics());
+      commitOperations.commitOrFail(singleCommit);
+      return ioStatisticsToPrettyString(
+          commitOperations.getIOStatistics());
     },
         always(NO_HEAD_OR_LIST),  // no probes for the dest path
         with(FAKE_DIRECTORIES_DELETED, 0),  // no fake dirs
@@ -311,5 +317,6 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
         always(NO_HEAD_OR_LIST),
         with(ACTION_HTTP_GET_REQUEST, 1));
   }
+
 
 }

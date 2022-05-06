@@ -111,6 +111,10 @@ public enum Statistic {
       StoreStatisticNames.OP_CREATE,
       "Calls of create()",
       TYPE_DURATION),
+  INVOCATION_CREATE_FILE(
+      StoreStatisticNames.OP_CREATE_FILE,
+      "Calls of createFile()",
+      TYPE_DURATION),
   INVOCATION_CREATE_NON_RECURSIVE(
       StoreStatisticNames.OP_CREATE_NON_RECURSIVE,
       "Calls of createNonRecursive()",

@@ -1646,8 +1646,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       boolean performance) throws IOException {
     String key = pathToKey(path);
 
-    final boolean skipOverwriteProbes = performance || isUnderMagicCommitPath(path);
-    if (skipOverwriteProbes) {
+    final boolean skipProbes = performance || isUnderMagicCommitPath(path);
+    if (skipProbes) {
       LOG.debug("Skipping existence/overwrite checkse");
     } else {
       try {
@@ -1715,7 +1715,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         null);
   }
 
-
   /**
    * Create instance of an FSDataOutputStreamBuilder for
    * creating a file at the given path.
@@ -1745,7 +1744,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         final Progressable progress,
         final boolean performance) throws IOException {
       // the span will be picked up inside the output stream
-      return trackDurationAndSpan(INVOCATION_CREATE, path, () ->
+      return trackDurationAndSpan(INVOCATION_CREATE_FILE, path, () ->
           innerCreateFile(path, overwrite, progress, performance));
     }
   }
@@ -3249,6 +3248,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Make the given path and all non-existent parents into
    * directories. Has the semantics of Unix {@code 'mkdir -p'}.
    * Existence of the directory hierarchy is not an error.
+   * Parent elements are scanned to see if any are a file,
+   * <i>except under __magic</i> paths.
+   * There the FS assumes that the destination directory creation
+   * did that scan and that paths in job/task attempts are all
+   * "well formed"
    * @param p path to create
    * @param permission to apply to path
    * @return true if a directory was created or already existed
@@ -3266,7 +3270,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new MkdirOperation(
             createStoreContext(),
             path,
-            createMkdirOperationCallbacks(), false));
+            createMkdirOperationCallbacks(),
+            isMagicCommitPath(path)));
   }
 
   /**
@@ -3292,11 +3297,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public void createFakeDirectory(final Path dir)
+    public void createFakeDirectory(final Path dir, final boolean keepMarkers)
         throws IOException {
       S3AFileSystem.this.createFakeDirectory(
           pathToKey(dir),
-          putOptionsForPath(dir));
+          keepMarkers
+              ? PutObjectOptions.keepingDirs()
+              : putOptionsForPath(dir));
     }
   }
 
@@ -4067,9 +4074,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       PutObjectOptions putOptions) {
     LOG.debug("Finished write to {}, len {}. etag {}, version {}",
         key, length, eTag, versionId);
-    Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
-    if (!(putOptions.isKeepMarkers())) {
+    Path p = keyToQualifiedPath(key);
+    if (!putOptions.isKeepMarkers()) {
       deleteUnnecessaryFakeDirectories(p.getParent());
     }
   }

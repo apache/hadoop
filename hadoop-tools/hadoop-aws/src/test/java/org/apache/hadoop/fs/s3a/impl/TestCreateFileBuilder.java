@@ -40,13 +40,13 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class TestCreateFileBuilder extends HadoopTestBase {
 
-  private static final BuilderCallbacks callbacks = new BuilderCallbacks();
+  private static final BuilderCallbacks CALLBACKS = new BuilderCallbacks();
 
   private CreateFileBuilder mkBuilder() throws IOException {
     return new CreateFileBuilder(
         FileSystem.getLocal(new Configuration()),
         new Path("/"),
-        callbacks);
+        CALLBACKS);
   }
 
   private BuilderOutputStream unwrap(FSDataOutputStream out) {
@@ -102,11 +102,11 @@ public class TestCreateFileBuilder extends HadoopTestBase {
    */
   private static final class BuilderOutputStream extends OutputStream {
 
-    final boolean overwrite;
+    private final boolean overwrite;
 
-    final Progressable progress;
+    private final Progressable progress;
 
-    final boolean performance;
+    private final boolean performance;
 
     private BuilderOutputStream(final boolean overwrite,
         final Progressable progress,

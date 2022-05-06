@@ -345,7 +345,7 @@ public final class CommitContext implements Closeable {
   /**
    * Submitter for a given thread pool.
    */
-  private class PoolSubmitter implements TaskPool.Submitter, Closeable {
+  private final class PoolSubmitter implements TaskPool.Submitter, Closeable {
 
     private ExecutorService executor;
 

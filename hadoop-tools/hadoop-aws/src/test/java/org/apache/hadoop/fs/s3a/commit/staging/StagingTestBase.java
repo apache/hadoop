@@ -105,10 +105,10 @@ public class StagingTestBase {
   /** The raw bucket URI Path before any canonicalization. */
   public static final URI RAW_BUCKET_URI =
       RAW_BUCKET_PATH.toUri();
-  public static Path outputPath =
+  protected static Path outputPath =
       new Path("s3a://" + BUCKET + "/" + OUTPUT_PREFIX);
-  public static URI outputPathUri = outputPath.toUri();
-  public static Path root;
+  protected static URI outputPathUri = outputPath.toUri();
+  protected static Path root;
 
   protected StagingTestBase() {
   }

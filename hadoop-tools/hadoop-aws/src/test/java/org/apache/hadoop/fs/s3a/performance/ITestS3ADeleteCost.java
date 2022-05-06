@@ -280,8 +280,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         withWhenDeleting(FAKE_DIRECTORIES_DELETED,
             directories),
         withWhenDeleting(getDeleteMarkerStatistic(),
-            isBulkDelete() ? 1: directories)
-        );
+            isBulkDelete() ? 1: directories));
   }
 
 }
