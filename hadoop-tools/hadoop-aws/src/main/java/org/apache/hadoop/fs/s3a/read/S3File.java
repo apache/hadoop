@@ -30,6 +30,10 @@ import java.util.Map;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.common.Io;
 import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
@@ -44,6 +48,7 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
  * Encapsulates low level interactions with S3 object on AWS.
  */
 public class S3File implements Closeable {
+  private static final Logger LOG = LoggerFactory.getLogger(S3File.class);
 
   // Read-specific operation context.
   private final S3AReadOpContext context;
@@ -63,6 +68,9 @@ public class S3File implements Closeable {
   // Maps a stream returned by openForRead() to the associated S3 object.
   // That allows us to close the object when closing the stream.
   private Map<InputStream, S3Object> s3Objects;
+
+  // Asynchronous tasks are performed in this pool.
+  private final ExecutorServiceFuturePool futurePool;
 
   /**
    * Initializes a new instance of the {@code S3File} class.
@@ -98,6 +106,7 @@ public class S3File implements Closeable {
     this.streamStatistics = streamStatistics;
     this.changeTracker = changeTracker;
     this.s3Objects = new IdentityHashMap<InputStream, S3Object>();
+    this.futurePool = context.getFuturePool();
   }
 
   /**
@@ -214,7 +223,40 @@ public class S3File implements Closeable {
       this.s3Objects.remove(inputStream);
     }
 
-    Io.closeIgnoringIoException(inputStream);
-    Io.closeIgnoringIoException(obj);
+   this.futurePool.executeRunnable(new DrainTask(inputStream, obj));
   }
+
+
+  /**
+   * Drain task that is submitted to the future pool.
+   */
+  private static class DrainTask implements Runnable {
+
+    private final InputStream inputStream;
+    private final S3Object obj;
+    private long drained;
+
+    DrainTask(InputStream inputStream, S3Object obj) {
+      this.inputStream = inputStream;
+      this.obj = obj;
+    }
+
+    @Override
+    public void run() {
+      try {
+
+        while(this.inputStream.read() >= 0) {
+          drained++;
+        }
+
+        LOG.debug("Drained stream of {} bytes", drained);
+
+        Io.closeIgnoringIoException(this.inputStream);
+        Io.closeIgnoringIoException(this.obj);
+      } catch (Exception e) {
+        LOG.debug("When shutting down", e);
+      }
+    }
+  }
+
 }
