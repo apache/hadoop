@@ -211,7 +211,7 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
             "-b(=[20480:200 61440:600 0:0 20480:20 0]);" + // a
             "-c(=[20480:200 61440:600 0:0 0:0 0])"; // c
     String appsConfig =
-        // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+        // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" + "(1,1024:1,n1,,60,false,0:0,user1);" + // app1 in a
         "b\t" + "(1,0:0,n1,,0,false,20480:20,user2);"; // app2 in b
 
