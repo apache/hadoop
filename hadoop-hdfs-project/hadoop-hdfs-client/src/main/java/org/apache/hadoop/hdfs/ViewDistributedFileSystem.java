@@ -2318,4 +2318,14 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     }
     return this.vfs.getUsed();
   }
+
+  @Override
+  public DatanodeInfo[] getSlowDatanodeStats() throws IOException {
+    if (this.vfs == null) {
+      return super.getSlowDatanodeStats();
+    }
+    checkDefaultDFS(defaultDFS, "getSlowDatanodeStats");
+    return defaultDFS.getSlowDatanodeStats();
+  }
+
 }

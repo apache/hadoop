@@ -1018,6 +1018,14 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
+  <name>fs.s3a.input.async.drain.threshold</name>
+  <value>64K</value>
+  <description>Bytes to read ahead during a seek() before closing and
+  re-opening the S3 HTTP connection. This option will be overridden if
+  any call to setReadahead() is made to an open stream.</description>
+</property>
+
+<property>
   <name>fs.s3a.list.version</name>
   <value>2</value>
   <description>Select which version of the S3 SDK's List Objects API to use.

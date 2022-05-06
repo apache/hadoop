@@ -544,6 +544,18 @@ which address issues. In particular, we encourage testing of Hadoop release
 candidates, as these third-party endpoints get even less testing than the
 S3 endpoint itself.
 
+### Public datasets used in tests
+
+Some tests rely on the presence of existing public datasets available on Amazon S3.
+You may find a number of these in `org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils`.
+
+When testing against an endpoint which is not part of Amazon S3's standard commercial partition
+(`aws`) such as third-party implementations or AWS's China regions, you should replace these
+configurations with an empty space (` `) to disable the tests or an existing path in your object
+store that supports these tests.
+
+An example of this might be the MarkerTools tests which require a bucket with a large number of
+objects or the requester pays tests that require requester pays to be enabled for the bucket.
 
 ### Disabling the encryption tests
 

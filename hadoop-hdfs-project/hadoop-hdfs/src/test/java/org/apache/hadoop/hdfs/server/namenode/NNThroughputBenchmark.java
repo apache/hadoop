@@ -569,12 +569,20 @@ public class NNThroughputBenchmark implements Tool {
       // int generatedFileIdx = 0;
       LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
       fileNames = new String[numThreads][];
-      for(int idx=0; idx < numThreads; idx++) {
-        int threadOps = opsPerThread[idx];
-        fileNames[idx] = new String[threadOps];
-        for(int jdx=0; jdx < threadOps; jdx++)
-          fileNames[idx][jdx] = nameGenerator.
-                                  getNextFileName("ThroughputBench");
+      try {
+        for(int idx=0; idx < numThreads; idx++) {
+          int threadOps = opsPerThread[idx];
+          fileNames[idx] = new String[threadOps];
+          for(int jdx=0; jdx < threadOps; jdx++) {
+            fileNames[idx][jdx] = nameGenerator.
+                    getNextFileName("ThroughputBench");
+          }
+        }
+      } catch (ArrayIndexOutOfBoundsException e) {
+        LOG.error("The current environment allows {} files to be created. " +
+            "If you want to test more files, please update the -filesPerDir parameter.",
+                nameGenerator.getFileCount());
+        throw e;
       }
     }
 
@@ -669,12 +677,20 @@ public class NNThroughputBenchmark implements Tool {
           false);
       LOG.info("Generate " + numOpsRequired + " inputs for " + getOpName());
       dirPaths = new String[numThreads][];
-      for(int idx=0; idx < numThreads; idx++) {
-        int threadOps = opsPerThread[idx];
-        dirPaths[idx] = new String[threadOps];
-        for(int jdx=0; jdx < threadOps; jdx++)
-          dirPaths[idx][jdx] = nameGenerator.
-              getNextFileName("ThroughputBench");
+      try {
+        for(int idx=0; idx < numThreads; idx++) {
+          int threadOps = opsPerThread[idx];
+          dirPaths[idx] = new String[threadOps];
+          for(int jdx=0; jdx < threadOps; jdx++) {
+            dirPaths[idx][jdx] = nameGenerator.
+                    getNextFileName("ThroughputBench");
+          }
+        }
+      } catch (ArrayIndexOutOfBoundsException e) {
+        LOG.error("The current environment allows {} directories to be created. " +
+            "If you want to test more directories, please update the -dirsPerDir parameter.",
+                nameGenerator.getFileCount());
+        throw e;
       }
     }
 

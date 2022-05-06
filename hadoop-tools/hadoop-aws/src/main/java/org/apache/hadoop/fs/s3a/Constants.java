@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
@@ -603,36 +604,68 @@ public final class Constants {
   public static final long DEFAULT_READAHEAD_RANGE = 64 * 1024;
 
   /**
+   * The threshold at which drain operations switch
+   * to being asynchronous with the schedule/wait overhead
+   * compared to synchronous.
+   * Value: {@value}
+   */
+  public static final String ASYNC_DRAIN_THRESHOLD = "fs.s3a.input.async.drain.threshold";
+
+  /**
+   * This is a number based purely on experimentation in
+   * {@code ITestS3AInputStreamPerformance}.
+   * Value: {@value}
+   */
+  public static final int DEFAULT_ASYNC_DRAIN_THRESHOLD = 16_000;
+
+  /**
    * Which input strategy to use for buffering, seeking and similar when
    * reading data.
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String INPUT_FADVISE =
       "fs.s3a.experimental.input.fadvise";
 
   /**
+   * The default value for this FS.
+   * Which for S3A, is adaptive.
+   * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
+   */
+  public static final String INPUT_FADV_DEFAULT =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
+
+  /**
    * General input. Some seeks, some reads.
+   * The policy name "default" is standard across different stores,
+   * and should be preferred.
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String INPUT_FADV_NORMAL = "normal";
 
   /**
    * Optimized for sequential access.
    * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
    */
-  @InterfaceStability.Unstable
-  public static final String INPUT_FADV_SEQUENTIAL = "sequential";
+  public static final String INPUT_FADV_SEQUENTIAL =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 
   /**
    * Optimized purely for random seek+read/positionedRead operations;
    * The performance of sequential IO may be reduced in exchange for
    * more efficient {@code seek()} operations.
    * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
    */
-  @InterfaceStability.Unstable
-  public static final String INPUT_FADV_RANDOM = "random";
+  public static final String INPUT_FADV_RANDOM =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 
   /**
    * Gauge name for the input policy : {@value}.
