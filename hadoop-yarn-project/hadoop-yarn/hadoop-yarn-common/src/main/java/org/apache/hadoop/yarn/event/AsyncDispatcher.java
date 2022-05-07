@@ -30,6 +30,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -103,6 +105,13 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
    * The thread name for dispatcher.
    */
   private String dispatcherThreadName = "AsyncDispatcher event handler";
+
+  private boolean monitorEnable = false;
+  private long monitorInterval;
+  private long monitorTimeout;
+  private Event lastMonitorEvent = null;
+  private long lastMonitorEventTime;
+  private Thread monitorThread;
 
   public AsyncDispatcher() {
     this(new LinkedBlockingQueue<Event>());
@@ -203,6 +212,19 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     eventHandlingThread = new Thread(createThread());
     eventHandlingThread.setName(dispatcherThreadName);
     eventHandlingThread.start();
+    if (monitorEnable) {
+      monitorInterval = getConfig().getLong(
+          YarnConfiguration.YARN_DISPATCHER_MONITOR_EVENT_INTERVAL_MSEC,
+          YarnConfiguration.DEFAULT_YARN_DISPATCHER_MONITOR_EVENT_INTERVAL_MSEC);
+      monitorTimeout = getConfig()
+          .getLong(YarnConfiguration.YARN_DISPATCHER_MONITOR_EVENT_TIMEOUT_MSEC,
+              YarnConfiguration.DEFAULT_YARN_DISPATCHER_MONITOR_EVENT_TIMEOUT_MSEC);
+      lastMonitorEvent = null;
+      lastMonitorEventTime = Time.now();
+      monitorThread = new Thread(createMonitorThread());
+      eventHandlingThread.setName(dispatcherThreadName + " monitor");
+      monitorThread.start();
+    }
   }
 
   public void setDrainEventsOnStop() {
@@ -413,4 +435,46 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   public int getEventQueueSize() {
     return eventQueue.size();
   }
+
+  public void setMonitorEnable(boolean monitorEnable) {
+    this.monitorEnable = monitorEnable;
+  }
+
+  Runnable createMonitorThread() {
+    return new Runnable() {
+      @Override
+      public void run() {
+        try {
+          while (!stopped && !Thread.currentThread().isInterrupted()) {
+            Event currentEvent = eventQueue.peek();
+            if (currentEvent != null && (currentEvent == lastMonitorEvent)) {
+              if ((Time.now() - lastMonitorEventTime > monitorTimeout)) {
+                LOG.info(
+                    "Event update timeout, maybe AsyncDispatcher have already stuck, so exit...");
+                ReflectionUtils.logThreadInfo(LOG, "AsyncDispatcher stuck", 0);
+                if (exitOnDispatchException) {
+                  Thread shutDownThread = new Thread(createShutDownThread());
+                  shutDownThread.setName("AsyncDispatcher ShutDown handler");
+                  shutDownThread.start();
+                }
+                return;
+              }
+            } else {
+              lastMonitorEvent = currentEvent;
+              lastMonitorEventTime = Time.now();
+            }
+            Thread.sleep(monitorInterval);
+          }
+        } catch (Throwable e) {
+          LOG.info("AsyncDispatcher Monitor Thread failed, caused by", e);
+        }
+      }
+    };
+  }
+
+  @VisibleForTesting
+  public Thread getMonitorThread() {
+    return monitorThread;
+  }
+
 }

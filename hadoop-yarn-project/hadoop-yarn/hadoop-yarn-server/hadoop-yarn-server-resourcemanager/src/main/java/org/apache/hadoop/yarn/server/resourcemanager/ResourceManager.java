@@ -512,6 +512,11 @@ public class ResourceManager extends CompositeService
         rmAppAttemptEventTypeMetrics
             .getEnumClass());
 
+    if (conf.getBoolean(YarnConfiguration.YARN_RM_DISPATCHER_MONITOR_ENABLE,
+        false)) {
+      dispatcher.setMonitorEnable(true);
+    }
+
     return dispatcher;
   }
 
