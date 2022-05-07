@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -125,10 +127,14 @@ public class FlowRunCoprocessor implements RegionCoprocessor, RegionObserver {
           // also, get a unique cell timestamp for non-metric cells
           // this way we don't inadvertently overwrite cell versions
           long cellTimestamp = getCellTimestamp(cell.getTimestamp(), tags);
-          newCells.add(CellUtil.createCell(CellUtil.cloneRow(cell),
-              CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
-              cellTimestamp, KeyValue.Type.Put, CellUtil.cloneValue(cell),
-              tagByteArray));
+          newCells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+                  .setRow(CellUtil.cloneRow(cell))
+                  .setFamily(CellUtil.cloneFamily(cell))
+                  .setQualifier(CellUtil.cloneQualifier(cell))
+                  .setTimestamp(cellTimestamp)
+                  .setType(KeyValue.Type.Put.getCode())
+                  .setValue(CellUtil.cloneValue(cell))
+                  .setTags(tagByteArray).build());
         }
         newFamilyMap.put(entry.getKey(), newCells);
       } // for each entry
