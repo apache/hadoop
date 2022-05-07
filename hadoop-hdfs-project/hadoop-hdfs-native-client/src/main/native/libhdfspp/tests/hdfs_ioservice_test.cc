@@ -94,7 +94,6 @@ TEST(IoServiceTest, SimplePost) {
   EXPECT_EQ(result, "hello from IoService");
 
   service->Stop();
-
 }
 
 int main(int argc, char *argv[]) {
