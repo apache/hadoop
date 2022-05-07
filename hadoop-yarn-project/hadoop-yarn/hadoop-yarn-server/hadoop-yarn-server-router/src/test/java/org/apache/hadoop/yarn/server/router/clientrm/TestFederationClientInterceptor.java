@@ -649,8 +649,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     LOG.info("Test FederationClientInterceptor : Get Cluster Nodeds request");
     // null request
     LambdaTestUtils.intercept(YarnException.class,
-            "Missing getClusterNodes request.",
-            () -> interceptor.getClusterNodes(null));
+            "Missing getClusterNodes request.", () -> interceptor.getClusterNodes(null));
 
     // normal request.
     GetClusterNodesResponse response =
