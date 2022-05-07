@@ -173,7 +173,7 @@ public class FlowRunCoprocessor implements RegionCoprocessor, RegionObserver {
   public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e,
                        Get get, List<Cell> results) throws IOException {
     Scan scan = new Scan(get);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     RegionScanner scanner = null;
     try {
       scanner = new FlowScanner(e.getEnvironment(), scan,
@@ -204,7 +204,7 @@ public class FlowRunCoprocessor implements RegionCoprocessor, RegionObserver {
       throws IOException {
     // set max versions for scan to see all
     // versions to aggregate for metrics
-    scan.setMaxVersions();
+    scan.readAllVersions();
   }
 
   /*
