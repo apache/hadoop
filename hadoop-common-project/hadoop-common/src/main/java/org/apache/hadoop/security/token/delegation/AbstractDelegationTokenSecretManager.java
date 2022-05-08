@@ -110,7 +110,8 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Metrics to track token management operations.
    */
-  private DelegationTokenSecretManagerMetrics metrics;
+  private static final DelegationTokenSecretManagerMetrics METRICS
+          = DelegationTokenSecretManagerMetrics.create();
   
   private long keyUpdateInterval;
   private long tokenMaxLifetime;
@@ -149,7 +150,6 @@ extends AbstractDelegationTokenIdentifier>
     this.tokenRenewInterval = delegationTokenRenewInterval;
     this.tokenRemoverScanInterval = delegationTokenRemoverScanInterval;
     this.storeTokenTrackingId = false;
-    this.metrics = DelegationTokenSecretManagerMetrics.create();
   }
 
   /** should be called before this object is used */
@@ -446,7 +446,7 @@ extends AbstractDelegationTokenIdentifier>
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
     try {
-      metrics.trackStoreToken(() -> storeToken(identifier, tokenInfo));
+      METRICS.trackStoreToken(() -> storeToken(identifier, tokenInfo));
     } catch (IOException ioe) {
       LOG.error("Could not store token " + formatTokenId(identifier) + "!!",
           ioe);
@@ -571,7 +571,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("Renewal request for unknown token "
           + formatTokenId(id));
     }
-    metrics.trackUpdateToken(() -> updateToken(id, info));
+    METRICS.trackUpdateToken(() -> updateToken(id, info));
     return renewTime;
   }
   
@@ -607,7 +607,7 @@ extends AbstractDelegationTokenIdentifier>
     if (info == null) {
       throw new InvalidToken("Token not found " + formatTokenId(id));
     }
-    metrics.trackRemoveToken(() -> {
+    METRICS.trackRemoveToken(() -> {
       removeTokenForOwnerStats(id);
       removeStoredToken(id);
     });
@@ -845,7 +845,7 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   protected DelegationTokenSecretManagerMetrics getMetrics() {
-    return metrics;
+    return METRICS;
   }
 
   /**
