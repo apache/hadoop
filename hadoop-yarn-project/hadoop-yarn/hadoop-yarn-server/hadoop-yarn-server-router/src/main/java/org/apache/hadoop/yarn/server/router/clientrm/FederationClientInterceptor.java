@@ -412,9 +412,9 @@ public class FederationClientInterceptor
     for (int i = 0; i < numSubmitRetries; ++i) {
 
       SubClusterId subClusterId = policyFacade.getHomeSubcluster(
-          request.getApplicationSubmissionContext(), blacklist);
-      LOG.info("submitApplication appId" + applicationId + " try #" + i
-          + " on SubCluster " + subClusterId);
+              request.getApplicationSubmissionContext(), blacklist);
+      LOG.info("submitApplication appId {} try #{} on SubCluster {}",
+              applicationId, i, subClusterId);
 
       ApplicationHomeSubCluster appHomeSubCluster =
           ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
@@ -445,8 +445,8 @@ public class FederationClientInterceptor
           SubClusterId subClusterIdInStateStore =
               federationFacade.getApplicationHomeSubCluster(applicationId);
           if (subClusterId == subClusterIdInStateStore) {
-            LOG.info("Application " + applicationId
-                + " already submitted on SubCluster " + subClusterId);
+            LOG.info("Application {} already submitted on SubCluster {} ",
+                    applicationId , subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
             RouterAuditLogger.logFailure(user.getShortUserName(),
@@ -464,14 +464,13 @@ public class FederationClientInterceptor
       try {
         response = clientRMProxy.submitApplication(request);
       } catch (Exception e) {
-        LOG.warn("Unable to submit the application " + applicationId
-            + "to SubCluster " + subClusterId.getId(), e);
+        LOG.warn("Unable to submit the application {} to SubCluster {} error = {}",
+                applicationId, subClusterId.getId(), e);
       }
 
       if (response != null) {
-        LOG.info("Application "
-            + request.getApplicationSubmissionContext().getApplicationName()
-            + " with appId " + applicationId + " submitted on " + subClusterId);
+        LOG.info("Application {} with appId {} submitted on {} ",
+                request.getApplicationSubmissionContext().getApplicationName(), applicationId, subClusterId);
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
         RouterAuditLogger.logSuccess(user.getShortUserName(),
