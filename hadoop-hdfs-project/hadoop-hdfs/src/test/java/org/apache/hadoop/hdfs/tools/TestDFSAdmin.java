@@ -1196,16 +1196,18 @@ public class TestDFSAdmin {
     assertEquals("Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.",
         outsForStartReconf.get(2));
 
+    Thread.sleep(1000);
     final List<String> outs = new ArrayList<>();
     final List<String> errs = new ArrayList<>();
     awaitReconfigurationFinished("datanode", "livenodes", outs, errs);
     assertEquals(9, outs.size());
     assertEquals(0, errs.size());
+    LOG.info("dfsadmin -status -livenodes output:");
+    outs.forEach(out -> LOG.info("{}", out));
     assertTrue(outs.get(0).startsWith("Reconfiguring status for node"));
-    assertEquals("SUCCESS: Changed property dfs.datanode.peer.stats.enabled", outs.get(1));
-    assertEquals("\tFrom: \"false\"", outs.get(2));
-    assertEquals("\tTo: \"true\"", outs.get(3));
-    assertTrue(outs.get(4).startsWith("Reconfiguring status for node"));
+    assertEquals("SUCCESS: Changed property dfs.datanode.peer.stats.enabled", outs.get(2));
+    assertEquals("\tFrom: \"false\"", outs.get(3));
+    assertEquals("\tTo: \"true\"", outs.get(4));
     assertEquals("SUCCESS: Changed property dfs.datanode.peer.stats.enabled", outs.get(5));
     assertEquals("\tFrom: \"false\"", outs.get(6));
     assertEquals("\tTo: \"true\"", outs.get(7));
