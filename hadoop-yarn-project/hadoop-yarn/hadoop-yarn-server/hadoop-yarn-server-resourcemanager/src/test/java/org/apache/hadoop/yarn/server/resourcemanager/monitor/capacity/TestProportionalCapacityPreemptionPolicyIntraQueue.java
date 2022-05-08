@@ -846,7 +846,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
             "-b(=[40 100 40 120 0])"; // b
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user(optional))
         "a\t" // app1 in a
             + "(1,1,n1,,5,false,25);" + // app1 a
             "a\t" // app2 in a
