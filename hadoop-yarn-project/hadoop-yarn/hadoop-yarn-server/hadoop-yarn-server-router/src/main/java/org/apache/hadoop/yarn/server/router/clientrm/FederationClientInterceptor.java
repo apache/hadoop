@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -845,8 +846,32 @@ public class FederationClientInterceptor
 
   @Override
   public GetNodesToLabelsResponse getNodeToLabels(
-      GetNodesToLabelsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+          GetNodesToLabelsRequest request) throws YarnException, IOException {
+    if (request == null) {
+      routerMetrics.incrGetNodeToLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+              "Missing getNodeToLabels request.", null);
+    }
+    long startTime = clock.getTime();
+    Map<SubClusterId, SubClusterInfo> subClusters =
+            federationFacade.getSubClusters(true);
+    Map<SubClusterId, GetNodesToLabelsResponse> clusterNodeLables = Maps.newHashMap();
+    for (Map.Entry<SubClusterId, SubClusterInfo> entry : subClusters.entrySet()) {
+      SubClusterId subClusterId = entry.getKey();
+      ApplicationClientProtocol client = null;
+      try {
+        client = getClientRMProxyForSubCluster(subClusterId);
+        GetNodesToLabelsResponse response = client.getNodeToLabels(request);
+        clusterNodeLables.put(subClusterId, response);
+      } catch (Exception ex) {
+        routerMetrics.incrGetNodeToLabelsFailedRetrieved();
+        LOG.error("Unable to get cluster node labels due to exception.", ex);
+      }
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
+    // merge cluster nodes
+    return RouterYarnClientUtils.mergeNodesToLabelsResponse(clusterNodeLables.values());
   }
 
   @Override

@@ -20,14 +20,14 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
-import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -193,5 +193,25 @@ public final class RouterYarnClientUtils {
     }
     return !(appName.startsWith(UnmanagedApplicationManager.APP_NAME) ||
         appName.startsWith(PARTIAL_REPORT));
+  }
+
+  /**
+   * Merges a list of GetNodesToLabelsResponse grouping by SubClusterId.
+   *
+   * @param responses a list of GetNodesToLabelsResponse to merge
+   * @return the merged GetNodesToLabelsResponse
+   */
+  public static GetNodesToLabelsResponse mergeNodesToLabelsResponse(
+          Collection<GetNodesToLabelsResponse> responses) {
+    GetNodesToLabelsResponse nodesToLabelsResponse = Records.newRecord(
+            GetNodesToLabelsResponse.class);
+    Map<NodeId, Set<String>> nodesToLabelMap = new HashMap<>();
+    for (GetNodesToLabelsResponse response : responses) {
+      if (response != null && response.getNodeToLabels() != null) {
+        nodesToLabelMap.putAll(response.getNodeToLabels());
+      }
+    }
+    nodesToLabelsResponse.setNodeToLabels(nodesToLabelMap);
+    return nodesToLabelsResponse;
   }
 }
