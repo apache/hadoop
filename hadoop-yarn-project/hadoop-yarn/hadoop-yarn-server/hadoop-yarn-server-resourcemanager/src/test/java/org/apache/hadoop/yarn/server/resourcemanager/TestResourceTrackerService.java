@@ -41,6 +41,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -304,6 +305,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat3.getNodeAction());
   }
 
+  @Ignore
   @Test
   public void testGracefulDecommissionDefaultTimeoutResolution()
       throws Exception {
