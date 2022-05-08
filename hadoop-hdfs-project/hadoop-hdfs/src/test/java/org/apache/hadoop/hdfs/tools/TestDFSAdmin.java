@@ -1203,7 +1203,7 @@ public class TestDFSAdmin {
     assertEquals(9, outs.size());
     assertEquals(0, errs.size());
     LOG.info("dfsadmin -status -livenodes output:");
-    outs.forEach(out -> LOG.info("{}", out));
+    outs.forEach(s -> LOG.info("{}", s));
     assertTrue(outs.get(0).startsWith("Reconfiguring status for node"));
     assertEquals("SUCCESS: Changed property dfs.datanode.peer.stats.enabled", outs.get(2));
     assertEquals("\tFrom: \"false\"", outs.get(3));
