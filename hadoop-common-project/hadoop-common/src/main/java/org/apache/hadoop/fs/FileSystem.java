@@ -104,13 +104,13 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
  * All user code that may potentially use the Hadoop Distributed
  * File System should be written to use a FileSystem object or its
  * successor, {@link FileContext}.
- *
+ * </p>
  * <p>
  * The local implementation is {@link LocalFileSystem} and distributed
  * implementation is DistributedFileSystem. There are other implementations
  * for object stores and (outside the Apache Hadoop codebase),
  * third party filesystems.
- * <p>
+ * </p>
  * Notes
  * <ol>
  * <li>The behaviour of the filesystem is
@@ -133,13 +133,12 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
  * New methods may be marked as Unstable or Evolving for their initial release,
  * as a warning that they are new and may change based on the
  * experience of use in applications.
- * <p></p>
+ * <p>
  * <b>Important note for developers</b>
- * <p></p>
+ * </p>
  * If you are making changes here to the public API or protected methods,
  * you must review the following subclasses and make sure that
  * they are filtering/passing through new methods as appropriate.
- * <p></p>
  *
  * {@link FilterFileSystem}: methods are passed through. If not,
  * then {@code TestFilterFileSystem.MustNotImplement} must be
