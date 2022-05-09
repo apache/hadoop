@@ -223,7 +223,7 @@ public class S3File implements Closeable {
       this.s3Objects.remove(inputStream);
     }
 
-   this.futurePool.executeRunnable(new DrainTask(inputStream, obj));
+    this.futurePool.executeRunnable(new DrainTask(inputStream, obj));
   }
 
 
