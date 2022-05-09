@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.util.Collection;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import org.apache.hadoop.util.Preconditions;
 import java.io.FileNotFoundException;
@@ -81,6 +84,8 @@ public abstract class InodeTree<T> {
   private List<RegexMountPoint<T>> regexMountPointList =
       new ArrayList<RegexMountPoint<T>>();
 
+  private final boolean isNestedMountPointSupported;
+
   public static class MountPoint<T> {
     String src;
     INodeLink<T> target;
@@ -99,7 +104,7 @@ public abstract class InodeTree<T> {
     }
 
     /**
-     * Returns the target link.
+     * Returns the target INode link.
      * @return The target INode link
      */
     public INodeLink<T> getTarget() {
@@ -133,6 +138,11 @@ public abstract class InodeTree<T> {
     // and is read only.
     abstract boolean isInternalDir();
 
+    /**
+     * INode representing a INodeDir which also contains a INodeLink(nested mount point)
+     */
+    abstract boolean isDirAndLink();
+
     // INode linking to another filesystem. Represented
     // via mount table link config entries.
     boolean isLink() {
@@ -157,6 +167,11 @@ public abstract class InodeTree<T> {
     @Override
     boolean isInternalDir() {
       return true;
+    }
+
+    @Override
+    boolean isDirAndLink() {
+      return false;
     }
 
     T getInternalDirFs() {
@@ -211,6 +226,43 @@ public abstract class InodeTree<T> {
         throw new FileAlreadyExistsException();
       }
       children.put(pathComponent, link);
+    }
+
+    void addDirLink(final String pathComponent, final INodeDirLink<T> dirLink) {
+      children.put(pathComponent, dirLink);
+    }
+  }
+
+  /**
+   * Internal class to represent an INodeDir which also contains a INodeLink. This is used to support nested mount points
+   * where an INode is internalDir but points to a mount link. The class is a subclass of INodeDir and the semantics are
+   * as follows:
+   * isLink(): false
+   * isInternalDir(): true
+   * isDirAndLink(): true
+   * @param <T>
+   */
+  static class INodeDirLink<T> extends INodeDir<T> {
+    /**
+     * INodeLink wrapped in the INodeDir
+     */
+    private final INodeLink<T> link;
+
+    INodeDirLink(String pathToNode, UserGroupInformation aUgi, INodeLink<T> link) {
+      super(pathToNode, aUgi);
+      this.link = link;
+    }
+
+    INodeLink<T> getLink() {
+      return link;
+    }
+
+    /**
+     * True because the INodeDir also contains a INodeLink
+     */
+    @Override
+    boolean isDirAndLink() {
+      return true;
     }
   }
 
@@ -320,6 +372,11 @@ public abstract class InodeTree<T> {
       return false;
     }
 
+    @Override
+    boolean isDirAndLink() {
+      return false;
+    }
+
     /**
      * Get the instance of FileSystem to use, creating one if needed.
      * @return An Initialized instance of T
@@ -377,9 +434,16 @@ public abstract class InodeTree<T> {
         nextInode = newDir;
       }
       if (nextInode.isLink()) {
-        // Error - expected a dir but got a link
-        throw new FileAlreadyExistsException("Path " + nextInode.fullPath +
-            " already exists as link");
+        if (isNestedMountPointSupported) {
+          // nested mount detected, add a new INodeDirLink that wraps existing INodeLink to INodeTree and override existing INodelink
+          INodeDirLink<T> dirLink = new INodeDirLink<T>(nextInode.fullPath, aUgi, (INodeLink<T>) nextInode);
+          curInode.addDirLink(iPath, dirLink);
+          curInode = dirLink;
+        } else {
+          // Error - expected a dir but got a link
+          throw new FileAlreadyExistsException("Path " + nextInode.fullPath +
+              " already exists as link");
+        }
       } else {
         assert(nextInode.isInternalDir());
         curInode = (INodeDir<T>) nextInode;
@@ -538,6 +602,7 @@ public abstract class InodeTree<T> {
       mountTableName = ConfigUtil.getDefaultMountTableName(config);
     }
     homedirPrefix = ConfigUtil.getHomeDirValue(config, mountTableName);
+    isNestedMountPointSupported = ConfigUtil.isNestedMountPointSupported(config);
 
     boolean isMergeSlashConfigured = false;
     String mergeSlashTarget = null;
@@ -642,7 +707,8 @@ public abstract class InodeTree<T> {
       getRootDir().setInternalDirFs(getTargetFileSystem(getRootDir()));
       getRootDir().setRoot(true);
       INodeLink<T> fallbackLink = null;
-      for (LinkEntry le : linkEntries) {
+
+      for (LinkEntry le : getLinkEntries(linkEntries)) {
         switch (le.getLinkType()) {
         case SINGLE_FALLBACK:
           if (fallbackLink != null) {
@@ -680,6 +746,32 @@ public abstract class InodeTree<T> {
           initAndGetTargetFs(), theUri.toString());
       getRootDir().addFallbackLink(rootFallbackLink);
     }
+  }
+
+  /**
+   * Get collection of linkEntry. If nested mount point is supported, sort mount point based on alphabetical order of
+   * the src paths. The purpose is to group nested paths(shortest path always comes first) during INodeTree creation.
+   * E.g. /foo is nested with /foo/bar so an INodeDirLink will be created at /foo.
+   * @param linkEntries input linkEntries
+   * @return sorted linkEntries if nested mpunt point is supported
+   */
+  private Collection<LinkEntry> getLinkEntries(List<LinkEntry> linkEntries) {
+    if (isNestedMountPointSupported) {
+      Set<LinkEntry> sortedLinkEntries = new TreeSet<>((o1, o2) -> {
+        if (o1 == null) {
+          return -1;
+        }
+        if (o2 == null) {
+          return 1;
+        }
+        String src1 = o1.getSrc();
+        String src2=  o2.getSrc();
+        return src1.compareTo(src2);
+      });
+      sortedLinkEntries.addAll(linkEntries);
+      return sortedLinkEntries;
+    }
+    return linkEntries;
   }
 
   private void checkMntEntryKeyEqualsTarget(
@@ -818,10 +910,17 @@ public abstract class InodeTree<T> {
     }
 
     int i;
+    INodeDirLink<T> lastResolvedDirLink = null;
+    int lastResolvedDirLinkIndex = -1;
     // ignore first slash
     for (i = 1; i < path.length - (resolveLastComponent ? 0 : 1); i++) {
       INode<T> nextInode = curInode.resolveInternal(path[i]);
       if (nextInode == null) {
+        // first resolve to dirlink for nested mount point
+        if (isNestedMountPointSupported && lastResolvedDirLink != null) {
+          return new ResolveResult<T>(ResultKind.EXTERNAL_DIR, lastResolvedDirLink.getLink().getTargetFileSystem(),
+              lastResolvedDirLink.fullPath, getRemainingPath(path, i),true);
+        }
         if (hasFallbackLink()) {
           resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
               getRootFallbackLink().getTargetFileSystem(), root.fullPath,
@@ -839,44 +938,52 @@ public abstract class InodeTree<T> {
 
       if (nextInode.isLink()) {
         final INodeLink<T> link = (INodeLink<T>) nextInode;
-        final Path remainingPath;
-        if (i >= path.length - 1) {
-          remainingPath = SlashPath;
-        } else {
-          StringBuilder remainingPathStr =
-              new StringBuilder("/" + path[i + 1]);
-          for (int j = i + 2; j < path.length; ++j) {
-            remainingPathStr.append('/').append(path[j]);
-          }
-          remainingPath = new Path(remainingPathStr.toString());
-        }
+        final Path remainingPath = getRemainingPath(path, i + 1);
         resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
             link.getTargetFileSystem(), nextInode.fullPath, remainingPath,
             true);
         return resolveResult;
       } else if (nextInode.isInternalDir()) {
         curInode = (INodeDir<T>) nextInode;
+        // track last resolved nest mount point.
+        if (isNestedMountPointSupported && nextInode.isDirAndLink()) {
+          lastResolvedDirLink = (INodeDirLink<T>) nextInode;
+          lastResolvedDirLinkIndex = i;
+        }
       }
     }
 
-    // We have resolved to an internal dir in mount table.
     Path remainingPath;
-    if (resolveLastComponent) {
+    if (isNestedMountPointSupported && lastResolvedDirLink != null) {
+      remainingPath = getRemainingPath(path, lastResolvedDirLinkIndex + 1);
+      resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR, lastResolvedDirLink.getLink().getTargetFileSystem(),
+          lastResolvedDirLink.fullPath, remainingPath,true);
+    } else {
+      remainingPath = resolveLastComponent ? SlashPath : getRemainingPath(path, i);
+      resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR, curInode.getInternalDirFs(),
+          curInode.fullPath, remainingPath, false);
+    }
+    return resolveResult;
+  }
+
+  /**
+   * Return remaining path from specified index to the end of the path array.
+   * @param path An array of path components split by slash
+   * @param startIndex the specified start index of the path array
+   * @return remaining path.
+   */
+  private Path getRemainingPath(String[] path, int startIndex) {
+    Path remainingPath;
+    if (startIndex >= path.length) {
       remainingPath = SlashPath;
     } else {
-      // note we have taken care of when path is "/" above
-      // for internal dirs rem-path does not start with / since the lookup
-      // that follows will do a children.get(remaningPath) and will have to
-      // strip-out the initial /
-      StringBuilder remainingPathStr = new StringBuilder("/" + path[i]);
-      for (int j = i + 1; j < path.length; ++j) {
-        remainingPathStr.append('/').append(path[j]);
+      StringBuilder remainingPathStr = new StringBuilder();
+      for (int j = startIndex; j < path.length; j++) {
+        remainingPathStr.append("/").append(path[j]);
       }
       remainingPath = new Path(remainingPathStr.toString());
     }
-    resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-        curInode.getInternalDirFs(), curInode.fullPath, remainingPath, false);
-    return resolveResult;
+    return remainingPath;
   }
 
   /**
