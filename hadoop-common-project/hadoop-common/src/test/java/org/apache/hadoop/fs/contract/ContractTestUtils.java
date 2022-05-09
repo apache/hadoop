@@ -29,10 +29,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.functional.FutureIO;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -1102,7 +1101,15 @@ public class ContractTestUtils extends Assert {
                 mismatch);
   }
 
-  public static void validateVectoredReadResult(List<FileRange> fileRanges, byte[] DATASET)
+  /**
+   * Utility to validate vectored read results.
+   * @param fileRanges input ranges.
+   * @param originalData original data.
+   * @throws ExecutionException any exception.
+   * @throws InterruptedException any exception.
+   */
+  public static void validateVectoredReadResult(List<FileRange> fileRanges,
+                                                byte[] originalData)
           throws ExecutionException, InterruptedException {
     CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
     int i = 0;
@@ -1115,8 +1122,9 @@ public class ContractTestUtils extends Assert {
     for (FileRange res : fileRanges) {
       CompletableFuture<ByteBuffer> data = res.getData();
       try {
-        ByteBuffer buffer = FutureIOSupport.awaitFuture(data);
-        assertDatasetEquals((int) res.getOffset(), "vecRead", buffer, res.getLength(), DATASET);
+        ByteBuffer buffer = FutureIO.awaitFuture(data);
+        assertDatasetEquals((int) res.getOffset(), "vecRead",
+                buffer, res.getLength(), originalData);
       } catch (Exception ex) {
         LOG.error("Exception while running vectored read ", ex);
         Assert.fail("Exception while running vectored read " + ex);
@@ -1133,7 +1141,7 @@ public class ContractTestUtils extends Assert {
    * @param operation  operation name for the assertion.
    * @param data       data read in.
    * @param length     length of data to check.
-   * @param originalData
+   * @param originalData original data.
    */
   public static void assertDatasetEquals(
           final int readOffset, final String operation,

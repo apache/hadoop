@@ -456,7 +456,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   }
 
   @Test
-  public void test_045_VectoredIOHugeFile() throws Throwable {
+  public void test_045_VectoredIoHugeFile() throws Throwable {
     assumeHugeFileExists();
     List<FileRange> rangeList = new ArrayList<>();
     rangeList.add(new FileRangeImpl(5856368, 1167716));
