@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.fairness;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.junit.Assert;
@@ -28,6 +29,7 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
@@ -41,7 +43,7 @@ public class TestDynamicRouterRpcFairnessPolicyController {
   private static String nameServices = "ns1.nn1, ns1.nn2, ns2.nn1, ns2.nn2";
 
   @Test
-  public void testDynamicControllerSimple() throws InterruptedException {
+  public void testDynamicControllerSimple() throws InterruptedException, TimeoutException {
     verifyDynamicControllerSimple(true);
     verifyDynamicControllerSimple(false);
   }
@@ -53,7 +55,7 @@ public class TestDynamicRouterRpcFairnessPolicyController {
   }
 
   private void verifyDynamicControllerSimple(boolean manualRefresh)
-      throws InterruptedException {
+      throws InterruptedException, TimeoutException {
     // 3 permits each ns
     DynamicRouterRpcFairnessPolicyController controller;
     if (manualRefresh) {
@@ -61,14 +63,10 @@ public class TestDynamicRouterRpcFairnessPolicyController {
     } else {
       controller = getFairnessPolicyController(9, 4000);
     }
-    for (int i = 0; i < 3; i++) {
-      Assert.assertTrue(controller.acquirePermit("ns1"));
-      Assert.assertTrue(controller.acquirePermit("ns2"));
-      Assert.assertTrue(controller.acquirePermit(CONCURRENT_NS));
-    }
-    Assert.assertFalse(controller.acquirePermit("ns1"));
-    Assert.assertFalse(controller.acquirePermit("ns2"));
-    Assert.assertFalse(controller.acquirePermit(CONCURRENT_NS));
+
+    String[] nss = new String[] {"ns1", "ns2", CONCURRENT_NS};
+    // Initial permit counts should be 3:3:3
+    verifyRemainingPermitCounts(new int[] {3, 3, 3}, nss, controller);
 
     // Release all permits
     for (int i = 0; i < 3; i++) {
@@ -86,22 +84,18 @@ public class TestDynamicRouterRpcFairnessPolicyController {
     injectDummyMetrics(rejectedPermitsPerNs, CONCURRENT_NS, 10);
     controller.setMetrics(rejectedPermitsPerNs, acceptedPermitsPerNs);
 
+    // Current permits count should be 5:1:5
+    int[] newPermitCounts = new int[] {5, 1, 5};
+
     if (manualRefresh) {
       controller.refreshPermitsCap();
+      verifyRemainingPermitCounts(newPermitCounts, nss, controller);
     } else {
-      Thread.sleep(5000);
+      GenericTestUtils.waitFor(() -> {
+        verifyRemainingPermitCounts(newPermitCounts, nss, controller);
+        return true;
+      }, 5000, 5000);
     }
-
-    // Current permits count should be 5:1:5
-    for (int i = 0; i < 5; i++) {
-      Assert.assertTrue(controller.acquirePermit("ns1"));
-      Assert.assertTrue(controller.acquirePermit(CONCURRENT_NS));
-    }
-    Assert.assertTrue(controller.acquirePermit("ns2"));
-
-    Assert.assertFalse(controller.acquirePermit("ns1"));
-    Assert.assertFalse(controller.acquirePermit("ns2"));
-    Assert.assertFalse(controller.acquirePermit(CONCURRENT_NS));
   }
 
   public void verifyDynamicControllerAllPermitsAcquired(boolean manualRefresh)
@@ -113,11 +107,9 @@ public class TestDynamicRouterRpcFairnessPolicyController {
     } else {
       controller = getFairnessPolicyController(30, 4000);
     }
-    for (int i = 0; i < 10; i++) {
-      Assert.assertTrue(controller.acquirePermit("ns1"));
-      Assert.assertTrue(controller.acquirePermit("ns2"));
-      Assert.assertTrue(controller.acquirePermit(CONCURRENT_NS));
-    }
+
+    String[] nss = new String[] {"ns1", "ns2", CONCURRENT_NS};
+    verifyRemainingPermitCounts(new int[] {10, 10, 10}, nss, controller);
 
     // Inject dummy metrics
     Map<String, LongAdder> rejectedPermitsPerNs = new HashMap<>();
@@ -136,12 +128,7 @@ public class TestDynamicRouterRpcFairnessPolicyController {
 
     // Current permits count should be 14:14:2
     // Can acquire 4 more permits for ns1 and ns2
-    for (int i = 0; i < 4; i++) {
-      Assert.assertTrue(controller.acquirePermit("ns1"));
-      Assert.assertTrue(controller.acquirePermit("ns2"));
-    }
-    Assert.assertFalse(controller.acquirePermit("ns1"));
-    Assert.assertFalse(controller.acquirePermit("ns2"));
+    verifyRemainingPermitCounts(new int[] {4, 4, 0}, nss, controller);
     // Need to release at least 9 permits for concurrent before it has any free permits
     Assert.assertFalse(controller.acquirePermit(CONCURRENT_NS));
     for (int i = 0; i < 8; i++) {
@@ -152,6 +139,21 @@ public class TestDynamicRouterRpcFairnessPolicyController {
     Assert.assertTrue(controller.acquirePermit(CONCURRENT_NS));
   }
 
+  private void verifyRemainingPermitCounts(int[] remainingPermitCounts, String[] nss,
+      RouterRpcFairnessPolicyController controller) {
+    assert remainingPermitCounts.length == nss.length;
+    for (int i = 0; i < remainingPermitCounts.length; i++) {
+      verifyRemainingPermitCount(remainingPermitCounts[i], nss[i], controller);
+    }
+  }
+
+  private void verifyRemainingPermitCount(int remainingPermitCount, String nameservice,
+      RouterRpcFairnessPolicyController controller) {
+    for (int i = 0; i < remainingPermitCount; i++) {
+      Assert.assertTrue(controller.acquirePermit(nameservice));
+    }
+    Assert.assertFalse(controller.acquirePermit(nameservice));
+  }
 
   private void injectDummyMetrics(Map<String, LongAdder> metrics, String ns, long value) {
     metrics.computeIfAbsent(ns, k -> new LongAdder()).add(value);
