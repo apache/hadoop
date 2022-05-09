@@ -55,7 +55,7 @@ pipeline {
     environment {
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='f9ba0170a5787a5f4662d3769804fef0226a182f'
+        YETUS_VERSION='17798f8d3c5bcf85691e77aae3eb64657d66f082'
     }
 
     parameters {
