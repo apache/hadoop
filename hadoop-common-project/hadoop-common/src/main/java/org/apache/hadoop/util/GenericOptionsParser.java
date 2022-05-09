@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
  * 
  * <h3 id="GenericOptions">Generic Options</h3>
  * 
- * <p>The supported generic options are:
+ * <p>The supported generic options are:</p>
  * <p><blockquote><pre>
  *     -conf &lt;configuration file&gt;     specify a configuration file
  *     -D &lt;property=value&gt;            use value for given property
@@ -70,12 +70,12 @@ import org.slf4j.LoggerFactory;
  *     -archives &lt;comma separated list of archives&gt;    specify comma
  *             separated archives to be unarchived on the compute machines.
 
- * </pre></blockquote><p>
+ * </pre></blockquote></p>
  * 
  * <p>The general command line syntax is:</p>
  * <p><pre><code>
  * bin/hadoop command [genericOptions] [commandOptions]
- * </code></pre><p>
+ * </code></pre></p>
  * 
  * <p>Generic command line arguments <strong>might</strong> modify 
  * <code>Configuration </code> objects, given to constructors.</p>
@@ -105,7 +105,7 @@ import org.slf4j.LoggerFactory;
  * $ bin/hadoop jar -libjars testlib.jar 
  * -archives test.tgz -files file.txt inputjar args
  * job submission with libjars, files and archives
- * </pre></blockquote><p>
+ * </pre></blockquote></p>
  *
  * @see Tool
  * @see ToolRunner
