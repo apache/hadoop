@@ -55,7 +55,7 @@ import org.slf4j.LoggerFactory;
  * @param <T> is AbstractFileSystem or FileSystem
  *
  * The two main methods are
- * {@link #InodeTree(Configuration, String)} // constructor
+ * {@link #InodeTree(Configuration, String, URI, boolean)} // constructor
  * {@link #resolve(String, boolean)}
  */
 
@@ -266,8 +266,8 @@ public abstract class InodeTree<T> {
 
    * A merge dir link is  a merge (junction) of links to dirs:
    * example : merge of 2 dirs
-   *     /users -> hdfs:nn1//users
-   *     /users -> hdfs:nn2//users
+   *     /users -&gt; hdfs:nn1//users
+   *     /users -&gt; hdfs:nn2//users
    *
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)

@@ -64,11 +64,9 @@ import org.apache.hadoop.io.IOUtils;
  * </pre>
  *
  * <table width="100%" border="1">
+ * <caption>Memory usage by blocksize</caption>
  * <colgroup> <col width="33%" > <col width="33%" > <col width="33%" >
  * </colgroup>
- * <tr>
- * <th colspan="3">Memory usage by blocksize</th>
- * </tr>
  * <tr>
  * <th align="right">Blocksize</th> <th align="right">Compression<br>
  * memory usage</th> <th align="right">Decompression<br>

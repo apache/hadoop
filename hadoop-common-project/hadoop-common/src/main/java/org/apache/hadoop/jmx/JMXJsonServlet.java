@@ -89,7 +89,6 @@ import java.util.Set;
  * a 404 SC_NOT_FOUND http response code will be returned. 
  * </p>
  * The return format is JSON and in the form
- * <p>
  *  <pre><code>
  *  {
  *    "beans" : [
@@ -100,7 +99,6 @@ import java.util.Set;
  *    ]
  *  }
  *  </code></pre>
- *  </p>
  *  The servlet attempts to convert the the JMXBeans into JSON. Each
  *  bean's attributes will be converted to a JSON object member.
  *  

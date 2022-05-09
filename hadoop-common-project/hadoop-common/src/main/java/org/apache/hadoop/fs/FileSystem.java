@@ -147,21 +147,22 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
  * {@link #hasPathCapability(Path, String)} then
  * {@link FilterFileSystem#hasPathCapability(Path, String)}
  * must return false, always.
- * <p></p>
+ * <p>
  * {@link ChecksumFileSystem}: checksums are created and
  * verified.
- * <p></p>
+ * </p>
  * {@code TestHarFileSystem} will need its {@code MustNotImplement}
  * interface updated.
- * <p></p>
  *
+ * <p>
  * There are some external places your changes will break things.
  * Do co-ordinate changes here.
- * <p></p>
+ * </p>
  *
  * HBase: HBoss
- * <p></p>
+ * <p>
  * Hive: HiveShim23
+ * </p>
  * {@code shims/0.23/src/main/java/org/apache/hadoop/hive/shims/Hadoop23Shims.java}
  *
  *****************************************************************/

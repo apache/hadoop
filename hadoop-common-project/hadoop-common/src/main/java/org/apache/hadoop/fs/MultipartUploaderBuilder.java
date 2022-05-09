@@ -25,8 +25,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * Builder interface for Multipart readers.
- * @param <S>
- * @param <B>
+ * @param <S> MultipartUploader Generic Type
+ * @param <B> MultipartUploaderBuilder Generic Type
  */
 public interface MultipartUploaderBuilder<S extends MultipartUploader, B extends MultipartUploaderBuilder<S, B>>
     extends FSBuilder<S, B> {
