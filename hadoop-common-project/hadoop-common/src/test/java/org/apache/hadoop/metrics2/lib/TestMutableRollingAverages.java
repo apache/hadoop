@@ -31,8 +31,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.apache.hadoop.test.MetricsAsserts.*;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**

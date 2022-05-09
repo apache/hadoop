@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractManifestCommitterTest;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;

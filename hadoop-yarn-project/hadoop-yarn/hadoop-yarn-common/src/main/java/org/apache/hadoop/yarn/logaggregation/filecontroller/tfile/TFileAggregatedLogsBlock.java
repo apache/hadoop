@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller.tfile;
 
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
+import java.io.IOException;
+import java.util.Map;
 
 import com.google.inject.Inject;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -38,8 +37,8 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationHtmlBlock;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.PRE;
+
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
 
 /**
  * The Aggregated Logs Block implementation for TFile.

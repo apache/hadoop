@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.Utils;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+
 /**
  * This test case tests the symlink creation
  * utility provided by distributed caching 

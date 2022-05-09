@@ -20,7 +20,6 @@ package org.apache.hadoop.tools.rumen;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;

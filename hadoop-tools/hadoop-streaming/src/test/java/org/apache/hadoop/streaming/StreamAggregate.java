@@ -20,8 +20,6 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 
-import org.apache.hadoop.streaming.Environment;
-
 /** 
     Used to test the usage of external applications without adding
     platform-specific dependencies.

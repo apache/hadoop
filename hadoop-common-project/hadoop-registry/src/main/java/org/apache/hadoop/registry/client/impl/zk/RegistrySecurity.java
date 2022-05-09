@@ -33,7 +33,6 @@ import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.Environment;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.client.ZKClientConfig;
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;

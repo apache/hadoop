@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azure.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.util.JsonSerialization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

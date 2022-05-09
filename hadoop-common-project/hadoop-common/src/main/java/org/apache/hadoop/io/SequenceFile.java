@@ -27,7 +27,6 @@ import java.security.MessageDigest;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;

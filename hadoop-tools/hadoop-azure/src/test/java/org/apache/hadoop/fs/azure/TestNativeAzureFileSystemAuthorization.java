@@ -50,7 +50,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
 import static org.apache.hadoop.fs.azure.CachingAuthorizer.KEY_AUTH_SERVICE_CACHING_ENABLE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.junit.Assert.assertEquals;
 
 /**
  * Test class to hold all WASB authorization tests.

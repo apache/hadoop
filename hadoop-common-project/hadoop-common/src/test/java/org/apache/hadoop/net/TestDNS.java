@@ -18,25 +18,25 @@
 
 package org.apache.hadoop.net;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.net.InetAddress;
-
 import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
-
-import org.apache.hadoop.util.Time;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.util.Time;
+
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test host name and IP resolution and caching.

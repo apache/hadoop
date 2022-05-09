@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.extensions;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.MOCK_SASTOKENPROVIDER_FAIL_INIT;

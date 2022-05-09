@@ -29,7 +29,7 @@ import static org.junit.Assert.assertThat;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import static org.mockito.ArgumentMatchers.any;
+
 import static org.mockito.Mockito.*;
 import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;

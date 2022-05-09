@@ -30,7 +30,6 @@ import org.apache.hadoop.mapreduce.checkpoint.CheckpointService.CheckpointWriteC
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import org.mockito.*;
 
 public class TestFSCheckpointService {
 

@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.fs.contract;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
+import java.io.IOException;
+
 import org.junit.Test;
 
-import java.io.IOException;
+import org.apache.hadoop.fs.Path;
 
 /**
  * Test creating files, overwrite options &c

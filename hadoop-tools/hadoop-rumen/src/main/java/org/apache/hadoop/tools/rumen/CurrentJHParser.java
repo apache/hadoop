@@ -23,7 +23,6 @@ import java.io.InputStream;
 
 import org.apache.hadoop.mapreduce.jobhistory.EventReader;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
-import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
 
 /**
  * {@link JobHistoryParser} that parses JobHistory files.

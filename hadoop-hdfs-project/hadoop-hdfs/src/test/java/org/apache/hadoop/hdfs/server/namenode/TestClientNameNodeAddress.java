@@ -26,7 +26,6 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;

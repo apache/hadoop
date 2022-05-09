@@ -42,7 +42,6 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.test.GenericTestUtils;
-import static org.apache.hadoop.test.MoreAsserts.*;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;

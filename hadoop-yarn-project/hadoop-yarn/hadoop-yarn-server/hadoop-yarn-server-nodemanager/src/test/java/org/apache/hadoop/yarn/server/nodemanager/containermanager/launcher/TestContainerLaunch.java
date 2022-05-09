@@ -23,7 +23,6 @@ import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.io.BufferedReader;

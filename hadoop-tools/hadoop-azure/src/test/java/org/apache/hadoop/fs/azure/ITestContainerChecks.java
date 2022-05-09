@@ -24,7 +24,6 @@ import java.io.FileNotFoundException;
 import java.util.EnumSet;
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;

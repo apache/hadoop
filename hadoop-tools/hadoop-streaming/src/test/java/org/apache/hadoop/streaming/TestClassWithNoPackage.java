@@ -20,7 +20,6 @@ package org.apache.hadoop.streaming;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.net.MalformedURLException;
 
 import org.apache.hadoop.util.JarFinder;
 import org.junit.Test;

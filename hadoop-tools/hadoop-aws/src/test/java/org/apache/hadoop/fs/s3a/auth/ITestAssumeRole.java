@@ -60,8 +60,6 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
-import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
-import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;

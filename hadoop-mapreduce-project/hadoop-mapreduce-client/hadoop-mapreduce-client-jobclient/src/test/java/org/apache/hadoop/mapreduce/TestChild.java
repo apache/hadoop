@@ -30,7 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.log4j.Level;
-import org.junit.Before;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;

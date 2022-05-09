@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.File;
 import java.io.IOException;

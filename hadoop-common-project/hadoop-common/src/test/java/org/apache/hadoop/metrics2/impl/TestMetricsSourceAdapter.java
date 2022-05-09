@@ -40,7 +40,6 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricsSourceBuilder;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
-import static org.junit.Assert.assertEquals;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.io.retry;
 
-import org.apache.hadoop.io.retry.RetryPolicies.*;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
 import org.apache.hadoop.io.retry.UnreliableInterface.FatalException;
@@ -44,9 +43,6 @@ import javax.security.sasl.SaslException;
 
 import static org.apache.hadoop.io.retry.RetryPolicies.*;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 /**

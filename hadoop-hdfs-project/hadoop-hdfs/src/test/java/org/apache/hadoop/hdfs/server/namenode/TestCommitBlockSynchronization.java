@@ -32,7 +32,6 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**

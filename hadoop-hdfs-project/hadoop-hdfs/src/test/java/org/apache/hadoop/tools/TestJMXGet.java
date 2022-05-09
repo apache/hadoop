@@ -29,7 +29,6 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
@@ -37,9 +36,6 @@ import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;

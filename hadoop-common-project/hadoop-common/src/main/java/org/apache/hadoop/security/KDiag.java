@@ -63,7 +63,6 @@ import static org.apache.hadoop.security.UserGroupInformation.*;
 import static org.apache.hadoop.security.authentication.util.KerberosUtil.*;
 import static org.apache.hadoop.util.StringUtils.popOption;
 import static org.apache.hadoop.util.StringUtils.popOptionWithArgument;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
 
 /**
  * Kerberos diagnostics

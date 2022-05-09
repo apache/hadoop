@@ -21,14 +21,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.apache.hadoop.fs.CommonConfigurationKeys
-    .IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
-    .FS_TRASH_INTERVAL_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
-    .KMS_CLIENT_ENC_KEY_CACHE_LOW_WATERMARK;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.
-    KMS_CLIENT_ENC_KEY_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.
     DFS_DATA_TRANSFER_PROTECTION_KEY;
 

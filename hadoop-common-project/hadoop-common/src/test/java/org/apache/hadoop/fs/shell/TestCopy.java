@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.shell;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;

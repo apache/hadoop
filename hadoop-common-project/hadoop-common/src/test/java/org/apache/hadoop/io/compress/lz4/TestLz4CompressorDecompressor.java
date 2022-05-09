@@ -42,7 +42,6 @@ import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.junit.Test;
-import static org.junit.Assume.*;
 
 public class TestLz4CompressorDecompressor {
   

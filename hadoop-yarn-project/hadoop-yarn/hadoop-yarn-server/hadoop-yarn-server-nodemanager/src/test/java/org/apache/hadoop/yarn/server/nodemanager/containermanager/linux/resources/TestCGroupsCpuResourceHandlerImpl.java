@@ -37,7 +37,6 @@ import java.io.File;
 import java.util.List;
 
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 
 public class TestCGroupsCpuResourceHandlerImpl {
 

@@ -18,20 +18,22 @@
 
 package org.apache.hadoop.mapred;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.CallerContext;
@@ -59,11 +61,8 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * The main() for MapReduce task processes.

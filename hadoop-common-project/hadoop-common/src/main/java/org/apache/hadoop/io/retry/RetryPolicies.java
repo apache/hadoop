@@ -41,7 +41,6 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.ietf.jgss.GSSException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
