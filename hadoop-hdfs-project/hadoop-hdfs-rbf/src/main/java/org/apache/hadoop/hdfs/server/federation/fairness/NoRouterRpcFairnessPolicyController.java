@@ -56,6 +56,11 @@ public class NoRouterRpcFairnessPolicyController implements
   }
 
   @Override
+  public String getPermitCapacityPerNs() {
+    return "N/A";
+  }
+
+  @Override
   public void setMetrics(Map<String, LongAdder> rejectedPermitsPerNs,
       Map<String, LongAdder> acceptedPermitsPerNs) {
     // Nothing

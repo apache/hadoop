@@ -114,6 +114,18 @@ public class TestRouterRpcFairnessPolicyController {
   }
 
   @Test
+  public void testGetPermitCapacityPerNs() {
+    RouterRpcFairnessPolicyController routerRpcFairnessPolicyController
+        = getFairnessPolicyController(30);
+    assertEquals("{\"concurrent\":10,\"ns2\":10,\"ns1\":10}",
+        routerRpcFairnessPolicyController.getPermitCapacityPerNs());
+    routerRpcFairnessPolicyController.acquirePermit("ns1");
+    routerRpcFairnessPolicyController.acquirePermit("ns2");
+    assertEquals("{\"concurrent\":10,\"ns2\":10,\"ns1\":10}",
+        routerRpcFairnessPolicyController.getPermitCapacityPerNs());
+  }
+
+  @Test
   public void testGetAvailableHandlerOnPerNsForNoFairness() {
     Configuration conf = new Configuration();
     RouterRpcFairnessPolicyController routerRpcFairnessPolicyController =

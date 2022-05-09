@@ -44,6 +44,7 @@ public class AbstractRouterRpcFairnessPolicyController
 
   /** Hash table to hold semaphore for each configured name service. */
   private Map<String, AdjustableSemaphore> permits;
+  private final Map<String, Integer> permitSizes = new HashMap<>();
   private Map<String, LongAdder> rejectedPermitsPerNs;
   private Map<String, LongAdder> acceptedPermitsPerNs;
 
@@ -99,6 +100,19 @@ public class AbstractRouterRpcFairnessPolicyController
   }
 
   @Override
+  public String getPermitCapacityPerNs() {
+    JSONObject json = new JSONObject();
+    for (Map.Entry<String, Integer> entry : permitSizes.entrySet()) {
+      try {
+        json.put(entry.getKey(), entry.getValue());
+      } catch (JSONException e) {
+        LOG.warn("Cannot put {} into JSONObject", entry.getKey(), e);
+      }
+    }
+    return json.toString();
+  }
+
+  @Override
   public void setMetrics(Map<String, LongAdder> rejectedPermits,
       Map<String, LongAdder> acceptedPermits) {
     this.rejectedPermitsPerNs = rejectedPermits;
@@ -114,5 +128,9 @@ public class AbstractRouterRpcFairnessPolicyController
   }
   public Map<String, LongAdder> getAcceptedPermitsPerNs() {
     return acceptedPermitsPerNs;
+  }
+
+  protected Map<String, Integer> getPermitSizes() {
+    return permitSizes;
   }
 }
