@@ -64,7 +64,6 @@ import org.apache.hadoop.io.IOUtils;
  * </pre>
  *
  * <table width="100%" border="1">
- *   <caption></caption>
  * <colgroup> <col width="33%" > <col width="33%" > <col width="33%" >
  * </colgroup>
  * <tr>
