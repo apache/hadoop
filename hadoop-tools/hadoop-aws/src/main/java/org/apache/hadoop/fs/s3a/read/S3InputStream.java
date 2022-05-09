@@ -67,7 +67,7 @@ public abstract class S3InputStream
   private volatile boolean closed;
 
   // Indicates whether resources have been freed, useful when the stream is closed via unbuffer.
-  private volatile boolean streamClosed;
+  private volatile boolean underlyingResourcesClosed;
 
   // Current position within the file.
   private FilePosition fpos;
@@ -130,7 +130,7 @@ public abstract class S3InputStream
     setReadahead(context.getReadahead());
 
     this.s3File = this.getS3File();
-    this.initialize();
+    this.initializeUnderlyingResources();
 
     this.seekTargetPos = 0;
   }
@@ -138,8 +138,8 @@ public abstract class S3InputStream
   /**
    * Initializes those resources that the stream uses but are released during unbuffer.
    */
-  protected void initialize() {
-    this.streamClosed = false;
+  protected void initializeUnderlyingResources() {
+    this.underlyingResourcesClosed = false;
     long fileSize = s3Attributes.getLen();
     int bufferSize = context.getPrefetchBlockSize();
     this.reader = new S3Reader(this.s3File);
@@ -211,7 +211,7 @@ public abstract class S3InputStream
   public int available() throws IOException {
     this.throwIfClosed();
 
-    if (streamClosed || !ensureCurrentBuffer()) {
+    if (underlyingResourcesClosed || !ensureCurrentBuffer()) {
       return 0;
     }
 
@@ -366,8 +366,8 @@ public abstract class S3InputStream
     return this.closed;
   }
 
-  protected  boolean isStreamClosed() {
-    return this.streamClosed;
+  protected  boolean allUnderlyingResourceClosed() {
+    return this.underlyingResourcesClosed;
   }
 
   protected long getSeekTargetPos() {
@@ -419,11 +419,11 @@ public abstract class S3InputStream
 
   protected void closeStream() {
 
-    if(this.streamClosed) {
+    if(this.underlyingResourcesClosed) {
       return;
     }
 
-    this.streamClosed = true;
+    this.underlyingResourcesClosed = true;
     this.blockData = null;
     this.reader.close();
     this.reader = null;

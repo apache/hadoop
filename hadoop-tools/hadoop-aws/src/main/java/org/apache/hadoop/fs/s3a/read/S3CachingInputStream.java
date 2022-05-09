@@ -75,8 +75,9 @@ public class S3CachingInputStream extends S3InputStream {
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(), fileSize);
   }
 
-  protected void initialize() {
-    super.initialize();
+  @Override
+  protected void initializeUnderlyingResources() {
+    super.initializeUnderlyingResources();
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
     this.blockManager = this.createBlockManager(
         this.getContext().getFuturePool(),
@@ -100,7 +101,7 @@ public class S3CachingInputStream extends S3InputStream {
     // The call to setAbsolute() returns true if the target position is valid and
     // within the current block. Therefore, no additional work is needed when we get back true.
     if (!this.getFilePosition().setAbsolute(pos)) {
-      if (!this.isStreamClosed()) {
+      if (!this.allUnderlyingResourceClosed()) {
         LOG.info("seek({})", getOffsetStr(pos));
       }
       // We could be here in two cases:

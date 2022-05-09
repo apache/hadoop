@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.StreamCapabilities;
@@ -46,7 +47,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  */
 public class S3PrefetchingInputStream
     extends FSInputStream
-    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
+    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource, CanUnbuffer {
   private static final Logger LOG = LoggerFactory.getLogger(S3PrefetchingInputStream.class);
 
   // Underlying input stream used for reading S3 file.
@@ -99,10 +100,9 @@ public class S3PrefetchingInputStream
    * Gets the current position.
    *
    * @return the current position.
-   * @throws IOException if there is an IO error during this operation.
    */
   @Override
-  public synchronized long getPos() throws IOException {
+  public synchronized long getPos() {
     return this.isClosed() ? 0 : this.inputStream.getPos();
   }
 
@@ -115,6 +115,11 @@ public class S3PrefetchingInputStream
   @Override
   public synchronized int read() throws IOException {
     this.throwIfClosed();
+
+    if(this.inputStream.allUnderlyingResourceClosed()) {
+      this.inputStream.initializeUnderlyingResources();
+    }
+
     return this.inputStream.read();
   }
 
@@ -132,7 +137,19 @@ public class S3PrefetchingInputStream
   @Override
   public synchronized int read(byte[] buffer, int offset, int len) throws IOException {
     this.throwIfClosed();
+
+    if(this.inputStream.allUnderlyingResourceClosed()) {
+      this.inputStream.initializeUnderlyingResources();
+    }
+
     return this.inputStream.read(buffer, offset, len);
+  }
+
+  @Override
+  public synchronized void unbuffer() {
+    if (this.inputStream != null) {
+      this.inputStream.unbuffer();
+    }
   }
 
   /**
