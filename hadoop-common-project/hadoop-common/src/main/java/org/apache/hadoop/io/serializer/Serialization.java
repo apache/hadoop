@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * <p>
  * Encapsulates a {@link Serializer}/{@link Deserializer} pair.
  * </p>
- * @param <T>
+ * @param <T> generic type
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
