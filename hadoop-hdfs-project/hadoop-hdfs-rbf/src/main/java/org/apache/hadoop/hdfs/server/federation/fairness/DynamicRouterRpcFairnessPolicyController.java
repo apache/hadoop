@@ -51,7 +51,7 @@ public class DynamicRouterRpcFairnessPolicyController
   private static final Logger LOG =
       LoggerFactory.getLogger(DynamicRouterRpcFairnessPolicyController.class);
 
-  private static final ScheduledExecutorService scheduledExecutor = HadoopExecutors
+  private static final ScheduledExecutorService SCHEDULED_EXECUTOR = HadoopExecutors
       .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true)
           .setNameFormat("DynamicRouterRpcFairnessPolicyControllerPermitsResizer").build());
   private PermitsResizerService permitsResizerService;
@@ -60,7 +60,7 @@ public class DynamicRouterRpcFairnessPolicyController
 
   /**
    * Initializes using the same logic as {@link StaticRouterRpcFairnessPolicyController}
-   * and starts a periodic semaphore resizer thread
+   * and starts a periodic semaphore resizer thread.
    *
    * @param conf configuration
    */
@@ -72,7 +72,7 @@ public class DynamicRouterRpcFairnessPolicyController
             DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_SECONDS_DEFAULT,
             TimeUnit.SECONDS);
     permitsResizerService = new PermitsResizerService();
-    refreshTask = scheduledExecutor
+    refreshTask = SCHEDULED_EXECUTOR
         .scheduleWithFixedDelay(permitsResizerService, refreshInterval, refreshInterval,
             TimeUnit.MILLISECONDS);
   }
@@ -82,7 +82,7 @@ public class DynamicRouterRpcFairnessPolicyController
     super(conf);
     handlerCount = conf.getInt(DFS_ROUTER_HANDLER_COUNT_KEY, DFS_ROUTER_HANDLER_COUNT_DEFAULT);
     permitsResizerService = new PermitsResizerService();
-    refreshTask = scheduledExecutor
+    refreshTask = SCHEDULED_EXECUTOR
         .scheduleWithFixedDelay(permitsResizerService, refreshInterval, refreshInterval,
             TimeUnit.MILLISECONDS);
   }
@@ -98,8 +98,8 @@ public class DynamicRouterRpcFairnessPolicyController
     if (refreshTask != null) {
       refreshTask.cancel(true);
     }
-    if (scheduledExecutor != null) {
-      scheduledExecutor.shutdown();
+    if (SCHEDULED_EXECUTOR != null) {
+      SCHEDULED_EXECUTOR.shutdown();
     }
   }
 
@@ -109,26 +109,26 @@ public class DynamicRouterRpcFairnessPolicyController
     public synchronized void run() {
       long totalOps = 0;
       Map<String, Long> nsOps = new HashMap<>();
-      for (Map.Entry<String, AdjustableSemaphore> entry : permits.entrySet()) {
-        long ops = (rejectedPermitsPerNs.containsKey(entry.getKey()) ?
-            rejectedPermitsPerNs.get(entry.getKey()).longValue() :
-            0) + (acceptedPermitsPerNs.containsKey(entry.getKey()) ?
-            acceptedPermitsPerNs.get(entry.getKey()).longValue() :
+      for (Map.Entry<String, AdjustableSemaphore> entry : getPermits().entrySet()) {
+        long ops = (getRejectedPermitsPerNs().containsKey(entry.getKey()) ?
+            getRejectedPermitsPerNs().get(entry.getKey()).longValue() :
+            0) + (getAcceptedPermitsPerNs().containsKey(entry.getKey()) ?
+            getAcceptedPermitsPerNs().get(entry.getKey()).longValue() :
             0);
         nsOps.put(entry.getKey(), ops);
         totalOps += ops;
       }
 
-      for (Map.Entry<String, AdjustableSemaphore> entry : permits.entrySet()) {
+      for (Map.Entry<String, AdjustableSemaphore> entry : getPermits().entrySet()) {
         String ns = entry.getKey();
         AdjustableSemaphore semaphore = entry.getValue();
-        int oldPermitCap = permitSizes.get(ns);
+        int oldPermitCap = getPermitSizes().get(ns);
         int newPermitCap = (int) Math.ceil((float) nsOps.get(ns) / totalOps * handlerCount);
         // Leave at least 1 handler even if there's no traffic
         if (newPermitCap == 0) {
           newPermitCap = 1;
         }
-        permitSizes.put(ns, newPermitCap);
+        getPermitSizes().put(ns, newPermitCap);
         if (newPermitCap > oldPermitCap) {
           semaphore.release(newPermitCap - oldPermitCap);
         } else if (newPermitCap < oldPermitCap) {

@@ -278,8 +278,8 @@ public final class FederationUtil {
    * from the configuration and attaches permits access metrics to the controller.
    *
    * @param conf Configuration that defines the fairness controller class.
-   * @param rejectedPermitsPerNs Metrics map ns -> rejected permits
-   * @param acceptedPermitsPerNs Metrics map ns -> accepted permits
+   * @param rejectedPermitsPerNs Metrics map ns:rejected permits
+   * @param acceptedPermitsPerNs Metrics map ns:accepted permits
    * @return Fairness policy controller.
    */
   public static RouterRpcFairnessPolicyController newFairnessPolicyController(Configuration conf,

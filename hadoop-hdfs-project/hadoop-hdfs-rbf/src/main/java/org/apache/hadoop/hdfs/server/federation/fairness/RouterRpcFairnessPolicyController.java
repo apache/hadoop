@@ -72,7 +72,7 @@ public interface RouterRpcFairnessPolicyController {
   String getAvailableHandlerOnPerNs();
 
   /**
-   * Attaches permits access metrics to the controller
+   * Attaches permits access metrics to the controller.
    */
   void setMetrics(Map<String, LongAdder> rejectedPermitsPerNs,
       Map<String, LongAdder> acceptedPermitsPerNs);

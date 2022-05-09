@@ -43,9 +43,9 @@ public class AbstractRouterRpcFairnessPolicyController
       LoggerFactory.getLogger(AbstractRouterRpcFairnessPolicyController.class);
 
   /** Hash table to hold semaphore for each configured name service. */
-  protected Map<String, AdjustableSemaphore> permits;
-  protected Map<String, LongAdder> rejectedPermitsPerNs;
-  protected Map<String, LongAdder> acceptedPermitsPerNs;
+  private Map<String, AdjustableSemaphore> permits;
+  private Map<String, LongAdder> rejectedPermitsPerNs;
+  private Map<String, LongAdder> acceptedPermitsPerNs;
 
   public void init(Configuration conf) {
     this.permits = new HashMap<>();
@@ -99,9 +99,20 @@ public class AbstractRouterRpcFairnessPolicyController
   }
 
   @Override
-  public void setMetrics(Map<String, LongAdder> rejectedPermitsPerNs,
-      Map<String, LongAdder> acceptedPermitsPerNs) {
-    this.rejectedPermitsPerNs = rejectedPermitsPerNs;
-    this.acceptedPermitsPerNs = acceptedPermitsPerNs;
+  public void setMetrics(Map<String, LongAdder> rejectedPermits,
+      Map<String, LongAdder> acceptedPermits) {
+    this.rejectedPermitsPerNs = rejectedPermits;
+    this.acceptedPermitsPerNs = acceptedPermits;
+  }
+
+  protected Map<String, AdjustableSemaphore> getPermits() {
+    return permits;
+  }
+
+  public Map<String, LongAdder> getRejectedPermitsPerNs() {
+    return rejectedPermitsPerNs;
+  }
+  public Map<String, LongAdder> getAcceptedPermitsPerNs() {
+    return acceptedPermitsPerNs;
   }
 }

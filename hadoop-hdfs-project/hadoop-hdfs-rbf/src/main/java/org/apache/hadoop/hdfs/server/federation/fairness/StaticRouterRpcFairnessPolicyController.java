@@ -48,7 +48,7 @@ public class StaticRouterRpcFairnessPolicyController extends
       + DFS_ROUTER_HANDLER_COUNT_KEY + '='
       + " %d is less than the minimum required handlers %d";
 
-  protected Map<String, Integer> permitSizes = new HashMap<>();
+  private Map<String, Integer> permitSizes = new HashMap<>();
 
   public StaticRouterRpcFairnessPolicyController(Configuration conf) {
     init(conf);
@@ -142,4 +142,7 @@ public class StaticRouterRpcFairnessPolicyController extends
     }
   }
 
+  protected Map<String, Integer> getPermitSizes() {
+    return permitSizes;
+  }
 }
