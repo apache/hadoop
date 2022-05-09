@@ -429,7 +429,6 @@ public abstract class InodeTree<T> {
   /**
    * The user of this class must subclass and implement the following
    * 3 abstract methods.
-   * @throws IOException
    */
   protected abstract Function<URI, T> initAndGetTargetFs();
 
@@ -882,7 +881,7 @@ public abstract class InodeTree<T> {
   /**
    * Walk through all regex mount points to see
    * whether the path match any regex expressions.
-   *  E.g. link: ^/user/(?<username>\\w+) => s3://$user.apache.com/_${user}
+   *  E.g. link: ^/user/(?&lt;username&gt;\\w+) =&gt; s3://$user.apache.com/_${user}
    *  srcPath: is /user/hadoop/dir1
    *  resolveLastComponent: true
    *  then return value is s3://hadoop.apache.com/_hadoop
@@ -907,7 +906,7 @@ public abstract class InodeTree<T> {
    * Build resolve result.
    * Here's an example
    * Mountpoint: fs.viewfs.mounttable.mt
-   *     .linkRegex.replaceresolveddstpath:_:-#.^/user/(?<username>\w+)
+   *     .linkRegex.replaceresolveddstpath:_:-#.^/user/(?&lt;username&gt;\w+)
    * Value: /targetTestRoot/$username
    * Dir path to test:
    * viewfs://mt/user/hadoop_user1/hadoop_dir1
