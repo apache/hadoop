@@ -35,7 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * other producers may write to the output between calls to
  * {@link #serialize(Object)}.
  * </p>
- * @param <T>
+ * @param <T> generic type
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
