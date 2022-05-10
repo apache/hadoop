@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+
 import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
