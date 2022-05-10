@@ -242,7 +242,7 @@ public abstract class KeyProvider implements Closeable {
     /**
      * Serialize the metadata to a set of bytes.
      * @return the serialized bytes
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     protected byte[] serialize() throws IOException {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -281,7 +281,7 @@ public abstract class KeyProvider implements Closeable {
     /**
      * Deserialize a new metadata object from a set of bytes.
      * @param bytes the serialized metadata
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     protected Metadata(byte[] bytes) throws IOException {
       String cipher = null;
@@ -450,7 +450,7 @@ public abstract class KeyProvider implements Closeable {
    * when decrypting data.
    * @param versionName the name of a specific version of the key
    * @return the key material
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract KeyVersion getKeyVersion(String versionName
                                             ) throws IOException;
@@ -458,14 +458,14 @@ public abstract class KeyProvider implements Closeable {
   /**
    * Get the key names for all keys.
    * @return the list of key names
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract List<String> getKeys() throws IOException;
 
   /**
    * Get key metadata in bulk.
    * @param names the names of the keys to get
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public Metadata[] getKeysMetadata(String... names) throws IOException {
     Metadata[] result = new Metadata[names.length];
@@ -478,7 +478,7 @@ public abstract class KeyProvider implements Closeable {
   /**
    * Get the key material for all versions of a specific key name.
    * @return the list of key material
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract List<KeyVersion> getKeyVersions(String name) throws IOException;
 
@@ -488,7 +488,7 @@ public abstract class KeyProvider implements Closeable {
    * @param name the base name of the key
    * @return the version name of the current version of the key or null if the
    *    key version doesn't exist
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public KeyVersion getCurrentKey(String name) throws IOException {
     Metadata meta = getMetadata(name);
@@ -502,7 +502,7 @@ public abstract class KeyProvider implements Closeable {
    * Get metadata about the key.
    * @param name the basename of the key
    * @return the key's metadata or null if the key doesn't exist
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract Metadata getMetadata(String name) throws IOException;
 
@@ -512,7 +512,7 @@ public abstract class KeyProvider implements Closeable {
    * @param material the key material for the first version of the key.
    * @param options the options for the new key.
    * @return the version name of the first version of the key.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract KeyVersion createKey(String name, byte[] material,
                                        Options options) throws IOException;
@@ -558,7 +558,7 @@ public abstract class KeyProvider implements Closeable {
    * @param name the base name of the key
    * @param options the options for the new key.
    * @return the version name of the first version of the key.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws NoSuchAlgorithmException
    */
   public KeyVersion createKey(String name, Options options)
@@ -570,7 +570,7 @@ public abstract class KeyProvider implements Closeable {
   /**
    * Delete the given key.
    * @param name the name of the key to delete
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void deleteKey(String name) throws IOException;
 
@@ -579,7 +579,7 @@ public abstract class KeyProvider implements Closeable {
    * @param name the basename of the key
    * @param material the new key material
    * @return the name of the new version of the key
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract KeyVersion rollNewVersion(String name,
                                              byte[] material
@@ -601,7 +601,7 @@ public abstract class KeyProvider implements Closeable {
    *
    * @param name the basename of the key
    * @return the name of the new version of the key
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public KeyVersion rollNewVersion(String name) throws NoSuchAlgorithmException,
                                                        IOException {
@@ -620,7 +620,7 @@ public abstract class KeyProvider implements Closeable {
    * version of the given key.
    *
    * @param name the basename of the key
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void invalidateCache(String name) throws IOException {
     // NOP
@@ -628,7 +628,7 @@ public abstract class KeyProvider implements Closeable {
 
   /**
    * Ensures that any changes to the keys are written to persistent store.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void flush() throws IOException;
 
@@ -637,7 +637,7 @@ public abstract class KeyProvider implements Closeable {
    * "/aaa/bbb".
    * @param versionName the version name to split
    * @return the base name of the key
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static String getBaseName(String versionName) throws IOException {
     int div = versionName.lastIndexOf('@');
