@@ -1172,6 +1172,7 @@ public class DatanodeManager {
       DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByXferAddr(
           nodeReg.getIpAddr(), nodeReg.getXferPort());
         
+      // Non-change. REMOVE. Number 2
       if (nodeN != null && nodeN != nodeS) {
         NameNode.LOG.info("BLOCK* registerDatanode: " + nodeN);
         // nodeN previously served a different data storage, 
@@ -1193,14 +1194,14 @@ public class DatanodeManager {
           }
         } else {
           // nodeS is found
-          /* The registering datanode is a replacement node for the existing 
+          /* The registering datanode is a replacement node for the existing
             data storage, which from now on will be served by a new node.
             If this message repeats, both nodes might have same storageID 
             by (insanely rare) random chance. User needs to restart one of the
             nodes with its data cleared (or user can just remove the StorageID
             value in "VERSION" file under the data directory of the datanode,
             but this is might not work if VERSION file format has changed 
-         */        
+          */        
           NameNode.stateChangeLog.info("BLOCK* registerDatanode: " + nodeS
               + " is replaced by " + nodeReg + " with the same storageID "
               + nodeReg.getDatanodeUuid());
