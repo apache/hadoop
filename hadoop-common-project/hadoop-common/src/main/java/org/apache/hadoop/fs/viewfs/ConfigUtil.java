@@ -249,7 +249,7 @@ public class ConfigUtil {
   }
 
   /**
-   * Get the bool config whether nested mount point is supported.
+   * Check the bool config whether nested mount point is supported.
    * @param conf - from this conf
    * @return whether nested mount point is supported
    */
