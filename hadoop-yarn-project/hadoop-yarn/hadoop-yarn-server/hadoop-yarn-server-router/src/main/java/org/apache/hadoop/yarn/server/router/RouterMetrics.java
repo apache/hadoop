@@ -76,8 +76,7 @@ public final class RouterMetrics {
   @Metric("Total number of successful Retrieved getClusterMetrics and "
       + "latency(ms)")
   private MutableRate totalSucceededGetClusterMetricsRetrieved;
-  @Metric("Total number of successful Retrieved getClusterNodes and "
-          + "latency(ms)")
+  @Metric("Total number of successful Retrieved getClusterNodes and latency(ms)")
   private MutableRate totalSucceededGetClusterNodesRetrieved;
 
   /**
