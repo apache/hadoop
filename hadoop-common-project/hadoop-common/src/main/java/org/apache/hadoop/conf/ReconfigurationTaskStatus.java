@@ -43,6 +43,7 @@ public class ReconfigurationTaskStatus {
    * Return true if
    *   - A reconfiguration task has finished or
    *   - an active reconfiguration task is running
+   * @return true if startTime &gt; 0; false if not.
    */
   public boolean hasTask() {
     return startTime > 0;
@@ -51,6 +52,7 @@ public class ReconfigurationTaskStatus {
   /**
    * Return true if the latest reconfiguration task has finished and there is
    * no another active task running.
+   * @return true if endTime &gt; 0; false if not.
    */
   public boolean stopped() {
     return endTime > 0;
