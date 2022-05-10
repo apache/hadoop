@@ -446,7 +446,7 @@ public class FederationClientInterceptor
               federationFacade.getApplicationHomeSubCluster(applicationId);
           if (subClusterId == subClusterIdInStateStore) {
             LOG.info("Application {} already submitted on SubCluster {} ",
-                    applicationId , subClusterId);
+                    applicationId, subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
             RouterAuditLogger.logFailure(user.getShortUserName(),
@@ -470,7 +470,8 @@ public class FederationClientInterceptor
 
       if (response != null) {
         LOG.info("Application {} with appId {} submitted on {} ",
-                request.getApplicationSubmissionContext().getApplicationName(), applicationId, subClusterId);
+                request.getApplicationSubmissionContext().getApplicationName(),
+                applicationId, subClusterId);
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
         RouterAuditLogger.logSuccess(user.getShortUserName(),
