@@ -53,7 +53,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotM
  * deserialized. If for some reason this is required, use
  * {@link #requiredSerializationClasses()} to get the list of classes
  * used when deserializing instances of this object.
- * <p>
+ * </p>
  * <p>
  * It is annotated for correct serializations with jackson2.
  * </p>

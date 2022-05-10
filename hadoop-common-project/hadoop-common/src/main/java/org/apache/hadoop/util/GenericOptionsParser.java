@@ -86,7 +86,7 @@ import org.slf4j.LoggerFactory;
  * <p>The functionality is implemented using Commons CLI.</p>
  *
  * <p>Examples:</p>
- * <p>
+ *
  * <blockquote>
  * <pre>
  * $ bin/hadoop dfs -fs darwin:8020 -ls /data
@@ -112,7 +112,7 @@ import org.slf4j.LoggerFactory;
  * job submission with libjars, files and archives
  * </pre>
  * </blockquote>
- * </p>
+ *
  *
  * @see Tool
  * @see ToolRunner
