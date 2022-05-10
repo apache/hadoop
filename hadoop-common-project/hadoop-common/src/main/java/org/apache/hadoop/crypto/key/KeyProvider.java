@@ -537,7 +537,7 @@ public abstract class KeyProvider implements Closeable {
    * @param size length of the key.
    * @param algorithm algorithm to use for generating the key.
    * @return the generated key.
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchAlgorithmException no such algorithm exception
    */
   protected byte[] generateKey(int size, String algorithm)
       throws NoSuchAlgorithmException {
@@ -559,7 +559,7 @@ public abstract class KeyProvider implements Closeable {
    * @param options the options for the new key.
    * @return the version name of the first version of the key.
    * @throws IOException raised on errors performing I/O.
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchAlgorithmException no such algorithm exception
    */
   public KeyVersion createKey(String name, Options options)
       throws NoSuchAlgorithmException, IOException {
@@ -602,7 +602,8 @@ public abstract class KeyProvider implements Closeable {
    * @param name the basename of the key
    * @return the name of the new version of the key
    * @throws IOException              raised on errors performing I/O.
-   * @throws NoSuchAlgorithmException This exception is thrown when a particular cryptographic algorithm is requested
+   * @throws NoSuchAlgorithmException This exception is thrown when a particular
+   *                                  cryptographic algorithm is requested
    *                                  but is not available in the environment.
    */
   public KeyVersion rollNewVersion(String name) throws NoSuchAlgorithmException,
@@ -684,7 +685,7 @@ public abstract class KeyProvider implements Closeable {
    * means. If true, the password should be provided by the caller using
    * setPassword().
    * @return Whether or not the provider requires a password
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public boolean needsPassword() throws IOException {
     return false;

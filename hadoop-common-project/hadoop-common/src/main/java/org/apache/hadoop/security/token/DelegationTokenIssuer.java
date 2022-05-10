@@ -46,7 +46,7 @@ public interface DelegationTokenIssuer {
   /**
    * Unconditionally get a new token with the optional renewer.  Returning
    * null indicates the service does not issue tokens.
-   * @param renewer
+   * @param renewer renewer
    * @return the token
    * @throws IOException raised on errors performing I/O.
    */

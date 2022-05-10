@@ -63,12 +63,15 @@ public abstract class TokenRenewer {
   public abstract long renew(Token<?> token,
                              Configuration conf
                              ) throws IOException, InterruptedException;
-  
-  /**
-   * Cancel the given token
-   * @throws IOException
-   * @throws InterruptedException 
-   */
+
+    /**
+     * Cancel the given token
+     *
+     * @throws IOException          raised on errors performing I/O.
+     * @throws InterruptedException thrown when a thread is waiting, sleeping,
+     *                              or otherwise occupied, and the thread is interrupted,
+     *                              either before or during the activity.
+     */
   public abstract void cancel(Token<?> token,
                               Configuration conf
                               ) throws IOException, InterruptedException;

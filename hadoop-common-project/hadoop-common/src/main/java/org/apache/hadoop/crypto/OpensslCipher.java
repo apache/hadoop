@@ -251,8 +251,11 @@ public final class OpensslCipher {
    * @param output the output ByteBuffer
    * @return int number of bytes stored in <code>output</code>
    * @throws ShortBufferException      if there is insufficient space in the output buffer.
-   * @throws IllegalBlockSizeException This exception is thrown when the length of data provided to a block cipher is incorrect.
-   * @throws BadPaddingException       This exception is thrown when a particular padding mechanism is expected for the input data but the data is not padded properly.
+   * @throws IllegalBlockSizeException This exception is thrown when the length
+   *                                   of data provided to a block cipher is incorrect.
+   * @throws BadPaddingException       This exception is thrown when a particular
+   *                                   padding mechanism is expected for the input
+   *                                   data but the data is not padded properly.
    */
   public int doFinal(ByteBuffer output) throws ShortBufferException, 
       IllegalBlockSizeException, BadPaddingException {

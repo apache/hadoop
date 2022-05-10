@@ -3907,6 +3907,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   /** For debugging.  List non-default properties to the terminal and exit.
    * @param args the argument to be parsed
+   * @throws Exception exception
    */
   public static void main(String[] args) throws Exception {
     new Configuration().writeXml(System.out);

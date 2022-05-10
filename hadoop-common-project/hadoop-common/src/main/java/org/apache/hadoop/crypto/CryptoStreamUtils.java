@@ -39,7 +39,11 @@ public class CryptoStreamUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(CryptoStreamUtils.class);
 
-  /** Forcibly free the direct buffer. */
+  /**
+   * Forcibly free the direct buffer.
+   *
+   * @param buffer buffer
+   */
   public static void freeDB(ByteBuffer buffer) {
     if (CleanerUtil.UNMAP_SUPPORTED) {
       try {
@@ -53,7 +57,7 @@ public class CryptoStreamUtils {
   }
 
   /**
-   * Read crypto buffer size
+   * Read crypto buffer size.
    *
    * @param conf configuration
    * @return hadoop.security.crypto.buffer.size
@@ -77,7 +81,7 @@ public class CryptoStreamUtils {
   }
 
   /**
-   * Check and floor buffer size
+   * Check and floor buffer size.
    *
    * @param codec      crypto codec
    * @param bufferSize the size of the buffer to be used.

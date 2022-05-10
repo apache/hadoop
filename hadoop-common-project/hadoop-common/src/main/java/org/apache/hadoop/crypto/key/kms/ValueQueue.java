@@ -63,7 +63,7 @@ public class ValueQueue <E> {
      * @param keyName Key name
      * @param keyQueue Queue that needs to be filled
      * @param numValues number of Values to be added to the queue.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public void fillQueueForKey(String keyName,
         Queue<E> keyQueue, int numValues) throws IOException;
@@ -344,8 +344,8 @@ public class ValueQueue <E> {
    * @param keyName String key name
    * @param num Minimum number of values to return.
    * @return {@literal List<E>} values returned
-   * @throws IOException
-   * @throws ExecutionException
+   * @throws IOException raised on errors performing I/O.
+   * @throws ExecutionException execution exception
    */
   public List<E> getAtMost(String keyName, int num) throws IOException,
       ExecutionException {
