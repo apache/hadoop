@@ -564,9 +564,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     roleFS = (S3AFileSystem) writeableDir.getFileSystem(conf);
     CommitterStatistics committerStatistics = fs.newCommitterStatistics();
     CommitOperations fullOperations = new CommitOperations(fs,
-        committerStatistics);
+        committerStatistics, "/");
     CommitOperations operations = new CommitOperations(roleFS,
-        committerStatistics);
+        committerStatistics, "/");
 
     File localSrc = File.createTempFile("source", "");
     writeCSVData(localSrc);
@@ -610,7 +610,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       // we expect to be able to list all the files here
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
           pendingCommits = operations.loadSinglePendingCommits(readOnlyDir,
-          true, commitContext);
+          true, commitContext, false);
 
       // all those commits must fail
       List<SinglePendingCommit> commits = pendingCommits.getLeft().getCommits();

@@ -463,6 +463,10 @@ public enum Statistic {
       "committer_commits_reverted",
       "Count of commits reverted",
       TYPE_COUNTER),
+  COMMITTER_LOAD_SINGLE_PENDING_FILE(
+      "committer_load_single_pending_file",
+      "Duration to load a single pending file in task commit",
+      TYPE_DURATION),
   COMMITTER_MAGIC_FILES_CREATED(
       "committer_magic_files_created",
       "Count of files created under 'magic' paths",

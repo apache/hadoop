@@ -190,7 +190,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     try (CommitContext commitContext = initiateTaskOperation(context)) {
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
           loaded = actions.loadSinglePendingCommits(
-              taskAttemptPath, true, commitContext);
+              taskAttemptPath, true, commitContext, false);
       pendingSet = loaded.getKey();
       List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
       if (!failures.isEmpty()) {

@@ -69,6 +69,7 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MATERIALIZE_FILE;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_LOAD_SINGLE_PENDING_FILE;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.XA_MAGIC_MARKER;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
@@ -121,7 +122,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @throws IOException failure to bind.
    */
   public CommitOperations(S3AFileSystem fs) throws IOException {
-    this(requireNonNull(fs), fs.newCommitterStatistics());
+    this(requireNonNull(fs), fs.newCommitterStatistics(), "/");
   }
 
   /**
@@ -129,10 +130,12 @@ public class CommitOperations extends AbstractStoreOperation
    * the commit operations.
    * @param fs FS to bind to
    * @param committerStatistics committer statistics
+   * @param outputPath
    * @throws IOException failure to bind.
    */
   public CommitOperations(S3AFileSystem fs,
-      CommitterStatistics committerStatistics) throws IOException {
+      CommitterStatistics committerStatistics,
+      String outputPath) throws IOException {
     super(requireNonNull(fs).createStoreContext());
     this.fs = fs;
     statistics = requireNonNull(committerStatistics);
@@ -140,7 +143,7 @@ public class CommitOperations extends AbstractStoreOperation
     writeOperations = fs.createWriteOperationHelper(
         fs.getAuditSpanSource().createSpan(
             COMMITTER_COMMIT_JOB.getSymbol(),
-            "/", null));
+            outputPath, null));
   }
 
   /**
@@ -258,6 +261,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @param pendingDir directory containing commits
    * @param recursive do a recursive scan?
    * @param commitContext commit context
+   * @param deleteSource delete the source file and stub file without prefix?
    * @return tuple of loaded entries and those pending files which would
    * not load/validate.
    * @throws IOException on a failure to list the files.
@@ -266,7 +270,8 @@ public class CommitOperations extends AbstractStoreOperation
       List<Pair<LocatedFileStatus, IOException>>>
       loadSinglePendingCommits(Path pendingDir,
       boolean recursive,
-      CommitContext commitContext)
+      CommitContext commitContext,
+      boolean deleteSource)
       throws IOException {
 
     PendingSet commits = new PendingSet();
@@ -280,14 +285,28 @@ public class CommitOperations extends AbstractStoreOperation
         .suppressExceptions(false)
         .executeWith(commitContext.getOuterSubmitter())
         .run(status -> {
+          Path path = status.getPath();
           try {
-            pendingFiles.add(
-                SinglePendingCommit.load(fs,
-                    status.getPath(),
-                    status,
-                    commitContext.getSinglePendingFileSerializer()));
+            // load the file
+            SinglePendingCommit singleCommit = trackDuration(statistics,
+                COMMITTER_LOAD_SINGLE_PENDING_FILE.getSymbol(), () ->
+                    SinglePendingCommit.load(fs,
+                        path,
+                        status,
+                        commitContext.getSinglePendingFileSerializer()));
+            // aggregate stats
+            commits.getIOStatistics()
+                .aggregate(singleCommit.getIOStatistics());
+            // then clear so they aren't marshalled again.
+            singleCommit.getIOStatistics().clear();
+            pendingFiles.add(singleCommit);
+            if (deleteSource) {
+              // TODO, delete files here
+
+
+            }
           } catch (IOException e) {
-            LOG.warn("Failed to load commit file {}", status.getPath(), e);
+            LOG.warn("Failed to load commit file {}", path, e);
             failures.add(Pair.of(status, e));
           }
         });

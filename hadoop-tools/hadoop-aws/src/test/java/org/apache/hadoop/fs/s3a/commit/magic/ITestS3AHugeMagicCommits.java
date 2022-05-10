@@ -133,7 +133,8 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     try(CommitContext commitContext
             = operations.createCommitContextForTesting(jobDir, null, COMMITTER_THREADS)) {
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
-          results = operations.loadSinglePendingCommits(jobDir, false, commitContext);
+          results = operations.loadSinglePendingCommits(jobDir, false, commitContext,
+          false);
       for (SinglePendingCommit singlePendingCommit :
           results.getKey().getCommits()) {
         commitContext.commitOrFail(singlePendingCommit);

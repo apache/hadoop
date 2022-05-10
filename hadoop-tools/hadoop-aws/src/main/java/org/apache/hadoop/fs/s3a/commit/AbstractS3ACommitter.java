@@ -227,7 +227,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
         DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
     // the statistics are shared between this committer and its operations.
     this.committerStatistics = fs.newCommitterStatistics();
-    this.commitOperations = new CommitOperations(fs, committerStatistics);
+    this.commitOperations = new CommitOperations(fs, committerStatistics,
+        outputPath.toString());
   }
 
   /**

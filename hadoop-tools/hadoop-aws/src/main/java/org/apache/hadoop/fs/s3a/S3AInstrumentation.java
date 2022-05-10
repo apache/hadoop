@@ -1638,6 +1638,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               COMMITTER_TASKS_SUCCEEDED.getSymbol())
           .withDurationTracking(
               COMMITTER_COMMIT_JOB.getSymbol(),
+              COMMITTER_LOAD_SINGLE_PENDING_FILE.getSymbol(),
               COMMITTER_MATERIALIZE_FILE.getSymbol(),
               COMMITTER_STAGE_FILE_UPLOAD.getSymbol())
           .build();
