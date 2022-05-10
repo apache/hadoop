@@ -466,6 +466,7 @@ public abstract class KeyProvider implements Closeable {
    * Get key metadata in bulk.
    * @param names the names of the keys to get
    * @throws IOException raised on errors performing I/O.
+   * @return Metadata Array
    */
   public Metadata[] getKeysMetadata(String... names) throws IOException {
     Metadata[] result = new Metadata[names.length];
@@ -479,6 +480,7 @@ public abstract class KeyProvider implements Closeable {
    * Get the key material for all versions of a specific key name.
    * @return the list of key material
    * @throws IOException raised on errors performing I/O.
+   * @return KeyVersion List
    */
   public abstract List<KeyVersion> getKeyVersions(String name) throws IOException;
 

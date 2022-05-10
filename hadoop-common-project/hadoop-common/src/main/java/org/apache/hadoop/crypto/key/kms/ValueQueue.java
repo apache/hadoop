@@ -268,7 +268,7 @@ public class ValueQueue <E> {
    * Initializes the Value Queues for the provided keys by calling the
    * fill Method with "numInitValues" values
    * @param keyNames Array of key Names
-   * @throws ExecutionException
+   * @throws ExecutionException executionException
    */
   public void initializeQueuesForKeys(String... keyNames)
       throws ExecutionException {
@@ -285,8 +285,8 @@ public class ValueQueue <E> {
    * function to add 1 value to Queue and then drain it.
    * @param keyName String key name
    * @return E the next value in the Queue
-   * @throws IOException
-   * @throws ExecutionException
+   * @throws IOException raised on errors performing I/O.
+   * @throws ExecutionException executionException
    */
   public E getNext(String keyName)
       throws IOException, ExecutionException {

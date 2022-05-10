@@ -993,6 +993,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @throws FileNotFoundException file not found exception
    * @throws UnresolvedLinkException unresolved link exception
    * @throws IOException             raised on errors performing I/O.
+   * @return File Check sum
    */
   public abstract FileChecksum getFileChecksum(final Path f)
       throws AccessControlException, FileNotFoundException,
@@ -1009,6 +1010,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @throws FileNotFoundException file not found exception
    * @throws UnresolvedLinkException unresolved link exception
    * @throws IOException             raised on errors performing I/O.
+   * @return File Status
    */
   public abstract FileStatus getFileStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
@@ -1473,6 +1475,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param path the path
    * @param snapshotName snapshot name
    * @throws IOException raised on errors performing I/O.
+   * @return path
    */
   public Path createSnapshot(final Path path, final String snapshotName)
       throws IOException {

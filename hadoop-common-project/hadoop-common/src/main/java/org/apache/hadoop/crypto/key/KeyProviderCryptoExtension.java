@@ -178,6 +178,7 @@ public class KeyProviderCryptoExtension extends
      * Calls to this method allows the underlying KeyProvider to warm-up any
      * implementation specific caches used to store the Encrypted Keys.
      * @param keyNames Array of Key Names
+     * @throws IOException thrown if the key material could not be encrypted
      */
     public void warmUpEncryptedKeys(String... keyNames)
         throws IOException;
@@ -487,6 +488,7 @@ public class KeyProviderCryptoExtension extends
    * Notifies the Underlying CryptoExtension implementation to warm up any
    * implementation specific caches for the specified KeyVersions
    * @param keyNames Arrays of key Names
+   * @throws IOException raised on errors performing I/O.
    */
   public void warmUpEncryptedKeys(String... keyNames)
       throws IOException {

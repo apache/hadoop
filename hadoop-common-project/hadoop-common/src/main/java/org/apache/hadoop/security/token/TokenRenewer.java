@@ -65,7 +65,10 @@ public abstract class TokenRenewer {
                              ) throws IOException, InterruptedException;
 
     /**
-     * Cancel the given token
+     * Cancel the given token.
+     *
+     * @param token the token being checked
+     * @param conf configuration
      *
      * @throws IOException          raised on errors performing I/O.
      * @throws InterruptedException thrown when a thread is waiting, sleeping,
