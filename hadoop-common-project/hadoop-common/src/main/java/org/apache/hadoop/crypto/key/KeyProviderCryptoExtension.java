@@ -474,8 +474,9 @@ public class KeyProviderCryptoExtension extends
   /**
    * This constructor is to be used by sub classes that provide
    * delegating/proxying functionality to the {@link KeyProviderCryptoExtension}
-   * @param keyProvider
-   * @param extension
+   *
+   * @param keyProvider key provider
+   * @param extension crypto extension
    */
   protected KeyProviderCryptoExtension(KeyProvider keyProvider,
       CryptoExtension extension) {

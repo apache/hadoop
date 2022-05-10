@@ -601,7 +601,9 @@ public abstract class KeyProvider implements Closeable {
    *
    * @param name the basename of the key
    * @return the name of the new version of the key
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException              raised on errors performing I/O.
+   * @throws NoSuchAlgorithmException This exception is thrown when a particular cryptographic algorithm is requested
+   *                                  but is not available in the environment.
    */
   public KeyVersion rollNewVersion(String name) throws NoSuchAlgorithmException,
                                                        IOException {
@@ -660,9 +662,11 @@ public abstract class KeyProvider implements Closeable {
 
   /**
    * Find the provider with the given key.
+   *
    * @param providerList the list of providers
-   * @param keyName the key name we are looking for
+   * @param keyName      the key name we are looking for
    * @return the KeyProvider that has the key
+   * @throws IOException raised on errors performing I/O.
    */
   public static KeyProvider findProvider(List<KeyProvider> providerList,
                                          String keyName) throws IOException {
