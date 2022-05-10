@@ -428,7 +428,6 @@ public abstract class S3InputStream
     this.reader.close();
     this.reader = null;
     this.seekTargetPos = this.getPos();
-
     this.fpos.invalidate();
   }
 
