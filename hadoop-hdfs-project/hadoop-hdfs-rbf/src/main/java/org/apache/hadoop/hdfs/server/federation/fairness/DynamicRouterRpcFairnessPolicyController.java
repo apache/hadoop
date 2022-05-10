@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hdfs.server.federation.fairness;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -35,6 +37,8 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_SECONDS_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 
@@ -57,6 +61,7 @@ public class DynamicRouterRpcFairnessPolicyController
   private PermitsResizerService permitsResizerService;
   private ScheduledFuture<?> refreshTask;
   private int handlerCount;
+  private int minimumHandlerPerNs;
 
   /**
    * Initializes using the same logic as {@link StaticRouterRpcFairnessPolicyController}
@@ -66,6 +71,8 @@ public class DynamicRouterRpcFairnessPolicyController
    */
   public DynamicRouterRpcFairnessPolicyController(Configuration conf) {
     super(conf);
+    minimumHandlerPerNs = conf.getInt(DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY,
+        DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_DEFAULT);
     handlerCount = conf.getInt(DFS_ROUTER_HANDLER_COUNT_KEY, DFS_ROUTER_HANDLER_COUNT_DEFAULT);
     long refreshInterval =
         conf.getTimeDuration(DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_SECONDS_KEY,
@@ -74,17 +81,19 @@ public class DynamicRouterRpcFairnessPolicyController
     permitsResizerService = new PermitsResizerService();
     refreshTask = SCHEDULED_EXECUTOR
         .scheduleWithFixedDelay(permitsResizerService, refreshInterval, refreshInterval,
-            TimeUnit.MILLISECONDS);
+            TimeUnit.SECONDS);
   }
 
   @VisibleForTesting
   public DynamicRouterRpcFairnessPolicyController(Configuration conf, long refreshInterval) {
     super(conf);
+    minimumHandlerPerNs = conf.getInt(DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY,
+        DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_DEFAULT);
     handlerCount = conf.getInt(DFS_ROUTER_HANDLER_COUNT_KEY, DFS_ROUTER_HANDLER_COUNT_DEFAULT);
     permitsResizerService = new PermitsResizerService();
     refreshTask = SCHEDULED_EXECUTOR
         .scheduleWithFixedDelay(permitsResizerService, refreshInterval, refreshInterval,
-            TimeUnit.MILLISECONDS);
+            TimeUnit.SECONDS);
   }
 
   @VisibleForTesting
@@ -107,6 +116,9 @@ public class DynamicRouterRpcFairnessPolicyController
 
     @Override
     public synchronized void run() {
+      if ((getRejectedPermitsPerNs() == null) || (getAcceptedPermitsPerNs() == null)) {
+        return;
+      }
       long totalOps = 0;
       Map<String, Long> nsOps = new HashMap<>();
       for (Map.Entry<String, AdjustableSemaphore> entry : getPermits().entrySet()) {
@@ -119,23 +131,48 @@ public class DynamicRouterRpcFairnessPolicyController
         totalOps += ops;
       }
 
+      List<String> underMinimumNss = new ArrayList<>();
+      List<String> overMinimumNss = new ArrayList<>();
+      int effectiveOps = 0;
+
+      // First iteration: split namespaces into those underused and those that are not.
       for (Map.Entry<String, AdjustableSemaphore> entry : getPermits().entrySet()) {
         String ns = entry.getKey();
-        AdjustableSemaphore semaphore = entry.getValue();
-        int oldPermitCap = getPermitSizes().get(ns);
         int newPermitCap = (int) Math.ceil((float) nsOps.get(ns) / totalOps * handlerCount);
-        // Leave at least 1 handler even if there's no traffic
-        if (newPermitCap == 0) {
-          newPermitCap = 1;
+
+        if (newPermitCap <= minimumHandlerPerNs) {
+          underMinimumNss.add(ns);
+        } else {
+          overMinimumNss.add(ns);
+          effectiveOps += nsOps.get(ns);
         }
-        getPermitSizes().put(ns, newPermitCap);
-        if (newPermitCap > oldPermitCap) {
-          semaphore.release(newPermitCap - oldPermitCap);
-        } else if (newPermitCap < oldPermitCap) {
-          semaphore.reducePermits(oldPermitCap - newPermitCap);
-        }
-        LOG.info("Resized handlers for nsId {} from {} to {}", ns, oldPermitCap, newPermitCap);
       }
+
+      // Second iteration part 1: assign minimum handlers
+      for (String ns: underMinimumNss) {
+        resizeNsHandlerCapacity(ns, minimumHandlerPerNs);
+      }
+      // Second iteration part 2: assign handlers to the rest
+      int leftoverPermits = handlerCount - minimumHandlerPerNs * underMinimumNss.size();
+      for (String ns: overMinimumNss) {
+        int newPermitCap = (int) Math.ceil((float) nsOps.get(ns) / effectiveOps * leftoverPermits);
+        resizeNsHandlerCapacity(ns, newPermitCap);
+      }
+    }
+
+    private void resizeNsHandlerCapacity(String ns, int newPermitCap) {
+      AdjustableSemaphore semaphore = getPermits().get(ns);
+      int oldPermitCap = getPermitSizes().get(ns);
+      if (newPermitCap <= minimumHandlerPerNs) {
+        newPermitCap = minimumHandlerPerNs;
+      }
+      getPermitSizes().put(ns, newPermitCap);
+      if (newPermitCap > oldPermitCap) {
+        semaphore.release(newPermitCap - oldPermitCap);
+      } else if (newPermitCap < oldPermitCap) {
+        semaphore.reducePermits(oldPermitCap - newPermitCap);
+      }
+      LOG.info("Resized handlers for nsId {} from {} to {}", ns, oldPermitCap, newPermitCap);
     }
   }
 }

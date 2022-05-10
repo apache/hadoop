@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX;
@@ -100,6 +101,14 @@ public class TestRouterRpcFairnessPolicyController {
     Configuration conf = createConf(1);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "concurrent", 1);
     verifyInstantiationError(conf, 1, 3);
+  }
+
+  @Test
+  public void testAllocationErrorTooFewDedicatedHandlers() {
+    Configuration conf = createConf(9);
+    conf.setInt(DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY, 3);
+    conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + CONCURRENT_NS, 1);
+    verifyInstantiationError(conf, CONCURRENT_NS,  9, 3);
   }
 
   @Test
@@ -180,6 +189,20 @@ public class TestRouterRpcFairnessPolicyController {
         totalDedicatedHandlers);
     assertTrue("Should contain error message: " + errorMsg,
         logs.getOutput().contains(errorMsg));
+  }
+
+  private void verifyInstantiationError(Configuration conf, String ns, int handlerCount,
+      int minimumHandler) {
+    GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+        LoggerFactory.getLogger(StaticRouterRpcFairnessPolicyController.class));
+    try {
+      FederationUtil.newFairnessPolicyController(conf);
+    } catch (IllegalArgumentException e) {
+      // Ignore the exception as it is expected here.
+    }
+    String errorMsg = String.format(StaticRouterRpcFairnessPolicyController.ERROR_NS_MSG,
+        DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + ns, handlerCount, minimumHandler);
+    assertTrue("Should contain error message: " + errorMsg, logs.getOutput().contains(errorMsg));
   }
 
   private RouterRpcFairnessPolicyController getFairnessPolicyController(
