@@ -256,8 +256,8 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
   }
 
   @Test(timeout = 60000)
-  public void testNegotiate() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException,
-          IOException {
+  public void testNegotiate() throws NoSuchMethodException, InvocationTargetException,
+          IllegalAccessException, IOException {
     KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
 
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
@@ -265,22 +265,25 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
             thenReturn(KerberosAuthenticator.NEGOTIATE);
     Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
 
-    Method method = KerberosAuthenticator.class.getDeclaredMethod("isNegotiate", HttpURLConnection.class);
+    Method method = KerberosAuthenticator.class.getDeclaredMethod("isNegotiate",
+            HttpURLConnection.class);
     method.setAccessible(true);
 
     Assert.assertTrue((boolean)method.invoke(kerberosAuthenticator, conn));
   }
 
   @Test(timeout = 60000)
-  public void testNegotiateLowerCase() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException,
-          IOException {
+  public void testNegotiateLowerCase() throws NoSuchMethodException, InvocationTargetException,
+          IllegalAccessException, IOException {
     KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
 
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getHeaderField("www-authenticate")).thenReturn(KerberosAuthenticator.NEGOTIATE);
+    Mockito.when(conn.getHeaderField("www-authenticate"))
+            .thenReturn(KerberosAuthenticator.NEGOTIATE);
     Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
 
-    Method method = KerberosAuthenticator.class.getDeclaredMethod("isNegotiate", HttpURLConnection.class);
+    Method method = KerberosAuthenticator.class.getDeclaredMethod("isNegotiate",
+            HttpURLConnection.class);
     method.setAccessible(true);
 
     Assert.assertTrue((boolean)method.invoke(kerberosAuthenticator, conn));
@@ -299,7 +302,8 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
             .thenReturn(KerberosAuthenticator.NEGOTIATE + " " +
                     Arrays.toString(base64.encode("foobar".getBytes())));
 
-    Method method = KerberosAuthenticator.class.getDeclaredMethod("readToken", HttpURLConnection.class);
+    Method method = KerberosAuthenticator.class.getDeclaredMethod("readToken",
+            HttpURLConnection.class);
     method.setAccessible(true);
 
     try {
@@ -310,7 +314,8 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
   }
 
   @Test(timeout = 60000)
-  public void testReadTokenLowerCase() throws NoSuchMethodException, IOException, IllegalAccessException {
+  public void testReadTokenLowerCase() throws NoSuchMethodException, IOException,
+          IllegalAccessException {
     KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
     FieldUtils.writeField(kerberosAuthenticator, "base64", new Base64(), true);
 
@@ -318,10 +323,12 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
 
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
-    Mockito.when(conn.getHeaderField("www-authenticate")).thenReturn(KerberosAuthenticator.NEGOTIATE +
+    Mockito.when(conn.getHeaderField("www-authenticate"))
+            .thenReturn(KerberosAuthenticator.NEGOTIATE +
                     Arrays.toString(base64.encode("foobar".getBytes())));
 
-    Method method = KerberosAuthenticator.class.getDeclaredMethod("readToken", HttpURLConnection.class);
+    Method method = KerberosAuthenticator.class.getDeclaredMethod("readToken",
+            HttpURLConnection.class);
     method.setAccessible(true);
 
     try {

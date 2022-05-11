@@ -597,12 +597,10 @@ public class TestAuthenticationFilter {
 
       FilterChain chain = Mockito.mock(FilterChain.class);
 
-      Mockito.doAnswer(
-              (Answer<Object>) invocation -> {
-                Assert.fail();
-                return null;
-              }
-      ).when(chain).doFilter(Mockito.anyObject(), Mockito.anyObject());
+      Mockito.doAnswer((Answer<Object>) invocation -> {
+        Assert.fail();
+        return null;
+      }).when(chain).doFilter(any(), any());
 
       Mockito.when(response.containsHeader("www-authenticate")).thenReturn(true);
       filter.doFilter(request, response, chain);
