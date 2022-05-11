@@ -478,9 +478,10 @@ public abstract class KeyProvider implements Closeable {
 
   /**
    * Get the key material for all versions of a specific key name.
+   *
+   * @param name the base name of the key
    * @return the list of key material
    * @throws IOException raised on errors performing I/O.
-   * @return KeyVersion List
    */
   public abstract List<KeyVersion> getKeyVersions(String name) throws IOException;
 

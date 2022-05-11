@@ -281,6 +281,8 @@ public abstract class FileSystem extends Configured
   /**
    * Returns the configured FileSystem implementation.
    * @param conf the configuration to use
+   * @return FileSystem
+   * @throws IOException If an I/O error occurred
    */
   public static FileSystem get(Configuration conf) throws IOException {
     return get(getDefaultUri(conf), conf);
@@ -391,6 +393,7 @@ public abstract class FileSystem extends Configured
    * not specified and if {@link #getDefaultPort()} returns a
    * default port.
    *
+   * @param uri url
    * @return URI
    * @see NetUtils#getCanonicalUri(URI, int)
    */
@@ -458,7 +461,14 @@ public abstract class FileSystem extends Configured
   @Deprecated
   public String getName() { return getUri().toString(); }
 
-  /** @deprecated call {@link #get(URI, Configuration)} instead. */
+  /**
+   * @deprecated call {@link #get(URI, Configuration)} instead.
+   *
+   * @param name name
+   * @param conf configuration
+   * @return file system
+   * @throws IOException If an I/O error occurred
+   */
   @Deprecated
   public static FileSystem getNamed(String name, Configuration conf)
     throws IOException {
@@ -1948,7 +1958,7 @@ public abstract class FileSystem extends Configured
    *              if this is the first call.
    * @return
    * @throws FileNotFoundException
-   * @throws IOException
+   * @throws IOException If an I/O error occurred
    */
   @InterfaceAudience.Private
   protected DirectoryEntries listStatusBatch(Path f, byte[] token) throws
@@ -2685,7 +2695,7 @@ public abstract class FileSystem extends Configured
    * In some FileSystem implementations such as HDFS metadata
    * synchronization is essential to guarantee consistency of read requests
    * particularly in HA setting.
-   * @throws IOException
+   * @throws IOException If an I/O error occurred
    * @throws UnsupportedOperationException
    */
   public void msync() throws IOException, UnsupportedOperationException {
@@ -3221,7 +3231,7 @@ public abstract class FileSystem extends Configured
   /**
    * Set the source path to satisfy storage policy.
    * @param path The source path referring to either a directory or a file.
-   * @throws IOException
+   * @throws IOException If an I/O error occurred
    */
   public void satisfyStoragePolicy(final Path path) throws IOException {
     throw new UnsupportedOperationException(
@@ -3529,7 +3539,7 @@ public abstract class FileSystem extends Configured
      * @param conf configuration
      * @param key key to store/retrieve this FileSystem in the cache
      * @return a cached or newly instantiated FileSystem.
-     * @throws IOException
+     * @throws IOException If an I/O error occurred
      */
     private FileSystem getInternal(URI uri, Configuration conf, Key key)
         throws IOException{
