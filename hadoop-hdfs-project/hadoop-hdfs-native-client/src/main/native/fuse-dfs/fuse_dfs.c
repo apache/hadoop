@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
   options.rdbuffer_size = 10*1024*1024; 
   options.attribute_timeout = 60; 
   options.entry_timeout = 60;
+  options.max_background = 0;
 
   if (-1 == fuse_opt_parse(&args, &options, dfs_opts, dfs_options)) {
     return -1;
@@ -114,6 +115,11 @@ int main(int argc, char *argv[])
 
     snprintf(buf, sizeof buf, "-oentry_timeout=%d",options.entry_timeout);
     fuse_opt_add_arg(&args, buf);
+
+    if (options.max_background > 0) {
+      snprintf(buf, sizeof buf, "-omax_background=%d",options.max_background);
+      fuse_opt_add_arg(&args, buf);
+    }
   }
 
   if (options.nn_uri == NULL) {

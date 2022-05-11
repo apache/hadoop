@@ -185,16 +185,18 @@ public class ViewFs extends AbstractFileSystem {
   
   
   static public class MountPoint {
-    private Path src;       // the src of the mount
-    private URI[] targets; //  target of the mount; Multiple targets imply mergeMount
-    MountPoint(Path srcPath, URI[] targetURIs) {
+    // the src of the mount
+    private Path src;
+    // Target of the mount; Multiple targets imply mergeMount
+    private String[] targets;
+    MountPoint(Path srcPath, String[] targetURIs) {
       src = srcPath;
       targets = targetURIs;
     }
     Path getSrc() {
       return src;
     }
-    URI[] getTargets() {
+    String[] getTargets() {
       return targets;
     }
   }
@@ -744,6 +746,17 @@ public class ViewFs extends AbstractFileSystem {
         result.addAll(tokens);
       }
     }
+
+    // Add tokens from fallback FS
+    if (this.fsState.getRootFallbackLink() != null) {
+      AbstractFileSystem rootFallbackFs =
+          this.fsState.getRootFallbackLink().getTargetFileSystem();
+      List<Token<?>> tokens = rootFallbackFs.getDelegationTokens(renewer);
+      if (tokens != null) {
+        result.addAll(tokens);
+      }
+    }
+
     return result;
   }
 

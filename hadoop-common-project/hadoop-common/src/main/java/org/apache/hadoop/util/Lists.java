@@ -232,4 +232,28 @@ public final class Lists {
     return addAll(addTo, elementsToAdd.iterator());
   }
 
+  /**
+   * Returns consecutive sub-lists of a list, each of the same size
+   * (the final list may be smaller).
+   * @param originalList original big list.
+   * @param pageSize desired size of each sublist ( last one
+   *                 may be smaller)
+   * @return a list of sub lists.
+   */
+  public static <T> List<List<T>> partition(List<T> originalList, int pageSize) {
+
+    Preconditions.checkArgument(originalList != null && originalList.size() > 0,
+            "Invalid original list");
+    Preconditions.checkArgument(pageSize > 0, "Page size should " +
+            "be greater than 0 for performing partition");
+
+    List<List<T>> result = new ArrayList<>();
+    int i=0;
+    while (i < originalList.size()) {
+      result.add(originalList.subList(i,
+              Math.min(i + pageSize, originalList.size())));
+      i = i + pageSize;
+    }
+    return result;
+  }
 }

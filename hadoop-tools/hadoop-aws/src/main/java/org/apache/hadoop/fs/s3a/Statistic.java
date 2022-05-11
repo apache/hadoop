@@ -55,6 +55,10 @@ public enum Statistic {
       StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
       "HEAD request.",
       TYPE_DURATION),
+  ACTION_FILE_OPENED(
+      StoreStatisticNames.ACTION_FILE_OPENED,
+      "File opened.",
+      TYPE_DURATION),
   ACTION_HTTP_GET_REQUEST(
       StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
       "GET request.",
@@ -174,6 +178,10 @@ public enum Statistic {
   INVOCATION_OPEN(
       StoreStatisticNames.OP_OPEN,
       "Calls of open()",
+      TYPE_COUNTER),
+  INVOCATION_OPENFILE(
+      StoreStatisticNames.OP_OPENFILE,
+      "Calls of openFile()",
       TYPE_COUNTER),
   INVOCATION_RENAME(
       StoreStatisticNames.OP_RENAME,
@@ -296,6 +304,15 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_OPERATIONS,
       "Count of read() operations in an input stream",
       TYPE_COUNTER),
+  STREAM_READ_REMOTE_STREAM_ABORTED(
+      StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
+      "Duration of aborting a remote stream during stream IO",
+      TYPE_DURATION),
+  STREAM_READ_REMOTE_STREAM_CLOSED(
+      StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
+      "Duration of closing a remote stream during stream IO",
+      TYPE_DURATION),
+
   STREAM_READ_OPERATIONS_INCOMPLETE(
       StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
       "Count of incomplete read() operations in an input stream",
@@ -454,47 +471,6 @@ public enum Statistic {
       "committer_stage_file_upload",
       "Duration Tracking of files uploaded from a local staging path",
       TYPE_DURATION),
-
-  /* S3guard stats */
-  S3GUARD_METADATASTORE_PUT_PATH_REQUEST(
-      "s3guard_metadatastore_put_path_request",
-      "S3Guard metadata store put one metadata path request",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_PUT_PATH_LATENCY(
-      "s3guard_metadatastore_put_path_latency",
-      "S3Guard metadata store put one metadata path latency",
-      TYPE_QUANTILE),
-  S3GUARD_METADATASTORE_INITIALIZATION(
-      "s3guard_metadatastore_initialization",
-      "S3Guard metadata store initialization times",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_RECORD_DELETES(
-      "s3guard_metadatastore_record_deletes",
-      "S3Guard metadata store records deleted",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_RECORD_READS(
-      "s3guard_metadatastore_record_reads",
-      "S3Guard metadata store records read",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_RECORD_WRITES(
-      "s3guard_metadatastore_record_writes",
-      "S3Guard metadata store records written",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_RETRY("s3guard_metadatastore_retry",
-      "S3Guard metadata store retry events",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_THROTTLED("s3guard_metadatastore_throttled",
-      "S3Guard metadata store throttled events",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_THROTTLE_RATE(
-      "s3guard_metadatastore_throttle_rate",
-      "S3Guard metadata store throttle rate",
-      TYPE_QUANTILE),
-  S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED(
-      "s3guard_metadatastore_authoritative_directories_updated",
-      "S3Guard metadata store authoritative directories updated from S3",
-      TYPE_COUNTER),
-
 
   /* General Store operations */
   STORE_EXISTS_PROBE(StoreStatisticNames.STORE_EXISTS_PROBE,

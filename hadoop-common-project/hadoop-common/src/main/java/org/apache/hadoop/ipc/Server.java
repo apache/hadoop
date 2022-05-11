@@ -498,6 +498,7 @@ public abstract class Server {
   private Map<Integer, Listener> auxiliaryListenerMap;
   private Responder responder = null;
   private Handler[] handlers = null;
+  private final AtomicInteger numInProcessHandler = new AtomicInteger();
 
   private boolean logSlowRPC = false;
 
@@ -507,6 +508,10 @@ public abstract class Server {
    */
   protected boolean isLogSlowRPC() {
     return logSlowRPC;
+  }
+
+  public int getNumInProcessHandler() {
+    return numInProcessHandler.get();
   }
 
   /**
@@ -1324,14 +1329,6 @@ public abstract class Server {
     }
   }
 
-  @VisibleForTesting
-  @InterfaceAudience.Private
-  protected void configureSocketChannel(SocketChannel channel) throws IOException {
-    channel.configureBlocking(false);
-    channel.socket().setTcpNoDelay(tcpNoDelay);
-    channel.socket().setKeepAlive(true);
-  }
-
   /** Listens on the socket. Creates jobs for the handler threads*/
   private class Listener extends Thread {
     
@@ -1538,24 +1535,15 @@ public abstract class Server {
     InetSocketAddress getAddress() {
       return (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
     }
-
+    
     void doAccept(SelectionKey key) throws InterruptedException, IOException,  OutOfMemoryError {
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
       SocketChannel channel;
       while ((channel = server.accept()) != null) {
 
-        try {
-          configureSocketChannel(channel);
-        } catch (IOException e) {
-          LOG.warn("Error in an accepted SocketChannel", e);
-          try {
-            channel.socket().close();
-            channel.close();
-          } catch (IOException ex) {
-            LOG.warn("Error in closing SocketChannel", ex);
-          }
-          continue;
-        }
+        channel.configureBlocking(false);
+        channel.socket().setTcpNoDelay(tcpNoDelay);
+        channel.socket().setKeepAlive(true);
         
         Reader reader = getReader();
         Connection c = connectionManager.register(channel,
@@ -3080,6 +3068,7 @@ public abstract class Server {
 
         try {
           call = callQueue.take(); // pop the queue; maybe blocked here
+          numInProcessHandler.incrementAndGet();
           startTimeNanos = Time.monotonicNowNanos();
           if (alignmentContext != null && call.isCallCoordinated() &&
               call.getClientStateId() > alignmentContext.getLastSeenStateId()) {
@@ -3133,6 +3122,7 @@ public abstract class Server {
           }
         } finally {
           CurCall.set(null);
+          numInProcessHandler.decrementAndGet();
           IOUtils.cleanupWithLogger(LOG, traceScope);
           if (call != null) {
             updateMetrics(call, startTimeNanos, connDropped);

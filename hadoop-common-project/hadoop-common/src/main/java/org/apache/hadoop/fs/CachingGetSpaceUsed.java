@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,19 +90,19 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
       if (!shouldFirstRefresh) {
         // Skip initial refresh operation, so we need to do first refresh
         // operation immediately in refresh thread.
-        initRefeshThread(true);
+        initRefreshThread(true);
         return;
       }
       refresh();
     }
-    initRefeshThread(false);
+    initRefreshThread(false);
   }
 
   /**
    * RunImmediately should set true, if we skip the first refresh.
    * @param runImmediately The param default should be false.
    */
-  private void initRefeshThread (boolean runImmediately) {
+  private void initRefreshThread(boolean runImmediately) {
     if (refreshInterval > 0) {
       refreshUsed = new Thread(new RefreshThread(this, runImmediately),
           "refreshUsed-" + dirPath);
@@ -154,8 +155,18 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
   /**
    * How long in between runs of the background refresh.
    */
-  long getRefreshInterval() {
+  @VisibleForTesting
+  public long getRefreshInterval() {
     return refreshInterval;
+  }
+
+  /**
+   * Randomize the refresh interval timing by this amount, the actual interval will be chosen
+   * uniformly between {@code interval-jitter} and {@code interval+jitter}.
+   */
+  @VisibleForTesting
+  public long getJitter() {
+    return jitter;
   }
 
   /**

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.impl;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
@@ -47,7 +48,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
  * options accordingly, for example:
  *
  * If the option is not related to the file system, the option will be ignored.
- * If the option is must, but not supported by the file system, a
+ * If the option is must, but not supported/known by the file system, an
  * {@link IllegalArgumentException} will be thrown.
  *
  */
@@ -147,8 +148,9 @@ public abstract class FutureDataInputStreamBuilderImpl
   }
 
   @Override
-  public FutureDataInputStreamBuilder withFileStatus(FileStatus st) {
-    this.status = requireNonNull(st, "status");
+  public FutureDataInputStreamBuilder withFileStatus(
+      @Nullable FileStatus st) {
+    this.status = st;
     return this;
   }
 

@@ -2678,7 +2678,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     } else {
       return Response.status(Status.BAD_REQUEST)
           .entity("Scheduler Configuration format only supported by " +
-          "MutableConfScheduler.").build();
+              MutableConfScheduler.class.getSimpleName()).build();
     }
   }
 
@@ -2727,8 +2727,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
                   .build();
       }
     } else {
-      String errorMsg = "Configuration change validation only supported by " +
-              "MutableConfScheduler.";
+      String errorMsg = String.format("Configuration change validation only supported by %s.",
+          MutableConfScheduler.class.getSimpleName());
       LOG.warn(errorMsg);
       return Response.status(Status.BAD_REQUEST)
               .entity(errorMsg)
@@ -2823,10 +2823,11 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           .build();
     } else {
       return Response.status(Status.BAD_REQUEST).entity(
-          "This API only supports to retrieve scheduler configuration"
-              + " from a mutable-conf scheduler, underneath scheduler "
-              + scheduler.getClass().getSimpleName()
-              + " is not an instance of MutableConfScheduler")
+              String.format("This API only supports to retrieve scheduler configuration"
+                  + " from a mutable-conf scheduler, underneath scheduler %s"
+                  + " is not an instance of %s",
+                  scheduler.getClass().getSimpleName(),
+                  MutableConfScheduler.class.getSimpleName()))
           .build();
     }
   }
@@ -2858,8 +2859,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       }
     } else {
       return Response.status(Status.BAD_REQUEST)
-          .entity("Configuration Version only supported by "
-          + "MutableConfScheduler.").build();
+          .entity(String.format("Configuration Version only supported by %s.",
+              MutableConfScheduler.class.getSimpleName())).build();
     }
   }
 

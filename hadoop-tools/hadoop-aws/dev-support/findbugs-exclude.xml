@@ -28,19 +28,10 @@
     <Method name="s3Exists" />
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
   </Match>
-
-  <!--
-    This extends the serializable S3Object, so findbug checks
-    serializability. It is never serialized however, so its
-    warnings are false positives.
-  -->
+  <!-- we are using completable futures, so ignore the Future which submit() returns -->
   <Match>
-    <Class name="org.apache.hadoop.fs.s3a.InconsistentS3Object" />
-    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3a.InconsistentS3Object" />
-    <Bug pattern="SE_NO_SERIALVERSIONID" />
+    <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem$InputStreamCallbacksImpl" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
   </Match>
 
   <!--

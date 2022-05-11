@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
@@ -161,32 +162,20 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     CapacitySchedulerConfiguration autoCreatedTemplateConfig =
         super.initializeLeafQueueConfigs(leafQueueTemplateConfPrefix);
     builder.configuration(autoCreatedTemplateConfig);
+    QueueResourceQuotas queueResourceQuotas = new QueueResourceQuotas();
+    setAbsoluteResourceTemplates(configuration, queueResourceQuotas);
+
     QueuePath templateQueuePath = configuration
         .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
-
     Set<String> templateConfiguredNodeLabels = queueContext
         .getQueueManager().getConfiguredNodeLabelsForAllQueues()
         .getLabelsByQueue(templateQueuePath.getFullPath());
-    for (String nodeLabel : templateConfiguredNodeLabels) {
-      Resource templateMinResource = autoCreatedTemplateConfig.getMinimumResourceRequirement(
-          nodeLabel, configuration
-              .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
-          resourceTypes);
-
-      if (this.capacityConfigType.equals(CapacityConfigType.PERCENTAGE)
-          && !templateMinResource.equals(Resources.none())) {
-        throw new IOException("Managed Parent Queue " + this.getQueuePath()
-            + " config type is different from leaf queue template config type");
-      }
-    }
-
     //Load template capacities
     QueueCapacities queueCapacities = new QueueCapacities(false);
     CSQueueUtils.loadCapacitiesByLabelsFromConf(templateQueuePath,
         queueCapacities,
         configuration,
         templateConfiguredNodeLabels);
-
 
     /**
      * Populate leaf queue template (of Parent resources configured in
@@ -198,7 +187,29 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       updateQueueCapacities(queueCapacities);
     }
     builder.capacities(queueCapacities);
+    builder.resourceQuotas(queueResourceQuotas);
     return builder;
+  }
+
+  private void setAbsoluteResourceTemplates(CapacitySchedulerConfiguration configuration,
+                                            QueueResourceQuotas queueResourceQuotas) throws IOException {
+    QueuePath templateQueuePath = configuration
+        .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
+    Set<String> templateConfiguredNodeLabels = queueContext
+        .getQueueManager().getConfiguredNodeLabelsForAllQueues()
+        .getLabelsByQueue(templateQueuePath.getFullPath());
+
+    for (String nodeLabel : templateConfiguredNodeLabels) {
+      Resource templateMinResource = configuration.getMinimumResourceRequirement(
+          nodeLabel, templateQueuePath.getFullPath(), resourceTypes);
+      queueResourceQuotas.setConfiguredMinResource(nodeLabel, templateMinResource);
+
+      if (this.capacityConfigType.equals(CapacityConfigType.PERCENTAGE)
+          && !templateMinResource.equals(Resources.none())) {
+        throw new IOException("Managed Parent Queue " + this.getQueuePath()
+            + " config type is different from leaf queue template config type");
+      }
+    }
   }
 
   private void updateQueueCapacities(QueueCapacities queueCapacities) {

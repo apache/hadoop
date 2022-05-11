@@ -412,6 +412,7 @@ class BlockReceiver implements Closeable {
   void flushOrSync(boolean isSync, long seqno) throws IOException {
     long flushTotalNanos = 0;
     long begin = Time.monotonicNow();
+    DataNodeFaultInjector.get().delay();
     if (checksumOut != null) {
       long flushStartNanos = System.nanoTime();
       checksumOut.flush();
@@ -445,6 +446,7 @@ class BlockReceiver implements Closeable {
     }
     long duration = Time.monotonicNow() - begin;
     if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
+      datanode.metrics.incrSlowFlushOrSyncCount();
       LOG.warn("Slow flushOrSync took " + duration + "ms (threshold="
           + datanodeSlowLogThresholdMs + "ms), isSync:" + isSync + ", flushTotalNanos="
           + flushTotalNanos + "ns, volume=" + getVolumeBaseUri()
@@ -887,7 +889,7 @@ class BlockReceiver implements Closeable {
    */
   private void trackSendPacketToLastNodeInPipeline(final long elapsedMs) {
     final DataNodePeerMetrics peerMetrics = datanode.getPeerMetrics();
-    if (peerMetrics != null && isPenultimateNode) {
+    if (datanode.getDnConf().peerStatsEnabled && peerMetrics != null && isPenultimateNode) {
       peerMetrics.addSendPacketDownstream(mirrorNameForMetrics, elapsedMs);
     }
   }
@@ -1107,7 +1109,7 @@ class BlockReceiver implements Closeable {
     if (downstreams != null && downstreams.length > 0) {
       downstreamDNs = downstreams;
       isPenultimateNode = (downstreams.length == 1);
-      if (isPenultimateNode && datanode.getPeerMetrics() != null) {
+      if (isPenultimateNode && datanode.getDnConf().peerStatsEnabled) {
         mirrorNameForMetrics = (downstreams[0].getInfoSecurePort() != 0 ?
             downstreams[0].getInfoSecureAddr() : downstreams[0].getInfoAddr());
         LOG.debug("Will collect peer metrics for downstream node {}",
@@ -1656,6 +1658,7 @@ class BlockReceiver implements Closeable {
       }
       // send my ack back to upstream datanode
       long begin = Time.monotonicNow();
+      DataNodeFaultInjector.get().delay();
       /* for test only, no-op in production system */
       DataNodeFaultInjector.get().delaySendingAckToUpstream(inAddr);
       replyAck.write(upstreamOut);
@@ -1665,6 +1668,7 @@ class BlockReceiver implements Closeable {
           inAddr,
           duration);
       if (duration > datanodeSlowLogThresholdMs) {
+        datanode.metrics.incrSlowAckToUpstreamCount();
         LOG.warn("Slow PacketResponder send ack to upstream took " + duration
             + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), " + myString
             + ", replyAck=" + replyAck

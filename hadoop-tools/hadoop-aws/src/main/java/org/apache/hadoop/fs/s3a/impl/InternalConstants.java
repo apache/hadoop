@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.Constants;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 
 /**
  * Internal constants private only to the S3A codebase.
@@ -89,11 +91,16 @@ public final class InternalConstants {
    * used becomes that of the select operation.
    */
   @InterfaceStability.Unstable
-  public static final Set<String> STANDARD_OPENFILE_KEYS =
-      Collections.unmodifiableSet(
-          new HashSet<>(
-              Arrays.asList(Constants.INPUT_FADVISE,
-                  Constants.READAHEAD_RANGE)));
+  public static final Set<String> S3A_OPENFILE_KEYS;
+
+  static {
+    Set<String> keys = Stream.of(
+        Constants.INPUT_FADVISE,
+        Constants.READAHEAD_RANGE)
+        .collect(Collectors.toSet());
+    keys.addAll(FS_OPTION_OPENFILE_STANDARD_OPTIONS);
+    S3A_OPENFILE_KEYS = Collections.unmodifiableSet(keys);
+  }
 
   /** 403 error code. */
   public static final int SC_403 = 403;
@@ -136,17 +143,6 @@ public final class InternalConstants {
    * length when certain conditions are met.
    */
   public static final int CSE_PADDING_LENGTH = 16;
-
-  /**
-   * Error message to indicate S3-CSE is incompatible with S3Guard.
-   */
-  public static final String CSE_S3GUARD_INCOMPATIBLE = "S3-CSE cannot be "
-      + "used with S3Guard";
-
-  /**
-   * Error message to indicate Access Points are incompatible with S3Guard.
-   */
-  public static final String AP_S3GUARD_INCOMPATIBLE = "Access Points cannot be used with S3Guard";
 
   /**
    * Error message to indicate Access Points are required to be used for S3 access.

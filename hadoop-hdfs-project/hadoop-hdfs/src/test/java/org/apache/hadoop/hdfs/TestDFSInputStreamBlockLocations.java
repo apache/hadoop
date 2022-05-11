@@ -21,28 +21,25 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -137,154 +134,111 @@ public class TestDFSInputStreamBlockLocations {
   }
 
   @Test
-  public void testRead() throws Exception {
+  public void testRefreshBlockLocations() throws IOException {
     final String fileName = "/test_cache_locations";
-    filePath = new Path(fileName);
-    DFSInputStream fin = null;
-    FSDataOutputStream fout = null;
-    try {
-      // create a file and write for testing
-      fout = fs.create(filePath, REPLICATION_FACTOR);
-      fout.write(new byte[(fileLength)]);
-      // finalize the file by closing the output stream
-      fout.close();
-      fout = null;
-      // get the located blocks
-      LocatedBlocks referenceLocatedBlocks =
-          dfsClient.getLocatedBlocks(fileName, 0, fileLength);
-      assertEquals(numOfBlocks, referenceLocatedBlocks.locatedBlockCount());
-      String poolId = dfsCluster.getNamesystem().getBlockPoolId();
-      fin = dfsClient.open(fileName);
-      // get the located blocks from fin
-      LocatedBlocks finLocatedBlocks = fin.locatedBlocks;
-      assertEquals(dfsClientPrefetchSize / BLOCK_SIZE,
-          finLocatedBlocks.locatedBlockCount());
-      final int chunkReadSize = BLOCK_SIZE / 4;
-      byte[] readBuffer = new byte[chunkReadSize];
-      // read the first block
-      DatanodeInfo prevDNInfo = null;
-      DatanodeInfo currDNInfo = null;
-      int bytesRead = 0;
-      int firstBlockMark = BLOCK_SIZE;
-      // get the second block locations
-      LocatedBlock firstLocatedBlk =
-          fin.locatedBlocks.getLocatedBlocks().get(0);
-      DatanodeInfo[] firstBlkDNInfos = firstLocatedBlk.getLocations();
-      while (fin.getPos() < firstBlockMark) {
-        bytesRead = fin.read(readBuffer);
-        Assert.assertTrue("Unexpected number of read bytes",
-            chunkReadSize >= bytesRead);
-        if (currDNInfo == null) {
-          currDNInfo = fin.getCurrentDatanode();
-          assertNotNull("current FIS datanode is null", currDNInfo);
-          continue;
-        }
-        prevDNInfo = currDNInfo;
-        currDNInfo = fin.getCurrentDatanode();
-        assertEquals("the DFSInput stream does not read from same node",
-            prevDNInfo, currDNInfo);
+    filePath = createFile(fileName);
+
+    try (DFSInputStream fin = dfsClient.open(fileName)) {
+      LocatedBlocks existing = fin.locatedBlocks;
+      long lastRefreshedAt = fin.getLastRefreshedBlocksAtForTesting();
+
+      assertFalse("should not have attempted refresh",
+          fin.refreshBlockLocations(null));
+      assertEquals("should not have updated lastRefreshedAt",
+          lastRefreshedAt, fin.getLastRefreshedBlocksAtForTesting());
+      assertSame("should not have modified locatedBlocks",
+          existing, fin.locatedBlocks);
+
+      // fake a dead node to force refresh
+      // refreshBlockLocations should return true, indicating we attempted a refresh
+      // nothing should be changed, because locations have not changed
+      fin.addToLocalDeadNodes(dfsClient.datanodeReport(DatanodeReportType.LIVE)[0]);
+      assertTrue("should have attempted refresh",
+          fin.refreshBlockLocations(null));
+      verifyChanged(fin, existing, lastRefreshedAt);
+
+      // reset
+      lastRefreshedAt = fin.getLastRefreshedBlocksAtForTesting();
+      existing = fin.locatedBlocks;
+
+      // It's hard to test explicitly for non-local nodes, but we can fake it
+      // because we also treat unresolved as non-local. Pass in a cache where all the datanodes
+      // are unresolved hosts.
+      Map<String, InetSocketAddress> mockAddressCache = new HashMap<>();
+      InetSocketAddress unresolved = InetSocketAddress.createUnresolved("www.google.com", 80);
+      for (DataNode dataNode : dfsCluster.getDataNodes()) {
+        mockAddressCache.put(dataNode.getDatanodeUuid(), unresolved);
       }
 
-      assertEquals("InputStream exceeds expected position",
-          firstBlockMark, fin.getPos());
-      // get the second block locations
-      LocatedBlock secondLocatedBlk =
-          fin.locatedBlocks.getLocatedBlocks().get(1);
-      // get the nodeinfo for that block
-      DatanodeInfo[] secondBlkDNInfos = secondLocatedBlk.getLocations();
-      DatanodeInfo deadNodeInfo = secondBlkDNInfos[0];
-      // stop the datanode in the list of the
-      DataNode deadNode = getdataNodeFromHostName(dfsCluster,
-          deadNodeInfo.getHostName());
-      // Shutdown and wait for datanode to be marked dead
-      DatanodeRegistration reg = InternalDataNodeTestUtils.
-          getDNRegistrationForBP(dfsCluster.getDataNodes().get(0), poolId);
-      DataNodeProperties stoppedDNProps =
-          dfsCluster.stopDataNode(deadNodeInfo.getName());
-
-      List<DataNode> datanodesPostStoppage = dfsCluster.getDataNodes();
-      assertEquals(NUM_DATA_NODES - 1, datanodesPostStoppage.size());
-      // get the located blocks
-      LocatedBlocks afterStoppageLocatedBlocks =
-          dfsClient.getLocatedBlocks(fileName, 0, fileLength);
-      // read second block
-      int secondBlockMark =  (int) (1.5 * BLOCK_SIZE);
-      boolean firstIteration = true;
-      if (this.enableBlkExpiration) {
-        // set the time stamps to make sure that we do not refresh locations yet
-        fin.setReadTimeStampsForTesting(Time.monotonicNow());
-      }
-      while (fin.getPos() < secondBlockMark) {
-        bytesRead = fin.read(readBuffer);
-        assertTrue("dead node used to read at position: " + fin.getPos(),
-            fin.deadNodesContain(deadNodeInfo));
-        Assert.assertTrue("Unexpected number of read bytes",
-            chunkReadSize >= bytesRead);
-        prevDNInfo = currDNInfo;
-        currDNInfo = fin.getCurrentDatanode();
-        assertNotEquals(deadNodeInfo, currDNInfo);
-        if (firstIteration) {
-          // currDNInfo has to be different unless first block locs is different
-          assertFalse("FSInputStream should pick a different DN",
-              firstBlkDNInfos[0].equals(deadNodeInfo)
-                  && prevDNInfo.equals(currDNInfo));
-          firstIteration = false;
-        }
-      }
-      assertEquals("InputStream exceeds expected position",
-          secondBlockMark, fin.getPos());
-      // restart the dead node with the same port
-      assertTrue(dfsCluster.restartDataNode(stoppedDNProps, true));
-      dfsCluster.waitActive();
-      List<DataNode> datanodesPostRestart = dfsCluster.getDataNodes();
-      assertEquals(NUM_DATA_NODES, datanodesPostRestart.size());
-      // continue reading from block 2 again. We should read from deadNode
-      int thirdBlockMark =  2 * BLOCK_SIZE;
-      firstIteration = true;
-      while (fin.getPos() < thirdBlockMark) {
-        bytesRead = fin.read(readBuffer);
-        if (this.enableBlkExpiration) {
-          assertEquals("node is removed from deadNodes after 1st iteration",
-              firstIteration, fin.deadNodesContain(deadNodeInfo));
-        } else {
-          assertTrue(fin.deadNodesContain(deadNodeInfo));
-        }
-        Assert.assertTrue("Unexpected number of read bytes",
-            chunkReadSize >= bytesRead);
-        prevDNInfo = currDNInfo;
-        currDNInfo = fin.getCurrentDatanode();
-        if (!this.enableBlkExpiration) {
-          assertNotEquals(deadNodeInfo, currDNInfo);
-        }
-        if (firstIteration) {
-          assertEquals(prevDNInfo, currDNInfo);
-          firstIteration = false;
-          if (this.enableBlkExpiration) {
-            // reset the time stamps of located blocks to force cache expiration
-            fin.setReadTimeStampsForTesting(
-                Time.monotonicNow() - (dfsInputLocationsTimeout + 1));
-          }
-        }
-      }
-      assertEquals("InputStream exceeds expected position",
-          thirdBlockMark, fin.getPos());
-    } finally {
-      if (fout != null) {
-        fout.close();
-      }
-      if (fin != null) {
-        fin.close();
-      }
+      assertTrue("should have attempted refresh",
+          fin.refreshBlockLocations(mockAddressCache));
+      verifyChanged(fin, existing, lastRefreshedAt);
     }
   }
 
-  private DataNode getdataNodeFromHostName(MiniDFSCluster cluster,
-      String hostName) {
-    for (DataNode dn : cluster.getDataNodes()) {
-      if (dn.getDatanodeId().getHostName().equals(hostName)) {
-        return dn;
+  private void verifyChanged(DFSInputStream fin, LocatedBlocks existing, long lastRefreshedAt) {
+    assertTrue("lastRefreshedAt should have incremented",
+        fin.getLastRefreshedBlocksAtForTesting() > lastRefreshedAt);
+    assertNotSame("located blocks should have changed",
+        existing, fin.locatedBlocks);
+    assertTrue("deadNodes should be empty",
+        fin.getLocalDeadNodes().isEmpty());
+  }
+
+  @Test
+  public void testDeferredRegistrationStatefulRead() throws IOException {
+    testWithRegistrationMethod(DFSInputStream::read);
+  }
+
+  @Test
+  public void testDeferredRegistrationPositionalRead() throws IOException {
+    testWithRegistrationMethod(fin -> fin.readFully(0, new byte[1]));
+  }
+
+  @Test
+  public void testDeferredRegistrationGetAllBlocks() throws IOException {
+    testWithRegistrationMethod(DFSInputStream::getAllBlocks);
+  }
+
+  @FunctionalInterface
+  interface ThrowingConsumer {
+    void accept(DFSInputStream fin) throws IOException;
+  }
+
+  private void testWithRegistrationMethod(ThrowingConsumer registrationMethod) throws IOException {
+    final String fileName = "/test_cache_locations";
+    filePath = createFile(fileName);
+
+    DFSInputStream fin = null;
+    try {
+      fin = dfsClient.open(fileName);
+      assertFalse("should not be tracking input stream on open",
+          dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin));
+
+      // still not registered because it hasn't been an hour by the time we call this
+      registrationMethod.accept(fin);
+      assertFalse("should not be tracking input stream after first read",
+          dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin));
+
+      // artificially make it have been an hour
+      fin.setLastRefreshedBlocksAtForTesting(Time.monotonicNow() - (dfsInputLocationsTimeout + 1));
+      registrationMethod.accept(fin);
+      assertEquals("SHOULD be tracking input stream on read after interval, only if enabled",
+          enableBlkExpiration, dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin));
+    } finally {
+      if (fin != null) {
+        fin.close();
+        assertFalse(dfsClient.getLocatedBlockRefresher().isInputStreamTracked(fin));
       }
+      fs.delete(filePath, true);
     }
-    return null;
+  }
+
+  private Path createFile(String fileName) throws IOException {
+    Path path = new Path(fileName);
+    try (FSDataOutputStream fout = fs.create(path, REPLICATION_FACTOR)) {
+      fout.write(new byte[(fileLength)]);
+    }
+    return path;
   }
 }

@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public class AbstractRouterRpcFairnessPolicyController
     implements RouterRpcFairnessPolicyController {
 
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(AbstractRouterRpcFairnessPolicyController.class);
 
   /** Hash table to hold semaphore for each configured name service. */
@@ -64,6 +64,7 @@ public class AbstractRouterRpcFairnessPolicyController
 
   @Override
   public void shutdown() {
+    LOG.debug("Shutting down router fairness policy controller");
     // drain all semaphores
     for (Semaphore sema: this.permits.values()) {
       sema.drainPermits();

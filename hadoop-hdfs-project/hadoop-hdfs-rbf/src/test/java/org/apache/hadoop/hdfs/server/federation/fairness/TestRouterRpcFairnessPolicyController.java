@@ -129,6 +129,30 @@ public class TestRouterRpcFairnessPolicyController {
     verifyInstantiationError(conf, 1, 4);
   }
 
+  @Test
+  public void testHandlerAllocationConcurrentConfigured() {
+    Configuration conf = createConf(5);
+    conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns1", 1);
+    conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns2", 1);
+    conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "concurrent", 1);
+    RouterRpcFairnessPolicyController routerRpcFairnessPolicyController =
+        FederationUtil.newFairnessPolicyController(conf);
+
+    // ns1, ns2 should have 1 permit each
+    assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns1"));
+    assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns2"));
+    assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns1"));
+    assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns2"));
+
+    // concurrent should have 3 permits
+    for (int i=0; i<3; i++) {
+      assertTrue(
+          routerRpcFairnessPolicyController.acquirePermit(CONCURRENT_NS));
+    }
+    assertFalse(routerRpcFairnessPolicyController.acquirePermit(CONCURRENT_NS));
+  }
+
+
   private void verifyInstantiationError(Configuration conf, int handlerCount,
       int totalDedicatedHandlers) {
     GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer

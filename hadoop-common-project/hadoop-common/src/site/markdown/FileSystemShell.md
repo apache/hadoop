@@ -328,16 +328,16 @@ Returns 0 on success and -1 on error.
 get
 ---
 
-Usage: `hadoop fs -get [-ignorecrc] [-crc] [-p] [-f] [-t <thread count>] [-q <thread pool queue size>] <src> ... <localdst> `
+Usage: `hadoop fs -get [-ignoreCrc] [-crc] [-p] [-f] [-t <thread count>] [-q <thread pool queue size>] <src> ... <localdst> `
 
-Copy files to the local file system. Files that fail the CRC check may be copied with the -ignorecrc option. Files and CRCs may be copied using the -crc option.
+Copy files to the local file system. Files that fail the CRC check may be copied with the -ignoreCrc option. Files and CRCs may be copied using the -crc option.
 
 Options:
 
 * `-p` : Preserves access and modification times, ownership and the permissions.
   (assuming the permissions can be propagated across filesystems)
 * `-f` : Overwrites the destination if it already exists.
-* `-ignorecrc` : Skip CRC checks on the file(s) downloaded.
+* `-ignoreCrc` : Skip CRC checks on the file(s) downloaded.
 * `-crc`: write CRC checksums for the files downloaded.
 * `-t <thread count>` : Number of threads to be used, default is 1.
   Useful when downloading directories containing more than 1 file.

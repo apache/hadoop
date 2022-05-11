@@ -36,7 +36,17 @@ import javax.crypto.SecretKey;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
 import org.apache.hadoop.metrics2.util.Metrics2Util.TopN;
 import org.apache.hadoop.security.AccessControlException;
@@ -47,6 +57,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +69,12 @@ extends AbstractDelegationTokenIdentifier>
    extends SecretManager<TokenIdent> {
   private static final Logger LOG = LoggerFactory
       .getLogger(AbstractDelegationTokenSecretManager.class);
+
+  /**
+   * Metrics to track token management operations.
+   */
+  private static final DelegationTokenSecretManagerMetrics METRICS
+      = DelegationTokenSecretManagerMetrics.create();
 
   private String formatTokenId(TokenIdent id) {
     return "(" + id + ")";
@@ -430,14 +447,14 @@ extends AbstractDelegationTokenIdentifier>
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
     try {
-      storeToken(identifier, tokenInfo);
+      METRICS.trackStoreToken(() -> storeToken(identifier, tokenInfo));
     } catch (IOException ioe) {
       LOG.error("Could not store token " + formatTokenId(identifier) + "!!",
           ioe);
     }
     return password;
   }
-  
+
 
 
   /**
@@ -555,7 +572,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("Renewal request for unknown token "
           + formatTokenId(id));
     }
-    updateToken(id, info);
+    METRICS.trackUpdateToken(() -> updateToken(id, info));
     return renewTime;
   }
   
@@ -591,8 +608,10 @@ extends AbstractDelegationTokenIdentifier>
     if (info == null) {
       throw new InvalidToken("Token not found " + formatTokenId(id));
     }
-    removeTokenForOwnerStats(id);
-    removeStoredToken(id);
+    METRICS.trackRemoveToken(() -> {
+      removeTokenForOwnerStats(id);
+      removeStoredToken(id);
+    });
     return id;
   }
   
@@ -823,6 +842,99 @@ extends AbstractDelegationTokenIdentifier>
     tokenOwnerStats.clear();
     for (TokenIdent id : currentTokens.keySet()) {
       addTokenForOwnerStats(id);
+    }
+  }
+
+  protected DelegationTokenSecretManagerMetrics getMetrics() {
+    return METRICS;
+  }
+
+  /**
+   * DelegationTokenSecretManagerMetrics tracks token management operations
+   * and publishes them through the metrics interfaces.
+   */
+  @Metrics(about="Delegation token secret manager metrics", context="token")
+  static class DelegationTokenSecretManagerMetrics implements DurationTrackerFactory {
+    private static final Logger LOG = LoggerFactory.getLogger(
+        DelegationTokenSecretManagerMetrics.class);
+
+    final static String STORE_TOKEN_STAT = "storeToken";
+    final static String UPDATE_TOKEN_STAT = "updateToken";
+    final static String REMOVE_TOKEN_STAT = "removeToken";
+    final static String TOKEN_FAILURE_STAT = "tokenFailure";
+
+    private final MetricsRegistry registry;
+    private final IOStatisticsStore ioStatistics;
+
+    @Metric("Rate of storage of delegation tokens and latency (milliseconds)")
+    private MutableRate storeToken;
+    @Metric("Rate of update of delegation tokens and latency (milliseconds)")
+    private MutableRate updateToken;
+    @Metric("Rate of removal of delegation tokens and latency (milliseconds)")
+    private MutableRate removeToken;
+    @Metric("Counter of delegation tokens operation failures")
+    private MutableCounterLong tokenFailure;
+
+    static DelegationTokenSecretManagerMetrics create() {
+      return DefaultMetricsSystem.instance().register(new DelegationTokenSecretManagerMetrics());
+    }
+
+    DelegationTokenSecretManagerMetrics() {
+      ioStatistics = IOStatisticsBinding.iostatisticsStore()
+          .withDurationTracking(STORE_TOKEN_STAT, UPDATE_TOKEN_STAT, REMOVE_TOKEN_STAT)
+          .withCounters(TOKEN_FAILURE_STAT)
+          .build();
+      registry = new MetricsRegistry("DelegationTokenSecretManagerMetrics");
+      LOG.debug("Initialized {}", registry);
+    }
+
+    public void trackStoreToken(InvocationRaisingIOE invocation) throws IOException {
+      trackInvocation(invocation, STORE_TOKEN_STAT, storeToken);
+    }
+
+    public void trackUpdateToken(InvocationRaisingIOE invocation) throws IOException {
+      trackInvocation(invocation, UPDATE_TOKEN_STAT, updateToken);
+    }
+
+    public void trackRemoveToken(InvocationRaisingIOE invocation) throws IOException {
+      trackInvocation(invocation, REMOVE_TOKEN_STAT, removeToken);
+    }
+
+    public void trackInvocation(InvocationRaisingIOE invocation, String statistic,
+        MutableRate metric) throws IOException {
+      try {
+        long start = Time.monotonicNow();
+        IOStatisticsBinding.trackDurationOfInvocation(this, statistic, invocation);
+        metric.add(Time.monotonicNow() - start);
+      } catch (Exception ex) {
+        tokenFailure.incr();
+        throw ex;
+      }
+    }
+
+    @Override
+    public DurationTracker trackDuration(String key, long count) {
+      return ioStatistics.trackDuration(key, count);
+    }
+
+    protected MutableRate getStoreToken() {
+      return storeToken;
+    }
+
+    protected MutableRate getUpdateToken() {
+      return updateToken;
+    }
+
+    protected MutableRate getRemoveToken() {
+      return removeToken;
+    }
+
+    protected MutableCounterLong getTokenFailure() {
+      return tokenFailure;
+    }
+
+    protected IOStatisticsStore getIoStatistics() {
+      return ioStatistics;
     }
   }
 }

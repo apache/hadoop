@@ -34,57 +34,24 @@ add_library(hdfs_tool_obj OBJECT hdfs-tool.cc)
 target_include_directories(hdfs_tool_obj PRIVATE ../tools)
 
 add_subdirectory(hdfs-cat)
-
 add_subdirectory(hdfs-chgrp)
-
 add_subdirectory(hdfs-chown)
-
 add_subdirectory(hdfs-chmod)
-
-add_executable(hdfs_find hdfs_find.cc)
-target_link_libraries(hdfs_find tools_common hdfspp_static)
-
-add_executable(hdfs_mkdir hdfs_mkdir.cc)
-target_link_libraries(hdfs_mkdir tools_common hdfspp_static)
-
-add_executable(hdfs_rm hdfs_rm.cc)
-target_link_libraries(hdfs_rm tools_common hdfspp_static)
-
-add_executable(hdfs_ls hdfs_ls.cc)
-target_link_libraries(hdfs_ls tools_common hdfspp_static)
-
-add_executable(hdfs_stat hdfs_stat.cc)
-target_link_libraries(hdfs_stat tools_common hdfspp_static)
-
-add_executable(hdfs_count hdfs_count.cc)
-target_link_libraries(hdfs_count tools_common hdfspp_static)
-
+add_subdirectory(hdfs-find)
+add_subdirectory(hdfs-mkdir)
+add_subdirectory(hdfs-rm)
+add_subdirectory(hdfs-ls)
+add_subdirectory(hdfs-stat)
+add_subdirectory(hdfs-count)
 add_subdirectory(hdfs-df)
-
-add_executable(hdfs_du hdfs_du.cc)
-target_link_libraries(hdfs_du tools_common hdfspp_static)
-
-add_executable(hdfs_get hdfs_get.cc)
-target_link_libraries(hdfs_get tools_common hdfspp_static)
-
-add_executable(hdfs_copyToLocal hdfs_copyToLocal.cc)
-target_link_libraries(hdfs_copyToLocal tools_common hdfspp_static)
-
-add_executable(hdfs_moveToLocal hdfs_moveToLocal.cc)
-target_link_libraries(hdfs_moveToLocal tools_common hdfspp_static)
-
-add_executable(hdfs_setrep hdfs_setrep.cc)
-target_link_libraries(hdfs_setrep tools_common hdfspp_static)
-
+add_subdirectory(hdfs-du)
+add_subdirectory(hdfs-get)
+add_subdirectory(hdfs-copy-to-local)
+add_subdirectory(hdfs-move-to-local)
+add_subdirectory(hdfs-setrep)
 add_subdirectory(hdfs-allow-snapshot)
-
 add_subdirectory(hdfs-disallow-snapshot)
-
 add_subdirectory(hdfs-create-snapshot)
-
 add_subdirectory(hdfs-rename-snapshot)
-
 add_subdirectory(hdfs-delete-snapshot)
-
-add_executable(hdfs_tail hdfs_tail.cc)
-target_link_libraries(hdfs_tail tools_common hdfspp_static)
+add_subdirectory(hdfs-tail)

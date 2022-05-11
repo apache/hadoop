@@ -457,17 +457,6 @@ public class ITestS3AConfiguration {
   }
 
   @Test
-  public void testReadAheadRange() throws Exception {
-    conf = new Configuration();
-    conf.set(Constants.READAHEAD_RANGE, "300K");
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    assertNotNull(fs);
-    long readAheadRange = fs.getReadAheadRange();
-    assertNotNull(readAheadRange);
-    assertEquals("Read Ahead Range Incorrect.", 300 * 1024, readAheadRange);
-  }
-
-  @Test
   public void testUsernameFromUGI() throws Throwable {
     final String alice = "alice";
     UserGroupInformation fakeUser =
@@ -537,7 +526,7 @@ public class ITestS3AConfiguration {
     Assert.assertEquals(s3SignerOverride,
         clientConfiguration.getSignerOverride());
     clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
     Assert.assertNull(clientConfiguration.getSignerOverride());
 
     // Configured base SIGNING_ALGORITHM, overridden for S3 only
@@ -549,41 +538,9 @@ public class ITestS3AConfiguration {
     Assert.assertEquals(s3SignerOverride,
         clientConfiguration.getSignerOverride());
     clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
     Assert
         .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
   }
 
-  @Test(timeout = 10_000L)
-  public void testDdbSpecificSignerOverride() throws IOException {
-    ClientConfiguration clientConfiguration = null;
-    Configuration config;
-
-    String signerOverride = "testSigner";
-    String ddbSignerOverride = "testDdbSigner";
-
-    // Default SIGNING_ALGORITHM, overridden for S3
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
-    Assert.assertEquals(ddbSignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert.assertNull(clientConfiguration.getSignerOverride());
-
-    // Configured base SIGNING_ALGORITHM, overridden for S3
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM, signerOverride);
-    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
-    Assert.assertEquals(ddbSignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert
-        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
-  }
 }

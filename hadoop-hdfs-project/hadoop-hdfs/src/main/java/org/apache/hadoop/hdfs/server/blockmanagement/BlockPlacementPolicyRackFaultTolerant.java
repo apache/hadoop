@@ -42,7 +42,7 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       totalNumOfReplicas = clusterSize;
     }
     // No calculation needed when there is only one rack or picking one node.
-    int numOfRacks = clusterMap.getNumOfRacks();
+    int numOfRacks = clusterMap.getNumOfNonEmptyRacks();
     // HDFS-14527 return default when numOfRacks = 0 to avoid
     // ArithmeticException when calc maxNodesPerRack at following logic.
     if (numOfRacks <= 1 || totalNumOfReplicas <= 1) {
@@ -90,38 +90,39 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
                                  EnumMap<StorageType, Integer> storageTypes)
                                  throws NotEnoughReplicasException {
     int totalReplicaExpected = results.size() + numOfReplicas;
-    int numOfRacks = clusterMap.getNumOfRacks();
-    if (totalReplicaExpected < numOfRacks ||
-        totalReplicaExpected % numOfRacks == 0) {
-      writer = chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
-          maxNodesPerRack, results, avoidStaleNodes, storageTypes);
-      return writer;
-    }
-
-    assert totalReplicaExpected > (maxNodesPerRack -1) * numOfRacks;
-
-    // Calculate numOfReplicas for filling each rack exactly (maxNodesPerRack-1)
-    // replicas.
-    HashMap<String, Integer> rackCounts = new HashMap<>();
-    for (DatanodeStorageInfo dsInfo : results) {
-      String rack = dsInfo.getDatanodeDescriptor().getNetworkLocation();
-      Integer count = rackCounts.get(rack);
-      if (count != null) {
-        rackCounts.put(rack, count + 1);
-      } else {
-        rackCounts.put(rack, 1);
-      }
-    }
-    int excess = 0; // Sum of the above (maxNodesPerRack-1) part of nodes in results
-    for (int count : rackCounts.values()) {
-      if (count > maxNodesPerRack -1) {
-        excess += count - (maxNodesPerRack -1);
-      }
-    }
-    numOfReplicas = Math.min(totalReplicaExpected - results.size(),
-        (maxNodesPerRack -1) * numOfRacks - (results.size() - excess));
+    int numOfRacks = clusterMap.getNumOfNonEmptyRacks();
 
     try {
+      if (totalReplicaExpected < numOfRacks ||
+          totalReplicaExpected % numOfRacks == 0) {
+        writer = chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
+            maxNodesPerRack, results, avoidStaleNodes, storageTypes);
+        return writer;
+      }
+
+      assert totalReplicaExpected > (maxNodesPerRack -1) * numOfRacks;
+
+      // Calculate numOfReplicas for filling each rack exactly (maxNodesPerRack-1)
+      // replicas.
+      HashMap<String, Integer> rackCounts = new HashMap<>();
+      for (DatanodeStorageInfo dsInfo : results) {
+        String rack = dsInfo.getDatanodeDescriptor().getNetworkLocation();
+        Integer count = rackCounts.get(rack);
+        if (count != null) {
+          rackCounts.put(rack, count + 1);
+        } else {
+          rackCounts.put(rack, 1);
+        }
+      }
+      int excess = 0; // Sum of the above (maxNodesPerRack-1) part of nodes in results
+      for (int count : rackCounts.values()) {
+        if (count > maxNodesPerRack -1) {
+          excess += count - (maxNodesPerRack -1);
+        }
+      }
+      numOfReplicas = Math.min(totalReplicaExpected - results.size(),
+          (maxNodesPerRack -1) * numOfRacks - (results.size() - excess));
+
       // Try to spread the replicas as evenly as possible across racks.
       // This is done by first placing with (maxNodesPerRack-1), then spreading
       // the remainder by calling again with maxNodesPerRack.
@@ -243,7 +244,7 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       racks.add(dn.getNetworkLocation());
     }
     return new BlockPlacementStatusDefault(racks.size(), numberOfReplicas,
-        clusterMap.getNumOfRacks());
+        clusterMap.getNumOfNonEmptyRacks());
   }
 
   @Override

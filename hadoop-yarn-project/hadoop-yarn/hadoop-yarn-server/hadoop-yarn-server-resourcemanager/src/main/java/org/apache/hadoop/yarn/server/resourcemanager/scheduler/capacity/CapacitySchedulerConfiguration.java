@@ -426,6 +426,19 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private ConfigurationProperties configurationProperties;
 
+  public int getMaximumAutoCreatedQueueDepth(String queuePath) {
+    return getInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH,
+        getInt(PREFIX + MAXIMUM_QUEUE_DEPTH, DEFAULT_MAXIMUM_QUEUE_DEPTH));
+  }
+
+  public void setMaximumAutoCreatedQueueDepth(String queuePath, int value) {
+    setInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH, value);
+  }
+
+  public void setMaximumAutoCreatedQueueDepth(int value) {
+    setInt(PREFIX + MAXIMUM_QUEUE_DEPTH, value);
+  }
+
   /**
    * Different resource types supported.
    */
@@ -926,6 +939,90 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static String getAclKey(AccessType acl) {
     return "acl_" + StringUtils.toLowerCase(acl.toString());
+  }
+
+  /**
+   * Creates a mapping of queue ACLs for a Legacy Auto Created Leaf Queue.
+   *
+   * @param parentQueuePath the parent's queue path
+   * @return A mapping of the queue ACLs.
+   */
+  public Map<AccessType, AccessControlList> getACLsForLegacyAutoCreatedLeafQueue(
+      String parentQueuePath) {
+    final String prefix =
+        getQueuePrefix(getAutoCreatedQueueTemplateConfPrefix(
+            parentQueuePath));
+
+    Map<String, String> properties = new HashMap<>();
+    for (QueueACL acl : QueueACL.values()) {
+      final String key = getAclKey(acl);
+      final String value = get(prefix + key);
+      if (value != null) {
+        properties.put(key, get(prefix + key));
+      }
+    }
+    return getACLsFromProperties(properties);
+  }
+
+  /**
+   * Creates a mapping of queue ACLs for a Flexible Auto Created Parent Queue.
+   * The .parent-template is preferred to .template ACLs.
+   *
+   * @param aqc The AQC templates to use.
+   * @return A mapping of the queue ACLs.
+   */
+  public static Map<AccessType, AccessControlList> getACLsForFlexibleAutoCreatedParentQueue(
+      AutoCreatedQueueTemplate aqc) {
+    return getACLsFromProperties(aqc.getParentOnlyProperties(),
+        aqc.getTemplateProperties());
+  }
+
+  /**
+   * Creates a mapping of queue ACLs for a Flexible Auto Created Leaf Queue.
+   * The .leaf-template is preferred to .template ACLs.
+   *
+   * @param aqc The AQC templates to use.
+   * @return A mapping of the queue ACLs.
+   */
+  public static Map<AccessType, AccessControlList> getACLsForFlexibleAutoCreatedLeafQueue(
+      AutoCreatedQueueTemplate aqc) {
+    return getACLsFromProperties(aqc.getLeafOnlyProperties(),
+        aqc.getTemplateProperties());
+  }
+
+  /**
+   * Transforms the string ACL properties to AccessType and AccessControlList mapping.
+   *
+   * @param properties The ACL properties.
+   * @return A mapping of the queue ACLs.
+   */
+  private static Map<AccessType, AccessControlList> getACLsFromProperties(
+      Map<String, String> properties) {
+    return getACLsFromProperties(properties, new HashMap<>());
+  }
+
+  /**
+   * Transforms the string ACL properties to AccessType and AccessControlList mapping.
+   *
+   * @param properties The ACL properties.
+   * @param fallbackProperties The fallback properties to use.
+   * @return A mapping of the queue ACLs.
+   */
+  private static Map<AccessType, AccessControlList> getACLsFromProperties(
+      Map<String, String> properties, Map<String, String> fallbackProperties) {
+    Map<AccessType, AccessControlList> acls = new HashMap<>();
+    for (QueueACL acl : QueueACL.values()) {
+      String aclStr = properties.get(getAclKey(acl));
+      if (aclStr == null) {
+        aclStr = fallbackProperties.get(getAclKey(acl));
+        if (aclStr == null) {
+          aclStr = NONE_ACL;
+        }
+      }
+      acls.put(SchedulerUtils.toAccessType(acl),
+          new AccessControlList(aclStr));
+    }
+    return acls;
   }
 
   @Override
@@ -2135,6 +2232,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final int
       DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES = 1000;
+
+  @Private
+  public static final String MAXIMUM_QUEUE_DEPTH =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "maximum-queue-depth";
+
+  @Private
+  public static final int DEFAULT_MAXIMUM_QUEUE_DEPTH = 2;
 
   @Private
   public static final boolean DEFAULT_AUTO_QUEUE_CREATION_ENABLED = false;

@@ -91,7 +91,7 @@ of:
 
 These credentials are obtained from the AWS Secure Token Service (STS) when the the token is issued.
 * A set of AWS session credentials binding the user to a specific AWS IAM Role,
-further restricted to only access the S3 bucket and matching S3Guard DynamoDB table.
+further restricted to only access the S3 bucket.
 Again, these credentials are requested when the token is issued.
 
 
@@ -404,7 +404,6 @@ Else: as with session delegation tokens, an STS client is created. This time
 set to restrict access to:
 
 * CRUD access the specific bucket a token is being requested for
-* CRUD access to the contents of any S3Guard DDB used (not admin rights though).
 * access to all KMS keys (assumption: AWS KMS is where restrictions are set up)
 
 *Example Generated Role Policy*
@@ -428,12 +427,7 @@ set to restrict access to:
     "Effect" : "Allow",
     "Action" : [ "kms:Decrypt", "kms:GenerateDataKey" ],
     "Resource" : "arn:aws:kms:*"
-  }, {
-    "Sid" : "9",
-    "Effect" : "Allow",
-    "Action" : [ "dynamodb:BatchGetItem", "dynamodb:BatchWriteItem", "dynamodb:DeleteItem", "dynamodb:DescribeTable", "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query", "dynamodb:UpdateItem" ],
-    "Resource" : "arn:aws:dynamodb:eu-west-1:980678866fff:table/example-bucket"
-  } ]
+  }]
 }
 ```
 

@@ -98,6 +98,8 @@ jthrowable initCachedClasses(JNIEnv* env) {
                 "org/apache/hadoop/hdfs/ReadStatistics";
         cachedJavaClasses[JC_HDFS_DATA_INPUT_STREAM].className =
                 "org/apache/hadoop/hdfs/client/HdfsDataInputStream";
+        cachedJavaClasses[JC_FUTURE_DATA_IS_BUILDER].className =
+                "org/apache/hadoop/fs/FutureDataInputStreamBuilder";
         cachedJavaClasses[JC_DOMAIN_SOCKET].className =
                 "org/apache/hadoop/net/unix/DomainSocket";
         cachedJavaClasses[JC_URI].className =
@@ -108,6 +110,8 @@ jthrowable initCachedClasses(JNIEnv* env) {
                 "java/util/EnumSet";
         cachedJavaClasses[JC_EXCEPTION_UTILS].className =
                 "org/apache/commons/lang3/exception/ExceptionUtils";
+        cachedJavaClasses[JC_CFUTURE].className =
+                "java/util/concurrent/CompletableFuture";
 
         // Create and set the jclass objects based on the class names set above
         jthrowable jthr;
