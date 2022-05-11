@@ -1811,6 +1811,11 @@ public class FileContext implements PathCapabilities {
     
     /**
      * See {@link #listStatus(Path[], PathFilter)}
+     *
+     * @param files files
+     * @throws AccessControlException If access is denied
+     * @throws FileNotFoundException If <code>files</code> does not exist
+     * @throws IOException If an I/O error occurred
      */
     public FileStatus[] listStatus(Path[] files) throws AccessControlException,
         FileNotFoundException, IOException {
@@ -2066,36 +2071,29 @@ public class FileContext implements PathCapabilities {
      *    <dt> <tt> ? </tt>
      *    <dd> Matches any single character.
      *
-     *    <p>
      *    <dt> <tt> * </tt>
      *    <dd> Matches zero or more characters.
      *
-     *    <p>
      *    <dt> <tt> [<i>abc</i>] </tt>
      *    <dd> Matches a single character from character set
      *     <tt>{<i>a,b,c</i>}</tt>.
      *
-     *    <p>
      *    <dt> <tt> [<i>a</i>-<i>b</i>] </tt>
      *    <dd> Matches a single character from the character range
      *     <tt>{<i>a...b</i>}</tt>. Note: character <tt><i>a</i></tt> must be
      *     lexicographically less than or equal to character <tt><i>b</i></tt>.
      *
-     *    <p>
      *    <dt> <tt> [^<i>a</i>] </tt>
      *    <dd> Matches a single char that is not from character set or range
      *     <tt>{<i>a</i>}</tt>.  Note that the <tt>^</tt> character must occur
      *     immediately to the right of the opening bracket.
      *
-     *    <p>
      *    <dt> <tt> \<i>c</i> </tt>
      *    <dd> Removes (escapes) any special meaning of character <i>c</i>.
      *
-     *    <p>
      *    <dt> <tt> {ab,cd} </tt>
      *    <dd> Matches a string from the string set <tt>{<i>ab, cd</i>} </tt>
-     *    
-     *    <p>
+     *
      *    <dt> <tt> {ab,c{de,fh}} </tt>
      *    <dd> Matches a string from string set <tt>{<i>ab, cde, cfh</i>}</tt>
      *
@@ -2156,6 +2154,18 @@ public class FileContext implements PathCapabilities {
     /**
      * Copy file from src to dest. See
      * {@link #copy(Path, Path, boolean, boolean)}
+     *
+     * @param src src
+     * @param dst dst
+     * @throws AccessControlException         If access is denied
+     * @throws FileAlreadyExistsException     If file <code>src</code> already exists
+     * @throws FileNotFoundException          if next file does not exist any more
+     * @throws ParentNotDirectoryException    If parent of <code>src</code> is not a
+     *                                        directory.
+     * @throws UnsupportedFileSystemException If file system for
+     *                                        <code>src/dst</code> is not supported
+     * @thorws IOException If an I/O error occurred
+     * @return if success copy true, not false
      */
     public boolean copy(final Path src, final Path dst)
         throws AccessControlException, FileAlreadyExistsException,
@@ -2166,8 +2176,8 @@ public class FileContext implements PathCapabilities {
     
     /**
      * Copy from src to dst, optionally deleting src and overwriting dst.
-     * @param src
-     * @param dst
+     * @param src src
+     * @param dst dst
      * @param deleteSource - delete src if true
      * @param overwrite  overwrite dst if true; throw IOException if dst exists
      *         and overwrite is false.

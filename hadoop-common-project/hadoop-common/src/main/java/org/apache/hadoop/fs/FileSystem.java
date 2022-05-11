@@ -1084,6 +1084,7 @@ public abstract class FileSystem extends Configured
    * @param f the file to create
    * @param progress to report progress
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f, Progressable progress)
       throws IOException {
@@ -1100,6 +1101,7 @@ public abstract class FileSystem extends Configured
    * @param f the file to create
    * @param replication the replication factor
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f, short replication)
       throws IOException {
@@ -1118,6 +1120,7 @@ public abstract class FileSystem extends Configured
    * @param replication the replication factor
    * @param progress to report progress
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f, short replication,
       Progressable progress) throws IOException {
@@ -1135,6 +1138,7 @@ public abstract class FileSystem extends Configured
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f,
                                    boolean overwrite,
@@ -1155,6 +1159,7 @@ public abstract class FileSystem extends Configured
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f,
                                    boolean overwrite,
@@ -1175,6 +1180,7 @@ public abstract class FileSystem extends Configured
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f,
       boolean overwrite,
@@ -1193,6 +1199,7 @@ public abstract class FileSystem extends Configured
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f,
                                             boolean overwrite,
@@ -1219,6 +1226,7 @@ public abstract class FileSystem extends Configured
    * @param progress the progress reporter
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
+   * @return output stream
    */
   public abstract FSDataOutputStream create(Path f,
       FsPermission permission,
@@ -1240,6 +1248,7 @@ public abstract class FileSystem extends Configured
    * @param progress the progress reporter
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
+   * @return output stream
    */
   public FSDataOutputStream create(Path f,
       FsPermission permission,
@@ -1266,6 +1275,7 @@ public abstract class FileSystem extends Configured
    *        found in conf will be used.
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
+   * @return output stream
    */
   public FSDataOutputStream create(Path f,
       FsPermission permission,
@@ -1287,6 +1297,16 @@ public abstract class FileSystem extends Configured
    * the permission with umask before calling this method.
    * This a temporary method added to support the transition from FileSystem
    * to FileContext for user applications.
+   *
+   * @param f path
+   * @param absolutePermission permission
+   * @param flag create flag
+   * @param bufferSize  buffer size
+   * @param replication replication
+   * @param blockSize block size
+   * @param progress progress
+   * @param checksumOpt check sum opt
+   * @return output stream
    * @throws IOException IO failure
    */
   @Deprecated
@@ -1341,6 +1361,11 @@ public abstract class FileSystem extends Configured
    * with umask before calling this method.
    * This a temporary method added to support the transition from FileSystem
    * to FileContext for user applications.
+   *
+   * @param f the path
+   * @param absolutePermission permission
+   * @param createParent create parent
+   * @throws IOException IO failure
    */
   @Deprecated
   protected void primitiveMkdir(Path f, FsPermission absolutePermission,
@@ -1380,6 +1405,7 @@ public abstract class FileSystem extends Configured
    * @param progress the progress reporter
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
+   * @return output stream
    */
   public FSDataOutputStream createNonRecursive(Path f,
       boolean overwrite,
@@ -1403,6 +1429,7 @@ public abstract class FileSystem extends Configured
    * @param progress the progress reporter
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
+   * @return output stream
    */
    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
        boolean overwrite, int bufferSize, short replication, long blockSize,
@@ -1426,6 +1453,7 @@ public abstract class FileSystem extends Configured
     * @param progress the progress reporter
     * @throws IOException IO failure
     * @see #setPermission(Path, FsPermission)
+    * @return output stream
     */
     public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
         EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
@@ -1440,6 +1468,7 @@ public abstract class FileSystem extends Configured
    * <i>Important: the default implementation is not atomic</i>
    * @param f path to use for create
    * @throws IOException IO failure
+   * @return if create new file success true,not false
    */
   public boolean createNewFile(Path f) throws IOException {
     if (exists(f)) {
@@ -1474,6 +1503,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException IO failure
    * @throws UnsupportedOperationException if the operation is unsupported
    *         (default).
+   * @return output stream
    */
   public FSDataOutputStream append(Path f, int bufferSize) throws IOException {
     return append(f, bufferSize, null);
@@ -1487,6 +1517,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException IO failure
    * @throws UnsupportedOperationException if the operation is unsupported
    *         (default).
+   * @return output stream
    */
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
@@ -1525,7 +1556,7 @@ public abstract class FileSystem extends Configured
    * This is the default behavior.
    * @param src file name
    * @param replication new replication
-   * @throws IOException
+   * @throws IOException an IO failure
    * @return true if successful, or the feature in unsupported;
    *         false if replication is supported but the file does not exist,
    *         or is a directory
@@ -1554,11 +1585,12 @@ public abstract class FileSystem extends Configured
    * <p>
    * If OVERWRITE option is not passed as an argument, rename fails
    * if the dst already exists.
+   * </p>
    * <p>
    * If OVERWRITE option is passed as an argument, rename overwrites
    * the dst if it is a file or an empty directory. Rename fails if dst is
    * a non-empty directory.
-   * <p>
+   * </p>
    * Note that atomicity of rename is dependent on the file system
    * implementation. Please refer to the file system documentation for
    * details. This default implementation is non atomic.
@@ -1566,6 +1598,7 @@ public abstract class FileSystem extends Configured
    * This method is deprecated since it is a temporary method added to
    * support the transition from FileSystem to FileContext for user
    * applications.
+   * </p>
    *
    * @param src path to be renamed
    * @param dst new path after rename
