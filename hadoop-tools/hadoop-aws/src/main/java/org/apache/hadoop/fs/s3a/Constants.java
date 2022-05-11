@@ -433,7 +433,7 @@ public final class Constants {
    * S3 storage class: standard, reduced_redundancy, intelligent_tiering etc.
    * Value {@value }.
    */
-  public static final String STORAGE_CLASS = "fs.s3a.storage.class";
+  public static final String STORAGE_CLASS = "fs.s3a.create.storage.class";
 
   /**
    * S3 Storage option: {@value}.

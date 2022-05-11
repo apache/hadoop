@@ -1080,7 +1080,7 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.storage.class</name>
+  <name>fs.s3a.create.storage.class</name>
   <value></value>
   <description>
       Storage class: standard, reduced_redundancy, intelligent_tiering, etc.
@@ -1678,12 +1678,12 @@ that you can choose from based on behavior of your applications. By using the ri
 storage class, you can reduce the cost of your bucket.
 
 S3A uses Standard storage class for PUT object requests by default, which is suitable for 
-general use cases. To use a specific storage class, set the value in `fs.s3a.storage.class` property to
+general use cases. To use a specific storage class, set the value in `fs.s3a.create.storage.class` property to
 the storage class you want.
 
 ```xml
 <property>
-    <name>fs.s3a.storage.class</name>
+    <name>fs.s3a.create.storage.class</name>
     <value>intelligent_tiering</value>
 </property>
 ```
