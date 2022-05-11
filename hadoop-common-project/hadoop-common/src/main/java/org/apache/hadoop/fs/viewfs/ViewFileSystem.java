@@ -83,6 +83,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME;
+
 /**
  * ViewFileSystem (extends the FileSystem interface) implements a client-side
  * mount table. Its spec and implementation is identical to {@link ViewFs}.
@@ -360,7 +363,7 @@ public class ViewFileSystem extends FileSystem {
 
         @Override
         protected FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
-            throws URISyntaxException {
+            throws URISyntaxException, IOException {
           return new InternalDirOfViewFs(dir, creationTime, ugi, myUri, config,
               this);
         }
@@ -1386,10 +1389,12 @@ public class ViewFileSystem extends FileSystem {
     final URI myUri;
     private final boolean showMountLinksAsSymlinks;
     private InodeTree<FileSystem> fsState;
-    
+    private String mountLinkUserName;
+    private String mountLinkGroupName;
+
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
         final long cTime, final UserGroupInformation ugi, URI uri,
-        Configuration config, InodeTree fsState) throws URISyntaxException {
+        Configuration config, InodeTree fsState) throws URISyntaxException, IOException {
       myUri = uri;
       this.fsState = fsState;
       try {
@@ -1403,6 +1408,14 @@ public class ViewFileSystem extends FileSystem {
       showMountLinksAsSymlinks = config
           .getBoolean(CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
               CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT);
+      mountLinkUserName = config.get(CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME);
+      mountLinkGroupName = config.get(CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME);
+      if (mountLinkUserName == null) {
+        mountLinkUserName = ugi.getShortUserName();
+      }
+      if (mountLinkGroupName == null) {
+        mountLinkGroupName = ugi.getPrimaryGroupName();
+      }
     }
 
     static private void checkPathIsSlash(final Path f) throws IOException {
@@ -1525,12 +1538,21 @@ public class ViewFileSystem extends FileSystem {
     public FileStatus getFileStatus(Path f) throws IOException {
       checkPathIsSlash(f);
       return new FileStatus(0, true, 0, 0, creationTime, creationTime,
-          PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
+          getMountLinkDefaultPermissions(),
+          mountLinkUserName,
+          mountLinkGroupName,
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, ROOT_PATH));
     }
     
-
+    /**
+     * {@inheritDoc}
+     *
+     * Note: listStatus on root("/") considers listing from fallbackLink if
+     * available. If the same directory name is present in configured mount
+     * path as well as in fallback link, then only the configured mount path
+     * will be listed in the returned result.
+     */
     @Override
     public FileStatus[] listStatus(Path f) throws AccessControlException,
         FileNotFoundException, IOException {
@@ -1552,8 +1574,8 @@ public class ViewFileSystem extends FileSystem {
             // symlink and rest other properties are belongs to mount link only.
             linkStatuses.add(
                 new FileStatus(0, false, 0, 0, creationTime, creationTime,
-                    PERMISSION_555, ugi.getShortUserName(),
-                    ugi.getPrimaryGroupName(), link.getTargetLink(), path));
+                    getMountLinkDefaultPermissions(), mountLinkUserName,
+                    mountLinkGroupName, link.getTargetLink(), path));
             continue;
           }
 
@@ -1584,8 +1606,8 @@ public class ViewFileSystem extends FileSystem {
         } else {
           internalDirStatuses.add(
               new FileStatus(0, true, 0, 0, creationTime, creationTime,
-                  PERMISSION_555, ugi.getShortUserName(),
-                  ugi.getPrimaryGroupName(), path));
+                  getMountLinkDefaultPermissions(), mountLinkUserName,
+                  mountLinkGroupName, path));
         }
       }
       FileStatus[] internalDirStatusesMergedWithFallBack = internalDirStatuses
@@ -1812,9 +1834,10 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public AclStatus getAclStatus(Path path) throws IOException {
       checkPathIsSlash(path);
-      return new AclStatus.Builder().owner(ugi.getShortUserName())
-          .group(ugi.getPrimaryGroupName())
-          .addEntries(AclUtil.getMinimalAcl(PERMISSION_555))
+      return new AclStatus.Builder().owner(mountLinkUserName)
+          .group(mountLinkGroupName)
+          .setPermission(getMountLinkDefaultPermissions())
+          .addEntries(AclUtil.getMinimalAcl(getMountLinkDefaultPermissions()))
           .stickyBit(false).build();
     }
 
@@ -1916,6 +1939,10 @@ public class ViewFileSystem extends FileSystem {
         }
       }
       return allPolicies;
+    }
+
+    private FsPermission getMountLinkDefaultPermissions() {
+      return PERMISSION_555;
     }
   }
 
