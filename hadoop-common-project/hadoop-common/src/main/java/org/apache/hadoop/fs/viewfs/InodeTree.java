@@ -144,6 +144,14 @@ public abstract class InodeTree<T> {
     boolean isLink() {
       return !isInternalDir();
     }
+
+    /**
+     * Return the link if isLink.
+     * @return will return null, for non links.
+     */
+    INodeLink<T> getLink() {
+      return null;
+    }
   }
 
   /**
@@ -243,6 +251,7 @@ public abstract class InodeTree<T> {
       this.link = link;
     }
 
+    @Override
     INodeLink<T> getLink() {
       return link;
     }
@@ -368,6 +377,11 @@ public abstract class InodeTree<T> {
     @Override
     boolean isInternalDir() {
       return false;
+    }
+
+    @Override
+    INodeLink<T> getLink() {
+      return this;
     }
 
     /**

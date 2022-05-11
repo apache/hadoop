@@ -1098,8 +1098,7 @@ public class ViewFs extends AbstractFileSystem {
       }
       FileStatus result;
       if (inode.isLink()) {
-        INodeLink<AbstractFileSystem> inodelink = !inode.isInternalDir() ?
-          (INodeLink<AbstractFileSystem>) inode : ((InodeTree.INodeDirLink<AbstractFileSystem>) inode).getLink();
+        INodeLink<AbstractFileSystem> inodelink = inode.getLink();
         try {
           String linkedPath = inodelink.getTargetFileSystem()
               .getUri().getPath();
@@ -1169,8 +1168,7 @@ public class ViewFs extends AbstractFileSystem {
         INode<AbstractFileSystem> inode = iEntry.getValue();
         Path path = new Path(inode.fullPath).makeQualified(myUri, null);
         if (inode.isLink()) {
-          INodeLink<AbstractFileSystem> link = !inode.isInternalDir() ?
-            (INodeLink<AbstractFileSystem>) inode : ((InodeTree.INodeDirLink<AbstractFileSystem>) inode).getLink();
+          INodeLink<AbstractFileSystem> link = inode.getLink();
 
           if (showMountLinksAsSymlinks) {
             // To maintain backward compatibility, with default option(showing
