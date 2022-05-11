@@ -560,7 +560,7 @@ public class KeyProviderCryptoExtension extends
    * Calls {@link CryptoExtension#drain(String)} for the given key name on the
    * underlying {@link CryptoExtension}.
    *
-   * @param keyName
+   * @param keyName key name
    */
   public void drain(String keyName) {
     getExtension().drain(keyName);

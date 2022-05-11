@@ -377,6 +377,7 @@ public abstract class FileSystem extends Configured
    * implement that method.
    *
    * @see #canonicalizeUri(URI)
+   * @return the URI of this filesystem.
    */
   protected URI getCanonicalUri() {
     return canonicalizeUri(getUri());
@@ -457,7 +458,10 @@ public abstract class FileSystem extends Configured
       : null;
   }
 
-  /** @deprecated call {@link #getUri()} instead.*/
+  /**
+   * @return uri to string
+   * @deprecated call {@link #getUri()} instead.
+   */
   @Deprecated
   public String getName() { return getUri().toString(); }
 
@@ -523,6 +527,9 @@ public abstract class FileSystem extends Configured
    *   configuration and URI, cached and returned to the caller.
    * </li>
    * </ol>
+   * @param uri uri of the filesystem
+   * @param conf configrution
+   * @return filesystem instance
    * @throws IOException if the FileSystem cannot be instantiated.
    */
   public static FileSystem get(URI uri, Configuration conf) throws IOException {
@@ -552,7 +559,7 @@ public abstract class FileSystem extends Configured
   /**
    * Returns the FileSystem for this URI's scheme and authority and the
    * given user. Internally invokes {@link #newInstance(URI, Configuration)}
-   * @param uri of the filesystem
+   * @param uri uri of the filesystem
    * @param conf the configuration to use
    * @param user to perform the get as
    * @return filesystem instance
@@ -870,6 +877,7 @@ public abstract class FileSystem extends Configured
    * @param start offset into the given file
    * @param len length for which to get locations for
    * @throws IOException IO failure
+   * @return block location array
    */
   public BlockLocation[] getFileBlockLocations(FileStatus file,
       long start, long len) throws IOException {
@@ -910,6 +918,7 @@ public abstract class FileSystem extends Configured
    * @param len length for which to get locations for
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException IO failure
+   * @return block location array
    */
   public BlockLocation[] getFileBlockLocations(Path p,
       long start, long len) throws IOException {
@@ -972,6 +981,7 @@ public abstract class FileSystem extends Configured
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.
    * @throws IOException IO failure
+   * @return input stream
    */
   public abstract FSDataInputStream open(Path f, int bufferSize)
     throws IOException;
@@ -980,6 +990,7 @@ public abstract class FileSystem extends Configured
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file to open
    * @throws IOException IO failure
+   * @return input stream
    */
   public FSDataInputStream open(Path f) throws IOException {
     return open(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
@@ -997,6 +1008,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException IO failure
    * @throws UnsupportedOperationException If {@link #open(PathHandle, int)}
    *                                       not overridden by subclass
+   * @return input stream
    */
   public FSDataInputStream open(PathHandle fd) throws IOException {
     return open(fd, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
@@ -1014,6 +1026,7 @@ public abstract class FileSystem extends Configured
    *                                    not satisfied
    * @throws IOException IO failure
    * @throws UnsupportedOperationException If not overridden by subclass
+   * @return input stream
    */
   public FSDataInputStream open(PathHandle fd, int bufferSize)
       throws IOException {
@@ -1031,6 +1044,7 @@ public abstract class FileSystem extends Configured
    *         not overridden by subclass.
    * @throws UnsupportedOperationException If this FileSystem cannot enforce
    *         the specified constraints.
+   * @return path handle
    */
   public final PathHandle getPathHandle(FileStatus stat, HandleOpt... opt) {
     // method is final with a default so clients calling getPathHandle(stat)
@@ -1046,6 +1060,7 @@ public abstract class FileSystem extends Configured
    * @param stat Referent in the target FileSystem
    * @param opt Constraints that determine the validity of the
    *            {@link PathHandle} reference.
+   * @return path handle
    */
   protected PathHandle createPathHandle(FileStatus stat, HandleOpt... opt) {
     throw new UnsupportedOperationException();
@@ -1056,6 +1071,7 @@ public abstract class FileSystem extends Configured
    * Files are overwritten by default.
    * @param f the file to create
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f) throws IOException {
     return create(f, true);
@@ -1067,6 +1083,7 @@ public abstract class FileSystem extends Configured
    * @param overwrite if a file with this name already exists, then if true,
    *   the file will be overwritten, and if false an exception will be thrown.
    * @throws IOException IO failure
+   * @return output stream
    */
   public FSDataOutputStream create(Path f, boolean overwrite)
       throws IOException {
@@ -1158,6 +1175,7 @@ public abstract class FileSystem extends Configured
    * @param overwrite if a file with this name already exists, then if true,
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
+   * @param progress to report progress
    * @throws IOException IO failure
    * @return output stream
    */
@@ -1179,6 +1197,7 @@ public abstract class FileSystem extends Configured
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
+   * @param blockSize the size of the buffer to be used.
    * @throws IOException IO failure
    * @return output stream
    */
@@ -1198,6 +1217,8 @@ public abstract class FileSystem extends Configured
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
+   * @param blockSize the size of the buffer to be used.
+   * @param progress to report progress
    * @throws IOException IO failure
    * @return output stream
    */

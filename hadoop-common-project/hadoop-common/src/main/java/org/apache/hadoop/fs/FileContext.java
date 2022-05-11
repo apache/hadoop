@@ -366,8 +366,8 @@ public class FileContext implements PathCapabilities {
    * Create a FileContext with specified FS as default using the specified
    * config.
    * 
-   * @param defFS
-   * @param aConf
+   * @param defFS default fs
+   * @param aConf configutration
    * @return new FileContext with specified FS as default.
    */
   public static FileContext getFileContext(final AbstractFileSystem defFS,
@@ -378,7 +378,7 @@ public class FileContext implements PathCapabilities {
   /**
    * Create a FileContext for specified file system using the default config.
    * 
-   * @param defaultFS
+   * @param defaultFS default fs
    * @return a FileContext with the specified AbstractFileSystem
    *                 as the default FS.
    */
@@ -431,7 +431,7 @@ public class FileContext implements PathCapabilities {
   /**
    * Create a FileContext for specified URI using the default config.
    * 
-   * @param defaultFsUri
+   * @param defaultFsUri defaultFsUri
    * @return a FileContext with the specified URI as the default FS.
    * 
    * @throws UnsupportedFileSystemException If the file system for
@@ -445,8 +445,8 @@ public class FileContext implements PathCapabilities {
   /**
    * Create a FileContext for specified default URI using the specified config.
    * 
-   * @param defaultFsUri
-   * @param aConf
+   * @param defaultFsUri defaultFsUri
+   * @param aConf configrution
    * @return new FileContext for specified uri
    * @throws UnsupportedFileSystemException If the file system with specified is
    *           not supported
@@ -477,7 +477,7 @@ public class FileContext implements PathCapabilities {
    * {@link #getFileContext(URI, Configuration)} instead of this one.
    * 
    * 
-   * @param aConf
+   * @param aConf configration
    * @return new FileContext
    * @throws UnsupportedFileSystemException If file system in the config
    *           is not supported
@@ -1061,7 +1061,7 @@ public class FileContext implements PathCapabilities {
   
   /**
    * Set permission of a path.
-   * @param f
+   * @param f the path
    * @param permission - the new absolute permission (umask is not applied)
    *
    * @throws AccessControlException If access is denied
@@ -1205,7 +1205,7 @@ public class FileContext implements PathCapabilities {
    * Set the verify checksum flag for the  file system denoted by the path.
    * This is only applicable if the 
    * corresponding FileSystem supports checksum. By default doesn't do anything.
-   * @param verifyChecksum
+   * @param verifyChecksum verify check sum
    * @param f set the verifyChecksum for the Filesystem containing this path
    *
    * @throws AccessControlException If access is denied
@@ -1260,8 +1260,9 @@ public class FileContext implements PathCapabilities {
   /**
    * Synchronize client metadata state.
    *
-   * @throws IOException
-   * @throws UnsupportedOperationException
+   * @throws IOException                   If an I/O error occurred
+   * @throws UnsupportedOperationException If file system for <code>f</code> is
+   *                                       not supported
    */
   public void msync() throws IOException, UnsupportedOperationException {
     defaultFS.msync();
@@ -1751,6 +1752,7 @@ public class FileContext implements PathCapabilities {
      * @throws RpcServerException If an exception occurred in the RPC server
      * @throws UnexpectedServerException If server implementation throws 
      *           undeclared exception to RPC server
+     * @return if f exists true, not false
      */
     public boolean exists(final Path f) throws AccessControlException,
       UnsupportedFileSystemException, IOException {
@@ -1816,6 +1818,7 @@ public class FileContext implements PathCapabilities {
      * @throws AccessControlException If access is denied
      * @throws FileNotFoundException If <code>files</code> does not exist
      * @throws IOException If an I/O error occurred
+     * @return file status array
      */
     public FileStatus[] listStatus(Path[] files) throws AccessControlException,
         FileNotFoundException, IOException {
@@ -2164,7 +2167,7 @@ public class FileContext implements PathCapabilities {
      *                                        directory.
      * @throws UnsupportedFileSystemException If file system for
      *                                        <code>src/dst</code> is not supported
-     * @thorws IOException If an I/O error occurred
+     * @throws IOException If an I/O error occurred
      * @return if success copy true, not false
      */
     public boolean copy(final Path src, final Path dst)
