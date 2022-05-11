@@ -447,13 +447,15 @@ public class FederationClientInterceptor
           SubClusterId subClusterIdInStateStore =
               federationFacade.getApplicationHomeSubCluster(applicationId);
           if (subClusterId == subClusterIdInStateStore) {
-            LOG.info("Application {} already submitted on SubCluster {} ",
-                    applicationId, subClusterId);
+            if (LOG.isInfoEnabled()) {
+              LOG.info("Application {} already submitted on SubCluster {} ",
+                      applicationId, subClusterId);
+            }
           } else {
             routerMetrics.incrAppsFailedSubmitted();
             RouterAuditLogger.logFailure(user.getShortUserName(),
-                RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
-                "RouterClientRMService", message, applicationId, subClusterId);
+                    RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
+                    "RouterClientRMService", message, applicationId, subClusterId);
             throw new YarnException(message, e);
           }
         }
