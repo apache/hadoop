@@ -1245,8 +1245,8 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Gets the current active configuration instance
-   * @return
+   * Gets the current active configuration instance.
+   * @return active AbfsConfiguration instance.
    */
   public AbfsConfiguration getAbfsConfiguration() {
     return abfsConfiguration;
