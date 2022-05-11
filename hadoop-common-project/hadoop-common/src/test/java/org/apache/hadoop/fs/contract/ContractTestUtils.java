@@ -55,6 +55,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -1105,30 +1107,23 @@ public class ContractTestUtils extends Assert {
    * Utility to validate vectored read results.
    * @param fileRanges input ranges.
    * @param originalData original data.
-   * @throws ExecutionException any exception.
-   * @throws InterruptedException any exception.
+   * @throws IOException any ioe.
    */
   public static void validateVectoredReadResult(List<FileRange> fileRanges,
-                                                byte[] originalData)
-          throws ExecutionException, InterruptedException {
+                                                byte[] originalData) throws IOException, TimeoutException {
     CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
     int i = 0;
     for (FileRange res : fileRanges) {
       completableFutures[i++] = res.getData();
     }
     CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
-    combinedFuture.get();
+    FutureIO.awaitFuture(combinedFuture, 5, TimeUnit.MINUTES);
 
     for (FileRange res : fileRanges) {
       CompletableFuture<ByteBuffer> data = res.getData();
-      try {
-        ByteBuffer buffer = FutureIO.awaitFuture(data);
-        assertDatasetEquals((int) res.getOffset(), "vecRead",
-                buffer, res.getLength(), originalData);
-      } catch (Exception ex) {
-        LOG.error("Exception while running vectored read ", ex);
-        Assert.fail("Exception while running vectored read " + ex);
-      }
+      ByteBuffer buffer = FutureIO.awaitFuture(data, 5, TimeUnit.MINUTES);
+      assertDatasetEquals((int) res.getOffset(), "vecRead",
+              buffer, res.getLength(), originalData);
     }
   }
 
