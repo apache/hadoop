@@ -43,11 +43,7 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000;  // 3s
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
   public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
-<<<<<<< HEAD
   public static final int DEFAULT_HTTP_CONNECTION_TIMEOUT = 500; // 500ms
-=======
-  public static final int DEFAULT_HTTP_CONNECTION_TIMEOUT = 30 * 1000; // 30 secs
->>>>>>> Configurable HTTP connection and read timeouts
   public static final int DEFAULT_HTTP_READ_TIMEOUT = 30 * 1000; // 30 secs
 
   // Retry parameter defaults.
