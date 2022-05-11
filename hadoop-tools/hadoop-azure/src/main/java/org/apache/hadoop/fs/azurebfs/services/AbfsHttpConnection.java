@@ -63,7 +63,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
    *
    * @throws IOException if an error occurs.
    */
-  public void init(final String method, List<AbfsHttpHeader> requestHeaders)
+  private void init(final String method, List<AbfsHttpHeader> requestHeaders)
       throws IOException {
     connection = openConnection();
     if (connection instanceof HttpsURLConnection) {
