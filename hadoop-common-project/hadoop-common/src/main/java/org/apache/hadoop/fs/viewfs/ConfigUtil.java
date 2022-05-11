@@ -249,12 +249,12 @@ public class ConfigUtil {
   }
 
   /**
-   * Check the bool config whether nested mount point is supported.
+   * Check the bool config whether nested mount point is supported. Default: true
    * @param conf - from this conf
    * @return whether nested mount point is supported
    */
   public static boolean isNestedMountPointSupported(final Configuration conf) {
-    return conf.getBoolean(Constants.CONFIG_NESTED_MOUNT_POINT_SUPPORTED, false);
+    return conf.getBoolean(Constants.CONFIG_NESTED_MOUNT_POINT_SUPPORTED, true);
   }
 
   /**

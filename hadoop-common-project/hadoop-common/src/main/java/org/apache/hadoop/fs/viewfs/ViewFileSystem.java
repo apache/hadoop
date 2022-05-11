@@ -1543,9 +1543,8 @@ public class ViewFileSystem extends FileSystem {
           theInternalDir.getChildren().entrySet()) {
         INode<FileSystem> inode = iEntry.getValue();
         Path path = new Path(inode.fullPath).makeQualified(myUri, null);
-        // Nested mount point inode.islink()=false, we should add additional check to treat nested mount point as link
-        if (inode.isLink() || inode.isDirAndLink()) {
-          INodeLink<FileSystem> link = inode.isLink() ? (INodeLink<FileSystem>) inode : ((InodeTree.INodeDirLink<FileSystem>)inode).getLink();
+        if (inode.isLink()) {
+          INodeLink<FileSystem> link = !inode.isInternalDir() ? (INodeLink<FileSystem>) inode : ((InodeTree.INodeDirLink<FileSystem>)inode).getLink();
 
           if (showMountLinksAsSymlinks) {
             // To maintain backward compatibility, with default option(showing

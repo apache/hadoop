@@ -1097,8 +1097,8 @@ public class ViewFs extends AbstractFileSystem {
             "viewFs internal mount table - missing entry:" + f);
       }
       FileStatus result;
-      if (inode.isLink() || inode.isDirAndLink()) {
-        INodeLink<AbstractFileSystem> inodelink = inode.isLink() ?
+      if (inode.isLink()) {
+        INodeLink<AbstractFileSystem> inodelink = !inode.isInternalDir() ?
           (INodeLink<AbstractFileSystem>) inode : ((InodeTree.INodeDirLink<AbstractFileSystem>) inode).getLink();
         try {
           String linkedPath = inodelink.getTargetFileSystem()
@@ -1168,8 +1168,8 @@ public class ViewFs extends AbstractFileSystem {
           theInternalDir.getChildren().entrySet()) {
         INode<AbstractFileSystem> inode = iEntry.getValue();
         Path path = new Path(inode.fullPath).makeQualified(myUri, null);
-        if (inode.isLink() || inode.isDirAndLink()) {
-          INodeLink<AbstractFileSystem> link = inode.isLink() ?
+        if (inode.isLink()) {
+          INodeLink<AbstractFileSystem> link = !inode.isInternalDir() ?
             (INodeLink<AbstractFileSystem>) inode : ((InodeTree.INodeDirLink<AbstractFileSystem>) inode).getLink();
 
           if (showMountLinksAsSymlinks) {
