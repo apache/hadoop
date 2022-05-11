@@ -819,6 +819,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         " expect the final file has correct storage class.");
 
     Configuration conf = getConfiguration();
+    skipIfStorageClassTestsDisabled(conf);
     conf.set(STORAGE_CLASS, STORAGE_CLASS_INTELLIGENT_TIERING);
 
     JobData jobData = startJob(false);

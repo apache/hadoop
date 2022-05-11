@@ -35,6 +35,7 @@ import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_GLACIER;
 import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_REDUCED_REDUNDANCY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfStorageClassTestsDisabled;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_STORAGE_CLASS;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -51,6 +52,12 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(conf, STORAGE_CLASS);
 
     return conf;
+  }
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    skipIfStorageClassTestsDisabled(getConfiguration());
   }
 
   /*

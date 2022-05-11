@@ -36,6 +36,7 @@ import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
 import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_REDUCED_REDUNDANCY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfStorageClassTestsDisabled;
 
 /**
  * Class to verify that {@link Constants#STORAGE_CLASS} is set correctly
@@ -44,6 +45,12 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AHugeFilesStorageClass.class);
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    skipIfStorageClassTestsDisabled(getConfiguration());
+  }
 
   @Override
   protected Configuration createScaleConfiguration() {
