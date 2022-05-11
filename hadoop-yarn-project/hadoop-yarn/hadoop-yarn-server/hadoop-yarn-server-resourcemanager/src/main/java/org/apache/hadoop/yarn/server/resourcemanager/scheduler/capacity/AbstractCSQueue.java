@@ -1000,8 +1000,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     Set<String> nodeLabels = new HashSet<String>();
     if (this.getAccessibleNodeLabels() != null && this.getAccessibleNodeLabels()
         .contains(RMNodeLabelsManager.ANY)) {
-      nodeLabels.addAll(Sets.union(this.getQueueCapacities().getNodePartitionsSet(),
-          this.getQueueResourceUsage().getNodePartitionsSet()));
+      nodeLabels.addAll(Sets.union(this.getQueueCapacities().getExistingNodeLabels(),
+          this.getQueueResourceUsage().getExistingNodeLabels()));
     } else {
       nodeLabels.addAll(this.getAccessibleNodeLabels());
     }
