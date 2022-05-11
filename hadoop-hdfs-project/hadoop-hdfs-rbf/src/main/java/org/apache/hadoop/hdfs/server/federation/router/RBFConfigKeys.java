@@ -356,7 +356,7 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_FAIRNESS_PREFIX + "handler.count.";
   public static final String DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY =
       FEDERATION_ROUTER_FAIRNESS_PREFIX + "minimum.handler.count";
-  public static int DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_DEFAULT = 1;
+  public static final int DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_DEFAULT = 1;
   public static final long DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_SECONDS_DEFAULT =
       600;
   public static final String DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_SECONDS_KEY =
