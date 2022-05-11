@@ -413,8 +413,10 @@ public class FederationClientInterceptor
 
       SubClusterId subClusterId = policyFacade.getHomeSubcluster(
               request.getApplicationSubmissionContext(), blacklist);
-      LOG.info("submitApplication appId {} try #{} on SubCluster {}",
-              applicationId, i, subClusterId);
+      if (LOG.isInfoEnabled()) {
+        LOG.info("submitApplication appId {} try #{} on SubCluster {}",
+                applicationId, i, subClusterId);
+      }
 
       ApplicationHomeSubCluster appHomeSubCluster =
           ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
@@ -469,9 +471,11 @@ public class FederationClientInterceptor
       }
 
       if (response != null) {
-        LOG.info("Application {} with appId {} submitted on {} ",
-                request.getApplicationSubmissionContext().getApplicationName(),
-                applicationId, subClusterId);
+        if (LOG.isInfoEnabled()) {
+          LOG.info("Application {} with appId {} submitted on {} ",
+                  request.getApplicationSubmissionContext().getApplicationName(),
+                  applicationId, subClusterId);
+        }
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
         RouterAuditLogger.logSuccess(user.getShortUserName(),

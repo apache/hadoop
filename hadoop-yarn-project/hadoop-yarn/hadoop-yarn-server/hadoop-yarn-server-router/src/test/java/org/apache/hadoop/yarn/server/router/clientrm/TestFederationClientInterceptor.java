@@ -167,7 +167,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testSubmitApplication()
-      throws YarnException, IOException, InterruptedException {
+      throws YarnException, IOException {
     LOG.info("Test FederationClientInterceptor: Submit Application");
 
     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
