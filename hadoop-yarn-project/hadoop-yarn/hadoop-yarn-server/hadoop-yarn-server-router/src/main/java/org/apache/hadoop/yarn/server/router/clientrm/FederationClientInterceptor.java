@@ -791,19 +791,17 @@ public class FederationClientInterceptor
 
   @Override
   public GetClusterNodesResponse getClusterNodes(GetClusterNodesRequest request)
-          throws YarnException, IOException {
+      throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrClusterNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-              "Missing getClusterNodes request.", null);
+      RouterServerUtil.logAndThrowException("Missing getClusterNodes request.", null);
     }
     long startTime = clock.getTime();
-    Map<SubClusterId, SubClusterInfo> subclusters =
+    Map<SubClusterId, SubClusterInfo> subClusters =
             federationFacade.getSubClusters(true);
     Map<SubClusterId, GetClusterNodesResponse> clusterNodes = Maps.newHashMap();
-    for (Map.Entry<SubClusterId, SubClusterInfo> entry : subclusters.entrySet()) {
-      SubClusterId subClusterId = entry.getKey();
-      ApplicationClientProtocol client = null;
+    for (SubClusterId subClusterId : subClusters.keySet()) {
+      ApplicationClientProtocol client;
       try {
         client = getClientRMProxyForSubCluster(subClusterId);
         GetClusterNodesResponse response = client.getClusterNodes(request);
@@ -811,6 +809,7 @@ public class FederationClientInterceptor
       } catch (Exception ex) {
         routerMetrics.incrClusterNodesFailedRetrieved();
         LOG.error("Unable to get cluster nodes due to exception.", ex);
+        throw ex;
       }
     }
     long stopTime = clock.getTime();
