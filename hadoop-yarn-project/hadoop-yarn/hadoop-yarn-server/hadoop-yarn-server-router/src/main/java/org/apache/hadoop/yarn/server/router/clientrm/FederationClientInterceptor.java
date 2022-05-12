@@ -798,7 +798,7 @@ public class FederationClientInterceptor
     }
     long startTime = clock.getTime();
     Map<SubClusterId, SubClusterInfo> subClusters =
-            federationFacade.getSubClusters(true);
+        federationFacade.getSubClusters(true);
     Map<SubClusterId, GetClusterNodesResponse> clusterNodes = Maps.newHashMap();
     for (SubClusterId subClusterId : subClusters.keySet()) {
       ApplicationClientProtocol client;
