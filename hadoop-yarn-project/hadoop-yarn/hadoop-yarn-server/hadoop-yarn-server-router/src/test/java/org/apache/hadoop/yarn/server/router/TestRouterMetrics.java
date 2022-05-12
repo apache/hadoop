@@ -399,8 +399,7 @@ public class TestRouterMetrics {
     }
 
     public void getClusterNodes(long duration) {
-      LOG.info("Mocked: successful getClusterNodes call with duration {}",
-              duration);
+      LOG.info("Mocked: successful getClusterNodes call with duration {}", duration);
       metrics.succeededGetClusterNodesRetrieved(duration);
     }
   }
@@ -410,14 +409,14 @@ public class TestRouterMetrics {
     long totalGoodBefore = metrics.getNumSucceededGetClusterNodesRetrieved();
     goodSubCluster.getClusterNodes(150);
     Assert.assertEquals(totalGoodBefore + 1,
-            metrics.getNumSucceededGetClusterNodesRetrieved());
+        metrics.getNumSucceededGetClusterNodesRetrieved());
     Assert.assertEquals(150, metrics.getLatencySucceededGetClusterNodesRetrieved(),
-            0);
+         0);
     goodSubCluster.getClusterNodes(300);
     Assert.assertEquals(totalGoodBefore + 2,
-            metrics.getNumSucceededGetClusterNodesRetrieved());
+        metrics.getNumSucceededGetClusterNodesRetrieved());
     Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodesRetrieved(),
-            0);
+        0);
   }
 
   @Test
@@ -425,6 +424,6 @@ public class TestRouterMetrics {
     long totalBadBefore = metrics.getClusterNodesFailedRetrieved();
     badSubCluster.getClusterNodes();
     Assert.assertEquals(totalBadBefore + 1,
-            metrics.getClusterNodesFailedRetrieved());
+        metrics.getClusterNodesFailedRetrieved());
   }
 }
