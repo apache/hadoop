@@ -1624,7 +1624,7 @@ public abstract class FileSystem extends Configured
    *
    * @param src path to be renamed
    * @param dst new path after rename
-   * @param option rename options
+   * @param options rename options
    * @throws FileNotFoundException src path does not exist, or the parent
    * path of dst does not exist.
    * @throws FileAlreadyExistsException dest path exists and is a file
@@ -2147,36 +2147,29 @@ public abstract class FileSystem extends Configured
    *    <dt> <tt> ? </tt>
    *    <dd> Matches any single character.
    *
-   *    <p>
    *    <dt> <tt> * </tt>
    *    <dd> Matches zero or more characters.
    *
-   *    <p>
    *    <dt> <tt> [<i>abc</i>] </tt>
    *    <dd> Matches a single character from character set
    *     <tt>{<i>a,b,c</i>}</tt>.
    *
-   *    <p>
    *    <dt> <tt> [<i>a</i>-<i>b</i>] </tt>
    *    <dd> Matches a single character from the character range
    *     <tt>{<i>a...b</i>}</tt>.  Note that character <tt><i>a</i></tt> must be
    *     lexicographically less than or equal to character <tt><i>b</i></tt>.
    *
-   *    <p>
    *    <dt> <tt> [^<i>a</i>] </tt>
    *    <dd> Matches a single character that is not from character set or range
    *     <tt>{<i>a</i>}</tt>.  Note that the <tt>^</tt> character must occur
    *     immediately to the right of the opening bracket.
    *
-   *    <p>
    *    <dt> <tt> \<i>c</i> </tt>
    *    <dd> Removes (escapes) any special meaning of character <i>c</i>.
    *
-   *    <p>
    *    <dt> <tt> {ab,cd} </tt>
    *    <dd> Matches a string from the string set <tt>{<i>ab, cd</i>} </tt>
    *
-   *    <p>
    *    <dt> <tt> {ab,c{de,fh}} </tt>
    *    <dd> Matches a string from the string set <tt>{<i>ab, cde, cfh</i>}</tt>
    *
@@ -2407,6 +2400,7 @@ public abstract class FileSystem extends Configured
 
   /** Return the current user's home directory in this FileSystem.
    * The default implementation returns {@code "/user/$USER/"}.
+   * @return the path
    */
   public Path getHomeDirectory() {
     String username;
@@ -2517,6 +2511,7 @@ public abstract class FileSystem extends Configured
    * @param delSrc whether to delete the src
    * @param src path
    * @param dst path
+   * @throws IOException IO failure
    */
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
@@ -2631,6 +2626,7 @@ public abstract class FileSystem extends Configured
    * @param fsOutputFile path of output file
    * @param tmpLocalFile path of local tmp file
    * @throws IOException IO failure
+   * @return the path
    */
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
@@ -2678,6 +2674,7 @@ public abstract class FileSystem extends Configured
   /**
    * Return the total size of all files in the filesystem.
    * @throws IOException IO failure
+   * @return the number of path used
    */
   public long getUsed() throws IOException {
     Path path = new Path("/");
@@ -2711,6 +2708,7 @@ public abstract class FileSystem extends Configured
    * Return the number of bytes that large input files should be optimally
    * be split into to minimize I/O time.
    * @deprecated use {@link #getDefaultBlockSize(Path)} instead
+   * @return default block size
    */
   @Deprecated
   public long getDefaultBlockSize() {
@@ -2896,6 +2894,7 @@ public abstract class FileSystem extends Configured
 
   /**
    * See {@link AbstractFileSystem#supportsSymlinks()}.
+   * @return if support symlinkls true, not false
    */
   public boolean supportsSymlinks() {
     return false;
@@ -4486,6 +4485,7 @@ public abstract class FileSystem extends Configured
   /**
    * Return the FileSystem classes that have Statistics.
    * @deprecated use {@link #getGlobalStorageStatistics()}
+   * @return statistics lists
    */
   @Deprecated
   public static synchronized List<Statistics> getAllStatistics() {
@@ -4529,6 +4529,7 @@ public abstract class FileSystem extends Configured
 
   /**
    * Print all statistics for all file systems to {@code System.out}
+   * @throws IOException If an I/O error occurred
    */
   public static synchronized
   void printStatistics() throws IOException {
@@ -4569,6 +4570,7 @@ public abstract class FileSystem extends Configured
 
   /**
    * Get the global storage statistics.
+   * @return global storage statistics
    */
   public static GlobalStorageStatistics getGlobalStorageStatistics() {
     return GlobalStorageStatistics.INSTANCE;
