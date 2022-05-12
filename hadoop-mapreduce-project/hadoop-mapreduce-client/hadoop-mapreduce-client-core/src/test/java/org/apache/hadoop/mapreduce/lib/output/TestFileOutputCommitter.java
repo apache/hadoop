@@ -288,7 +288,7 @@ public class TestFileOutputCommitter {
 
     // check task and job temp directories exist
     File jobOutputDir = new File(
-        new Path(outDir, FileOutputCommitter.PENDING_DIR_NAME).toString());
+        new Path(outDir, FileOutputCommitter.JOB_PENDING_DIR_NAME).toString());
     File taskOutputDir = new File(Path.getPathWithoutSchemeAndAuthority(
         committer.getWorkPath()).toString());
     assertTrue("job temp dir does not exist", jobOutputDir.exists());

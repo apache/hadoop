@@ -139,7 +139,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
     super(outputPath, context);
     Configuration conf = context.getConfiguration();
 
-    JOB_PENDING_DIR_NAME = "_temporary_" + context.getJobID();
+    setJobPendingDirName(context);
 
     algorithmVersion =
         conf.getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -168,7 +168,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
       this.outputPath = fs.makeQualified(outputPath);
     }
   }
-  
+
+  private static void setJobPendingDirName(JobContext context) {
+    JOB_PENDING_DIR_NAME = "_temporary_" + context.getJobID();
+  }
+
   /**
    * @return the path where final output of the job should be placed.  This
    * could also be considered the committed application attempt path.

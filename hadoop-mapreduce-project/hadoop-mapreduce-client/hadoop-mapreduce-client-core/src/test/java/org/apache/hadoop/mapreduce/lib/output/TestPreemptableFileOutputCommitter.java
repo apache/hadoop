@@ -47,11 +47,17 @@ public class TestPreemptableFileOutputCommitter {
 
     Path p = spy(new Path("/user/hadoop/out"));
     Path a = new Path("hdfs://user/hadoop/out");
-    Path p0 = new Path(a, "_temporary/1/attempt_1363718006656_0001_r_000014_0");
-    Path p1 = new Path(a, "_temporary/1/attempt_1363718006656_0001_r_000014_1");
-    Path p2 = new Path(a, "_temporary/1/attempt_1363718006656_0001_r_000013_0");
+
+    final FileSystem fs = mock(FileSystem.class);
+    TaskAttemptContext context = mock(TaskAttemptContext.class);
+    PartialFileOutputCommitter foc = new TestPFOC(p, context, fs);
+    Path jobAttemptPath = foc.getJobAttemptPath(1);
+
+    Path p0 = new Path(jobAttemptPath, "attempt_1363718006656_0001_r_000014_0");
+    Path p1 = new Path(jobAttemptPath, "attempt_1363718006656_0001_r_000014_1");
+    Path p2 = new Path(jobAttemptPath, "attempt_1363718006656_0001_r_000013_0");
     // (p3 does not exist)
-    Path p3 = new Path(a, "_temporary/1/attempt_1363718006656_0001_r_000014_2");
+    Path p3 = new Path(jobAttemptPath, "attempt_1363718006656_0001_r_000014_2");
 
     FileStatus[] fsa = new FileStatus[3];
     fsa[0] = new FileStatus();
@@ -61,7 +67,6 @@ public class TestPreemptableFileOutputCommitter {
     fsa[2] = new FileStatus();
     fsa[2].setPath(p2);
 
-    final FileSystem fs = mock(FileSystem.class);
     when(fs.exists(eq(p0))).thenReturn(true);
     when(fs.exists(eq(p1))).thenReturn(true);
     when(fs.exists(eq(p2))).thenReturn(true);
@@ -71,11 +76,8 @@ public class TestPreemptableFileOutputCommitter {
     doReturn(fs).when(p).getFileSystem(any(Configuration.class));
     when(fs.makeQualified(eq(p))).thenReturn(a);
 
-    TaskAttemptContext context = mock(TaskAttemptContext.class);
     when(context.getTaskAttemptID()).thenReturn(tid0);
     when(context.getConfiguration()).thenReturn(conf);
-
-    PartialFileOutputCommitter foc = new TestPFOC(p, context, fs);
 
     foc.cleanUpPartialOutputForTask(context);
     verify(fs).delete(eq(p0), eq(true));
