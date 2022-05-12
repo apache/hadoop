@@ -54,7 +54,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -1110,7 +1109,8 @@ public class ContractTestUtils extends Assert {
    * @throws IOException any ioe.
    */
   public static void validateVectoredReadResult(List<FileRange> fileRanges,
-                                                byte[] originalData) throws IOException, TimeoutException {
+                                                byte[] originalData)
+          throws IOException, TimeoutException {
     CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
     int i = 0;
     for (FileRange res : fileRanges) {
