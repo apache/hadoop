@@ -210,7 +210,6 @@ public final class RouterYarnClientUtils {
       Collection<GetClusterNodesResponse> responses) {
     GetClusterNodesResponse clusterNodesResponse = Records.newRecord(GetClusterNodesResponse.class);
     List<NodeReport> nodeReports = new ArrayList<>();
-
     for (GetClusterNodesResponse response : responses) {
       if (response != null && response.getNodeReports() != null) {
         nodeReports.addAll(response.getNodeReports());
