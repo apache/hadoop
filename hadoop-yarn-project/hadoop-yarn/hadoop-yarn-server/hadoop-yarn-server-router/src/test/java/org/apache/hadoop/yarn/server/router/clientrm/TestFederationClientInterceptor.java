@@ -648,13 +648,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   public void testGetClusterNodesRequest() throws Exception {
     LOG.info("Test FederationClientInterceptor : Get Cluster Nodeds request");
     // null request
-    LambdaTestUtils.intercept(YarnException.class,
-            "Missing getClusterNodes request.", () -> interceptor.getClusterNodes(null));
-
+    LambdaTestUtils.intercept(YarnException.class, "Missing getClusterNodes request.",
+        () -> interceptor.getClusterNodes(null));
     // normal request.
     GetClusterNodesResponse response =
-            interceptor.getClusterNodes(GetClusterNodesRequest.newInstance());
+        interceptor.getClusterNodes(GetClusterNodesRequest.newInstance());
     Assert.assertEquals(subClusters.size(),
-            response.getNodeReports().size());
+        response.getNodeReports().size());
   }
 }
