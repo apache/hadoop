@@ -256,6 +256,11 @@ public final class RouterMetrics {
     return numGetClusterMetricsFailedRetrieved.value();
   }
 
+  @VisibleForTesting
+  public int getClusterNodesFailedRetrieved() {
+    return numGetClusterNodesFailedRetrieved.value();
+  }
+
   public void succeededAppsCreated(long duration) {
     totalSucceededAppsCreated.add(duration);
     getNewApplicationLatency.add(duration);
