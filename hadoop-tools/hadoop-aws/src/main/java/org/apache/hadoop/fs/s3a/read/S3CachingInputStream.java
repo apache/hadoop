@@ -41,9 +41,9 @@ public class S3CachingInputStream extends S3InputStream {
   private static final Logger LOG = LoggerFactory.getLogger(S3CachingInputStream.class);
 
   /**
-   * Number of blocks queued for prefching.
+   * Number of blocks queued for prefetching.
    */
-  private final int numBlocksToPrefetch;
+  private int numBlocksToPrefetch;
 
   private BlockManager blockManager;
 
@@ -63,14 +63,6 @@ public class S3CachingInputStream extends S3InputStream {
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client) {
     super(context, s3Attributes, client);
-
-    this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
-    int bufferPoolSize = this.numBlocksToPrefetch + 1;
-    this.blockManager = this.createBlockManager(
-        this.getContext().getFuturePool(),
-        this.getReader(),
-        this.getBlockData(),
-        bufferPoolSize);
     int fileSize = (int) s3Attributes.getLen();
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(), fileSize);
   }
@@ -78,6 +70,7 @@ public class S3CachingInputStream extends S3InputStream {
   @Override
   protected void initializeUnderlyingResources() {
     super.initializeUnderlyingResources();
+    this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
     this.blockManager = this.createBlockManager(
         this.getContext().getFuturePool(),
