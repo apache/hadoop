@@ -42,7 +42,6 @@ import javax.xml.bind.Marshaller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -110,7 +109,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       System.setProperty(SUN_SECURITY_KRB5_RCACHE_KEY, "none");
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
       setupKDC();
-      DefaultMetricsSystem.setMiniClusterMode(true);
+
     } catch (Exception e) {
       assertTrue("Couldn't create MiniKDC", false);
     }
@@ -189,13 +188,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     UserGroupInformation.setConfiguration(rmconf);
     rm = new MockRM(rmconf);
     rm.start();
-    //TODO remove
-//    rmconf.writeXml(System.out);
-//    try {
-//      rm.start();
-//    } catch (Exception e) {
-//      e.printStackTrace();
-//    }
+
   }
 
   private static void setupKDC() throws Exception {
