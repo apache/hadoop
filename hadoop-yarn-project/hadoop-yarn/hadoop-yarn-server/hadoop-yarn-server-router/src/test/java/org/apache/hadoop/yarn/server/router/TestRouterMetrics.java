@@ -411,7 +411,7 @@ public class TestRouterMetrics {
     Assert.assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetClusterNodesRetrieved());
     Assert.assertEquals(150, metrics.getLatencySucceededGetClusterNodesRetrieved(),
-         0);
+        0);
     goodSubCluster.getClusterNodes(300);
     Assert.assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetClusterNodesRetrieved());
