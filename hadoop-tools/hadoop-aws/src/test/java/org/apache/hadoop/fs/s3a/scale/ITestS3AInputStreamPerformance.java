@@ -96,6 +96,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     Configuration conf = getConf();
     conf.setInt(SOCKET_SEND_BUFFER, 16 * 1024);
     conf.setInt(SOCKET_RECV_BUFFER, 16 * 1024);
+    conf.setBoolean(PREFETCH_ENABLED_KEY, false);
     String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
     if (testFile.isEmpty()) {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
@@ -550,15 +551,15 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     describe("read over a buffer, making sure that the requests" +
         " spans readahead ranges");
     int datasetLen = _32K;
-    S3AFileSystem fs = getFileSystem();
     Path dataFile = path("testReadOverBuffer.bin");
+    bindS3aFS(dataFile);
     byte[] sourceData = dataset(datasetLen, 0, 64);
     // relies on the field 'fs' referring to the R/W FS
-    writeDataset(fs, dataFile, sourceData, datasetLen, _16K, true);
+    writeDataset(s3aFS, dataFile, sourceData, datasetLen, _16K, true);
     byte[] buffer = new byte[datasetLen];
     int readahead = _8K;
     int halfReadahead = _4K;
-    in = openDataFile(fs, dataFile, S3AInputPolicy.Random, readahead);
+    in = openDataFile(s3aFS, dataFile, S3AInputPolicy.Random, readahead);
 
     LOG.info("Starting initial reads");
     S3AInputStream s3aStream = getS3aStream();
@@ -592,7 +593,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
       assertEquals("open operations on request #" + readOps
               + " after reading " + bytesRead
               + " current position in stream " + currentPos
-              + " in\n" + fs
+              + " in\n" + s3aFS
               + "\n " + in,
           1, streamStatistics.getOpenOperations());
       for (int i = currentPos; i < currentPos + read; i++) {
