@@ -207,10 +207,8 @@ public final class RouterYarnClientUtils {
    * @return the merged GetClusterNodesResponse.
    */
   public static GetClusterNodesResponse mergeClusterNodesResponse(
-          Collection<GetClusterNodesResponse> responses) {
-
+      Collection<GetClusterNodesResponse> responses) {
     GetClusterNodesResponse clusterNodesResponse = Records.newRecord(GetClusterNodesResponse.class);
-
     List<NodeReport> nodeReports = new ArrayList<>();
 
     for (GetClusterNodesResponse response : responses) {
