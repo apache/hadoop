@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
-
+import org.apache.hadoop.fs.azurebfs.AbfsDriverMetrics;
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -70,6 +70,8 @@ public class AbfsRestOperation {
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
+
+  private AbfsDriverMetrics abfsDriverMetrics;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -145,6 +147,7 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
+    this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
   }
 
   /**
@@ -175,6 +178,7 @@ public class AbfsRestOperation {
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
+    this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
   }
 
   /**
@@ -225,7 +229,6 @@ public class AbfsRestOperation {
         Thread.currentThread().interrupt();
       }
     }
-
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
