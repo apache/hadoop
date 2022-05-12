@@ -290,7 +290,8 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
   }
 
   @Test(timeout = 60000)
-  public void testReadToken() throws NoSuchMethodException, IOException, IllegalAccessException {
+  public void testReadToken() throws NoSuchMethodException, IOException, IllegalAccessException,
+          InvocationTargetException {
     KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
     FieldUtils.writeField(kerberosAuthenticator, "base64", new Base64(), true);
 
@@ -306,16 +307,12 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
             HttpURLConnection.class);
     method.setAccessible(true);
 
-    try {
-      method.invoke(kerberosAuthenticator, conn);
-    } catch (Exception e) {
-      Assert.fail("readToken() method should not have thrown any exception" + e);
-    }
+    method.invoke(kerberosAuthenticator, conn); // expecting this not to throw an exception
   }
 
   @Test(timeout = 60000)
   public void testReadTokenLowerCase() throws NoSuchMethodException, IOException,
-          IllegalAccessException {
+          IllegalAccessException, InvocationTargetException {
     KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
     FieldUtils.writeField(kerberosAuthenticator, "base64", new Base64(), true);
 
@@ -331,10 +328,6 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
             HttpURLConnection.class);
     method.setAccessible(true);
 
-    try {
-      method.invoke(kerberosAuthenticator, conn);
-    } catch (Exception e) {
-      Assert.fail("readToken() method should not have thrown any exception" + e);
-    }
+    method.invoke(kerberosAuthenticator, conn); // expecting this not to throw an exception
   }
 }
