@@ -574,7 +574,7 @@ their classname.
 
 ### Disabling the storage class tests
 
-When running storage class tests against third party object store that doesn't support 
+When running storage class tests against third party object store that doesn't support
 S3 storage class, these tests might fail. They can be disabled.
 
 ```xml

@@ -54,7 +54,7 @@ public interface S3ATestConstants {
   String KEY_ENCRYPTION_TESTS = TEST_FS_S3A + "encryption.enabled";
 
   /**
-   * A property set to true if storage class tests are enabled: {@value }
+   * A property set to true if storage class tests are enabled: {@value }.
    */
   String KEY_STORAGE_CLASS_TESTS_ENABLED = TEST_FS_S3A + "create.storage.class.enabled";
 

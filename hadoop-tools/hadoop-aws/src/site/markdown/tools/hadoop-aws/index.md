@@ -1673,11 +1673,11 @@ To enable this feature within S3A, configure the `fs.s3a.requester.pays.enabled`
 
 ## <a name="storage_classes"></a>Storage Classes
 
-Amazon S3 offers a range of [Storage Classes](https://aws.amazon.com/s3/storage-classes/) 
-that you can choose from based on behavior of your applications. By using the right 
+Amazon S3 offers a range of [Storage Classes](https://aws.amazon.com/s3/storage-classes/)
+that you can choose from based on behavior of your applications. By using the right
 storage class, you can reduce the cost of your bucket.
 
-S3A uses Standard storage class for PUT object requests by default, which is suitable for 
+S3A uses Standard storage class for PUT object requests by default, which is suitable for
 general use cases. To use a specific storage class, set the value in `fs.s3a.create.storage.class` property to
 the storage class you want.
 

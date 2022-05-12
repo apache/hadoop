@@ -708,7 +708,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     S3AFileSystem fs = getFileSystem();
     String actualStorageClass = fs.getObjectMetadata(expectedFile).getStorageClass();
 
-    Assertions.assertThat(actualStorageClass).describedAs("Storage class of object %s", expectedFile)
+    Assertions.assertThat(actualStorageClass)
+        .describedAs("Storage class of object %s", expectedFile)
         .isEqualToIgnoringCase(expectedStorageClass);
   }
 
