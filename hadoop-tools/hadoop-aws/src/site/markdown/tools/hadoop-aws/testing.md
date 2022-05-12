@@ -579,7 +579,7 @@ S3 storage class, these tests might fail. They can be disabled.
 
 ```xml
 <property>
-  <name>test.fs.s3a.storage.class.enabled</name>
+  <name>test.fs.s3a.create.storage.class.enabled</name>
   <value>false</value>
 </property>
 ```

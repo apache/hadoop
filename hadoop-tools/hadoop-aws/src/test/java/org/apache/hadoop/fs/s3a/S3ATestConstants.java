@@ -56,7 +56,7 @@ public interface S3ATestConstants {
   /**
    * A property set to true if storage class tests are enabled: {@value }
    */
-  String KEY_STORAGE_CLASS_TESTS_ENABLED = TEST_FS_S3A + "storage.class.enabled";
+  String KEY_STORAGE_CLASS_TESTS_ENABLED = TEST_FS_S3A + "create.storage.class.enabled";
 
   /**
    * Tell tests that they are being executed in parallel: {@value}.
