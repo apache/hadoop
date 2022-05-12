@@ -57,6 +57,8 @@ public class FileOutputCommitter extends PathOutputCommitter {
    * committed yet.
    */
   public static final String PENDING_DIR_NAME = "_temporary";
+
+  public static String JOB_PENDING_DIR_NAME = "_temporary";
   /**
    * Temporary directory name 
    *
@@ -136,6 +138,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
                              JobContext context) throws IOException {
     super(outputPath, context);
     Configuration conf = context.getConfiguration();
+
+    JOB_PENDING_DIR_NAME = "_temporary_" + context.getJobID();
+
     algorithmVersion =
         conf.getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
                     FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT);
@@ -187,7 +192,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
    * @return the location of pending job attempts.
    */
   private static Path getPendingJobAttemptsPath(Path out) {
-    return new Path(out, PENDING_DIR_NAME);
+    return new Path(out, JOB_PENDING_DIR_NAME);
   }
   
   /**
