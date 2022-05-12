@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
@@ -31,8 +49,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
    * Tests that require a large file only run if the there is a named test file that can be read.
    */
   private boolean testDataAvailable = true;
-  private static final int _1KB = 1024;
-
+  private static final int _1K = 1024;
   // Path for file which should have length > block size so S3CachingInputStream is used
   private Path largeFile;
   private FileSystem fs;
@@ -40,7 +57,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
   private int blockSize;
   private long largeFileSize;
   // Size should be < block size so S3InMemoryInputStream is used
-  private int smallFileSize = _1KB * 16;
+  private static final int smallFileSize = _1K * 16;
 
   @Override
   public void setup() throws Exception {
@@ -94,11 +111,11 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
       byte[] buffer = new byte[blockSize];
 
       // Don't read the block completely so it gets cached on seek
-      in.read(buffer, 0, blockSize - _1KB * 10);
-      in.seek(blockSize + _1KB * 10);
+      in.read(buffer, 0, blockSize - _1K * 10);
+      in.seek(blockSize + _1K * 10);
 
       // Backwards seek, will use cached block
-      in.seek(_1KB * 5);
+      in.seek(_1K * 5);
       in.read();
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 2);
@@ -120,9 +137,9 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
       byte[] buffer = new byte[smallFileSize];
 
-      in.read(buffer, 0, _1KB * 4);
-      in.seek(_1KB * 12);
-      in.read(buffer, 0, _1KB * 4);
+      in.read(buffer, 0, _1K * 4);
+      in.seek(_1K * 12);
+      in.read(buffer, 0, _1K * 4);
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 1);
 
