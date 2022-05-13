@@ -116,12 +116,6 @@ public interface FederationRPCMBean {
   String getAvailableHandlerOnPerNs();
 
   /**
-   * JSON representation of max handler count per ns.
-   * @return JSON string representation.
-   */
-  String getPermitCapacityPerNs();
-
-  /**
    * Get the JSON representation of the async caller thread pool.
    * @return JSON string representation of the async caller thread pool.
    */

@@ -29,9 +29,7 @@ import java.net.URLConnection;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -271,22 +269,6 @@ public final class FederationUtil {
         RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS_DEFAULT,
         RouterRpcFairnessPolicyController.class);
     return newInstance(conf, null, null, clazz);
-  }
-
-  /**
-   * Creates an instance of an RouterRpcFairnessPolicyController
-   * from the configuration and attaches permits access metrics to the controller.
-   *
-   * @param conf Configuration that defines the fairness controller class.
-   * @param rejectedPermitsPerNs Metrics map ns:rejected permits
-   * @param acceptedPermitsPerNs Metrics map ns:accepted permits
-   * @return Fairness policy controller.
-   */
-  public static RouterRpcFairnessPolicyController newFairnessPolicyController(Configuration conf,
-      Map<String, LongAdder> rejectedPermitsPerNs, Map<String, LongAdder> acceptedPermitsPerNs) {
-    RouterRpcFairnessPolicyController instance = newFairnessPolicyController(conf);
-    instance.setMetrics(rejectedPermitsPerNs, acceptedPermitsPerNs);
-    return instance;
   }
 
   /**
