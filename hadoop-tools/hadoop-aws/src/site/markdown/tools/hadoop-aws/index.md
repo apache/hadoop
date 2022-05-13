@@ -1619,7 +1619,7 @@ The `fs.s3a.accesspoint.required` property can also require all access to S3 to 
 Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
 to known sources of data defined through Access Points. In case there is a need to access a bucket
 directly (without Access Points) then you can use per bucket overrides to disable this setting on a
-bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
+bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
 
 ```xml
 <!-- Require access point only access -->
@@ -1629,7 +1629,7 @@ bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
 </property>
 <!-- Disable it on a per-bucket basis if needed -->
 <property>
-    <name>fs.s3a.example-bucket.accesspoint.required</name>
+    <name>fs.s3a.bucket.example-bucket.accesspoint.required</name>
     <value>false</value>
 </property>
 ```
