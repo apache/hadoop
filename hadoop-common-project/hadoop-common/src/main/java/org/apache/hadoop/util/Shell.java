@@ -1117,7 +1117,7 @@ public abstract class Shell {
   protected abstract String[] getExecString();
 
   /**
-   * Parse the execution result
+   * Parse the execution result.
    *
    * @param lines lines
    * @throws IOException raised on errors performing I/O.

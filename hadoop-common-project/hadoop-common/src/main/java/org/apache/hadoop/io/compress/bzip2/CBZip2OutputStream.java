@@ -210,6 +210,10 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
   /**
   * This method is accessible by subclasses for historical purposes. If you
   * don't know what it does then you don't need it.
+  * @param len len
+  * @param freq freq
+  * @param alphaSize alphaSize
+  * @param maxLen maxLen
   */
   protected static void hbMakeCodeLengths(char[] len, int[] freq,
       int alphaSize, int maxLen) {
@@ -846,6 +850,7 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
 
   /**
   * Returns the blocksize parameter specified at construction time.
+  * @return blocksize
   */
   public final int getBlockSize() {
     return this.blockSize100k;

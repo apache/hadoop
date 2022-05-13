@@ -36,7 +36,7 @@ public class FsStatus implements Writable {
   private long remaining;
 
   /**
-   * Construct a FsStatus object, using the specified statistics
+   * Construct a FsStatus object, using the specified statistics.
    *
    * @param capacity capacity
    * @param used used

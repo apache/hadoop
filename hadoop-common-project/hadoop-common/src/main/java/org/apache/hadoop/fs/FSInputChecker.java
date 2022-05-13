@@ -132,7 +132,7 @@ abstract public class FSInputChecker extends FSInputStream {
   abstract protected long getChunkPosition(long pos);
 
   /**
-   * Return true if there is a need for checksum verification
+   * Return true if there is a need for checksum verification.
    * @return if there is a need for checksum verification true, not false
    */
   protected synchronized boolean needChecksum() {

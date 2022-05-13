@@ -141,7 +141,7 @@ abstract public class Command extends Configured {
   }
 
   /**
-   * sets the command factory for later use
+   * sets the command factory for later use.
    * @param factory factory
    */
   public void setCommandFactory(CommandFactory factory) {
@@ -149,7 +149,7 @@ abstract public class Command extends Configured {
   }
 
   /**
-   * retrieves the command factory
+   * retrieves the command factory.
    *
    * @return command factory
    */

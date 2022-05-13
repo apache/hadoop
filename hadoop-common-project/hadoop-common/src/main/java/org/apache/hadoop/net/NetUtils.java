@@ -448,7 +448,6 @@ public class NetUtils {
   
   /**
    * Same as <code>getInputStream(socket, socket.getSoTimeout()).</code>
-   * <br/>
    *
    * @param socket socket
    * @throws IOException raised on errors performing I/O.
