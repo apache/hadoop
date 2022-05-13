@@ -156,8 +156,8 @@ public class RouterRpcClient {
             HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     this.connectionManager = new ConnectionManager(clientConf);
     this.connectionManager.start();
-    this.routerRpcFairnessPolicyController =
-        FederationUtil.newFairnessPolicyController(conf);
+    this.routerRpcFairnessPolicyController = FederationUtil
+        .newFairnessPolicyController(conf, rejectedPermitsPerNs, acceptedPermitsPerNs);
 
     int numThreads = conf.getInt(
         RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE,
@@ -1630,14 +1630,15 @@ public class RouterRpcClient {
 
   /**
    * Refreshes/changes the fairness policy controller implementation if possible
-   * and returns the controller class name
+   * and returns the controller class name.
    * @param conf Configuration
    * @return New controller class name if successfully refreshed, else old controller class name
    */
   public synchronized String refreshFairnessPolicyController(Configuration conf) {
     RouterRpcFairnessPolicyController newController;
     try {
-      newController = FederationUtil.newFairnessPolicyController(conf);
+      newController = FederationUtil.newFairnessPolicyController(conf, rejectedPermitsPerNs,
+          acceptedPermitsPerNs);
     } catch (RuntimeException e) {
       LOG.error("Failed to create router fairness policy controller", e);
       return getCurrentFairnessPolicyControllerClassName();

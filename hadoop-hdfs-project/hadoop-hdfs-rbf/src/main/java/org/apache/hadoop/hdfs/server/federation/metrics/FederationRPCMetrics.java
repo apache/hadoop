@@ -248,6 +248,11 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   }
 
   @Override
+  public String getPermitCapacityPerNs() {
+    return rpcServer.getRPCClient().getRouterRpcFairnessPolicyController().getPermitCapacityPerNs();
+  }
+
+  @Override
   public String getAsyncCallerPool() {
     return rpcServer.getRPCClient().getAsyncCallerPoolJson();
   }
