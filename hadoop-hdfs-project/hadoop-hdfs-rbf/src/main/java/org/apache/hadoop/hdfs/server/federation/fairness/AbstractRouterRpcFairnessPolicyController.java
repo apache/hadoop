@@ -22,13 +22,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.federation.utils.AdjustableSemaphore;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +40,7 @@ public class AbstractRouterRpcFairnessPolicyController
       LoggerFactory.getLogger(AbstractRouterRpcFairnessPolicyController.class);
 
   /** Hash table to hold semaphore for each configured name service. */
-  private Map<String, AdjustableSemaphore> permits;
-  private final Map<String, Integer> permitSizes = new HashMap<>();
-  private Map<String, LongAdder> rejectedPermitsPerNs;
-  private Map<String, LongAdder> acceptedPermitsPerNs;
+  private Map<String, Semaphore> permits;
 
   public void init(Configuration conf) {
     this.permits = new HashMap<>();
@@ -78,7 +72,7 @@ public class AbstractRouterRpcFairnessPolicyController
   }
 
   protected void insertNameServiceWithPermits(String nsId, int maxPermits) {
-    this.permits.put(nsId, new AdjustableSemaphore(maxPermits));
+    this.permits.put(nsId, new Semaphore(maxPermits));
   }
 
   protected int getAvailablePermits(String nsId) {
@@ -88,7 +82,7 @@ public class AbstractRouterRpcFairnessPolicyController
   @Override
   public String getAvailableHandlerOnPerNs() {
     JSONObject json = new JSONObject();
-    for (Map.Entry<String, AdjustableSemaphore> entry : permits.entrySet()) {
+    for (Map.Entry<String, Semaphore> entry : permits.entrySet()) {
       try {
         String nsId = entry.getKey();
         int availableHandler = entry.getValue().availablePermits();
@@ -98,40 +92,5 @@ public class AbstractRouterRpcFairnessPolicyController
       }
     }
     return json.toString();
-  }
-
-  @Override
-  public String getPermitCapacityPerNs() {
-    JSONObject json = new JSONObject();
-    for (Map.Entry<String, Integer> entry : permitSizes.entrySet()) {
-      try {
-        json.put(entry.getKey(), entry.getValue());
-      } catch (JSONException e) {
-        LOG.warn("Cannot put {} into JSONObject", entry.getKey(), e);
-      }
-    }
-    return json.toString();
-  }
-
-  @Override
-  public void setMetrics(Map<String, LongAdder> rejectedPermits,
-      Map<String, LongAdder> acceptedPermits) {
-    this.rejectedPermitsPerNs = rejectedPermits;
-    this.acceptedPermitsPerNs = acceptedPermits;
-  }
-
-  protected Map<String, AdjustableSemaphore> getPermits() {
-    return permits;
-  }
-
-  public Map<String, LongAdder> getRejectedPermitsPerNs() {
-    return rejectedPermitsPerNs;
-  }
-  public Map<String, LongAdder> getAcceptedPermitsPerNs() {
-    return acceptedPermitsPerNs;
-  }
-
-  protected Map<String, Integer> getPermitSizes() {
-    return permitSizes;
   }
 }

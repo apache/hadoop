@@ -27,8 +27,6 @@ import java.util.Set;
 import java.util.HashSet;
 
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_DEFAULT;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX;
@@ -47,9 +45,6 @@ public class StaticRouterRpcFairnessPolicyController extends
   public static final String ERROR_MSG = "Configured handlers "
       + DFS_ROUTER_HANDLER_COUNT_KEY + '='
       + " %d is less than the minimum required handlers %d";
-  public static final String ERROR_NS_MSG =
-      "Configured handlers %s=%d is less than the minimum required handlers %d";
-
 
   public StaticRouterRpcFairnessPolicyController(Configuration conf) {
     init(conf);
@@ -83,7 +78,6 @@ public class StaticRouterRpcFairnessPolicyController extends
         handlerCount -= dedicatedHandlers;
         insertNameServiceWithPermits(nsId, dedicatedHandlers);
         logAssignment(nsId, dedicatedHandlers);
-        getPermitSizes().put(nsId, dedicatedHandlers);
       } else {
         unassignedNS.add(nsId);
       }
@@ -98,7 +92,6 @@ public class StaticRouterRpcFairnessPolicyController extends
       for (String nsId : unassignedNS) {
         insertNameServiceWithPermits(nsId, handlersPerNS);
         logAssignment(nsId, handlersPerNS);
-        getPermitSizes().put(nsId, handlersPerNS);
       }
     }
 
@@ -110,7 +103,6 @@ public class StaticRouterRpcFairnessPolicyController extends
       LOG.info("Assigned extra {} handlers to commons pool", leftOverHandlers);
       insertNameServiceWithPermits(CONCURRENT_NS,
           existingPermits + leftOverHandlers);
-      getPermitSizes().put(CONCURRENT_NS, existingPermits + leftOverHandlers);
     }
     LOG.info("Final permit allocation for concurrent ns: {}",
         getAvailablePermits(CONCURRENT_NS));
@@ -124,23 +116,15 @@ public class StaticRouterRpcFairnessPolicyController extends
   private void validateHandlersCount(Configuration conf, int handlerCount,
                                      Set<String> allConfiguredNS) {
     int totalDedicatedHandlers = 0;
-    int minimumHandlerPerNs = conf.getInt(DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY,
-        DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_DEFAULT);
     for (String nsId : allConfiguredNS) {
       int dedicatedHandlers =
               conf.getInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + nsId, 0);
       if (dedicatedHandlers > 0) {
-        if (dedicatedHandlers < minimumHandlerPerNs) {
-          String msg = String.format(ERROR_NS_MSG, DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + nsId,
-              handlerCount, minimumHandlerPerNs);
-          LOG.error(msg);
-          throw new IllegalArgumentException(msg);
-        }
         // Total handlers should not be less than sum of dedicated handlers.
         totalDedicatedHandlers += dedicatedHandlers;
       } else {
-        // Each NS has to have a minimum number of handlers assigned.
-        totalDedicatedHandlers += minimumHandlerPerNs;
+        // Each NS should have at least one handler assigned.
+        totalDedicatedHandlers++;
       }
     }
     if (totalDedicatedHandlers > handlerCount) {
@@ -150,4 +134,5 @@ public class StaticRouterRpcFairnessPolicyController extends
       throw new IllegalArgumentException(msg);
     }
   }
+
 }
