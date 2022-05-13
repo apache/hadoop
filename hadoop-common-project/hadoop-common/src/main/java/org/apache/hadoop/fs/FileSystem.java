@@ -4127,6 +4127,7 @@ public abstract class FileSystem extends Configured
 
     /**
      * Get or create the thread-local data associated with the current thread.
+     * @return statistics data
      */
     public StatisticsData getThreadStatistics() {
       StatisticsData data = threadData.get();

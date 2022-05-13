@@ -136,7 +136,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Return the bytes Per Checksum
+   * Return the bytes Per Checksum.
    *
    * @return bytes per check sum
    */
