@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
@@ -45,10 +44,6 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
     super(true);
   }
 
-  /**
-   * Tests that require a large file only run if the there is a named test file that can be read.
-   */
-  private boolean testDataAvailable = true;
   private static final int _1K = 1024;
   // Path for file which should have length > block size so S3CachingInputStream is used
   private Path largeFile;
@@ -83,7 +78,6 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
   @Test
   public void testReadLargeFileFully() throws Throwable {
     describe("read a large file fully");
-    skipIfEmptyTestFile();
     openFS();
 
     try (FSDataInputStream in = fs.open(largeFile)) {
@@ -94,7 +88,6 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
       in.read(buffer, 0, (int) largeFileSize);
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, numBlocks);
-
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, numBlocks);
     }
   }
@@ -102,7 +95,6 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
   @Test
   public void testRandomReadLargeFile() throws Throwable {
     describe("read a large file fully");
-    skipIfEmptyTestFile();
     openFS();
 
     try (FSDataInputStream in = fs.open(largeFile)) {
@@ -113,13 +105,11 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
       // Don't read the block completely so it gets cached on seek
       in.read(buffer, 0, blockSize - _1K * 10);
       in.seek(blockSize + _1K * 10);
-
       // Backwards seek, will use cached block
       in.seek(_1K * 5);
       in.read();
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 2);
-
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, 2);
     }
   }
@@ -142,15 +132,8 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
       in.read(buffer, 0, _1K * 4);
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 1);
-
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, 1);
     }
 
-  }
-
-  private void skipIfEmptyTestFile() {
-    if (!testDataAvailable) {
-      skip("Test data file not specified");
-    }
   }
 }
