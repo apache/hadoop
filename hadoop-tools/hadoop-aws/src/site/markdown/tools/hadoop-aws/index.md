@@ -1595,7 +1595,7 @@ Accessing data through an access point, is done by using its ARN, as opposed to 
 You can set the Access Point ARN property using the following per bucket configuration property:
 ```xml
 <property>
-    <name>fs.s3a.sample-bucket.accesspoint.arn</name>
+    <name>fs.s3a.bucket.sample-bucket.accesspoint.arn</name>
     <value> {ACCESSPOINT_ARN_HERE} </value>
     <description>Configure S3a traffic to use this AccessPoint</description>
 </property>
@@ -1609,7 +1609,7 @@ You can also use an Access Point name as a path URI such as `s3a://finance-team-
 configuring the `.accesspoint.arn` property as a per-bucket override:
 ```xml
 <property>
-    <name>fs.s3a.finance-team-access.accesspoint.arn</name>
+    <name>fs.s3a.bucket.finance-team-access.accesspoint.arn</name>
     <value> {ACCESSPOINT_ARN_HERE} </value>
     <description>Configure S3a traffic to use this AccessPoint</description>
 </property>
