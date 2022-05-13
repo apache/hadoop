@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -45,8 +44,6 @@ public class AbstractRouterRpcFairnessPolicyController
   /** Hash table to hold semaphore for each configured name service. */
   private Map<String, AdjustableSemaphore> permits;
   private final Map<String, Integer> permitSizes = new HashMap<>();
-  private Map<String, LongAdder> rejectedPermitsPerNs;
-  private Map<String, LongAdder> acceptedPermitsPerNs;
 
   public void init(Configuration conf) {
     this.permits = new HashMap<>();
@@ -113,24 +110,9 @@ public class AbstractRouterRpcFairnessPolicyController
     return json.toString();
   }
 
-  @Override
-  public void setMetrics(Map<String, LongAdder> rejectedPermits,
-      Map<String, LongAdder> acceptedPermits) {
-    this.rejectedPermitsPerNs = rejectedPermits;
-    this.acceptedPermitsPerNs = acceptedPermits;
-  }
-
   protected Map<String, AdjustableSemaphore> getPermits() {
     return permits;
   }
-
-  public Map<String, LongAdder> getRejectedPermitsPerNs() {
-    return rejectedPermitsPerNs;
-  }
-  public Map<String, LongAdder> getAcceptedPermitsPerNs() {
-    return acceptedPermitsPerNs;
-  }
-
   protected Map<String, Integer> getPermitSizes() {
     return permitSizes;
   }

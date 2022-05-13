@@ -22,9 +22,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
@@ -52,7 +54,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 public class DynamicRouterRpcFairnessPolicyController
     extends StaticRouterRpcFairnessPolicyController {
 
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(DynamicRouterRpcFairnessPolicyController.class);
 
   private static final ScheduledExecutorService SCHEDULED_EXECUTOR = HadoopExecutors
@@ -62,6 +64,8 @@ public class DynamicRouterRpcFairnessPolicyController
   private ScheduledFuture<?> refreshTask;
   private int handlerCount;
   private int minimumHandlerPerNs;
+  private Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
+  private Map<String, LongAdder> acceptedPermitsPerNs = new ConcurrentHashMap<>();
 
   /**
    * Initializes using the same logic as {@link StaticRouterRpcFairnessPolicyController}
@@ -101,6 +105,11 @@ public class DynamicRouterRpcFairnessPolicyController
     permitsResizerService.run();
   }
 
+  @VisibleForTesting
+  public PermitsResizerService getResizerService() {
+    return permitsResizerService;
+  }
+
   @Override
   public void shutdown() {
     super.shutdown();
@@ -109,20 +118,42 @@ public class DynamicRouterRpcFairnessPolicyController
     }
   }
 
+  @Override
+  public boolean acquirePermit(String nsId) {
+    boolean result = super.acquirePermit(nsId);
+    if (result) {
+      acceptedPermitsPerNs.computeIfAbsent(nsId, k -> new LongAdder()).increment();
+    } else {
+      rejectedPermitsPerNs.computeIfAbsent(nsId, k -> new LongAdder()).increment();
+    }
+    return result;
+  }
+
+  @VisibleForTesting
+  public void setAcceptedPermitsPerNs(Map<String, LongAdder> metrics) {
+    acceptedPermitsPerNs = metrics;
+  }
+
+  @VisibleForTesting
+  public void setRejectedPermitsPerNs(Map<String, LongAdder> metrics) {
+    rejectedPermitsPerNs = metrics;
+  }
+
   class PermitsResizerService implements Runnable {
 
     @Override
     public synchronized void run() {
-      if ((getRejectedPermitsPerNs() == null) || (getAcceptedPermitsPerNs() == null)) {
+      if (rejectedPermitsPerNs == null || acceptedPermitsPerNs == null || (
+          rejectedPermitsPerNs.isEmpty() && acceptedPermitsPerNs.isEmpty())) {
         return;
       }
       long totalOps = 0;
       Map<String, Long> nsOps = new HashMap<>();
       for (Map.Entry<String, AdjustableSemaphore> entry : getPermits().entrySet()) {
-        long ops = (getRejectedPermitsPerNs().containsKey(entry.getKey()) ?
-            getRejectedPermitsPerNs().get(entry.getKey()).longValue() :
-            0) + (getAcceptedPermitsPerNs().containsKey(entry.getKey()) ?
-            getAcceptedPermitsPerNs().get(entry.getKey()).longValue() :
+        long ops = (rejectedPermitsPerNs.containsKey(entry.getKey()) ?
+            rejectedPermitsPerNs.get(entry.getKey()).longValue() :
+            0) + (acceptedPermitsPerNs.containsKey(entry.getKey()) ?
+            acceptedPermitsPerNs.get(entry.getKey()).longValue() :
             0);
         nsOps.put(entry.getKey(), ops);
         totalOps += ops;
@@ -155,6 +186,10 @@ public class DynamicRouterRpcFairnessPolicyController
         int newPermitCap = (int) Math.ceil((float) nsOps.get(ns) / effectiveOps * leftoverPermits);
         resizeNsHandlerCapacity(ns, newPermitCap);
       }
+
+      // Reset the metrics
+      rejectedPermitsPerNs = new ConcurrentHashMap<>();
+      acceptedPermitsPerNs = new ConcurrentHashMap<>();
     }
 
     private void resizeNsHandlerCapacity(String ns, int newPermitCap) {

@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.federation.fairness;
 
-import java.util.Map;
-import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -58,11 +55,5 @@ public class NoRouterRpcFairnessPolicyController implements
   @Override
   public String getPermitCapacityPerNs() {
     return "N/A";
-  }
-
-  @Override
-  public void setMetrics(Map<String, LongAdder> rejectedPermitsPerNs,
-      Map<String, LongAdder> acceptedPermitsPerNs) {
-    // Nothing
   }
 }

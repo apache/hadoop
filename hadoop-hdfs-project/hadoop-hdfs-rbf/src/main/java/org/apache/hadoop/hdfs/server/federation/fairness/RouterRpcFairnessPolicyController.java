@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.federation.fairness;
 
-import java.util.Map;
-import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -75,10 +72,4 @@ public interface RouterRpcFairnessPolicyController {
    * Returns the JSON string of the max handler count for each ns.
    */
   String getPermitCapacityPerNs();
-
-  /**
-   * Attaches permits access metrics to the controller.
-   */
-  void setMetrics(Map<String, LongAdder> rejectedPermitsPerNs,
-      Map<String, LongAdder> acceptedPermitsPerNs);
 }

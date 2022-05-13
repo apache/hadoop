@@ -220,7 +220,7 @@ public class TestRouterRefreshFairnessPolicyController {
         routerContext.getRouterRpcServer().getRPCMetrics().getProxyOpPermitRejectedPerNs());
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testRefreshStaticDynamic() throws Exception {
     // Setup and mock
     MiniRouterDFSCluster.RouterContext routerContext = cluster.getRandomRouter();
@@ -242,12 +242,16 @@ public class TestRouterRefreshFairnessPolicyController {
     client.refreshFairnessPolicyController(routerContext.getConf());
 
     // Newly created state, 3:3:3
-    assertEquals("{\"concurrent\":3,\"ns0\":3,\"ns1\":3}", client.getRouterRpcFairnessPolicyController().getAvailableHandlerOnPerNs());
-    makeDummySynchronizedInvocations(client, 2, "ns0");
-    makeDummySynchronizedInvocations(client, 1, "ns1");
+    DynamicRouterRpcFairnessPolicyController controller =
+        (DynamicRouterRpcFairnessPolicyController) client.getRouterRpcFairnessPolicyController();
+    synchronized (controller.getResizerService()) {
+      assertEquals("{\"concurrent\":3,\"ns0\":3,\"ns1\":3}", controller.getAvailableHandlerOnPerNs());
+      makeDummySynchronizedInvocations(client, 2, "ns0");
+      makeDummySynchronizedInvocations(client, 1, "ns1");
+    }
     Thread.sleep(4000);
     // With dummy metrics, new handler cap is 6:3:1
-    assertEquals("{\"concurrent\":1,\"ns0\":6,\"ns1\":3}", client.getRouterRpcFairnessPolicyController().getAvailableHandlerOnPerNs());
+    assertEquals("{\"concurrent\":1,\"ns0\":6,\"ns1\":3}", controller.getAvailableHandlerOnPerNs());
 
     // Refresh to static
     routerContext.getConf().set(RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS,
@@ -263,11 +267,15 @@ public class TestRouterRefreshFairnessPolicyController {
         .setLong(RBFConfigKeys.DFS_ROUTER_DYNAMIC_FAIRNESS_CONTROLLER_REFRESH_INTERVAL_SECONDS_KEY,
             2);
     client.refreshFairnessPolicyController(routerContext.getConf());
-    makeDummySynchronizedInvocations(client, 1, "ns0");
-    makeDummySynchronizedInvocations(client, 1, "ns1");
+    controller =
+        (DynamicRouterRpcFairnessPolicyController) client.getRouterRpcFairnessPolicyController();
+    synchronized (controller.getResizerService()) {
+      makeDummySynchronizedInvocations(client, 1, "ns0");
+      makeDummySynchronizedInvocations(client, 1, "ns1");
+    }
     Thread.sleep(2500);
     // With dummy metrics, new handler cap is 4:4:1
-    assertEquals("{\"concurrent\":1,\"ns0\":5,\"ns1\":4}", client.getRouterRpcFairnessPolicyController().getAvailableHandlerOnPerNs());
+    assertEquals("{\"concurrent\":1,\"ns0\":4,\"ns1\":4}", client.getRouterRpcFairnessPolicyController().getAvailableHandlerOnPerNs());
 
   }
 
