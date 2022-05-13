@@ -316,6 +316,10 @@ public final class TestAbfsClient {
     client = TestAbfsClient.setAbfsClientField(client, "baseUrl",
         baseAbfsClientInstance.getBaseUrl());
 
+    // override xMsVersion
+    client = TestAbfsClient.setAbfsClientField(client, "xMsVersion",
+        baseAbfsClientInstance.getxMsVersion());
+
     // override auth provider
     if (currentAuthType == AuthType.SharedKey) {
       client = TestAbfsClient.setAbfsClientField(client, "sharedKeyCredentials",

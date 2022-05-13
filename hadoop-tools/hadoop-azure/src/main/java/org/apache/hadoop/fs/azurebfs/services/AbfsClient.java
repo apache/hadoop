@@ -1302,6 +1302,10 @@ public class AbfsClient implements Closeable {
     return abfsCounters;
   }
 
+  public String getxMsVersion() {
+    return xMsVersion;
+  }
+
   public int getNumLeaseThreads() {
     return abfsConfiguration.getNumLeaseThreads();
   }
