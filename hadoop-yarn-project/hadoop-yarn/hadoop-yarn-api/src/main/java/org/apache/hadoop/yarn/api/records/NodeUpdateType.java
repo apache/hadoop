@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager;
+package org.apache.hadoop.yarn.api.records;
 
-public enum NodesListManagerEventType {
+/**
+ * <p>Taxonomy of the <code>NodeState</code> that a
+ * <code>Node</code> might transition into.</p>
+ * */
+public enum NodeUpdateType {
   NODE_USABLE,
   NODE_UNUSABLE,
   NODE_DECOMMISSIONING

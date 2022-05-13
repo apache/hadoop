@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeUpdateType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -154,10 +154,12 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * received by the RMApp. Updates can be node becoming lost or becoming
    * healthy etc. The method clears the information from the {@link RMApp}. So
    * each call to this method gives the delta from the previous call.
-   * @param updatedNodes Collection into which the updates are transferred
-   * @return the number of nodes added to the {@link Collection}
+   * @param updatedNodes Map into which the updates are transferred, with each
+   * node updates as the key, and the {@link NodeUpdateType} for that update
+   * as the corresponding value.
+   * @return the number of nodes added to the {@link Map}
    */
-  int pullRMNodeUpdates(Collection<RMNode> updatedNodes);
+  int pullRMNodeUpdates(Map<RMNode, NodeUpdateType> updatedNodes);
 
   /**
    * The finish time of the {@link RMApp}
