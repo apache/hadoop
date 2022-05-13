@@ -175,7 +175,7 @@ More precisely
 1. The token passed by the RM to the NM for localization is refreshed/updated as needed.
 1. Tokens in the app launch context for use by the application are *not* refreshed.
 That is, if it has an out of date HDFS token —that token is not renewed. This
-also holds for tokens for for Hive, HBase, etc.
+also holds for tokens for Hive, HBase, etc.
 1. Therefore, to survive AM restart after token expiry, your AM has to get the
 NMs to localize the keytab or make no HDFS accesses until (somehow) a new token has been passed to them from a client.
 
@@ -546,7 +546,7 @@ the list of resources to localize.
 is readable by principals other than the current user, warn,
 and consider actually failing the launch (similar to the normal `ssh` application.)
 
-`[ ]` Client acquires HDFS delegation token and and attaches to the AM Container
+`[ ]` Client acquires HDFS delegation token and attaches to the AM Container
 Launch Context,
 
 `[ ]` AM logs in as principal in keytab via `loginUserFromKeytab()`.

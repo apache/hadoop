@@ -29,6 +29,7 @@ include_directories(
     main/native
     main/native/libhdfs
     ${OS_DIR}
+    ../libhdfspp/lib
 )
 
 hadoop_add_dual_library(hdfs

@@ -40,7 +40,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
@@ -674,7 +674,7 @@ class S3ABlockOutputStream extends OutputStream implements
     }
     // downgrading.
     WARN_ON_SYNCABLE.warn("Application invoked the Syncable API against"
-        + " stream writing to {}. This is unsupported",
+        + " stream writing to {}. This is Unsupported",
         key);
     // and log at debug
     LOG.debug("Downgrading Syncable call", ex);

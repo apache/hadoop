@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -163,7 +164,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_MAPPING;
@@ -183,10 +184,9 @@ public class CapacityScheduler extends
 
   private CapacitySchedulerQueueManager queueManager;
 
-  private WorkflowPriorityMappingsManager workflowPriorityMappingsMgr;
+  private CapacitySchedulerQueueContext queueContext;
 
-  // timeout to join when we stop this service
-  protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
+  private WorkflowPriorityMappingsManager workflowPriorityMappingsMgr;
 
   private PreemptionManager preemptionManager = new PreemptionManager();
 
@@ -201,6 +201,9 @@ public class CapacityScheduler extends
   private CSConfigurationProvider csConfProvider;
 
   private int threadNum = 0;
+
+  private final PendingApplicationComparator applicationComparator =
+      new PendingApplicationComparator();
 
   @Override
   public void setConf(Configuration conf) {
@@ -225,26 +228,13 @@ public class CapacityScheduler extends
   private ResourceCalculator calculator;
   private boolean usePortForNodeName;
 
-  private boolean scheduleAsynchronously;
-  @VisibleForTesting
-  protected List<AsyncScheduleThread> asyncSchedulerThreads;
-  private ResourceCommitterService resourceCommitterService;
+  private AsyncSchedulingConfiguration asyncSchedulingConf;
   private RMNodeLabelsManager labelManager;
   private AppPriorityACLsManager appPriorityACLManager;
   private boolean multiNodePlacementEnabled;
 
   private boolean printedVerboseLoggingForAsyncScheduling;
   private boolean appShouldFailFast;
-
-  /**
-   * EXPERT
-   */
-  private long asyncScheduleInterval;
-  private static final String ASYNC_SCHEDULER_INTERVAL =
-      CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
-          + ".scheduling-interval-ms";
-  private static final long DEFAULT_ASYNC_SCHEDULER_INTERVAL = 5;
-  private long asyncMaxPendingBacklogs;
 
   private CSMaxRunningAppsEnforcer maxRunningEnforcer;
 
@@ -265,6 +255,11 @@ public class CapacityScheduler extends
   @Override
   public CapacitySchedulerConfiguration getConfiguration() {
     return conf;
+  }
+
+  @Override
+  public CapacitySchedulerQueueContext getQueueContext() {
+    return queueContext;
   }
 
   @Override
@@ -319,6 +314,7 @@ public class CapacityScheduler extends
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
       this.activitiesManager = new ActivitiesManager(rmContext);
       activitiesManager.init(conf);
+      this.queueContext = new CapacitySchedulerQueueContext(this);
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
       this.assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
@@ -368,27 +364,7 @@ public class CapacityScheduler extends
   }
 
   private void initAsyncSchedulingProperties() {
-    scheduleAsynchronously = this.conf.getScheduleAynschronously();
-    asyncScheduleInterval = this.conf.getLong(ASYNC_SCHEDULER_INTERVAL,
-        DEFAULT_ASYNC_SCHEDULER_INTERVAL);
-
-    // number of threads for async scheduling
-    int maxAsyncSchedulingThreads = this.conf.getInt(
-        CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD, 1);
-    maxAsyncSchedulingThreads = Math.max(maxAsyncSchedulingThreads, 1);
-
-    if (scheduleAsynchronously) {
-      asyncSchedulerThreads = new ArrayList<>();
-      for (int i = 0; i < maxAsyncSchedulingThreads; i++) {
-        asyncSchedulerThreads.add(new AsyncScheduleThread(this));
-      }
-      resourceCommitterService = new ResourceCommitterService(this);
-      asyncMaxPendingBacklogs = this.conf.getInt(
-          CapacitySchedulerConfiguration.
-              SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS,
-          CapacitySchedulerConfiguration.
-              DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS);
-    }
+    this.asyncSchedulingConf = new AsyncSchedulingConfiguration(conf, this);
   }
 
   private void initMultiNodePlacement() {
@@ -411,8 +387,8 @@ public class CapacityScheduler extends
         getResourceCalculator().getClass(),
         getMinimumResourceCapability(),
         getMaximumResourceCapability(),
-        scheduleAsynchronously,
-        asyncScheduleInterval,
+        asyncSchedulingConf.isScheduleAsynchronously(),
+        asyncSchedulingConf.getAsyncScheduleInterval(),
         multiNodePlacementEnabled,
         assignMultipleEnabled,
         maxAssignPerHeartbeat,
@@ -423,15 +399,7 @@ public class CapacityScheduler extends
     writeLock.lock();
     try {
       activitiesManager.start();
-      if (scheduleAsynchronously) {
-        Preconditions.checkNotNull(asyncSchedulerThreads,
-            "asyncSchedulerThreads is null");
-        for (Thread t : asyncSchedulerThreads) {
-          t.start();
-        }
-
-        resourceCommitterService.start();
-      }
+      asyncSchedulingConf.startThreads();
     } finally {
       writeLock.unlock();
     }
@@ -457,14 +425,7 @@ public class CapacityScheduler extends
     writeLock.lock();
     try {
       this.activitiesManager.stop();
-      if (scheduleAsynchronously && asyncSchedulerThreads != null) {
-        for (Thread t : asyncSchedulerThreads) {
-          t.interrupt();
-          t.join(THREAD_JOIN_TIMEOUT_MS);
-        }
-        resourceCommitterService.interrupt();
-        resourceCommitterService.join(THREAD_JOIN_TIMEOUT_MS);
-      }
+      asyncSchedulingConf.serviceStopInvoked();
     } finally {
       writeLock.unlock();
     }
@@ -531,7 +492,7 @@ public class CapacityScheduler extends
   }
 
   long getAsyncScheduleInterval() {
-    return asyncScheduleInterval;
+    return asyncSchedulingConf.getAsyncScheduleInterval();
   }
 
   private final static Random random = new Random(System.currentTimeMillis());
@@ -663,6 +624,11 @@ public class CapacityScheduler extends
     Thread.sleep(cs.getAsyncScheduleInterval());
   }
 
+  @VisibleForTesting
+  public void setAsyncSchedulingConf(AsyncSchedulingConfiguration conf) {
+    this.asyncSchedulingConf = conf;
+  }
+
   static class AsyncScheduleThread extends Thread {
 
     private final CapacityScheduler cs;
@@ -684,7 +650,7 @@ public class CapacityScheduler extends
           } else {
             // Don't run schedule if we have some pending backlogs already
             if (cs.getAsyncSchedulingPendingBacklogs()
-                > cs.asyncMaxPendingBacklogs) {
+                > cs.asyncSchedulingConf.getAsyncMaxPendingBacklogs()) {
               Thread.sleep(1);
             } else{
               schedule(cs);
@@ -844,6 +810,7 @@ public class CapacityScheduler extends
   @Lock(CapacityScheduler.class)
   private void reinitializeQueues(CapacitySchedulerConfiguration newConf)
   throws IOException {
+    queueContext.reinitialize();
     this.queueManager.reinitializeQueues(newConf);
     updatePlacementRules();
 
@@ -917,7 +884,7 @@ public class CapacityScheduler extends
           throw new QueueInvalidException(queueErrorMsg);
         }
       }
-      if (!(queue instanceof LeafQueue)) {
+      if (!(queue instanceof AbstractLeafQueue)) {
         // During RM restart, this means leaf queue was converted to a parent
         // queue, which is not supported for running apps.
         if (!appShouldFailFast) {
@@ -942,7 +909,7 @@ public class CapacityScheduler extends
       // that means its previous state was DRAINING. So we auto transit
       // the state to DRAINING for recovery.
       if (queue.getState() == QueueState.STOPPED) {
-        ((LeafQueue) queue).recoverDrainingState();
+        ((AbstractLeafQueue) queue).recoverDrainingState();
       }
       // Submit to the queue
       try {
@@ -1090,7 +1057,7 @@ public class CapacityScheduler extends
         return;
       }
 
-      if (!(queue instanceof LeafQueue)) {
+      if (!(queue instanceof AbstractLeafQueue)) {
         String message =
             "Application " + applicationId + " submitted by user : " + user
                 + " to non-leaf queue : " + queueName;
@@ -1242,7 +1209,7 @@ public class CapacityScheduler extends
         return;
       }
       CSQueue queue = (CSQueue) application.getQueue();
-      if (!(queue instanceof LeafQueue)) {
+      if (!(queue instanceof AbstractLeafQueue)) {
         LOG.error("Cannot finish application " + "from non-leaf queue: " + queue
             .getQueuePath());
       } else{
@@ -1301,7 +1268,7 @@ public class CapacityScheduler extends
       // Inform the queue
       Queue  queue = attempt.getQueue();
       CSQueue csQueue = (CSQueue) queue;
-      if (!(csQueue instanceof LeafQueue)) {
+      if (!(csQueue instanceof AbstractLeafQueue)) {
         LOG.error(
             "Cannot finish application " + "from non-leaf queue: "
             + csQueue.getQueuePath());
@@ -1367,7 +1334,7 @@ public class CapacityScheduler extends
     // Release containers
     releaseContainers(release, application);
 
-    LeafQueue updateDemandForQueue = null;
+    AbstractLeafQueue updateDemandForQueue = null;
 
     // Sanity check for new allocation requests
     normalizeResourceRequests(ask);
@@ -1398,7 +1365,7 @@ public class CapacityScheduler extends
         // Update application requests
         if (application.updateResourceRequests(ask) || application
             .updateSchedulingRequests(schedulingRequests)) {
-          updateDemandForQueue = (LeafQueue) application.getQueue();
+          updateDemandForQueue = (AbstractLeafQueue) application.getQueue();
         }
 
         if (LOG.isDebugEnabled()) {
@@ -1470,7 +1437,7 @@ public class CapacityScheduler extends
     }
 
     // Try to do scheduling
-    if (!scheduleAsynchronously) {
+    if (!asyncSchedulingConf.isScheduleAsynchronously()) {
       writeLock.lock();
       try {
         // reset allocation and reservation stats before we start doing any
@@ -1783,7 +1750,7 @@ public class CapacityScheduler extends
     LOG.debug("Trying to fulfill reservation for application {} on node: {}",
         reservedApplication.getApplicationId(), node.getNodeID());
 
-    LeafQueue queue = ((LeafQueue) reservedApplication.getQueue());
+    AbstractLeafQueue queue = ((AbstractLeafQueue) reservedApplication.getQueue());
     CSAssignment assignment = queue.assignContainers(getClusterResource(),
         new SimpleCandidateNodeSet<>(node),
         // TODO, now we only consider limits for parent for non-labeled
@@ -2239,6 +2206,22 @@ public class CapacityScheduler extends
     }
   }
 
+  /**
+   * Add node to nodeTracker. Used when validating CS configuration by instantiating a new
+   * CS instance.
+   * @param nodesToAdd node to be added
+   */
+  public void addNodes(List<FiCaSchedulerNode> nodesToAdd) {
+    writeLock.lock();
+    try {
+      for (FiCaSchedulerNode node : nodesToAdd) {
+        nodeTracker.addNode(node);
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
   private void addNode(RMNode nodeManager) {
     writeLock.lock();
     try {
@@ -2266,8 +2249,8 @@ public class CapacityScheduler extends
           "Added node " + nodeManager.getNodeAddress() + " clusterResource: "
               + clusterResource);
 
-      if (scheduleAsynchronously && getNumClusterNodes() == 1) {
-        for (AsyncScheduleThread t : asyncSchedulerThreads) {
+      if (asyncSchedulingConf.isScheduleAsynchronously() && getNumClusterNodes() == 1) {
+        for (AsyncScheduleThread t : asyncSchedulingConf.asyncSchedulerThreads) {
           t.beginSchedule();
         }
       }
@@ -2315,11 +2298,7 @@ public class CapacityScheduler extends
           new ResourceLimits(clusterResource));
       int numNodes = nodeTracker.nodeCount();
 
-      if (scheduleAsynchronously && numNodes == 0) {
-        for (AsyncScheduleThread t : asyncSchedulerThreads) {
-          t.suspendSchedule();
-        }
-      }
+      asyncSchedulingConf.nodeRemoved(numNodes);
 
       LOG.info(
           "Removed node " + nodeInfo.getNodeAddress() + " clusterResource: "
@@ -2370,7 +2349,7 @@ public class CapacityScheduler extends
     }
 
     // Inform the queue
-    LeafQueue queue = (LeafQueue) application.getQueue();
+    AbstractLeafQueue queue = (AbstractLeafQueue) application.getQueue();
     queue.completedContainer(getClusterResource(), application, node,
         rmContainer, containerStatus, event, null, true);
   }
@@ -2657,7 +2636,7 @@ public class CapacityScheduler extends
       throws YarnException {
     writeLock.lock();
     try {
-      LeafQueue queue = this.queueManager.getAndCheckLeafQueue(inQueue);
+      AbstractLeafQueue queue = this.queueManager.getAndCheckLeafQueue(inQueue);
       AbstractManagedParentQueue parent =
           (AbstractManagedParentQueue) queue.getParent();
 
@@ -2700,10 +2679,10 @@ public class CapacityScheduler extends
         throw new YarnException("App to be moved " + appId + " not found.");
       }
       String sourceQueueName = application.getQueue().getQueueName();
-      LeafQueue source =
+      AbstractLeafQueue source =
           this.queueManager.getAndCheckLeafQueue(sourceQueueName);
       String destQueueName = handleMoveToPlanQueue(targetQueueName);
-      LeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
+      AbstractLeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
 
       String user = application.getUser();
       try {
@@ -2761,7 +2740,7 @@ public class CapacityScheduler extends
           ((CSQueue) queue).getQueuePath() : queue.getQueueName();
       this.queueManager.getAndCheckLeafQueue(sourceQueueName);
       String destQueueName = handleMoveToPlanQueue(newQueue);
-      LeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
+      AbstractLeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
       // Validation check - ACLs, submission limits for user & queue
       String user = application.getUser();
       // Check active partition only when attempt is available
@@ -2788,7 +2767,7 @@ public class CapacityScheduler extends
    * @param dest
    * @throws YarnException
    */
-  private void checkQueuePartition(FiCaSchedulerApp app, LeafQueue dest)
+  private void checkQueuePartition(FiCaSchedulerApp app, AbstractLeafQueue dest)
       throws YarnException {
     if (!YarnConfiguration.areNodeLabelsEnabled(conf)) {
       return;
@@ -2838,7 +2817,7 @@ public class CapacityScheduler extends
       }
       return getMaximumResourceCapability();
     }
-    if (!(queue instanceof LeafQueue)) {
+    if (!(queue instanceof AbstractLeafQueue)) {
       LOG.error("queue " + queueName + " is not an leaf queue");
       return getMaximumResourceCapability();
     }
@@ -2847,7 +2826,7 @@ public class CapacityScheduler extends
     // getMaximumResourceCapability() returns maximum allocation considers
     // per-node maximum resources. So return (component-wise) min of the two.
 
-    Resource queueMaxAllocation = ((LeafQueue)queue).getMaximumAllocation();
+    Resource queueMaxAllocation = queue.getMaximumAllocation();
     Resource clusterMaxAllocationConsiderNodeMax =
         getMaximumResourceCapability();
 
@@ -2973,7 +2952,7 @@ public class CapacityScheduler extends
 
       // As we use iterator over a TreeSet for OrderingPolicy, once we change
       // priority then reinsert back to make order correct.
-      LeafQueue queue = (LeafQueue) getQueue(rmApp.getQueue());
+      AbstractLeafQueue queue = (AbstractLeafQueue) getQueue(rmApp.getQueue());
       queue.updateApplicationPriority(application, appPriority);
 
       LOG.info("Priority '" + appPriority + "' is updated in queue :"
@@ -3067,9 +3046,9 @@ public class CapacityScheduler extends
       return;
     }
 
-    if (scheduleAsynchronously) {
+    if (asyncSchedulingConf.isScheduleAsynchronously()) {
       // Submit to a commit thread and commit it async-ly
-      resourceCommitterService.addNewCommitRequest(request);
+      asyncSchedulingConf.resourceCommitterService.addNewCommitRequest(request);
     } else{
       // Otherwise do it sync-ly.
       tryCommit(cluster, request, true);
@@ -3314,10 +3293,7 @@ public class CapacityScheduler extends
   }
 
   public int getAsyncSchedulingPendingBacklogs() {
-    if (scheduleAsynchronously) {
-      return resourceCommitterService.getPendingBacklogs();
-    }
-    return 0;
+    return asyncSchedulingConf.getPendingBacklogs();
   }
 
   @Override
@@ -3388,14 +3364,14 @@ public class CapacityScheduler extends
     readLock.lock();
     try {
       CSQueue queue = getQueue(queueName);
-      if (queue == null || !(queue instanceof LeafQueue)) {
+      if (!(queue instanceof AbstractLeafQueue)) {
         return lifetimeRequestedByApp;
       }
 
       long defaultApplicationLifetime =
-          ((LeafQueue) queue).getDefaultApplicationLifetime();
+          queue.getDefaultApplicationLifetime();
       long maximumApplicationLifetime =
-          ((LeafQueue) queue).getMaximumApplicationLifetime();
+          queue.getMaximumApplicationLifetime();
 
       // check only for maximum, that's enough because default can't
       // exceed maximum
@@ -3418,7 +3394,7 @@ public class CapacityScheduler extends
   @Override
   public long getMaximumApplicationLifetime(String queueName) {
     CSQueue queue = getQueue(queueName);
-    if (queue == null || !(queue instanceof LeafQueue)) {
+    if (!(queue instanceof AbstractLeafQueue)) {
       if (isAmbiguous(queueName)) {
         LOG.error("Ambiguous queue reference: " + queueName
             + " please use full queue path instead.");
@@ -3428,7 +3404,7 @@ public class CapacityScheduler extends
       return -1;
     }
     // In seconds
-    return ((LeafQueue) queue).getMaximumApplicationLifetime();
+    return queue.getMaximumApplicationLifetime();
   }
 
   @Override
@@ -3458,7 +3434,7 @@ public class CapacityScheduler extends
   }
 
   public int getNumAsyncSchedulerThreads() {
-    return asyncSchedulerThreads == null ? 0 : asyncSchedulerThreads.size();
+    return asyncSchedulingConf.getNumAsyncSchedulerThreads();
   }
 
   @VisibleForTesting
@@ -3477,5 +3453,137 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public void setQueueManager(CapacitySchedulerQueueManager qm) {
     this.queueManager = qm;
+  }
+
+  @VisibleForTesting
+  public List<AsyncScheduleThread> getAsyncSchedulerThreads() {
+    return asyncSchedulingConf.getAsyncSchedulerThreads();
+  }
+
+  static class AsyncSchedulingConfiguration {
+    // timeout to join when we stop this service
+    private static final long THREAD_JOIN_TIMEOUT_MS = 1000;
+
+    @VisibleForTesting
+    protected List<AsyncScheduleThread> asyncSchedulerThreads;
+    private ResourceCommitterService resourceCommitterService;
+
+    private long asyncScheduleInterval;
+    private static final String ASYNC_SCHEDULER_INTERVAL =
+        CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
+            + ".scheduling-interval-ms";
+    private static final long DEFAULT_ASYNC_SCHEDULER_INTERVAL = 5;
+    private long asyncMaxPendingBacklogs;
+
+    private final boolean scheduleAsynchronously;
+
+    AsyncSchedulingConfiguration(CapacitySchedulerConfiguration conf,
+        CapacityScheduler cs) {
+      this.scheduleAsynchronously = conf.getScheduleAynschronously();
+      if (this.scheduleAsynchronously) {
+        this.asyncScheduleInterval = conf.getLong(
+            CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_INTERVAL,
+            CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_INTERVAL);
+        // number of threads for async scheduling
+        int maxAsyncSchedulingThreads = conf.getInt(
+            CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
+            1);
+        maxAsyncSchedulingThreads = Math.max(maxAsyncSchedulingThreads, 1);
+        this.asyncMaxPendingBacklogs = conf.getInt(
+            CapacitySchedulerConfiguration.
+                SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS,
+            CapacitySchedulerConfiguration.
+                DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS);
+
+        this.asyncSchedulerThreads = new ArrayList<>();
+        for (int i = 0; i < maxAsyncSchedulingThreads; i++) {
+          asyncSchedulerThreads.add(new AsyncScheduleThread(cs));
+        }
+        this.resourceCommitterService = new ResourceCommitterService(cs);
+      }
+    }
+    public boolean isScheduleAsynchronously() {
+      return scheduleAsynchronously;
+    }
+    public long getAsyncScheduleInterval() {
+      return asyncScheduleInterval;
+    }
+    public long getAsyncMaxPendingBacklogs() {
+      return asyncMaxPendingBacklogs;
+    }
+
+    public void startThreads() {
+      if (scheduleAsynchronously) {
+        Preconditions.checkNotNull(asyncSchedulerThreads,
+            "asyncSchedulerThreads is null");
+        for (Thread t : asyncSchedulerThreads) {
+          t.start();
+        }
+
+        resourceCommitterService.start();
+      }
+    }
+
+    public void serviceStopInvoked() throws InterruptedException {
+      if (scheduleAsynchronously && asyncSchedulerThreads != null) {
+        for (Thread t : asyncSchedulerThreads) {
+          t.interrupt();
+          t.join(THREAD_JOIN_TIMEOUT_MS);
+        }
+        resourceCommitterService.interrupt();
+        resourceCommitterService.join(THREAD_JOIN_TIMEOUT_MS);
+      }
+    }
+
+    public void nodeRemoved(int numNodes) {
+      if (scheduleAsynchronously && numNodes == 0) {
+        for (AsyncScheduleThread t : asyncSchedulerThreads) {
+          t.suspendSchedule();
+        }
+      }
+    }
+
+    public int getPendingBacklogs() {
+      if (scheduleAsynchronously) {
+        return resourceCommitterService.getPendingBacklogs();
+      }
+      return 0;
+    }
+
+    public int getNumAsyncSchedulerThreads() {
+      return asyncSchedulerThreads == null ? 0 : asyncSchedulerThreads.size();
+    }
+
+    @VisibleForTesting
+    public List<AsyncScheduleThread> getAsyncSchedulerThreads() {
+      return asyncSchedulerThreads;
+    }
+  }
+
+  @Override
+  public PendingApplicationComparator getPendingApplicationComparator(){
+    return applicationComparator;
+  }
+
+  /**
+   * Comparator that orders applications by their submit time.
+   */
+  class PendingApplicationComparator
+      implements Comparator<FiCaSchedulerApp> {
+
+    @Override
+    public int compare(FiCaSchedulerApp app1, FiCaSchedulerApp app2) {
+      RMApp rmApp1 = rmContext.getRMApps().get(app1.getApplicationId());
+      RMApp rmApp2 = rmContext.getRMApps().get(app2.getApplicationId());
+      if (rmApp1 != null && rmApp2 != null) {
+        return Long.compare(rmApp1.getSubmitTime(), rmApp2.getSubmitTime());
+      } else if (rmApp1 != null) {
+        return -1;
+      } else if (rmApp2 != null) {
+        return 1;
+      } else{
+        return 0;
+      }
+    }
   }
 }

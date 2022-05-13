@@ -464,9 +464,8 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     for (String line : auditLog.getOutput().split("\n")) {
       if (line.contains(auditFlag)) {
         // assert origin caller context exist in audit log
-        assertTrue(line.contains("callerContext=clientContext"));
-        String callerContext = line.substring(
-            line.indexOf("callerContext=clientContext"));
+        String callerContext = line.substring(line.indexOf("callerContext="));
+        assertTrue(callerContext.contains("clientContext"));
         // assert client ip info exist in caller context
         assertTrue(callerContext.contains(clientIpInfo));
         // assert client ip info appears only once in caller context

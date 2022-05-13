@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
     .FiCaSchedulerApp;
@@ -34,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,22 +52,17 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
   private static final Logger LOG = LoggerFactory.getLogger(
       ManagedParentQueue.class);
 
-  public ManagedParentQueue(final CapacitySchedulerContext cs,
+  public ManagedParentQueue(final CapacitySchedulerQueueContext queueContext,
       final String queueName, final CSQueue parent, final CSQueue old)
       throws IOException {
-    super(cs, queueName, parent, old);
+    super(queueContext, queueName, parent, old);
 
     shouldFailAutoCreationWhenGuaranteedCapacityExceeded =
-        csContext.getConfiguration()
+        queueContext.getConfiguration()
             .getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
                 getQueuePath());
 
     leafQueueTemplate = initializeLeafQueueConfigs().build();
-
-    LOG.info(
-        "Created Managed Parent Queue: [{}] with capacity: [{}]"
-            + " with max capacity: [{}]",
-        queueName, super.getCapacity(), super.getMaximumCapacity());
 
     initializeQueueManagementPolicy();
   }
@@ -83,7 +76,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       validate(newlyParsedQueue);
 
       shouldFailAutoCreationWhenGuaranteedCapacityExceeded =
-          csContext.getConfiguration()
+          queueContext.getConfiguration()
               .getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
                   getQueuePath());
 
@@ -122,7 +115,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       LOG.info(
           "Reinitialized Managed Parent Queue: [{}] with capacity [{}]"
               + " with max capacity [{}]",
-          queueName, super.getCapacity(), super.getMaximumCapacity());
+          getQueueName(), super.getCapacity(), super.getMaximumCapacity());
     } catch (YarnException ye) {
       LOG.error("Exception while computing policy changes for leaf queue : "
           + getQueuePath(), ye);
@@ -134,23 +127,23 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
   private void initializeQueueManagementPolicy() throws IOException {
     queueManagementPolicy =
-        csContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
+        queueContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
             getQueuePath());
 
-    queueManagementPolicy.init(csContext, this);
+    queueManagementPolicy.init(this);
   }
 
   private void reinitializeQueueManagementPolicy() throws IOException {
     AutoCreatedQueueManagementPolicy managementPolicy =
-        csContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
+        queueContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
             getQueuePath());
 
     if (!(managementPolicy.getClass().equals(
         this.queueManagementPolicy.getClass()))) {
       queueManagementPolicy = managementPolicy;
-      queueManagementPolicy.init(csContext, this);
+      queueManagementPolicy.init(this);
     } else{
-      queueManagementPolicy.reinitialize(csContext, this);
+      queueManagementPolicy.reinitialize(this);
     }
   }
 
@@ -159,38 +152,30 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     AutoCreatedLeafQueueConfig.Builder builder =
         new AutoCreatedLeafQueueConfig.Builder();
 
+    CapacitySchedulerConfiguration configuration =
+        queueContext.getConfiguration();
+
+    // TODO load configs into CapacitySchedulerConfiguration instead of duplicating them
     String leafQueueTemplateConfPrefix = getLeafQueueConfigPrefix(
-        csContext.getConfiguration());
-    //Load template configuration
-    CapacitySchedulerConfiguration conf =
+        configuration);
+    //Load template configuration into CapacitySchedulerConfiguration
+    CapacitySchedulerConfiguration autoCreatedTemplateConfig =
         super.initializeLeafQueueConfigs(leafQueueTemplateConfPrefix);
-    builder.configuration(conf);
-    String templateQueuePath = csContext.getConfiguration()
-        .getAutoCreatedQueueTemplateConfPrefix(getQueuePath());
+    builder.configuration(autoCreatedTemplateConfig);
+    QueueResourceQuotas queueResourceQuotas = new QueueResourceQuotas();
+    setAbsoluteResourceTemplates(configuration, queueResourceQuotas);
 
-    Set<String> templateConfiguredNodeLabels = csContext
-        .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
-        .getLabelsByQueue(templateQueuePath);
-    for (String nodeLabel : templateConfiguredNodeLabels) {
-      Resource templateMinResource = conf.getMinimumResourceRequirement(
-          nodeLabel, csContext.getConfiguration()
-              .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
-          resourceTypes);
-
-      if (this.capacityConfigType.equals(CapacityConfigType.PERCENTAGE)
-          && !templateMinResource.equals(Resources.none())) {
-        throw new IOException("Managed Parent Queue " + this.getQueuePath()
-            + " config type is different from leaf queue template config type");
-      }
-    }
-
+    QueuePath templateQueuePath = configuration
+        .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
+    Set<String> templateConfiguredNodeLabels = queueContext
+        .getQueueManager().getConfiguredNodeLabelsForAllQueues()
+        .getLabelsByQueue(templateQueuePath.getFullPath());
     //Load template capacities
     QueueCapacities queueCapacities = new QueueCapacities(false);
     CSQueueUtils.loadCapacitiesByLabelsFromConf(templateQueuePath,
         queueCapacities,
-        csContext.getConfiguration(),
+        configuration,
         templateConfiguredNodeLabels);
-
 
     /**
      * Populate leaf queue template (of Parent resources configured in
@@ -202,39 +187,64 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       updateQueueCapacities(queueCapacities);
     }
     builder.capacities(queueCapacities);
+    builder.resourceQuotas(queueResourceQuotas);
     return builder;
   }
 
+  private void setAbsoluteResourceTemplates(CapacitySchedulerConfiguration configuration,
+                                            QueueResourceQuotas queueResourceQuotas) throws IOException {
+    QueuePath templateQueuePath = configuration
+        .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
+    Set<String> templateConfiguredNodeLabels = queueContext
+        .getQueueManager().getConfiguredNodeLabelsForAllQueues()
+        .getLabelsByQueue(templateQueuePath.getFullPath());
+
+    for (String nodeLabel : templateConfiguredNodeLabels) {
+      Resource templateMinResource = configuration.getMinimumResourceRequirement(
+          nodeLabel, templateQueuePath.getFullPath(), resourceTypes);
+      queueResourceQuotas.setConfiguredMinResource(nodeLabel, templateMinResource);
+
+      if (this.capacityConfigType.equals(CapacityConfigType.PERCENTAGE)
+          && !templateMinResource.equals(Resources.none())) {
+        throw new IOException("Managed Parent Queue " + this.getQueuePath()
+            + " config type is different from leaf queue template config type");
+      }
+    }
+  }
+
   private void updateQueueCapacities(QueueCapacities queueCapacities) {
+    CapacitySchedulerConfiguration configuration =
+        queueContext.getConfiguration();
+
     for (String label : queueCapacities.getExistingNodeLabels()) {
       queueCapacities.setCapacity(label,
-          this.csContext.getResourceCalculator().divide(
-              this.csContext.getClusterResource(),
-              this.csContext.getConfiguration().getMinimumResourceRequirement(
+          resourceCalculator.divide(
+              queueContext.getClusterResource(),
+              configuration.getMinimumResourceRequirement(
                   label,
-                  this.csContext.getConfiguration()
+                  configuration
                       .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
                   resourceTypes),
               getQueueResourceQuotas().getConfiguredMinResource(label)));
 
-      Resource childMaxResource = this.csContext.getConfiguration()
+      Resource childMaxResource = configuration
           .getMaximumResourceRequirement(label,
-              this.csContext.getConfiguration()
+              configuration
                   .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
               resourceTypes);
       Resource parentMaxRes = getQueueResourceQuotas()
           .getConfiguredMaxResource(label);
 
       Resource effMaxResource = Resources.min(
-          this.csContext.getResourceCalculator(),
-          this.csContext.getClusterResource(),
+          resourceCalculator,
+          queueContext.getClusterResource(),
           childMaxResource.equals(Resources.none()) ? parentMaxRes
               : childMaxResource,
           parentMaxRes);
 
       queueCapacities.setMaximumCapacity(
-          label, this.csContext.getResourceCalculator().divide(
-               this.csContext.getClusterResource(),
+          label, resourceCalculator.divide(
+              queueContext.getClusterResource(),
                effMaxResource,
                getQueueResourceQuotas().getConfiguredMaxResource(label)));
 
@@ -269,7 +279,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
             "Expected child queue to be an instance of AutoCreatedLeafQueue");
       }
 
-      CapacitySchedulerConfiguration conf = csContext.getConfiguration();
+      CapacitySchedulerConfiguration conf = queueContext.getConfiguration();
       ManagedParentQueue parentQueue =
           (ManagedParentQueue) childQueue.getParent();
 
@@ -323,8 +333,8 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
       // Do one update cluster resource call to make sure all absolute resources
       // effective resources are updated.
-      updateClusterResource(this.csContext.getClusterResource(),
-          new ResourceLimits(this.csContext.getClusterResource()));
+      updateClusterResource(queueContext.getClusterResource(),
+          new ResourceLimits(queueContext.getClusterResource()));
     } finally {
       writeLock.unlock();
     }
@@ -335,7 +345,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     try {
       List<FiCaSchedulerApp> apps = new ArrayList<>();
       for (CSQueue childQueue : getChildQueues()) {
-        apps.addAll(((LeafQueue) childQueue).getApplications());
+        apps.addAll(((AbstractLeafQueue) childQueue).getApplications());
       }
       return Collections.unmodifiableList(apps);
     } finally {
@@ -348,7 +358,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     try {
       List<FiCaSchedulerApp> apps = new ArrayList<>();
       for (CSQueue childQueue : getChildQueues()) {
-        apps.addAll(((LeafQueue) childQueue).getPendingApplications());
+        apps.addAll(((AbstractLeafQueue) childQueue).getPendingApplications());
       }
       return Collections.unmodifiableList(apps);
     } finally {
@@ -361,7 +371,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     try {
       List<FiCaSchedulerApp> apps = new ArrayList<>();
       for (CSQueue childQueue : getChildQueues()) {
-        apps.addAll(((LeafQueue) childQueue).getAllApplications());
+        apps.addAll(((AbstractLeafQueue) childQueue).getAllApplications());
       }
       return Collections.unmodifiableList(apps);
     } finally {
@@ -428,12 +438,11 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
                 + " Ignoring update " + queueManagementChanges);
       }
 
-      switch (queueManagementChange.getQueueAction()){
-      case UPDATE_QUEUE:
+      if (queueManagementChange.getQueueAction() ==
+          QueueManagementChange.QueueAction.UPDATE_QUEUE) {
         AutoCreatedLeafQueueConfig template =
             queueManagementChange.getUpdatedQueueTemplate();
         ((AutoCreatedLeafQueue) childQueue).validateConfigurations(template);
-        break;
       }
 
     }
@@ -443,37 +452,24 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       List<QueueManagementChange> queueManagementChanges)
       throws SchedulerDynamicEditException, IOException {
     for (QueueManagementChange queueManagementChange : queueManagementChanges) {
-      switch (queueManagementChange.getQueueAction()){
-      case UPDATE_QUEUE:
+      if (queueManagementChange.getQueueAction() ==
+          QueueManagementChange.QueueAction.UPDATE_QUEUE) {
         AutoCreatedLeafQueue childQueueToBeUpdated =
             (AutoCreatedLeafQueue) queueManagementChange.getQueue();
         //acquires write lock on leaf queue
         childQueueToBeUpdated.reinitializeFromTemplate(
             queueManagementChange.getUpdatedQueueTemplate());
-        break;
       }
     }
   }
 
-  public CapacitySchedulerConfiguration getLeafQueueConfigs(
-      String leafQueueName) {
-    return getLeafQueueConfigs(getLeafQueueTemplate().getLeafQueueConfigs(),
-        leafQueueName);
-  }
-
-  public CapacitySchedulerConfiguration getLeafQueueConfigs(
-      CapacitySchedulerConfiguration templateConfig, String leafQueueName) {
-    CapacitySchedulerConfiguration leafQueueConfigTemplate = new
-        CapacitySchedulerConfiguration(new Configuration(false), false);
-    for (final Iterator<Map.Entry<String, String>> iterator =
-         templateConfig.iterator(); iterator.hasNext(); ) {
-      Map.Entry<String, String> confKeyValuePair = iterator.next();
-      final String name = confKeyValuePair.getKey().replaceFirst(
-          CapacitySchedulerConfiguration
-              .AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX,
-          leafQueueName);
-      leafQueueConfigTemplate.set(name, confKeyValuePair.getValue());
+  public void setLeafQueueConfigs(String leafQueueName) {
+    CapacitySchedulerConfiguration templateConfig = leafQueueTemplate.getLeafQueueConfigs();
+    for (Map.Entry<String, String> confKeyValuePair : templateConfig) {
+      final String name = confKeyValuePair.getKey()
+          .replaceFirst(CapacitySchedulerConfiguration.AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX,
+              leafQueueName);
+      queueContext.setConfigurationEntry(name, confKeyValuePair.getValue());
     }
-    return leafQueueConfigTemplate;
   }
 }

@@ -103,7 +103,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected double considerLoadFactor;
   private boolean preferLocalNode;
   private boolean dataNodePeerStatsEnabled;
-  private boolean excludeSlowNodesEnabled;
+  private volatile boolean excludeSlowNodesEnabled;
   protected NetworkTopology clusterMap;
   protected Host2NodesMap host2datanodeMap;
   private FSClusterStats stats;
@@ -304,7 +304,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         && stats.isAvoidingStaleDataNodesForWrite());
     boolean avoidLocalRack = (addBlockFlags != null
         && addBlockFlags.contains(AddBlockFlag.NO_LOCAL_RACK) && writer != null
-        && clusterMap.getNumOfRacks() > 2);
+        && clusterMap.getNumOfNonEmptyRacks() > 2);
     boolean avoidLocalNode = (addBlockFlags != null
         && addBlockFlags.contains(AddBlockFlag.NO_LOCAL_WRITE)
         && writer != null
@@ -385,7 +385,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       totalNumOfReplicas = clusterSize;
     }
     // No calculation needed when there is only one rack or picking one node.
-    int numOfRacks = clusterMap.getNumOfRacks();
+    int numOfRacks = clusterMap.getNumOfNonEmptyRacks();
     // HDFS-14527 return default when numOfRacks = 0 to avoid
     // ArithmeticException when calc maxNodesPerRack at following logic.
     if (numOfRacks <= 1 || totalNumOfReplicas <= 1) {
@@ -1173,7 +1173,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         .map(dn -> dn.getNetworkLocation()).distinct().count();
 
     return new BlockPlacementStatusDefault(Math.toIntExact(rackCount),
-        minRacks, clusterMap.getNumOfRacks());
+        minRacks, clusterMap.getNumOfNonEmptyRacks());
   }
 
   /**
@@ -1359,5 +1359,14 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   void setPreferLocalNode(boolean prefer) {
     this.preferLocalNode = prefer;
   }
-}
 
+  @Override
+  public void setExcludeSlowNodesEnabled(boolean enable) {
+    this.excludeSlowNodesEnabled = enable;
+  }
+
+  @Override
+  public boolean getExcludeSlowNodesEnabled() {
+    return excludeSlowNodesEnabled;
+  }
+}

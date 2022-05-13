@@ -569,18 +569,21 @@ public class NNThroughputBenchmark implements Tool {
       // int generatedFileIdx = 0;
       LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
       fileNames = new String[numThreads][];
-      for(int idx=0; idx < numThreads; idx++) {
-        int threadOps = opsPerThread[idx];
-        fileNames[idx] = new String[threadOps];
-        for(int jdx=0; jdx < threadOps; jdx++)
-          fileNames[idx][jdx] = nameGenerator.
-                                  getNextFileName("ThroughputBench");
+      try {
+        for(int idx=0; idx < numThreads; idx++) {
+          int threadOps = opsPerThread[idx];
+          fileNames[idx] = new String[threadOps];
+          for(int jdx=0; jdx < threadOps; jdx++) {
+            fileNames[idx][jdx] = nameGenerator.
+                    getNextFileName("ThroughputBench");
+          }
+        }
+      } catch (ArrayIndexOutOfBoundsException e) {
+        LOG.error("The current environment allows {} files to be created. " +
+            "If you want to test more files, please update the -filesPerDir parameter.",
+                nameGenerator.getFileCount());
+        throw e;
       }
-    }
-
-    void dummyActionNoSynch(int daemonId, int fileIdx) {
-      for(int i=0; i < 2000; i++)
-        fileNames[daemonId][fileIdx].contains(""+i);
     }
 
     /**
@@ -598,7 +601,6 @@ public class NNThroughputBenchmark implements Tool {
     long executeOp(int daemonId, int inputIdx, String clientName) 
     throws IOException {
       long start = Time.now();
-      // dummyActionNoSynch(fileIdx);
       clientProto.create(fileNames[daemonId][inputIdx],
           FsPermission.getDefault(), clientName,
           new EnumSetWritable<CreateFlag>(EnumSet
@@ -675,12 +677,20 @@ public class NNThroughputBenchmark implements Tool {
           false);
       LOG.info("Generate " + numOpsRequired + " inputs for " + getOpName());
       dirPaths = new String[numThreads][];
-      for(int idx=0; idx < numThreads; idx++) {
-        int threadOps = opsPerThread[idx];
-        dirPaths[idx] = new String[threadOps];
-        for(int jdx=0; jdx < threadOps; jdx++)
-          dirPaths[idx][jdx] = nameGenerator.
-              getNextFileName("ThroughputBench");
+      try {
+        for(int idx=0; idx < numThreads; idx++) {
+          int threadOps = opsPerThread[idx];
+          dirPaths[idx] = new String[threadOps];
+          for(int jdx=0; jdx < threadOps; jdx++) {
+            dirPaths[idx][jdx] = nameGenerator.
+                    getNextFileName("ThroughputBench");
+          }
+        }
+      } catch (ArrayIndexOutOfBoundsException e) {
+        LOG.error("The current environment allows {} directories to be created. " +
+            "If you want to test more directories, please update the -dirsPerDir parameter.",
+                nameGenerator.getFileCount());
+        throw e;
       }
     }
 

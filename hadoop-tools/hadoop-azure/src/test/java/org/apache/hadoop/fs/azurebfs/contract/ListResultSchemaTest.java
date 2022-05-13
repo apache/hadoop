@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.io.IOException;
 
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;

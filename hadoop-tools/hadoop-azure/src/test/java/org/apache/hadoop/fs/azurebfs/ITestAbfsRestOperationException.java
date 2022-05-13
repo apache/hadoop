@@ -74,8 +74,9 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       // verify its format
       String errorMessage = ex.getLocalizedMessage();
       String[] errorFields = errorMessage.split(",");
-
-      Assert.assertEquals(6, errorFields.length);
+      Assertions.assertThat(errorFields)
+          .describedAs("fields in exception of %s", ex)
+          .hasSize(6);
       // Check status message, status code, HTTP Request Type and URL.
       Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
       Assert.assertEquals("404", errorFields[1].trim());

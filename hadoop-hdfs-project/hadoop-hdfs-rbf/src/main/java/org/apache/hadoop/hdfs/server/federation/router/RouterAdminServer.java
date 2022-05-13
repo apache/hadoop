@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.server.federation.fairness.RefreshFairnessPolicyControllerHandler.HANDLER_IDENTIFIER;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocol;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterPolicyProvider;
+import org.apache.hadoop.hdfs.server.federation.fairness.RefreshFairnessPolicyControllerHandler;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
@@ -211,6 +213,8 @@ public class RouterAdminServer extends AbstractService
         genericRefreshService, adminServer);
     DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
         refreshCallQueueService, adminServer);
+
+    registerRefreshFairnessPolicyControllerHandler();
   }
 
   /**
@@ -783,5 +787,10 @@ public class RouterAdminServer extends AbstractService
 
     Configuration configuration = new Configuration();
     router.getRpcServer().getServer().refreshCallQueue(configuration);
+  }
+
+  private void registerRefreshFairnessPolicyControllerHandler() {
+    RefreshRegistry.defaultRegistry()
+        .register(HANDLER_IDENTIFIER, new RefreshFairnessPolicyControllerHandler(router));
   }
 }

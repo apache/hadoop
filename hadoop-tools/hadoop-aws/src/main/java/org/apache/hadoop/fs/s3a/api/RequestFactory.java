@@ -291,12 +291,9 @@ public interface RequestFactory {
   /**
    * Bulk delete request.
    * @param keysToDelete list of keys to delete.
-   * @param quiet should a bulk query be quiet, or should its result list
-   * all deleted keys?
    * @return the request
    */
   DeleteObjectsRequest newBulkDeleteRequest(
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean quiet);
+          List<DeleteObjectsRequest.KeyVersion> keysToDelete);
 
 }

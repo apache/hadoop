@@ -76,7 +76,8 @@ public class TestReadOnly {
           "getQuotaUsage",
           "msync",
           "getHAServiceState",
-          "getECTopologyResultForPolicies"
+          "getECTopologyResultForPolicies",
+          "getSlowDatanodeReport"
       )
   );
 

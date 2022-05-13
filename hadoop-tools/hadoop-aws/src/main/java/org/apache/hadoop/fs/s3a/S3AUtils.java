@@ -27,15 +27,11 @@ import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.retry.RetryUtils;
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -92,10 +88,11 @@ import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
-import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
 /**
  * Utility methods for S3A code.
+ * Some methods are marked LimitedPrivate since they are being used in an
+ * external project.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -163,7 +160,6 @@ public final class S3AUtils {
    *
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
-   * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
    * @param operation operation
    * @param path path operated on (must not be null)
    * @param exception amazon exception raised
@@ -213,11 +209,6 @@ public final class S3AUtils {
       }
       return new AWSClientIOException(message, exception);
     } else {
-      if (exception instanceof AmazonDynamoDBException) {
-        // special handling for dynamo DB exceptions
-        return translateDynamoDBException(path, message,
-            (AmazonDynamoDBException)exception);
-      }
       IOException ioe;
       AmazonServiceException ase = (AmazonServiceException) exception;
       // this exception is non-null if the service exception is an s3 one
@@ -401,8 +392,7 @@ public final class S3AUtils {
 
   /**
    * Is the exception an instance of a throttling exception. That
-   * is an AmazonServiceException with a 503 response, any
-   * exception from DynamoDB for limits exceeded, an
+   * is an AmazonServiceException with a 503 response, an
    * {@link AWSServiceThrottledException},
    * or anything which the AWS SDK's RetryUtils considers to be
    * a throttling exception.
@@ -411,8 +401,6 @@ public final class S3AUtils {
    */
   public static boolean isThrottleException(Exception ex) {
     return ex instanceof AWSServiceThrottledException
-        || ex instanceof ProvisionedThroughputExceededException
-        || ex instanceof LimitExceededException
         || (ex instanceof AmazonServiceException
             && 503  == ((AmazonServiceException)ex).getStatusCode())
         || (ex instanceof SdkBaseException
@@ -429,49 +417,6 @@ public final class S3AUtils {
   public static boolean isMessageTranslatableToEOF(SdkBaseException ex) {
     return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER) ||
             ex.toString().contains(EOF_READ_DIFFERENT_LENGTH);
-  }
-
-  /**
-   * Translate a DynamoDB exception into an IOException.
-   *
-   * @param path path in the DDB
-   * @param message preformatted message for the exception
-   * @param ddbException exception
-   * @return an exception to throw.
-   */
-  public static IOException translateDynamoDBException(final String path,
-      final String message,
-      final AmazonDynamoDBException ddbException) {
-    if (isThrottleException(ddbException)) {
-      return new AWSServiceThrottledException(message, ddbException);
-    }
-    if (ddbException instanceof ResourceNotFoundException) {
-      return (FileNotFoundException) new FileNotFoundException(message)
-          .initCause(ddbException);
-    }
-    final int statusCode = ddbException.getStatusCode();
-    final String errorCode = ddbException.getErrorCode();
-    IOException result = null;
-    // 400 gets used a lot by DDB
-    if (statusCode == 400) {
-      switch (errorCode) {
-      case "AccessDeniedException":
-        result = (IOException) new AccessDeniedException(
-            path,
-            null,
-            ddbException.toString())
-            .initCause(ddbException);
-        break;
-
-      default:
-        result = new AWSBadRequestException(message, ddbException);
-      }
-
-    }
-    if (result ==  null) {
-      result = new AWSServiceIOException(message, ddbException);
-    }
-    return result;
   }
 
   /**
@@ -884,6 +829,8 @@ public final class S3AUtils {
   /**
    * Get a password from a configuration, including JCEKS files, handling both
    * the absolute key and bucket override.
+   * <br>
+   * <i>Note:</i> LimitedPrivate for ranger repository to get secrets.
    * @param bucket bucket or "" if none known
    * @param conf configuration
    * @param baseKey base key to look up, e.g "fs.s3a.secret.key"
@@ -894,6 +841,7 @@ public final class S3AUtils {
    * @throws IOException on any IO problem
    * @throws IllegalArgumentException bad arguments
    */
+  @InterfaceAudience.LimitedPrivate("Ranger")
   public static String lookupPassword(
       String bucket,
       Configuration conf,
@@ -1152,10 +1100,15 @@ public final class S3AUtils {
    * This method does not propagate security provider path information from
    * the S3A property into the Hadoop common provider: callers must call
    * {@link #patchSecurityCredentialProviders(Configuration)} explicitly.
+   *
+   * <br>
+   * <i>Note:</i> LimitedPrivate for ranger repository to set up
+   * per-bucket configurations.
    * @param source Source Configuration object.
    * @param bucket bucket name. Must not be empty.
    * @return a (potentially) patched clone of the original.
    */
+  @InterfaceAudience.LimitedPrivate("Ranger")
   public static Configuration propagateBucketOptions(Configuration source,
       String bucket) {
 
@@ -1248,7 +1201,7 @@ public final class S3AUtils {
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @param awsServiceIdentifier a string representing the AWS service (S3,
-   * DDB, etc) for which the ClientConfiguration is being created.
+   * etc) for which the ClientConfiguration is being created.
    * @return new AWS client configuration
    * @throws IOException problem creating AWS client configuration
    */
@@ -1264,9 +1217,6 @@ public final class S3AUtils {
       switch (awsServiceIdentifier) {
       case AWS_SERVICE_IDENTIFIER_S3:
         configKey = SIGNING_ALGORITHM_S3;
-        break;
-      case AWS_SERVICE_IDENTIFIER_DDB:
-        configKey = SIGNING_ALGORITHM_DDB;
         break;
       case AWS_SERVICE_IDENTIFIER_STS:
         configKey = SIGNING_ALGORITHM_STS;
@@ -1351,6 +1301,8 @@ public final class S3AUtils {
   /**
    * Initializes AWS SDK proxy support in the AWS client configuration
    * if the S3A settings enable it.
+   * <br>
+   * <i>Note:</i> LimitedPrivate to provide proxy support in ranger repository.
    *
    * @param conf Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
@@ -1358,6 +1310,7 @@ public final class S3AUtils {
    * @throws IllegalArgumentException if misconfigured
    * @throws IOException problem getting username/secret from password source.
    */
+  @InterfaceAudience.LimitedPrivate("Ranger")
   public static void initProxySupport(Configuration conf,
       String bucket,
       ClientConfiguration awsConf) throws IllegalArgumentException,
@@ -1430,21 +1383,16 @@ public final class S3AUtils {
 
   /**
    * Convert the data of an iterator of {@link S3AFileStatus} to
-   * an array. Given tombstones are filtered out. If the iterator
-   * does return any item, an empty array is returned.
+   * an array.
    * @param iterator a non-null iterator
-   * @param tombstones possibly empty set of tombstones
    * @return a possibly-empty array of file status entries
    * @throws IOException failure
    */
   public static S3AFileStatus[] iteratorToStatuses(
-      RemoteIterator<S3AFileStatus> iterator, Set<Path> tombstones)
+      RemoteIterator<S3AFileStatus> iterator)
       throws IOException {
-    // this will close the span afterwards
-    RemoteIterator<S3AFileStatus> source = filteringRemoteIterator(iterator,
-        st -> !tombstones.contains(st.getPath()));
     S3AFileStatus[] statuses = RemoteIterators
-        .toArray(source, new S3AFileStatus[0]);
+        .toArray(iterator, new S3AFileStatus[0]);
     return statuses;
   }
 

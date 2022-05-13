@@ -1816,6 +1816,12 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+    return rpcServer.getSlowDatanodeReport(true, 0);
+  }
+
+  @Override
   public HAServiceProtocol.HAServiceState getHAServiceState() {
     if (rpcServer.isSafeMode()) {
       return HAServiceProtocol.HAServiceState.STANDBY;

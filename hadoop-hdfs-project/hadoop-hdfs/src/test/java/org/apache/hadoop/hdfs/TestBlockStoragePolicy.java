@@ -1274,23 +1274,29 @@ public class TestBlockStoragePolicy {
     DFSTestUtil.formatNameNode(conf);
     NameNode namenode = new NameNode(conf);
 
-    final BlockManager bm = namenode.getNamesystem().getBlockManager();
-    BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
-    NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
-    for (DatanodeDescriptor datanode : dataNodes) {
-      cluster.add(datanode);
-    }
+    try {
+      final BlockManager bm = namenode.getNamesystem().getBlockManager();
+      BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
+      NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
+      for (DatanodeDescriptor datanode : dataNodes) {
+        cluster.add(datanode);
+      }
 
-    DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 3,
-        dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
-        new HashSet<Node>(), 0, policy1, null);
-    System.out.println(Arrays.asList(targets));
-    Assert.assertEquals(3, targets.length);
-    targets = replicator.chooseTarget("/foo", 3,
-        dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
-        new HashSet<Node>(), 0, policy2, null);
-    System.out.println(Arrays.asList(targets));
-    Assert.assertEquals(3, targets.length);
+      DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 3,
+              dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
+              new HashSet<Node>(), 0, policy1, null);
+      System.out.println(Arrays.asList(targets));
+      Assert.assertEquals(3, targets.length);
+      targets = replicator.chooseTarget("/foo", 3,
+              dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
+              new HashSet<Node>(), 0, policy2, null);
+      System.out.println(Arrays.asList(targets));
+      Assert.assertEquals(3, targets.length);
+    } finally {
+      if (namenode != null) {
+        namenode.stop();
+      }
+    }
   }
 
   @Test
@@ -1321,20 +1327,26 @@ public class TestBlockStoragePolicy {
     DFSTestUtil.formatNameNode(conf);
     NameNode namenode = new NameNode(conf);
 
-    final BlockManager bm = namenode.getNamesystem().getBlockManager();
-    BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
-    NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
-    for (DatanodeDescriptor datanode : dataNodes) {
-      cluster.add(datanode);
-    }
+    try {
+      final BlockManager bm = namenode.getNamesystem().getBlockManager();
+      BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
+      NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
+      for (DatanodeDescriptor datanode : dataNodes) {
+        cluster.add(datanode);
+      }
 
-    DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 3,
-        dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
-        new HashSet<Node>(), 0, policy, null);
-    System.out.println(policy.getName() + ": " + Arrays.asList(targets));
-    Assert.assertEquals(2, targets.length);
-    Assert.assertEquals(StorageType.SSD, targets[0].getStorageType());
-    Assert.assertEquals(StorageType.DISK, targets[1].getStorageType());
+      DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 3,
+              dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
+              new HashSet<Node>(), 0, policy, null);
+      System.out.println(policy.getName() + ": " + Arrays.asList(targets));
+      Assert.assertEquals(2, targets.length);
+      Assert.assertEquals(StorageType.SSD, targets[0].getStorageType());
+      Assert.assertEquals(StorageType.DISK, targets[1].getStorageType());
+    } finally {
+      if (namenode != null) {
+        namenode.stop();
+      }
+    }
   }
 
   /**
@@ -1374,20 +1386,26 @@ public class TestBlockStoragePolicy {
     DFSTestUtil.formatNameNode(conf);
     NameNode namenode = new NameNode(conf);
 
-    final BlockManager bm = namenode.getNamesystem().getBlockManager();
-    BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
-    NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
-    for (DatanodeDescriptor datanode : dataNodes) {
-      cluster.add(datanode);
+    try {
+      final BlockManager bm = namenode.getNamesystem().getBlockManager();
+      BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
+      NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
+      for (DatanodeDescriptor datanode : dataNodes) {
+        cluster.add(datanode);
+      }
+      // chsenDs are DISK StorageType to simulate not enough SDD Storage
+      List<DatanodeStorageInfo> chsenDs = new ArrayList<>();
+      chsenDs.add(diskStorages[0]);
+      chsenDs.add(diskStorages[1]);
+      DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 1,
+              null, chsenDs, true,
+              new HashSet<Node>(), 0, policy, null);
+      Assert.assertEquals(3, targets.length);
+    } finally {
+      if (namenode != null) {
+        namenode.stop();
+      }
     }
-    // chsenDs are DISK StorageType to simulate not enough SDD Storage
-    List<DatanodeStorageInfo> chsenDs = new ArrayList<>();
-    chsenDs.add(diskStorages[0]);
-    chsenDs.add(diskStorages[1]);
-    DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 1,
-        null, chsenDs, true,
-        new HashSet<Node>(), 0, policy, null);
-    Assert.assertEquals(3, targets.length);
   }
 
   @Test

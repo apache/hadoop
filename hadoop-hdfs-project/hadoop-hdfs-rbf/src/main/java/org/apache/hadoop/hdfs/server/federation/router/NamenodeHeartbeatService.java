@@ -48,6 +48,8 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+
 /**
  * The {@link Router} periodically checks the state of a Namenode (usually on
  * the same server) and reports their high availability (HA) state and
@@ -267,12 +269,16 @@ public class NamenodeHeartbeatService extends PeriodicService {
       LOG.error("Namenode is not operational: {}", getNamenodeDesc());
     } else if (report.haStateValid()) {
       // block and HA status available
-      LOG.debug("Received service state: {} from HA namenode: {}",
-          report.getState(), getNamenodeDesc());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received service state: {} from HA namenode: {}",
+            report.getState(), getNamenodeDesc());
+      }
     } else if (localTarget == null) {
       // block info available, HA status not expected
-      LOG.debug(
-          "Reporting non-HA namenode as operational: " + getNamenodeDesc());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Reporting non-HA namenode as operational: {}", getNamenodeDesc());
+      }
     } else {
       // block info available, HA status should be available, but was not
       // fetched do nothing and let the current state stand
@@ -342,7 +348,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
           // Determine if NN is active
           // TODO: dynamic timeout
           if (localTargetHAProtocol == null) {
-            localTargetHAProtocol = localTarget.getProxy(conf, 30*1000);
+            localTargetHAProtocol = localTarget.getHealthMonitorProxy(conf, 30*1000);
+            LOG.debug("Get HA status with address {}", lifelineAddress);
           }
           HAServiceStatus status = localTargetHAProtocol.getServiceStatus();
           report.setHAServiceState(status.getState());
@@ -367,6 +374,11 @@ public class NamenodeHeartbeatService extends PeriodicService {
           getNamenodeDesc(), e.getMessage(), e);
     }
     return report;
+  }
+
+  @VisibleForTesting
+  NNHAServiceTarget getLocalTarget(){
+    return this.localTarget;
   }
 
   /**
@@ -466,7 +478,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
               jsonObject.getLong("PendingReplicationBlocks"),
               jsonObject.getLong("UnderReplicatedBlocks"),
               jsonObject.getLong("PendingDeletionBlocks"),
-              jsonObject.optLong("ProvidedCapacityTotal"));
+              jsonObject.optLong("ProvidedCapacityTotal"),
+              jsonObject.getInt("PendingSPSPaths"));
         }
       }
     }

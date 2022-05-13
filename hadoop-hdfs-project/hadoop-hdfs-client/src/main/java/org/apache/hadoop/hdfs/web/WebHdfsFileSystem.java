@@ -478,7 +478,8 @@ public class WebHdfsFileSystem extends FileSystem
     return f.isAbsolute()? f: new Path(workingDir, f);
   }
 
-  static Map<?, ?> jsonParse(final HttpURLConnection c,
+  @VisibleForTesting
+  public static Map<?, ?> jsonParse(final HttpURLConnection c,
       final boolean useErrorStream) throws IOException {
     if (c.getContentLength() == 0) {
       return null;
@@ -1458,7 +1459,9 @@ public class WebHdfsFileSystem extends FileSystem
         }.run();
   }
 
-  private SnapshotDiffReportListing getSnapshotDiffReportListing(
+  // This API should be treated as private to WebHdfsFileSystem. Only tests can use it directly.
+  @VisibleForTesting
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(
         String snapshotDir, final String fromSnapshot, final String toSnapshot,
         byte[] startPath, int index) throws IOException {
     return new FsPathResponseRunner<SnapshotDiffReportListing>(

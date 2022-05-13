@@ -43,7 +43,6 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -261,11 +260,9 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * Relies on retry code in filesystem
    * @throws IOException on problems
    * @param destKey destination key
-   * @param operationState operational state for a bulk update
    */
   @Retries.OnceTranslated
-  void revertCommit(String destKey,
-      @Nullable BulkOperationState operationState) throws IOException;
+  void revertCommit(String destKey) throws IOException;
 
   /**
    * This completes a multipart upload to the destination key via
@@ -276,7 +273,6 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
    * @param length length of the upload
-   * @param operationState operational state for a bulk update
    * @return the result of the operation.
    * @throws IOException if problems arose which could not be retried, or
    * the retry count was exceeded
@@ -286,28 +282,8 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       String destKey,
       String uploadId,
       List<PartETag> partETags,
-      long length,
-      @Nullable BulkOperationState operationState)
+      long length)
       throws IOException;
-
-  /**
-   * Initiate a commit operation through any metastore.
-   * @param path path under which the writes will all take place.
-   * @return an possibly null operation state from the metastore.
-   * @throws IOException failure to instantiate.
-   */
-  BulkOperationState initiateCommitOperation(
-      Path path) throws IOException;
-
-  /**
-   * Initiate a commit operation through any metastore.
-   * @param path path under which the writes will all take place.
-   * @param operationType operation to initiate
-   * @return an possibly null operation state from the metastore.
-   * @throws IOException failure to instantiate.
-   */
-  BulkOperationState initiateOperation(Path path,
-      BulkOperationState.OperationType operationType) throws IOException;
 
   /**
    * Upload part of a multi-partition file.

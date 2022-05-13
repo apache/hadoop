@@ -50,6 +50,7 @@ abstract public class BaseReplicationPolicyTest {
   protected NameNode namenode;
   protected DatanodeManager dnManager;
   protected BlockPlacementPolicy replicator;
+  private BlockPlacementPolicy striptedPolicy;
   protected final String filename = "/dummyfile.txt";
   protected DatanodeStorageInfo[] storages;
   protected String blockPlacementPolicy;
@@ -90,6 +91,7 @@ abstract public class BaseReplicationPolicyTest {
 
     final BlockManager bm = namenode.getNamesystem().getBlockManager();
     replicator = bm.getBlockPlacementPolicy();
+    striptedPolicy = bm.getStriptedBlockPlacementPolicy();
     cluster = bm.getDatanodeManager().getNetworkTopology();
     dnManager = bm.getDatanodeManager();
     // construct network topology
@@ -109,6 +111,10 @@ abstract public class BaseReplicationPolicyTest {
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
+  }
+
+  public BlockPlacementPolicy getStriptedPolicy() {
+    return striptedPolicy;
   }
 
   @After

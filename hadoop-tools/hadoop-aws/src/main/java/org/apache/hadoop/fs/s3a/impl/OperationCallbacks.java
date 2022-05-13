@@ -24,7 +24,6 @@ import java.util.List;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
 
@@ -37,7 +36,6 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 
 /**
  * These are all the callbacks which the {@link RenameOperation}
@@ -87,21 +85,18 @@ public interface OperationCallbacks {
   void finishRename(Path sourceRenamed, Path destCreated) throws IOException;
 
   /**
-   * Delete an object, also updating the metastore.
+   * Delete an object.
    * This call does <i>not</i> create any mock parent entries.
    * Retry policy: retry untranslated; delete considered idempotent.
    * @param path path to delete
    * @param key key of entry
    * @param isFile is the path a file (used for instrumentation only)
-   * @param operationState (nullable) operational state for a bulk update
-   * @throws AmazonClientException problems working with S3
-   * @throws IOException IO failure in the metastore
+   * @throws IOException from invoker signature only -should not be raised.
    */
   @Retries.RetryTranslated
   void deleteObjectAtPath(Path path,
       String key,
-      boolean isFile,
-      BulkOperationState operationState)
+      boolean isFile)
       throws IOException;
 
   /**
@@ -109,7 +104,6 @@ public interface OperationCallbacks {
    *
    * @param path path to list from
    * @param status optional status of path to list.
-   * @param collectTombstones should tombstones be collected from S3Guard?
    * @param includeSelf should the listing include this path if present?
    * @return an iterator.
    * @throws IOException failure
@@ -118,7 +112,6 @@ public interface OperationCallbacks {
   RemoteIterator<S3ALocatedFileStatus> listFilesAndDirectoryMarkers(
       Path path,
       S3AFileStatus status,
-      boolean collectTombstones,
       boolean includeSelf) throws IOException;
 
   /**
@@ -140,21 +133,10 @@ public interface OperationCallbacks {
       throws IOException;
 
   /**
-   * Remove keys from the store, updating the metastore on a
-   * partial delete represented as a MultiObjectDeleteException failure by
-   * deleting all those entries successfully deleted and then rethrowing
-   * the MultiObjectDeleteException.
+   * Remove keys from the store.
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs.
-   * @param undeletedObjectsOnFailure List which will be built up of all
-   * files that were not deleted. This happens even as an exception
-   * is raised.
-   * @param operationState bulk operation state
-   * @param quiet should a bulk query be quiet, or should its result list
-   * all deleted keys
-   * @return the deletion result if a multi object delete was invoked
-   * and it returned without a failure, else null.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -162,28 +144,15 @@ public interface OperationCallbacks {
    * @throws AmazonClientException amazon-layer failure.
    * @throws IOException other IO Exception.
    */
-  @Retries.RetryMixed
-  DeleteObjectsResult removeKeys(
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean deleteFakeDir,
-      List<Path> undeletedObjectsOnFailure,
-      BulkOperationState operationState,
-      boolean quiet)
+  @Retries.RetryRaw
+  void removeKeys(
+          List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+          boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException;
 
   /**
-   * Is the path for this instance considered authoritative on the client,
-   * that is: will listing/status operations only be handled by the metastore,
-   * with no fallback to S3.
-   * @param p path
-   * @return true iff the path is authoritative on the client.
-   */
-  boolean allowAuthoritative(Path p);
-
-  /**
-   * Create an iterator over objects in S3 only; S3Guard
-   * is not involved.
+   * Create an iterator over objects in S3.
    * The listing includes the key itself, if found.
    * @param path  path of the listing.
    * @param key object key

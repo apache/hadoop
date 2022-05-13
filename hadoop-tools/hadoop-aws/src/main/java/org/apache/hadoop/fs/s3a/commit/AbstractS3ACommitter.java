@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 import com.amazonaws.services.s3.model.MultipartUpload;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -441,7 +441,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     return false;
   }
   /**
-   * Task recovery considered unsupported: Warn and fail.
+   * Task recovery considered Unsupported: Warn and fail.
    * @param taskContext Context of the task whose output is being recovered
    * @throws IOException always.
    */
@@ -457,7 +457,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * if the job requires a success marker on a successful job,
    * create the file {@link CommitConstants#_SUCCESS}.
    *
-   * While the classic committers create a 0-byte file, the S3Guard committers
+   * While the classic committers create a 0-byte file, the S3A committers
    * PUT up a the contents of a {@link SuccessData} file.
    * @param context job context
    * @param pending the pending commits
@@ -481,7 +481,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * if the job requires a success marker on a successful job,
    * create the file {@link CommitConstants#_SUCCESS}.
    *
-   * While the classic committers create a 0-byte file, the S3Guard committers
+   * While the classic committers create a 0-byte file, the S3A committers
    * PUT up a the contents of a {@link SuccessData} file.
    * @param context job context
    * @param filenames list of filenames.
@@ -904,6 +904,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       jobCompleted(false);
       abortJobInternal(context, true);
       throw e;
+    } finally {
+      resetCommonContext();
     }
   }
 
@@ -946,6 +948,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     } finally {
       destroyThreadPool();
       cleanupStagingDirs();
+      resetCommonContext();
     }
   }
 

@@ -863,7 +863,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   public long getRefreshReadBlkLocationsInterval() {
-    return dfsClientConf.getRefreshReadBlockLocationsMS();
+    return dfsClientConf.getLocatedBlocksRefresherInterval();
   }
 
   /**
@@ -3459,4 +3459,44 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public DeadNodeDetector getDeadNodeDetector() {
     return clientContext.getDeadNodeDetector();
   }
+
+  /**
+   * Obtain LocatedBlocksRefresher of the current client.
+   */
+  public LocatedBlocksRefresher getLocatedBlockRefresher() {
+    return clientContext.getLocatedBlocksRefresher();
+  }
+
+  /**
+   * Adds the {@link DFSInputStream} to the {@link LocatedBlocksRefresher}, so that
+   * the underlying {@link LocatedBlocks} is periodically refreshed.
+   */
+  public void addLocatedBlocksRefresh(DFSInputStream dfsInputStream) {
+    if (isLocatedBlocksRefresherEnabled()) {
+      clientContext.getLocatedBlocksRefresher().addInputStream(dfsInputStream);
+    }
+  }
+
+  /**
+   * Removes the {@link DFSInputStream} from the {@link LocatedBlocksRefresher}, so that
+   * the underlying {@link LocatedBlocks} is no longer periodically refreshed.
+   * @param dfsInputStream
+   */
+  public void removeLocatedBlocksRefresh(DFSInputStream dfsInputStream) {
+    if (isLocatedBlocksRefresherEnabled()) {
+      clientContext.getLocatedBlocksRefresher().removeInputStream(dfsInputStream);
+    }
+  }
+
+  private boolean isLocatedBlocksRefresherEnabled() {
+    return clientContext.isLocatedBlocksRefresherEnabled();
+  }
+
+  public DatanodeInfo[] slowDatanodeReport() throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("slowDatanodeReport")) {
+      return namenode.getSlowDatanodeReport();
+    }
+  }
+
 }
