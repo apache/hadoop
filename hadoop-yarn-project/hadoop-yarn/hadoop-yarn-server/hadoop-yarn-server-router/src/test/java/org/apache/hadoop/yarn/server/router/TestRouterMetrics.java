@@ -38,6 +38,8 @@ public class TestRouterMetrics {
 
   private static RouterMetrics metrics = RouterMetrics.getMetrics();
 
+  private static final Double ASSERT_DOUBLE_DELTA = 0.01;
+
   @BeforeClass
   public static void init() {
 
@@ -408,22 +410,17 @@ public class TestRouterMetrics {
   public void testSucceededGetClusterNodes() {
     long totalGoodBefore = metrics.getNumSucceededGetClusterNodesRetrieved();
     goodSubCluster.getClusterNodes(150);
-    Assert.assertEquals(totalGoodBefore + 1,
-        metrics.getNumSucceededGetClusterNodesRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededGetClusterNodesRetrieved(),
-        0);
+    Assert.assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetClusterNodesRetrieved());
+    Assert.assertEquals(150, metrics.getLatencySucceededGetClusterNodesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterNodes(300);
-    Assert.assertEquals(totalGoodBefore + 2,
-        metrics.getNumSucceededGetClusterNodesRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodesRetrieved(),
-        0);
+    Assert.assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetClusterNodesRetrieved());
+    Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
   @Test
   public void testGetClusterNodesFailed() {
     long totalBadBefore = metrics.getClusterNodesFailedRetrieved();
     badSubCluster.getClusterNodes();
-    Assert.assertEquals(totalBadBefore + 1,
-        metrics.getClusterNodesFailedRetrieved());
+    Assert.assertEquals(totalBadBefore + 1, metrics.getClusterNodesFailedRetrieved());
   }
 }

@@ -653,7 +653,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request.
     GetClusterNodesResponse response =
         interceptor.getClusterNodes(GetClusterNodesRequest.newInstance());
-    Assert.assertEquals(subClusters.size(),
-        response.getNodeReports().size());
+    Assert.assertEquals(subClusters.size(), response.getNodeReports().size());
   }
 }
