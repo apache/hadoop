@@ -411,10 +411,12 @@ public class TestRouterMetrics {
     long totalGoodBefore = metrics.getNumSucceededGetClusterNodesRetrieved();
     goodSubCluster.getClusterNodes(150);
     Assert.assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetClusterNodesRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededGetClusterNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+    Assert.assertEquals(150, metrics.getLatencySucceededGetClusterNodesRetrieved(),
+        ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterNodes(300);
     Assert.assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetClusterNodesRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+    Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodesRetrieved(),
+        ASSERT_DOUBLE_DELTA);
   }
 
   @Test
