@@ -248,7 +248,7 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Create an FSDataOutputStream at the specified path.
    *
-   * return Generics Type B
+   * @return return Generics Type B
    */
   public B create() {
     flags.add(CreateFlag.CREATE);

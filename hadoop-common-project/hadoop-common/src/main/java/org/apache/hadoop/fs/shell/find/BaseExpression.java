@@ -295,6 +295,8 @@ public abstract class BaseExpression implements Expression, Configurable {
    * @param item
    *          PathData
    * @return Path
+   *
+   * @throws IOException raised on errors performing I/O.
    */
   protected Path getPath(PathData item) throws IOException {
     return item.path;

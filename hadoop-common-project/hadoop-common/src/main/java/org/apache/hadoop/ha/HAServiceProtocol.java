@@ -119,7 +119,7 @@ public interface HAServiceProtocol {
    * Request service to transition to active state. No operation, if the
    * service is already in active state.
    *
-   * @param reqInfo
+   * @param reqInfo reqInfo
    * @throws ServiceFailedException
    *           if transition from standby to active fails.
    * @throws AccessControlException

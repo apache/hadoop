@@ -254,6 +254,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    *          reference to callback interface object
    * @param failFast
    *          whether need to add the retry when establishing ZK connection.
+   * @param maxRetryNum max Retry Num
    * @throws IOException
    *          raised on errors performing I/O.
    * @throws HadoopIllegalArgumentException

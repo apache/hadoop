@@ -372,6 +372,7 @@ public final class ZKCuratorManager {
    *
    * @param path Path to be deleted.
    * @param fencingNodePath fencingNodePath
+   * @param fencingACL fencingACL
    * @throws Exception if any problem occurs while performing deletion.
    */
   public void safeDelete(final String path, List<ACL> fencingACL,

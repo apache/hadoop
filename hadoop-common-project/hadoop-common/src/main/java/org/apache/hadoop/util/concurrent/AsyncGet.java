@@ -57,6 +57,7 @@ public interface AsyncGet<R, E extends Throwable> {
      * @param obj object
      * @param timeout timeout
      * @param unit unit
+     * @throws InterruptedException if the thread is interrupted.
      */
     public static void wait(Object obj, long timeout, TimeUnit unit)
         throws InterruptedException {

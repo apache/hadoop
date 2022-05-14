@@ -305,6 +305,7 @@ extends AbstractDelegationTokenIdentifier>
    * based implementations.
    *
    * @param keyId keyId
+   * @return DelegationKey
    */
   protected DelegationKey getDelegationKey(int keyId) {
     return allKeys.get(keyId);

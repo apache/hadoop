@@ -132,7 +132,6 @@ public class ArrayFile extends MapFile {
      *
      * @return key key
      * @throws IOException raised on errors performing I/O.
-     * @return seek long
      */
     public synchronized long key() throws IOException {
       return key.get();

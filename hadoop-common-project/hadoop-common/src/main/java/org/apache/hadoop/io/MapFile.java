@@ -457,10 +457,18 @@ public class MapFile {
     private WritableComparable[] keys;
     private long[] positions;
 
-    /** Returns the class of keys in this file. */
+    /**
+     * Returns the class of keys in this file.
+     *
+     * @return keyClass
+     */
     public Class<?> getKeyClass() { return data.getKeyClass(); }
 
-    /** Returns the class of values in this file. */
+    /**
+     * Returns the class of values in this file.
+     *
+     * @return Value Class
+     */
     public Class<?> getValueClass() { return data.getValueClass(); }
 
     public static interface Option extends SequenceFile.Reader.Option {}
@@ -490,8 +498,14 @@ public class MapFile {
       open(dir, comparator, conf, opts);
     }
  
-    /** Construct a map reader for the named map.
+    /**
+     * Construct a map reader for the named map.
      * @deprecated
+     *
+     * @param fs FileSystem
+     * @param dirName dirName
+     * @param conf configuration
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Reader(FileSystem fs, String dirName, 
@@ -537,6 +551,12 @@ public class MapFile {
     /**
      * Override this method to specialize the type of
      * {@link SequenceFile.Reader} returned.
+     *
+     * @param dataFile data file
+     * @param conf configuration
+     * @param options options
+     * @throws IOException raised on errors performing I/O.
+     * @return SequenceFile.Reader
      */
     protected SequenceFile.Reader 
       createDataFileReader(Path dataFile, Configuration conf,
@@ -603,13 +623,21 @@ public class MapFile {
       }
     }
 
-    /** Re-positions the reader before its first key. */
+    /**
+     * Re-positions the reader before its first key.
+     *
+     * @throws IOException raised on errors performing I/O.
+     */
     public synchronized void reset() throws IOException {
       data.seek(firstPosition);
     }
 
-    /** Get the key at approximately the middle of the file. Or null if the
-     *  file is empty. 
+    /**
+     * Get the key at approximately the middle of the file. Or null if the
+     *  file is empty.
+     *
+     * @throws IOException raised on errors performing I/O.
+     * @return WritableComparable
      */
     public synchronized WritableComparable midKey() throws IOException {
 
@@ -621,9 +649,11 @@ public class MapFile {
       return keys[(count - 1) / 2];
     }
     
-    /** Reads the final key from the file.
+    /**
+     * Reads the final key from the file.
      *
      * @param key key to read into
+     * @throws IOException raised on errors performing I/O.
      */
     public synchronized void finalKey(WritableComparable key)
       throws IOException {
@@ -643,9 +673,14 @@ public class MapFile {
       }
     }
 
-    /** Positions the reader at the named key, or if none such exists, at the
+    /**
+     * Positions the reader at the named key, or if none such exists, at the
      * first entry after the named key.  Returns true iff the named key exists
      * in this map.
+     *
+     * @param key key
+     * @throws IOException raised on errors performing I/O.
+     * @return if the named key exists in this map true, not false.
      */
     public synchronized boolean seek(WritableComparable key) throws IOException {
       return seekInternal(key) == 0;
@@ -771,7 +806,13 @@ public class MapFile {
       return data.next(key, val);
     }
 
-    /** Return the value for the named key, or null if none exists. */
+    /**
+     * Return the value for the named key, or null if none exists.
+     * @param key key
+     * @param val val
+     * @throws Writable if such a pair exists true,not false
+     * @throws IOException raised on errors performing I/O.
+     */
     public synchronized Writable get(WritableComparable key, Writable val)
       throws IOException {
       if (seek(key)) {
@@ -786,9 +827,10 @@ public class MapFile {
      * Returns <code>key</code> or if it does not exist, at the first entry
      * after the named key.
      * 
--     * @param key       - key that we're trying to find
--     * @param val       - data value if key is found
--     * @return          - the key that was the closest match or null if eof.
+     * @param key       - key that we're trying to find
+     * @param val       - data value if key is found
+     * @return          - the key that was the closest match or null if eof.
+     * @throws IOException raised on errors performing I/O.
      */
     public synchronized WritableComparable getClosest(WritableComparable key,
       Writable val)
@@ -805,6 +847,7 @@ public class MapFile {
      * the first entry that falls just before the <code>key</code>.  Otherwise,
      * return the record that sorts just after.
      * @return          - the key that was the closest match or null if eof.
+     * @throws IOException raised on errors performing I/O.
      */
     public synchronized WritableComparable getClosest(WritableComparable key,
         Writable val, final boolean before)

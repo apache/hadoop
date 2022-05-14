@@ -908,8 +908,11 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Add default apps.
+   *
+   * @param parent contexthandlercollection
    * @param appDir The application directory
-   * @throws IOException
+   * @param conf configuration
+   * @throws IOException raised on errors performing I/O.
    */
   protected void addDefaultApps(ContextHandlerCollection parent,
       final String appDir, Configuration conf) throws IOException {
@@ -1190,6 +1193,12 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Define a filter for a context and set up default url mappings.
+   *
+   * @param ctx ctx
+   * @param name name
+   * @param classname  classname
+   * @param parameters parameters
+   * @param urls urls
    */
   public static void defineFilter(ServletContextHandler ctx, String name,
       String classname, Map<String,String> parameters, String[] urls) {
@@ -1300,6 +1309,7 @@ public final class HttpServer2 implements FilterContainer {
   /**
    * Get the address that corresponds to a particular connector.
    *
+   * @param index index
    * @return the corresponding address for the connector, or null if there's no
    *         such connector or the connector is not bounded or was closed.
    */
@@ -1319,6 +1329,9 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Set the min, max number of worker threads (simultaneous connections).
+   *
+   * @param min min
+   * @param max max
    */
   public void setThreads(int min, int max) {
     QueuedThreadPool pool = (QueuedThreadPool) webServer.getThreadPool();
@@ -1345,6 +1358,8 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Start the server. Does not wait for the server to start.
+   *
+   * @throws IOException raised on errors performing I/O.
    */
   public void start() throws IOException {
     try {
@@ -1519,7 +1534,9 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   /**
-   * stop the server
+   * stop the server.
+   *
+   * @throws Exception exception
    */
   public void stop() throws Exception {
     MultiException exception = null;
@@ -1646,7 +1663,7 @@ public final class HttpServer2 implements FilterContainer {
    * @param request request
    * @param response used to send the error response if user does not have admin access.
    * @return true if admin-authorized, false otherwise
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static boolean hasAdministratorAccess(
       ServletContext servletContext, HttpServletRequest request,
