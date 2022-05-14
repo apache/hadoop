@@ -37,7 +37,7 @@ public final class FsCreateModes extends FsPermission {
    *
    * @param mode  mode
    * @param umask umask
-   * @retutn If the mode is already
+   * @return If the mode is already
    * an FsCreateModes object, return it.
    */
   public static FsPermission applyUMask(FsPermission mode,

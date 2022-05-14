@@ -152,7 +152,10 @@ extends AbstractDelegationTokenIdentifier>
     this.metrics = DelegationTokenSecretManagerMetrics.create();
   }
 
-  /** should be called before this object is used */
+  /**
+   * should be called before this object is used.
+   * @throws IOException raised on errors performing I/O.
+   */
   public void startThreads() throws IOException {
     Preconditions.checkState(!running);
     updateCurrentKey();
@@ -175,6 +178,8 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * Total count of active delegation tokens.
+   *
+   * @return currentTokens.size.
    */
   public long getCurrentTokensSize() {
     return currentTokens.size();
@@ -182,8 +187,11 @@ extends AbstractDelegationTokenIdentifier>
 
   /** 
    * Add a previously used master key to cache (when NN restarts), 
-   * should be called before activate(). 
-   * */
+   * should be called before activate().
+   *
+   * @param key delegation key
+   * @throws IOException raised on errors performing I/O.
+   */
   public synchronized void addKey(DelegationKey key) throws IOException {
     if (running) // a safety check
       throw new IOException("Can't add delegation key to a running SecretManager.");
@@ -233,7 +241,9 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @return currentId
    */
   protected synchronized int getCurrentKeyId() {
     return currentId;
@@ -241,7 +251,9 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @return currentId
    */
   protected synchronized int incrementCurrentKeyId() {
     return ++currentId;
@@ -249,7 +261,9 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @param keyId keyId
    */
   protected synchronized void setCurrentKeyId(int keyId) {
     currentId = keyId;
@@ -257,7 +271,9 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @return delegationTokenSequenceNumber
    */
   protected synchronized int getDelegationTokenSeqNum() {
     return delegationTokenSequenceNumber;
@@ -265,7 +281,9 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @return delegationTokenSequenceNumber
    */
   protected synchronized int incrementDelegationTokenSeqNum() {
     return ++delegationTokenSequenceNumber;
@@ -273,7 +291,9 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @param seqNum seqNum
    */
   protected synchronized void setDelegationTokenSeqNum(int seqNum) {
     delegationTokenSequenceNumber = seqNum;
@@ -281,7 +301,9 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @param keyId keyId
    */
   protected DelegationKey getDelegationKey(int keyId) {
     return allKeys.get(keyId);
@@ -289,7 +311,10 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @param key DelegationKey
+   * @throws IOException raised on errors performing I/O.
    */
   protected void storeDelegationKey(DelegationKey key) throws IOException {
     allKeys.put(key.getKeyId(), key);
@@ -298,7 +323,10 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @param key DelegationKey
+   * @throws IOException raised on errors performing I/O.
    */
   protected void updateDelegationKey(DelegationKey key) throws IOException {
     allKeys.put(key.getKeyId(), key);
@@ -307,6 +335,9 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations
+   *
+   * @param ident ident
+   * @return DelegationTokenInformation
    */
   protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
     return currentTokens.get(ident);
@@ -314,7 +345,11 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @param ident ident
+   * @param tokenInfo tokenInfo
+   * @throws IOException raised on errors performing I/O.
    */
   protected void storeToken(TokenIdent ident,
       DelegationTokenInformation tokenInfo) throws IOException {
@@ -325,7 +360,11 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * For subclasses externalizing the storage, for example Zookeeper
-   * based implementations
+   * based implementations.
+   *
+   * @param ident ident
+   * @param tokenInfo tokenInfo
+   * @throws IOException raised on errors performing I/O.
    */
   protected void updateToken(TokenIdent ident,
       DelegationTokenInformation tokenInfo) throws IOException {
@@ -341,7 +380,7 @@ extends AbstractDelegationTokenIdentifier>
    * startThreads() is called)
    * @param identifier identifier read from persistent storage
    * @param renewDate token renew time
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public synchronized void addPersistedDelegationToken(
       TokenIdent identifier, long renewDate) throws IOException {
@@ -460,6 +499,10 @@ extends AbstractDelegationTokenIdentifier>
    * Find the DelegationTokenInformation for the given token id, and verify that
    * if the token is expired. Note that this method should be called with 
    * acquiring the secret manager's monitor.
+   *
+   * @param identifier identifier
+   * @throws InvalidToken invalid token exception
+   * @return DelegationTokenInformation
    */
   protected DelegationTokenInformation checkToken(TokenIdent identifier)
       throws InvalidToken {
@@ -503,7 +546,7 @@ extends AbstractDelegationTokenIdentifier>
    * Verifies that the given identifier and password are valid and match.
    * @param identifier Token identifier.
    * @param password Password in the token.
-   * @throws InvalidToken
+   * @throws InvalidToken InvalidToken
    */
   public synchronized void verifyToken(TokenIdent identifier, byte[] password)
       throws InvalidToken {
@@ -577,6 +620,9 @@ extends AbstractDelegationTokenIdentifier>
   
   /**
    * Cancel a token by removing it from cache.
+   *
+   * @param token token
+   * @param canceller canceller
    * @return Identifier of the canceled token
    * @throws InvalidToken for invalid token
    * @throws AccessControlException if the user isn't allowed to cancel
@@ -640,15 +686,25 @@ extends AbstractDelegationTokenIdentifier>
       this.password = password;
       this.trackingId = trackingId;
     }
-    /** returns renew date */
+    /**
+     * returns renew date.
+     * @return renew date
+     */
     public long getRenewDate() {
       return renewDate;
     }
-    /** returns password */
+    /**
+     * returns password.
+     * @return password
+     */
     byte[] getPassword() {
       return password;
     }
-    /** returns tracking id */
+
+    /**
+     * returns tracking id.
+     * @return tracking id
+     */
     public String getTrackingId() {
       return trackingId;
     }
@@ -753,7 +809,7 @@ extends AbstractDelegationTokenIdentifier>
    * 
    * @param token the token where to extract the identifier
    * @return the delegation token identifier
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public TokenIdent decodeTokenIdentifier(Token<TokenIdent> token) throws IOException {
     return token.decodeIdentifier();

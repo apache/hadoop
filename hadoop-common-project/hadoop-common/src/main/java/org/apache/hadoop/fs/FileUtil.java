@@ -420,7 +420,7 @@ public class FileUtil {
    * @param overwrite overwrite
    * @param conf configuration
    * @throws IOException raised on errors performing I/O.
-   *
+   * @return true if the operation succeeded.
    */
   public static boolean copy(FileSystem srcFS, Path src,
                              FileSystem dstFS, Path dst,
@@ -433,20 +433,21 @@ public class FileUtil {
 
   /**
    * Copy a file/directory tree within/between filesystems.
-   * <br />
+   * <p>
    * returns true if the operation succeeded. When deleteSource is true,
    * this means "after the copy, delete(source) returned true"
    * If the destination is a directory, and mkdirs (dest) fails,
    * the operation will return false rather than raise any exception.
-   * <br />
+   * </p>
    * The overwrite flag is about overwriting files; it has no effect about
    * handing an attempt to copy a file atop a directory (expect an IOException),
    * or a directory over a path which contains a file (mkdir will fail, so
    * "false").
-   * <br />
+   * <p>
    * The operation is recursive, and the deleteSource operation takes place
    * as each subdirectory is copied. Therefore, if an operation fails partway
    * through, the source tree may be partially deleted.
+   * </p>
    * @param srcFS source filesystem
    * @param srcStatus status of source
    * @param dstFS destination filesystem
@@ -1769,6 +1770,7 @@ public class FileUtil {
    * wildcard path to return all jars from the directory to use in a classpath.
    *
    * @param path the path to the directory. The path may include the wildcard.
+   * @param useLocal use local
    * @return the list of jars as URLs, or an empty list if there are no jars, or
    * the directory does not exist
    */

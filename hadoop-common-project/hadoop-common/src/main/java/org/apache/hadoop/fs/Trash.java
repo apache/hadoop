@@ -99,9 +99,9 @@ public class Trash extends Configured {
   }
   
   /**
-   * Returns whether the trash is enabled for this filesystem
+   * Returns whether the trash is enabled for this filesystem.
    *
-   * return if isEnabled true,not false
+   * @return return if isEnabled true,not false
    */
   public boolean isEnabled() {
     return trashPolicy.isEnabled();

@@ -181,8 +181,9 @@ public class CommonConfigurationKeysPublic {
 
   /**
    * Default value for {@link #FS_CREATION_PARALLEL_COUNT}.
-   * <br />
+   * <p>
    * Default value: {@value}.
+   * </p>
    */
   public static final int FS_CREATION_PARALLEL_COUNT_DEFAULT =
       64;

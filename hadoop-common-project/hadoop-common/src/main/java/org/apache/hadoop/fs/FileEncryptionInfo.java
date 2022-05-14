@@ -53,7 +53,6 @@ public class FileEncryptionInfo implements Serializable {
    * @param ezKeyVersionName name of the KeyVersion used to encrypt the
    *                         encrypted data encryption key.
    * @param version version
-   * @return file encryption info
    */
   public FileEncryptionInfo(final CipherSuite suite,
       final CryptoProtocolVersion version, final byte[] edek,

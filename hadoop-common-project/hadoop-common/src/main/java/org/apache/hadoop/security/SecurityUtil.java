@@ -515,9 +515,9 @@ public final class SecurityUtil {
    * InterruptedException is thrown, it is converted to an IOException.
    *
    * @param action the action to perform
+   * @param <T> Generics Type T
    * @return the result of the action
    * @throws IOException in the event of error
-   * @return generic type T
    */
   public static <T> T doAsLoginUser(PrivilegedExceptionAction<T> action)
       throws IOException {
