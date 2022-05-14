@@ -154,7 +154,9 @@ public class MapFile {
            valueClass(valClass));
     }
 
-    /** Create the named map using the named key comparator. 
+    /** Create the named map using the named key comparator.
+     * @param conf configuration
+     * @param fs filesystem
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
      */
     @Deprecated
