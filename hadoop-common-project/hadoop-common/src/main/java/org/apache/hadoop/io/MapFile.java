@@ -145,6 +145,7 @@ public class MapFile {
 
     /** Create the named map using the named key comparator. 
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
