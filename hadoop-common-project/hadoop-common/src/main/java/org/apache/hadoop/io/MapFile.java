@@ -98,8 +98,16 @@ public class MapFile {
     private long lastIndexKeyCount = Long.MIN_VALUE;
 
 
-    /** Create the named map for keys of the named class. 
+    /**
+     * Create the named map for keys of the named class.
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
+     *
+     * @param conf configuration
+     * @param fs filesystem
+     * @param dirName dirName
+     * @param keyClass keyClass
+     * @param valClass valClass
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
@@ -108,8 +116,18 @@ public class MapFile {
       this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass));
     }
 
-    /** Create the named map for keys of the named class. 
+    /**
+     * Create the named map for keys of the named class.
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
+     *
+     * @param conf configuration
+     * @param fs fs
+     * @param dirName dirName
+     * @param keyClass keyClass
+     * @param valClass valClass
+     * @param compress compress
+     * @param progress progress
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
@@ -120,8 +138,19 @@ public class MapFile {
            compression(compress), progressable(progress));
     }
 
-    /** Create the named map for keys of the named class. 
+    /**
+     * Create the named map for keys of the named class.
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
+     *
+     * @param conf configuration
+     * @param fs FileSystem
+     * @param dirName dirName
+     * @param keyClass keyClass
+     * @param valClass valClass
+     * @param compress compress
+     * @param codec codec
+     * @param progress progress
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
@@ -132,8 +161,16 @@ public class MapFile {
            compression(compress, codec), progressable(progress));
     }
 
-    /** Create the named map for keys of the named class. 
+    /**
+     * Create the named map for keys of the named class.
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
+     * @param conf configuration
+     * @param fs fs
+     * @param dirName dirName
+     * @param keyClass keyClass
+     * @param valClass valClass
+     * @param compress compress
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
@@ -145,6 +182,11 @@ public class MapFile {
 
     /** Create the named map using the named key comparator. 
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
+     * @param conf configuration
+     * @param fs fs
+     * @param dirName dirName
+     * @param comparator comparator
+     * @param valClass valClass
      * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
@@ -158,6 +200,11 @@ public class MapFile {
     /** Create the named map using the named key comparator.
      * @param conf configuration
      * @param fs filesystem
+     * @param dirName dirName
+     * @param comparator comparator
+     * @param valClass valClass
+     * @param compress compress
+     * @throws IOException raised on errors performing I/O.
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
      */
     @Deprecated
@@ -168,8 +215,18 @@ public class MapFile {
            valueClass(valClass), compression(compress));
     }
 
-    /** Create the named map using the named key comparator. 
+    /**
+     * Create the named map using the named key comparator.
      * @deprecated Use Writer(Configuration, Path, Option...)} instead.
+     *
+     * @param conf configuration
+     * @param fs filesystem
+     * @param dirName dirName
+     * @param comparator comparator
+     * @param valClass valClass
+     * @param compress CompressionType
+     * @param progress progress
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
@@ -181,8 +238,19 @@ public class MapFile {
            progressable(progress));
     }
 
-    /** Create the named map using the named key comparator. 
+    /**
+     * Create the named map using the named key comparator.
      * @deprecated Use Writer(Configuration, Path, Option...) instead.
+     *
+     * @param conf configuration
+     * @param fs FileSystem
+     * @param dirName dirName
+     * @param comparator comparator
+     * @param valClass valClass
+     * @param compress CompressionType
+     * @param codec codec
+     * @param progress progress
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
@@ -288,16 +356,26 @@ public class MapFile {
       this.index = SequenceFile.createWriter(conf, indexOptions);      
     }
 
-    /** The number of entries that are added before an index entry is added.*/
+    /**
+     * The number of entries that are added before an index entry is added.
+     * @return indexInterval
+     */
     public int getIndexInterval() { return indexInterval; }
 
-    /** Sets the index interval.
+    /**
+     * Sets the index interval.
      * @see #getIndexInterval()
+     *
+     * @param interval interval
      */
     public void setIndexInterval(int interval) { indexInterval = interval; }
 
-    /** Sets the index interval and stores it in conf
+    /**
+     * Sets the index interval and stores it in conf.
      * @see #getIndexInterval()
+     *
+     * @param conf configuration
+     * @param interval interval
      */
     public static void setIndexInterval(Configuration conf, int interval) {
       conf.setInt(INDEX_INTERVAL, interval);
@@ -310,8 +388,14 @@ public class MapFile {
       index.close();
     }
 
-    /** Append a key/value pair to the map.  The key must be greater or equal
-     * to the previous key added to the map. */
+    /**
+     * Append a key/value pair to the map.  The key must be greater or equal
+     * to the previous key added to the map.
+     *
+     * @param key key
+     * @param val value
+     * @throws IOException raised on errors performing I/O.
+     */
     public synchronized void append(WritableComparable key, Writable val)
       throws IOException {
 
@@ -672,9 +756,16 @@ public class MapFile {
       return -(low + 1);                          // key not found.
     }
 
-    /** Read the next key/value pair in the map into <code>key</code> and
+    /**
+     * Read the next key/value pair in the map into <code>key</code> and
      * <code>val</code>.  Returns true if such a pair exists and false when at
-     * the end of the map */
+     * the end of the map.
+     *
+     * @param key WritableComparable
+     * @param val Writable
+     * @return if such a pair exists true,not false
+     * @throws IOException raised on errors performing I/O.
+     */
     public synchronized boolean next(WritableComparable key, Writable val)
       throws IOException {
       return data.next(key, val);

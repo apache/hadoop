@@ -270,6 +270,7 @@ public final class HttpServer2 implements FilterContainer {
      *          specifies the binding address, and the port specifies the
      *          listening port. Unspecified or zero port means that the server
      *          can listen to any port.
+     * @return Builder
      */
     public Builder addEndpoint(URI endpoint) {
       endpoints.add(endpoint);
@@ -280,6 +281,9 @@ public final class HttpServer2 implements FilterContainer {
      * Set the hostname of the http server. The host name is used to resolve the
      * _HOST field in Kerberos principals. The hostname of the first listener
      * will be used if the name is unspecified.
+     *
+     * @param hostName hostName
+     * @return Builder
      */
     public Builder hostName(String hostName) {
       this.hostName = hostName;
@@ -308,6 +312,9 @@ public final class HttpServer2 implements FilterContainer {
     /**
      * Specify whether the server should authorize the client in SSL
      * connections.
+     *
+     * @param value value
+     * @return Builder
      */
     public Builder needsClientAuth(boolean value) {
       this.needsClientAuth = value;
@@ -332,6 +339,9 @@ public final class HttpServer2 implements FilterContainer {
     /**
      * Specify the SSL configuration to load. This API provides an alternative
      * to keyStore/keyPassword/trustStore.
+     *
+     * @param sslCnf sslCnf
+     * @return Builder
      */
     public Builder setSSLConf(Configuration sslCnf) {
       this.sslConf = sslCnf;
@@ -1610,6 +1620,7 @@ public final class HttpServer2 implements FilterContainer {
    * @param request the servlet request.
    * @param response the servlet response.
    * @return TRUE/FALSE based on the logic decribed above.
+   * @throws IOException raised on errors performing I/O.
    */
   public static boolean isInstrumentationAccessAllowed(
     ServletContext servletContext, HttpServletRequest request,
@@ -1631,6 +1642,8 @@ public final class HttpServer2 implements FilterContainer {
    * Does the user sending the HttpServletRequest has the administrator ACLs? If
    * it isn't the case, response will be modified to send an error to the user.
    *
+   * @param servletContext servletContext
+   * @param request request
    * @param response used to send the error response if user does not have admin access.
    * @return true if admin-authorized, false otherwise
    * @throws IOException

@@ -46,7 +46,12 @@ public class WritableComparator implements RawComparator, Configurable {
 
   private Configuration conf;
 
-  /** For backwards compatibility. **/
+  /**
+   * For backwards compatibility.
+   *
+   * @param c WritableComparable Type
+   * @return WritableComparator
+   */
   public static WritableComparator get(Class<? extends WritableComparable> c) {
     return get(c, null);
   }
@@ -111,7 +116,10 @@ public class WritableComparator implements RawComparator, Configurable {
     this(null);
   }
 
-  /** Construct for a {@link WritableComparable} implementation. */
+  /**
+   * Construct for a {@link WritableComparable} implementation.
+   * @param keyClass WritableComparable Class
+   */
   protected WritableComparator(Class<? extends WritableComparable> keyClass) {
     this(keyClass, null, false);
   }
