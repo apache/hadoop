@@ -247,4 +247,22 @@ public class ConfigUtil {
     return conf.get(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
         Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE);
   }
+
+  /**
+   * Check the bool config whether nested mount point is supported. Default: true
+   * @param conf - from this conf
+   * @return whether nested mount point is supported
+   */
+  public static boolean isNestedMountPointSupported(final Configuration conf) {
+    return conf.getBoolean(Constants.CONFIG_NESTED_MOUNT_POINT_SUPPORTED, true);
+  }
+
+  /**
+   * Set the bool value isNestedMountPointSupported in config.
+   * @param conf - from this conf
+   * @param isNestedMountPointSupported - whether nested mount point is supported
+   */
+  public static void setIsNestedMountPointSupported(final Configuration conf, boolean isNestedMountPointSupported) {
+    conf.setBoolean(Constants.CONFIG_NESTED_MOUNT_POINT_SUPPORTED, isNestedMountPointSupported);
+  }
 }

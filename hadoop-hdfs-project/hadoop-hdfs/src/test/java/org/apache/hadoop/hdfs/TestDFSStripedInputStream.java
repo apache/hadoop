@@ -669,7 +669,12 @@ public class TestDFSStripedInputStream {
 
   @Test
   public void testBlockReader() throws Exception {
-    ecPolicy = StripedFileTestUtil.getDefaultECPolicy(); // RS-6-3-1024k
+    ErasureCodingPolicy targetPolicy = StripedFileTestUtil.getDefaultECPolicy(); // RS-6-3-1024k
+    if (!ecPolicy.equals(targetPolicy)) {
+      // Be sure not affected by random EC policy from
+      // TestDFSStripedInputStreamWithRandomECPolicy.
+      return;
+    }
     int fileSize = 19 * cellSize + 100;
     long stripeSize = (long) dataBlocks * cellSize;
     byte[] bytes = StripedFileTestUtil.generateBytes(fileSize);
