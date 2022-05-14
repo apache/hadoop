@@ -2173,13 +2173,22 @@ public class SequenceFile {
       return valClass;
     }
 
-    /** Returns true if values are compressed. */
+    /**
+     * Returns true if values are compressed.
+     * @return if values are compressed true, not false
+     */
     public boolean isCompressed() { return decompress; }
     
-    /** Returns true if records are block-compressed. */
+    /**
+     * Returns true if records are block-compressed.
+     * @return if records are block-compressed true, not false
+     */
     public boolean isBlockCompressed() { return blockCompressed; }
     
-    /** Returns the compression codec of data in this file. */
+    /**
+     * Returns the compression codec of data in this file.
+     * @return CompressionCodec
+     */
     public CompressionCodec getCompressionCodec() { return codec; }
     
     private byte[] getSync() {
@@ -2202,7 +2211,10 @@ public class SequenceFile {
       }
     }
 
-    /** Returns the metadata object of the file */
+    /**
+     * Returns the metadata object of the file.
+     * @return metadata
+     */
     public Metadata getMetadata() {
       return this.metadata;
     }
@@ -2311,7 +2323,7 @@ public class SequenceFile {
     /**
      * Get the 'value' corresponding to the last read 'key'.
      * @param val : The 'value' to be read.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public synchronized void getCurrentValue(Writable val) 
       throws IOException {
@@ -2392,8 +2404,13 @@ public class SequenceFile {
       return valDeserializer.deserialize(val);
     }
     
-    /** Read the next key in the file into <code>key</code>, skipping its
-     * value.  True if another entry exists, and false at end of file. */
+    /**
+     * Read the next key in the file into <code>key</code>, skipping its
+     * value.True if another entry exists, and false at end of file.
+     *
+     * @param key key
+     *
+     */
     public synchronized boolean next(Writable key) throws IOException {
       if (key.getClass() != getKeyClass())
         throw new IOException("wrong key class: "+key.getClass().getName()

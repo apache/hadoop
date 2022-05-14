@@ -287,6 +287,7 @@ public class JsonSerialization<T> {
    * @param fs filesystem
    * @param path path
    * @param overwrite should any existing file be overwritten
+   * @param instance instance
    * @throws IOException IO exception
    */
   public void save(FileSystem fs, Path path, T instance,
@@ -324,6 +325,7 @@ public class JsonSerialization<T> {
    * @param bytes byte array
    * @throws IOException IO problems
    * @throws EOFException not enough data
+   * @return byte array
    */
   public T fromBytes(byte[] bytes) throws IOException {
     return fromJson(new String(bytes, 0, bytes.length, UTF_8));

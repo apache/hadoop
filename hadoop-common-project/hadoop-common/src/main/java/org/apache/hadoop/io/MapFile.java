@@ -810,7 +810,7 @@ public class MapFile {
      * Return the value for the named key, or null if none exists.
      * @param key key
      * @param val val
-     * @throws Writable if such a pair exists true,not false
+     * @return Writable if such a pair exists true,not false
      * @throws IOException raised on errors performing I/O.
      */
     public synchronized Writable get(WritableComparable key, Writable val)
