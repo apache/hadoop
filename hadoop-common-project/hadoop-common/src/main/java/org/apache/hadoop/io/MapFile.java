@@ -513,8 +513,15 @@ public class MapFile {
       this(new Path(dirName), conf);
     }
 
-    /** Construct a map reader for the named map using the named comparator.
+    /**
+     * Construct a map reader for the named map using the named comparator.
      * @deprecated
+     *
+     * @param fs FileSystem
+     * @param dirName dirName
+     * @param comparator WritableComparator
+     * @param conf Configuration
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Reader(FileSystem fs, String dirName, WritableComparator comparator, 
@@ -867,7 +874,10 @@ public class MapFile {
       return nextKey;
     }
 
-    /** Close the map. */
+    /**
+     * Close the map.
+     * @throws IOException raised on errors performing I/O.
+     */
     @Override
     public synchronized void close() throws IOException {
       if (!indexClosed) {
@@ -878,7 +888,13 @@ public class MapFile {
 
   }
 
-  /** Renames an existing map directory. */
+  /**
+   * Renames an existing map directory.
+   * @param fs fs
+   * @param oldName oldName
+   * @param newName newName
+   * @throws IOException raised on errors performing I/O.
+   */
   public static void rename(FileSystem fs, String oldName, String newName)
     throws IOException {
     Path oldDir = new Path(oldName);
@@ -906,8 +922,9 @@ public class MapFile {
    * @param keyClass key class (has to be a subclass of Writable)
    * @param valueClass value class (has to be a subclass of Writable)
    * @param dryrun do not perform any changes, just report what needs to be done
+   * @param conf configuration
    * @return number of valid entries in this MapFile, or -1 if no fixing was needed
-   * @throws Exception
+   * @throws Exception Exception
    */
   public static long fix(FileSystem fs, Path dir,
                          Class<? extends Writable> keyClass,
@@ -1007,11 +1024,12 @@ public class MapFile {
     }
 
     /**
-     * Merge multiple MapFiles to one Mapfile
+     * Merge multiple MapFiles to one Mapfile.
      *
-     * @param inMapFiles
-     * @param outMapFile
-     * @throws IOException
+     * @param inMapFiles input inMapFiles
+     * @param deleteInputs deleteInputs
+     * @param outMapFile input outMapFile
+     * @throws IOException raised on errors performing I/O.
      */
     public void merge(Path[] inMapFiles, boolean deleteInputs,
         Path outMapFile) throws IOException {

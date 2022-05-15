@@ -77,12 +77,19 @@ public class OutputBuffer extends FilterOutputStream {
     this.buffer = buffer;
   }
 
-  /** Returns the current contents of the buffer.
+  /**
+   * Returns the current contents of the buffer.
    *  Data is only valid to {@link #getLength()}.
+   *
+   * @return the current contents of the buffer.
    */
   public byte[] getData() { return buffer.getData(); }
 
-  /** Returns the length of the valid data currently in the buffer. */
+  /**
+   * Returns the length of the valid data currently in the buffer.
+   * @return the length of the valid data
+   *          currently in the buffer.
+   */
   public int getLength() { return buffer.getLength(); }
 
   /** Resets the buffer to empty. */
