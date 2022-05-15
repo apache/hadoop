@@ -55,6 +55,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numAppAttemptsFailedRetrieved;
   @Metric("# of getClusterMetrics failed to be retrieved")
   private MutableGaugeInt numGetClusterMetricsFailedRetrieved;
+  @Metric("# of getClusterNodes failed to be retrieved")
+  private MutableGaugeInt numGetClusterNodesFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -74,7 +76,8 @@ public final class RouterMetrics {
   @Metric("Total number of successful Retrieved getClusterMetrics and "
       + "latency(ms)")
   private MutableRate totalSucceededGetClusterMetricsRetrieved;
-
+  @Metric("Total number of successful Retrieved getClusterNodes and latency(ms)")
+  private MutableRate totalSucceededGetClusterNodesRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -86,6 +89,7 @@ public final class RouterMetrics {
   private MutableQuantiles getApplicationsReportLatency;
   private MutableQuantiles getApplicationAttemptReportLatency;
   private MutableQuantiles getClusterMetricsLatency;
+  private MutableQuantiles getClusterNodesLatency;
 
   private static volatile RouterMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -112,6 +116,10 @@ public final class RouterMetrics {
     getClusterMetricsLatency =
         registry.newQuantiles("getClusterMetricsLatency",
             "latency of get cluster metrics", "ops", "latency", 10);
+
+    getClusterNodesLatency =
+        registry.newQuantiles("getClusterNodesLatency",
+            "latency of get cluster nodes", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -169,6 +177,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetClusterNodesRetrieved(){
+    return totalSucceededGetClusterNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -201,6 +214,11 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededGetClusterMetricsRetrieved() {
     return totalSucceededGetClusterMetricsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetClusterNodesRetrieved() {
+    return totalSucceededGetClusterNodesRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -238,6 +256,11 @@ public final class RouterMetrics {
     return numGetClusterMetricsFailedRetrieved.value();
   }
 
+  @VisibleForTesting
+  public int getClusterNodesFailedRetrieved() {
+    return numGetClusterNodesFailedRetrieved.value();
+  }
+
   public void succeededAppsCreated(long duration) {
     totalSucceededAppsCreated.add(duration);
     getNewApplicationLatency.add(duration);
@@ -273,6 +296,11 @@ public final class RouterMetrics {
     getClusterMetricsLatency.add(duration);
   }
 
+  public void succeededGetClusterNodesRetrieved(long duration) {
+    totalSucceededGetClusterNodesRetrieved.add(duration);
+    getClusterNodesLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -301,4 +329,7 @@ public final class RouterMetrics {
     numGetClusterMetricsFailedRetrieved.incr();
   }
 
+  public void incrClusterNodesFailedRetrieved() {
+    numGetClusterNodesFailedRetrieved.incr();
+  }
 }

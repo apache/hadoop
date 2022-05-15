@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -640,5 +642,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     Assert.assertNotNull(responseGet);
     Assert.assertTrue(responseGet.getApplicationList().isEmpty());
+  }
+
+  @Test
+  public void testGetClusterNodesRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get Cluster Nodeds request");
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getClusterNodes request.",
+        () -> interceptor.getClusterNodes(null));
+    // normal request.
+    GetClusterNodesResponse response =
+        interceptor.getClusterNodes(GetClusterNodesRequest.newInstance());
+    Assert.assertEquals(subClusters.size(), response.getNodeReports().size());
   }
 }
