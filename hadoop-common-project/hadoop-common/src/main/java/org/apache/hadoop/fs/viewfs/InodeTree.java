@@ -597,12 +597,14 @@ public abstract class InodeTree<T> {
    *
    * @param config                         - the mount table keys are prefixed with
    *                                       FsConstants.CONFIG_VIEWFS_PREFIX
-   * @param viewName                       - the name of the mount table - if null use defaultMT name
+   * @param viewName                       - the name of the mount table
+   *                                       if null use defaultMT name
    * @param theUri                         theUri
    * @param initingUriAsFallbackOnNoMounts initingUriAsFallbackOnNoMounts
    * @throws UnsupportedFileSystemException file system for <code>uri</code> is
    *                                        not found
-   * @throws URISyntaxException             if the URI does not have an authority it is badly formed.
+   * @throws URISyntaxException             if the URI does not have an authority
+   *                                        it is badly formed.
    * @throws FileAlreadyExistsException     there is a file at the path specified
    *                                        or is discovered on one of its ancestors.
    * @throws IOException                    raised on errors performing I/O.

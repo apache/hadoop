@@ -124,6 +124,7 @@ public class StringUtils {
    * The same as String.format(Locale.ENGLISH, format, objects).
    * @param format format
    * @param objects objects
+   * @return format string
    */
   public static String format(final String format, final Object... objects) {
     return String.format(Locale.ENGLISH, format, objects);

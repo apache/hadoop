@@ -37,6 +37,7 @@ public class FsGetter {
    * @param uri uri
    * @param conf configuration
    * @throws IOException raised on errors performing I/O.
+   * @return file system
    */
   public FileSystem getNewInstance(URI uri, Configuration conf)
       throws IOException {

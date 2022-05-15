@@ -113,6 +113,9 @@ public class ToolRunner {
    *
    * @param prompt prompt
    * @throws IOException raised on errors performing I/O.
+   * @return if the user
+   *         responds with "y" or "yes". (case insensitive) true,
+   *         not false.
    */
   public static boolean confirmPrompt(String prompt) throws IOException {
     while (true) {

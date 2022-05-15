@@ -85,6 +85,7 @@ public final class Lists {
    * calling Iterables#addAll.
    *
    * @param <E> Generics Type E
+   * @param elements elements
    * @return ArrayList Generics Type E
    */
   public static <E> ArrayList<E> newArrayList(Iterable<? extends E> elements) {
@@ -102,6 +103,7 @@ public final class Lists {
    * and then calling Iterators#addAll.
    *
    * @param <E> Generics Type E
+   * @param elements elements
    * @return ArrayList Generics Type E
    */
   public static <E> ArrayList<E> newArrayList(Iterator<? extends E> elements) {

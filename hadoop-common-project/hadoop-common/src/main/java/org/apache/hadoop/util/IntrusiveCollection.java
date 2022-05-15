@@ -303,6 +303,7 @@ public class IntrusiveCollection<E extends IntrusiveCollection.Element>
    * Add an element to the front of the list.
    *
    * @param elem     The new element to add.
+   * @return if addFirst success true, not false
    */
   public boolean addFirst(Element elem) {
     if (elem == null) {

@@ -36,7 +36,7 @@ public abstract class PriorityQueue<T> {
       must define this one method.
    * @param a object a
    * @param b object b
-   * @return if a < b true, not false
+   * @return if a less than b true, not false
    */
   protected abstract boolean lessThan(Object a, Object b);
 
