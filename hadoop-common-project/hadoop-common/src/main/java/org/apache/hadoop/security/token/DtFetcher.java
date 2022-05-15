@@ -49,6 +49,7 @@ public interface DtFetcher {
    * @param renewer renewer
    * @param url url
    * @throws Exception Exception
+   * @return DelegationTokens
    */
   Token<?> addDelegationTokens(Configuration conf, Credentials creds,
                                String renewer, String url) throws Exception;

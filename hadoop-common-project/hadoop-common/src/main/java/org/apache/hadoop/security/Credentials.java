@@ -220,6 +220,7 @@ public class Credentials implements Writable {
    * @param filename filename
    * @param conf configuration
    * @throws IOException  raised on errors performing I/O.
+   * @return Credentials
    */
   public static Credentials readTokenStorageFile(Path filename,
                                                  Configuration conf)

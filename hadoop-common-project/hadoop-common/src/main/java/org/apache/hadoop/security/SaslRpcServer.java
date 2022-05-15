@@ -257,6 +257,7 @@ public class SaslRpcServer {
      *
      * @param in DataInput
      * @throws IOException raised on errors performing I/O.
+     * @return AuthMethod
      */
     public static AuthMethod read(DataInput in) throws IOException {
       return valueOf(in.readByte());

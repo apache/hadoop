@@ -549,7 +549,7 @@ public class TFile {
      *          guarantees that the value is encoded in one chunk, and avoids
      *          intermediate chunk buffering.
      * @throws IOException raised on errors performing I/O.
-     * 
+     * @return DataOutputStream
      */
     public DataOutputStream prepareAppendValue(int length) throws IOException {
       if (state != State.END_KEY) {
@@ -1701,6 +1701,7 @@ public class TFile {
          * 
          * @param value value
          * @throws IOException raised on errors performing I/O.
+         * @return long value
          */
         public long getValue(BytesWritable value) throws IOException {
           DataInputStream dis = getValueStream();
