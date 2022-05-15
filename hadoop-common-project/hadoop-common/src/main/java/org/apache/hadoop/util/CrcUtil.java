@@ -109,7 +109,6 @@ public final class CrcUtil {
    *     {@code value}.
    *
    * @param value value.
-   * @return byte array.
    */
   public static byte[] intToBytes(int value) {
     byte[] buf = new byte[4];

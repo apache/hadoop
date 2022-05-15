@@ -74,7 +74,6 @@ public class DataChecksum implements Checksum {
      *
      * @return the type corresponding to the id.
      * @param id id
-     * @return Type
      */
     public static Type valueOf(int id) {
       if (id < 0 || id >= values().length) {
@@ -187,6 +186,8 @@ public class DataChecksum implements Checksum {
    *
    * @param in data input stream
    * @throws IOException raised on errors performing I/O.
+   * @return DataChecksum by reading HEADER_LEN
+   *         bytes from input stream
    */
   public static DataChecksum newDataChecksum( DataInputStream in )
                                  throws IOException {
@@ -212,6 +213,9 @@ public class DataChecksum implements Checksum {
   
   /**
    * Writes the checksum header to the output stream <i>out</i>.
+   *
+   * @param out output stream
+   * @throws IOException raised on errors performing I/O.
    */
   public void writeHeader( DataOutputStream out ) 
                            throws IOException { 
