@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-
+import org.apache.hadoop.fs.azurebfs.AbfsDriverMetrics;
 /**
  * An interface for Abfs counters.
  */
@@ -74,4 +74,6 @@ public interface AbfsCounters extends IOStatisticsSource, DurationTrackerFactory
    */
   @Override
   DurationTracker trackDuration(String key);
+
+  AbfsDriverMetrics getAbfsDriverMetrics();
 }

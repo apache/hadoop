@@ -171,7 +171,7 @@ public class TracingContext {
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
-    httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+    //httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
   }
 
   /**

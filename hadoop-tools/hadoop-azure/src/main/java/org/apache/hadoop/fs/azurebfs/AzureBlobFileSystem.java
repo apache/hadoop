@@ -678,6 +678,17 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
+    try {
+      //String metric = abfsCounters.getAbfsDriverMetrics().toString();
+      String metric = "abcd";
+      URI metricUri = new URI(
+          "abfs://metric@snvarmacanary.dfs.core.windows.net");
+      AzureBlobFileSystem metricfs = (AzureBlobFileSystem) FileSystem.get(
+          metricUri, getConf());
+      metricfs.sentMetric(metric);
+    } catch (Exception ex) {
+      // do nothing
+    }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");
@@ -692,6 +703,13 @@ public class AzureBlobFileSystem extends FileSystem
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());
     }
+  }
+
+  public void sentMetric(String metric) throws AzureBlobFileSystemException {
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+        fileSystemId, FSOperationType.SET_ATTR, true, tracingHeaderFormat,
+        listener);
+     abfsStore.sentMetric(metric, tracingContext);
   }
 
   @Override

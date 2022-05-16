@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.azurebfs.AbfsDriverMetrics;
+import java.util.concurrent.atomic.AtomicLong;
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -227,6 +228,51 @@ public class AbfsRestOperation {
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
+      }
+    }
+    if(retryCount > 0) {
+      if (retryCount == 1) {
+        long noOfRequests1Retry
+            = abfsDriverMetrics.getNumberOfRequestsSucceededInFirstRetry()
+            .incrementAndGet();
+        abfsDriverMetrics.getNumberOfRequestsSucceededInFirstRetry()
+            .set(noOfRequests1Retry);
+      } else if (retryCount == 2) {
+        long noOfRequests2Retry
+            = abfsDriverMetrics.getNumberOfRequestsSucceededInSecondRetry()
+            .incrementAndGet();
+        abfsDriverMetrics.getNumberOfRequestsSucceededInSecondRetry()
+            .set(noOfRequests2Retry);
+      } else if (retryCount == 3) {
+        long noOfRequests3Retry
+            = abfsDriverMetrics.getNumberOfRequestsSucceededInThirdRetry()
+            .incrementAndGet();
+        abfsDriverMetrics.getNumberOfRequestsSucceededInThirdRetry()
+            .set(noOfRequests3Retry);
+      } else if (retryCount == 4) {
+        long noOfRequests4Retry
+            = abfsDriverMetrics.getNumberOfRequestsSucceededInFourthRetry()
+            .incrementAndGet();
+        abfsDriverMetrics.getNumberOfRequestsSucceededInFourthRetry()
+            .set(noOfRequests4Retry);
+      } else if (retryCount >= 5 && retryCount < 15) {
+        long noOfRequests5_15Retry
+            = abfsDriverMetrics.getNumberOfRequestsSucceededInFiveToFifteenRetry()
+            .incrementAndGet();
+        abfsDriverMetrics.getNumberOfRequestsSucceededInFiveToFifteenRetry()
+            .set(noOfRequests5_15Retry);
+      } else if (retryCount >= 15 && retryCount < 25) {
+        long noOfRequests15_25Retry
+            = abfsDriverMetrics.getNumberOfRequestsSucceededInFifteenToTwentyFiveRetry()
+            .incrementAndGet();
+        abfsDriverMetrics.getNumberOfRequestsSucceededInFifteenToTwentyFiveRetry()
+            .set(noOfRequests15_25Retry);
+      } else {
+        long noOfRequests25_30Retry
+            = abfsDriverMetrics.getNumberOfRequestsSucceededInTwentyFiveToThirtyRetry()
+            .incrementAndGet();
+        abfsDriverMetrics.getNumberOfRequestsSucceededInTwentyFiveToThirtyRetry()
+            .set(noOfRequests25_30Retry);
       }
     }
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {

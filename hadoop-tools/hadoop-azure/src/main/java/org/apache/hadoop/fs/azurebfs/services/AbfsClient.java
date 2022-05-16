@@ -750,11 +750,31 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  public AbfsRestOperation getPathStatusMetric(final String path,
+      TracingContext tracingContext, String metric) throws AzureBlobFileSystemException {
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    requestHeaders.add(new AbfsHttpHeader(X_MS_CLIENT_REQUEST_ID, metric));
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    String operation = SASTokenProvider.GET_PROPERTIES_OPERATION;
+    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_STATUS);
+    operation = SASTokenProvider.GET_STATUS_OPERATION;
+    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
+    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
+
+    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.GetPathStatus,
+        this,
+        HTTP_METHOD_HEAD,
+        url,
+        requestHeaders);
+    op.execute(tracingContext);
+    return op;
+  }
+
   public AbfsRestOperation getPathStatus(final String path, final boolean includeProperties,
                                          TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    String headerValue = "Path=%2Fsomepath%2Ffile.txt,Operation=ReadFile,ReadAheadHit=10,ReadAheadMiss=5";
-    requestHeaders.add(new AbfsHttpHeader(X_MS_CLIENT_METRICS, headerValue));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String operation = SASTokenProvider.GET_PROPERTIES_OPERATION;
     if (!includeProperties) {
