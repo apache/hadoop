@@ -353,6 +353,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getClusterNodes call");
       metrics.incrClusterNodesFailedRetrieved();
     }
+
+    public void getNodeToLabels() {
+      LOG.info("Mocked: failed getNodeToLabels call");
+      metrics.incrNodeToLabelsFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -404,6 +409,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful getClusterNodes call with duration {}", duration);
       metrics.succeededGetClusterNodesRetrieved(duration);
     }
+
+    public void getNodeToLabels(long duration) {
+      LOG.info("Mocked: successful getNodeToLabels call with duration {}", duration);
+      metrics.succeededGetNodeToLabelsRetrieved(duration);
+    }
   }
 
   @Test
@@ -424,5 +434,25 @@ public class TestRouterMetrics {
     long totalBadBefore = metrics.getClusterNodesFailedRetrieved();
     badSubCluster.getClusterNodes();
     Assert.assertEquals(totalBadBefore + 1, metrics.getClusterNodesFailedRetrieved());
+  }
+
+  @Test
+  public void testSucceededGetNodeToLabels() {
+    long totalGoodBefore = metrics.getNumSucceededGetNodeToLabelsRetrieved();
+    goodSubCluster.getNodeToLabels(150);
+    Assert.assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetNodeToLabelsRetrieved());
+    Assert.assertEquals(150, metrics.getLatencySucceededGetNodeToLabelsRetrieved(),
+            ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getNodeToLabels(300);
+    Assert.assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetNodeToLabelsRetrieved());
+    Assert.assertEquals(225, metrics.getLatencySucceededGetNodeToLabelsRetrieved(),
+            ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetNodeToLabelsFailed() {
+    long totalBadBefore = metrics.getNodeToLabelsFailedRetrieved();
+    badSubCluster.getNodeToLabels();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getNodeToLabelsFailedRetrieved());
   }
 }

@@ -870,7 +870,30 @@ public class FederationClientInterceptor
   @Override
   public GetNodesToLabelsResponse getNodeToLabels(
       GetNodesToLabelsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      routerMetrics.incrNodeToLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getNodesToLabels request.", null);
+    }
+    long startTime = clock.getTime();
+    Map<SubClusterId, SubClusterInfo> subClusters =
+            federationFacade.getSubClusters(true);
+    Map<SubClusterId, GetNodesToLabelsResponse> clusterNodes = Maps.newHashMap();
+    for (SubClusterId subClusterId : subClusters.keySet()) {
+      ApplicationClientProtocol client;
+      try {
+        client = getClientRMProxyForSubCluster(subClusterId);
+        GetNodesToLabelsResponse response = client.getNodeToLabels(request);
+        clusterNodes.put(subClusterId, response);
+      } catch (Exception ex) {
+        routerMetrics.incrNodeToLabelsFailedRetrieved();
+        LOG.error("Unable to get node labels due to exception.", ex);
+        throw ex;
+      }
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
+    // Merge the NodesToLabelsResponse
+    return RouterYarnClientUtils.mergeNodesToLabelsResponse(clusterNodes.values());
   }
 
   @Override
