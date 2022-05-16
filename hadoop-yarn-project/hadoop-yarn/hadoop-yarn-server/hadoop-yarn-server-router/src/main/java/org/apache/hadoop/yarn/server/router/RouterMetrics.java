@@ -104,7 +104,6 @@ public final class RouterMetrics {
   private MutableQuantiles getClusterNodesLatency;
   private MutableQuantiles getNodeToLabelsLatency;
   private MutableQuantiles getLabelToNodesLatency;
-
   private MutableQuantiles getClusterNodeLabelsLatency;
 
   private static volatile RouterMetrics INSTANCE = null;
