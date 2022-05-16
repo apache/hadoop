@@ -924,13 +924,36 @@ public class FederationClientInterceptor
     long stopTime = clock.getTime();
     routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
     // Merge the LabelsToNodesResponse
-    return RouterYarnClientUtils.mergeClusterLabelsToNodes(clusterNodes.values());
+    return RouterYarnClientUtils.mergeLabelsToNodes(clusterNodes.values());
   }
 
   @Override
   public GetClusterNodeLabelsResponse getClusterNodeLabels(
       GetClusterNodeLabelsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      routerMetrics.incrClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getClusterNodeLabels request.", null);
+    }
+    long startTime = clock.getTime();
+    Map<SubClusterId, SubClusterInfo> subClusters =
+        federationFacade.getSubClusters(true);
+    Map<SubClusterId, GetClusterNodeLabelsResponse> clusterNodes = Maps.newHashMap();
+    for (SubClusterId subClusterId : subClusters.keySet()) {
+      ApplicationClientProtocol client;
+      try {
+        client = getClientRMProxyForSubCluster(subClusterId);
+        GetClusterNodeLabelsResponse response = client.getClusterNodeLabels(request);
+        clusterNodes.put(subClusterId, response);
+      } catch (Exception ex) {
+        routerMetrics.incrClusterNodeLabelsFailedRetrieved();
+        LOG.error("Unable to get cluster nodeLabels due to exception.", ex);
+        throw ex;
+      }
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
+    // Merge the ClusterNodeLabelsResponse
+    return RouterYarnClientUtils.mergeClusterNodeLabelsResponse(clusterNodes.values());
   }
 
   /**

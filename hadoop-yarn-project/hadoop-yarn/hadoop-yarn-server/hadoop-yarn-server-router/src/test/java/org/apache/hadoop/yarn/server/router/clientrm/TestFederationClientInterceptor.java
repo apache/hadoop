@@ -664,4 +664,16 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         interceptor.getLabelsToNodes(GetLabelsToNodesRequest.newInstance());
     Assert.assertEquals(0, response.getLabelsToNodes().size());
   }
+
+  @Test
+  public void testClusterNodeLabelsRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor :  Get Cluster NodeLabels request");
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getClusterNodeLabels request.",
+        () -> interceptor.getClusterNodeLabels(null));
+    // normal request.
+    GetClusterNodeLabelsResponse response =
+        interceptor.getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
+    Assert.assertEquals(0, response.getNodeLabelList().size());
+  }
 }

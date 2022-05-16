@@ -23,18 +23,21 @@ import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.HashSet;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -249,7 +252,7 @@ public final class RouterYarnClientUtils {
    * @param responses a list of GetLabelsToNodesResponse to merge.
    * @return the merged GetLabelsToNodesResponse.
    */
-  public static GetLabelsToNodesResponse mergeClusterLabelsToNodes(
+  public static GetLabelsToNodesResponse mergeLabelsToNodes(
       Collection<GetLabelsToNodesResponse> responses){
     GetLabelsToNodesResponse labelsToNodesResponse = Records.newRecord(
          GetLabelsToNodesResponse.class);
@@ -273,5 +276,24 @@ public final class RouterYarnClientUtils {
     return labelsToNodesResponse;
   }
 
+  /**
+   * Merges a list of GetClusterNodeLabelsResponse.
+   *
+   * @param responses a list of GetClusterNodeLabelsResponse to merge.
+   * @return the merged GetClusterNodeLabelsResponse.
+   */
+  public static GetClusterNodeLabelsResponse mergeClusterNodeLabelsResponse(
+      Collection<GetClusterNodeLabelsResponse> responses) {
+    GetClusterNodeLabelsResponse nodeLabelsResponse = Records.newRecord(
+        GetClusterNodeLabelsResponse.class);
+    Set<NodeLabel> nodeLabelsList = new HashSet<>();
+    for (GetClusterNodeLabelsResponse response : responses) {
+      if (response != null && response.getNodeLabelList() != null) {
+        nodeLabelsList.addAll(response.getNodeLabelList());
+      }
+    }
+    nodeLabelsResponse.setNodeLabelList(new ArrayList<>(nodeLabelsList));
+    return nodeLabelsResponse;
+  }
 }
 
