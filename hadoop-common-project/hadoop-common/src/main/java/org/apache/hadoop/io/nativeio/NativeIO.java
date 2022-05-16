@@ -724,7 +724,7 @@ public class NativeIO {
         throws NativeIOException;
 
     /**
-     * Wrapper around CreateFile() on Windows.
+     * @return Wrapper around CreateFile() on Windows.
      * @param path input path.
      * @param desiredAccess input desiredAccess.
      * @param shareMode input shareMode.
@@ -864,7 +864,7 @@ public class NativeIO {
   }
 
   /**
-   * Return true if the JNI-based native IO extensions are available.
+   * @return Return true if the JNI-based native IO extensions are available.
    */
   public static boolean isAvailable() {
     return NativeCodeLoader.isNativeCodeLoaded() && nativeLoaded;
@@ -991,7 +991,7 @@ public class NativeIO {
   }
 
   /**
-   * Create the specified File for write access, ensuring that it does not exist.
+   * @return Create the specified File for write access, ensuring that it does not exist.
    * @param f the file that we want to create
    * @param permissions we want to have on the file (if security is enabled)
    *

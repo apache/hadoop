@@ -49,11 +49,11 @@ public class RetryCache {
   private static final int MAX_CAPACITY = 16;
 
   /**
-   * CacheEntry is tracked using unique client ID and callId of the RPC request
+   * CacheEntry is tracked using unique client ID and callId of the RPC request.
    */
   public static class CacheEntry implements LightWeightCache.Entry {
     /**
-     * Processing state of the requests
+     * Processing state of the requests.
      */
     private static byte INPROGRESS = 0;
     private static byte SUCCESS = 1;

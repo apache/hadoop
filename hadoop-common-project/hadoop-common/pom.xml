@@ -1179,12 +1179,6 @@
                 <sourceFileExclude>**/FSProtos.java</sourceFileExclude>
               </sourceFileExcludes>
               <excludePackageNames>*.proto:*.tracing:*.protobuf</excludePackageNames>
-              <additionalJOptions>
-                <additionalJOption>-Xmaxerrs</additionalJOption>
-                <additionalJOption>1000</additionalJOption>
-                <additionalJOption>-Xmaxwarns</additionalJOption>
-                <additionalJOption>1000</additionalJOption>
-              </additionalJOptions>
             </configuration>
           </plugin>
         </plugins>

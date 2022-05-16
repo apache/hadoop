@@ -2380,7 +2380,7 @@ public abstract class Server {
      * @return -1 in case of error, else num bytes read so far
      * @throws IOException - internal error that should not be returned to
      *         client, typically failure to respond to client
-     * @throws InterruptedException
+     * @throws InterruptedException - if the thread is interrupted.
      */
     public int readAndProcess() throws IOException, InterruptedException {
       while (!shouldClose()) { // stop if a fatal response has been sent.

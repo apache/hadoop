@@ -52,10 +52,13 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
    * Elements of {@link LightWeightGSet}.
    */
   public interface LinkedElement {
-    /** Set the next element. */
+    /**
+     * Set the next element.
+     * @param next inputNext.
+     */
     void setNext(LinkedElement next);
 
-    /** Get the next element. */
+    /** @return Get the next element. */
     LinkedElement getNext();
   }
 
