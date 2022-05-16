@@ -51,7 +51,7 @@ import org.junit.rules.Timeout;
 
 public class TestShell extends Assert {
   /**
-   * Set the timeout for every test
+   * Set the timeout for every test.
    */
   @Rule
   public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);

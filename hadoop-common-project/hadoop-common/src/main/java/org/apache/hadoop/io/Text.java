@@ -503,6 +503,8 @@ public class Text extends BinaryComparable
    * Converts the provided String to bytes using the
    * UTF-8 encoding. If the input is malformed,
    * invalid chars are replaced by a default value.
+   *
+   * @param string input string.
    * @return ByteBuffer: bytes stores at ByteBuffer.array() 
    *                     and length is ByteBuffer.limit()
    * @throws CharacterCodingException when a character
@@ -575,6 +577,7 @@ public class Text extends BinaryComparable
    * @param out input out.
    * @param s input s.
    * @throws IOException raised on errors performing I/O.
+   * @return a UTF8 encoded string to out.
    */
   public static int writeString(DataOutput out, String s) throws IOException {
     ByteBuffer bytes = encode(s);

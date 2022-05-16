@@ -3825,7 +3825,7 @@ public class SequenceFile {
       }
 
       /**
-       * Fills up the rawKey object with the key returned by the Reader
+       * Fills up the rawKey object with the key returned by the Reader.
        * @return true if there is a key returned; false, otherwise
        * @throws IOException raised on errors performing I/O.
        */

@@ -395,8 +395,9 @@ public class RPC {
 
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server
-   * 
+   * and a set of methods that are supported by the server.
+   *
+   * @param <T> Generics Type.
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -405,7 +406,7 @@ public class RPC {
    * @param connectionRetryPolicy input connectionRetryPolicy
    * @param timeout time in milliseconds before giving up
    * @return the proxy
-   * @throws IOException if the far end through a RemoteException
+   * @throws IOException if the far end through a RemoteException.
    */
   public static <T> ProtocolProxy<T> waitForProtocolProxy(Class<T> protocol,
                                long clientVersion,
@@ -461,6 +462,7 @@ public class RPC {
    * @param conf input Configuration.
    * @param factory input factory.
    * @throws IOException raised on errors performing I/O.
+   * @return proxy.
    */
   public static <T> T getProxy(Class<T> protocol,
                                 long clientVersion,
@@ -519,7 +521,8 @@ public class RPC {
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server
-   * 
+   *
+   * @param <T> Generics Type T.
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -1149,6 +1152,7 @@ public class RPC {
     
     /**
      * Add a protocol to the existing server.
+     * @param rpcKind - input rpcKind
      * @param protocolClass - the protocol class
      * @param protocolImpl - the impl of the protocol that will be called
      * @return the server (for convenience)

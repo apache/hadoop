@@ -133,15 +133,26 @@ public class SetFile extends MapFile {
       return super.seek(key);
     }
 
-    /** Read the next key in a set into <code>key</code>.  Returns
-     * true if such a key exists and false when at the end of the set. */
+    /**
+     * Read the next key in a set into <code>key</code>.
+     *
+     * @param key input key.
+     * @return Returns true if such a key exists
+     *    and false when at the end of the set.
+     * @throws IOException raised on errors performing I/O.
+     */
     public boolean next(WritableComparable key)
       throws IOException {
       return next(key, NullWritable.get());
     }
 
-    /** Read the matching key from a set into <code>key</code>.
-     * Returns <code>key</code>, or null if no match exists. */
+    /**
+     * Read the matching key from a set into <code>key</code>.
+     *
+     * @param key input key.
+     * @return Returns <code>key</code>, or null if no match exists.
+     * @throws IOException raised on errors performing I/O.
+     */
     public WritableComparable get(WritableComparable key)
       throws IOException {
       if (seek(key)) {

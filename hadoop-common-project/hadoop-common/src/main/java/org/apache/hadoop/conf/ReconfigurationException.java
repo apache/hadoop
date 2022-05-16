@@ -59,9 +59,9 @@ public class ReconfigurationException extends Exception {
 
   /**
    * Create a new instance of {@link ReconfigurationException}.
-   * @param property property name
-   * @param newVal new value
-   * @param oldVal old value
+   * @param property property name.
+   * @param newVal new value.
+   * @param oldVal old value.
    * @param cause original exception.
    */
   public ReconfigurationException(String property, 

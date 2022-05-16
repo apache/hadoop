@@ -317,7 +317,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private boolean loadDefaults = true;
 
   /**
-   * Configuration objects
+   * Configuration objects.
    */
   private static final WeakHashMap<Configuration,Object> REGISTRY = 
     new WeakHashMap<Configuration,Object>();
@@ -2208,7 +2208,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
 
     /**
-     * Is the given value in the set of ranges
+     * Is the given value in the set of ranges.
      * @param value the value to check
      * @return is the value in the ranges?
      */
@@ -2265,7 +2265,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
-   * Parse the given attribute as a set of integer ranges
+   * Parse the given attribute as a set of integer ranges.
    * @param name the attribute name
    * @param defaultValue the default value if it is not set
    * @return a new set of ranges from the configured value
@@ -2798,7 +2798,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * directory does not exist, an attempt is made to create it.
    *
    * @param dirsProp directory in which to locate the file.
-   * @param path     file-path.
+   * @param path file-path.
    * @return local file under the directory with the given path.
    * @throws IOException raised on errors performing I/O.
    */
@@ -3546,7 +3546,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Print a warning if a property with a given name already exists with a
-   * different value
+   * different value.
    */
   private void checkForOverride(Properties properties, String name, String attr, String value) {
     String propertyValue = properties.getProperty(attr);
@@ -3591,7 +3591,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * the configuration, this method throws an {@link IllegalArgumentException}.
    * </li>
    * </ul>
-   * @param propertyName xml property name
+   * @param propertyName xml property name.
    * @param out the writer to write to.
    * @throws IOException raised on errors performing I/O.
    */
@@ -3942,7 +3942,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
   
   /**
-   * get keys matching the the regex 
+   * get keys matching the the regex.
    * @param regex the regex to match against.
    * @return {@literal Map<String,String>} with matching keys
    */
