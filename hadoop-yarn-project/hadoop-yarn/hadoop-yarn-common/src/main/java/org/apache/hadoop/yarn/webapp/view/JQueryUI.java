@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import static org.apache.commons.text.StringEscapeUtils.escapeEcmaScript;
-import static org.apache.hadoop.yarn.util.StringHelper.djoin;
-import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.util.StringHelper.split;
-
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.HTML;
 
 import com.google.common.collect.Lists;
+
+import static org.apache.commons.text.StringEscapeUtils.escapeEcmaScript;
+import static org.apache.hadoop.yarn.util.StringHelper.djoin;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.split;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class JQueryUI extends HtmlBlock {
@@ -68,7 +68,7 @@ public class JQueryUI extends HtmlBlock {
     html.link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css"))
         .link(root_url("static/dt-1.10.7/css/jui-dt.css"))
         .script(root_url("static/jquery/jquery-3.3.1.min.js"))
-        .script(root_url("static/jquery/jquery-ui-1.12.1.custom.min.js"))
+        .script(root_url("static/jquery/jquery-ui-1.13.1.custom.min.js"))
         .script(root_url("static/dt-1.10.7/js/jquery.dataTables.min.js"))
         .script(root_url("static/yarn.dt.plugins.js"))
         .script(root_url("static/dt-sorting/natural.js"))
