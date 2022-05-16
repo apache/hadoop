@@ -137,15 +137,15 @@ public final class RouterMetrics {
             "latency of get cluster nodes", "ops", "latency", 10);
 
     getNodeToLabelsLatency =
-            registry.newQuantiles("getNodeToLabelsLatency",
+        registry.newQuantiles("getNodeToLabelsLatency",
             "latency of get node labels", "ops", "latency", 10);
 
     getLabelToNodesLatency =
-            registry.newQuantiles("getLabelToNodesLatency",
+        registry.newQuantiles("getLabelToNodesLatency",
             "latency of get label nodes", "ops", "latency", 10);
 
     getClusterNodeLabelsLatency =
-            registry.newQuantiles("getClusterNodeLabelsLatency",
+        registry.newQuantiles("getClusterNodeLabelsLatency",
                     "latency of get cluster node labels", "ops", "latency", 10);
   }
 
