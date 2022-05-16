@@ -262,6 +262,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public void setParent(CSQueue newParentQueue) {
     this.parent = newParentQueue;
+    getMetrics().setParentQueue(newParentQueue);
   }
 
   @Override
