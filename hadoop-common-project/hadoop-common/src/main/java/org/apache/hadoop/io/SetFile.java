@@ -39,15 +39,29 @@ public class SetFile extends MapFile {
    */
   public static class Writer extends MapFile.Writer {
 
-    /** Create the named set for keys of the named class. 
-     *  @deprecated pass a Configuration too
+    /**
+     * Create the named set for keys of the named class.
+     * @deprecated pass a Configuration too
+     * @param fs input FileSystem.
+     * @param dirName input dirName.
+     * @param keyClass input keyClass.
+     * @throws IOException raised on errors performing I/O.
      */
     public Writer(FileSystem fs, String dirName,
 	Class<? extends WritableComparable> keyClass) throws IOException {
       super(new Configuration(), fs, dirName, keyClass, NullWritable.class);
     }
 
-    /** Create a set naming the element class and compression type. */
+    /**
+     * Create a set naming the element class and compression type.
+     *
+     * @param conf input Configuration.
+     * @param fs input FileSystem.
+     * @param dirName input dirName.
+     * @param keyClass input keyClass.
+     * @param compress input compress.
+     * @throws IOException raised on errors performing I/O.
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class<? extends WritableComparable> keyClass,
                   SequenceFile.CompressionType compress)
@@ -55,7 +69,16 @@ public class SetFile extends MapFile {
       this(conf, fs, dirName, WritableComparator.get(keyClass, conf), compress);
     }
 
-    /** Create a set naming the element comparator and compression type. */
+    /**
+     * Create a set naming the element comparator and compression type.
+     *
+     * @param conf input Configuration.
+     * @param fs input FileSystem.
+     * @param dirName input dirName.
+     * @param comparator input comparator.
+     * @param compress input compress.
+     * @throws IOException raised on errors performing I/O.
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   WritableComparator comparator,
                   SequenceFile.CompressionType compress) throws IOException {
@@ -65,8 +88,12 @@ public class SetFile extends MapFile {
             compression(compress));
     }
 
-    /** Append a key to a set.  The key must be strictly greater than the
-     * previous key added to the set. */
+    /**
+     * Append a key to a set.  The key must be strictly greater than the
+     * previous key added to the set.
+     * @param key input key.
+     * @throws IOException raised on errors performing I/O.
+     */
     public void append(WritableComparable key) throws IOException{
       append(key, NullWritable.get());
     }

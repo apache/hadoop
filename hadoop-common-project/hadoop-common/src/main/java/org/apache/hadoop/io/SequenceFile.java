@@ -2408,7 +2408,7 @@ public class SequenceFile {
     }
     
     /**
-     * Get the 'value' corresponding to the last read 'key'.
+     * @return Get the 'value' corresponding to the last read 'key'.
      * @param val : The 'value' to be read.
      * @throws IOException raised on errors performing I/O.
      */
@@ -2453,7 +2453,7 @@ public class SequenceFile {
     }
     
     /**
-     * Read the next key in the file into <code>key</code>, skipping its
+     * @return Read the next key in the file into <code>key</code>, skipping its
      * value.True if another entry exists, and false at end of file.
      *
      * @param key key
@@ -2988,7 +2988,7 @@ public class SequenceFile {
      */
     public void setMemory(int memory) { this.memory = memory; }
 
-    /** Get the total amount of buffer memory, in bytes.*/
+    /** @return Get the total amount of buffer memory, in bytes.*/
     public int getMemory() { return memory; }
 
     /**
@@ -3440,7 +3440,7 @@ public class SequenceFile {
     /** Merge the provided files.
      * @param inFiles the array of input path names
      * @param outFile the final output file
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public void merge(Path[] inFiles, Path outFile) throws IOException {
       if (fs.exists(outFile)) {

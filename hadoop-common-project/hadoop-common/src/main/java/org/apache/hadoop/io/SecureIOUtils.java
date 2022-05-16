@@ -90,7 +90,7 @@ public class SecureIOUtils {
   private final static FileSystem rawFilesystem;
 
   /**
-   * Open the given File for random read access, verifying the expected user/
+   * @return Open the given File for random read access, verifying the expected user/
    * group constraints if security is enabled.
    * 
    * Note that this function provides no additional security checks if hadoop
@@ -114,7 +114,7 @@ public class SecureIOUtils {
   }
 
   /**
-   * Same as openForRandomRead except that it will run even if security is off.
+   * @return Same as openForRandomRead except that it will run even if security is off.
    * This is used by unit tests.
    *
    * @param f input f.
@@ -195,7 +195,7 @@ public class SecureIOUtils {
    * Open the given File for read access, verifying the expected user/group
    * constraints if security is enabled.
    *
-   * Note that this function provides no additional checks if Hadoop
+   * @return Note that this function provides no additional checks if Hadoop
    * security is disabled, since doing the checks would be too expensive
    * when native libraries are not available.
    *
@@ -214,7 +214,7 @@ public class SecureIOUtils {
   }
 
   /**
-   * Same as openForRead() except that it will run even if security is off.
+   * @return Same as openForRead() except that it will run even if security is off.
    * This is used by unit tests.
    * @param f input f.
    * @param expectedOwner input expectedOwner.
