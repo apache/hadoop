@@ -90,6 +90,35 @@ public final class CapacitySchedulerQueueHelpers {
     return conf;
   }
 
+  public static CapacitySchedulerConfiguration setupAdditionalQueues(
+      CapacitySchedulerConfiguration conf) {
+
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a", "b"});
+
+    conf.setCapacity(A, A_CAPACITY);
+    conf.setCapacity(B, B_CAPACITY);
+
+    // Define 2nd-level queues
+    conf.setQueues(A, new String[]{"a1", "a2", "a3"});
+    conf.setCapacity(A1, 30.0f);
+    conf.setUserLimitFactor(A1, 100.0f);
+    conf.setCapacity(A2, 30.0f);
+    conf.setUserLimitFactor(A2, 100.0f);
+    conf.setCapacity("root.a.a3", 40.0f);
+    conf.setUserLimitFactor("root.a.a3", 100.0f);
+
+    conf.setQueues(B, new String[]{"b1", "b2", "b3"});
+    conf.setCapacity(B1, B1_CAPACITY);
+    conf.setUserLimitFactor(B1, 100.0f);
+    conf.setCapacity(B2, B2_CAPACITY);
+    conf.setUserLimitFactor(B2, 100.0f);
+    conf.setCapacity(B3, B3_CAPACITY);
+    conf.setUserLimitFactor(B3, 100.0f);
+
+    return conf;
+  }
+
   /**
    * @param conf, to be modified
    * @return CS configuration which has deleted all children of queue(b)
