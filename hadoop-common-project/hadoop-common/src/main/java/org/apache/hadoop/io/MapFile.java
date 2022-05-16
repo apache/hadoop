@@ -904,7 +904,12 @@ public class MapFile {
     }
   }
 
-  /** Deletes the named map file. */
+  /**
+   * Deletes the named map file.
+   * @param fs input fs.
+   * @param name input name.
+   * @throws IOException raised on errors performing I/O.
+   */
   public static void delete(FileSystem fs, String name) throws IOException {
     Path dir = new Path(name);
     Path data = new Path(dir, DATA_FILE_NAME);

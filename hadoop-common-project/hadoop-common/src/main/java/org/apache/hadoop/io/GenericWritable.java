@@ -90,7 +90,7 @@ public abstract class GenericWritable implements Writable, Configurable {
   /**
    * Set the instance that is wrapped.
    * 
-   * @param obj
+   * @param obj input obj.
    */
   public void set(Writable obj) {
     instance = obj;

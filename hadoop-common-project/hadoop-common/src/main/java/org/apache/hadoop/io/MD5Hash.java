@@ -56,7 +56,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Constructs an MD5Hash from a hex string.
-   * @param hex
+   * @param hex input hex.
    */
   public MD5Hash(String hex) {
     setDigest(hex);

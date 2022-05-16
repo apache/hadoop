@@ -38,7 +38,7 @@ public class IntWritable implements WritableComparable<IntWritable> {
 
   /**
    * Set the value of this IntWritable.
-   * @param value
+   * @param value input value.
    */
   public void set(int value) { this.value = value; }
 

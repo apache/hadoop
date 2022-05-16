@@ -75,12 +75,25 @@ public class SetFile extends MapFile {
   /** Provide access to an existing set file. */
   public static class Reader extends MapFile.Reader {
 
-    /** Construct a set reader for the named set.*/
+    /**
+     * Construct a set reader for the named set.
+     * @param fs input FileSystem.
+     * @param dirName input dirName.
+     * @param conf input Configuration.
+     * @throws IOException raised on errors performing I/O.
+     */
     public Reader(FileSystem fs, String dirName, Configuration conf) throws IOException {
       super(fs, dirName, conf);
     }
 
-    /** Construct a set reader for the named set using the named comparator.*/
+    /**
+     * Construct a set reader for the named set using the named comparator.
+     * @param fs input FileSystem.
+     * @param dirName input dirName.
+     * @param comparator input comparator.
+     * @param conf input Configuration.
+     * @throws IOException raised on errors performing I/O.
+     */
     public Reader(FileSystem fs, String dirName, WritableComparator comparator, Configuration conf)
       throws IOException {
       super(new Path(dirName), conf, comparator(comparator));

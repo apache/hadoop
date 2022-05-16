@@ -92,13 +92,18 @@ public class OutputBuffer extends FilterOutputStream {
    */
   public int getLength() { return buffer.getLength(); }
 
-  /** Resets the buffer to empty. */
+  /** @return Resets the buffer to empty. */
   public OutputBuffer reset() {
     buffer.reset();
     return this;
   }
 
-  /** Writes bytes from a InputStream directly into the buffer. */
+  /**
+   * Writes bytes from a InputStream directly into the buffer.
+   * @param in input in.
+   * @param length input length.
+   * @throws IOException raised on errors performing I/O.
+   */
   public void write(InputStream in, int length) throws IOException {
     buffer.write(in, length);
   }
