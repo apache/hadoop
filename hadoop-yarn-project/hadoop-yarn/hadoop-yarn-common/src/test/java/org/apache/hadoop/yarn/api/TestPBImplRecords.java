@@ -918,7 +918,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   public void testQueueInfoPBImpl() throws Exception {
     validatePBImplRecord(QueueInfoPBImpl.class, QueueInfoProto.class);
   }
-  
+
   @Test
   public void testQueueConfigurationsPBImpl() throws Exception{
     validatePBImplRecord(QueueConfigurationsPBImpl.class,
