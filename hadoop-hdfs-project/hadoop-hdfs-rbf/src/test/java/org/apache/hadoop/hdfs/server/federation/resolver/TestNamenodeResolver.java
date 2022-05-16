@@ -129,7 +129,7 @@ public class TestNamenodeResolver {
       int resultsCount, FederationNamenodeServiceState state)
           throws IOException {
     List<? extends FederationNamenodeContext> namenodes =
-        namenodeResolver.getNamenodesForNameserviceId(nsId);
+        namenodeResolver.getNamenodesForNameserviceId(nsId, false);
     if (resultsCount == 0) {
       assertNull(namenodes);
     } else {
@@ -291,8 +291,8 @@ public class TestNamenodeResolver {
             HAServiceState.STANDBY)));
     stateStore.refreshCaches(true);
     // Check whether the namenpde state is reported correct as standby.
-    FederationNamenodeContext namenode =
-        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0]).get(0);
+    FederationNamenodeContext namenode = namenodeResolver
+        .getNamenodesForNameserviceId(NAMESERVICES[0], false).get(0);
     assertEquals(FederationNamenodeServiceState.STANDBY, namenode.getState());
     String rpcAddr = namenode.getRpcAddress();
     InetSocketAddress inetAddr = getInetSocketAddress(rpcAddr);
@@ -301,8 +301,8 @@ public class TestNamenodeResolver {
     // RouterRpcClient calls updateActiveNamenode to update the state to active,
     // Check whether correct updated state is returned post update.
     namenodeResolver.updateActiveNamenode(NAMESERVICES[0], inetAddr);
-    FederationNamenodeContext namenode1 =
-        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0]).get(0);
+    FederationNamenodeContext namenode1 = namenodeResolver
+        .getNamenodesForNameserviceId(NAMESERVICES[0], false).get(0);
     assertEquals("The namenode state should be ACTIVE post update.",
         FederationNamenodeServiceState.ACTIVE, namenode1.getState());
   }
@@ -318,8 +318,8 @@ public class TestNamenodeResolver {
 
     InetSocketAddress inetAddr = getInetSocketAddress(rpcAddress);
     namenodeResolver.updateActiveNamenode(NAMESERVICES[0], inetAddr);
-    FederationNamenodeContext namenode =
-        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0]).get(0);
+    FederationNamenodeContext namenode = namenodeResolver
+        .getNamenodesForNameserviceId(NAMESERVICES[0], false).get(0);
     assertEquals("The namenode state should be ACTIVE post update.",
         FederationNamenodeServiceState.ACTIVE, namenode.getState());
   }

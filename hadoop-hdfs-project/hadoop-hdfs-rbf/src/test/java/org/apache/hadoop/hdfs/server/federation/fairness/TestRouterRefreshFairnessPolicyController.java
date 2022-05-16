@@ -162,7 +162,8 @@ public class TestRouterRefreshFairnessPolicyController {
       Thread.sleep(sleepTime);
       return null;
     }).when(client)
-        .invokeMethod(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+        .invokeMethod(Mockito.any(), Mockito.any(), Mockito.any(),
+            Mockito.any(), Mockito.anyBoolean(), Mockito.any());
 
     // No calls yet
     assertEquals("{}",

@@ -44,6 +44,17 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface ActiveNamenodeResolver {
 
   /**
+   * Report a failed, unavailable NN address for a nameservice or blockPool.
+   *
+   * @param ns Nameservice identifier.
+   * @param failedAddress The address the failed responded to the command.
+   *
+   * @throws IOException If the state store cannot be accessed.
+   */
+  void updateUnavailableNamenode(
+      String ns, InetSocketAddress failedAddress) throws IOException;
+
+  /**
    * Report a successful, active NN address for a nameservice or blockPool.
    *
    * @param ns Nameservice identifier.
@@ -56,20 +67,30 @@ public interface ActiveNamenodeResolver {
 
   /**
    * Returns a prioritized list of the most recent cached registration entries
-   * for a single nameservice ID.
-   * Returns an empty list if none are found. Returns entries in preference of:
+   * for a single nameservice ID. Returns an empty list if none are found.
+   * In the case of not observerRead Returns entries in preference of :
    * <ul>
+   * <li>The most recent ACTIVE NN
+   * <li>The most recent OBSERVER NN
+   * <li>The most recent STANDBY NN
+   * <li>The most recent UNAVAILABLE NN
+   * </ul>
+   *
+   * In the case of observerRead Returns entries in preference of :
+   * <ul>
+   * <li>The most recent OBSERVER NN
    * <li>The most recent ACTIVE NN
    * <li>The most recent STANDBY NN
    * <li>The most recent UNAVAILABLE NN
    * </ul>
    *
    * @param nameserviceId Nameservice identifier.
+   * @param observerRead Observer read case, observer NN will be ranked first
    * @return Prioritized list of namenode contexts.
    * @throws IOException If the state store cannot be accessed.
    */
-  List<? extends FederationNamenodeContext>
-      getNamenodesForNameserviceId(String nameserviceId) throws IOException;
+  List<? extends FederationNamenodeContext> getNamenodesForNameserviceId(
+      String nameserviceId, boolean observerRead) throws IOException;
 
   /**
    * Returns a prioritized list of the most recent cached registration entries
@@ -77,6 +98,7 @@ public interface ActiveNamenodeResolver {
    * Returns an empty list if none are found. Returns entries in preference of:
    * <ul>
    * <li>The most recent ACTIVE NN
+   * <li>The most recent OBSERVER NN
    * <li>The most recent STANDBY NN
    * <li>The most recent UNAVAILABLE NN
    * </ul>

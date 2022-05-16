@@ -179,7 +179,7 @@ public final class FederationTestUtils {
       public Boolean get() {
         try {
           List<? extends FederationNamenodeContext> namenodes =
-              resolver.getNamenodesForNameserviceId(nsId);
+              resolver.getNamenodesForNameserviceId(nsId, false);
           if (namenodes != null) {
             for (FederationNamenodeContext namenode : namenodes) {
               // Check if this is the Namenode we are checking
@@ -214,7 +214,7 @@ public final class FederationTestUtils {
       public Boolean get() {
         try {
           List<? extends FederationNamenodeContext> nns =
-              resolver.getNamenodesForNameserviceId(nsId);
+              resolver.getNamenodesForNameserviceId(nsId, false);
           for (FederationNamenodeContext nn : nns) {
             if (nn.getState().equals(state)) {
               return true;
