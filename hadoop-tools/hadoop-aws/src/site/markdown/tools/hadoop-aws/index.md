@@ -1595,7 +1595,7 @@ Accessing data through an access point, is done by using its ARN, as opposed to 
 You can set the Access Point ARN property using the following per bucket configuration property:
 ```xml
 <property>
-    <name>fs.s3a.sample-bucket.accesspoint.arn</name>
+    <name>fs.s3a.bucket.sample-bucket.accesspoint.arn</name>
     <value> {ACCESSPOINT_ARN_HERE} </value>
     <description>Configure S3a traffic to use this AccessPoint</description>
 </property>
@@ -1605,21 +1605,11 @@ This configures access to the `sample-bucket` bucket for S3A, to go through the
 new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
 configured ARN when getting data from S3 instead of your bucket.
 
-You can also use an Access Point name as a path URI such as `s3a://finance-team-access/key`, by
-configuring the `.accesspoint.arn` property as a per-bucket override:
-```xml
-<property>
-    <name>fs.s3a.finance-team-access.accesspoint.arn</name>
-    <value> {ACCESSPOINT_ARN_HERE} </value>
-    <description>Configure S3a traffic to use this AccessPoint</description>
-</property>
-```
-
 The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
 Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
 to known sources of data defined through Access Points. In case there is a need to access a bucket
 directly (without Access Points) then you can use per bucket overrides to disable this setting on a
-bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
+bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
 
 ```xml
 <!-- Require access point only access -->
@@ -1629,7 +1619,7 @@ bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
 </property>
 <!-- Disable it on a per-bucket basis if needed -->
 <property>
-    <name>fs.s3a.example-bucket.accesspoint.required</name>
+    <name>fs.s3a.bucket.example-bucket.accesspoint.required</name>
     <value>false</value>
 </property>
 ```
