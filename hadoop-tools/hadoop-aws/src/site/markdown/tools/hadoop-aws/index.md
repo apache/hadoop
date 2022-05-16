@@ -1605,7 +1605,6 @@ This configures access to the `sample-bucket` bucket for S3A, to go through the
 new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
 configured ARN when getting data from S3 instead of your bucket.
 
-
 The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
 Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
 to known sources of data defined through Access Points. In case there is a need to access a bucket
