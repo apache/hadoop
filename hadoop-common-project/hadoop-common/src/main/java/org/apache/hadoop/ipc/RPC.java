@@ -258,14 +258,14 @@ public class RPC {
     }
     
     /**
-     * Get the client's preferred version
+     * @return Get the client's preferred version
      */
     public long getClientVersion() {
       return clientVersion;
     }
     
     /**
-     * Get the server's agreed to version.
+     * @return Get the server's agreed to version.
      */
     public long getServerVersion() {
       return serverVersion;
@@ -803,39 +803,55 @@ public class RPC {
       return this;
     }
     
-    /** Default: -1 */
+    /**
+     * @return Default: -1
+     * @param queueSizePerHandler
+     *        input queueSizePerHandler.
+     */
     public Builder setQueueSizePerHandler(int queueSizePerHandler) {
       this.queueSizePerHandler = queueSizePerHandler;
       return this;
     }
     
-    /** Default: false */
+    /**
+     * @return Default: false.
+     * @param verbose input verbose.
+     */
     public Builder setVerbose(boolean verbose) {
       this.verbose = verbose;
       return this;
     }
     
-    /** Default: null */
+    /**
+     * @return Default: null.
+     * @param secretManager input secretManager.
+     */
     public Builder setSecretManager(
         SecretManager<? extends TokenIdentifier> secretManager) {
       this.secretManager = secretManager;
       return this;
     }
     
-    /** Default: null */
+    /**
+     * @return Default: null.
+     * @param portRangeConfig input portRangeConfig.
+     */
     public Builder setPortRangeConfig(String portRangeConfig) {
       this.portRangeConfig = portRangeConfig;
       return this;
     }
     
-    /** Default: null */
+    /**
+     * @return Default: null.
+     * @param alignmentContext input alignmentContext.
+     */
     public Builder setAlignmentContext(AlignmentContext alignmentContext) {
       this.alignmentContext = alignmentContext;
       return this;
     }
 
     /**
-     * Build the RPC Server. 
+     * @return Build the RPC Server.
      * @throws IOException on error
      * @throws HadoopIllegalArgumentException when mandatory fields are not set
      */

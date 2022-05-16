@@ -131,7 +131,7 @@ public class GenericOptionsParser {
    * Create an options parser with the given options to parse the args.
    * @param opts the options
    * @param args the command line arguments
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public GenericOptionsParser(Options opts, String[] args) 
       throws IOException {
@@ -141,7 +141,7 @@ public class GenericOptionsParser {
   /**
    * Create an options parser to parse the args.
    * @param args the command line arguments
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public GenericOptionsParser(String[] args) 
       throws IOException {
@@ -157,7 +157,7 @@ public class GenericOptionsParser {
    * 
    * @param conf the <code>Configuration</code> to modify.
    * @param args command-line arguments.
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public GenericOptionsParser(Configuration conf, String[] args) 
       throws IOException {
@@ -174,7 +174,7 @@ public class GenericOptionsParser {
    * @param conf the configuration to modify  
    * @param options options built by the caller 
    * @param args User-specified arguments
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public GenericOptionsParser(Configuration conf,
       Options options, String[] args) throws IOException {
@@ -224,9 +224,10 @@ public class GenericOptionsParser {
   }
 
   /**
-   * Specify properties of each generic option.
+   * @return Specify properties of each generic option.
    * <i>Important</i>: as {@link OptionBuilder} is not thread safe, subclasses
    * must synchronize use on {@code OptionBuilder.class}
+   * @param opts input opts.
    */
   @SuppressWarnings("static-access")
   protected Options buildGeneralOptions(Options opts) {
@@ -366,9 +367,9 @@ public class GenericOptionsParser {
   
   /**
    * If libjars are set in the conf, parse the libjars.
-   * @param conf
+   * @param conf input Configuration.
    * @return libjar urls
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static URL[] getLibJars(Configuration conf) throws IOException {
     String jars = conf.get("tmpjars");

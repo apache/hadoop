@@ -150,20 +150,17 @@ public class FsPermission implements Writable, Serializable,
   }
 
   /**
-   * Return user {@link FsAction}.
-   * return FsAction useraction
+   * @return Return user {@link FsAction}.
    */
   public FsAction getUserAction() {return useraction;}
 
   /**
-   * Return group {@link FsAction}.
-   * return FsAction groupaction
+   * @return Return group {@link FsAction}.
    */
   public FsAction getGroupAction() {return groupaction;}
 
   /**
-   * Return other {@link FsAction}.
-   * return FsAction otheraction
+   * @return Return other {@link FsAction}.
    */
   public FsAction getOtherAction() {return otheraction;}
 
