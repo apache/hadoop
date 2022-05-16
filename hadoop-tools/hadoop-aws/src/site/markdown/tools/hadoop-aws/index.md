@@ -1605,15 +1605,6 @@ This configures access to the `sample-bucket` bucket for S3A, to go through the
 new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
 configured ARN when getting data from S3 instead of your bucket.
 
-You can also use an Access Point name as a path URI such as `s3a://finance-team-access/key`, by
-configuring the `.accesspoint.arn` property as a per-bucket override:
-```xml
-<property>
-    <name>fs.s3a.bucket.finance-team-access.accesspoint.arn</name>
-    <value> {ACCESSPOINT_ARN_HERE} </value>
-    <description>Configure S3a traffic to use this AccessPoint</description>
-</property>
-```
 
 The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
 Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
