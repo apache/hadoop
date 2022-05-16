@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -241,4 +242,36 @@ public final class RouterYarnClientUtils {
     nodesToLabelsResponse.setNodeToLabels(nodesToLabelMap);
     return nodesToLabelsResponse;
   }
+
+  /**
+   * Merges a list of GetLabelsToNodesResponse.
+   *
+   * @param responses a list of GetLabelsToNodesResponse to merge.
+   * @return the merged GetLabelsToNodesResponse.
+   */
+  public static GetLabelsToNodesResponse mergeClusterLabelsToNodes(
+      Collection<GetLabelsToNodesResponse> responses){
+    GetLabelsToNodesResponse labelsToNodesResponse = Records.newRecord(
+         GetLabelsToNodesResponse.class);
+    Map<String, Set<NodeId>> labelsToNodesMap = new HashMap<>();
+    for (GetLabelsToNodesResponse response : responses) {
+      if (response != null && response.getLabelsToNodes() != null) {
+        Map<String, Set<NodeId>> clusterLabelsToNodesMap = response.getLabelsToNodes();
+        for (Map.Entry<String, Set<NodeId>> entry : clusterLabelsToNodesMap.entrySet()) {
+          String label = entry.getKey();
+          Set<NodeId> clusterNodes = entry.getValue();
+          if (labelsToNodesMap.containsKey(label)) {
+            Set<NodeId> allNodes = labelsToNodesMap.get(label);
+            allNodes.addAll(clusterNodes);
+          } else {
+            labelsToNodesMap.put(label, clusterNodes);
+          }
+        }
+      }
+    }
+    labelsToNodesResponse.setLabelsToNodes(labelsToNodesMap);
+    return labelsToNodesResponse;
+  }
+
 }
+

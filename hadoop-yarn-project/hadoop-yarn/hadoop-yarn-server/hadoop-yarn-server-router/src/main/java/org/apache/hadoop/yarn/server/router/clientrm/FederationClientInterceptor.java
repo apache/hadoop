@@ -77,6 +77,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
@@ -876,7 +878,7 @@ public class FederationClientInterceptor
     }
     long startTime = clock.getTime();
     Map<SubClusterId, SubClusterInfo> subClusters =
-            federationFacade.getSubClusters(true);
+        federationFacade.getSubClusters(true);
     Map<SubClusterId, GetNodesToLabelsResponse> clusterNodes = Maps.newHashMap();
     for (SubClusterId subClusterId : subClusters.keySet()) {
       ApplicationClientProtocol client;
@@ -899,7 +901,30 @@ public class FederationClientInterceptor
   @Override
   public GetLabelsToNodesResponse getLabelsToNodes(
       GetLabelsToNodesRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      routerMetrics.incrLabelsToNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getLabelsToNodes request.", null);
+    }
+    long startTime = clock.getTime();
+    Map<SubClusterId, SubClusterInfo> subClusters =
+        federationFacade.getSubClusters(true);
+    Map<SubClusterId, GetLabelsToNodesResponse> clusterNodes = Maps.newHashMap();
+    for (SubClusterId subClusterId : subClusters.keySet()) {
+      ApplicationClientProtocol client;
+      try {
+        client = getClientRMProxyForSubCluster(subClusterId);
+        GetLabelsToNodesResponse response = client.getLabelsToNodes(request);
+        clusterNodes.put(subClusterId, response);
+      } catch (Exception ex) {
+        routerMetrics.incrLabelsToNodesFailedRetrieved();
+        LOG.error("Unable to get label node due to exception.", ex);
+        throw ex;
+      }
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
+    // Merge the LabelsToNodesResponse
+    return RouterYarnClientUtils.mergeClusterLabelsToNodes(clusterNodes.values());
   }
 
   @Override
