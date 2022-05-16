@@ -117,6 +117,7 @@ public class Component implements Serializable {
    * 0);
    * NEVER (Do not restart in any cases)
    *
+   * @return restartPolicy
    **/
   @XmlType(name = "restart_policy")
   @XmlEnum
