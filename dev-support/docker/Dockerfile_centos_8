@@ -93,7 +93,7 @@ ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
 ENV MAVEN_HOME /opt/maven
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
+ENV JAVA_HOME /usr/lib/jvm/java-1.11.0
 
 #######
 # Set env vars for SpotBugs
