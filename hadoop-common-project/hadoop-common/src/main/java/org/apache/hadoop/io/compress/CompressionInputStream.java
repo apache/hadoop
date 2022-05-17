@@ -120,7 +120,7 @@ public abstract class CompressionInputStream extends InputStream
   /**
    * This method is current not supported.
    *
-   * @throws UnsupportedOperationException Unsupported Operation Exception
+   * @throws UnsupportedOperationException Unsupported Operation Exception.
    */
 
   @Override
@@ -131,7 +131,7 @@ public abstract class CompressionInputStream extends InputStream
   /**
    * This method is current not supported.
    *
-   * @throws UnsupportedOperationException Unsupported Operation Exception
+   * @throws UnsupportedOperationException Unsupported Operation Exception.
    */
   @Override
   public boolean seekToNewSource(long targetPos) throws UnsupportedOperationException {

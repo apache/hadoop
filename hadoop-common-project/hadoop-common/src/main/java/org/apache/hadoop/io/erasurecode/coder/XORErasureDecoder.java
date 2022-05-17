@@ -53,7 +53,7 @@ public class XORErasureDecoder extends ErasureDecoder {
   /**
    * Which blocks were erased ? For XOR it's simple we only allow and return one
    * erased block, either data or parity.
-   * @param blockGroup blockGroup
+   * @param blockGroup blockGroup.
    * @return output blocks to recover
    */
   @Override

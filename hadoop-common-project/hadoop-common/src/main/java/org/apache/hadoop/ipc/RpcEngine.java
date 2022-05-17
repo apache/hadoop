@@ -49,7 +49,7 @@ public interface RpcEngine {
    * @param rpcTimeout input rpcTimeout.
    * @param connectionRetryPolicy input connectionRetryPolicy.
    * @throws IOException raised on errors performing I/O.
-   * @return ProtocolProxy
+   * @return ProtocolProxy.
    */
   <T> ProtocolProxy<T> getProxy(Class<T> protocol,
                   long clientVersion, InetSocketAddress addr,
@@ -72,7 +72,7 @@ public interface RpcEngine {
    * @param fallbackToSimpleAuth input fallbackToSimpleAuth.
    * @param alignmentContext input alignmentContext.
    * @throws IOException raised on errors performing I/O.
-   * @return ProtocolProxy
+   * @return ProtocolProxy.
    */
   <T> ProtocolProxy<T> getProxy(Class<T> protocol,
                   long clientVersion, InetSocketAddress addr,

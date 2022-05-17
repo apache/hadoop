@@ -68,7 +68,7 @@ public class ObjectWritable implements Writable, Configurable {
   
   /**
    * Reset the instance.
-   * @param instance instance
+   * @param instance instance.
    */
   public void set(Object instance) {
     this.declaredClass = instance.getClass();
@@ -133,10 +133,10 @@ public class ObjectWritable implements Writable, Configurable {
    * Write a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding.
    *
-   * @param out DataOutput
-   * @param instance instance
-   * @param conf Configuration
-   * @param declaredClass declaredClass
+   * @param out DataOutput.
+   * @param instance instance.
+   * @param conf Configuration.
+   * @param declaredClass declaredClass.
    * @throws IOException raised on errors performing I/O.
    */
   public static void writeObject(DataOutput out, Object instance,
@@ -155,10 +155,10 @@ public class ObjectWritable implements Writable, Configurable {
      * that may not be running the same version of software.  Sometime in ~2013 
      * we can consider removing this parameter and always using the compact format.
      *
-     * @param conf configuration
-     * @param out dataoutput
-     * @param declaredClass declaredClass
-     * @param instance instance
+     * @param conf configuration.
+     * @param out dataoutput.
+     * @param declaredClass declaredClass.
+     * @param instance instance.
      * @throws IOException raised on errors performing I/O.
      *
      */
@@ -238,9 +238,9 @@ public class ObjectWritable implements Writable, Configurable {
    * Read a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding.
    *
-   * @param conf configuration
-   * @param in DataInput
-   * @return Object
+   * @param conf configuration.
+   * @param in DataInput.
+   * @return Object.
    * @throws IOException raised on errors performing I/O.
    */
   public static Object readObject(DataInput in, Configuration conf)
@@ -252,10 +252,10 @@ public class ObjectWritable implements Writable, Configurable {
    * Read a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding.
    *
-   * @param in DataInput
-   * @param objectWritable objectWritable
-   * @param conf configuration
-   * @return Object
+   * @param in DataInput.
+   * @param objectWritable objectWritable.
+   * @param conf configuration.
+   * @return Object.
    * @throws IOException raised on errors performing I/O.
    */
   @SuppressWarnings("unchecked")
@@ -405,9 +405,9 @@ public class ObjectWritable implements Writable, Configurable {
    * it in the specified <tt>conf</tt>. If the specified <tt>conf</tt> is null,
    * try load it directly.
    *
-   * @param conf configuration
-   * @param className classname
-   * @return Class
+   * @param conf configuration.
+   * @param className classname.
+   * @return Class.
    */
   public static Class<?> loadClass(Configuration conf, String className) {
     Class<?> declaredClass = null;

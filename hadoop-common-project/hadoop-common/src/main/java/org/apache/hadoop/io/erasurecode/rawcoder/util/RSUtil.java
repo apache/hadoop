@@ -60,9 +60,9 @@ public final class RSUtil {
   /**
    * Ported from Intel ISA-L library.
    *
-   * @param k k
-   * @param a a
-   * @param m m
+   * @param k k.
+   * @param a a.
+   * @param m m.
    */
   public static void genCauchyMatrix(byte[] a, int m, int k) {
     // Identity matrix in high position
@@ -87,12 +87,12 @@ public final class RSUtil {
    * The algorithm is ported from Intel ISA-L library for compatible. It
    * leverages Java auto-vectorization support for performance.
    *
-   * @param gfTables gfTables
-   * @param dataLen dataLen
-   * @param inputs inputs
-   * @param inputOffsets inputOffsets
-   * @param outputs outputs
-   * @param outputOffsets outputOffsets
+   * @param gfTables gfTables.
+   * @param dataLen dataLen.
+   * @param inputs inputs.
+   * @param inputOffsets inputOffsets.
+   * @param outputs outputs.
+   * @param outputOffsets outputOffsets.
    */
   public static void encodeData(byte[] gfTables, int dataLen, byte[][] inputs,
       int[] inputOffsets, byte[][] outputs,
@@ -145,9 +145,9 @@ public final class RSUtil {
   /**
    * See above. Try to use the byte[] version when possible.
    *
-   * @param gfTables gfTables
-   * @param inputs inputs
-   * @param outputs outputs
+   * @param gfTables gfTables.
+   * @param inputs inputs.
+   * @param outputs outputs.
    */
   public static void encodeData(byte[] gfTables, ByteBuffer[] inputs,
       ByteBuffer[] outputs) {

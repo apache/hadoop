@@ -169,7 +169,7 @@ public class RPC {
    * otherwise get it from the versionID field of the protocol class.
    *
    * @param protocol input protocol.
-   * @return ProtocolVersion
+   * @return ProtocolVersion.
    */
   static public long getProtocolVersion(Class<?> protocol) {
     if (protocol == null) {
@@ -264,7 +264,7 @@ public class RPC {
     }
     
     /**
-     * @return Get the client's preferred version
+     * @return Get the client's preferred version.
      */
     public long getClientVersion() {
       return clientVersion;
@@ -403,7 +403,7 @@ public class RPC {
    * @param addr remote address
    * @param conf configuration to use
    * @param rpcTimeout timeout for each RPC
-   * @param connectionRetryPolicy input connectionRetryPolicy
+   * @param connectionRetryPolicy input connectionRetryPolicy.
    * @param timeout time in milliseconds before giving up
    * @return the proxy
    * @throws IOException if the far end through a RemoteException.
@@ -476,7 +476,7 @@ public class RPC {
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server.
    *
-   * @param <T> Generics Type T
+   * @param <T> Generics Type T.
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -497,14 +497,14 @@ public class RPC {
    * Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. 
    *
-   * @param <T> Generics Type T
+   * @param <T> Generics Type T.
    * @param protocol input protocol.
-   * @param clientVersion input clientVersion
-   * @param addr input addr
-   * @param ticket input tocket
-   * @param conf input conf
-   * @param factory input factory
-   * @return the protocol proxy
+   * @param clientVersion input clientVersion.
+   * @param addr input addr.
+   * @param ticket input tocket.
+   * @param conf input conf.
+   * @param factory input factory.
+   * @return the protocol proxy.
    * @throws IOException raised on errors performing I/O.
    *
    */
@@ -572,7 +572,7 @@ public class RPC {
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server.
    *
-   * @param <T> Generics Type T
+   * @param <T> Generics Type T.
    * @param protocol protocol
    * @param clientVersion client's version
    * @param addr server address
@@ -600,7 +600,7 @@ public class RPC {
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server.
    *
-   * @param <T> Generics Type T
+   * @param <T> Generics Type T.
    * @param protocol protocol
    * @param clientVersion client's version
    * @param addr server address
@@ -647,7 +647,7 @@ public class RPC {
    * @param fallbackToSimpleAuth set to true or false during calls to indicate
    *   if a secure client falls back to simple auth
    * @param alignmentContext state alignment context
-   * @param <T> Generics Type T
+   * @param <T> Generics Type T.
    * @return the proxy
    * @throws IOException if any error occurs
    */

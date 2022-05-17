@@ -320,7 +320,7 @@ public class WritableRpcEngine implements RpcEngine {
    * @param connectionRetryPolicy input connectionRetryPolicy.
    * @param fallbackToSimpleAuth input fallbackToSimpleAuth.
    * @param alignmentContext input alignmentContext.
-   * @return ProtocolProxy
+   * @return ProtocolProxy.
    */
   @Override
   @SuppressWarnings("unchecked")

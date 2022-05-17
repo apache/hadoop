@@ -346,7 +346,7 @@ public class RetryCache {
   /**
    * Static method that provides null check for retryCache.
    * @param cache input Cache.
-   * @return CacheEntry
+   * @return CacheEntry.
    */
   public static CacheEntry waitForCompletion(RetryCache cache) {
     if (skipRetryCache()) {

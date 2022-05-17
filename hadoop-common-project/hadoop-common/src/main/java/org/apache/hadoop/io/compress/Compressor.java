@@ -65,13 +65,13 @@ public interface Compressor {
 
   /**
    * Return number of uncompressed bytes input so far.
-   * @return bytes read
+   * @return bytes read.
    */
   public long getBytesRead();
 
   /**
    * Return number of compressed bytes output so far.
-   * @return bytes written
+   * @return bytes written.
    */
   public long getBytesWritten();
 

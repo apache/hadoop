@@ -34,7 +34,7 @@ public class RetryProxy {
    * @param iface the interface that the retry will implement
    * @param implementation the instance whose methods should be retried
    * @param retryPolicy the policy for retrying method call failures
-   * @param <T> T
+   * @param <T> T.
    * @return the retry proxy
    */
   public static <T> Object create(Class<T> iface, T implementation,
@@ -52,7 +52,7 @@ public class RetryProxy {
    * @param iface the interface that the retry will implement
    * @param proxyProvider provides implementation instances whose methods should be retried
    * @param retryPolicy the policy for retrying or failing over method call failures
-   * @param <T> T
+   * @param <T> T.
    * @return the retry proxy
    */
   public static <T> Object create(Class<T> iface,
@@ -71,7 +71,7 @@ public class RetryProxy {
    * {@link RetryPolicies#TRY_ONCE_THEN_FAIL} is used.
    * 
    * @param iface the interface that the retry will implement
-   * @param <T> T
+   * @param <T> T.
    * @param implementation the instance whose methods should be retried
    * @param methodNameToPolicyMap a map of method names to retry policies
    * @return the retry proxy
@@ -93,8 +93,8 @@ public class RetryProxy {
    * @param iface the interface that the retry will implement
    * @param proxyProvider provides implementation instances whose methods should be retried
    * @param methodNameToPolicyMap map of method names to retry policies
-   * @param defaultPolicy defaultPolicy
-   * @param <T> T
+   * @param defaultPolicy defaultPolicy.
+   * @param <T> T.
    * @return the retry proxy
    */
   public static <T> Object create(Class<T> iface,

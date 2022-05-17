@@ -427,7 +427,7 @@ public class ProtobufRpcEngine implements RpcEngine {
      * @param portRangeConfig A config parameter that can be used to restrict
      * the range of ports used when port is 0 (an ephemeral port)
      * @param alignmentContext provides server state info on client responses
-     * @param secretManager input secretManager
+     * @param secretManager input secretManager.
      * @param queueSizePerHandler input queueSizePerHandler.
      * @param numReaders input numReaders.
      * @throws IOException raised on errors performing I/O.

@@ -61,24 +61,24 @@ public abstract class AvroSerialization<T> extends Configured
 
   /**
    * Return an Avro Schema instance for the given class.
-   * @param t Generics Type T
-   * @return schema
+   * @param t Generics Type T.
+   * @return schema.
    */
   @InterfaceAudience.Private
   public abstract Schema getSchema(T t);
 
   /**
    * Create and return Avro DatumWriter for the given class.
-   * @param clazz clazz
-   * @return DatumWriter
+   * @param clazz clazz.
+   * @return DatumWriter.
    */
   @InterfaceAudience.Private
   public abstract DatumWriter<T> getWriter(Class<T> clazz);
 
   /**
    * Create and return Avro DatumReader for the given class.
-   * @param clazz clazz
-   * @return DatumReader
+   * @param clazz clazz.
+   * @return DatumReader.
    */
   @InterfaceAudience.Private
   public abstract DatumReader<T> getReader(Class<T> clazz);

@@ -76,9 +76,9 @@ public class RetryPolicies {
    * Keep trying forever with a fixed time between attempts.
    * </p>
    *
-   * @param sleepTime sleepTime
-   * @param timeUnit timeUnit
-   * @return RetryPolicy
+   * @param sleepTime sleepTime.
+   * @param timeUnit timeUnit.
+   * @return RetryPolicy.
    */
   public static final RetryPolicy retryForeverWithFixedSleep(long sleepTime,
       TimeUnit timeUnit) {
@@ -92,10 +92,10 @@ public class RetryPolicies {
    * and then fail by re-throwing the exception.
    * </p>
    *
-   * @param maxRetries maxRetries
-   * @param sleepTime sleepTime
-   * @param timeUnit timeUnit
-   * @return RetryPolicy
+   * @param maxRetries maxRetries.
+   * @param sleepTime sleepTime.
+   * @param timeUnit timeUnit.
+   * @return RetryPolicy.
    */
   public static final RetryPolicy retryUpToMaximumCountWithFixedSleep(int maxRetries, long sleepTime, TimeUnit timeUnit) {
     return new RetryUpToMaximumCountWithFixedSleep(maxRetries, sleepTime, timeUnit);
@@ -107,10 +107,10 @@ public class RetryPolicies {
    * and then fail by re-throwing the exception.
    * </p>
    *
-   * @param timeUnit  timeUnit
-   * @param sleepTime sleepTime
-   * @param maxTime maxTime
-   * @return RetryPolicy
+   * @param timeUnit timeUnit.
+   * @param sleepTime sleepTime.
+   * @param maxTime maxTime.
+   * @return RetryPolicy.
    */
   public static final RetryPolicy retryUpToMaximumTimeWithFixedSleep(long maxTime, long sleepTime, TimeUnit timeUnit) {
     return new RetryUpToMaximumTimeWithFixedSleep(maxTime, sleepTime, timeUnit);
@@ -123,10 +123,10 @@ public class RetryPolicies {
    * The time between attempts is <code>sleepTime</code> mutliplied by the number of tries so far.
    * </p>
    *
-   * @param sleepTime sleepTime
-   * @param maxRetries maxRetries
-   * @param timeUnit timeUnit
-   * @return RetryPolicy
+   * @param sleepTime sleepTime.
+   * @param maxRetries maxRetries.
+   * @param timeUnit timeUnit.
+   * @return RetryPolicy.
    */
   public static final RetryPolicy retryUpToMaximumCountWithProportionalSleep(int maxRetries, long sleepTime, TimeUnit timeUnit) {
     return new RetryUpToMaximumCountWithProportionalSleep(maxRetries, sleepTime, timeUnit);
@@ -141,10 +141,10 @@ public class RetryPolicies {
    * </p>
    *
    *
-   * @param timeUnit timeUnit
-   * @param maxRetries maxRetries
-   * @param sleepTime sleepTime
-   * @return RetryPolicy
+   * @param timeUnit timeUnit.
+   * @param maxRetries maxRetries.
+   * @param sleepTime sleepTime.
+   * @return RetryPolicy.
    */
   public static final RetryPolicy exponentialBackoffRetry(
       int maxRetries, long sleepTime, TimeUnit timeUnit) {
@@ -156,9 +156,9 @@ public class RetryPolicies {
    * Set a default policy with some explicit handlers for specific exceptions.
    * </p>
    *
-   * @param exceptionToPolicyMap exceptionToPolicyMap
-   * @param defaultPolicy defaultPolicy
-   * @return RetryPolicy
+   * @param exceptionToPolicyMap exceptionToPolicyMap.
+   * @param defaultPolicy defaultPolicy.
+   * @return RetryPolicy.
    */
   public static final RetryPolicy retryByException(RetryPolicy defaultPolicy,
                                                    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap) {
@@ -171,9 +171,9 @@ public class RetryPolicies {
    * Set a default policy with some explicit handlers for specific exceptions.
    * </p>
    *
-   * @param defaultPolicy defaultPolicy
-   * @param exceptionToPolicyMap exceptionToPolicyMap
-   * @return RetryPolicy
+   * @param defaultPolicy defaultPolicy.
+   * @param exceptionToPolicyMap exceptionToPolicyMap.
+   * @return RetryPolicy.
    */
   public static final RetryPolicy retryByRemoteException(
       RetryPolicy defaultPolicy,
@@ -183,9 +183,9 @@ public class RetryPolicies {
 
   /**
    * A retry policy for exceptions other than RemoteException.
-   * @param defaultPolicy defaultPolicy
-   * @param exceptionToPolicyMap exceptionToPolicyMap
-   * @return RetryPolicy
+   * @param defaultPolicy defaultPolicy.
+   * @param exceptionToPolicyMap exceptionToPolicyMap.
+   * @return RetryPolicy.
    */
   public static final RetryPolicy retryOtherThanRemoteException(
       RetryPolicy defaultPolicy,
@@ -473,7 +473,7 @@ public class RetryPolicies {
      * where t_i and n_i are the i-th pair of sleep time and number of retries.
      * Note that the white spaces in the string are ignored.
      *
-     * @param s input string
+     * @param s input string.
      * @return the parsed object, or null if the parsing fails.
      */
     public static MultipleLinearRandomRetry parseCommaSeparatedString(String s) {

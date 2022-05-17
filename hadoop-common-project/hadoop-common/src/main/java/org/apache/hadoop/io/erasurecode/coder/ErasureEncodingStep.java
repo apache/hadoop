@@ -36,9 +36,9 @@ public class ErasureEncodingStep implements ErasureCodingStep {
 
   /**
    * The constructor with all the necessary info.
-   * @param inputBlocks inputBlocks
-   * @param outputBlocks outputBlocks
-   * @param rawEncoder rawEncoder
+   * @param inputBlocks inputBlocks.
+   * @param outputBlocks outputBlocks.
+   * @param rawEncoder rawEncoder.
    */
   public ErasureEncodingStep(ECBlock[] inputBlocks, ECBlock[] outputBlocks,
                              RawErasureEncoder rawEncoder) {

@@ -211,7 +211,7 @@ public final class WritableUtils  {
    *
    * @param <T> Generics Type T.
    * @param orig The object to copy
-   * @param conf input Configuration
+   * @param conf input Configuration.
    * @return The copied object
    */
   public static <T extends Writable> T clone(T orig, Configuration conf) {

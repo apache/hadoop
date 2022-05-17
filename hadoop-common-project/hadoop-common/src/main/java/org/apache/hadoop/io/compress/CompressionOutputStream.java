@@ -48,7 +48,7 @@ public abstract class CompressionOutputStream extends OutputStream
   /**
    * Create a compression output stream that writes
    * the compressed bytes to the given stream.
-   * @param out out
+   * @param out out.
    */
   protected CompressionOutputStream(OutputStream out) {
     this.out = out;

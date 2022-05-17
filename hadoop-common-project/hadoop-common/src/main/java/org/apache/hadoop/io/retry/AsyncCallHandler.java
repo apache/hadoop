@@ -51,8 +51,8 @@ public class AsyncCallHandler {
 
   /**
    * @return the async return value from {@link AsyncCallHandler}.
-   * @param <T> T
-   * @param <R> R
+   * @param <T> T.
+   * @param <R> R.
    */
   @InterfaceStability.Unstable
   @SuppressWarnings("unchecked")
@@ -68,7 +68,7 @@ public class AsyncCallHandler {
 
   /**
    * For the lower rpc layers to set the async return value.
-   * @param asyncReturn asyncReturn
+   * @param asyncReturn asyncReturn.
    */
   @InterfaceStability.Unstable
   public static void setLowerLayerAsyncReturn(

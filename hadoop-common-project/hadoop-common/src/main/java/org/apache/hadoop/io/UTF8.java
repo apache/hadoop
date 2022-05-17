@@ -138,7 +138,7 @@ public class UTF8 implements WritableComparable<UTF8> {
 
   /**
    * Skips over one UTF8 in the input.
-   * @param in datainput
+   * @param in datainput.
    * @throws IOException raised on errors performing I/O.
    */
   public static void skip(DataInput in) throws IOException {
@@ -251,7 +251,7 @@ public class UTF8 implements WritableComparable<UTF8> {
   /**
    * @return Convert a UTF-8 encoded byte array back into a string.
    *
-   * @param bytes input bytes
+   * @param bytes input bytes.
    * @throws IOException if the byte array is invalid UTF8
    */
   public static String fromBytes(byte[] bytes) throws IOException {

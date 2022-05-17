@@ -549,7 +549,7 @@ public class TFile {
      *          guarantees that the value is encoded in one chunk, and avoids
      *          intermediate chunk buffering.
      * @throws IOException raised on errors performing I/O.
-     * @return DataOutputStream
+     * @return DataOutputStream.
      */
     public DataOutputStream prepareAppendValue(int length) throws IOException {
       if (state != State.END_KEY) {
@@ -796,7 +796,7 @@ public class TFile {
      *          The length of TFile. This is required because we have no easy
      *          way of knowing the actual size of the input file through the
      *          File input stream.
-     * @param conf configuration
+     * @param conf configuration.
      * @throws IOException raised on errors performing I/O.
      */
     public Reader(FSDataInputStream fsdis, long fileLength, Configuration conf)
@@ -1685,7 +1685,7 @@ public class TFile {
          * @param key
          *          BytesWritable to hold the key.
          * @throws IOException raised on errors performing I/O.
-         * @return the key into BytesWritable
+         * @return the key into BytesWritable.
          */
         public int getKey(BytesWritable key) throws IOException {
           key.setSize(getKeyLength());
@@ -1699,9 +1699,9 @@ public class TFile {
          * directly uses the buffer inside BytesWritable for storing the value.
          * The call does not require the value length to be known.
          * 
-         * @param value value
+         * @param value value.
          * @throws IOException raised on errors performing I/O.
-         * @return long value
+         * @return long value.
          */
         public long getValue(BytesWritable value) throws IOException {
           DataInputStream dis = getValueStream();
@@ -1831,7 +1831,7 @@ public class TFile {
          * {@link #getValue(byte[])}, {@link #getValue(byte[], int)},
          * {@link #getValueStream}.
          *
-         * @param buf buf
+         * @param buf buf.
          * @return the length of the value. Does not require
          *         isValueLengthKnown() to be true.
          * @throws IOException raised on errors performing I/O.
@@ -1850,8 +1850,8 @@ public class TFile {
          * exception: {@link #getValue(byte[])}, {@link #getValue(byte[], int)},
          * {@link #getValueStream}.
          *
-         * @param buf buf
-         * @param offset offset
+         * @param buf buf.
+         * @param offset offset.
          * @return the length of the value. Does not require
          *         isValueLengthKnown() to be true.
          * @throws IOException raised on errors performing I/O.

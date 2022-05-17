@@ -2223,19 +2223,19 @@ public class SequenceFile {
 
     /**
      * Returns true if values are compressed.
-     * @return if values are compressed true, not false
+     * @return if values are compressed true, not false.
      */
     public boolean isCompressed() { return decompress; }
     
     /**
      * Returns true if records are block-compressed.
-     * @return if records are block-compressed true, not false
+     * @return if records are block-compressed true, not false.
      */
     public boolean isBlockCompressed() { return blockCompressed; }
     
     /**
      * Returns the compression codec of data in this file.
-     * @return CompressionCodec
+     * @return CompressionCodec.
      */
     public CompressionCodec getCompressionCodec() { return codec; }
     
@@ -2261,7 +2261,7 @@ public class SequenceFile {
 
     /**
      * Returns the metadata object of the file.
-     * @return metadata
+     * @return metadata.
      */
     public Metadata getMetadata() {
       return this.metadata;
@@ -2456,7 +2456,7 @@ public class SequenceFile {
      * @return Read the next key in the file into <code>key</code>, skipping its
      * value.True if another entry exists, and false at end of file.
      *
-     * @param key key
+     * @param key key.
      * @throws IOException raised on errors performing I/O.
      */
     public synchronized boolean next(Writable key) throws IOException {

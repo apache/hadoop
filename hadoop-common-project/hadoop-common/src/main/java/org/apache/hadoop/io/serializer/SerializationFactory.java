@@ -53,7 +53,7 @@ public class SerializationFactory extends Configured {
    * classnames.
    * </p>
    *
-   * @param conf configuration
+   * @param conf configuration.
    */
   public SerializationFactory(Configuration conf) {
     super(conf);

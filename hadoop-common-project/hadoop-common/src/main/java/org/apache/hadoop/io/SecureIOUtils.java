@@ -151,7 +151,7 @@ public class SecureIOUtils {
    * @param expectedGroup the expected group owner for the file
    * @throws IOException if an IO Error occurred or the user/group does not
    * match if security is enabled
-   * @return FSDataInputStream
+   * @return FSDataInputStream.
    */
   public static FSDataInputStream openFSDataInputStream(File file,
       String expectedOwner, String expectedGroup) throws IOException {
@@ -169,7 +169,7 @@ public class SecureIOUtils {
    * @param expectedOwner input expectedOwner.
    * @param expectedGroup input expectedGroup.
    * @throws IOException raised on errors performing I/O.
-   * @return FSDataInputStream
+   * @return FSDataInputStream.
    */
   @VisibleForTesting
   protected static FSDataInputStream forceSecureOpenFSDataInputStream(
@@ -268,7 +268,7 @@ public class SecureIOUtils {
    *
    * @throws AlreadyExistsException if the file already exists
    * @throws IOException if any other error occurred
-   * @return createForWrite FileOutputStream
+   * @return createForWrite FileOutputStream.
    */
   public static FileOutputStream createForWrite(File f, int permissions)
   throws IOException {

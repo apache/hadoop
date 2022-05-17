@@ -3659,7 +3659,7 @@ public abstract class Server {
    * @param protocol input protocol.
    * @param param input param.
    * @param receiveTime input receiveTime.
-   * @return Call
+   * @return Call.
    * @throws Exception raised on errors performing I/O.
    */
   public abstract Writable call(RPC.RpcKind rpcKind, String protocol,

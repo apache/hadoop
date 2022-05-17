@@ -152,7 +152,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
   * This method reports the processed bytes so far. Please note that this
   * statistic is only updated on block boundaries and only when the stream is
   * initiated in BYBLOCK mode.
-  * @return ProcessedByteCount
+  * @return ProcessedByteCount.
   */
   public long getProcessedByteCount() {
     return reportedBytesReadFromCompressedStream;
@@ -283,8 +283,8 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
   * the magic. Thus callers have to skip the first two bytes. Otherwise this
   * constructor will throw an exception.
   * </p>
-  * @param in in
-  * @param readMode READ_MODE
+  * @param in in.
+  * @param readMode READ_MODE.
   * @throws IOException
   *             if the stream content is malformed or an I/O error occurs.
   * @throws NullPointerException

@@ -97,7 +97,7 @@ public class GaloisField {
    *
    * @param fieldSize           size of the field
    * @param primitivePolynomial a primitive polynomial corresponds to the size
-   * @return GaloisField
+   * @return GaloisField.
    */
   public static GaloisField getInstance(int fieldSize,
                                         int primitivePolynomial) {
@@ -116,7 +116,7 @@ public class GaloisField {
 
   /**
    * Get the object performs Galois field arithmetic with default setting.
-   * @return GaloisField
+   * @return GaloisField.
    */
   public static GaloisField getInstance() {
     return getInstance(DEFAULT_FIELD_SIZE, DEFAULT_PRIMITIVE_POLYNOMIAL);
@@ -240,11 +240,11 @@ public class GaloisField {
   /**
    * A "bulk" version to the solving of Vandermonde System.
    *
-   * @param x input x
-   * @param y input y
-   * @param outputOffsets input outputOffsets
-   * @param len input len
-   * @param dataLen input dataLen
+   * @param x input x.
+   * @param y input y.
+   * @param outputOffsets input outputOffsets.
+   * @param len input len.
+   * @param dataLen input dataLen.
    */
   public void solveVandermondeSystem(int[] x, byte[][] y, int[] outputOffsets,
                                      int len, int dataLen) {
@@ -278,9 +278,9 @@ public class GaloisField {
   /**
    * A "bulk" version of the solveVandermondeSystem, using ByteBuffer.
    *
-   * @param x input x
-   * @param y input y
-   * @param len input len
+   * @param x input x.
+   * @param y input y.
+   * @param len input len.
    */
   public void solveVandermondeSystem(int[] x, ByteBuffer[] y, int len) {
     ByteBuffer p;
@@ -425,10 +425,10 @@ public class GaloisField {
    * Tends to be 2X faster than the "int" substitute in a loop.
    *
    * @param p input polynomial
-   * @param offsets input offset
-   * @param len input len
+   * @param offsets input offset.
+   * @param len input len.
    * @param q store the return result
-   * @param offset input offset
+   * @param offset input offset.
    * @param x input field
    */
   public void substitute(byte[][] p, int[] offsets,
@@ -452,7 +452,7 @@ public class GaloisField {
    * @param p input polynomial
    * @param q store the return result
    * @param x input field
-   * @param len input len
+   * @param len input len.
    */
   public void substitute(ByteBuffer[] p, int len, ByteBuffer q, int x) {
     int y = 1, iIdx, oIdx;
@@ -473,8 +473,8 @@ public class GaloisField {
    * The "bulk" version of the remainder.
    * Warning: This function will modify the "dividend" inputs.
    *
-   * @param divisor divisor
-   * @param dividend dividend
+   * @param divisor divisor.
+   * @param dividend dividend.
    */
   public void remainder(byte[][] dividend, int[] divisor) {
     for (int i = dividend.length - divisor.length; i >= 0; i--) {
@@ -493,10 +493,10 @@ public class GaloisField {
    * The "bulk" version of the remainder.
    * Warning: This function will modify the "dividend" inputs.
    *
-   * @param dividend dividend
-   * @param offsets offsets
-   * @param len len
-   * @param divisor divisor
+   * @param dividend dividend.
+   * @param offsets offsets.
+   * @param len len.
+   * @param divisor divisor.
    */
   public void remainder(byte[][] dividend, int[] offsets,
                         int len, int[] divisor) {
@@ -519,8 +519,8 @@ public class GaloisField {
    * The "bulk" version of the remainder, using ByteBuffer.
    * Warning: This function will modify the "dividend" inputs.
    *
-   * @param dividend dividend
-   * @param divisor divisor
+   * @param dividend dividend.
+   * @param divisor divisor.
    */
   public void remainder(ByteBuffer[] dividend, int[] divisor) {
     int idx1, idx2;
@@ -544,7 +544,7 @@ public class GaloisField {
    * Perform Gaussian elimination on the given matrix. This matrix has to be a
    * fat matrix (number of rows &gt; number of columns).
    *
-   * @param matrix matrix
+   * @param matrix matrix.
    */
   public void gaussianElimination(int[][] matrix) {
     assert(matrix != null && matrix.length > 0 && matrix[0].length > 0

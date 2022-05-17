@@ -196,8 +196,8 @@ public final class GF256 {
    *
    * Ported from Intel ISA-L library.
    *
-   * @param inMatrix inMatrix
-   * @param outMatrix outMatrix
+   * @param inMatrix inMatrix.
+   * @param outMatrix outMatrix.
    * @param n n
    */
   public static void gfInvertMatrix(byte[] inMatrix, byte[] outMatrix, int n) {
@@ -268,9 +268,9 @@ public final class GF256 {
    * gftbl(A) = {A{00}, A{01}, A{02}, ... , A{0f} }, {A{00}, A{10}, A{20},
    * ... , A{f0} } -- from ISA-L implementation.
    *
-   * @param c c
-   * @param tbl tbl
-   * @param offset offset
+   * @param c c.
+   * @param tbl tbl.
+   * @param offset offset.
    */
   public static void gfVectMulInit(byte c, byte[] tbl, int offset) {
     byte c2 = (byte) ((c << 1) ^ ((c & 0x80) != 0 ? 0x1d : 0));

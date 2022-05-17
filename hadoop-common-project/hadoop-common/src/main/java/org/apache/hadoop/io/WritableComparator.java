@@ -49,8 +49,8 @@ public class WritableComparator implements RawComparator, Configurable {
   /**
    * For backwards compatibility.
    *
-   * @param c WritableComparable Type
-   * @return WritableComparator
+   * @param c WritableComparable Type.
+   * @return WritableComparator.
    */
   public static WritableComparator get(Class<? extends WritableComparable> c) {
     return get(c, null);
@@ -58,9 +58,9 @@ public class WritableComparator implements RawComparator, Configurable {
 
   /**
    * Get a comparator for a {@link WritableComparable} implementation.
-   * @param c class
-   * @param conf configuration
-   * @return WritableComparator
+   * @param c class.
+   * @param conf configuration.
+   * @return WritableComparator.
    */
   public static WritableComparator get(
       Class<? extends WritableComparable> c, Configuration conf) {
@@ -109,8 +109,8 @@ public class WritableComparator implements RawComparator, Configurable {
    * Register an optimized comparator for a {@link WritableComparable}
    * implementation. Comparators registered with this method must be
    * thread-safe.
-   * @param c class
-   * @param comparator WritableComparator
+   * @param c class.
+   * @param comparator WritableComparator.
    */
   public static void define(Class c, WritableComparator comparator) {
     comparators.put(c, comparator);
@@ -127,7 +127,7 @@ public class WritableComparator implements RawComparator, Configurable {
 
   /**
    * Construct for a {@link WritableComparable} implementation.
-   * @param keyClass WritableComparable Class
+   * @param keyClass WritableComparable Class.
    */
   protected WritableComparator(Class<? extends WritableComparable> keyClass) {
     this(keyClass, null, false);
@@ -219,13 +219,13 @@ public class WritableComparator implements RawComparator, Configurable {
 
   /**
    * Lexicographic order of binary data.
-   * @param b1 b1
-   * @param s1 s1
-   * @param l1 l1
-   * @param b2 b2
-   * @param s2 s2
-   * @param l2 l2
-   * @return compare bytes
+   * @param b1 b1.
+   * @param s1 s1.
+   * @param l1 l1.
+   * @param b2 b2.
+   * @param s2 s2.
+   * @param l2 l2.
+   * @return compare bytes.
    */
   public static int compareBytes(byte[] b1, int s1, int l1,
                                  byte[] b2, int s2, int l2) {
@@ -234,10 +234,10 @@ public class WritableComparator implements RawComparator, Configurable {
 
   /**
    * Compute hash for binary data.
-   * @param bytes bytes
-   * @param offset offset
-   * @param length length
-   * @return hash for binary data
+   * @param bytes bytes.
+   * @param offset offset.
+   * @param length length.
+   * @return hash for binary data.
    */
   public static int hashBytes(byte[] bytes, int offset, int length) {
     int hash = 1;
@@ -248,8 +248,8 @@ public class WritableComparator implements RawComparator, Configurable {
   
   /**
    * Compute hash for binary data.
-   * @param bytes bytes
-   * @param length length
+   * @param bytes bytes.
+   * @param length length.
    * @return hash for binary data.
    */
   public static int hashBytes(byte[] bytes, int length) {
@@ -258,8 +258,8 @@ public class WritableComparator implements RawComparator, Configurable {
 
   /**
    * Parse an unsigned short from a byte array.
-   * @param bytes bytes
-   * @param start start
+   * @param bytes bytes.
+   * @param start start.
    * @return unsigned short from a byte array
    */
   public static int readUnsignedShort(byte[] bytes, int start) {
@@ -269,8 +269,8 @@ public class WritableComparator implements RawComparator, Configurable {
 
   /**
    * Parse an integer from a byte array.
-   * @param bytes bytes
-   * @param start start
+   * @param bytes bytes.
+   * @param start start.
    * @return integer from a byte array
    */
   public static int readInt(byte[] bytes, int start) {
@@ -283,8 +283,8 @@ public class WritableComparator implements RawComparator, Configurable {
 
   /**
    * Parse a float from a byte array.
-   * @param bytes bytes
-   * @param start start
+   * @param bytes bytes.
+   * @param start start.
    * @return float from a byte array
    */
   public static float readFloat(byte[] bytes, int start) {
@@ -304,9 +304,9 @@ public class WritableComparator implements RawComparator, Configurable {
 
   /**
    * Parse a double from a byte array.
-   * @param bytes bytes
-   * @param start start
-   * @return double from a byte array
+   * @param bytes bytes.
+   * @param start start.
+   * @return double from a byte array.
    */
   public static double readDouble(byte[] bytes, int start) {
     return Double.longBitsToDouble(readLong(bytes, start));

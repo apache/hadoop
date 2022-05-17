@@ -249,8 +249,8 @@ public final class Utils {
   /**
    * Write a String as a VInt n, followed by n Bytes as in Text format.
    * 
-   * @param out out
-   * @param s s
+   * @param out out.
+   * @param s s.
    * @throws IOException raised on errors performing I/O.
    */
   public static void writeString(DataOutput out, String s) throws IOException {
