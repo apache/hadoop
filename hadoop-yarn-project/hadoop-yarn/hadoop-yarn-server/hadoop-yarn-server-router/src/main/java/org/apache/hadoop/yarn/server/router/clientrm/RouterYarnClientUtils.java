@@ -20,14 +20,19 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -193,5 +198,24 @@ public final class RouterYarnClientUtils {
     }
     return !(appName.startsWith(UnmanagedApplicationManager.APP_NAME) ||
         appName.startsWith(PARTIAL_REPORT));
+  }
+
+  /**
+   * Merges a list of GetClusterNodesResponse.
+   *
+   * @param responses a list of GetClusterNodesResponse to merge.
+   * @return the merged GetClusterNodesResponse.
+   */
+  public static GetClusterNodesResponse mergeClusterNodesResponse(
+      Collection<GetClusterNodesResponse> responses) {
+    GetClusterNodesResponse clusterNodesResponse = Records.newRecord(GetClusterNodesResponse.class);
+    List<NodeReport> nodeReports = new ArrayList<>();
+    for (GetClusterNodesResponse response : responses) {
+      if (response != null && response.getNodeReports() != null) {
+        nodeReports.addAll(response.getNodeReports());
+      }
+    }
+    clusterNodesResponse.setNodeReports(nodeReports);
+    return clusterNodesResponse;
   }
 }

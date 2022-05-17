@@ -1868,4 +1868,16 @@ public interface ClientProtocol {
    */
   @AtMostOnce
   void satisfyStoragePolicy(String path) throws IOException;
+
+  /**
+   * Get report on all of the slow Datanodes. Slow running datanodes are identified based on
+   * the Outlier detection algorithm, if slow peer tracking is enabled for the DFS cluster.
+   *
+   * @return Datanode report for slow running datanodes.
+   * @throws IOException If an I/O error occurs.
+   */
+  @Idempotent
+  @ReadOnly
+  DatanodeInfo[] getSlowDatanodeReport() throws IOException;
+
 }

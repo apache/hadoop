@@ -66,7 +66,7 @@
           <artifactId>jersey-core</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.sun.jersey</groupId>
+          <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
@@ -167,7 +167,7 @@
           <artifactId>jersey-core</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.sun.jersey</groupId>
+          <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
@@ -218,7 +218,7 @@
           <artifactId>jersey-server</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.sun.jersey</groupId>
+          <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
@@ -275,7 +275,7 @@
           <artifactId>guice-servlet</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.sun.jersey</groupId>
+          <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>

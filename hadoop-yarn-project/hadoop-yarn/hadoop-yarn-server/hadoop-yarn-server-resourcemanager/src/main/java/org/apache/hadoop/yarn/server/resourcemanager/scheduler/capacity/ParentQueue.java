@@ -78,6 +78,8 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
+
 @Private
 @Evolving
 public class ParentQueue extends AbstractCSQueue {
@@ -185,6 +187,16 @@ public class ParentQueue extends AbstractCSQueue {
           + ", allowZeroCapacitySum=" + allowZeroCapacitySum);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  @Override
+  protected void setDynamicQueueACLProperties() {
+    super.setDynamicQueueACLProperties();
+
+    if (parent instanceof ParentQueue) {
+      acls.putAll(getACLsForFlexibleAutoCreatedParentQueue(
+          ((ParentQueue) parent).getAutoCreatedQueueTemplate()));
     }
   }
 
@@ -465,7 +477,7 @@ public class ParentQueue extends AbstractCSQueue {
         "numChildQueue= " + childQueues.size() + ", " +
         getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
-        "usedResources=" + usageTracker.getQueueUsage().getUsed() +
+        "usedResources=" + usageTracker.getQueueUsage().getUsed() + ", " +
         "usedCapacity=" + getUsedCapacity() + ", " +
         "numApps=" + getNumApplications() + ", " +
         "numContainers=" + getNumContainers();
@@ -1148,7 +1160,7 @@ public class ParentQueue extends AbstractCSQueue {
     StringBuilder sb = new StringBuilder();
     for (CSQueue q : childQueues) {
       sb.append(q.getQueuePath() + 
-          "usedCapacity=(" + q.getUsedCapacity() + "), " + 
+          " usedCapacity=(" + q.getUsedCapacity() + "), " +
           " label=("
           + StringUtils.join(q.getAccessibleNodeLabels().iterator(), ",") 
           + ")");
@@ -1280,7 +1292,7 @@ public class ParentQueue extends AbstractCSQueue {
           labelManager.getResourceByLabel(null, clusterResource),
           RMNodeLabelsManager.NO_LABEL, this);
     } catch (IOException e) {
-      LOG.error("Fatal issue found: e", e);
+      LOG.error("Error during updating cluster resource: ", e);
       throw new YarnRuntimeException("Fatal issue during scheduling", e);
     } finally {
       writeLock.unlock();
@@ -1294,17 +1306,24 @@ public class ParentQueue extends AbstractCSQueue {
 
   private void calculateEffectiveResourcesAndCapacity(String label,
       Resource clusterResource) {
+    // Update effective resources for my self;
+    if (rootQueue) {
+      Resource resourceByLabel = labelManager.getResourceByLabel(label, clusterResource);
+      usageTracker.getQueueResourceQuotas().setEffectiveMinResource(label, resourceByLabel);
+      usageTracker.getQueueResourceQuotas().setEffectiveMaxResource(label, resourceByLabel);
+    } else {
+      super.updateEffectiveResources(clusterResource);
+    }
+
+    recalculateEffectiveMinRatio(label, clusterResource);
+  }
+
+  private void recalculateEffectiveMinRatio(String label, Resource clusterResource) {
     // For root queue, ensure that max/min resource is updated to latest
     // cluster resource.
-    Resource resourceByLabel = labelManager.getResourceByLabel(label,
-        clusterResource);
+    Resource resourceByLabel = labelManager.getResourceByLabel(label, clusterResource);
 
-    /*
-     * == Below logic are added to calculate effectiveMinRatioPerResource ==
-     */
-
-    // Total configured min resources of direct children of this given parent
-    // queue
+    // Total configured min resources of direct children of this given parent queue
     Resource configuredMinResources = Resource.newInstance(0L, 0);
     for (CSQueue childQueue : getChildQueues()) {
       Resources.addTo(configuredMinResources,
@@ -1312,8 +1331,7 @@ public class ParentQueue extends AbstractCSQueue {
     }
 
     // Factor to scale down effective resource: When cluster has sufficient
-    // resources, effective_min_resources will be same as configured
-    // min_resources.
+    // resources, effective_min_resources will be same as configured min_resources.
     Resource numeratorForMinRatio = null;
     if (getQueuePath().equals("root")) {
       if (!resourceByLabel.equals(Resources.none()) && Resources.lessThan(resourceCalculator,
@@ -1324,21 +1342,12 @@ public class ParentQueue extends AbstractCSQueue {
       if (Resources.lessThan(resourceCalculator, clusterResource,
           usageTracker.getQueueResourceQuotas().getEffectiveMinResource(label),
           configuredMinResources)) {
-        numeratorForMinRatio = usageTracker.getQueueResourceQuotas()
-            .getEffectiveMinResource(label);
+        numeratorForMinRatio = usageTracker.getQueueResourceQuotas().getEffectiveMinResource(label);
       }
     }
 
     effectiveMinResourceRatio.put(label, getEffectiveMinRatio(
         configuredMinResources, numeratorForMinRatio));
-
-    // Update effective resources for my self;
-    if (rootQueue) {
-      usageTracker.getQueueResourceQuotas().setEffectiveMinResource(label, resourceByLabel);
-      usageTracker.getQueueResourceQuotas().setEffectiveMaxResource(label, resourceByLabel);
-    } else{
-      super.updateEffectiveResources(clusterResource);
-    }
   }
 
   private Map<String, Float> getEffectiveMinRatio(

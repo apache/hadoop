@@ -33,6 +33,7 @@ import java.util.Date;
 import static org.junit.Assert.assertEquals;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -59,6 +60,8 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
     // Create mock S3ObjectInputStream and S3Object for open()
     S3ObjectInputStream objectStream = mock(S3ObjectInputStream.class);
     when(objectStream.read()).thenReturn(-1);
+    when(objectStream.read(any(byte[].class))).thenReturn(-1);
+    when(objectStream.read(any(byte[].class), anyInt(), anyInt())).thenReturn(-1);
 
     S3Object s3Object = mock(S3Object.class);
     when(s3Object.getObjectContent()).thenReturn(objectStream);
@@ -67,7 +70,7 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
 
     // Call read and then unbuffer
     FSDataInputStream stream = fs.open(path);
-    assertEquals(0, stream.read(new byte[8])); // mocks read 0 bytes
+    assertEquals(-1, stream.read(new byte[8])); // mocks read 0 bytes
     stream.unbuffer();
 
     // Verify that unbuffer closed the object stream

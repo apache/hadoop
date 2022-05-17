@@ -39,6 +39,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
@@ -107,6 +108,15 @@ public class SlowPeerTracker {
     this.maxNodesToReport = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY,
         DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT);
+  }
+
+  /**
+   * If SlowPeerTracker is enabled, return true, else returns false.
+   *
+   * @return true if slow peer tracking is enabled, else false.
+   */
+  public boolean isSlowPeerTrackerEnabled() {
+    return true;
   }
 
   /**
@@ -239,7 +249,7 @@ public class SlowPeerTracker {
    * @param numNodes
    * @return
    */
-  public ArrayList<String> getSlowNodes(int numNodes) {
+  public List<String> getSlowNodes(int numNodes) {
     Collection<ReportForJson> jsonReports = getJsonReports(numNodes);
     ArrayList<String> slowNodes = new ArrayList<>();
     for (ReportForJson jsonReport : jsonReports) {

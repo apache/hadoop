@@ -43,10 +43,10 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.server.datanode.FSCachingGetSpaceUsed;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -78,6 +78,10 @@ import org.apache.hadoop.util.Timer;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_JITTER_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
+
 /**
  * A block pool slice represents a portion of a block pool stored on a volume.
  * Taken together, all BlockPoolSlices sharing a block pool ID across a
@@ -85,7 +89,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
  *
  * This class is synchronized by {@link FsVolumeImpl}.
  */
-class BlockPoolSlice {
+public class BlockPoolSlice {
   static final Logger LOG = LoggerFactory.getLogger(BlockPoolSlice.class);
 
   private final String bpid;
@@ -116,6 +120,8 @@ class BlockPoolSlice {
   private final Timer timer;
   private final int maxDataLength;
   private final FileIoProvider fileIoProvider;
+  private final Configuration config;
+  private final File bpDir;
 
   private static ForkJoinPool addReplicaThreadPool = null;
   private static final int VOLUMES_REPLICA_ADD_THREADPOOL_SIZE = Runtime
@@ -129,7 +135,7 @@ class BlockPoolSlice {
   };
 
   // TODO:FEDERATION scalability issue - a thread per DU is needed
-  private final GetSpaceUsed dfsUsage;
+  private volatile GetSpaceUsed dfsUsage;
 
   /**
    * Create a blook pool slice
@@ -142,6 +148,8 @@ class BlockPoolSlice {
    */
   BlockPoolSlice(String bpid, FsVolumeImpl volume, File bpDir,
       Configuration conf, Timer timer) throws IOException {
+    this.config = conf;
+    this.bpDir = bpDir;
     this.bpid = bpid;
     this.volume = volume;
     this.fileIoProvider = volume.getFileIoProvider();
@@ -231,6 +239,40 @@ class BlockPoolSlice {
     };
     ShutdownHookManager.get().addShutdownHook(shutdownHook,
         SHUTDOWN_HOOK_PRIORITY);
+  }
+
+  public void updateDfsUsageConfig(Long interval, Long jitter, Class<? extends GetSpaceUsed> klass)
+          throws IOException {
+    // Close the old dfsUsage if it is CachingGetSpaceUsed.
+    if (dfsUsage instanceof CachingGetSpaceUsed) {
+      ((CachingGetSpaceUsed) dfsUsage).close();
+    }
+    if (interval != null) {
+      Preconditions.checkArgument(interval > 0,
+          FS_DU_INTERVAL_KEY + " should be larger than 0");
+      config.setLong(FS_DU_INTERVAL_KEY, interval);
+    }
+    if (jitter != null) {
+      Preconditions.checkArgument(jitter >= 0,
+          FS_GETSPACEUSED_JITTER_KEY + " should be larger than or equal to 0");
+      config.setLong(FS_GETSPACEUSED_JITTER_KEY, jitter);
+    }
+
+    if (klass != null) {
+      config.setClass(FS_GETSPACEUSED_CLASSNAME, klass, CachingGetSpaceUsed.class);
+    }
+    // Start new dfsUsage.
+    this.dfsUsage = new FSCachingGetSpaceUsed.Builder().setBpid(bpid)
+        .setVolume(volume)
+        .setPath(bpDir)
+        .setConf(config)
+        .setInitialUsed(loadDfsUsed())
+        .build();
+  }
+
+  @VisibleForTesting
+  public GetSpaceUsed getDfsUsage() {
+    return dfsUsage;
   }
 
   private synchronized static void initializeAddReplicaPool(Configuration conf,
@@ -914,7 +956,7 @@ class BlockPoolSlice {
 
   private boolean readReplicasFromCache(ReplicaMap volumeMap,
       final RamDiskReplicaTracker lazyWriteReplicaMap) {
-    ReplicaMap tmpReplicaMap = new ReplicaMap(new ReentrantReadWriteLock());
+    ReplicaMap tmpReplicaMap = new ReplicaMap();
     File replicaFile = new File(replicaCacheDir, REPLICA_CACHE_FILE);
     // Check whether the file exists or not.
     if (!replicaFile.exists()) {

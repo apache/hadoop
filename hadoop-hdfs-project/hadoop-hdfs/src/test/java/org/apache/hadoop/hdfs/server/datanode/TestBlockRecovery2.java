@@ -46,7 +46,6 @@ import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -252,10 +251,8 @@ public class TestBlockRecovery2 {
           final BlockRecoveryCommand.RecoveringBlock recoveringBlock =
               new BlockRecoveryCommand.RecoveringBlock(block.getBlock(),
                   locations, block.getBlock().getGenerationStamp() + 1);
-          try(AutoCloseableLock lock = dataNode.data.acquireDatasetLock()) {
-            Thread.sleep(2000);
-            dataNode.initReplicaRecovery(recoveringBlock);
-          }
+          Thread.sleep(2000);
+          dataNode.initReplicaRecovery(recoveringBlock);
         } catch (Exception e) {
           LOG.error("Something went wrong.", e);
           recoveryInitResult.set(false);

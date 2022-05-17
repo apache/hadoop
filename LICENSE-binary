@@ -218,12 +218,12 @@ com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.amazonaws:aws-java-sdk-bundle:1.11.901
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
-com.fasterxml.jackson.core:jackson-annotations:2.13.0
-com.fasterxml.jackson.core:jackson-core:2.13.0
-com.fasterxml.jackson.core:jackson-databind:2.13.0
-com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.13.0
-com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.13.0
-com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.13.0
+com.fasterxml.jackson.core:jackson-annotations:2.13.2
+com.fasterxml.jackson.core:jackson-core:2.13.2
+com.fasterxml.jackson.core:jackson-databind:2.13.2.2
+com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.13.2
+com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.13.2
+com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.13.2
 com.fasterxml.uuid:java-uuid-generator:3.1.4
 com.fasterxml.woodstox:woodstox-core:5.3.0
 com.github.davidmoten:rxjava-extras:0.8.0.17
@@ -283,7 +283,7 @@ log4j:log4j:1.2.17
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.2
 net.minidev:json-smart:2.4.7
-org.apache.avro:avro:1.7.7
+org.apache.avro:avro:1.9.2
 org.apache.commons:commons-collections4:4.2
 org.apache.commons:commons-compress:1.21
 org.apache.commons:commons-configuration2:2.1.1
@@ -324,10 +324,6 @@ org.apache.kerby:token-provider:1.0.1
 org.apache.solr:solr-solrj:8.8.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.6.3
-org.codehaus.jackson:jackson-core-asl:1.9.13
-org.codehaus.jackson:jackson-jaxrs:1.9.13
-org.codehaus.jackson:jackson-mapper-asl:1.9.13
-org.codehaus.jackson:jackson-xc:1.9.13
 org.codehaus.jettison:jettison:1.1
 org.eclipse.jetty:jetty-annotations:9.4.44.v20210927
 org.eclipse.jetty:jetty-http:9.4.44.v20210927
@@ -468,8 +464,8 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk15on:1.60
-org.bouncycastle:bcprov-jdk15on:1.60
+org.bouncycastle:bcpkix-jdk15on:1.68
+org.bouncycastle:bcprov-jdk15on:1.68
 org.checkerframework:checker-qual:2.5.2
 org.codehaus.mojo:animal-sniffer-annotations:1.17
 org.jruby.jcodings:jcodings:1.0.13
@@ -484,12 +480,12 @@ org.slf4j:slf4j-log4j12:1.7.25
 CDDL 1.1 + GPLv2 with classpath exception
 -----------------------------------------
 
-com.sun.jersey:jersey-client:1.19
-com.sun.jersey:jersey-core:1.19
-com.sun.jersey:jersey-guice:1.19
-com.sun.jersey:jersey-json:1.19
-com.sun.jersey:jersey-server:1.19
-com.sun.jersey:jersey-servlet:1.19
+com.github.pjfanning:jersey-json:1.20
+com.sun.jersey:jersey-client:1.19.4
+com.sun.jersey:jersey-core:1.19.4
+com.sun.jersey:jersey-guice:1.19.4
+com.sun.jersey:jersey-server:1.19.4
+com.sun.jersey:jersey-servlet:1.19.4
 com.sun.xml.bind:jaxb-impl:2.2.3-1
 javax.annotation:javax.annotation-api:1.3.2
 javax.servlet:javax.servlet-api:3.1.0

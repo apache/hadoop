@@ -62,6 +62,12 @@ public final class OperationCost {
   public static final OperationCost NO_IO =
       new OperationCost(0, 0);
 
+  /**
+   * More detailed description of the NO_IO cost.
+   */
+  public static final OperationCost NO_HEAD_OR_LIST =
+      NO_IO;
+
   /** A HEAD operation. */
   public static final OperationCost HEAD_OPERATION = new OperationCost(1, 0);
 

@@ -3491,4 +3491,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private boolean isLocatedBlocksRefresherEnabled() {
     return clientContext.isLocatedBlocksRefresherEnabled();
   }
+
+  public DatanodeInfo[] slowDatanodeReport() throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("slowDatanodeReport")) {
+      return namenode.getSlowDatanodeReport();
+    }
+  }
+
 }

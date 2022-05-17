@@ -64,7 +64,8 @@ bool CopyToLocal::ValidateConstraints() const {
 
 std::string CopyToLocal::GetDescription() const {
   std::stringstream desc;
-  desc << "Usage: hdfs_copyToLocal [OPTION] SRC_FILE DST_FILE" << std::endl
+  desc << "Usage: hdfs_" << GetToolName() << " [OPTION] SRC_FILE DST_FILE"
+       << std::endl
        << std::endl
        << "Copy SRC_FILE from hdfs to DST_FILE on the local file system."
        << std::endl
@@ -72,16 +73,19 @@ std::string CopyToLocal::GetDescription() const {
        << "  -h  display this help and exit" << std::endl
        << std::endl
        << "Examples:" << std::endl
-       << "hdfs_copyToLocal hdfs://localhost.localdomain:8020/dir/file "
+       << "hdfs_" << GetToolName()
+       << " hdfs://localhost.localdomain:8020/dir/file "
           "/home/usr/myfile"
        << std::endl
-       << "hdfs_copyToLocal /dir/file /home/usr/dir/file" << std::endl;
+       << "hdfs_" << GetToolName() << " /dir/file /home/usr/dir/file"
+       << std::endl;
   return desc.str();
 }
 
 bool CopyToLocal::Do() {
   if (!Initialize()) {
-    std::cerr << "Unable to initialize HDFS copyToLocal tool" << std::endl;
+    std::cerr << "Unable to initialize HDFS " << GetToolName() << " tool"
+              << std::endl;
     return false;
   }
 
@@ -129,4 +133,6 @@ bool CopyToLocal::HandlePath(const std::string &source,
   std::fclose(dst_file);
   return true;
 }
+
+std::string CopyToLocal::GetToolName() const { return "copyToLocal"; }
 } // namespace hdfs::tools
