@@ -38,6 +38,10 @@ import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 
+/**
+ * Test the prefetching input stream, validates that the underlying S3CachingInputStream and
+ * S3InMemoryInputStream are working as expected.
+ */
 public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
   public ITestS3PrefetchingInputStream() {
@@ -77,7 +81,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
   @Test
   public void testReadLargeFileFully() throws Throwable {
-    describe("read a large file fully");
+    describe("read a large file fully, uses S3CachingInputStream");
     openFS();
 
     try (FSDataInputStream in = fs.open(largeFile)) {
@@ -94,7 +98,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
   @Test
   public void testRandomReadLargeFile() throws Throwable {
-    describe("read a large file fully");
+    describe("random read on a large file, uses S3CachingInputStream");
     openFS();
 
     try (FSDataInputStream in = fs.open(largeFile)) {
@@ -116,7 +120,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
   @Test
   public void testRandomReadSmallFile() throws Throwable {
-    describe("random read on a small file");
+    describe("random read on a small file, uses S3InMemoryInputStream");
 
     byte[] data = ContractTestUtils.dataset(smallFileSize, 'a', 26);
     Path smallFile = path("randomReadSmallFile");
