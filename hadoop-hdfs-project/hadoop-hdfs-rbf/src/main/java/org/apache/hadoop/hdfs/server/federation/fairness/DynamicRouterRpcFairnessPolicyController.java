@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -64,8 +65,8 @@ public class DynamicRouterRpcFairnessPolicyController
   private ScheduledFuture<?> refreshTask;
   private int handlerCount;
   private int minimumHandlerPerNs;
-  private Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
-  private Map<String, LongAdder> acceptedPermitsPerNs = new ConcurrentHashMap<>();
+  private final Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
+  private final Map<String, LongAdder> acceptedPermitsPerNs = new ConcurrentHashMap<>();
 
   /**
    * Initializes using the same logic as {@link StaticRouterRpcFairnessPolicyController}
@@ -131,12 +132,36 @@ public class DynamicRouterRpcFairnessPolicyController
 
   @VisibleForTesting
   public void setAcceptedPermitsPerNs(Map<String, LongAdder> metrics) {
-    acceptedPermitsPerNs = metrics;
+    for (Map.Entry<String, LongAdder> entry: metrics.entrySet()) {
+      acceptedPermitsPerNs.put(entry.getKey(), new LongAdder());
+      acceptedPermitsPerNs.get(entry.getKey()).add(entry.getValue().longValue());
+    }
+    List<String> toRemove = new ArrayList<>();
+    for (String key: acceptedPermitsPerNs.keySet()) {
+      if (!metrics.containsKey(key)) {
+        toRemove.add(key);
+      }
+    }
+    for (String key: toRemove) {
+      acceptedPermitsPerNs.remove(key);
+    }
   }
 
   @VisibleForTesting
   public void setRejectedPermitsPerNs(Map<String, LongAdder> metrics) {
-    rejectedPermitsPerNs = metrics;
+    for (Map.Entry<String, LongAdder> entry: metrics.entrySet()) {
+      rejectedPermitsPerNs.put(entry.getKey(), new LongAdder());
+      rejectedPermitsPerNs.get(entry.getKey()).add(entry.getValue().longValue());
+    }
+    List<String> toRemove = new ArrayList<>();
+    for (String key: rejectedPermitsPerNs.keySet()) {
+      if (!metrics.containsKey(key)) {
+        toRemove.add(key);
+      }
+    }
+    for (String key: toRemove) {
+      rejectedPermitsPerNs.remove(key);
+    }
   }
 
   class PermitsResizerService implements Runnable {
@@ -188,8 +213,8 @@ public class DynamicRouterRpcFairnessPolicyController
       }
 
       // Reset the metrics
-      rejectedPermitsPerNs = new ConcurrentHashMap<>();
-      acceptedPermitsPerNs = new ConcurrentHashMap<>();
+      rejectedPermitsPerNs.replaceAll((k, v) -> new LongAdder());
+      acceptedPermitsPerNs.replaceAll((k, v) -> new LongAdder());
     }
 
     private void resizeNsHandlerCapacity(String ns, int newPermitCap) {
