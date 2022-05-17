@@ -44,7 +44,7 @@ public final class ViewFileSystemUtil {
   /**
    * Check if the FileSystem is a ViewFileSystem.
    *
-   * @param fileSystem file system
+   * @param fileSystem file system.
    * @return true if the fileSystem is ViewFileSystem
    */
   public static boolean isViewFileSystem(final FileSystem fileSystem) {
@@ -54,7 +54,7 @@ public final class ViewFileSystemUtil {
   /**
    * Check if the FileSystem is a ViewFileSystemOverloadScheme.
    *
-   * @param fileSystem file system
+   * @param fileSystem file system.
    * @return true if the fileSystem is ViewFileSystemOverloadScheme
    */
   public static boolean isViewFileSystemOverloadScheme(

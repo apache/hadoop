@@ -140,7 +140,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * Sets whether to add fallback automatically when no mount points found.
    *
-   * @param addAutoFallbackOnNoMounts addAutoFallbackOnNoMounts
+   * @param addAutoFallbackOnNoMounts addAutoFallbackOnNoMounts.
    */
   public void setSupportAutoAddingFallbackOnNoMounts(
       boolean addAutoFallbackOnNoMounts) {
@@ -323,7 +323,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
    * @param path - fs uri path
    * @param conf - configuration
    * @throws IOException raised on errors performing I/O.
-   * @return file system
+   * @return file system.
    */
   public FileSystem getRawFileSystem(Path path, Configuration conf)
       throws IOException {
@@ -343,9 +343,9 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
    * Gets the mount path info, which contains the target file system and
    * remaining path to pass to the target file system.
    *
-   * @param path the path
-   * @param conf configuration
-   * @return mount path info
+   * @param path the path.
+   * @param conf configuration.
+   * @return mount path info.
    * @throws IOException raised on errors performing I/O.
    */
   public MountPathInfo<FileSystem> getMountPathInfo(Path path,

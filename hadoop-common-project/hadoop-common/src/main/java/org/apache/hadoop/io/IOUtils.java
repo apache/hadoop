@@ -86,7 +86,7 @@ public class IOUtils {
    * 
    * @param in InputStrem to read from
    * @param out OutputStream to write to
-   * @param buffSize the size of the buffer
+   * @param buffSize the size of the buffer.
    * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out, int buffSize) 
@@ -109,7 +109,7 @@ public class IOUtils {
    *
    * @param in InputStrem to read from
    * @param out OutputStream to write to
-   * @param conf the Configuration object
+   * @param conf the Configuration object.
    * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out, Configuration conf)

@@ -34,10 +34,10 @@ public class FsGetter {
 
   /**
    * Gets new file system instance of given uri.
-   * @param uri uri
-   * @param conf configuration
+   * @param uri uri.
+   * @param conf configuration.
    * @throws IOException raised on errors performing I/O.
-   * @return file system
+   * @return file system.
    */
   public FileSystem getNewInstance(URI uri, Configuration conf)
       throws IOException {
@@ -47,10 +47,10 @@ public class FsGetter {
   /**
    * Gets file system instance of given uri.
    *
-   * @param uri uri
-   * @param conf configuration
+   * @param uri uri.
+   * @param conf configuration.
    * @throws IOException raised on errors performing I/O.
-   * @return FileSystem
+   * @return FileSystem.
    */
   public FileSystem get(URI uri, Configuration conf) throws IOException {
     return FileSystem.get(uri, conf);

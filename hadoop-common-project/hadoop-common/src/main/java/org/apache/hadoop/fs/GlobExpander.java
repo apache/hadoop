@@ -56,7 +56,7 @@ public class GlobExpander {
    * {a,b}/{c/\d}        - {a,b}/c/d
    * </pre>
    * 
-   * @param filePattern file pattern
+   * @param filePattern file pattern.
    * @return expanded file patterns
    * @throws IOException raised on errors performing I/O.
    */

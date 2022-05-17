@@ -33,7 +33,7 @@ public interface Seekable {
    * The next read() will be from that location.  Can't
    * seek past the end of the file.
    *
-   * @param pos offset from the start of the file
+   * @param pos offset from the start of the file.
    * @throws IOException raised on errors performing I/O.
    */
   void seek(long pos) throws IOException;
@@ -41,7 +41,7 @@ public interface Seekable {
   /**
    * Return the current offset from the start of the file
    *
-   * @return offset from the start of the file
+   * @return offset from the start of the file.
    * @throws IOException raised on errors performing I/O.
    */
   long getPos() throws IOException;
@@ -50,7 +50,7 @@ public interface Seekable {
    * Seeks a different copy of the data.  Returns true if
    * found a new source, false otherwise.
    *
-   * @param targetPos target position
+   * @param targetPos target position.
    * @return true if found a new source, false otherwise.
    * @throws IOException raised on errors performing I/O.
    */

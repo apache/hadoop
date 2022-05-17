@@ -73,8 +73,8 @@ public class LocalFileSystem extends ChecksumFileSystem {
     
   /**
    * Convert a path to a File.
-   * @param path the path
-   * @return file
+   * @param path the path.
+   * @return file.
    */
   public File pathToFile(Path path) {
     return ((RawLocalFileSystem)fs).pathToFile(path);

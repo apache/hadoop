@@ -38,14 +38,14 @@ public final class Result {
   /**
    * Should further directories be descended.
    * @return if is pass true,not false.
-   * */
+   */
   public boolean isDescend() {
     return this.descend;
   }
 
   /**
    * Should processing continue.
-   * @return if is pass true,not false
+   * @return if is pass true,not false.
    */
   public boolean isPass() {
     return this.success;
@@ -53,8 +53,8 @@ public final class Result {
 
   /**
    * Returns the combination of this and another result.
-   * @param other other
-   * @return result
+   * @param other other.
+   * @return result.
    */
   public Result combine(Result other) {
     return new Result(this.isPass() && other.isPass(), this.isDescend()
@@ -63,7 +63,7 @@ public final class Result {
 
   /**
    * Negate this result.
-   * @return Result
+   * @return Result.
    */
   public Result negate() {
     return new Result(!this.isPass(), this.isDescend());

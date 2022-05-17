@@ -40,7 +40,7 @@ public abstract class BaseExpression implements Expression, Configurable {
 
   /**
    * Sets the usage text for this {@link Expression} .
-   * @param usage usage array
+   * @param usage usage array.
    */
   protected void setUsage(String[] usage) {
     this.usage = usage;
@@ -48,7 +48,7 @@ public abstract class BaseExpression implements Expression, Configurable {
 
   /**
    * Sets the help text for this {@link Expression} .
-   * @param help help
+   * @param help help.
    */
   protected void setHelp(String[] help) {
     this.help = help;
@@ -100,7 +100,7 @@ public abstract class BaseExpression implements Expression, Configurable {
 
   /**
    * Return the options to be used by this expression.
-   * @return options
+   * @return options.
    */
   protected FindOptions getOptions() {
     return (this.options == null) ? new FindOptions() : this.options;

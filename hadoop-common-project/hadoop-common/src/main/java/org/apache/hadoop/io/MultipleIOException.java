@@ -44,8 +44,8 @@ public class MultipleIOException extends IOException {
 
   /**
    * A convenient method to create an {@link IOException}.
-   * @param exceptions IOException List
-   * @return IOException
+   * @param exceptions IOException List.
+   * @return IOException.
    */
   public static IOException createIOException(List<IOException> exceptions) {
     if (exceptions == null || exceptions.isEmpty()) {
@@ -66,7 +66,7 @@ public class MultipleIOException extends IOException {
     
     /**
      * Add the given {@link Throwable} to the exception list.
-     * @param t Throwable
+     * @param t Throwable.
      */
     public void add(Throwable t) {
       if (exceptions == null) {

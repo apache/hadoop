@@ -41,10 +41,10 @@ public class PermissionStatus implements Writable {
 
   /**
    * Create an immutable {@link PermissionStatus} object.
-   * @param user user
-   * @param group group
-   * @param permission permission
-   * @return PermissionStatus
+   * @param user user.
+   * @param group group.
+   * @param permission permission.
+   * @return PermissionStatus.
    */
   public static PermissionStatus createImmutable(
       String user, String group, FsPermission permission) {
@@ -65,9 +65,9 @@ public class PermissionStatus implements Writable {
   /**
    * Constructor.
    *
-   * @param user user
-   * @param group group
-   * @param permission permission
+   * @param user user.
+   * @param group group.
+   * @param permission permission.
    */
   public PermissionStatus(String user, String group, FsPermission permission) {
     username = user;
@@ -77,20 +77,19 @@ public class PermissionStatus implements Writable {
 
   /**
    * Return user name.
-   * @return user name
+   * @return user name.
    */
   public String getUserName() {return username;}
 
   /**
    * Return group name.
-   * @return group name
+   * @return group name.
    */
   public String getGroupName() {return groupname;}
 
   /**
    * Return permission.
-   *
-   * @return FsPermission
+   * @return FsPermission.
    */
   public FsPermission getPermission() {return permission;}
 
@@ -108,9 +107,9 @@ public class PermissionStatus implements Writable {
 
   /**
    * Create and initialize a {@link PermissionStatus} from {@link DataInput}.
-   * @param in data input
+   * @param in data input.
    * @throws IOException raised on errors performing I/O.
-   * @return PermissionStatus
+   * @return PermissionStatus.
    */
   public static PermissionStatus read(DataInput in) throws IOException {
     PermissionStatus p = new PermissionStatus();
@@ -120,10 +119,10 @@ public class PermissionStatus implements Writable {
 
   /**
    * Serialize a {@link PermissionStatus} from its base components.
-   * @param out out
-   * @param username username
-   * @param groupname groupname
-   * @param permission FsPermission
+   * @param out out.
+   * @param username username.
+   * @param groupname groupname.
+   * @param permission FsPermission.
    * @throws IOException raised on errors performing I/O.
    */
   public static void write(DataOutput out,

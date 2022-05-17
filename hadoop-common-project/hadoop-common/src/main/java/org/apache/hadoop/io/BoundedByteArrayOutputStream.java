@@ -116,7 +116,7 @@ public class BoundedByteArrayOutputStream extends OutputStream {
 
   /**
    * Return the current limit.
-   * @return limit
+   * @return limit.
    */
   public int getLimit() {
     return limit;
@@ -125,7 +125,7 @@ public class BoundedByteArrayOutputStream extends OutputStream {
   /**
    * Returns the underlying buffer.
    *  Data is only valid to {@link #size()}.
-   * @return the underlying buffer
+   * @return the underlying buffer.
    */
   public byte[] getBuffer() {
     return buffer;
@@ -135,7 +135,7 @@ public class BoundedByteArrayOutputStream extends OutputStream {
    * Returns the length of the valid data
    * currently in the buffer.
    *
-   * @return the length of the valid data
+   * @return the length of the valid data.
    */
   public int size() {
     return currentPointer - startOffset;

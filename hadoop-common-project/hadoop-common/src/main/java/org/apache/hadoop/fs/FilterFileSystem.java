@@ -304,7 +304,7 @@ public class FilterFileSystem extends FileSystem {
    * Set the current working directory for the given file system. All relative
    * paths will be resolved relative to it.
    * 
-   * @param newDir new dir
+   * @param newDir new dir.
    */
   @Override
   public void setWorkingDirectory(Path newDir) {

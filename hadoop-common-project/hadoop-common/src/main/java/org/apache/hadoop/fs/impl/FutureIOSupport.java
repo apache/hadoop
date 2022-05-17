@@ -75,8 +75,8 @@ public final class FutureIOSupport {
    * See {@link FutureIO#awaitFuture(Future, long, TimeUnit)}.
    * @param future future to evaluate
    * @param <T> type of the result.
-   * @param timeout timeout
-   * @param unit unit
+   * @param timeout timeout.
+   * @param unit unit.
    * @return the result, if all went well.
    * @throws InterruptedIOException future was interrupted
    * @throws IOException if something went wrong

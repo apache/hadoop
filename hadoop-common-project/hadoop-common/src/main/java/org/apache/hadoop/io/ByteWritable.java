@@ -41,7 +41,7 @@ public class ByteWritable implements WritableComparable<ByteWritable> {
 
   /**
    * Return the value of this ByteWritable.
-   * @return value bytes
+   * @return value bytes.
    */
   public byte get() { return value; }
 

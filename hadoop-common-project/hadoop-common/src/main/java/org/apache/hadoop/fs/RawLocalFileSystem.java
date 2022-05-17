@@ -103,8 +103,8 @@ public class RawLocalFileSystem extends FileSystem {
   /**
    * Convert a path to a File.
    *
-   * @param path the path
-   * @return file
+   * @param path the path.
+   * @return file.
    */
   public File pathToFile(Path path) {
     checkPath(path);

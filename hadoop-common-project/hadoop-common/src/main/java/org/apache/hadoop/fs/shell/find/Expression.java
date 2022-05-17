@@ -30,7 +30,7 @@ public interface Expression {
   /**
    * Set the options for this expression, called once before processing any
    * items.
-   * @param options options
+   * @param options options.
    * @throws IOException raised on errors performing I/O.
    */
   public void setOptions(FindOptions options) throws IOException;
@@ -79,13 +79,13 @@ public interface Expression {
   /**
    * Indicates whether this expression performs an action, i.e. provides output
    * back to the user.
-   * @return if is action true, not false
+   * @return if is action true, not false.
    */
   public boolean isAction();
 
   /**
    * Identifies the expression as an operator rather than a primary.
-   * @return if is operator true, not false
+   * @return if is operator true, not false.
    */
   public boolean isOperator();
 
@@ -93,7 +93,7 @@ public interface Expression {
    * Returns the precedence of this expression
    * (only applicable to operators).
    *
-   * @return precedence
+   * @return precedence.
    */
   public int getPrecedence();
 

@@ -38,7 +38,7 @@ public class LongWritable implements WritableComparable<LongWritable> {
 
   /**
    * Set the value of this LongWritable.
-   * @param value value
+   * @param value value.
    */
   public void set(long value) { this.value = value; }
 

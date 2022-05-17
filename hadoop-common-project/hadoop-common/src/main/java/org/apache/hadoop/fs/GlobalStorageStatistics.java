@@ -105,7 +105,7 @@ public enum GlobalStorageStatistics {
    * Get an iterator that we can use to iterate throw all the global storage
    * statistics objects.
    *
-   * @return StorageStatistics Iterator
+   * @return StorageStatistics Iterator.
    */
   synchronized public Iterator<StorageStatistics> iterator() {
     Entry<String, StorageStatistics> first = map.firstEntry();

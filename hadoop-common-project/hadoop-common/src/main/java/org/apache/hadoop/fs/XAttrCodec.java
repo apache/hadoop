@@ -102,7 +102,7 @@ public enum XAttrCodec {
    * while strings encoded as hexadecimal and base64 are prefixed with 
    * 0x and 0s, respectively.
    * @param value byte[] value
-   * @param encoding encoding
+   * @param encoding encoding.
    * @return String string representation of value
    * @throws IOException raised on errors performing I/O.
    */

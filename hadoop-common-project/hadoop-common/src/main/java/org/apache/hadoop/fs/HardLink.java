@@ -207,9 +207,9 @@ public class HardLink {
    /**
    * Retrieves the number of links to the specified file.
     *
-    * @param fileName file name
+    * @param fileName file name.
     * @throws IOException raised on errors performing I/O.
-    * @return link count
+    * @return link count.
    */
   public static int getLinkCount(File fileName) throws IOException {
     if (fileName == null) {

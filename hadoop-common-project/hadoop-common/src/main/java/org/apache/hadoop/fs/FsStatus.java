@@ -38,9 +38,9 @@ public class FsStatus implements Writable {
   /**
    * Construct a FsStatus object, using the specified statistics.
    *
-   * @param capacity capacity
-   * @param used used
-   * @param remaining remaining
+   * @param capacity capacity.
+   * @param used used.
+   * @param remaining remaining.
    */
   public FsStatus(long capacity, long used, long remaining) {
     this.capacity = capacity;
@@ -50,7 +50,7 @@ public class FsStatus implements Writable {
 
   /**
    * Return the capacity in bytes of the file system.
-   * @return capacity
+   * @return capacity.
    */
   public long getCapacity() {
     return capacity;
@@ -58,7 +58,7 @@ public class FsStatus implements Writable {
 
   /**
    * Return the number of bytes used on the file system.
-   * @return used
+   * @return used.
    */
   public long getUsed() {
     return used;
@@ -66,7 +66,7 @@ public class FsStatus implements Writable {
 
   /**
    * Return the number of remaining bytes on the file system.
-   * @return remaining
+   * @return remaining.
    */
   public long getRemaining() {
     return remaining;

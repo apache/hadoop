@@ -108,7 +108,7 @@ public class ViewFileSystem extends FileSystem {
   /**
    * Gets file system creator instance.
    *
-   * @return fs getter
+   * @return fs getter.
    */
   protected FsGetter fsGetter() {
     return new FsGetter();
@@ -384,10 +384,10 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Convenience Constructor for apps to call directly
+   * Convenience Constructor for apps to call directly.
    * @param theUri which must be that of ViewFileSystem
-   * @param conf
-   * @throws IOException
+   * @param conf conf configuration.
+   * @throws IOException raised on errors performing I/O.
    */
   ViewFileSystem(final URI theUri, final Configuration conf)
       throws IOException {
@@ -397,7 +397,7 @@ public class ViewFileSystem extends FileSystem {
 
   /**
    * Convenience Constructor for apps to call directly.
-   * @param conf configuration
+   * @param conf configuration.
    * @throws IOException raised on errors performing I/O.
    */
   public ViewFileSystem(final Configuration conf) throws IOException {

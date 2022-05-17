@@ -238,7 +238,7 @@ public final class IOStatisticsSnapshot
   /**
    * Serialize by converting each map to a TreeMap, and saving that
    * to the stream.
-   * @param s ObjectOutputStream
+   * @param s ObjectOutputStream.
    * @throws IOException raised on errors performing I/O.
    */
   private synchronized void writeObject(ObjectOutputStream s)
@@ -256,7 +256,7 @@ public final class IOStatisticsSnapshot
    * Deserialize by loading each TreeMap, and building concurrent
    * hash maps from them.
    *
-   * @param s ObjectInputStream
+   * @param s ObjectInputStream.
    * @throws IOException raised on errors performing I/O.
    * @throws ClassNotFoundException class not found exception
    */

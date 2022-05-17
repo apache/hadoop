@@ -120,7 +120,7 @@ abstract class CommandWithDestination extends FsCommand {
    * file will be preserved as far as target {@link FileSystem}
    * implementation allows.
    *
-   * @param preserve preserve
+   * @param preserve preserve.
    */
   protected void setPreserve(boolean preserve) {
     if (preserve) {

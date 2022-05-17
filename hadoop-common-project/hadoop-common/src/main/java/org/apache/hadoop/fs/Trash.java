@@ -101,7 +101,7 @@ public class Trash extends Configured {
   /**
    * Returns whether the trash is enabled for this filesystem.
    *
-   * @return return if isEnabled true,not false
+   * @return return if isEnabled true,not false.
    */
   public boolean isEnabled() {
     return trashPolicy.isEnabled();
@@ -109,7 +109,7 @@ public class Trash extends Configured {
 
   /** Move a file or directory to the current trash directory.
    *
-   * @param path the path
+   * @param path the path.
    * @return false if the item is already in the trash or trash is disabled
    * @throws IOException raised on errors performing I/O.
    */ 
@@ -146,7 +146,7 @@ public class Trash extends Configured {
    * get the current working directory.
    *
    * @throws IOException on raised on errors performing I/O.
-   * @return Trash Dir
+   * @return Trash Dir.
    */
   Path getCurrentTrashDir() throws IOException {
     return trashPolicy.getCurrentTrashDir();
@@ -155,7 +155,7 @@ public class Trash extends Configured {
   /**
    * get the configured trash policy.
    *
-   * @return TrashPolicy
+   * @return TrashPolicy.
    */
   TrashPolicy getTrashPolicy() {
     return trashPolicy;
@@ -166,7 +166,7 @@ public class Trash extends Configured {
    * users, intended to be run by the superuser.
    *
    * @throws IOException on raised on errors performing I/O.
-   * @return Runnable
+   * @return Runnable.
    */
   public Runnable getEmptier() throws IOException {
     return trashPolicy.getEmptier();

@@ -147,14 +147,14 @@ public abstract class StorageStatistics {
    * The values returned will depend on the type of FileSystem or FileContext
    * object.  The values do not necessarily reflect a snapshot in time.
    *
-   * @return LongStatistic Iterator
+   * @return LongStatistic Iterator.
    */
   public abstract Iterator<LongStatistic> getLongStatistics();
 
   /**
    * Get the value of a statistic.
    *
-   * @param key key
+   * @param key key.
    * @return         null if the statistic is not being tracked or is not a
    *                 long statistic. The value of the statistic, otherwise.
    */
@@ -163,7 +163,7 @@ public abstract class StorageStatistics {
   /**
    * Return true if a statistic is being tracked.
    *
-   * @param key key
+   * @param key key.
    * @return         True only if the statistic is being tracked.
    */
   public abstract boolean isTracked(String key);

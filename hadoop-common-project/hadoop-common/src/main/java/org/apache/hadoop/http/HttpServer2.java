@@ -270,7 +270,7 @@ public final class HttpServer2 implements FilterContainer {
      *          specifies the binding address, and the port specifies the
      *          listening port. Unspecified or zero port means that the server
      *          can listen to any port.
-     * @return Builder
+     * @return Builder.
      */
     public Builder addEndpoint(URI endpoint) {
       endpoints.add(endpoint);
@@ -282,8 +282,8 @@ public final class HttpServer2 implements FilterContainer {
      * _HOST field in Kerberos principals. The hostname of the first listener
      * will be used if the name is unspecified.
      *
-     * @param hostName hostName
-     * @return Builder
+     * @param hostName hostName.
+     * @return Builder.
      */
     public Builder hostName(String hostName) {
       this.hostName = hostName;
@@ -313,8 +313,8 @@ public final class HttpServer2 implements FilterContainer {
      * Specify whether the server should authorize the client in SSL
      * connections.
      *
-     * @param value value
-     * @return Builder
+     * @param value value.
+     * @return Builder.
      */
     public Builder needsClientAuth(boolean value) {
       this.needsClientAuth = value;
@@ -340,8 +340,8 @@ public final class HttpServer2 implements FilterContainer {
      * Specify the SSL configuration to load. This API provides an alternative
      * to keyStore/keyPassword/trustStore.
      *
-     * @param sslCnf sslCnf
-     * @return Builder
+     * @param sslCnf sslCnf.
+     * @return Builder.
      */
     public Builder setSSLConf(Configuration sslCnf) {
       this.sslConf = sslCnf;
@@ -909,9 +909,9 @@ public final class HttpServer2 implements FilterContainer {
   /**
    * Add default apps.
    *
-   * @param parent contexthandlercollection
+   * @param parent contexthandlercollection.
    * @param appDir The application directory
-   * @param conf configuration
+   * @param conf configuration.
    * @throws IOException raised on errors performing I/O.
    */
   protected void addDefaultApps(ContextHandlerCollection parent,
@@ -1194,11 +1194,11 @@ public final class HttpServer2 implements FilterContainer {
   /**
    * Define a filter for a context and set up default url mappings.
    *
-   * @param ctx ctx
-   * @param name name
-   * @param classname  classname
-   * @param parameters parameters
-   * @param urls urls
+   * @param ctx ctx.
+   * @param name name.
+   * @param classname classname.
+   * @param parameters parameters.
+   * @param urls urls.
    */
   public static void defineFilter(ServletContextHandler ctx, String name,
       String classname, Map<String,String> parameters, String[] urls) {
@@ -1309,7 +1309,7 @@ public final class HttpServer2 implements FilterContainer {
   /**
    * Get the address that corresponds to a particular connector.
    *
-   * @param index index
+   * @param index index.
    * @return the corresponding address for the connector, or null if there's no
    *         such connector or the connector is not bounded or was closed.
    */
@@ -1330,8 +1330,8 @@ public final class HttpServer2 implements FilterContainer {
   /**
    * Set the min, max number of worker threads (simultaneous connections).
    *
-   * @param min min
-   * @param max max
+   * @param min min.
+   * @param max max.
    */
   public void setThreads(int min, int max) {
     QueuedThreadPool pool = (QueuedThreadPool) webServer.getThreadPool();
@@ -1536,7 +1536,7 @@ public final class HttpServer2 implements FilterContainer {
   /**
    * stop the server.
    *
-   * @throws Exception exception
+   * @throws Exception exception.
    */
   public void stop() throws Exception {
     MultiException exception = null;
@@ -1659,8 +1659,8 @@ public final class HttpServer2 implements FilterContainer {
    * Does the user sending the HttpServletRequest has the administrator ACLs? If
    * it isn't the case, response will be modified to send an error to the user.
    *
-   * @param servletContext servletContext
-   * @param request request
+   * @param servletContext servletContext.
+   * @param request request.
    * @param response used to send the error response if user does not have admin access.
    * @return true if admin-authorized, false otherwise
    * @throws IOException raised on errors performing I/O.

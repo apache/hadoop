@@ -41,10 +41,10 @@ public class ArrayFile extends MapFile {
     /**
      * Create the named file for values of the named class.
      *
-     * @param conf configuration
-     * @param fs file system
-     * @param file file
-     * @param valClass valClass
+     * @param conf configuration.
+     * @param fs file system.
+     * @param file file.
+     * @param valClass valClass.
      * @throws IOException raised on errors performing I/O.
      */
     public Writer(Configuration conf, FileSystem fs,
@@ -57,12 +57,12 @@ public class ArrayFile extends MapFile {
     /**
      * Create the named file for values of the named class.
      *
-     * @param conf configuration
-     * @param fs file system
-     * @param file file
-     * @param valClass valClass
-     * @param compress compress
-     * @param progress progress
+     * @param conf configuration.
+     * @param fs file system.
+     * @param file file.
+     * @param valClass valClass.
+     * @param compress compress.
+     * @param progress progress.
      * @throws IOException raised on errors performing I/O.
      */
     public Writer(Configuration conf, FileSystem fs,
@@ -78,7 +78,7 @@ public class ArrayFile extends MapFile {
 
     /**
      * Append a value to the file.
-     * @param value value
+     * @param value value.
      * @throws IOException raised on errors performing I/O.
      */
     public synchronized void append(Writable value) throws IOException {
@@ -93,9 +93,9 @@ public class ArrayFile extends MapFile {
 
     /**
      * Construct an array reader for the named file.
-     * @param fs FileSystem
-     * @param file file
-     * @param conf configuration
+     * @param fs FileSystem.
+     * @param file file.
+     * @param conf configuration.
      * @throws IOException raised on errors performing I/O.
      */
     public Reader(FileSystem fs, String file, 
@@ -106,7 +106,7 @@ public class ArrayFile extends MapFile {
     /**
      * Positions the reader before its <code>n</code>th value.
      *
-     * @param n n key
+     * @param n n key.
      * @throws IOException raised on errors performing I/O.
      */
     public synchronized void seek(long n) throws IOException {
@@ -117,9 +117,9 @@ public class ArrayFile extends MapFile {
     /**
      * Read and return the next value in the file.
      *
-     * @param value value
+     * @param value value.
      * @throws IOException raised on errors performing I/O.
-     * @return Writable
+     * @return Writable.
      */
     public synchronized Writable next(Writable value) throws IOException {
       return next(key, value) ? value : null;
@@ -130,7 +130,7 @@ public class ArrayFile extends MapFile {
      * #seek(long)}, {@link #next(Writable)}, or {@link
      * #get(long,Writable)}.
      *
-     * @return key key
+     * @return key key.
      * @throws IOException raised on errors performing I/O.
      */
     public synchronized long key() throws IOException {
@@ -139,10 +139,10 @@ public class ArrayFile extends MapFile {
 
     /**
      * Return the <code>n</code>th value in the file.
-     * @param n n key
-     * @param value value
+     * @param n n key.
+     * @param value value.
      * @throws IOException raised on errors performing I/O.
-     * @return writable
+     * @return writable.
      */
     public synchronized Writable get(long n, Writable value)
       throws IOException {

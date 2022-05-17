@@ -80,7 +80,7 @@ public class LocalDirAllocator {
 
   /**
    * Create an allocator object.
-   * @param contextCfgItemName contextCfgItemName
+   * @param contextCfgItemName contextCfgItemName.
    */
   public LocalDirAllocator(String contextCfgItemName) {
     this.contextCfgItemName = contextCfgItemName;
@@ -216,7 +216,7 @@ public class LocalDirAllocator {
   
   /**
    * Method to check whether a context is valid.
-   * @param contextCfgItemName contextCfgItemName
+   * @param contextCfgItemName contextCfgItemName.
    * @return true/false
    */
   public static boolean isContextValid(String contextCfgItemName) {
@@ -228,7 +228,7 @@ public class LocalDirAllocator {
   /**
    * Removes the context from the context config items.
    * 
-   * @param contextCfgItemName contextCfgItemName
+   * @param contextCfgItemName contextCfgItemName.
    */
   @Deprecated
   @InterfaceAudience.LimitedPrivate({"MapReduce"})

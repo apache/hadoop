@@ -80,7 +80,7 @@ abstract public class Command extends Configured {
   /**
    * Constructor.
    *
-   * @param conf configuration
+   * @param conf configuration.
    */
   protected Command(Configuration conf) {
     super(conf);
@@ -142,7 +142,7 @@ abstract public class Command extends Configured {
 
   /**
    * sets the command factory for later use.
-   * @param factory factory
+   * @param factory factory.
    */
   public void setCommandFactory(CommandFactory factory) {
     this.commandFactory = factory;
@@ -151,7 +151,7 @@ abstract public class Command extends Configured {
   /**
    * retrieves the command factory.
    *
-   * @return command factory
+   * @return command factory.
    */
   protected CommandFactory getCommandFactory() {
     return this.commandFactory;

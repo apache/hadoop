@@ -47,9 +47,9 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
   /**
    * Create a MD5FileChecksum.
    *
-   * @param bytesPerCRC bytesPerCRC
-   * @param crcPerBlock crcPerBlock
-   * @param md5 md5
+   * @param bytesPerCRC bytesPerCRC.
+   * @param crcPerBlock crcPerBlock.
+   * @param md5 md5.
    */
   public MD5MD5CRC32FileChecksum(int bytesPerCRC, long crcPerBlock, MD5Hash md5) {
     this.bytesPerCRC = bytesPerCRC;
@@ -84,7 +84,7 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
 
   /**
    * returns the CRC type.
-   * @return data check sum type
+   * @return data check sum type.
    */
   public DataChecksum.Type getCrcType() {
     // default to the one that is understood by all releases.

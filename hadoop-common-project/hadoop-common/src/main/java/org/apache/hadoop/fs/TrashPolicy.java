@@ -67,7 +67,7 @@ public abstract class TrashPolicy extends Configured {
 
   /** 
    * Move a file or directory to the current trash directory.
-   * @param path the path
+   * @param path the path.
    * @return false if the item is already in the trash or trash is disabled
    * @throws IOException raised on errors performing I/O.
    */ 
@@ -102,7 +102,7 @@ public abstract class TrashPolicy extends Configured {
    * It returns the trash location correctly for the path specified no matter
    * the path is in encryption zone or not.
    *
-   * @return the path
+   * @return the path.
    */
   public abstract Path getCurrentTrashDir();
 
@@ -122,7 +122,7 @@ public abstract class TrashPolicy extends Configured {
    * users, intended to be run by the superuser.
    *
    * @throws IOException raised on errors performing I/O.
-   * @return Runnable
+   * @return Runnable.
    */
   public abstract Runnable getEmptier() throws IOException;
 

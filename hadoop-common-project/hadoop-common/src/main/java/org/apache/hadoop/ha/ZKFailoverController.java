@@ -154,7 +154,7 @@ public abstract class ZKFailoverController {
    * nameservices can run on the same ZK quorum without having to manually
    * configure them to separate subdirectories.
    *
-   * @return ScopeInsideParentNode
+   * @return ScopeInsideParentNode.
    */
   protected abstract String getScopeInsideParentNode();
 

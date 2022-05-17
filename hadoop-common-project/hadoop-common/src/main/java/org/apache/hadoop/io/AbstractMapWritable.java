@@ -86,7 +86,7 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   
   /**
    * Add a Class to the maps if it is not already present.
-   * @param clazz clazz
+   * @param clazz clazz.
    */
   protected synchronized void addToMap(Class<?> clazz) {
     if (classToIdMap.containsKey(clazz)) {
@@ -102,8 +102,8 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
 
   /**
    * the Class class for the specified id.
-   * @param id id
-   * @return the Class class for the specified id
+   * @param id id.
+   * @return the Class class for the specified id.
    */
   protected Class<?> getClass(byte id) {
     return idToClassMap.get(id);
@@ -111,8 +111,8 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
 
   /**
    * get id.
-   * @return the id for the specified Class
-   * @param clazz clazz
+   * @return the id for the specified Class.
+   * @param clazz clazz.
    */
   protected byte getId(Class<?> clazz) {
     return classToIdMap.containsKey(clazz) ? classToIdMap.get(clazz) : -1;
@@ -120,7 +120,7 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
 
   /**
    * Used by child copy constructors.
-   * @param other other
+   * @param other other.
    */
   protected synchronized void copy(Writable other) {
     if (other != null) {

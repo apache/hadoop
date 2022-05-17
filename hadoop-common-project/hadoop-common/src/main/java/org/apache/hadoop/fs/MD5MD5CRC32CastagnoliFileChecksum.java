@@ -31,9 +31,9 @@ public class MD5MD5CRC32CastagnoliFileChecksum extends MD5MD5CRC32FileChecksum {
   /**
    * Create a MD5FileChecksum.
    *
-   * @param bytesPerCRC bytesPerCRC
-   * @param crcPerBlock crcPerBlock
-   * @param md5 md5
+   * @param bytesPerCRC bytesPerCRC.
+   * @param crcPerBlock crcPerBlock.
+   * @param md5 md5.
    */
   public MD5MD5CRC32CastagnoliFileChecksum(int bytesPerCRC, long crcPerBlock, MD5Hash md5) {
     super(bytesPerCRC, crcPerBlock, md5);

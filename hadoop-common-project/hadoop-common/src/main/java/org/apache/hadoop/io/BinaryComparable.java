@@ -32,14 +32,14 @@ public abstract class BinaryComparable implements Comparable<BinaryComparable> {
   /**
    * Return n st bytes 0..n-1 from {#getBytes()} are valid.
    *
-   * @return length
+   * @return length.
    */
   public abstract int getLength();
 
   /**
    * Return representative byte array for this instance.
    *
-   * @return getBytes
+   * @return getBytes.
    */
   public abstract byte[] getBytes();
 
@@ -58,10 +58,10 @@ public abstract class BinaryComparable implements Comparable<BinaryComparable> {
   /**
    * Compare bytes from {#getBytes()} to those provided.
    *
-   * @param other other
-   * @param off off
-   * @param len len
-   * @return compareBytes
+   * @param other other.
+   * @param off off.
+   * @param len len.
+   * @return compareBytes.
    */
   public int compareTo(byte[] other, int off, int len) {
     return WritableComparator.compareBytes(getBytes(), 0, getLength(),

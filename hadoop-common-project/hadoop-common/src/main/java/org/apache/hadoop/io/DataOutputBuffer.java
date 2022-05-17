@@ -103,19 +103,19 @@ public class DataOutputBuffer extends DataOutputStream {
    * Returns the current contents of the buffer.
    *  Data is only valid to {@link #getLength()}.
    *
-   * @return data byte
+   * @return data byte.
    */
   public byte[] getData() { return buffer.getData(); }
 
   /**
    * Returns the length of the valid data currently in the buffer.
-   * @return length
+   * @return length.
    */
   public int getLength() { return buffer.getLength(); }
 
   /**
    * Resets the buffer to empty.
-   * @return DataOutputBuffer
+   * @return DataOutputBuffer.
    */
   public DataOutputBuffer reset() {
     this.written = 0;
@@ -125,8 +125,8 @@ public class DataOutputBuffer extends DataOutputStream {
 
   /**
    * Writes bytes from a DataInput directly into the buffer.
-   * @param in data input
-   * @param length length
+   * @param in data input.
+   * @param length length.
    * @throws IOException raised on errors performing I/O.
    */
   public void write(DataInput in, int length) throws IOException {
@@ -135,7 +135,7 @@ public class DataOutputBuffer extends DataOutputStream {
 
   /**
    * Write to a file stream.
-   * @param out OutputStream
+   * @param out OutputStream.
    * @throws IOException raised on errors performing I/O.
    */
   public void writeTo(OutputStream out) throws IOException {
@@ -147,8 +147,8 @@ public class DataOutputBuffer extends DataOutputStream {
    * be used to overwrite existing data in the buffer, i.e., buffer#count cannot
    * be increased, and DataOutputStream#written cannot be increased.
    *
-   * @param v v
-   * @param offset offset
+   * @param v v.
+   * @param offset offset.
    * @throws IOException raised on errors performing I/O.
    */
   public void writeInt(int v, int offset) throws IOException {

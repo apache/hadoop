@@ -207,7 +207,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
   /**
    * Add another MeanStatistic.
    * @param other other value
-   * @return mean statistic
+   * @return mean statistic.
    */
   public synchronized MeanStatistic add(final MeanStatistic other) {
     if (other.isEmpty()) {

@@ -92,7 +92,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
      * Callback implementations are expected to manage their own
      * timeouts (e.g. when making an RPC to a remote node).
      *
-     * @throws ServiceFailedException Service Failed Exception
+     * @throws ServiceFailedException Service Failed Exception.
      */
     void becomeActive() throws ServiceFailedException;
 
@@ -122,7 +122,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
      * errors or Zookeeper persistent unavailability) then notifyFatalError is
      * called to notify the app about it.
      *
-     * @param errorMessage error message
+     * @param errorMessage error message.
      */
     void notifyFatalError(String errorMessage);
 
@@ -208,13 +208,12 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    *                 ZK connection
    * @param app
    *          reference to callback interface object
-   * @param maxRetryNum maxRetryNum
-   * @throws IOException
-   *          raised on errors performing I/O.
+   * @param maxRetryNum maxRetryNum.
+   * @throws IOException raised on errors performing I/O.
    * @throws HadoopIllegalArgumentException
-   *          if valid data is not supplied.
+   *         if valid data is not supplied.
    * @throws KeeperException
-   *          other zookeeper operation errors.
+   *         other zookeeper operation errors.
    */
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
@@ -458,7 +457,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    * @throws KeeperException
    *           other zookeeper operation errors
    * @throws InterruptedException
-   *           interrupted exception
+   *           interrupted exception.
    * @throws IOException
    *           when ZooKeeper connection could not be established
    */
@@ -806,7 +805,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    * This is non-static, and separated out, so that unit tests
    * can override the behavior not to sleep.
    *
-   * @param sleepMs sleep ms
+   * @param sleepMs sleep ms.
    */
   @VisibleForTesting
   protected void sleepFor(int sleepMs) {

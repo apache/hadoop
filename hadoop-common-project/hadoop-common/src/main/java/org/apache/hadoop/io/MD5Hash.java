@@ -64,7 +64,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
   
   /**
    * Constructs an MD5Hash with a specified value.
-   * @param digest digest
+   * @param digest digest.
    */
   public MD5Hash(byte[] digest) {
     if (digest.length != MD5_LEN)
@@ -80,9 +80,9 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Constructs, reads and returns an instance.
-   * @param in in
+   * @param in in.
    * @throws IOException raised on errors performing I/O.
-   * @return MD5Hash
+   * @return MD5Hash.
    */
   public static MD5Hash read(DataInput in) throws IOException {
     MD5Hash result = new MD5Hash();
@@ -98,7 +98,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Copy the contents of another instance into this instance.
-   * @param that that
+   * @param that that.
    */
   public void set(MD5Hash that) {
     System.arraycopy(that.digest, 0, this.digest, 0, MD5_LEN);
@@ -106,14 +106,14 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Returns the digest bytes.
-   * @return digest
+   * @return digest.
    */
   public byte[] getDigest() { return digest; }
 
   /**
    * Construct a hash value for a byte array.
-   * @param data data
-   * @return MD5Hash
+   * @param data data.
+   * @return MD5Hash.
    */
   public static MD5Hash digest(byte[] data) {
     return digest(data, 0, data.length);
@@ -121,7 +121,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Create a thread local MD5 digester.
-   * @return MessageDigest
+   * @return MessageDigest.
    */
   public static MessageDigest getDigester() {
     MessageDigest digester = DIGESTER_FACTORY.get();
@@ -131,8 +131,8 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Construct a hash value for the content from the InputStream.
-   * @param in input stream
-   * @return MD5Hash MD5Hash
+   * @param in input stream.
+   * @return MD5Hash.
    * @throws IOException raised on errors performing I/O.
    */
   public static MD5Hash digest(InputStream in) throws IOException {
@@ -148,10 +148,10 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Construct a hash value for a byte array.
-   * @param data data
-   * @param start start
-   * @param len len
-   * @return MD5Hash
+   * @param data data.
+   * @param start start.
+   * @param len len.
+   * @return MD5Hash.
    */
   public static MD5Hash digest(byte[] data, int start, int len) {
     byte[] digest;
@@ -163,10 +163,10 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Construct a hash value for an array of byte array.
-   * @param dataArr dataArr
-   * @param start start
-   * @param len len
-   * @return MD5Hash
+   * @param dataArr dataArr.
+   * @param start start.
+   * @param len len.
+   * @return MD5Hash.
    */
   public static MD5Hash digest(byte[][] dataArr, int start, int len) {
     byte[] digest;
@@ -180,8 +180,8 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Construct a hash value for a String.
-   * @param string string
-   * @return MD5Hash
+   * @param string string.
+   * @return MD5Hash.
    */
   public static MD5Hash digest(String string) {
     return digest(UTF8.getBytes(string));
@@ -189,16 +189,16 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Construct a hash value for a String.
-   * @param utf8 utf8
-   * @return MD5Hash
+   * @param utf8 utf8.
+   * @return MD5Hash.
    */
   public static MD5Hash digest(UTF8 utf8) {
     return digest(utf8.getBytes(), 0, utf8.getLength());
   }
 
   /**
-   * Construct a half-sized version of this MD5.  Fits in a long
-   * @return halfDigest
+   * Construct a half-sized version of this MD5.  Fits in a long.
+   * @return halfDigest.
    */
   public long halfDigest() {
     long value = 0;
@@ -278,7 +278,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /**
    * Sets the digest value from a hex string.
-   * @param hex hex
+   * @param hex hex.
    */
   public void setDigest(String hex) {
     if (hex.length() != MD5_LEN*2)
