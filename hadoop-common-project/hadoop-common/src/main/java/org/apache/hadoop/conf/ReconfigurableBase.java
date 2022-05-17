@@ -79,7 +79,7 @@ public abstract class ReconfigurableBase
   /**
    * Construct a ReconfigurableBase with the {@link Configuration}
    * conf.
-   * @param conf configuration
+   * @param conf configuration.
    */
   public ReconfigurableBase(Configuration conf) {
     super((conf == null) ? new Configuration() : conf);
@@ -92,7 +92,7 @@ public abstract class ReconfigurableBase
 
   /**
    * Create a new configuration.
-   * @return configuration
+   * @return configuration.
    */
   protected abstract Configuration getNewConf();
 

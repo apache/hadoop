@@ -281,8 +281,8 @@ public abstract class FileSystem extends Configured
   /**
    * Returns the configured FileSystem implementation.
    * @param conf the configuration to use
-   * @return FileSystem
-   * @throws IOException If an I/O error occurred
+   * @return FileSystem.
+   * @throws IOException If an I/O error occurred.
    */
   public static FileSystem get(Configuration conf) throws IOException {
     return get(getDefaultUri(conf), conf);
@@ -394,7 +394,7 @@ public abstract class FileSystem extends Configured
    * not specified and if {@link #getDefaultPort()} returns a
    * default port.
    *
-   * @param uri url
+   * @param uri url.
    * @return URI
    * @see NetUtils#getCanonicalUri(URI, int)
    */
@@ -459,7 +459,7 @@ public abstract class FileSystem extends Configured
   }
 
   /**
-   * @return uri to string
+   * @return uri to string.
    * @deprecated call {@link #getUri()} instead.
    */
   @Deprecated
@@ -468,10 +468,10 @@ public abstract class FileSystem extends Configured
   /**
    * @deprecated call {@link #get(URI, Configuration)} instead.
    *
-   * @param name name
-   * @param conf configuration
-   * @return file system
-   * @throws IOException If an I/O error occurred
+   * @param name name.
+   * @param conf configuration.
+   * @return file system.
+   * @throws IOException If an I/O error occurred.
    */
   @Deprecated
   public static FileSystem getNamed(String name, Configuration conf)
@@ -527,9 +527,9 @@ public abstract class FileSystem extends Configured
    *   configuration and URI, cached and returned to the caller.
    * </li>
    * </ol>
-   * @param uri uri of the filesystem
-   * @param conf configrution
-   * @return filesystem instance
+   * @param uri uri of the filesystem.
+   * @param conf configrution.
+   * @return filesystem instance.
    * @throws IOException if the FileSystem cannot be instantiated.
    */
   public static FileSystem get(URI uri, Configuration conf) throws IOException {
@@ -559,7 +559,7 @@ public abstract class FileSystem extends Configured
   /**
    * Returns the FileSystem for this URI's scheme and authority and the
    * given user. Internally invokes {@link #newInstance(URI, Configuration)}
-   * @param uri uri of the filesystem
+   * @param uri uri of the filesystem.
    * @param conf the configuration to use
    * @param user to perform the get as
    * @return filesystem instance
@@ -877,7 +877,7 @@ public abstract class FileSystem extends Configured
    * @param start offset into the given file
    * @param len length for which to get locations for
    * @throws IOException IO failure
-   * @return block location array
+   * @return block location array.
    */
   public BlockLocation[] getFileBlockLocations(FileStatus file,
       long start, long len) throws IOException {
@@ -918,7 +918,7 @@ public abstract class FileSystem extends Configured
    * @param len length for which to get locations for
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException IO failure
-   * @return block location array
+   * @return block location array.
    */
   public BlockLocation[] getFileBlockLocations(Path p,
       long start, long len) throws IOException {
@@ -981,7 +981,7 @@ public abstract class FileSystem extends Configured
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.
    * @throws IOException IO failure
-   * @return input stream
+   * @return input stream.
    */
   public abstract FSDataInputStream open(Path f, int bufferSize)
     throws IOException;
@@ -990,7 +990,7 @@ public abstract class FileSystem extends Configured
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file to open
    * @throws IOException IO failure
-   * @return input stream
+   * @return input stream.
    */
   public FSDataInputStream open(Path f) throws IOException {
     return open(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
@@ -1008,7 +1008,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException IO failure
    * @throws UnsupportedOperationException If {@link #open(PathHandle, int)}
    *                                       not overridden by subclass
-   * @return input stream
+   * @return input stream.
    */
   public FSDataInputStream open(PathHandle fd) throws IOException {
     return open(fd, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
@@ -1026,7 +1026,7 @@ public abstract class FileSystem extends Configured
    *                                    not satisfied
    * @throws IOException IO failure
    * @throws UnsupportedOperationException If not overridden by subclass
-   * @return input stream
+   * @return input stream.
    */
   public FSDataInputStream open(PathHandle fd, int bufferSize)
       throws IOException {
@@ -1044,7 +1044,7 @@ public abstract class FileSystem extends Configured
    *         not overridden by subclass.
    * @throws UnsupportedOperationException If this FileSystem cannot enforce
    *         the specified constraints.
-   * @return path handle
+   * @return path handle.
    */
   public final PathHandle getPathHandle(FileStatus stat, HandleOpt... opt) {
     // method is final with a default so clients calling getPathHandle(stat)
@@ -1060,7 +1060,7 @@ public abstract class FileSystem extends Configured
    * @param stat Referent in the target FileSystem
    * @param opt Constraints that determine the validity of the
    *            {@link PathHandle} reference.
-   * @return path handle
+   * @return path handle.
    */
   protected PathHandle createPathHandle(FileStatus stat, HandleOpt... opt) {
     throw new UnsupportedOperationException();
@@ -1071,7 +1071,7 @@ public abstract class FileSystem extends Configured
    * Files are overwritten by default.
    * @param f the file to create
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f) throws IOException {
     return create(f, true);
@@ -1083,7 +1083,7 @@ public abstract class FileSystem extends Configured
    * @param overwrite if a file with this name already exists, then if true,
    *   the file will be overwritten, and if false an exception will be thrown.
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f, boolean overwrite)
       throws IOException {
@@ -1101,7 +1101,7 @@ public abstract class FileSystem extends Configured
    * @param f the file to create
    * @param progress to report progress
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f, Progressable progress)
       throws IOException {
@@ -1118,7 +1118,7 @@ public abstract class FileSystem extends Configured
    * @param f the file to create
    * @param replication the replication factor
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream1
    */
   public FSDataOutputStream create(Path f, short replication)
       throws IOException {
@@ -1137,7 +1137,7 @@ public abstract class FileSystem extends Configured
    * @param replication the replication factor
    * @param progress to report progress
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f, short replication,
       Progressable progress) throws IOException {
@@ -1155,7 +1155,7 @@ public abstract class FileSystem extends Configured
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f,
                                    boolean overwrite,
@@ -1175,9 +1175,9 @@ public abstract class FileSystem extends Configured
    * @param overwrite if a file with this name already exists, then if true,
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
-   * @param progress to report progress
+   * @param progress to report progress.
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f,
                                    boolean overwrite,
@@ -1199,7 +1199,7 @@ public abstract class FileSystem extends Configured
    * @param replication required block replication for the file.
    * @param blockSize the size of the buffer to be used.
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f,
       boolean overwrite,
@@ -1218,9 +1218,9 @@ public abstract class FileSystem extends Configured
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
    * @param blockSize the size of the buffer to be used.
-   * @param progress to report progress
+   * @param progress to report progress.
    * @throws IOException IO failure
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f,
                                             boolean overwrite,
@@ -1247,7 +1247,7 @@ public abstract class FileSystem extends Configured
    * @param progress the progress reporter
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
-   * @return output stream
+   * @return output stream.
    */
   public abstract FSDataOutputStream create(Path f,
       FsPermission permission,
@@ -1269,7 +1269,7 @@ public abstract class FileSystem extends Configured
    * @param progress the progress reporter
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f,
       FsPermission permission,
@@ -1296,7 +1296,7 @@ public abstract class FileSystem extends Configured
    *        found in conf will be used.
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream create(Path f,
       FsPermission permission,
@@ -1319,15 +1319,15 @@ public abstract class FileSystem extends Configured
    * This a temporary method added to support the transition from FileSystem
    * to FileContext for user applications.
    *
-   * @param f path
-   * @param absolutePermission permission
-   * @param flag create flag
-   * @param bufferSize  buffer size
-   * @param replication replication
-   * @param blockSize block size
-   * @param progress progress
-   * @param checksumOpt check sum opt
-   * @return output stream
+   * @param f path.
+   * @param absolutePermission permission.
+   * @param flag create flag.
+   * @param bufferSize buffer size.
+   * @param replication replication.
+   * @param blockSize block size.
+   * @param progress progress.
+   * @param checksumOpt check sum opt.
+   * @return output stream.
    * @throws IOException IO failure
    */
   @Deprecated
@@ -1383,10 +1383,10 @@ public abstract class FileSystem extends Configured
    * This a temporary method added to support the transition from FileSystem
    * to FileContext for user applications.
    *
-   * @param f the path
-   * @param absolutePermission permission
-   * @param createParent create parent
-   * @throws IOException IO failure
+   * @param f the path.
+   * @param absolutePermission permission.
+   * @param createParent create parent.
+   * @throws IOException IO failure.
    */
   @Deprecated
   protected void primitiveMkdir(Path f, FsPermission absolutePermission,
@@ -1426,7 +1426,7 @@ public abstract class FileSystem extends Configured
    * @param progress the progress reporter
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream createNonRecursive(Path f,
       boolean overwrite,
@@ -1450,7 +1450,7 @@ public abstract class FileSystem extends Configured
    * @param progress the progress reporter
    * @throws IOException IO failure
    * @see #setPermission(Path, FsPermission)
-   * @return output stream
+   * @return output stream.
    */
    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
        boolean overwrite, int bufferSize, short replication, long blockSize,
@@ -1474,7 +1474,7 @@ public abstract class FileSystem extends Configured
     * @param progress the progress reporter
     * @throws IOException IO failure
     * @see #setPermission(Path, FsPermission)
-    * @return output stream
+    * @return output stream.
     */
     public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
         EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
@@ -1489,7 +1489,7 @@ public abstract class FileSystem extends Configured
    * <i>Important: the default implementation is not atomic</i>
    * @param f path to use for create
    * @throws IOException IO failure
-   * @return if create new file success true,not false
+   * @return if create new file success true,not false.
    */
   public boolean createNewFile(Path f) throws IOException {
     if (exists(f)) {
@@ -1510,7 +1510,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException IO failure
    * @throws UnsupportedOperationException if the operation is unsupported
    *         (default).
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream append(Path f) throws IOException {
     return append(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
@@ -1525,7 +1525,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException IO failure
    * @throws UnsupportedOperationException if the operation is unsupported
    *         (default).
-   * @return output stream
+   * @return output stream.
    */
   public FSDataOutputStream append(Path f, int bufferSize) throws IOException {
     return append(f, bufferSize, null);
@@ -1539,7 +1539,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException IO failure
    * @throws UnsupportedOperationException if the operation is unsupported
    *         (default).
-   * @return output stream
+   * @return output stream.
    */
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
@@ -1578,7 +1578,7 @@ public abstract class FileSystem extends Configured
    * This is the default behavior.
    * @param src file name
    * @param replication new replication
-   * @throws IOException an IO failure
+   * @throws IOException an IO failure.
    * @return true if successful, or the feature in unsupported;
    *         false if replication is supported but the file does not exist,
    *         or is a directory
@@ -1624,7 +1624,7 @@ public abstract class FileSystem extends Configured
    *
    * @param src path to be renamed
    * @param dst new path after rename
-   * @param options rename options
+   * @param options rename options.
    * @throws FileNotFoundException src path does not exist, or the parent
    * path of dst does not exist.
    * @throws FileAlreadyExistsException dest path exists and is a file
@@ -1719,9 +1719,9 @@ public abstract class FileSystem extends Configured
 
   /**
    * Delete a file/directory.
-   * @param f the path
-   * @throws IOException IO failure
-   * @return if delete success true, not false
+   * @param f the path.
+   * @throws IOException IO failure.
+   * @return if delete success true, not false.
    * @deprecated Use {@link #delete(Path, boolean)} instead.
    */
   @Deprecated
@@ -1838,7 +1838,7 @@ public abstract class FileSystem extends Configured
    * @param f path to check
    * @throws IOException IO failure
    * @deprecated Use {@link #getFileStatus(Path)} instead
-   * @return if f is directory true, not false
+   * @return if f is directory true, not false.
    */
   @Deprecated
   public boolean isDirectory(Path f) throws IOException {
@@ -1856,7 +1856,7 @@ public abstract class FileSystem extends Configured
    * @param f path to check
    * @throws IOException IO failure
    * @deprecated Use {@link #getFileStatus(Path)} instead
-   * @return if f is file true, not false
+   * @return if f is file true, not false.
    */
   @Deprecated
   public boolean isFile(Path f) throws IOException {
@@ -1869,7 +1869,7 @@ public abstract class FileSystem extends Configured
 
   /**
    * The number of bytes in a file.
-   * @param f the path
+   * @param f the path.
    * @return the number of bytes; 0 for a directory
    * @deprecated Use {@link #getFileStatus(Path)} instead.
    * @throws FileNotFoundException if the path does not resolve
@@ -1884,7 +1884,7 @@ public abstract class FileSystem extends Configured
    * @param f path to use
    * @throws FileNotFoundException if the path does not resolve
    * @throws IOException IO failure
-   * @return content summary
+   * @return content summary.
    */
   public ContentSummary getContentSummary(Path f) throws IOException {
     FileStatus status = getFileStatus(f);
@@ -2019,9 +2019,9 @@ public abstract class FileSystem extends Configured
    * @param f Path to list
    * @param token opaque iteration token returned by previous call, or null
    *              if this is the first call.
-   * @return directory entries
-   * @throws FileNotFoundException when the path does not exist
-   * @throws IOException If an I/O error occurred
+   * @return directory entries.
+   * @throws FileNotFoundException when the path does not exist.
+   * @throws IOException If an I/O error occurred.
    */
   @InterfaceAudience.Private
   protected DirectoryEntries listStatusBatch(Path f, byte[] token) throws
@@ -2053,7 +2053,7 @@ public abstract class FileSystem extends Configured
   /**
    * List corrupted file blocks.
    *
-   * @param path the path
+   * @param path the path.
    * @return an iterator over the corrupt files under the given path
    * (may contain duplicates if a file has more than one corrupt block)
    * @throws UnsupportedOperationException if the operation is unsupported
@@ -2400,7 +2400,7 @@ public abstract class FileSystem extends Configured
 
   /** Return the current user's home directory in this FileSystem.
    * The default implementation returns {@code "/user/$USER/"}.
-   * @return the path
+   * @return the path.
    */
   public Path getHomeDirectory() {
     String username;
@@ -2463,7 +2463,7 @@ public abstract class FileSystem extends Configured
    * @param f path to create
    * @param permission to apply to f
    * @throws IOException IO failure
-   * @return if mkdir success true, not false
+   * @return if mkdir success true, not false.
    */
   public abstract boolean mkdirs(Path f, FsPermission permission
       ) throws IOException;
@@ -2511,7 +2511,7 @@ public abstract class FileSystem extends Configured
    * @param delSrc whether to delete the src
    * @param src path
    * @param dst path
-   * @throws IOException IO failure
+   * @throws IOException IO failure.
    */
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
@@ -2626,7 +2626,7 @@ public abstract class FileSystem extends Configured
    * @param fsOutputFile path of output file
    * @param tmpLocalFile path of local tmp file
    * @throws IOException IO failure
-   * @return the path
+   * @return the path.
    */
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
@@ -2674,7 +2674,7 @@ public abstract class FileSystem extends Configured
   /**
    * Return the total size of all files in the filesystem.
    * @throws IOException IO failure
-   * @return the number of path used
+   * @return the number of path used.
    */
   public long getUsed() throws IOException {
     Path path = new Path("/");
@@ -2683,9 +2683,9 @@ public abstract class FileSystem extends Configured
 
   /**
    * Return the total size of all files from a specified path.
-   * @param path the path
+   * @param path the path.
    * @throws IOException IO failure
-   * @return the number of path content summary
+   * @return the number of path content summary.
    */
   public long getUsed(Path path) throws IOException {
     return getContentSummary(path).getLength();
@@ -2708,7 +2708,7 @@ public abstract class FileSystem extends Configured
    * Return the number of bytes that large input files should be optimally
    * be split into to minimize I/O time.
    * @deprecated use {@link #getDefaultBlockSize(Path)} instead
-   * @return default block size
+   * @return default block size.
    */
   @Deprecated
   public long getDefaultBlockSize() {
@@ -2761,8 +2761,8 @@ public abstract class FileSystem extends Configured
    * In some FileSystem implementations such as HDFS metadata
    * synchronization is essential to guarantee consistency of read requests
    * particularly in HA setting.
-   * @throws IOException If an I/O error occurred
-   * @throws UnsupportedOperationException if the operation is unsupported
+   * @throws IOException If an I/O error occurred.
+   * @throws UnsupportedOperationException if the operation is unsupported.
    */
   public void msync() throws IOException, UnsupportedOperationException {
     throw new UnsupportedOperationException(getClass().getCanonicalName() +
@@ -2838,8 +2838,8 @@ public abstract class FileSystem extends Configured
 
   /**
    * See {@link FileContext#fixRelativePart}.
-   * @param p the path
-   * @return relative part
+   * @param p the path.
+   * @return relative part.
    */
   protected Path fixRelativePart(Path p) {
     if (p.isUriPathAbsolute()) {
@@ -2852,17 +2852,17 @@ public abstract class FileSystem extends Configured
   /**
    * See {@link FileContext#createSymlink(Path, Path, boolean)}.
    *
-   * @param target       target path
-   * @param link         link
-   * @param createParent create parent
-   * @throws AccessControlException         if access is denied
-   * @throws FileAlreadyExistsException     when the path does not exist
-   * @throws FileNotFoundException          when the path does not exist
-   * @throws ParentNotDirectoryException    if the parent path of dest is not
-   *                                        a directory
+   * @param target target path.
+   * @param link link.
+   * @param createParent create parent.
+   * @throws AccessControlException if access is denied.
+   * @throws FileAlreadyExistsException when the path does not exist.
+   * @throws FileNotFoundException when the path does not exist.
+   * @throws ParentNotDirectoryException if the parent path of dest is not
+   *                                     a directory.
    * @throws UnsupportedFileSystemException if there was no known implementation
    *                                        for the scheme.
-   * @throws IOException                    see specific implementation
+   * @throws IOException raised on errors performing I/O.
    */
   public void createSymlink(final Path target, final Path link,
       final boolean createParent) throws AccessControlException,
@@ -2877,10 +2877,10 @@ public abstract class FileSystem extends Configured
   /**
    * See {@link FileContext#getFileLinkStatus(Path)}.
    *
-   * @param f the path
-   * @throws AccessControlException         if access is denied
-   * @throws FileNotFoundException          when the path does not exist
-   * @throws IOException                    see specific implementation
+   * @param f the path.
+   * @throws AccessControlException if access is denied.
+   * @throws FileNotFoundException when the path does not exist.
+   * @throws IOException raised on errors performing I/O.
    * @throws UnsupportedFileSystemException if there was no known implementation
    *                                        for the scheme.
    * @return file status
@@ -2894,7 +2894,7 @@ public abstract class FileSystem extends Configured
 
   /**
    * See {@link AbstractFileSystem#supportsSymlinks()}.
-   * @return if support symlinkls true, not false
+   * @return if support symlinkls true, not false.
    */
   public boolean supportsSymlinks() {
     return false;
@@ -2902,11 +2902,11 @@ public abstract class FileSystem extends Configured
 
   /**
    * See {@link FileContext#getLinkTarget(Path)}.
-   * @param f the path
+   * @param f the path.
    * @throws UnsupportedOperationException if the operation is unsupported
    *         (default outcome).
-   * @throws IOException IO failure
-   * @return the path
+   * @throws IOException IO failure.
+   * @return the path.
    */
   public Path getLinkTarget(Path f) throws IOException {
     // Supporting filesystems should override this method
@@ -2916,11 +2916,11 @@ public abstract class FileSystem extends Configured
 
   /**
    * See {@link AbstractFileSystem#getLinkTarget(Path)}.
-   * @param f the path
+   * @param f the path.
    * @throws UnsupportedOperationException if the operation is unsupported
    *         (default outcome).
-   * @throws IOException IO failure
-   * @return the path
+   * @throws IOException IO failure.
+   * @return the path.
    */
   protected Path resolveLink(Path f) throws IOException {
     // Supporting filesystems should override this method
@@ -3324,7 +3324,7 @@ public abstract class FileSystem extends Configured
   /**
    * Set the source path to satisfy storage policy.
    * @param path The source path referring to either a directory or a file.
-   * @throws IOException If an I/O error occurred
+   * @throws IOException If an I/O error occurred.
    */
   public void satisfyStoragePolicy(final Path path) throws IOException {
     throw new UnsupportedOperationException(
@@ -3632,7 +3632,7 @@ public abstract class FileSystem extends Configured
      * @param conf configuration
      * @param key key to store/retrieve this FileSystem in the cache
      * @return a cached or newly instantiated FileSystem.
-     * @throws IOException If an I/O error occurred
+     * @throws IOException If an I/O error occurred.
      */
     private FileSystem getInternal(URI uri, Configuration conf, Key key)
         throws IOException{
@@ -4127,7 +4127,7 @@ public abstract class FileSystem extends Configured
 
     /**
      * Get or create the thread-local data associated with the current thread.
-     * @return statistics data
+     * @return statistics data.
      */
     public StatisticsData getThreadStatistics() {
       StatisticsData data = threadData.get();
@@ -4486,7 +4486,7 @@ public abstract class FileSystem extends Configured
   /**
    * Return the FileSystem classes that have Statistics.
    * @deprecated use {@link #getGlobalStorageStatistics()}
-   * @return statistics lists
+   * @return statistics lists.
    */
   @Deprecated
   public static synchronized List<Statistics> getAllStatistics() {
@@ -4495,7 +4495,7 @@ public abstract class FileSystem extends Configured
 
   /**
    * Get the statistics for a particular file system.
-   * @param scheme scheme
+   * @param scheme scheme.
    * @param cls the class to lookup
    * @return a statistics object
    * @deprecated use {@link #getGlobalStorageStatistics()}
@@ -4530,7 +4530,7 @@ public abstract class FileSystem extends Configured
 
   /**
    * Print all statistics for all file systems to {@code System.out}
-   * @throws IOException If an I/O error occurred
+   * @throws IOException If an I/O error occurred.
    */
   public static synchronized
   void printStatistics() throws IOException {
@@ -4571,7 +4571,7 @@ public abstract class FileSystem extends Configured
 
   /**
    * Get the global storage statistics.
-   * @return global storage statistics
+   * @return global storage statistics.
    */
   public static GlobalStorageStatistics getGlobalStorageStatistics() {
     return GlobalStorageStatistics.INSTANCE;

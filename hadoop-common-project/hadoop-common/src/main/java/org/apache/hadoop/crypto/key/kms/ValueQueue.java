@@ -268,7 +268,7 @@ public class ValueQueue <E> {
    * Initializes the Value Queues for the provided keys by calling the
    * fill Method with "numInitValues" values
    * @param keyNames Array of key Names
-   * @throws ExecutionException executionException
+   * @throws ExecutionException executionException.
    */
   public void initializeQueuesForKeys(String... keyNames)
       throws ExecutionException {
@@ -286,7 +286,7 @@ public class ValueQueue <E> {
    * @param keyName String key name
    * @return E the next value in the Queue
    * @throws IOException raised on errors performing I/O.
-   * @throws ExecutionException executionException
+   * @throws ExecutionException executionException.
    */
   public E getNext(String keyName)
       throws IOException, ExecutionException {
@@ -345,7 +345,7 @@ public class ValueQueue <E> {
    * @param num Minimum number of values to return.
    * @return {@literal List<E>} values returned
    * @throws IOException raised on errors performing I/O.
-   * @throws ExecutionException execution exception
+   * @throws ExecutionException execution exception.
    */
   public List<E> getAtMost(String keyName, int num) throws IOException,
       ExecutionException {

@@ -1908,7 +1908,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param name Property name
    * @param vStr The string value with time unit suffix to be converted.
    * @param unit Unit to convert the stored property, if it exists.
-   * @return time duration in given time unit
+   * @return time duration in given time unit.
    */
   public long getTimeDurationHelper(String name, String vStr, TimeUnit unit) {
     return getTimeDurationHelper(name, vStr, unit, unit);
@@ -1923,7 +1923,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param vStr The string value with time unit suffix to be converted.
    * @param defaultUnit Unit to convert the stored property, if it exists.
    * @param returnUnit Unit for the returned value.
-   * @return time duration in given time unit
+   * @return time duration in given time unit.
    */
   private long getTimeDurationHelper(String name, String vStr,
       TimeUnit defaultUnit, TimeUnit returnUnit) {
@@ -2484,7 +2484,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Fallback to clear text passwords in configuration.
-   * @param name the property name
+   * @param name the property name.
    * @return clear text password or null
    */
   protected char[] getPasswordFromConfig(String name) {
@@ -2550,7 +2550,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Set the socket address for the <code>name</code> property as
    * a <code>host:port</code>.
    * @param name property name.
-   * @param addr inetSocketAddress addr
+   * @param addr inetSocketAddress addr.
    */
   public void setSocketAddr(String name, InetSocketAddress addr) {
     set(name, NetUtils.getHostPortString(addr));
@@ -2728,7 +2728,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param name the conf key name.
    * @param defaultValue default value.
    * @param xface the interface implemented by the named class.
-   * @param <U> Interface class type
+   * @param <U> Interface class type.
    * @return property value as a <code>Class</code>, 
    *         or <code>defaultValue</code>.
    */
@@ -2758,7 +2758,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param name the property name.
    * @param xface the interface implemented by the classes named by
    *        <code>name</code>.
-   * @param <U> Interface class type
+   * @param <U> Interface class type.
    * @return a <code>List</code> of objects implementing <code>xface</code>.
    */
   @SuppressWarnings("unchecked")
@@ -2831,7 +2831,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * directory does not exist, an attempt is made to create it.
    *
    * @param dirsProp directory in which to locate the file.
-   * @param path     file-path.
+   * @param path file-path.
    * @return local file under the directory with the given path.
    * @throws IOException raised on errors performing I/O.
    */
@@ -3445,7 +3445,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Add tags defined in HADOOP_TAGS_SYSTEM, HADOOP_TAGS_CUSTOM.
-   * @param prop properties
+   * @param prop properties.
    */
   public void addTags(Properties prop) {
     // Get all system tags
@@ -3906,8 +3906,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
   
   /** For debugging.  List non-default properties to the terminal and exit.
-   * @param args the argument to be parsed
-   * @throws Exception exception
+   * @param args the argument to be parsed.
+   * @throws Exception exception.
    */
   public static void main(String[] args) throws Exception {
     new Configuration().writeXml(System.out);
@@ -3988,8 +3988,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Returns whether or not a deprecated name has been warned. If the name is not
    * deprecated then always return false
-   * @param name proprties
-   * @return true if name is a warned deprecation
+   * @param name proprties.
+   * @return true if name is a warned deprecation.
    */
   public static boolean hasWarnedDeprecation(String name) {
     DeprecationContext deprecations = deprecationContext.get();

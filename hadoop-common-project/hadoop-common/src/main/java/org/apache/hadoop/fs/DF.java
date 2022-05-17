@@ -104,7 +104,7 @@ public class DF extends Shell {
   }
 
   /**
-   * @return the filesystem mount point for the indicated volume
+   * @return the filesystem mount point for the indicated volume.
    * @throws IOException raised on errors performing I/O.
    */
   public String getMount() throws IOException {

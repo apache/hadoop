@@ -39,7 +39,7 @@ public abstract class FileSystemLinkResolver<T> {
    * @param p Path on which to perform an operation
    * @return Generic type returned by operation
    * @throws IOException raised on errors performing I/O.
-   * @throws UnresolvedLinkException unresolved link exception
+   * @throws UnresolvedLinkException unresolved link exception.
    */
   abstract public T doCall(final Path p) throws IOException,
       UnresolvedLinkException;

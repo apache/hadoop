@@ -31,21 +31,21 @@ public abstract class FileChecksum implements Writable {
   /**
    * The checksum algorithm name.
    *
-   * @return algorithm name
+   * @return algorithm name.
    */
   public abstract String getAlgorithmName();
 
   /**
    * The length of the checksum in bytes.
    *
-   * @return length
+   * @return length.
    */
   public abstract int getLength();
 
   /**
    * The value of the checksum in bytes.
    *
-   * @return byte array
+   * @return byte array.
    */
   public abstract byte[] getBytes();
 
@@ -56,8 +56,8 @@ public abstract class FileChecksum implements Writable {
   /**
    * Return true if both the algorithms and the values are the same.
    *
-   * @param other other
-   * @return if equal true, not false
+   * @param other other.
+   * @return if equal true, not false.
    */
   @Override
   public boolean equals(Object other) {

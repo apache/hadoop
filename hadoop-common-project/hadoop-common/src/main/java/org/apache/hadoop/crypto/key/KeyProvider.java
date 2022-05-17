@@ -466,7 +466,7 @@ public abstract class KeyProvider implements Closeable {
    * Get key metadata in bulk.
    * @param names the names of the keys to get
    * @throws IOException raised on errors performing I/O.
-   * @return Metadata Array
+   * @return Metadata Array.
    */
   public Metadata[] getKeysMetadata(String... names) throws IOException {
     Metadata[] result = new Metadata[names.length];
@@ -479,7 +479,7 @@ public abstract class KeyProvider implements Closeable {
   /**
    * Get the key material for all versions of a specific key name.
    *
-   * @param name the base name of the key
+   * @param name the base name of the key.
    * @return the list of key material
    * @throws IOException raised on errors performing I/O.
    */
@@ -540,7 +540,7 @@ public abstract class KeyProvider implements Closeable {
    * @param size length of the key.
    * @param algorithm algorithm to use for generating the key.
    * @return the generated key.
-   * @throws NoSuchAlgorithmException no such algorithm exception
+   * @throws NoSuchAlgorithmException no such algorithm exception.
    */
   protected byte[] generateKey(int size, String algorithm)
       throws NoSuchAlgorithmException {
@@ -562,7 +562,7 @@ public abstract class KeyProvider implements Closeable {
    * @param options the options for the new key.
    * @return the version name of the first version of the key.
    * @throws IOException raised on errors performing I/O.
-   * @throws NoSuchAlgorithmException no such algorithm exception
+   * @throws NoSuchAlgorithmException no such algorithm exception.
    */
   public KeyVersion createKey(String name, Options options)
       throws NoSuchAlgorithmException, IOException {
@@ -668,7 +668,7 @@ public abstract class KeyProvider implements Closeable {
    * Find the provider with the given key.
    *
    * @param providerList the list of providers
-   * @param keyName      the key name we are looking for
+   * @param keyName the key name we are looking for.
    * @return the KeyProvider that has the key
    * @throws IOException raised on errors performing I/O.
    */

@@ -40,9 +40,9 @@ public class CompositeCrcFileChecksum extends FileChecksum {
   /**
    * Create a CompositeCrcFileChecksum.
    *
-   * @param crc         crc
-   * @param crcType     crcType
-   * @param bytesPerCrc bytesPerCrc
+   * @param crc crc.
+   * @param crcType crcType.
+   * @param bytesPerCrc bytesPerCrc.
    */
   public CompositeCrcFileChecksum(
       int crc, DataChecksum.Type crcType, int bytesPerCrc) {

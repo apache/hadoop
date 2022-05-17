@@ -105,8 +105,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   /**
    * Return the name of the checksum file associated with a file.
    *
-   * @param file the file path
-   * @return name of the checksum file associated with a file
+   * @param file the file path.
+   * @return name of the checksum file associated with a file.
    */
   public Path getChecksumFile(Path file) {
     return new Path(file.getParent(), "." + file.getName() + ".crc");
@@ -115,8 +115,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   /**
    * Return true if file is a checksum file name.
    *
-   * @param file the file path
-   * @return if file is a checksum file true, not false
+   * @param file the file path.
+   * @return if file is a checksum file true, not false.
    */
   public static boolean isChecksumFile(Path file) {
     String name = file.getName();
@@ -127,9 +127,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Return the length of the checksum file given the size of the
    * actual file.
    *
-   * @param file     the file path
-   * @param fileSize file size
-   * @return checksum length
+   * @param file the file path.
+   * @param fileSize file size.
+   * @return checksum length.
    */
   public long getChecksumFileLength(Path file, long fileSize) {
     return getChecksumLength(fileSize, getBytesPerSum());
@@ -138,7 +138,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   /**
    * Return the bytes Per Checksum.
    *
-   * @return bytes per check sum
+   * @return bytes per check sum.
    */
   public int getBytesPerSum() {
     return bytesPerChecksum;
@@ -831,9 +831,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Copy it from FS control to the local dst name.
    * If src and dst are directories, the copyCrc parameter
    * determines whether to copy CRC files.
-   * @param src src path
-   * @param dst dst path
-   * @param copyCrc copy csc flag
+   * @param src src path.
+   * @param dst dst path.
+   * @param copyCrc copy csc flag.
    * @throws IOException if an I/O error occurs.
    */
   @SuppressWarnings("deprecation")

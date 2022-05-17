@@ -42,7 +42,7 @@ public class CryptoStreamUtils {
   /**
    * Forcibly free the direct buffer.
    *
-   * @param buffer buffer
+   * @param buffer buffer.
    */
   public static void freeDB(ByteBuffer buffer) {
     if (CleanerUtil.UNMAP_SUPPORTED) {
@@ -59,8 +59,8 @@ public class CryptoStreamUtils {
   /**
    * Read crypto buffer size.
    *
-   * @param conf configuration
-   * @return hadoop.security.crypto.buffer.size
+   * @param conf configuration.
+   * @return hadoop.security.crypto.buffer.size.
    */
   public static int getBufferSize(Configuration conf) {
     return conf.getInt(HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY, 
@@ -70,7 +70,7 @@ public class CryptoStreamUtils {
   /**
    * AES/CTR/NoPadding or SM4/CTR/NoPadding is required.
    *
-   * @param codec crypto codec
+   * @param codec crypto codec.
    */
   public static void checkCodec(CryptoCodec codec) {
     if (codec.getCipherSuite() != CipherSuite.AES_CTR_NOPADDING &&
@@ -83,9 +83,9 @@ public class CryptoStreamUtils {
   /**
    * Check and floor buffer size.
    *
-   * @param codec      crypto codec
+   * @param codec crypto codec.
    * @param bufferSize the size of the buffer to be used.
-   * @return calc buffer siez
+   * @return calc buffer size.
    */
   public static int checkBufferSize(CryptoCodec codec, int bufferSize) {
     Preconditions.checkArgument(bufferSize >= MIN_BUFFER_SIZE, 
@@ -98,8 +98,8 @@ public class CryptoStreamUtils {
    * If input stream is {@link org.apache.hadoop.fs.Seekable}, return it's
    * current position, otherwise return 0;
    *
-   * @param in wrapper
-   * @return current position, otherwise return 0;
+   * @param in wrapper.
+   * @return current position, otherwise return 0.
    * @throws IOException raised on errors performing I/O.
    */
   public static long getInputStreamOffset(InputStream in) throws IOException {

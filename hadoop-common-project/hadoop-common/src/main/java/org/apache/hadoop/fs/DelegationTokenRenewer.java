@@ -49,8 +49,8 @@ public class DelegationTokenRenewer
 
     /**
      * Set delegation token.
-     * @param <T> generic type T
-     * @param token token
+     * @param <T> generic type T.
+     * @param token token.
      */
     public <T extends TokenIdentifier> void setDelegationToken(Token<T> token);
   }
@@ -179,7 +179,7 @@ public class DelegationTokenRenewer
   /**
    * For testing purposes.
    *
-   * @return renew queue length
+   * @return renew queue length.
    */
   @VisibleForTesting
   protected int getRenewQueueLength() {
@@ -222,9 +222,9 @@ public class DelegationTokenRenewer
   /**
    * Add a renew action to the queue.
    *
-   * @param <T> generic type T
-   * @param fs file system
-   * @return renew action
+   * @param <T> generic type T.
+   * @param fs file system.
+   * @return renew action.
    * */
   @SuppressWarnings("static-access")
   public <T extends FileSystem & Renewable> RenewAction<T> addRenewAction(final T fs) {
@@ -245,8 +245,8 @@ public class DelegationTokenRenewer
   /**
    * Remove the associated renew action from the queue
    *
-   * @param <T> generic type T
-   * @param fs file system
+   * @param <T> generic type T.
+   * @param fs file system.
    * @throws IOException raised on errors performing I/O.
    */
   public <T extends FileSystem & Renewable> void removeRenewAction(

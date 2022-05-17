@@ -39,8 +39,8 @@ public class AvroFSInput implements Closeable, SeekableInput {
   /**
    * Construct given an {@link FSDataInputStream} and its length.
    *
-   * @param in  inputstream
-   * @param len len
+   * @param in inputstream.
+   * @param len len.
    */
   public AvroFSInput(final FSDataInputStream in, final long len) {
     this.stream = in;
@@ -48,9 +48,9 @@ public class AvroFSInput implements Closeable, SeekableInput {
   }
 
   /** Construct given a {@link FileContext} and a {@link Path}.
-   * @param fc filecontext
-   * @param p the path
-   * @throws IOException If an I/O error occurred
+   * @param fc filecontext.
+   * @param p the path.
+   * @throws IOException If an I/O error occurred.
    * */
   public AvroFSInput(final FileContext fc, final Path p) throws IOException {
     FileStatus status = fc.getFileStatus(p);

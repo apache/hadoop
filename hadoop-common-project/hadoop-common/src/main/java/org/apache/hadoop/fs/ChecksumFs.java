@@ -73,7 +73,7 @@ public abstract class ChecksumFs extends FilterFs {
   /**
    * get the raw file system.
    *
-   * @return abstract file system
+   * @return abstract file system.
    */
   public AbstractFileSystem getRawFs() {
     return getMyFs();
@@ -82,8 +82,8 @@ public abstract class ChecksumFs extends FilterFs {
   /**
    * Return the name of the checksum file associated with a file.
    *
-   * @param file the file path
-   * @return the checksum file associated with a file
+   * @param file the file path.
+   * @return the checksum file associated with a file.
    */
   public Path getChecksumFile(Path file) {
     return new Path(file.getParent(), "." + file.getName() + ".crc");
@@ -92,8 +92,8 @@ public abstract class ChecksumFs extends FilterFs {
   /**
    * Return true iff file is a checksum file name.
    *
-   * @param file the file path
-   * @return if is checksum file true,not false
+   * @param file the file path.
+   * @return if is checksum file true,not false.
    */
   public static boolean isChecksumFile(Path file) {
     String name = file.getName();
@@ -104,9 +104,9 @@ public abstract class ChecksumFs extends FilterFs {
    * Return the length of the checksum file given the size of the
    * actual file.
    *
-   * @param file     the file path
-   * @param fileSize file size
-   * @return check sum file length
+   * @param file the file path.
+   * @param fileSize file size.
+   * @return check sum file length.
    */
   public long getChecksumFileLength(Path file, long fileSize) {
     return getChecksumLength(fileSize, getBytesPerSum());
@@ -115,7 +115,7 @@ public abstract class ChecksumFs extends FilterFs {
   /**
    * Return the bytes Per Checksum.
    *
-   * @return bytes per sum
+   * @return bytes per sum.
    */
   public int getBytesPerSum() {
     return defaultBytesPerChecksum;

@@ -75,9 +75,9 @@ public class ReconfigurationException extends Exception {
 
   /**
    * Create a new instance of {@link ReconfigurationException}.
-   * @param property property name
-   * @param newVal new value
-   * @param oldVal old value
+   * @param property property name.
+   * @param newVal new value.
+   * @param oldVal old value.
    */
   public ReconfigurationException(String property, 
                                   String newVal, String oldVal) {
@@ -89,7 +89,7 @@ public class ReconfigurationException extends Exception {
 
   /**
    * Get property that cannot be changed.
-   * @return property info
+   * @return property info.
    */
   public String getProperty() {
     return property;
@@ -97,7 +97,7 @@ public class ReconfigurationException extends Exception {
 
   /**
    * Get value to which property was supposed to be changed.
-   * @return new value
+   * @return new value.
    */
   public String getNewValue() {
     return newVal;
@@ -105,7 +105,7 @@ public class ReconfigurationException extends Exception {
 
   /**
    * Get old value of property that cannot be changed.
-   * @return old value
+   * @return old value.
    */
   public String getOldValue() {
     return oldVal;

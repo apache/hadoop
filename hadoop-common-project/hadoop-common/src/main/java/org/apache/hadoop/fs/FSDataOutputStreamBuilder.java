@@ -123,8 +123,9 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Constructor.
-   * @param fileSystem file system
-   * @param p the path
+   *
+   * @param fileSystem file system.
+   * @param p the path.
    */
   protected FSDataOutputStreamBuilder(@Nonnull FileSystem fileSystem,
       @Nonnull Path p) {
@@ -152,8 +153,8 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Set permission for the file.
    *
-   * @param perm permission
-   * @return B Generics Type
+   * @param perm permission.
+   * @return B Generics Type.
    */
   public B permission(@Nonnull final FsPermission perm) {
     checkNotNull(perm);
@@ -168,8 +169,8 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Set the size of the buffer to be used.
    *
-   * @param bufSize buffer size
-   * @return Generics Type B
+   * @param bufSize buffer size.
+   * @return Generics Type B.
    */
   public B bufferSize(int bufSize) {
     bufferSize = bufSize;
@@ -183,8 +184,8 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Set replication factor.
    *
-   * @param replica replica
-   * @return Generics Type B
+   * @param replica replica.
+   * @return Generics Type B.
    */
   public B replication(short replica) {
     replication = replica;
@@ -198,8 +199,8 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Set block size.
    *
-   * @param blkSize block size
-   * @return B Generics Type
+   * @param blkSize block size.
+   * @return B Generics Type.
    */
   public B blockSize(long blkSize) {
     blockSize = blkSize;
@@ -209,7 +210,7 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Return true to create the parent directories if they do not exist.
    *
-   * @return if create the parent directories if they do not exist true,not false
+   * @return if create the parent directories if they do not exist true,not false.
    */
   protected boolean isRecursive() {
     return recursive;
@@ -218,7 +219,7 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Create the parent directory if they do not exist.
    *
-   * @return B Generics Type
+   * @return B Generics Type.
    */
   public B recursive() {
     recursive = true;
@@ -232,8 +233,8 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Set the facility of reporting progress.
    *
-   * @param prog progress
-   * @return B Generics Type
+   * @param prog progress.
+   * @return B Generics Type.
    */
   public B progress(@Nonnull final Progressable prog) {
     checkNotNull(prog);
@@ -248,7 +249,7 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Create an FSDataOutputStream at the specified path.
    *
-   * @return return Generics Type B
+   * @return return Generics Type B.
    */
   public B create() {
     flags.add(CreateFlag.CREATE);
@@ -260,8 +261,8 @@ public abstract class FSDataOutputStreamBuilder
    * Set it to false, an exception will be thrown when calling {@link #build()}
    * if the file exists.
    *
-   * @param overwrite overrite
-   * @return Generics Type B
+   * @param overwrite overrite.
+   * @return Generics Type B.
    */
   public B overwrite(boolean overwrite) {
     if (overwrite) {
@@ -275,7 +276,7 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Append to an existing file (optional operation).
    *
-   * @return Generics Type B
+   * @return Generics Type B.
    */
   public B append() {
     flags.add(CreateFlag.APPEND);
@@ -289,8 +290,8 @@ public abstract class FSDataOutputStreamBuilder
   /**
    * Set checksum opt.
    *
-   * @param chksumOpt check sum opt
-   * @return Generics Type B
+   * @param chksumOpt check sum opt.
+   * @return Generics Type B.
    */
   public B checksumOpt(@Nonnull final ChecksumOpt chksumOpt) {
     checkNotNull(chksumOpt);
