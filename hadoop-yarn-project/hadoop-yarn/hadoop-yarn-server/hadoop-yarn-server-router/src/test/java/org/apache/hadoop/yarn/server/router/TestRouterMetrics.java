@@ -500,9 +500,10 @@ public class TestRouterMetrics {
   public void testSucceededClusterNodeLabels() {
     long totalGoodBefore = metrics.getNumSucceededGetClusterNodeLabelsRetrieved();
     goodSubCluster.getClusterNodeLabels(150);
-    Assert.assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetClusterNodeLabelsRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededGetClusterNodeLabelsRetrieved(),
-        ASSERT_DOUBLE_DELTA);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetClusterNodeLabelsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterNodeLabels(300);
     Assert.assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetClusterNodeLabelsRetrieved());
     Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodeLabelsRetrieved(),
