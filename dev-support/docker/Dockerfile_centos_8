@@ -88,7 +88,7 @@ ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
 # TODO: Set locale
 
 #Install java 11
-RUN yum install -y java-11-openjdk-devel
+RUN yum -y install java-11-openjdk java-11-openjdk-devel
 
 ######
 # Set env vars required to build Hadoop
