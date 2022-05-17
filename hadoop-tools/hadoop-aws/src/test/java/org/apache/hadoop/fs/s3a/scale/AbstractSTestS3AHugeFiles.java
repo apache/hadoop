@@ -466,12 +466,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     rangeList.add(new FileRangeImpl(2520861, 116770));
     rangeList.add(new FileRangeImpl(9191913, 116770));
     rangeList.add(new FileRangeImpl(2820861, 156770));
-    IntFunction<ByteBuffer> allocate = new IntFunction<ByteBuffer>() {
-      @Override
-      public ByteBuffer apply(int value) {
-        return ByteBuffer.allocate(value);
-      }
-    };
+    IntFunction<ByteBuffer> allocate = ByteBuffer::allocate;
     FileSystem fs = getFileSystem();
     CompletableFuture<FSDataInputStream> builder =
             fs.openFile(hugefile).build();

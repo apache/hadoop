@@ -76,6 +76,12 @@ public class ContractTestUtils extends Assert {
   public static final int DEFAULT_IO_CHUNK_MODULUS_SIZE = 128;
 
   /**
+   * Timeout in seconds for vectored read
+   * operation in tests : {@value}.
+   */
+  static int VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS = 5 * 60;
+
+  /**
    * Assert that a property in the property set matches the expected value.
    * @param props property set
    * @param key property name
@@ -1117,11 +1123,13 @@ public class ContractTestUtils extends Assert {
       completableFutures[i++] = res.getData();
     }
     CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
-    FutureIO.awaitFuture(combinedFuture, 5, TimeUnit.MINUTES);
+    //FutureIO.awaitFuture(combinedFuture, 5, TimeUnit.MINUTES);
 
     for (FileRange res : fileRanges) {
       CompletableFuture<ByteBuffer> data = res.getData();
-      ByteBuffer buffer = FutureIO.awaitFuture(data, 5, TimeUnit.MINUTES);
+      ByteBuffer buffer = FutureIO.awaitFuture(data,
+              VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+              TimeUnit.SECONDS);
       assertDatasetEquals((int) res.getOffset(), "vecRead",
               buffer, res.getLength(), originalData);
     }
@@ -1139,7 +1147,8 @@ public class ContractTestUtils extends Assert {
    * @param originalData original data.
    */
   public static void assertDatasetEquals(
-          final int readOffset, final String operation,
+          final int readOffset,
+          final String operation,
           final ByteBuffer data,
           int length, byte[] originalData) {
     for (int i = 0; i < length; i++) {
