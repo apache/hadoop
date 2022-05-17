@@ -167,7 +167,7 @@ public class TableListing {
     /**
      * Whether to show column headers in table output. This is the default.
      *
-     * @return Builder
+     * @return Builder.
      */
     public Builder showHeaders() {
       this.showHeader = true;
@@ -178,8 +178,8 @@ public class TableListing {
      * Set the maximum width of a row in the TableListing. Must have one or
      * more wrappable fields for this to take effect.
      *
-     * @param width width
-     * @return Builder
+     * @param width width.
+     * @return Builder.
      */
     public Builder wrapWidth(int width) {
       this.wrapWidth = width;
@@ -189,7 +189,7 @@ public class TableListing {
     /**
      * Create a new TableListing.
      *
-     * @return TableListing
+     * @return TableListing.
      */
     public TableListing build() {
       return new TableListing(columns.toArray(new Column[0]), showHeader,

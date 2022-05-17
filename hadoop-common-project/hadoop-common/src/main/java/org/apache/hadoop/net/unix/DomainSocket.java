@@ -107,7 +107,7 @@ public class DomainSocket implements Closeable {
   /**
    * Return true only if UNIX domain sockets are available.
    *
-   * @return loadingFailureReason
+   * @return loadingFailureReason.
    */
   public static String getLoadingFailureReason() {
     return loadingFailureReason;
@@ -416,7 +416,7 @@ public class DomainSocket implements Closeable {
    *                          one byte.
    * @param offset            The offset in the jbuf array to start at.
    * @param length            Length of the jbuf array to use.
-   * @throws IOException      raised on errors performing I/O.
+   * @throws IOException raised on errors performing I/O.
    */
   public void sendFileDescriptors(FileDescriptor descriptors[],
       byte jbuf[], int offset, int length) throws IOException {
@@ -438,11 +438,11 @@ public class DomainSocket implements Closeable {
    * Receive some FileDescriptor objects from the process on the other side of
    * this socket, and wrap them in FileInputStream objects.
    *
-   * @param streams input stream
-   * @param buf input buf
-   * @param offset input offset
-   * @param length input length
-   * @return wrap them in FileInputStream objects
+   * @param streams input stream.
+   * @param buf input buf.
+   * @param offset input offset.
+   * @param length input length.
+   * @return wrap them in FileInputStream objects.
    * @throws IOException raised on errors performing I/O.
    */
   public int recvFileInputStreams(FileInputStream[] streams, byte buf[],

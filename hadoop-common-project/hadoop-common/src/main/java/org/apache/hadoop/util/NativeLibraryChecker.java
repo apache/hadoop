@@ -39,8 +39,8 @@ public class NativeLibraryChecker {
       LoggerFactory.getLogger(NativeLibraryChecker.class);
 
   /**
-   * A tool to test native library availability,
-   * @param args args
+   * A tool to test native library availability.
+   * @param args args.
    */
   public static void main(String[] args) {
     String usage = "NativeLibraryChecker [-a|-h]\n"

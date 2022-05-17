@@ -45,7 +45,7 @@ public class HadoopKerberosName extends KerberosName {
 
   /**
    * Create a name from the full Kerberos principal name.
-   * @param name name
+   * @param name name.
    */
   public HadoopKerberosName(String name) {
     super(name);

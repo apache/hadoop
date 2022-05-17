@@ -28,7 +28,7 @@ public interface IdGenerator {
 
   /**
    * Increment and then return the next value.
-   * @return long value
+   * @return long value.
    */
   public long nextValue();
 }

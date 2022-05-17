@@ -610,7 +610,7 @@ public class UserGroupInformation {
    * @param ticketCache     the path to the ticket cache file
    *
    * @throws IOException        if the kerberos login fails
-   * @return UserGroupInformation
+   * @return UserGroupInformation.
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
@@ -689,7 +689,7 @@ public class UserGroupInformation {
    * remove the login method that is followed by a space from the username
    * e.g. "jack (auth:SIMPLE)" {@literal ->} "jack"
    *
-   * @param userName userName
+   * @param userName userName.
    * @return userName without login method
    */
   public static String trimLoginMethod(String userName) {
@@ -1349,7 +1349,7 @@ public class UserGroupInformation {
    * @param user the principal name to load from the keytab
    * @param path the path to the keytab file
    * @throws IOException if the keytab file can't be read
-   * @return UserGroupInformation
+   * @return UserGroupInformation.
    */
   public
   static UserGroupInformation loginUserFromKeytabAndReturnUGI(String user,
@@ -1411,7 +1411,7 @@ public class UserGroupInformation {
    * Create a user from a login name. It is intended to be used for remote
    * users in RPC, since it won't have any credentials.
    * @param user the full user principal name, must not be empty or null
-   * @param authMethod authMethod
+   * @param authMethod authMethod.
    * @return the UserGroupInformation for the remote user.
    */
   @InterfaceAudience.Public
@@ -1481,8 +1481,8 @@ public class UserGroupInformation {
   /**
    * Create a proxy user using username of the effective user and the ugi of the
    * real user.
-   * @param user user
-   * @param realUser realUser
+   * @param user user.
+   * @param realUser realUser.
    * @return proxyUser ugi
    */
   @InterfaceAudience.Public
@@ -1795,7 +1795,7 @@ public class UserGroupInformation {
   /**
    * Sets the authentication method in the subject
    * 
-   * @param authMethod authMethod
+   * @param authMethod authMethod.
    */
   public synchronized 
   void setAuthenticationMethod(AuthenticationMethod authMethod) {
@@ -1805,7 +1805,7 @@ public class UserGroupInformation {
   /**
    * Sets the authentication method in the subject
    * 
-   * @param authMethod authMethod
+   * @param authMethod authMethod.
    */
   public void setAuthenticationMethod(AuthMethod authMethod) {
     user.setAuthenticationMethod(AuthenticationMethod.valueOf(authMethod));
@@ -1838,7 +1838,7 @@ public class UserGroupInformation {
    * Returns the authentication method of a ugi. If the authentication method is
    * PROXY, returns the authentication method of the real user.
    * 
-   * @param ugi ugi
+   * @param ugi ugi.
    * @return AuthenticationMethod
    */
   public static AuthenticationMethod getRealAuthenticationMethod(
@@ -1940,8 +1940,8 @@ public class UserGroupInformation {
   /**
    * Log current UGI and token information into specified log.
    * @param ugi - UGI
-   * @param log log
-   * @param caption caption
+   * @param log log.
+   * @param caption caption.
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "KMS"})
   @InterfaceStability.Unstable
@@ -1959,7 +1959,7 @@ public class UserGroupInformation {
   /**
    * Log all (current, real, login) UGI and token info into specified log.
    * @param ugi - UGI
-   * @param log - log
+   * @param log - log.
    * @throws IOException raised on errors performing I/O.
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "KMS"})
@@ -2256,7 +2256,7 @@ public class UserGroupInformation {
    * A test method to print out the current user's UGI.
    * @param args if there are two arguments, read the user from the keytab
    * and print it out.
-   * @throws Exception Exception
+   * @throws Exception Exception.
    */
   public static void main(String [] args) throws Exception {
   System.out.println("Getting UGI for current user");

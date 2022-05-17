@@ -567,7 +567,7 @@ public class ServiceLauncher<S extends Service>
    * @throws Exception any other failure -if it implements
    * {@link ExitCodeProvider} then it defines the exit code for any
    * containing exception
-   * @return status code
+   * @return status code.
    */
 
   protected int coreServiceLaunch(Configuration conf,

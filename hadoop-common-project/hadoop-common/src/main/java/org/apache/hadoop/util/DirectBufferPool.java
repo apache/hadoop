@@ -54,8 +54,8 @@ public class DirectBufferPool {
    * If a pooled buffer is available, returns that. Otherwise
    * allocates a new one.
    *
-   * @param size size
-   * @return ByteBuffer
+   * @param size size.
+   * @return ByteBuffer.
    */
   public ByteBuffer getBuffer(int size) {
     Queue<WeakReference<ByteBuffer>> list = buffersBySize.get(size);

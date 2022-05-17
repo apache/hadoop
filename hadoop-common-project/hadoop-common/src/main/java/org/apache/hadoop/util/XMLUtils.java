@@ -40,7 +40,7 @@ public class XMLUtils {
    * @param xml input xml data
    * @param out output
    * @throws TransformerConfigurationException synopsis signals a problem
-   *         creating a transformer object
+   *         creating a transformer object.
    * @throws TransformerException this is used for throwing processor
    *          exceptions before the processing has started.
    */

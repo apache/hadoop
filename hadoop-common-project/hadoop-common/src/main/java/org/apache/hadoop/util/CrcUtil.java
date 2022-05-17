@@ -45,9 +45,9 @@ public final class CrcUtil {
    * in "reversed" (little-endian) format such that {@code mod & 1} represents
    * x^31 and has an implicit term x^32.
    *
-   * @param lengthBytes lengthBytes
-   * @param mod mod
-   * @return monomial
+   * @param lengthBytes lengthBytes.
+   * @param mod mod.
+   * @return monomial.
    */
   public static int getMonomial(long lengthBytes, int mod) {
     if (lengthBytes == 0) {
@@ -79,11 +79,11 @@ public final class CrcUtil {
   /**
    * composeWithMonomial.
    *
-   * @param crcA crcA
-   * @param crcB crcB
+   * @param crcA crcA.
+   * @param crcB crcB.
    * @param monomial Precomputed x^(lengthBInBytes * 8) mod {@code mod}
-   * @param mod mod
-   * @return compose with monomial
+   * @param mod mod.
+   * @return compose with monomial.
    */
   public static int composeWithMonomial(
       int crcA, int crcB, int monomial, int mod) {
@@ -93,10 +93,10 @@ public final class CrcUtil {
   /**
    * compose.
    *
-   * @param crcA crcA
-   * @param crcB crcB
+   * @param crcA crcA.
+   * @param crcB crcB.
    * @param lengthB length of content corresponding to {@code crcB}, in bytes.
-   * @param mod mod
+   * @param mod mod.
    * @return compose result.
    */
   public static int compose(int crcA, int crcB, long lengthB, int mod) {
@@ -129,9 +129,9 @@ public final class CrcUtil {
    * starting at {@code offset}. buf.length must be greater than or
    * equal to offset + 4.
    *
-   * @param buf buf size
-   * @param offset offset
-   * @param value value
+   * @param buf buf size.
+   * @param offset offset.
+   * @param value value.
    * @throws IOException raised on errors performing I/O.
    */
   public static void writeInt(byte[] buf, int offset, int value)
@@ -151,9 +151,9 @@ public final class CrcUtil {
    * Reads 4-byte big-endian int value from {@code buf} starting at
    * {@code offset}. buf.length must be greater than or equal to offset + 4.
    *
-   * @param offset offset
-   * @param buf buf
-   * @return int
+   * @param offset offset.
+   * @param buf buf.
+   * @return int.
    * @throws IOException raised on errors performing I/O.
    */
   public static int readInt(byte[] buf, int offset)
@@ -194,7 +194,7 @@ public final class CrcUtil {
    * expecting it to be divisible by CRC byte size, and returns a list of
    * hex formatted values.
    *
-   * @param bytes bytes
+   * @param bytes bytes.
    * @throws IOException raised on errors performing I/O.
    * @return a list of hex formatted values.
    */

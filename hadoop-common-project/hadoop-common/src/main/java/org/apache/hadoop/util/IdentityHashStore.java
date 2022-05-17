@@ -112,8 +112,8 @@ public final class IdentityHashStore<K, V> {
    * In other words, you can insert the same key multiple times and it will
    * lead to multiple entries.
    *
-   * @param k Generics Type k
-   * @param v Generics Type v
+   * @param k Generics Type k.
+   * @param v Generics Type v.
    */
   public void put(K k, V v) {
     Preconditions.checkNotNull(k);
@@ -146,8 +146,8 @@ public final class IdentityHashStore<K, V> {
   /**
    * Retrieve a value associated with a given key.
    *
-   * @param k Generics Type k
-   * @return Generics Type V
+   * @param k Generics Type k.
+   * @return Generics Type V.
    */
   public V get(K k) {
     int index = getElementIndex(k);
@@ -161,8 +161,8 @@ public final class IdentityHashStore<K, V> {
    * Retrieve a value associated with a given key, and delete the
    * relevant entry.
    *
-   * @param k Generics Type k
-   * @return Generics Type V
+   * @param k Generics Type k.
+   * @return Generics Type V.
    */
   public V remove(K k) {
     int index = getElementIndex(k);
@@ -195,7 +195,7 @@ public final class IdentityHashStore<K, V> {
   /**
    * Visit all key, value pairs in the IdentityHashStore.
    *
-   * @param visitor visitor
+   * @param visitor visitor.
    */
   public void visitAll(Visitor<K, V> visitor) {
     int length = buffer == null ? 0 : buffer.length;

@@ -54,9 +54,9 @@ public interface AsyncGet<R, E extends Throwable> {
   class Util {
     /**
      * Use {@link #get(long, TimeUnit)} timeout parameters to wait.
-     * @param obj object
-     * @param timeout timeout
-     * @param unit unit
+     * @param obj object.
+     * @param timeout timeout.
+     * @param unit unit.
      * @throws InterruptedException if the thread is interrupted.
      */
     public static void wait(Object obj, long timeout, TimeUnit unit)

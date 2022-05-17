@@ -32,7 +32,7 @@ public abstract class SequentialNumber implements IdGenerator {
 
   /**
    * Create a new instance with the given initial value.
-   * @param initialValue initialValue
+   * @param initialValue initialValue.
    */
   protected SequentialNumber(final long initialValue) {
     currentValue = new AtomicLong(initialValue);
@@ -45,7 +45,7 @@ public abstract class SequentialNumber implements IdGenerator {
 
   /**
    * Set current value.
-   * @param value value
+   * @param value value.
    */
   public void setCurrentValue(long value) {
     currentValue.set(value);
@@ -71,9 +71,9 @@ public abstract class SequentialNumber implements IdGenerator {
 
   /**
    * Skip to the new value.
-   * @param newValue newValue
+   * @param newValue newValue.
    * @throws IllegalStateException
-   *         Cannot skip to less than the current value
+   *         Cannot skip to less than the current value.
    */
   public void skipTo(long newValue) throws IllegalStateException {
     for(;;) {

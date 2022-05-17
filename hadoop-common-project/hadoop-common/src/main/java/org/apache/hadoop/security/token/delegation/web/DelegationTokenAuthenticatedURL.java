@@ -337,9 +337,9 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
   /**
    * Select a delegation token from all tokens in credentials, based on url.
    *
-   * @param url url
-   * @param creds credentials
-   * @return token
+   * @param url url.
+   * @param creds credentials.
+   * @return token.
    */
   @InterfaceAudience.Private
   public org.apache.hadoop.security.token.Token<? extends TokenIdentifier>
@@ -411,7 +411,7 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
    * @param token the authentication token with the Delegation Token to renew.
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
-   * @return delegation token long value
+   * @return delegation token long value.
    */
   public long renewDelegationToken(URL url, Token token)
       throws IOException, AuthenticationException {
@@ -428,7 +428,7 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
    * @param doAsUser the user to do as, which will be the token owner.
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
-   * @return delegation token long value
+   * @return delegation token long value.
    */
   public long renewDelegationToken(URL url, Token token, String doAsUser)
       throws IOException, AuthenticationException {

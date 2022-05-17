@@ -54,7 +54,7 @@ public class Daemon extends Thread {
 
   /**
    * Construct a daemon thread.
-   * @param runnable runnable
+   * @param runnable runnable.
    */
   public Daemon(Runnable runnable) {
     super(runnable);
@@ -64,8 +64,8 @@ public class Daemon extends Thread {
 
   /**
    * Construct a daemon thread to be part of a specified thread group.
-   * @param group thread group
-   * @param runnable runnable
+   * @param group thread group.
+   * @param runnable runnable.
    */
   public Daemon(ThreadGroup group, Runnable runnable) {
     super(group, runnable);

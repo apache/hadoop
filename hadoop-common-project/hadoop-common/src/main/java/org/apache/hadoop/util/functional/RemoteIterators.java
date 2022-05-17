@@ -99,7 +99,7 @@ public final class RemoteIterators {
   /**
    * Create a remote iterator from a java.util.Iterator.
    * @param <T> type
-   * @param iterator iterator
+   * @param iterator iterator.
    * @return a remote iterator
    */
   public static <T> RemoteIterator<T> remoteIteratorFromIterator(
@@ -111,7 +111,7 @@ public final class RemoteIterators {
    * Create a remote iterator from a java.util.Iterable -e.g. a list
    * or other collection.
    * @param <T> type
-   * @param iterable iterable
+   * @param iterable iterable.
    * @return a remote iterator
    */
   public static <T> RemoteIterator<T> remoteIteratorFromIterable(
@@ -122,7 +122,7 @@ public final class RemoteIterators {
   /**
    * Create a remote iterator from an array.
    * @param <T> type
-   * @param array array
+   * @param array array.
    * @return a remote iterator
    */
   public static <T> RemoteIterator<T> remoteIteratorFromArray(T[] array) {

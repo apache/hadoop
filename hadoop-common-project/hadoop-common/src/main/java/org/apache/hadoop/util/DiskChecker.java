@@ -70,8 +70,8 @@ public class DiskChecker {
    * Create the directory if it doesn't exist and check that dir is readable,
    * writable and executable
    *  
-   * @param dir dir
-   * @throws DiskErrorException disk problem
+   * @param dir dir.
+   * @throws DiskErrorException disk problem.
    */
   public static void checkDir(File dir) throws DiskErrorException {
     checkDirInternal(dir);
@@ -82,8 +82,8 @@ public class DiskChecker {
    * readable, writable and executable. Perform some disk IO to
    * ensure that the disk is usable for writes.
    *
-   * @param dir dir
-   * @throws DiskErrorException disk problem
+   * @param dir dir.
+   * @throws DiskErrorException disk problem.
    */
   public static void checkDirWithDiskIo(File dir)
       throws DiskErrorException {
@@ -107,7 +107,7 @@ public class DiskChecker {
    * @param localFS local filesystem
    * @param dir directory
    * @param expected permission
-   * @throws DiskErrorException disk problem
+   * @throws DiskErrorException disk problem.
    * @throws IOException raised on errors performing I/O.
    */
   public static void checkDir(LocalFileSystem localFS, Path dir,
@@ -125,7 +125,7 @@ public class DiskChecker {
    * @param localFS local filesystem
    * @param dir directory
    * @param expected permission
-   * @throws DiskErrorException disk problem
+   * @throws DiskErrorException disk problem.
    * @throws IOException raised on errors performing I/O.
    */  
   public static void checkDirWithDiskIo(LocalFileSystem localFS, Path dir,

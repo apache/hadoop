@@ -190,7 +190,7 @@ extends AbstractDelegationTokenIdentifier>
    * Add a previously used master key to cache (when NN restarts), 
    * should be called before activate().
    *
-   * @param key delegation key
+   * @param key delegation key.
    * @throws IOException raised on errors performing I/O.
    */
   public synchronized void addKey(DelegationKey key) throws IOException {
@@ -244,7 +244,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @return currentId
+   * @return currentId.
    */
   protected synchronized int getCurrentKeyId() {
     return currentId;
@@ -254,7 +254,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @return currentId
+   * @return currentId.
    */
   protected synchronized int incrementCurrentKeyId() {
     return ++currentId;
@@ -264,7 +264,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @param keyId keyId
+   * @param keyId keyId.
    */
   protected synchronized void setCurrentKeyId(int keyId) {
     currentId = keyId;
@@ -274,7 +274,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @return delegationTokenSequenceNumber
+   * @return delegationTokenSequenceNumber.
    */
   protected synchronized int getDelegationTokenSeqNum() {
     return delegationTokenSequenceNumber;
@@ -284,7 +284,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @return delegationTokenSequenceNumber
+   * @return delegationTokenSequenceNumber.
    */
   protected synchronized int incrementDelegationTokenSeqNum() {
     return ++delegationTokenSequenceNumber;
@@ -294,7 +294,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @param seqNum seqNum
+   * @param seqNum seqNum.
    */
   protected synchronized void setDelegationTokenSeqNum(int seqNum) {
     delegationTokenSequenceNumber = seqNum;
@@ -304,8 +304,8 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @param keyId keyId
-   * @return DelegationKey
+   * @param keyId keyId.
+   * @return DelegationKey.
    */
   protected DelegationKey getDelegationKey(int keyId) {
     return allKeys.get(keyId);
@@ -315,7 +315,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @param key DelegationKey
+   * @param key DelegationKey.
    * @throws IOException raised on errors performing I/O.
    */
   protected void storeDelegationKey(DelegationKey key) throws IOException {
@@ -327,7 +327,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @param key DelegationKey
+   * @param key DelegationKey.
    * @throws IOException raised on errors performing I/O.
    */
   protected void updateDelegationKey(DelegationKey key) throws IOException {
@@ -338,8 +338,8 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations
    *
-   * @param ident ident
-   * @return DelegationTokenInformation
+   * @param ident ident.
+   * @return DelegationTokenInformation.
    */
   protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
     return currentTokens.get(ident);
@@ -349,8 +349,8 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @param ident ident
-   * @param tokenInfo tokenInfo
+   * @param ident ident.
+   * @param tokenInfo tokenInfo.
    * @throws IOException raised on errors performing I/O.
    */
   protected void storeToken(TokenIdent ident,
@@ -364,8 +364,8 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations.
    *
-   * @param ident ident
-   * @param tokenInfo tokenInfo
+   * @param ident ident.
+   * @param tokenInfo tokenInfo.
    * @throws IOException raised on errors performing I/O.
    */
   protected void updateToken(TokenIdent ident,
@@ -502,9 +502,9 @@ extends AbstractDelegationTokenIdentifier>
    * if the token is expired. Note that this method should be called with 
    * acquiring the secret manager's monitor.
    *
-   * @param identifier identifier
-   * @throws InvalidToken invalid token exception
-   * @return DelegationTokenInformation
+   * @param identifier identifier.
+   * @throws InvalidToken invalid token exception.
+   * @return DelegationTokenInformation.
    */
   protected DelegationTokenInformation checkToken(TokenIdent identifier)
       throws InvalidToken {
@@ -548,7 +548,7 @@ extends AbstractDelegationTokenIdentifier>
    * Verifies that the given identifier and password are valid and match.
    * @param identifier Token identifier.
    * @param password Password in the token.
-   * @throws InvalidToken InvalidToken
+   * @throws InvalidToken InvalidToken.
    */
   public synchronized void verifyToken(TokenIdent identifier, byte[] password)
       throws InvalidToken {
@@ -623,8 +623,8 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Cancel a token by removing it from cache.
    *
-   * @param token token
-   * @param canceller canceller
+   * @param token token.
+   * @param canceller canceller.
    * @return Identifier of the canceled token
    * @throws InvalidToken for invalid token
    * @throws AccessControlException if the user isn't allowed to cancel
@@ -689,23 +689,20 @@ extends AbstractDelegationTokenIdentifier>
       this.trackingId = trackingId;
     }
     /**
-     * returns renew date.
-     * @return renew date
+     * @return returns renew date.
      */
     public long getRenewDate() {
       return renewDate;
     }
     /**
-     * returns password.
-     * @return password
+     * @return returns password.
      */
     byte[] getPassword() {
       return password;
     }
 
     /**
-     * returns tracking id.
-     * @return tracking id
+     * @return returns tracking id.
      */
     public String getTrackingId() {
       return trackingId;

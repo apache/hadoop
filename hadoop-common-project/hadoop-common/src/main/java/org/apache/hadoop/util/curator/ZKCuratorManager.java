@@ -84,10 +84,10 @@ public final class ZKCuratorManager {
   /**
    * Utility method to fetch the ZK ACLs from the configuration.
    *
-   * @param conf configuration
+   * @param conf configuration.
    * @throws java.io.IOException if the Zookeeper ACLs configuration file
    * cannot be read
-   * @return acl list
+   * @return acl list.
    */
   public static List<ACL> getZKAcls(Configuration conf) throws IOException {
     // Parse authentication from configuration.
@@ -106,11 +106,11 @@ public final class ZKCuratorManager {
   /**
    * Utility method to fetch ZK auth info from the configuration.
    *
-   * @param conf configuration
+   * @param conf configuration.
    * @throws java.io.IOException if the Zookeeper ACLs configuration file
    * cannot be read
    * @throws ZKUtil.BadAuthFormatException if the auth format is invalid
-   * @return ZKAuthInfo List
+   * @return ZKAuthInfo List.
    */
   public static List<ZKUtil.ZKAuthInfo> getZKAuths(Configuration conf)
       throws IOException {
@@ -192,7 +192,7 @@ public final class ZKCuratorManager {
   /**
    * Get the data in a ZNode.
    * @param path Path of the ZNode.
-   * @param stat stat
+   * @param stat stat.
    * @return The data in the ZNode.
    * @throws Exception If it cannot contact Zookeeper.
    */
@@ -371,8 +371,8 @@ public final class ZKCuratorManager {
    * Deletes the path. Checks for existence of path as well.
    *
    * @param path Path to be deleted.
-   * @param fencingNodePath fencingNodePath
-   * @param fencingACL fencingACL
+   * @param fencingNodePath fencingNodePath.
+   * @param fencingACL fencingACL.
    * @throws Exception if any problem occurs while performing deletion.
    */
   public void safeDelete(final String path, List<ACL> fencingACL,

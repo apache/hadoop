@@ -415,7 +415,7 @@ public class NetworkTopology {
   }
   
   /**
-   * @return Check if network topology is aware of NodeGroup
+   * @return Check if network topology is aware of NodeGroup.
    */
   public boolean isNodeGroupAware() {
     return false;
@@ -947,7 +947,7 @@ public class NetworkTopology {
    * @param activeLen Number of active nodes at the front of the array
    * @param secondarySort a secondary sorting strategy which can inject into
    *     that point from outside to help sort the same distance.
-   * @param <T> Generics Type T
+   * @param <T> Generics Type T.
    */
   public <T extends Node> void sortByDistanceUsingNetworkLocation(Node reader,
       T[] nodes, int activeLen, Consumer<List<T>> secondarySort) {

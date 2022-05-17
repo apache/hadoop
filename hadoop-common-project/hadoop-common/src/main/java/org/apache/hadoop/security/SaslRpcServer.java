@@ -210,8 +210,8 @@ public class SaslRpcServer {
 
   /**
    * Splitting fully qualified Kerberos name into parts.
-   * @param fullName fullName
-   * @return splitKerberosName
+   * @param fullName fullName.
+   * @return splitKerberosName.
    */
   public static String[] splitKerberosName(String fullName) {
     return fullName.split("[/@]");
@@ -246,7 +246,7 @@ public class SaslRpcServer {
 
     /**
      * Return the SASL mechanism name.
-     * @return mechanismName
+     * @return mechanismName.
      */
     public String getMechanismName() {
       return mechanismName;
@@ -255,9 +255,9 @@ public class SaslRpcServer {
     /**
      * Read from in.
      *
-     * @param in DataInput
+     * @param in DataInput.
      * @throws IOException raised on errors performing I/O.
-     * @return AuthMethod
+     * @return AuthMethod.
      */
     public static AuthMethod read(DataInput in) throws IOException {
       return valueOf(in.readByte());
@@ -265,7 +265,7 @@ public class SaslRpcServer {
 
     /**
      * Write to out.
-     * @param out DataOutput
+     * @param out DataOutput.
      * @throws IOException raised on errors performing I/O.
      */
     public void write(DataOutput out) throws IOException {

@@ -51,11 +51,11 @@ public abstract class TokenRenewer {
     /**
      * Renew the given token.
      *
-     * @param token the token being checked
-     * @param conf configuration
+     * @param token the token being checked.
+     * @param conf configuration.
      *
-     * @return the new expiration time
-     * @throws IOException          raised on errors performing I/O.
+     * @return the new expiration time.
+     * @throws IOException raised on errors performing I/O.
      * @throws InterruptedException thrown when a thread is waiting, sleeping,
      *                              or otherwise occupied, and the thread is interrupted,
      *                              either before or during the activity.
@@ -67,10 +67,10 @@ public abstract class TokenRenewer {
     /**
      * Cancel the given token.
      *
-     * @param token the token being checked
-     * @param conf configuration
+     * @param token the token being checked.
+     * @param conf configuration.
      *
-     * @throws IOException          raised on errors performing I/O.
+     * @throws IOException raised on errors performing I/O.
      * @throws InterruptedException thrown when a thread is waiting, sleeping,
      *                              or otherwise occupied, and the thread is interrupted,
      *                              either before or during the activity.

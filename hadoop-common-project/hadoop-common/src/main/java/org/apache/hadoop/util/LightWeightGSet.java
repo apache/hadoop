@@ -180,8 +180,8 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
    * Remove the element corresponding to the key,
    * given key.hashCode() == index.
    *
-   * @param key key
-   * @param index index
+   * @param key key.
+   * @param index index.
    * @return If such element exists, return it.
    *         Otherwise, return null.
    */
@@ -278,7 +278,7 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
   /**
    * Print detailed information of this object.
    *
-   * @param out out
+   * @param out out.
    */
   public void printDetails(final PrintStream out) {
     out.print(this + ", entries = [");
@@ -367,9 +367,9 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
    * Then, we choose capacity = 2^e/(size of reference),
    * unless it is outside the close interval [1, 2^30].
    *
-   * @param mapName mapName
-   * @param percentage percentage
-   * @return compute capacity
+   * @param mapName mapName.
+   * @param percentage percentage.
+   * @return compute capacity.
    */
   public static int computeCapacity(double percentage, String mapName) {
     return computeCapacity(Runtime.getRuntime().maxMemory(), percentage,

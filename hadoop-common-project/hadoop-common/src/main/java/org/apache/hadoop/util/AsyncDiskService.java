@@ -95,8 +95,8 @@ public class AsyncDiskService {
   /**
    * Execute the task sometime in the future, using ThreadPools.
    *
-   * @param root root
-   * @param task task
+   * @param root root.
+   * @param task task.
    */
   public synchronized void execute(String root, Runnable task) {
     ThreadPoolExecutor executor = executors.get(root);
@@ -149,7 +149,7 @@ public class AsyncDiskService {
   /**
    * Shut down all ThreadPools immediately.
    *
-   * @return Runnable List
+   * @return Runnable List.
    */
   public synchronized List<Runnable> shutdownNow() {
     

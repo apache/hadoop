@@ -73,7 +73,7 @@ public class DataChecksum implements Checksum {
      * the type corresponding to the id.
      *
      * @return the type corresponding to the id.
-     * @param id id
+     * @param id id.
      */
     public static Type valueOf(int id) {
       if (id < 0 || id >= values().length) {
@@ -88,7 +88,7 @@ public class DataChecksum implements Checksum {
    * Create a Crc32 Checksum object. The implementation of the Crc32 algorithm
    * is chosen depending on the platform.
    *
-   * @return Checksum
+   * @return Checksum.
    */
   public static Checksum newCrc32() {
     return new CRC32();
@@ -152,8 +152,8 @@ public class DataChecksum implements Checksum {
   /**
    * Creates a DataChecksum from HEADER_LEN bytes from arr[offset].
    *
-   * @param bytes bytes
-   * @param offset offset
+   * @param bytes bytes.
+   * @param offset offset.
    * @return DataChecksum of the type in the array or null in case of an error.
    * @throws IOException raised on errors performing I/O.
    */
@@ -184,10 +184,10 @@ public class DataChecksum implements Checksum {
    * This constructs a DataChecksum by reading HEADER_LEN bytes from input
    * stream <i>in</i>.
    *
-   * @param in data input stream
+   * @param in data input stream.
    * @throws IOException raised on errors performing I/O.
    * @return DataChecksum by reading HEADER_LEN
-   *         bytes from input stream
+   *         bytes from input stream.
    */
   public static DataChecksum newDataChecksum( DataInputStream in )
                                  throws IOException {
@@ -214,7 +214,7 @@ public class DataChecksum implements Checksum {
   /**
    * Writes the checksum header to the output stream <i>out</i>.
    *
-   * @param out output stream
+   * @param out output stream.
    * @throws IOException raised on errors performing I/O.
    */
   public void writeHeader( DataOutputStream out ) 
@@ -238,8 +238,8 @@ public class DataChecksum implements Checksum {
    * Writes the current checksum to the stream.
    * If <i>reset</i> is true, then resets the checksum.
    *
-   * @param out out
-   * @param reset reset
+   * @param out out.
+   * @param reset reset.
    * @return number of bytes written. Will be equal to getChecksumSize();
    * @throws IOException raised on errors performing I/O.
    */
@@ -266,9 +266,9 @@ public class DataChecksum implements Checksum {
     * Writes the current checksum to a buffer.
     * If <i>reset</i> is true, then resets the checksum.
     *
-    * @param buf buf
-    * @param offset offset
-    * @param reset reset
+    * @param buf buf.
+    * @param offset offset.
+    * @param reset reset.
     * @return number of bytes written. Will be equal to getChecksumSize();
     * @throws IOException raised on errors performing I/O.
     */
@@ -298,8 +298,8 @@ public class DataChecksum implements Checksum {
    /**
     * Compares the checksum located at buf[offset] with the current checksum.
     *
-    * @param buf buf
-    * @param offset offset
+    * @param buf buf.
+    * @param offset offset.
     * @return true if the checksum matches and false otherwise.
     */
    public boolean compare( byte buf[], int offset ) {
@@ -339,7 +339,7 @@ public class DataChecksum implements Checksum {
 
   /**
    * the required checksum size given the data length.
-   * @param dataSize data size
+   * @param dataSize data size.
    * @return the required checksum size given the data length.
    */
   public int getChecksumSize(int dataSize) {
@@ -567,11 +567,11 @@ public class DataChecksum implements Checksum {
    * Implementation of chunked calculation specifically on byte arrays. This
    * is to avoid the copy when dealing with ByteBuffers that have array backing.
    *
-   * @param data data
-   * @param dataOffset dataOffset
-   * @param dataLength dataLength
-   * @param sums sums
-   * @param sumsOffset sumsOffset
+   * @param data data.
+   * @param dataOffset dataOffset.
+   * @param dataLength dataLength.
+   * @param sums sums.
+   * @param sumsOffset sumsOffset.
    */
   public void calculateChunkedSums(
       byte[] data, int dataOffset, int dataLength,

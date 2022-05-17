@@ -148,7 +148,7 @@ public class ProgramDriver {
   /**
    * API compatible with Hadoop 1.x.
    *
-   * @param argv argv
+   * @param argv argv.
    * @throws Throwable Anything thrown
    *                   by the example program's main
    */

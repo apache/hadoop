@@ -117,7 +117,7 @@ public class LightWeightResizableGSet<K, E extends K>
   /**
    * Resize the internal table to given capacity.
    *
-   * @param cap capacity
+   * @param cap capacity.
    */
   @SuppressWarnings("unchecked")
   protected synchronized void resize(int cap) {

@@ -38,7 +38,7 @@ public abstract class GetGroupsBase extends Configured implements Tool {
   
   /**
    * Create an instance of this tool using the given configuration.
-   * @param conf configuration
+   * @param conf configuration.
    */
   protected GetGroupsBase(Configuration conf) {
     this(conf, System.out);

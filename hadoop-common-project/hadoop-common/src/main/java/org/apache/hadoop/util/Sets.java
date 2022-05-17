@@ -57,7 +57,7 @@ public final class Sets {
    * instead, at the cost of increased memory footprint, to get
    * deterministic iteration behavior.</p>
    *
-   * @param <E> Generics Type E
+   * @param <E> Generics Type E.
    * @return a new, empty {@code TreeSet}
    */
   public static <E> HashSet<E> newHashSet() {
@@ -93,8 +93,8 @@ public final class Sets {
    * {@code newHashSet(}{@link Arrays#asList}{@code (...))}, or for creating an
    * empty set then calling {@link Collections#addAll}.</p>
    *
-   * @param <E> Generics Type E
-   * @param elements the elements that the set should contain
+   * @param <E> Generics Type E.
+   * @param elements the elements that the set should contain.
    * @return a new, empty thread-safe {@code Set}
    */
   @SafeVarargs
@@ -116,9 +116,9 @@ public final class Sets {
    * <p><b>Note:</b> if {@code E} is an {@link Enum} type, use
    * newEnumSet(Iterable, Class) instead.</p>
    *
-   * @param <E> Generics Type E
-   * @param elements the elements that the set should contain
-   * @return a new, empty thread-safe {@code Set}
+   * @param <E> Generics Type E.
+   * @param elements the elements that the set should contain.
+   * @return a new, empty thread-safe {@code Set}.
    */
   public static <E> HashSet<E> newHashSet(Iterable<? extends E> elements) {
     return (elements instanceof Collection)
@@ -147,7 +147,7 @@ public final class Sets {
    * then calling Iterables#addAll. This method is not very useful and will
    * likely be deprecated in the future.
    *
-   * @param <E> Generics Type E
+   * @param <E> Generics Type E.
    * @param elements the elements that the set should contain
    * @return a new {@code TreeSet} containing those elements (minus duplicates)
    */
@@ -184,9 +184,9 @@ public final class Sets {
    * <p>Overall, this method is not very useful and will likely be deprecated
    * in the future.</p>
    *
-   * @param <E> Generics Type E
-   * @param elements elements
-   * @return a new, empty thread-safe {@code Set}
+   * @param <E> Generics Type E.
+   * @param elements elements.
+   * @return a new, empty thread-safe {@code Set}.
    */
   public static <E> HashSet<E> newHashSet(Iterator<? extends E> elements) {
     HashSet<E> set = newHashSet();
@@ -205,7 +205,7 @@ public final class Sets {
    *
    * @param expectedSize the number of elements you expect to add to the
    *     returned set
-   * @param <E> Generics Type E
+   * @param <E> Generics Type E.
    * @return a new, empty hash set with enough capacity to hold
    *     {@code expectedSize} elements without resizing
    * @throws IllegalArgumentException if {@code expectedSize} is negative
@@ -242,10 +242,10 @@ public final class Sets {
    * on different equivalence relations (as {@code HashSet}, {@code TreeSet},
    * and the keySet of an {@code IdentityHashMap} all are).
    *
-   * @param set1 set1
-   * @param set2 set2
-   * @param <E> Generics Type E
-   * @return a new, empty thread-safe {@code Set}
+   * @param set1 set1.
+   * @param set2 set2.
+   * @param <E> Generics Type E.
+   * @return a new, empty thread-safe {@code Set}.
    */
   public static <E> Set<E> intersection(final Set<E> set1,
       final Set<E> set2) {
@@ -270,10 +270,10 @@ public final class Sets {
    * {@link TreeSet}, and the {@link Map#keySet} of an
    * {@code IdentityHashMap} all are).
    *
-   * @param set1 set1
-   * @param set2 set2
-   * @param <E> Generics Type E
-   * @return a new, empty thread-safe {@code Set}
+   * @param set1 set1.
+   * @param set2 set2.
+   * @param <E> Generics Type E.
+   * @return a new, empty thread-safe {@code Set}.
    */
   public static <E> Set<E> union(
       final Set<E> set1, final Set<E> set2) {
@@ -301,10 +301,10 @@ public final class Sets {
    * strict order requirement, recommended method is
    * {@link #differenceInTreeSets(Set, Set)}.
    *
-   * @param set1 set1
-   * @param set2 set2
-   * @param <E> Generics Type E
-   * @return a new, empty thread-safe {@code Set}
+   * @param set1 set1.
+   * @param set2 set2.
+   * @param <E> Generics Type E.
+   * @return a new, empty thread-safe {@code Set}.
    */
   public static <E> Set<E> difference(
       final Set<E> set1, final Set<E> set2) {
@@ -331,10 +331,10 @@ public final class Sets {
    * This method is used to find difference for TreeSets. For HashSets,
    * recommended method is {@link #difference(Set, Set)}.
    *
-   * @param <E> Generics Type E
-   * @param set1 set1
-   * @param set2 set2
-   * @return a new, empty thread-safe {@code Set}
+   * @param <E> Generics Type E.
+   * @param set1 set1.
+   * @param set2 set2.
+   * @return a new, empty thread-safe {@code Set}.
    */
   public static <E> Set<E> differenceInTreeSets(
       final Set<E> set1, final Set<E> set2) {
@@ -359,10 +359,10 @@ public final class Sets {
    * on different equivalence relations (as {@code HashSet}, {@code TreeSet},
    * and the keySet of an {@code IdentityHashMap} all are).
    *
-   * @param set1 set1
-   * @param set2 set2
-   * @param <E> Generics Type E
-   * @return a new, empty thread-safe {@code Set}
+   * @param set1 set1.
+   * @param set2 set2.
+   * @param <E> Generics Type E.
+   * @return a new, empty thread-safe {@code Set}.
    */
   public static <E> Set<E> symmetricDifference(
       final Set<E> set1, final Set<E> set2) {
@@ -388,7 +388,7 @@ public final class Sets {
    * <p>Unlike {@code HashSet}, this class does NOT allow {@code null} to be
    * used as an element. The set is serializable.
    *
-   * @param <E> Generics Type
+   * @param <E> Generics Type.
    * @return a new, empty thread-safe {@code Set}
    */
   public static <E> Set<E> newConcurrentHashSet() {

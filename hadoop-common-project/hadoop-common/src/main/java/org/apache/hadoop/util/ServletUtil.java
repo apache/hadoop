@@ -32,10 +32,10 @@ public class ServletUtil {
   /**
    * Initial HTML header.
    *
-   * @param response response
-   * @param title title
+   * @param response response.
+   * @param title title.
    * @throws IOException raised on errors performing I/O.
-   * @return PrintWriter
+   * @return PrintWriter.
    */
   public static PrintWriter initHTML(ServletResponse response, String title
       ) throws IOException {
@@ -53,9 +53,9 @@ public class ServletUtil {
    * Get a parameter from a ServletRequest.
    * Return null if the parameter contains only white spaces.
    *
-   * @param request request
-   * @param name name
-   * @return get a parameter from a ServletRequest
+   * @param request request.
+   * @param name name.
+   * @return get a parameter from a ServletRequest.
    */
   public static String getParameter(ServletRequest request, String name) {
     String s = request.getParameter(name);
@@ -69,8 +69,8 @@ public class ServletUtil {
   /**
    * parseLongParam.
    *
-   * @param request request
-   * @param param param
+   * @param request request.
+   * @param param param.
    * @return a long value as passed in the given parameter, throwing
    * an exception if it is not present or if it is not a valid number.
    * @throws IOException raised on errors performing I/O.

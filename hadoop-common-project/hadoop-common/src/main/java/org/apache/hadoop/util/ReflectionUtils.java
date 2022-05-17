@@ -120,7 +120,7 @@ public class ReflectionUtils {
    * 
    * @param theClass class of which an object is created
    * @param conf Configuration
-   * @param <T> Generics Type T
+   * @param <T> Generics Type T.
    * @return a new object
    */
   @SuppressWarnings("unchecked")
@@ -134,7 +134,7 @@ public class ReflectionUtils {
    * @param conf Configuration
    * @param argTypes the types of the arguments
    * @param values the values of the arguments
-   * @param <T> Generics Type
+   * @param <T> Generics Type.
    * @return a new object
    */
   @SuppressWarnings("unchecked")
@@ -286,7 +286,7 @@ public class ReflectionUtils {
    * Return the correctly-typed {@link Class} of the given object.
    *  
    * @param o object whose correctly-typed <code>Class</code> is to be obtained
-   * @param <T> Generics Type T
+   * @param <T> Generics Type T.
    * @return the correctly typed <code>Class</code> of the given object.
    */
   @SuppressWarnings("unchecked")
@@ -338,8 +338,8 @@ public class ReflectionUtils {
    * Make a copy of the writable object using serialization to a buffer.
    * @param src the object to copy from
    * @param dst the object to copy into, which is destroyed
-   * @param <T> Generics Type
-   * @param conf configuration
+   * @param <T> Generics Type.
+   * @param conf configuration.
    * @return dst param (the copy)
    * @throws IOException raised on errors performing I/O.
    */
@@ -399,8 +399,8 @@ public class ReflectionUtils {
    * Gets all the declared methods of a class including methods declared in
    * superclasses.
    *
-   * @param clazz clazz
-   * @return Method List
+   * @param clazz clazz.
+   * @return Method List.
    */
   public static List<Method> getDeclaredMethodsIncludingInherited(Class<?> clazz) {
     List<Method> methods = new ArrayList<Method>();

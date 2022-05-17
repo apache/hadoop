@@ -52,8 +52,8 @@ public class CrcComposer {
    * Returns a CrcComposer which will collapse all ingested CRCs into a single
    * value.
    *
-   * @param type type
-   * @param bytesPerCrcHint bytesPerCrcHint
+   * @param type type.
+   * @param bytesPerCrcHint bytesPerCrcHint.
    * @throws IOException raised on errors performing I/O.
    * @return a CrcComposer which will collapse all ingested CRCs into a single value.
    */
@@ -73,10 +73,10 @@ public class CrcComposer {
    * a stripeLength greater than the total underlying data size is equivalent
    * to using a non-striped CrcComposer.
    *
-   * @param type type
-   * @param bytesPerCrcHint bytesPerCrcHint
-   * @param stripeLength stripeLength
-   * @return a CrcComposer which will collapse CRCs for every combined
+   * @param type type.
+   * @param bytesPerCrcHint bytesPerCrcHint.
+   * @param stripeLength stripeLength.
+   * @return a CrcComposer which will collapse CRCs for every combined.
    * underlying data size which aligns with the specified stripe boundary.
    * @throws IOException raised on errors performing I/O.
    */
@@ -114,10 +114,10 @@ public class CrcComposer {
    * each CRC expected to correspond to exactly {@code bytesPerCrc} underlying
    * data bytes.
    *
-   * @param crcBuffer crcBuffer
-   * @param offset offset
+   * @param crcBuffer crcBuffer.
+   * @param offset offset.
    * @param length must be a multiple of the expected byte-size of a CRC.
-   * @param bytesPerCrc bytesPerCrc
+   * @param bytesPerCrc bytesPerCrc.
    * @throws IOException raised on errors performing I/O.
    */
   public void update(
@@ -142,9 +142,9 @@ public class CrcComposer {
    * out of {@code checksumIn}, with each CRC expected to correspond to exactly
    * {@code bytesPerCrc} underlying data bytes.
    *
-   * @param checksumIn checksumIn
-   * @param numChecksumsToRead numChecksumsToRead
-   * @param bytesPerCrc bytesPerCrc
+   * @param checksumIn checksumIn.
+   * @param numChecksumsToRead numChecksumsToRead.
+   * @param bytesPerCrc bytesPerCrc.
    * @throws IOException raised on errors performing I/O.
    */
   public void update(
@@ -160,8 +160,8 @@ public class CrcComposer {
    * Updates with a single additional CRC which corresponds to an underlying
    * data size of {@code bytesPerCrc}.
    *
-   * @param crcB crcB
-   * @param bytesPerCrc bytesPerCrc
+   * @param crcB crcB.
+   * @param bytesPerCrc bytesPerCrc.
    * @throws IOException raised on errors performing I/O.
    */
   public void update(int crcB, long bytesPerCrc) throws IOException {

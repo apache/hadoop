@@ -193,7 +193,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
   /**
    * Set the token kind. This is only intended to be used by services that
    * wrap another service's token.
-   * @param newKind newKind
+   * @param newKind newKind.
    */
   @InterfaceAudience.Private
   public synchronized void setKind(Text newKind) {
@@ -489,7 +489,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
 
   /**
    * Renew this delegation token.
-   * @param conf configuration
+   * @param conf configuration.
    * @return the new expiration time
    * @throws IOException raised on errors performing I/O.
    * @throws InterruptedException if the thread is interrupted.
@@ -502,7 +502,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
   /**
    * Cancel this delegation token.
    *
-   * @param conf configuration
+   * @param conf configuration.
    * @throws IOException raised on errors performing I/O.
    * @throws InterruptedException if the thread is interrupted.
    */

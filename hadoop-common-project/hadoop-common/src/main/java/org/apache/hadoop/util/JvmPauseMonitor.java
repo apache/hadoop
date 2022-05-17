@@ -215,8 +215,8 @@ public class JvmPauseMonitor extends AbstractService {
    * with a 1GB heap will very quickly go into "GC hell" and result in
    * log messages about the GC pauses.
    *
-   * @param args args
-   * @throws Exception Exception
+   * @param args args.
+   * @throws Exception Exception.
    */
   @SuppressWarnings("resource")
   public static void main(String []args) throws Exception {

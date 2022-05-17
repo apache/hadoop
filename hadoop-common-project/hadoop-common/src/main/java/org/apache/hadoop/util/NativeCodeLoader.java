@@ -77,7 +77,7 @@ public final class NativeCodeLoader {
   /**
    * Returns true only if this build was compiled with support for ISA-L.
    *
-   * @return if this build was compiled with support for ISA-L true, not false
+   * @return if this build was compiled with support for ISA-L true, not false.
    */
   public static native boolean buildSupportsIsal();
 

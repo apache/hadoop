@@ -1047,7 +1047,7 @@ public class KDiag extends Configured implements Tool, Closeable {
    * @param conf configuration
    * @param argv argument list
    * @return an exception
-   * @throws Exception Exception
+   * @throws Exception Exception.
    */
   public static int exec(Configuration conf, String... argv) throws Exception {
     try(KDiag kdiag = new KDiag()) {

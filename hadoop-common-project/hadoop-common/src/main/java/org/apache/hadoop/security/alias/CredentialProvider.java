@@ -116,7 +116,7 @@ public abstract class CredentialProvider {
    * @param name the alias of the credential
    * @param credential the credential value for the alias.
    * @throws IOException raised on errors performing I/O.
-   * @return CredentialEntry
+   * @return CredentialEntry.
    */
   public abstract CredentialEntry createCredentialEntry(String name, 
       char[] credential) throws IOException;

@@ -75,8 +75,8 @@ public class StringInterner {
    * Interns all the strings in the given array in place,
    * returning the same array.
    *
-   * @param strings strings
-   * @return internStringsInArray
+   * @param strings strings.
+   * @return internStringsInArray.
    */
   public static String[] internStringsInArray(String[] strings) {
     for (int i = 0; i < strings.length; i++) {

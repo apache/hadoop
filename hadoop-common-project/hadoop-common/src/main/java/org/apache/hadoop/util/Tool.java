@@ -82,7 +82,7 @@ public interface Tool extends Configurable {
    * 
    * @param args command specific arguments.
    * @return exit code.
-   * @throws Exception command exception
+   * @throws Exception command exception.
    */
   int run(String [] args) throws Exception;
 }

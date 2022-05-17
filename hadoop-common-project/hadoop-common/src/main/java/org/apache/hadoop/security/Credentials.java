@@ -148,7 +148,7 @@ public class Credentials implements Writable {
   /**
    * Returns an unmodifiable version of the full map of aliases to Tokens.
    *
-   * @return TokenMap
+   * @return TokenMap.
    */
   public Map<Text, Token<? extends TokenIdentifier>> getTokenMap() {
     return Collections.unmodifiableMap(tokenMap);
@@ -197,7 +197,7 @@ public class Credentials implements Writable {
   /**
    * Return all the secret key entries in the in-memory map.
    *
-   * @return Text List
+   * @return Text List.
    */
   public List<Text> getAllSecretKeys() {
     List<Text> list = new java.util.ArrayList<Text>();
@@ -209,7 +209,7 @@ public class Credentials implements Writable {
   /**
    * Returns an unmodifiable version of the full map of aliases to secret keys.
    *
-   * @return SecretKeyMap
+   * @return SecretKeyMap.
    */
   public Map<Text, byte[]> getSecretKeyMap() {
     return Collections.unmodifiableMap(secretKeysMap);
@@ -217,10 +217,10 @@ public class Credentials implements Writable {
 
   /**
    * Convenience method for reading a token storage file and loading its Tokens.
-   * @param filename filename
-   * @param conf configuration
+   * @param filename filename.
+   * @param conf configuration.
    * @throws IOException  raised on errors performing I/O.
-   * @return Credentials
+   * @return Credentials.
    */
   public static Credentials readTokenStorageFile(Path filename,
                                                  Configuration conf)
@@ -242,10 +242,10 @@ public class Credentials implements Writable {
 
   /**
    * Convenience method for reading a token storage file and loading its Tokens.
-   * @param filename filename
-   * @param conf configuration
+   * @param filename filename.
+   * @param conf configuration.
    * @throws IOException raised on errors performing I/O.
-   * @return Token
+   * @return Token.
    */
   public static Credentials readTokenStorageFile(File filename,
                                                  Configuration conf)
@@ -267,7 +267,7 @@ public class Credentials implements Writable {
   /**
    * Convenience method for reading a token from a DataInputStream.
    *
-   * @param in DataInputStream
+   * @param in DataInputStream.
    * @throws IOException raised on errors performing I/O.
    */
   public void readTokenStorageStream(DataInputStream in) throws IOException {
@@ -348,7 +348,7 @@ public class Credentials implements Writable {
 
   /**
    * Stores all the keys to DataOutput.
-   * @param out DataOutput
+   * @param out DataOutput.
    * @throws IOException raised on errors performing I/O.
    */
   @Override
@@ -414,7 +414,7 @@ public class Credentials implements Writable {
 
   /**
    * Loads all the keys.
-   * @param in DataInput
+   * @param in DataInput.
    * @throws IOException raised on errors performing I/O.
    */
   @Override

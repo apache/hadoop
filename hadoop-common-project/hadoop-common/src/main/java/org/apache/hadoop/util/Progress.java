@@ -55,8 +55,8 @@ public class Progress {
 
   /**
    * Adds a named node to the tree.
-   * @param status status
-   * @return Progress
+   * @param status status.
+   * @return Progress.
    */
   public Progress addPhase(String status) {
     Progress phase = addPhase();
@@ -66,7 +66,7 @@ public class Progress {
 
   /**
    * Adds a node to the tree. Gives equal weightage to all phases.
-   * @return Progress
+   * @return Progress.
    */
   public synchronized Progress addPhase() {
     Progress phase = addNewPhase();
@@ -87,9 +87,9 @@ public class Progress {
   /**
    * Adds a named node with a specified progress weightage to the tree.
    *
-   * @param status status
-   * @param weightage weightage
-   * @return Progress
+   * @param status status.
+   * @param weightage weightage.
+   * @return Progress.
    */
   public Progress addPhase(String status, float weightage) {
     Progress phase = addPhase(weightage);
@@ -101,8 +101,8 @@ public class Progress {
   /**
    * Adds a node with a specified progress weightage to the tree.
    *
-   * @param weightage weightage
-   * @return Progress
+   * @param weightage weightage.
+   * @return Progress.
    */
   public synchronized Progress addPhase(float weightage) {
     Progress phase = new Progress();
@@ -125,7 +125,7 @@ public class Progress {
   /**
    * Adds n nodes to the tree. Gives equal weightage to all phases.
    *
-   * @param n n
+   * @param n n.
    */
   public synchronized void addPhases(int n) {
     for (int i = 0; i < n; i++) {
@@ -160,7 +160,7 @@ public class Progress {
 
   /**
    * Returns the current sub-node executing.
-   * @return Progress
+   * @return Progress.
    */
   public synchronized Progress phase() {
     return phases.get(currentPhase);
@@ -185,7 +185,7 @@ public class Progress {
 
   /**
    * Called during execution on a leaf node to set its progress.
-   * @param progress progress
+   * @param progress progress.
    */
   public synchronized void set(float progress) {
     if (Float.isNaN(progress)) {
@@ -218,7 +218,7 @@ public class Progress {
 
   /**
    * Returns the overall progress of the root.
-   * @return progress
+   * @return progress.
    */
   // this method probably does not need to be synchronized as getInternal() is
   // synchronized and the node's parent never changes. Still, it doesn't hurt. 
@@ -234,7 +234,7 @@ public class Progress {
    * Returns progress in this node. get() would give overall progress of the
    * root node(not just given current node).
    *
-   * @return progress
+   * @return progress.
    */
   public synchronized float getProgress() {
     return getInternal();

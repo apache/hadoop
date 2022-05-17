@@ -54,8 +54,8 @@ public class GcTimeMonitor extends Thread {
 
     /**
      * Set observation window size in milliseconds.
-     * @param value value
-     * @return window size in milliseconds
+     * @param value value.
+     * @return window size in milliseconds.
      */
     public Builder observationWindowMs(long value) {
       this.observationWindowMs = value;
@@ -64,8 +64,8 @@ public class GcTimeMonitor extends Thread {
 
     /**
      * Set sleep interval in milliseconds.
-     * @param value value
-     * @return IntervalMs
+     * @param value value.
+     * @return IntervalMs.
      */
     public Builder sleepIntervalMs(long value) {
       this.sleepIntervalMs = value;
@@ -74,8 +74,8 @@ public class GcTimeMonitor extends Thread {
 
     /**
      * Set the max GC time percentage that triggers the alert handler.
-     * @param value value
-     * @return max GC time percentage
+     * @param value value.
+     * @return max GC time percentage.
      */
     public Builder maxGcTimePercentage(int value) {
       this.maxGcTimePercentage = value;
@@ -84,8 +84,8 @@ public class GcTimeMonitor extends Thread {
 
     /**
      * Set the GC alert handler.
-     * @param value value
-     * @return GC alert handler
+     * @param value value.
+     * @return GC alert handler.
      */
     public Builder gcTimeAlertHandler(GcTimeAlertHandler value) {
       this.handler = value;
@@ -240,7 +240,7 @@ public class GcTimeMonitor extends Thread {
 
     /**
      * Returns the absolute timestamp when this measurement was taken.
-     * @return timestamp
+     * @return timestamp.
      */
     public long getTimestamp() {
       return timestamp;
@@ -248,7 +248,7 @@ public class GcTimeMonitor extends Thread {
 
     /**
      * Returns the time since the start of the associated GcTimeMonitor.
-     * @return GcMonitorRunTime
+     * @return GcMonitorRunTime.
      */
     public long getGcMonitorRunTime() {
       return gcMonitorRunTime;
@@ -256,7 +256,7 @@ public class GcTimeMonitor extends Thread {
 
     /**
      * Returns accumulated GC time since this JVM started.
-     * @return AccumulatedGcTime
+     * @return AccumulatedGcTime.
      */
     public long getAccumulatedGcTime() {
       return totalGcTime;
@@ -264,7 +264,7 @@ public class GcTimeMonitor extends Thread {
 
     /**
      * Returns the accumulated number of GC pauses since this JVM started.
-     * @return AccumulatedGcCount
+     * @return AccumulatedGcCount.
      */
     public long getAccumulatedGcCount() {
       return totalGcCount;
@@ -274,7 +274,7 @@ public class GcTimeMonitor extends Thread {
      * Returns the percentage (0..100) of time that the JVM spent in GC pauses
      * within the observation window of the associated GcTimeMonitor.
      *
-     * @return GcTimePercentage
+     * @return GcTimePercentage.
      */
     public int getGcTimePercentage() {
       return gcTimePercentage;

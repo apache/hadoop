@@ -33,7 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public @interface KerberosInfo {
   /**
    * Key for getting server's Kerberos principal name from Configuration.
-   * @return serverPrincipal
+   * @return serverPrincipal.
    */
   String serverPrincipal();
   String clientPrincipal() default "";

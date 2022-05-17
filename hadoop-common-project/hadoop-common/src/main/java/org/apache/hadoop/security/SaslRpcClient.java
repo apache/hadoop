@@ -351,7 +351,7 @@ public class SaslRpcClient {
   /**
    * Do client side SASL authentication with server via the given IpcStreams.
    *
-   * @param ipcStreams ipcStreams
+   * @param ipcStreams ipcStreams.
    * @return AuthMethod used to negotiate the connection
    * @throws IOException raised on errors performing I/O.
    */

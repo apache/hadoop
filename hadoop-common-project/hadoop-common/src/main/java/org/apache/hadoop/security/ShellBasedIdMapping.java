@@ -211,13 +211,13 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
    * Get the list of users or groups returned by the specified command,
    * and save them in the corresponding map.
    *
-   * @param map map
-   * @param mapName mapName
-   * @param command command
-   * @param staticMapping staticMapping
-   * @param regex regex
+   * @param map map.
+   * @param mapName mapName.
+   * @param command command.
+   * @param staticMapping staticMapping.
+   * @param regex regex.
    * @throws IOException raised on errors performing I/O.
-   * @return updateMapInternal
+   * @return updateMapInternal.
    */
   @VisibleForTesting
   public static boolean updateMapInternal(BiMap<Integer, String> map,
