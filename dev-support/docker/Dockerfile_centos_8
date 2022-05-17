@@ -87,13 +87,16 @@ ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
 
 # TODO: Set locale
 
+#Install java 11
+RUN yum install -y java-11-openjdk-devel
+
 ######
 # Set env vars required to build Hadoop
 ######
 ENV MAVEN_HOME /opt/maven
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-1.11.0
+ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk/
 
 #######
 # Set env vars for SpotBugs

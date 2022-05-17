@@ -187,7 +187,7 @@ function run_ci() {
   # help keep the ASF boxes clean
   YETUS_ARGS+=("--sentinel")
 
-  # test with Java 8 and 11
+  # test with Java 11
   YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-11-openjdk-amd64")
 
   # custom javadoc goals

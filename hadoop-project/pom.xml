@@ -154,7 +154,7 @@
     <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
 
     <!-- define the Java language version used by the compiler -->
-    <javac.version>1.11</javac.version>
+    <javac.version>11</javac.version>
     <javadoc.skip.jdk11>false</javadoc.skip.jdk11>
 
     <!-- The java version enforced by the maven enforcer -->
