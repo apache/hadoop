@@ -873,13 +873,6 @@
                         <exclude>jetty-dir.css</exclude>
                       </excludes>
                     </filter>
-                    <filter>
-                      <artifact>*:*</artifact>
-                      <excludes>
-                        <exclude>**/hdfs/protocolPB/package-info.class</exclude>
-                        <exclude>**/yarn/server/metrics/package-info.class</exclude>
-                      </excludes>
-                    </filter>
                   </filters>
 
                   <!-- relocate classes from mssql-jdbc -->
