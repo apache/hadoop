@@ -505,7 +505,8 @@ public class TestRouterMetrics {
     Assert.assertEquals(150,
         metrics.getLatencySucceededGetClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterNodeLabels(300);
-    Assert.assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetClusterNodeLabelsRetrieved());
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetClusterNodeLabelsRetrieved());
     Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodeLabelsRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
