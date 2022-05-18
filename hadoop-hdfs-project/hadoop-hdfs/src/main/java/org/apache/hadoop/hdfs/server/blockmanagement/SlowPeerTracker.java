@@ -281,7 +281,7 @@ public class SlowPeerTracker {
     private final Long time;
     private final Double latency;
 
-    public LatencyWithLastReportTime(Long time, Double latency) {
+    LatencyWithLastReportTime(Long time, Double latency) {
       this.time = time;
       this.latency = latency;
     }

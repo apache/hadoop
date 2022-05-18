@@ -33,8 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
@@ -189,36 +187,28 @@ public class TestSlowPeerTracker {
     assertTrue(isNodeInReports(reports, "node6"));
 
     assertEquals(1, reports.stream().filter(
-            e -> e.getSlowNode().equals("node1")
-                && e.getSlowPeerLatencyWithReportingNodes().size() == 2
-                && e.getSlowPeerLatencyWithReportingNodes().first().getReportedLatency()
-                .equals(1.634) && e.getSlowPeerLatencyWithReportingNodes().last()
-                .getReportedLatency().equals(2.3566))
+        e -> e.getSlowNode().equals("node1") && e.getSlowPeerLatencyWithReportingNodes().size() == 2
+            && e.getSlowPeerLatencyWithReportingNodes().first().getReportedLatency().equals(1.634)
+            && e.getSlowPeerLatencyWithReportingNodes().last().getReportedLatency().equals(2.3566))
         .count());
 
     assertEquals(1, reports.stream().filter(
-            e -> e.getSlowNode().equals("node2")
-                && e.getSlowPeerLatencyWithReportingNodes().size() == 2
-                && e.getSlowPeerLatencyWithReportingNodes().first().getReportedLatency()
-                .equals(3.869) && e.getSlowPeerLatencyWithReportingNodes().last()
-                .getReportedLatency().equals(4.1356))
+        e -> e.getSlowNode().equals("node2") && e.getSlowPeerLatencyWithReportingNodes().size() == 2
+            && e.getSlowPeerLatencyWithReportingNodes().first().getReportedLatency().equals(3.869)
+            && e.getSlowPeerLatencyWithReportingNodes().last().getReportedLatency().equals(4.1356))
         .count());
 
     assertEquals(1, reports.stream().filter(
-            e -> e.getSlowNode().equals("node3")
-                && e.getSlowPeerLatencyWithReportingNodes().size() == 2
-                && e.getSlowPeerLatencyWithReportingNodes().first().getReportedLatency()
-                .equals(1.73057) && e.getSlowPeerLatencyWithReportingNodes().last()
-                .getReportedLatency().equals(2.4956730))
-        .count());
+        e -> e.getSlowNode().equals("node3") && e.getSlowPeerLatencyWithReportingNodes().size() == 2
+            && e.getSlowPeerLatencyWithReportingNodes().first().getReportedLatency().equals(1.73057)
+            && e.getSlowPeerLatencyWithReportingNodes().last().getReportedLatency()
+            .equals(2.4956730)).count());
 
     assertEquals(1, reports.stream().filter(
-            e -> e.getSlowNode().equals("node6")
-                && e.getSlowPeerLatencyWithReportingNodes().size() == 2
-                && e.getSlowPeerLatencyWithReportingNodes().first().getReportedLatency()
-                .equals(1.29475656) && e.getSlowPeerLatencyWithReportingNodes().last()
-                .getReportedLatency().equals(2.37464))
-        .count());
+        e -> e.getSlowNode().equals("node6") && e.getSlowPeerLatencyWithReportingNodes().size() == 2
+            && e.getSlowPeerLatencyWithReportingNodes().first().getReportedLatency()
+            .equals(1.29475656) && e.getSlowPeerLatencyWithReportingNodes().last()
+            .getReportedLatency().equals(2.37464)).count());
   }
 
   @Test

@@ -38,7 +38,7 @@ final class SlowPeerLatencyWithReportingNode
   @JsonProperty("ReportedLatency")
   private final Double reportedLatency;
 
-  public SlowPeerLatencyWithReportingNode(
+  SlowPeerLatencyWithReportingNode(
       @JsonProperty("ReportingNode")
           String reportingNode,
       @JsonProperty("ReportedLatency")

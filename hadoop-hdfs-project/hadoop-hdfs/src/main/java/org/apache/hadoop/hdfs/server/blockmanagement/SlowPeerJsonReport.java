@@ -39,7 +39,7 @@ final class SlowPeerJsonReport {
   @JsonProperty("SlowPeerLatencyWithReportingNodes")
   private final SortedSet<SlowPeerLatencyWithReportingNode> slowPeerLatencyWithReportingNodes;
 
-  public SlowPeerJsonReport(
+  SlowPeerJsonReport(
       @JsonProperty("SlowNode")
           String slowNode,
       @JsonProperty("SlowPeerLatencyWithReportingNodes")
