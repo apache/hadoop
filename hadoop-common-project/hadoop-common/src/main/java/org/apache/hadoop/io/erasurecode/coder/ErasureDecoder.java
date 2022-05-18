@@ -174,8 +174,8 @@ public abstract class ErasureDecoder extends Configured
   }
 
   /**
-   * Get erased input blocks from inputBlocks
-   * @param inputBlocks
+   * Get erased input blocks from inputBlocks.
+   * @param inputBlocks input inputBlocks.
    * @return an array of erased blocks from inputBlocks
    */
   protected ECBlock[] getErasedBlocks(ECBlock[] inputBlocks) {

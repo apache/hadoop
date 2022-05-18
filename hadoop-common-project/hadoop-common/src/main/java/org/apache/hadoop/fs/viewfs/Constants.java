@@ -89,8 +89,8 @@ public interface Constants {
   /**
    * Config variable for specifying a regex link which uses regular expressions
    * as source and target could use group captured in src.
-   * E.g. (^/(?<firstDir>\\w+), /prefix-${firstDir}) =>
-   *   (/path1/file1 => /prefix-path1/file1)
+   * E.g. (^/(?&lt;firstDir&gt;\\w+), /prefix-${firstDir}) =&gt;
+   *   (/path1/file1 =&gt; /prefix-path1/file1)
    */
   String CONFIG_VIEWFS_LINK_REGEX = "linkRegex";
 

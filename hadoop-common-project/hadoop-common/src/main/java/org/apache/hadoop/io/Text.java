@@ -82,25 +82,32 @@ public class Text extends BinaryComparable
     bytes = EMPTY_BYTES;
   }
 
-  /** Construct from a string. 
+  /**
+   * Construct from a string.
+   * @param string input string.
    */
   public Text(String string) {
     set(string);
   }
 
-  /** Construct from another text. */
+  /**
+   * Construct from another text.
+   * @param utf8 input utf8.
+   */
   public Text(Text utf8) {
     set(utf8);
   }
 
-  /** Construct from a byte array.
+  /**
+   * Construct from a byte array.
+   * @param utf8 input utf8.
    */
   public Text(byte[] utf8)  {
     set(utf8);
   }
   
   /**
-   * Get a copy of the bytes that is exactly the length of the data.
+   * @return Get a copy of the bytes that is exactly the length of the data.
    * See {@link #getBytes()} for faster access to the underlying array.
    */
   public byte[] copyBytes() {
@@ -128,10 +135,12 @@ public class Text extends BinaryComparable
   /**
    * Returns the Unicode Scalar Value (32-bit integer value)
    * for the character at <code>position</code>. Note that this
-   * method avoids using the converter or doing String instantiation
+   * method avoids using the converter or doing String instantiation.
+   *
+   * @param position input position.
    * @return the Unicode scalar value at position or -1
    *          if the position is invalid or points to a
-   *          trailing byte
+   *          trailing byte.
    */
   public int charAt(int position) {
     if (position > this.length) return -1; // too long
@@ -151,6 +160,9 @@ public class Text extends BinaryComparable
    * position is measured in bytes and the return value is in
    * terms of byte position in the buffer. The backing buffer is
    * not converted to a string for this operation.
+   *
+   * @param what input what.
+   * @param start input start.
    * @return byte position of the first occurrence of the search
    *         string in the UTF-8 buffer or -1 if not found
    */
@@ -191,7 +203,9 @@ public class Text extends BinaryComparable
       return -1;
     }
   }  
-  /** Set to contain the contents of a string. 
+  /**
+   * Set to contain the contents of a string.
+   * @param string input string.
    */
   public void set(String string) {
     try {
@@ -203,13 +217,18 @@ public class Text extends BinaryComparable
     }
   }
 
-  /** Set to a utf8 byte array
+  /**
+   * Set to a utf8 byte array.
+   * @param utf8 input utf8.
    */
   public void set(byte[] utf8) {
     set(utf8, 0, utf8.length);
   }
   
-  /** copy a text. */
+  /**
+   * copy a text.
+   * @param other input other.
+   */
   public void set(Text other) {
     set(other.getBytes(), 0, other.getLength());
   }
@@ -303,7 +322,11 @@ public class Text extends BinaryComparable
     readWithKnownLength(in, newLength);
   }
 
-  /** Skips over one Text in the input. */
+  /**
+   * Skips over one Text in the input.
+   * @param in input in.
+   * @throws IOException raised on errors performing I/O.
+   */
   public static void skip(DataInput in) throws IOException {
     int length = WritableUtils.readVInt(in);
     WritableUtils.skipFully(in, length);
@@ -313,6 +336,10 @@ public class Text extends BinaryComparable
    * Read a Text object whose length is already known.
    * This allows creating Text from a stream which uses a different serialization
    * format.
+   *
+   * @param in input in.
+   * @param len input len.
+   * @throws IOException raised on errors performing I/O.
    */
   public void readWithKnownLength(DataInput in, int len) throws IOException {
     setCapacity(len, false);
@@ -376,9 +403,13 @@ public class Text extends BinaryComparable
 
   /// STATIC UTILITIES FROM HERE DOWN
   /**
-   * Converts the provided byte array to a String using the
+   * @return Converts the provided byte array to a String using the
    * UTF-8 encoding. If the input is malformed,
    * replace by a default value.
+   *
+   * @param utf8 input utf8.
+   * @throws CharacterCodingException a character encoding or
+   * decoding error occurs.
    */
   public static String decode(byte[] utf8) throws CharacterCodingException {
     return decode(ByteBuffer.wrap(utf8), true);
@@ -390,11 +421,18 @@ public class Text extends BinaryComparable
   }
   
   /**
-   * Converts the provided byte array to a String using the
+   * @return Converts the provided byte array to a String using the
    * UTF-8 encoding. If <code>replace</code> is true, then
    * malformed input is replaced with the
    * substitution character, which is U+FFFD. Otherwise the
    * method throws a MalformedInputException.
+   *
+   * @param utf8 input utf8.
+   * @param start input start.
+   * @param length input length.
+   * @param replace input replace.
+   * @throws CharacterCodingException a character encoding or
+   * decoding error occurs.
    */
   public static String decode(byte[] utf8, int start, int length, boolean replace) 
     throws CharacterCodingException {
@@ -422,8 +460,12 @@ public class Text extends BinaryComparable
    * Converts the provided String to bytes using the
    * UTF-8 encoding. If the input is malformed,
    * invalid chars are replaced by a default value.
+   *
+   * @param string input string.
    * @return ByteBuffer: bytes stores at ByteBuffer.array() 
    *                     and length is ByteBuffer.limit()
+   * @throws CharacterCodingException
+   * a character encoding or decoding error occurs.
    */
 
   public static ByteBuffer encode(String string)
@@ -437,8 +479,12 @@ public class Text extends BinaryComparable
    * malformed input is replaced with the
    * substitution character, which is U+FFFD. Otherwise the
    * method throws a MalformedInputException.
+   *
+   * @param string input string.
+   * @param replace input replace.
    * @return ByteBuffer: bytes stores at ByteBuffer.array() 
    *                     and length is ByteBuffer.limit()
+   * @throws CharacterCodingException a character encoding or decoding error occurs.
    */
   public static ByteBuffer encode(String string, boolean replace)
     throws CharacterCodingException {
@@ -458,13 +504,20 @@ public class Text extends BinaryComparable
 
   static final public int DEFAULT_MAX_LEN = 1024 * 1024;
 
-  /** Read a UTF8 encoded string from in
+  /**
+   * @return Read a UTF8 encoded string from in.
+   * @param in input in.
+   * @throws IOException raised on errors performing I/O.
    */
   public static String readString(DataInput in) throws IOException {
     return readString(in, Integer.MAX_VALUE);
   }
   
-  /** Read a UTF8 encoded string with a maximum size
+  /**
+   * @return Read a UTF8 encoded string with a maximum size.
+   * @param in input in.
+   * @param maxLength input maxLength.
+   * @throws IOException raised on errors performing I/O.
    */
   public static String readString(DataInput in, int maxLength)
       throws IOException {
@@ -474,7 +527,12 @@ public class Text extends BinaryComparable
     return decode(bytes);
   }
   
-  /** Write a UTF8 encoded string to out
+  /**
+   * @return Write a UTF8 encoded string to out.
+   *
+   * @param out input out.
+   * @param s input s.
+   * @throws IOException raised on errors performing I/O.
    */
   public static int writeString(DataOutput out, String s) throws IOException {
     ByteBuffer bytes = encode(s);
@@ -484,7 +542,13 @@ public class Text extends BinaryComparable
     return length;
   }
 
-  /** Write a UTF8 encoded string with a maximum size to out
+  /**
+   * @return Write a UTF8 encoded string with a maximum size to out.
+   *
+   * @param out input out.
+   * @param s input s.
+   * @param maxLength input maxLength.
+   * @throws IOException raised on errors performing I/O.
    */
   public static int writeString(DataOutput out, String s, int maxLength)
       throws IOException {
@@ -616,9 +680,10 @@ public class Text extends BinaryComparable
     3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5 };
 
   /**
-   * Returns the next code point at the current position in
+   * @return Returns the next code point at the current position in
    * the buffer. The buffer's position will be incremented.
    * Any mark set on this buffer will be changed by this method!
+   * @param bytes input bytes.
    */
   public static int bytesToCodePoint(ByteBuffer bytes) {
     bytes.mark();

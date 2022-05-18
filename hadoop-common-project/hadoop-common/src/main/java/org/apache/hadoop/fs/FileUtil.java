@@ -1979,7 +1979,7 @@ public class FileUtil {
    * specified charset. This utility method opens the file for writing, creating
    * the file if it does not exist, or overwrites an existing file.
    *
-   * @param FileContext the file context with which to create the file
+   * @param fs the file context with which to create the file
    * @param path the path to the file
    * @param charseq the char sequence to write to the file
    * @param cs the charset to use for encoding

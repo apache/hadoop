@@ -82,6 +82,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   private boolean serverFailOverEnabled;
   /**
    * Create a FairCallQueue.
+   * @param priorityLevels input priorityLevels.
    * @param capacity the total size of all sub-queues
    * @param ns the prefix to use for configuration
    * @param conf the configuration to read from
