@@ -255,7 +255,7 @@ public final class RouterYarnClientUtils {
   public static GetLabelsToNodesResponse mergeLabelsToNodes(
       Collection<GetLabelsToNodesResponse> responses){
     GetLabelsToNodesResponse labelsToNodesResponse = Records.newRecord(
-         GetLabelsToNodesResponse.class);
+        GetLabelsToNodesResponse.class);
     Map<String, Set<NodeId>> labelsToNodesMap = new HashMap<>();
     for (GetLabelsToNodesResponse response : responses) {
       if (response != null && response.getLabelsToNodes() != null) {

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,6 +39,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -867,6 +870,24 @@ public class FederationClientInterceptor
     throw new NotImplementedException("Code is not implemented");
   }
 
+  private <R> Collection<R> invokeAppClientProtocolMethod(
+      Boolean filterInactiveSubClusters, ClientMethod request, Class<R> clazz)
+          throws YarnException, RuntimeException {
+    Map<SubClusterId, SubClusterInfo> subClusters =
+        federationFacade.getSubClusters(filterInactiveSubClusters);
+    return subClusters.keySet().stream().map(subClusterId -> {
+      try {
+        ApplicationClientProtocol protocol = getClientRMProxyForSubCluster(subClusterId);
+        Method method = ApplicationClientProtocol.class.
+            getMethod(request.getMethodName(), request.getTypes());
+        return clazz.cast(method.invoke(protocol, request.getParams()));
+      } catch (YarnException | NoSuchMethodException |
+               IllegalAccessException | InvocationTargetException ex) {
+        throw new RuntimeException(ex);
+      }
+    }).collect(Collectors.toList());
+  }
+
   @Override
   public GetNodesToLabelsResponse getNodeToLabels(
       GetNodesToLabelsRequest request) throws YarnException, IOException {
@@ -875,25 +896,21 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException("Missing getNodesToLabels request.", null);
     }
     long startTime = clock.getTime();
-    Map<SubClusterId, SubClusterInfo> subClusters =
-        federationFacade.getSubClusters(true);
-    Map<SubClusterId, GetNodesToLabelsResponse> clusterNodes = Maps.newHashMap();
-    for (SubClusterId subClusterId : subClusters.keySet()) {
-      ApplicationClientProtocol client;
-      try {
-        client = getClientRMProxyForSubCluster(subClusterId);
-        GetNodesToLabelsResponse response = client.getNodeToLabels(request);
-        clusterNodes.put(subClusterId, response);
-      } catch (Exception ex) {
-        routerMetrics.incrNodeToLabelsFailedRetrieved();
-        LOG.error("Unable to get node labels due to exception.", ex);
-        throw ex;
-      }
+    ClientMethod remoteMethod = new ClientMethod("getNodeToLabels",
+         new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
+    Collection<GetNodesToLabelsResponse> clusterNodes;
+    try {
+      clusterNodes = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetNodesToLabelsResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrNodeToLabelsFailedRetrieved();
+      LOG.error("Unable to get label node due to exception.", ex);
+      throw ex;
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
     // Merge the NodesToLabelsResponse
-    return RouterYarnClientUtils.mergeNodesToLabelsResponse(clusterNodes.values());
+    return RouterYarnClientUtils.mergeNodesToLabelsResponse(clusterNodes);
   }
 
   @Override
@@ -904,25 +921,21 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException("Missing getLabelsToNodes request.", null);
     }
     long startTime = clock.getTime();
-    Map<SubClusterId, SubClusterInfo> subClusters =
-        federationFacade.getSubClusters(true);
-    Map<SubClusterId, GetLabelsToNodesResponse> clusterNodes = Maps.newHashMap();
-    for (SubClusterId subClusterId : subClusters.keySet()) {
-      ApplicationClientProtocol client;
-      try {
-        client = getClientRMProxyForSubCluster(subClusterId);
-        GetLabelsToNodesResponse response = client.getLabelsToNodes(request);
-        clusterNodes.put(subClusterId, response);
-      } catch (Exception ex) {
-        routerMetrics.incrLabelsToNodesFailedRetrieved();
-        LOG.error("Unable to get label node due to exception.", ex);
-        throw ex;
-      }
+    ClientMethod remoteMethod = new ClientMethod("getLabelsToNodes",
+         new Class[] {GetLabelsToNodesRequest.class}, new Object[] {request});
+    Collection<GetLabelsToNodesResponse> labelNodes;
+    try {
+      labelNodes = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetLabelsToNodesResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrLabelsToNodesFailedRetrieved();
+      LOG.error("Unable to get label node due to exception.", ex);
+      throw ex;
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
     // Merge the LabelsToNodesResponse
-    return RouterYarnClientUtils.mergeLabelsToNodes(clusterNodes.values());
+    return RouterYarnClientUtils.mergeLabelsToNodes(labelNodes);
   }
 
   @Override
@@ -933,25 +946,21 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException("Missing getClusterNodeLabels request.", null);
     }
     long startTime = clock.getTime();
-    Map<SubClusterId, SubClusterInfo> subClusters =
-        federationFacade.getSubClusters(true);
-    Map<SubClusterId, GetClusterNodeLabelsResponse> clusterNodes = Maps.newHashMap();
-    for (SubClusterId subClusterId : subClusters.keySet()) {
-      ApplicationClientProtocol client;
-      try {
-        client = getClientRMProxyForSubCluster(subClusterId);
-        GetClusterNodeLabelsResponse response = client.getClusterNodeLabels(request);
-        clusterNodes.put(subClusterId, response);
-      } catch (Exception ex) {
-        routerMetrics.incrClusterNodeLabelsFailedRetrieved();
-        LOG.error("Unable to get cluster nodeLabels due to exception.", ex);
-        throw ex;
-      }
+    ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels",
+         new Class[] {GetClusterNodeLabelsRequest.class}, new Object[] {request});
+    Collection<GetClusterNodeLabelsResponse> nodeLabels;
+    try {
+      nodeLabels = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetClusterNodeLabelsResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrNodeToLabelsFailedRetrieved();
+      LOG.error("Unable to get cluster nodeLabels due to exception.", ex);
+      throw ex;
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
     // Merge the ClusterNodeLabelsResponse
-    return RouterYarnClientUtils.mergeClusterNodeLabelsResponse(clusterNodes.values());
+    return RouterYarnClientUtils.mergeClusterNodeLabelsResponse(nodeLabels);
   }
 
   /**
