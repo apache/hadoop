@@ -237,18 +237,18 @@ public class TestRouterYarnClientUtils {
     nodeLabelsMapSC1.put(node2, ImmutableSet.of("node2"));
     nodeLabelsMapSC1.put(node3, ImmutableSet.of("node3"));
 
-    // normal
+    // normal response
     GetNodesToLabelsResponse response1 = Records.newRecord(
         GetNodesToLabelsResponse.class);
     response1.setNodeToLabels(nodeLabelsMapSC1);
 
-    // empty
+    // empty response
     Map<NodeId, Set<String>> nodeLabelsMapSC2 = new HashMap<>();
     GetNodesToLabelsResponse response2 = Records.newRecord(
         GetNodesToLabelsResponse.class);
     response2.setNodeToLabels(nodeLabelsMapSC2);
 
-    // null
+    // null response
     GetNodesToLabelsResponse response3 = null;
 
     Map<NodeId, Set<String>> expectedResponse = new HashMap<>();
@@ -272,7 +272,7 @@ public class TestRouterYarnClientUtils {
     NodeLabel nodeLabel2 = NodeLabel.newInstance("nodeLabel2");
     NodeLabel nodeLabel3 = NodeLabel.newInstance("nodeLabel3");
 
-    // normal
+    // normal response
     List<NodeLabel> nodeLabelListSC1 = new ArrayList<>();
     nodeLabelListSC1.add(nodeLabel1);
     nodeLabelListSC1.add(nodeLabel2);
@@ -282,14 +282,14 @@ public class TestRouterYarnClientUtils {
         GetClusterNodeLabelsResponse.class);
     response1.setNodeLabelList(nodeLabelListSC1);
 
-    // empty
+    // empty response
     List<NodeLabel> nodeLabelListSC2 = new ArrayList<>();
 
     GetClusterNodeLabelsResponse response2 = Records.newRecord(
         GetClusterNodeLabelsResponse.class);
     response2.setNodeLabelList(nodeLabelListSC2);
 
-    // null
+    // null response
     GetClusterNodeLabelsResponse response3 = null;
 
     List<GetClusterNodeLabelsResponse> responses = new ArrayList<>();
@@ -306,7 +306,6 @@ public class TestRouterYarnClientUtils {
         mergeClusterNodeLabelsResponse(responses);
     Assert.assertTrue(CollectionUtils.isEqualCollection(expectedResponse,
         response.getNodeLabelList()));
-
   }
 
   @Test
@@ -341,7 +340,7 @@ public class TestRouterYarnClientUtils {
 
     // empty response
     GetLabelsToNodesResponse response3 = Records.newRecord(
-            GetLabelsToNodesResponse.class);
+        GetLabelsToNodesResponse.class);
 
     // null response
     GetLabelsToNodesResponse response4 = null;
@@ -350,7 +349,7 @@ public class TestRouterYarnClientUtils {
     responses.add(response1);
     responses.add(response2);
     responses.add(response3);
-    responses.add(null);
+    responses.add(response4);
 
     Map<String, Set<NodeId>> expectedResponse = new HashMap<>();
     Set<NodeId> nodeIdMergedSet1 = new HashSet<>();

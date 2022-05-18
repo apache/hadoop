@@ -40,7 +40,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -953,7 +952,7 @@ public class FederationClientInterceptor
       nodeLabels = invokeAppClientProtocolMethod(true, remoteMethod,
           GetClusterNodeLabelsResponse.class);
     } catch (Exception ex) {
-      routerMetrics.incrNodeToLabelsFailedRetrieved();
+      routerMetrics.incrClusterNodeLabelsFailedRetrieved();
       LOG.error("Unable to get cluster nodeLabels due to exception.", ex);
       throw ex;
     }
