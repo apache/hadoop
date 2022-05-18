@@ -93,6 +93,8 @@ public class ClientCache {
   /**
    * Stop a RPC client connection 
    * A RPC client is closed only when its reference count becomes zero.
+   *
+   * @param client input client.
    */
   public void stopClient(Client client) {
     if (Client.LOG.isDebugEnabled()) {

@@ -31,10 +31,11 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 /**
  * MultipartUploader is an interface for copying files multipart and across
  * multiple nodes.
- * <p></p>
+ * <p>
  * The interface extends {@link IOStatisticsSource} so that there is no
  * need to cast an instance to see if is a source of statistics.
  * However, implementations MAY return null for their actual statistics.
+ * </p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable

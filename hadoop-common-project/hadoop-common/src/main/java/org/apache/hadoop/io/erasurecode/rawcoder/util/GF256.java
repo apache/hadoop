@@ -195,6 +195,10 @@ public final class GF256 {
    * Invert a matrix assuming it's invertible.
    *
    * Ported from Intel ISA-L library.
+   *
+   * @param inMatrix inMatrix.
+   * @param outMatrix outMatrix.
+   * @param n n
    */
   public static void gfInvertMatrix(byte[] inMatrix, byte[] outMatrix, int n) {
     byte temp;
@@ -262,7 +266,11 @@ public final class GF256 {
    *
    * Calculates const table gftbl in GF(2^8) from single input A
    * gftbl(A) = {A{00}, A{01}, A{02}, ... , A{0f} }, {A{00}, A{10}, A{20},
-   * ... , A{f0} } -- from ISA-L implementation
+   * ... , A{f0} } -- from ISA-L implementation.
+   *
+   * @param c c.
+   * @param tbl tbl.
+   * @param offset offset.
    */
   public static void gfVectMulInit(byte c, byte[] tbl, int offset) {
     byte c2 = (byte) ((c << 1) ^ ((c & 0x80) != 0 ? 0x1d : 0));

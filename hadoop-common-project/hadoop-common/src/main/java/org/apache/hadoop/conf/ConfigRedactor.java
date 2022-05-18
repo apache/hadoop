@@ -57,8 +57,8 @@ public class ConfigRedactor {
    * Given a key / value pair, decides whether or not to redact and returns
    * either the original value or text indicating it has been redacted.
    *
-   * @param key
-   * @param value
+   * @param key param key.
+   * @param value param value, will return if conditions permit.
    * @return Original value, or text indicating it has been redacted
    */
   public String redact(String key, String value) {

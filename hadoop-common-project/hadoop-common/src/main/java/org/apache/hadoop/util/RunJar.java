@@ -156,6 +156,7 @@ public class RunJar {
    * @param inputStream the jar stream to unpack
    * @param toDir the destination directory into which to unpack the jar
    * @param unpackRegex the pattern to match jar entries against
+   * @param name name.
    *
    * @throws IOException if an I/O error has occurred or toDir
    * cannot be created and does not already exist
@@ -231,7 +232,11 @@ public class RunJar {
   }
 
   /** Run a Hadoop job jar.  If the main class is not in the jar's manifest,
-   * then it must be provided on the command line. */
+   * then it must be provided on the command line.
+   *
+   * @param args args.
+   * @throws Throwable error.
+   */
   public static void main(String[] args) throws Throwable {
     new RunJar().run(args);
   }

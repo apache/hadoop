@@ -49,11 +49,11 @@ public class RetryCache {
   private static final int MAX_CAPACITY = 16;
 
   /**
-   * CacheEntry is tracked using unique client ID and callId of the RPC request
+   * CacheEntry is tracked using unique client ID and callId of the RPC request.
    */
   public static class CacheEntry implements LightWeightCache.Entry {
     /**
-     * Processing state of the requests
+     * Processing state of the requests.
      */
     private static byte INPROGRESS = 0;
     private static byte SUCCESS = 1;
@@ -233,7 +233,7 @@ public class RetryCache {
   }
 
   /**
-   * This method returns cache name for metrics.
+   * @return This method returns cache name for metrics.
    */
   public String getCacheName() {
     return cacheName;
@@ -302,6 +302,9 @@ public class RetryCache {
   /** 
    * Add a new cache entry into the retry cache. The cache entry consists of 
    * clientId and callId extracted from editlog.
+   *
+   * @param clientId input clientId.
+   * @param callId input callId.
    */
   public void addCacheEntry(byte[] clientId, int callId) {
     CacheEntry newEntry = new CacheEntry(clientId, callId, System.nanoTime()
@@ -340,7 +343,11 @@ public class RetryCache {
         payload, System.nanoTime() + expirationTime);
   }
 
-  /** Static method that provides null check for retryCache */
+  /**
+   * Static method that provides null check for retryCache.
+   * @param cache input Cache.
+   * @return CacheEntry.
+   */
   public static CacheEntry waitForCompletion(RetryCache cache) {
     if (skipRetryCache()) {
       return null;
@@ -349,7 +356,12 @@ public class RetryCache {
         .waitForCompletion(newEntry(cache.expirationTime)) : null;
   }
 
-  /** Static method that provides null check for retryCache */
+  /**
+   * Static method that provides null check for retryCache.
+   * @param cache input cache.
+   * @param payload input payload.
+   * @return CacheEntryWithPayload.
+   */
   public static CacheEntryWithPayload waitForCompletion(RetryCache cache,
       Object payload) {
     if (skipRetryCache()) {

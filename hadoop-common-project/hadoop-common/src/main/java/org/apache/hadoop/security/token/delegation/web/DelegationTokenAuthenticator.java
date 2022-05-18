@@ -163,6 +163,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
    * @param renewer the renewer user.
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
+   * @return abstract delegation token identifier.
    */
   public Token<AbstractDelegationTokenIdentifier> getDelegationToken(URL url,
       AuthenticatedURL.Token token, String renewer)
@@ -182,6 +183,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
    * @param doAsUser the user to do as, which will be the token owner.
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
+   * @return abstract delegation token identifier.
    */
   public Token<AbstractDelegationTokenIdentifier> getDelegationToken(URL url,
       AuthenticatedURL.Token token, String renewer, String doAsUser)
@@ -207,8 +209,10 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
    * @param url the URL to renew the delegation token from. Only HTTP/S URLs are
    * supported.
    * @param token the authentication token with the Delegation Token to renew.
+   * @param dToken abstract delegation token identifier.
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
+   * @return delegation token long value.
    */
   public long renewDelegationToken(URL url,
       AuthenticatedURL.Token token,
@@ -225,8 +229,10 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
    * supported.
    * @param token the authentication token with the Delegation Token to renew.
    * @param doAsUser the user to do as, which will be the token owner.
+   * @param dToken abstract delegation token identifier.
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
+   * @return delegation token long value.
    */
   public long renewDelegationToken(URL url,
       AuthenticatedURL.Token token,
@@ -245,6 +251,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
    * @param url the URL to cancel the delegation token from. Only HTTP/S URLs
    * are supported.
    * @param token the authentication token with the Delegation Token to cancel.
+   * @param dToken abstract delegation token identifier.
    * @throws IOException if an IO error occurred.
    */
   public void cancelDelegationToken(URL url,
@@ -261,6 +268,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
    * @param url the URL to cancel the delegation token from. Only HTTP/S URLs
    * are supported.
    * @param token the authentication token with the Delegation Token to cancel.
+   * @param dToken abstract delegation token identifier.
    * @param doAsUser the user to do as, which will be the token owner.
    * @throws IOException if an IO error occurred.
    */

@@ -157,7 +157,7 @@ public class CryptoInputStream extends FilterInputStream implements
    * @param off the buffer offset.
    * @param len the maximum number of decrypted data bytes to read.
    * @return int the total number of decrypted data bytes read into the buffer.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public int read(byte[] b, int off, int len) throws IOException {

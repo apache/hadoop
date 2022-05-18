@@ -276,7 +276,7 @@ public class TFile {
      *          </ul>
      * @param conf
      *          The configuration object.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public Writer(FSDataOutputStream fsdos, int minBlockSize,
         String compressName, String comparator, Configuration conf)
@@ -350,7 +350,7 @@ public class TFile {
      *          Buffer for key.
      * @param value
      *          Buffer for value.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public void append(byte[] key, byte[] value) throws IOException {
       append(key, 0, key.length, value, 0, value.length);
@@ -521,7 +521,7 @@ public class TFile {
      *          exactly as many bytes as specified here before calling close on
      *          the returned output stream.
      * @return The key appending output stream.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      * 
      */
     public DataOutputStream prepareAppendKey(int length) throws IOException {
@@ -548,8 +548,8 @@ public class TFile {
      *          the returned output stream. Advertising the value size up-front
      *          guarantees that the value is encoded in one chunk, and avoids
      *          intermediate chunk buffering.
-     * @throws IOException
-     * 
+     * @throws IOException raised on errors performing I/O.
+     * @return DataOutputStream.
      */
     public DataOutputStream prepareAppendValue(int length) throws IOException {
       if (state != State.END_KEY) {
@@ -588,7 +588,7 @@ public class TFile {
      *          {@link TFile#getSupportedCompressionAlgorithms()}.
      * @return A DataOutputStream that can be used to write Meta Block data.
      *         Closing the stream would signal the ending of the block.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      * @throws MetaBlockAlreadyExists
      *           the Meta Block with the same name already exists.
      */
@@ -616,7 +616,7 @@ public class TFile {
      *          Name of the meta block.
      * @return A DataOutputStream that can be used to write Meta Block data.
      *         Closing the stream would signal the ending of the block.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      * @throws MetaBlockAlreadyExists
      *           the Meta Block with the same name already exists.
      */
@@ -796,8 +796,8 @@ public class TFile {
      *          The length of TFile. This is required because we have no easy
      *          way of knowing the actual size of the input file through the
      *          File input stream.
-     * @param conf
-     * @throws IOException
+     * @param conf configuration.
+     * @throws IOException raised on errors performing I/O.
      */
     public Reader(FSDataInputStream fsdis, long fileLength, Configuration conf)
         throws IOException {
@@ -896,7 +896,7 @@ public class TFile {
      * Get the first key in the TFile.
      * 
      * @return The first key in the TFile.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public RawComparable getFirstKey() throws IOException {
       checkTFileDataIndex();
@@ -907,7 +907,7 @@ public class TFile {
      * Get the last key in the TFile.
      * 
      * @return The last key in the TFile.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public RawComparable getLastKey() throws IOException {
       checkTFileDataIndex();
@@ -1043,7 +1043,7 @@ public class TFile {
      *          the user supplied offset.
      * @return the RecordNum to the corresponding entry. If no such entry
      *         exists, it returns the total entry count.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public long getRecordNumNear(long offset) throws IOException {
       return getRecordNumByLocation(getLocationNear(offset));
@@ -1058,7 +1058,7 @@ public class TFile {
      * @return the key that fits the requirement; or null if no such key exists
      *         (which could happen if the offset is close to the end of the
      *         TFile).
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public RawComparable getKeyNear(long offset) throws IOException {
       int blockIndex = readerBCF.getBlockIndexNear(offset);
@@ -1072,7 +1072,7 @@ public class TFile {
      * 
      * @return The scanner object. A valid Scanner is always returned even if
      *         the TFile is empty.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public Scanner createScanner() throws IOException {
       return new Scanner(this, begin, end);
@@ -1089,7 +1089,7 @@ public class TFile {
      *         specified byte-region but always round up to the compression
      *         block boundaries. It is possible that the returned scanner
      *         contains zero key-value pairs even if length is positive.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public Scanner createScannerByByteRange(long offset, long length) throws IOException {
       return new Scanner(this, offset, offset + length);
@@ -1106,7 +1106,7 @@ public class TFile {
      *          key-value entry of the TFile.
      * @return The actual coverage of the returned scanner will cover all keys
      *         greater than or equal to the beginKey and less than the endKey.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      * 
      * @deprecated Use {@link #createScannerByKey(byte[], byte[])} instead.
      */
@@ -1127,7 +1127,7 @@ public class TFile {
      *          key-value entry of the TFile.
      * @return The actual coverage of the returned scanner will cover all keys
      *         greater than or equal to the beginKey and less than the endKey.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public Scanner createScannerByKey(byte[] beginKey, byte[] endKey)
         throws IOException {
@@ -1147,7 +1147,7 @@ public class TFile {
      *          key-value entry of the TFile.
      * @return The actual coverage of the returned scanner will cover all keys
      *         greater than or equal to the beginKey and less than the endKey.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      * 
      * @deprecated Use {@link #createScannerByKey(RawComparable, RawComparable)}
      *             instead.
@@ -1169,7 +1169,7 @@ public class TFile {
      *          key-value entry of the TFile.
      * @return The actual coverage of the returned scanner will cover all keys
      *         greater than or equal to the beginKey and less than the endKey.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public Scanner createScannerByKey(RawComparable beginKey, RawComparable endKey)
         throws IOException {
@@ -1189,7 +1189,7 @@ public class TFile {
      *          The RecordNum for the last record (exclusive). To scan the whole
      *          file, either specify endRecNum==-1 or endRecNum==getEntryCount().
      * @return The TFile scanner that covers the specified range of records.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public Scanner createScannerByRecordNum(long beginRecNum, long endRecNum)
         throws IOException {
@@ -1313,7 +1313,7 @@ public class TFile {
        * @param endKey
        *          End key of the scan. If null, scan up to the last &lt;K, V&gt;
        *          entry of the TFile.
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       protected Scanner(Reader reader, RawComparable beginKey,
           RawComparable endKey) throws IOException {
@@ -1338,7 +1338,7 @@ public class TFile {
        * @param key
        *          The input key
        * @return true if we find an equal key.
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public boolean seekTo(byte[] key) throws IOException {
         return seekTo(key, 0, key.length);
@@ -1356,7 +1356,7 @@ public class TFile {
        * @param keyLen
        *          key buffer length.
        * @return true if we find an equal key; false otherwise.
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public boolean seekTo(byte[] key, int keyOffset, int keyLen)
           throws IOException {
@@ -1432,7 +1432,7 @@ public class TFile {
        * Rewind to the first entry in the scanner. The entry returned by the
        * previous entry() call will be invalid.
        * 
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public void rewind() throws IOException {
         seekTo(beginLocation);
@@ -1442,7 +1442,7 @@ public class TFile {
        * Seek to the end of the scanner. The entry returned by the previous
        * entry() call will be invalid.
        * 
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public void seekToEnd() throws IOException {
         parkCursorAtEnd();
@@ -1455,7 +1455,7 @@ public class TFile {
        * 
        * @param key
        *          The input key
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public void lowerBound(byte[] key) throws IOException {
         lowerBound(key, 0, key.length);
@@ -1472,7 +1472,7 @@ public class TFile {
        *          offset in the key buffer.
        * @param keyLen
        *          key buffer length.
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public void lowerBound(byte[] key, int keyOffset, int keyLen)
           throws IOException {
@@ -1486,7 +1486,7 @@ public class TFile {
        * 
        * @param key
        *          The input key
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public void upperBound(byte[] key) throws IOException {
         upperBound(key, 0, key.length);
@@ -1503,7 +1503,7 @@ public class TFile {
        *          offset in the key buffer.
        * @param keyLen
        *          key buffer length.
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public void upperBound(byte[] key, int keyOffset, int keyLen)
           throws IOException {
@@ -1516,7 +1516,7 @@ public class TFile {
        * 
        * @return true if the cursor successfully moves. False when cursor is
        *         already at the end location and cannot be advanced.
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public boolean advance() throws IOException {
         if (atEnd()) {
@@ -1614,7 +1614,7 @@ public class TFile {
        * Get an entry to access the key and value.
        * 
        * @return The Entry object to access the key and value.
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public Entry entry() throws IOException {
         checkKey();
@@ -1624,7 +1624,7 @@ public class TFile {
       /**
        * Get the RecordNum corresponding to the entry pointed by the cursor.
        * @return The RecordNum corresponding to the entry pointed by the cursor.
-       * @throws IOException
+       * @throws IOException raised on errors performing I/O.
        */
       public long getRecordNum() throws IOException {
         return reader.getRecordNumByLocation(currentLocation);
@@ -1670,7 +1670,7 @@ public class TFile {
          *          BytesWritable to hold key.
          * @param value
          *          BytesWritable to hold value
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
          */
         public void get(BytesWritable key, BytesWritable value)
             throws IOException {
@@ -1684,7 +1684,8 @@ public class TFile {
          * 
          * @param key
          *          BytesWritable to hold the key.
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
+         * @return the key into BytesWritable.
          */
         public int getKey(BytesWritable key) throws IOException {
           key.setSize(getKeyLength());
@@ -1698,8 +1699,9 @@ public class TFile {
          * directly uses the buffer inside BytesWritable for storing the value.
          * The call does not require the value length to be known.
          * 
-         * @param value
-         * @throws IOException
+         * @param value value.
+         * @throws IOException raised on errors performing I/O.
+         * @return long value.
          */
         public long getValue(BytesWritable value) throws IOException {
           DataInputStream dis = getValueStream();
@@ -1725,7 +1727,7 @@ public class TFile {
          * @param out
          *          The output stream
          * @return the length of the key.
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
          */
         public int writeKey(OutputStream out) throws IOException {
           out.write(keyBuffer, 0, klen);
@@ -1740,7 +1742,7 @@ public class TFile {
          * @param out
          *          The output stream
          * @return the length of the value
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
          */
         public long writeValue(OutputStream out) throws IOException {
           DataInputStream dis = getValueStream();
@@ -1768,7 +1770,7 @@ public class TFile {
          *          not be shorter than the key length.
          * @return The length of the key.
          * 
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
          */
         public int getKey(byte[] buf) throws IOException {
           return getKey(buf, 0);
@@ -1784,7 +1786,7 @@ public class TFile {
          *          the key into. Requiring the key-length + offset no greater
          *          than the buffer length.
          * @return The length of the key.
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
          */
         public int getKey(byte[] buf, int offset) throws IOException {
           if ((offset | (buf.length - offset - klen)) < 0) {
@@ -1828,10 +1830,11 @@ public class TFile {
          * without moving the cursor will result in exception:
          * {@link #getValue(byte[])}, {@link #getValue(byte[], int)},
          * {@link #getValueStream}.
-         * 
+         *
+         * @param buf buf.
          * @return the length of the value. Does not require
          *         isValueLengthKnown() to be true.
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
          * 
          */
         public int getValue(byte[] buf) throws IOException {
@@ -1846,10 +1849,12 @@ public class TFile {
          * functions more than once without moving the cursor will result in
          * exception: {@link #getValue(byte[])}, {@link #getValue(byte[], int)},
          * {@link #getValueStream}.
-         * 
+         *
+         * @param buf buf.
+         * @param offset offset.
          * @return the length of the value. Does not require
          *         isValueLengthKnown() to be true.
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
          */
         public int getValue(byte[] buf, int offset) throws IOException {
           DataInputStream dis = getValueStream();
@@ -1892,7 +1897,7 @@ public class TFile {
          * {@link #getValue(byte[], int)}, {@link #getValueStream}.
          * 
          * @return The input stream for reading the value.
-         * @throws IOException
+         * @throws IOException raised on errors performing I/O.
          */
         public DataInputStream getValueStream() throws IOException {
           if (valueChecked == true) {

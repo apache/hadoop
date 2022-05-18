@@ -88,6 +88,9 @@ public abstract class MultipartUploaderBuilderImpl
 
   /**
    * Constructor.
+   *
+   * @param fileSystem fileSystem.
+   * @param p path.
    */
   protected MultipartUploaderBuilderImpl(@Nonnull FileSystem fileSystem,
       @Nonnull Path p) {

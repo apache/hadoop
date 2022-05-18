@@ -39,7 +39,7 @@ public interface CompressionCodec {
    * 
    * @param out the location for the final output stream
    * @return a stream the user can write uncompressed data to have it compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   CompressionOutputStream createOutputStream(OutputStream out) 
   throws IOException;
@@ -51,7 +51,7 @@ public interface CompressionCodec {
    * @param out the location for the final output stream
    * @param compressor compressor to use
    * @return a stream the user can write uncompressed data to have it compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   CompressionOutputStream createOutputStream(OutputStream out, 
                                              Compressor compressor) 
@@ -77,7 +77,7 @@ public interface CompressionCodec {
    * 
    * @param in the stream to read compressed bytes from
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   CompressionInputStream createInputStream(InputStream in) throws IOException;
   
@@ -88,7 +88,7 @@ public interface CompressionCodec {
    * @param in the stream to read compressed bytes from
    * @param decompressor decompressor to use
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   CompressionInputStream createInputStream(InputStream in, 
                                            Decompressor decompressor) 

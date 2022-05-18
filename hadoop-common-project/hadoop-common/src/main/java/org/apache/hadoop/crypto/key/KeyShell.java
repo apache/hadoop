@@ -75,7 +75,7 @@ public class KeyShell extends CommandShell {
    * </pre>
    * @param args Command line arguments.
    * @return 0 on success, 1 on failure.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   protected int init(String[] args) throws IOException {
@@ -547,7 +547,7 @@ public class KeyShell extends CommandShell {
    * success and 1 for failure.
    *
    * @param args Command line arguments.
-   * @throws Exception
+   * @throws Exception raised on errors performing I/O.
    */
   public static void main(String[] args) throws Exception {
     int res = ToolRunner.run(new Configuration(), new KeyShell(), args);
