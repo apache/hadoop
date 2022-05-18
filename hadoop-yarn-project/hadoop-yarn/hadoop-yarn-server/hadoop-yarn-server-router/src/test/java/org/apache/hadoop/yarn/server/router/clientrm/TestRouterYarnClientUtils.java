@@ -26,7 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
