@@ -107,6 +107,8 @@ public class ViewFileSystem extends FileSystem {
 
   /**
    * Gets file system creator instance.
+   *
+   * @return fs getter.
    */
   protected FsGetter fsGetter() {
     return new FsGetter();
@@ -273,7 +275,7 @@ public class ViewFileSystem extends FileSystem {
    * {@link FileSystem#createFileSystem(URI, Configuration)}
    *
    * After this constructor is called initialize() is called.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public ViewFileSystem() throws IOException {
     ugi = UserGroupInformation.getCurrentUser();
@@ -382,10 +384,10 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Convenience Constructor for apps to call directly
+   * Convenience Constructor for apps to call directly.
    * @param theUri which must be that of ViewFileSystem
-   * @param conf
-   * @throws IOException
+   * @param conf conf configuration.
+   * @throws IOException raised on errors performing I/O.
    */
   ViewFileSystem(final URI theUri, final Configuration conf)
       throws IOException {
@@ -394,9 +396,9 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Convenience Constructor for apps to call directly
-   * @param conf
-   * @throws IOException
+   * Convenience Constructor for apps to call directly.
+   * @param conf configuration.
+   * @throws IOException raised on errors performing I/O.
    */
   public ViewFileSystem(final Configuration conf) throws IOException {
     this(FsConstants.VIEWFS_URI, conf);
@@ -1314,7 +1316,7 @@ public class ViewFileSystem extends FileSystem {
    * Constants#CONFIG_VIEWFS_LINK_MERGE_SLASH} is supported and is a valid
    * mount point. Else, throw NotInMountpointException.
    *
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public long getUsed() throws IOException {

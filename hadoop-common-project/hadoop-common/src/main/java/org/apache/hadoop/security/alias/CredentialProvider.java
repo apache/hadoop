@@ -91,7 +91,7 @@ public abstract class CredentialProvider {
   /**
    * Ensures that any changes to the credentials are written to persistent
    * store.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void flush() throws IOException;
 
@@ -99,7 +99,7 @@ public abstract class CredentialProvider {
    * Get the credential entry for a specific alias.
    * @param alias the name of a specific credential
    * @return the credentialEntry
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract CredentialEntry getCredentialEntry(String alias) 
       throws IOException;
@@ -107,7 +107,7 @@ public abstract class CredentialProvider {
   /**
    * Get the aliases for all credentials.
    * @return the list of alias names
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract List<String> getAliases() throws IOException;
 
@@ -115,7 +115,8 @@ public abstract class CredentialProvider {
    * Create a new credential. The given alias must not already exist.
    * @param name the alias of the credential
    * @param credential the credential value for the alias.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
+   * @return CredentialEntry.
    */
   public abstract CredentialEntry createCredentialEntry(String name, 
       char[] credential) throws IOException;
@@ -123,7 +124,7 @@ public abstract class CredentialProvider {
   /**
    * Delete the given credential.
    * @param name the alias of the credential to delete
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void deleteCredentialEntry(String name) throws IOException;
 
@@ -133,7 +134,7 @@ public abstract class CredentialProvider {
    * means. If true, the password should be provided by the caller using
    * setPassword().
    * @return Whether or not the provider requires a password
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public boolean needsPassword() throws IOException {
     return false;

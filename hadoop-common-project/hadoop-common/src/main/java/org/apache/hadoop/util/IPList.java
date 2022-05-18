@@ -26,7 +26,7 @@ public interface IPList {
 
   /**
    * returns true if the ipAddress is in the IPList.
-   * @param ipAddress
+   * @param ipAddress ipAddress.
    * @return boolean value indicating whether the ipAddress is in the IPList
    */
   public abstract boolean isIn(String ipAddress);

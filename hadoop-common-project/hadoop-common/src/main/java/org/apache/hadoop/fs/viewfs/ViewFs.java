@@ -909,7 +909,7 @@ public class ViewFs extends AbstractFileSystem {
    *
    * @param src file or directory path.
    * @return storage policy for give file.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public BlockStoragePolicySpi getStoragePolicy(final Path src)
       throws IOException {

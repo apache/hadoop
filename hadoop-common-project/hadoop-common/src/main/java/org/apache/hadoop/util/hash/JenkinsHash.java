@@ -247,7 +247,7 @@ public class JenkinsHash extends Hash {
   /**
    * Compute the hash of the specified file
    * @param args name of file to compute hash of.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static void main(String[] args) throws IOException {
     if (args.length != 1) {

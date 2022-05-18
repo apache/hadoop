@@ -48,7 +48,8 @@ public enum FsAction {
 
   /**
    * Return true if this action implies that action.
-   * @param that
+   * @param that FsAction that.
+   * @return if implies true,not false.
    */
   public boolean implies(FsAction that) {
     if (that != null) {
@@ -57,15 +58,26 @@ public enum FsAction {
     return false;
   }
 
-  /** AND operation. */
+  /**
+   * AND operation.
+   * @param that FsAction that.
+   * @return FsAction.
+   */
   public FsAction and(FsAction that) {
     return vals[ordinal() & that.ordinal()];
   }
-  /** OR operation. */
+  /**
+   * OR operation.
+   * @param that FsAction that.
+   * @return FsAction.
+   */
   public FsAction or(FsAction that) {
     return vals[ordinal() | that.ordinal()];
   }
-  /** NOT operation. */
+  /**
+   * NOT operation.
+   * @return FsAction.
+   */
   public FsAction not() {
     return vals[7 - ordinal()];
   }

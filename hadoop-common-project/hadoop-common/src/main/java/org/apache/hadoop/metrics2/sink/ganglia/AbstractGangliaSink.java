@@ -212,7 +212,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   /**
    * Lookup GangliaConf from cache. If not found, return default values
    *
-   * @param metricName
+   * @param metricName metricName.
    * @return looked up GangliaConf
    */
   protected GangliaConf getGangliaConfForMetric(String metricName) {
@@ -253,6 +253,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
 
   /**
    * Puts an integer into the buffer as 4 bytes, big-endian.
+   * @param i i.
    */
   protected void xdr_int(int i) {
     buffer[offset++] = (byte) ((i >> 24) & 0xff);
@@ -263,7 +264,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
 
   /**
    * Sends Ganglia Metrics to the configured hosts
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   protected void emitToGangliaHosts() throws IOException {
     try {

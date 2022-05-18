@@ -415,14 +415,16 @@ public class NetworkTopology {
   }
   
   /**
-   * Check if network topology is aware of NodeGroup
+   * @return Check if network topology is aware of NodeGroup.
    */
   public boolean isNodeGroupAware() {
     return false;
   }
   
   /** 
-   * Return false directly as not aware of NodeGroup, to be override in sub-class
+   * @return Return false directly as not aware of NodeGroup, to be override in sub-class.
+   * @param node1 input node1.
+   * @param node2 input node2.
    */
   public boolean isOnSameNodeGroup(Node node1, Node node2) {
     return false;
@@ -729,11 +731,10 @@ public class NetworkTopology {
   }
   
   /**
-   * Divide networklocation string into two parts by last separator, and get 
+   * @return Divide networklocation string into two parts by last separator, and get
    * the first part here.
    * 
-   * @param networkLocation
-   * @return
+   * @param networkLocation input networkLocation.
    */
   public static String getFirstHalf(String networkLocation) {
     int index = networkLocation.lastIndexOf(NodeBase.PATH_SEPARATOR_STR);
@@ -741,11 +742,10 @@ public class NetworkTopology {
   }
 
   /**
-   * Divide networklocation string into two parts by last separator, and get 
+   * @return Divide networklocation string into two parts by last separator, and get
    * the second part here.
    * 
-   * @param networkLocation
-   * @return
+   * @param networkLocation input networkLocation.
    */
   public static String getLastHalf(String networkLocation) {
     int index = networkLocation.lastIndexOf(NodeBase.PATH_SEPARATOR_STR);
@@ -897,7 +897,7 @@ public class NetworkTopology {
    * or on a different rack from the reader. Sorting the nodes based on network
    * distance from the reader reduces network traffic and improves
    * performance.
-   * <p>
+   * </p>
    * As an additional twist, we also randomize the nodes at each network
    * distance. This helps with load balancing when there is data skew.
    *
@@ -906,6 +906,7 @@ public class NetworkTopology {
    * @param activeLen Number of active nodes at the front of the array
    * @param secondarySort a secondary sorting strategy which can inject into
    *     that point from outside to help sort the same distance.
+   * @param <T> Generics Type T
    */
   public <T extends Node> void sortByDistance(Node reader, T[] nodes,
       int activeLen, Consumer<List<T>> secondarySort){
@@ -918,7 +919,7 @@ public class NetworkTopology {
    * is not a datanode. Sorting the nodes based on network distance
    * from the reader reduces network traffic and improves
    * performance.
-   * <p>
+   * </p>
    *
    * @param reader    Node where data will be read
    * @param nodes     Available replicas with the requested data
@@ -939,13 +940,14 @@ public class NetworkTopology {
    * is not a datanode. Sorting the nodes based on network distance
    * from the reader reduces network traffic and improves
    * performance.
-   * <p>
+   * </p>
    *
    * @param reader    Node where data will be read
    * @param nodes     Available replicas with the requested data
    * @param activeLen Number of active nodes at the front of the array
    * @param secondarySort a secondary sorting strategy which can inject into
    *     that point from outside to help sort the same distance.
+   * @param <T> Generics Type T.
    */
   public <T extends Node> void sortByDistanceUsingNetworkLocation(Node reader,
       T[] nodes, int activeLen, Consumer<List<T>> secondarySort) {

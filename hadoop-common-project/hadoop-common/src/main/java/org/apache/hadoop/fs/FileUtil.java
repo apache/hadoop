@@ -162,6 +162,8 @@ public class FileUtil {
    * (3) If dir is a normal file, it is deleted.
    * (4) If dir is a normal directory, then dir and all its contents recursively
    *     are deleted.
+   * @param dir dir.
+   * @return fully delete status.
    */
   public static boolean fullyDelete(final File dir) {
     return fullyDelete(dir, false);
@@ -257,6 +259,9 @@ public class FileUtil {
    * we return false, the directory may be partially-deleted.
    * If dir is a symlink to a directory, all the contents of the actual
    * directory pointed to by dir will be deleted.
+   *
+   * @param dir dir.
+   * @return fullyDeleteContents Status.
    */
   public static boolean fullyDeleteContents(final File dir) {
     return fullyDeleteContents(dir, false);
@@ -267,8 +272,11 @@ public class FileUtil {
    * we return false, the directory may be partially-deleted.
    * If dir is a symlink to a directory, all the contents of the actual
    * directory pointed to by dir will be deleted.
+   *
+   * @param dir dir.
    * @param tryGrantPermissions if 'true', try grant +rwx permissions to this
    * and all the underlying directories before trying to delete their contents.
+   * @return fully delete contents status.
    */
   public static boolean fullyDeleteContents(final File dir, final boolean tryGrantPermissions) {
     if (tryGrantPermissions) {
@@ -311,7 +319,7 @@ public class FileUtil {
    *
    * @param fs {@link FileSystem} on which the path is present
    * @param dir directory to recursively delete
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @deprecated Use {@link FileSystem#delete(Path, boolean)}
    */
   @Deprecated
@@ -343,7 +351,17 @@ public class FileUtil {
     }
   }
 
-  /** Copy files between FileSystems. */
+  /**
+   * Copy files between FileSystems.
+   * @param srcFS src fs.
+   * @param src src.
+   * @param dstFS dst fs.
+   * @param dst dst.
+   * @param deleteSource delete source.
+   * @param conf configuration.
+   * @return if copy success true, not false.
+   * @throws IOException raised on errors performing I/O.
+   */
   public static boolean copy(FileSystem srcFS, Path src,
                              FileSystem dstFS, Path dst,
                              boolean deleteSource,
@@ -391,7 +409,19 @@ public class FileUtil {
     return returnVal;
   }
 
-  /** Copy files between FileSystems. */
+  /**
+   * Copy files between FileSystems.
+   *
+   * @param srcFS srcFs.
+   * @param src src.
+   * @param dstFS dstFs.
+   * @param dst dst.
+   * @param deleteSource delete source.
+   * @param overwrite overwrite.
+   * @param conf configuration.
+   * @throws IOException raised on errors performing I/O.
+   * @return true if the operation succeeded.
+   */
   public static boolean copy(FileSystem srcFS, Path src,
                              FileSystem dstFS, Path dst,
                              boolean deleteSource,
@@ -403,20 +433,21 @@ public class FileUtil {
 
   /**
    * Copy a file/directory tree within/between filesystems.
-   * <p></p>
+   * <p>
    * returns true if the operation succeeded. When deleteSource is true,
    * this means "after the copy, delete(source) returned true"
    * If the destination is a directory, and mkdirs (dest) fails,
    * the operation will return false rather than raise any exception.
-   * <p></p>
+   * </p>
    * The overwrite flag is about overwriting files; it has no effect about
    * handing an attempt to copy a file atop a directory (expect an IOException),
    * or a directory over a path which contains a file (mkdir will fail, so
    * "false").
-   * <p></p>
+   * <p>
    * The operation is recursive, and the deleteSource operation takes place
    * as each subdirectory is copied. Therefore, if an operation fails partway
    * through, the source tree may be partially deleted.
+   * </p>
    * @param srcFS source filesystem
    * @param srcStatus status of source
    * @param dstFS destination filesystem
@@ -471,7 +502,17 @@ public class FileUtil {
 
   }
 
-  /** Copy local files to a FileSystem. */
+  /**
+   * Copy local files to a FileSystem.
+   *
+   * @param src src.
+   * @param dstFS dstFs.
+   * @param dst dst.
+   * @param deleteSource delete source.
+   * @param conf configuration.
+   * @throws IOException raised on errors performing I/O.
+   * @return true if the operation succeeded.
+   */
   public static boolean copy(File src,
                              FileSystem dstFS, Path dst,
                              boolean deleteSource,
@@ -514,7 +555,17 @@ public class FileUtil {
     }
   }
 
-  /** Copy FileSystem files to local files. */
+  /**
+   * Copy FileSystem files to local files.
+   *
+   * @param srcFS srcFs.
+   * @param src src.
+   * @param dst dst.
+   * @param deleteSource delete source.
+   * @param conf configuration.
+   * @throws IOException raised on errors performing I/O.
+   * @return true if the operation succeeded.
+   */
   public static boolean copy(FileSystem srcFS, Path src,
                              File dst, boolean deleteSource,
                              Configuration conf) throws IOException {
@@ -958,7 +1009,7 @@ public class FileUtil {
    *
    * @param inFile The tar file as input.
    * @param untarDir The untar directory where to untar the tar file.
-   * @throws IOException
+   * @throws IOException an exception occurred.
    */
   public static void unTar(File inFile, File untarDir) throws IOException {
     if (!untarDir.mkdirs()) {
@@ -1169,6 +1220,7 @@ public class FileUtil {
    * @param target the target for symlink
    * @param linkname the symlink
    * @return 0 on success
+   * @throws IOException raised on errors performing I/O.
    */
   public static int symLink(String target, String linkname) throws IOException{
 
@@ -1230,8 +1282,8 @@ public class FileUtil {
    * @param filename the name of the file to change
    * @param perm the permission string
    * @return the exit code from the command
-   * @throws IOException
-   * @throws InterruptedException
+   * @throws IOException raised on errors performing I/O.
+   * @throws InterruptedException command interrupted.
    */
   public static int chmod(String filename, String perm
                           ) throws IOException, InterruptedException {
@@ -1245,7 +1297,7 @@ public class FileUtil {
    * @param perm permission string
    * @param recursive true, if permissions should be changed recursively
    * @return the exit code from the command.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static int chmod(String filename, String perm, boolean recursive)
                             throws IOException {
@@ -1271,7 +1323,7 @@ public class FileUtil {
    * @param file the file to change
    * @param username the new user owner name
    * @param groupname the new group owner name
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static void setOwner(File file, String username,
       String groupname) throws IOException {
@@ -1288,7 +1340,7 @@ public class FileUtil {
    * Platform independent implementation for {@link File#setReadable(boolean)}
    * File#setReadable does not work as expected on Windows.
    * @param f input file
-   * @param readable
+   * @param readable readable.
    * @return true on success, false otherwise
    */
   public static boolean setReadable(File f, boolean readable) {
@@ -1309,7 +1361,7 @@ public class FileUtil {
    * Platform independent implementation for {@link File#setWritable(boolean)}
    * File#setWritable does not work as expected on Windows.
    * @param f input file
-   * @param writable
+   * @param writable writable.
    * @return true on success, false otherwise
    */
   public static boolean setWritable(File f, boolean writable) {
@@ -1333,7 +1385,7 @@ public class FileUtil {
    * behavior on Windows as on Unix platforms. Creating, deleting or renaming
    * a file within that folder will still succeed on Windows.
    * @param f input file
-   * @param executable
+   * @param executable executable.
    * @return true on success, false otherwise
    */
   public static boolean setExecutable(File f, boolean executable) {
@@ -1412,7 +1464,7 @@ public class FileUtil {
    * of forking if group == other.
    * @param f the file to change
    * @param permission the new permissions
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static void setPermission(File f, FsPermission permission
                                    ) throws IOException {
@@ -1717,6 +1769,7 @@ public class FileUtil {
    * wildcard path to return all jars from the directory to use in a classpath.
    *
    * @param path the path to the directory. The path may include the wildcard.
+   * @param useLocal use local.
    * @return the list of jars as URLs, or an empty list if there are no jars, or
    * the directory does not exist
    */

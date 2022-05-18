@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * @param <T> is AbstractFileSystem or FileSystem
  *
  * The two main methods are
- * {@link #InodeTree(Configuration, String)} // constructor
+ * {@link #InodeTree(Configuration, String, URI, boolean)} // constructor
  * {@link #resolve(String, boolean)}
  */
 
@@ -325,8 +325,8 @@ public abstract class InodeTree<T> {
 
    * A merge dir link is  a merge (junction) of links to dirs:
    * example : merge of 2 dirs
-   *     /users -> hdfs:nn1//users
-   *     /users -> hdfs:nn2//users
+   *     /users -&gt; hdfs:nn1//users
+   *     /users -&gt; hdfs:nn2//users
    *
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)
@@ -364,6 +364,8 @@ public abstract class InodeTree<T> {
     /**
      * Get the target of the link. If a merge link then it returned
      * as "," separated URI list.
+     *
+     * @return the path.
      */
     public Path getTargetLink() {
       StringBuilder result = new StringBuilder(targetDirLinkList[0].toString());
@@ -387,7 +389,7 @@ public abstract class InodeTree<T> {
     /**
      * Get the instance of FileSystem to use, creating one if needed.
      * @return An Initialized instance of T
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public T getTargetFileSystem() throws IOException {
       if (targetFileSystem != null) {
@@ -500,7 +502,7 @@ public abstract class InodeTree<T> {
   /**
    * The user of this class must subclass and implement the following
    * 3 abstract methods.
-   * @throws IOException
+   * @return Function.
    */
   protected abstract Function<URI, T> initAndGetTargetFs();
 
@@ -591,14 +593,21 @@ public abstract class InodeTree<T> {
   }
 
   /**
-   * Create Inode Tree from the specified mount-table specified in Config
-   * @param config - the mount table keys are prefixed with
-   *       FsConstants.CONFIG_VIEWFS_PREFIX
-   * @param viewName - the name of the mount table - if null use defaultMT name
-   * @throws UnsupportedFileSystemException
-   * @throws URISyntaxException
-   * @throws FileAlreadyExistsException
-   * @throws IOException
+   * Create Inode Tree from the specified mount-table specified in Config.
+   *
+   * @param config the mount table keys are prefixed with
+   *               FsConstants.CONFIG_VIEWFS_PREFIX.
+   * @param viewName the name of the mount table
+   *                 if null use defaultMT name.
+   * @param theUri heUri.
+   * @param initingUriAsFallbackOnNoMounts initingUriAsFallbackOnNoMounts.
+   * @throws UnsupportedFileSystemException file system for <code>uri</code> is
+   *                                        not found.
+   * @throws URISyntaxException if the URI does not have an authority
+   *                            it is badly formed.
+   * @throws FileAlreadyExistsException there is a file at the path specified
+   *                                    or is discovered on one of its ancestors.
+   * @throws IOException raised on errors performing I/O.
    */
   protected InodeTree(final Configuration config, final String viewName,
       final URI theUri, boolean initingUriAsFallbackOnNoMounts)
@@ -872,9 +881,9 @@ public abstract class InodeTree<T> {
   /**
    * Resolve the pathname p relative to root InodeDir.
    * @param p - input path
-   * @param resolveLastComponent
+   * @param resolveLastComponent resolveLastComponent.
    * @return ResolveResult which allows further resolution of the remaining path
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
       throws IOException {
@@ -996,14 +1005,14 @@ public abstract class InodeTree<T> {
   /**
    * Walk through all regex mount points to see
    * whether the path match any regex expressions.
-   *  E.g. link: ^/user/(?<username>\\w+) => s3://$user.apache.com/_${user}
+   *  E.g. link: ^/user/(?&lt;username&gt;\\w+) =&gt; s3://$user.apache.com/_${user}
    *  srcPath: is /user/hadoop/dir1
    *  resolveLastComponent: true
    *  then return value is s3://hadoop.apache.com/_hadoop
    *
-   * @param srcPath
-   * @param resolveLastComponent
-   * @return
+   * @param srcPath srcPath.
+   * @param resolveLastComponent resolveLastComponent.
+   * @return ResolveResult.
    */
   protected ResolveResult<T> tryResolveInRegexMountpoint(final String srcPath,
       final boolean resolveLastComponent) {
@@ -1021,7 +1030,7 @@ public abstract class InodeTree<T> {
    * Build resolve result.
    * Here's an example
    * Mountpoint: fs.viewfs.mounttable.mt
-   *     .linkRegex.replaceresolveddstpath:_:-#.^/user/(?<username>\w+)
+   *     .linkRegex.replaceresolveddstpath:_:-#.^/user/(??&lt;username&gt;\w+)
    * Value: /targetTestRoot/$username
    * Dir path to test:
    * viewfs://mt/user/hadoop_user1/hadoop_dir1
@@ -1030,6 +1039,10 @@ public abstract class InodeTree<T> {
    * targetOfResolvedPathStr: /targetTestRoot/hadoop-user1
    * remainingPath: /hadoop_dir1
    *
+   * @param resultKind resultKind.
+   * @param resolvedPathStr resolvedPathStr.
+   * @param targetOfResolvedPathStr targetOfResolvedPathStr.
+   * @param remainingPath remainingPath.
    * @return targetFileSystem or null on exceptions.
    */
   protected ResolveResult<T> buildResolveResultForRegexMountPoint(

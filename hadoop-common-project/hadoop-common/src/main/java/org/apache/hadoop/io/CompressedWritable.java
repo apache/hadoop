@@ -67,7 +67,11 @@ public abstract class CompressedWritable implements Writable {
     }
   }
 
-  /** Subclasses implement this instead of {@link #readFields(DataInput)}. */
+  /**
+   * Subclasses implement this instead of {@link #readFields(DataInput)}.
+   * @param in data input.
+   * @throws IOException raised on errors performing I/O.
+   */
   protected abstract void readFieldsCompressed(DataInput in)
     throws IOException;
 
@@ -87,7 +91,12 @@ public abstract class CompressedWritable implements Writable {
     out.write(compressed);
   }
 
-  /** Subclasses implement this instead of {@link #write(DataOutput)}. */
+  /**
+   * Subclasses implement this instead of {@link #write(DataOutput)}.
+   *
+   * @param out data output.
+   * @throws IOException raised on errors performing I/O.
+   */
   protected abstract void writeCompressed(DataOutput out) throws IOException;
 
 }

@@ -119,6 +119,8 @@ abstract class CommandWithDestination extends FsCommand {
    * owner, group and permission information of the source
    * file will be preserved as far as target {@link FileSystem}
    * implementation allows.
+   *
+   * @param preserve preserve.
    */
   protected void setPreserve(boolean preserve) {
     if (preserve) {
@@ -175,6 +177,7 @@ abstract class CommandWithDestination extends FsCommand {
    *  The last arg is expected to be a local path, if only one argument is
    *  given then the destination will be the current directory 
    *  @param args is the list of arguments
+   * @throws IOException raised on errors performing I/O.
    */
   protected void getLocalDestination(LinkedList<String> args)
   throws IOException {
