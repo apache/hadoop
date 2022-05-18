@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.io;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Non parameterized tests for {@code WeakReferencedElasticByteBufferPool}.
@@ -56,22 +59,18 @@ public class TestMoreWeakReferencedElasticByteBufferPool
   }
 
   @Test
-  public void testUnexpectedBufferSizes() {
+  public void testUnexpectedBufferSizes() throws Exception {
     WeakReferencedElasticByteBufferPool pool = new WeakReferencedElasticByteBufferPool();
     ByteBuffer buffer1 = pool.getBuffer(true, 0);
-    try {
-      // try writing a random byte in a 0 length buffer.
-      buffer1.put(new byte[1]);
-      fail("Expected exception as buffer requested is of size 0");
-    } catch (Exception ex) {
-      // Expected.
-    }
-    try {
-      pool.getBuffer(true, -5);
-      fail("Expected IllegalArgumentException as negative length buffer is requested");
-    } catch (IllegalArgumentException ex) {
-      // Expected.
-    }
+
+    // try writing a random byte in a 0 length buffer.
+    // Expected exception as buffer requested is of size 0.
+    intercept(BufferOverflowException.class,
+        () -> buffer1.put(new byte[1]));
+
+    // Expected IllegalArgumentException as negative length buffer is requested.
+    intercept(IllegalArgumentException.class,
+        () -> pool.getBuffer(true, -5));
   }
 
   /**

@@ -138,7 +138,9 @@ public class TestWeakReferencedElasticByteBufferPool
     ByteBuffer buffer3 = pool.getBuffer(isDirect, 10);
     // As buffer1 is returned to the pool before buffer2, it should
     // be returned when buffer of same size is asked again from
-    // the pool.
+    // the pool. Memory references must match not just content
+    // that is why {@code Assertions.isSameAs} is used here rather
+    // than usual {@code Assertions.isEqualTo}.
     Assertions.assertThat(buffer3)
             .describedAs("Buffers should be returned in order of their " +
                     "insertion time")
