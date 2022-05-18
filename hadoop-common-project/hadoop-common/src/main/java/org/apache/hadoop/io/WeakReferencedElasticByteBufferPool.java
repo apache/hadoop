@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * Buffer pool implementation which uses weak references to store
  * buffers in the pool, such that they are garbage collected when
  * there are no references to the buffer during a gc run. This is
- * important as direct buffer don't get garbage collected automatically
+ * important as direct buffers don't get garbage collected automatically
  * during a gc run as they are not stored on heap memory.
  * Also the buffers are stored in a tree map which helps in returning
  * smallest buffer whose size is just greater than requested length.
@@ -44,7 +44,9 @@ public final class WeakReferencedElasticByteBufferPool extends ElasticByteBuffer
           new TreeMap<>();
 
   private TreeMap<Key, WeakReference<ByteBuffer>> getBufferTree(boolean isDirect) {
-    return isDirect ? directBuffers : heapBuffers;
+    return isDirect
+            ? directBuffers
+            : heapBuffers;
   }
 
   /**
@@ -94,7 +96,8 @@ public final class WeakReferencedElasticByteBufferPool extends ElasticByteBuffer
     // If our key is not unique on the first try, we try again, since the
     // time will be different.  Since we use nanoseconds, it's pretty
     // unlikely that we'll loop even once, unless the system clock has a
-    // poor granularity.
+    // poor granularity or multi-socket systems have clocks slightly out
+    // of sync.
     while (true) {
       Key keyToInsert = new Key(buffer.capacity(), System.nanoTime());
       if (!buffersTree.containsKey(keyToInsert)) {
@@ -111,7 +114,7 @@ public final class WeakReferencedElasticByteBufferPool extends ElasticByteBuffer
    * memory leaks.
    */
   @Override
-  public void release() {
+  public synchronized void release() {
     heapBuffers.clear();
     directBuffers.clear();
   }

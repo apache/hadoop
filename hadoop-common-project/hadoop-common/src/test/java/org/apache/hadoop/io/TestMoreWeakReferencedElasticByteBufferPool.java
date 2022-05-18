@@ -23,10 +23,13 @@ import java.nio.ByteBuffer;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.test.HadoopTestBase;
+
 /**
  * Non parameterized tests for {@code WeakReferencedElasticByteBufferPool}.
  */
-public class TestMoreWeakReferencedElasticByteBufferPool {
+public class TestMoreWeakReferencedElasticByteBufferPool
+        extends HadoopTestBase {
 
   @Test
   public void testMixedBuffersInPool() {
@@ -52,6 +55,32 @@ public class TestMoreWeakReferencedElasticByteBufferPool {
 
   }
 
+  @Test
+  public void testUnexpectedBufferSizes() {
+    WeakReferencedElasticByteBufferPool pool = new WeakReferencedElasticByteBufferPool();
+    ByteBuffer buffer1 = pool.getBuffer(true, 0);
+    try {
+      // try writing a random byte in a 0 length buffer.
+      buffer1.put(new byte[1]);
+      fail("Expected exception as buffer requested is of size 0");
+    } catch (Exception ex) {
+      // Expected.
+    }
+    try {
+      pool.getBuffer(true, -5);
+      fail("Expected IllegalArgumentException as negative length buffer is requested");
+    } catch (IllegalArgumentException ex) {
+      // Expected.
+    }
+  }
+
+  /**
+   * Utility method to assert counts of direct and heap buffers in
+   * the given buffer pool.
+   * @param pool buffer pool.
+   * @param numDirectBuffersExpected expected number of direct buffers.
+   * @param numHeapBuffersExpected expected number of heap buffers.
+   */
   private void assertBufferCounts(WeakReferencedElasticByteBufferPool pool,
                                   int numDirectBuffersExpected,
                                   int numHeapBuffersExpected) {

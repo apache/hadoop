@@ -28,11 +28,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.test.HadoopTestBase;
+
 /**
  * Unit tests for {@code WeakReferencedElasticByteBufferPool}.
  */
 @RunWith(Parameterized.class)
-public class TestWeakReferencedElasticByteBufferPool {
+public class TestWeakReferencedElasticByteBufferPool
+        extends HadoopTestBase {
 
   private final boolean isDirect;
 
@@ -48,7 +51,6 @@ public class TestWeakReferencedElasticByteBufferPool {
     this.isDirect = !"array".equals(type);
   }
 
-  // Add more tests for different time and same size buffers in the pool. 
   @Test
   public void testGetAndPutBasic() {
     WeakReferencedElasticByteBufferPool pool = new WeakReferencedElasticByteBufferPool();
@@ -137,16 +139,16 @@ public class TestWeakReferencedElasticByteBufferPool {
     // As buffer1 is returned to the pool before buffer2, it should
     // be returned when buffer of same size is asked again from
     // the pool.
-    Assertions.assertThat(buffer3 == buffer1)
+    Assertions.assertThat(buffer3)
             .describedAs("Buffers should be returned in order of their " +
                     "insertion time")
-            .isTrue();
+            .isSameAs(buffer1);
     pool.putBuffer(buffer);
     ByteBuffer buffer4 = pool.getBuffer(isDirect, 10);
-    Assertions.assertThat(buffer4 == buffer2)
+    Assertions.assertThat(buffer4)
             .describedAs("Buffers should be returned in order of their " +
                     "insertion time")
-            .isTrue();
+            .isSameAs(buffer2);
   }
 
   @Test
@@ -168,10 +170,11 @@ public class TestWeakReferencedElasticByteBufferPool {
     Assertions.assertThat(buffer4.capacity())
             .describedAs("Pooled buffer should have older capacity")
             .isEqualTo(15);
-
+    pool.putBuffer(buffer4);
     // Removing the references
     buffer1 = null;
     buffer2 = null;
+    buffer4 = null;
     System.gc();
     ByteBuffer buffer3 = pool.getBuffer(isDirect, 12);
     Assertions.assertThat(buffer3.capacity())
