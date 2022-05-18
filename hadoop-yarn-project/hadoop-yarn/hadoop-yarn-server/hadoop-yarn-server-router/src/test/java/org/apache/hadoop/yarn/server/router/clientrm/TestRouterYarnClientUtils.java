@@ -359,8 +359,8 @@ public class TestRouterYarnClientUtils {
 
     Set<NodeId> nodeIdMergedSet2 = new HashSet<>();
     nodeIdMergedSet2.add(node4);
-    expectedResponse.put("Label1",nodeIdMergedSet1);
-    expectedResponse.put("Label2",nodeIdMergedSet2);
+    expectedResponse.put("Label1", nodeIdMergedSet1);
+    expectedResponse.put("Label2", nodeIdMergedSet2);
 
     GetLabelsToNodesResponse response = RouterYarnClientUtils.
         mergeLabelsToNodes(responses);
