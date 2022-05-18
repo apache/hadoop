@@ -33,7 +33,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Prefer the &quot;rightmost&quot; data source for this key.
- * For example, <tt>override(S1,S2,S3)</tt> will prefer values
+ * For example, <code>override(S1,S2,S3)</code> will prefer values
  * from S3 over S2, and values from S2 over S1 for all keys
  * emitted from all sources.
  */

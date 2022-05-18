@@ -91,7 +91,7 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
  * <p>The actual compression algorithm used to compress key and/or values can be
  * specified by using the appropriate {@link CompressionCodec}.</p>
  * 
- * <p>The recommended way is to use the static <tt>createWriter</tt> methods
+ * <p>The recommended way is to use the static <code>createWriter</code> methods
  * provided by the <code>SequenceFile</code> to chose the preferred format.</p>
  *
  * <p>The {@link SequenceFile.Reader} acts as the bridge and can read any of the

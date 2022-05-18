@@ -108,7 +108,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
 
     /**
-     * Returns <tt>true</tt> if the queue contains the specified element.
+     * Returns <code>true</code> if the queue contains the specified element.
      */
     synchronized boolean contains(E e) {
       return blockq.contains(e);

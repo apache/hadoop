@@ -290,7 +290,7 @@ public abstract static class Node extends ComposableInputFormat {
 
     /**
      * Let the first actual define the InputFormat and the second define
-     * the <tt>mapred.input.dir</tt> property.
+     * the <code>mapred.input.dir</code> property.
      */
     @Override
     public void parse(List<Token> ll, Configuration conf) throws IOException {

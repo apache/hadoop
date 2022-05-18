@@ -453,7 +453,7 @@ public abstract class ChecksumFs extends FilterFs {
   }
   /**
    * Set replication for an existing file.
-   * Implement the abstract <tt>setReplication</tt> of <tt>FileSystem</tt>
+   * Implement the abstract <code>setReplication</code> of <code>FileSystem</code>
    * @param src file name
    * @param replication new replication
    * @throws IOException if an I/O error occurs.

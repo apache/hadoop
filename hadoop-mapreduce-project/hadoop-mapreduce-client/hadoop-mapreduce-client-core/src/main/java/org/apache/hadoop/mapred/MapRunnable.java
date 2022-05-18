@@ -37,7 +37,7 @@ public interface MapRunnable<K1, V1, K2, V2>
     extends JobConfigurable {
   
   /** 
-   * Start mapping input <tt>&lt;key, value&gt;</tt> pairs.
+   * Start mapping input <code>&lt;key, value&gt;</code> pairs.
    *  
    * <p>Mapping of input records to output records is complete when this method 
    * returns.</p>

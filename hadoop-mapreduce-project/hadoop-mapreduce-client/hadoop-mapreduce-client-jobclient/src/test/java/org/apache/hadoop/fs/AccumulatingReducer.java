@@ -31,13 +31,13 @@ import org.slf4j.LoggerFactory;
  * The type is specified in the key part of the key-value pair 
  * as a prefix to the key in the following way
  * <p>
- * <tt>type:key</tt>
+ * <code>type:key</code>
  * <p>
  * The values are accumulated according to the types:
  * <ul>
- * <li><tt>s:</tt> - string, concatenate</li>
- * <li><tt>f:</tt> - float, summ</li>
- * <li><tt>l:</tt> - long, summ</li>
+ * <li><code>s:</code> - string, concatenate</li>
+ * <li><code>f:</code> - float, summ</li>
+ * <li><code>l:</code> - long, summ</li>
  * </ul>
  * 
  */

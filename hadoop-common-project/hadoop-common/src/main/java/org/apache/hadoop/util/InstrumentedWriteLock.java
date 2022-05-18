@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 
 /**
- * This is a wrap class of a <tt>WriteLock</tt>.
+ * This is a wrap class of a <code>WriteLock</code>.
  * It extends the class {@link InstrumentedLock}, and can be used to track
  * whether a specific write lock is being held for too long and log
  * warnings if so.

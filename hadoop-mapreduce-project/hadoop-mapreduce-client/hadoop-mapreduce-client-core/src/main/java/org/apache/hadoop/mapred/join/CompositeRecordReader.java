@@ -61,8 +61,8 @@ public abstract class CompositeRecordReader<
   protected abstract boolean combine(Object[] srcs, TupleWritable value);
 
   /**
-   * Create a RecordReader with <tt>capacity</tt> children to position
-   * <tt>id</tt> in the parent reader.
+   * Create a RecordReader with <code>capacity</code> children to position
+   * <code>id</code> in the parent reader.
    * The id of a root CompositeRecordReader is -1 by convention, but relying
    * on this is not recommended.
    */
