@@ -198,7 +198,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         boolean fullScan = false;
         if (dn.isMaintenance() && dn.maintenanceExpired()) {
           // If maintenance expires, stop tracking it.
-          dnAdmin.stopMaintenance(dn);
+          dnAdmin.stopMaintenanceInternal(dn);
           toRemove.add(dn);
           continue;
         }
