@@ -1095,6 +1095,14 @@
 
   <property>
     <description>
+    Extra skew time to make sure token expire time is not affected by local machine clock
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-clock-skew-time</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
     Time interval between each RM DelegationTokenRenewer thread retry attempt
     </description>
     <name>yarn.resourcemanager.delegation-token-renewer.thread-retry-interval</name>
