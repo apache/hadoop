@@ -58,13 +58,15 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
   // Size should be < block size so S3InMemoryInputStream is used
   private static final int smallFileSize = _1K * 16;
 
-  @Override
-  public void setup() throws Exception {
-    super.setup();
 
-    Configuration conf = getConfiguration();
+  @Override
+  public Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
+    return conf;
   }
+
 
   private void openFS() throws IOException {
     Configuration conf = getConfiguration();
