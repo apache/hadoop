@@ -23,4 +23,4 @@ else()
 endif()
 
 add_library(x_platform_obj OBJECT ${SYSCALL_SRC} utils.cc dirent.cc)
-add_library(x_platform_obj_c_api OBJECT $<TARGET_OBJECTS:x_platform_obj> c-api/syscall.cc)
+add_library(x_platform_obj_c_api OBJECT $<TARGET_OBJECTS:x_platform_obj> c-api/syscall.cc c-api/dirent.cc)
