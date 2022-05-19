@@ -46,6 +46,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -72,8 +75,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Service to renew application delegation tokens.
@@ -123,6 +124,7 @@ public class DelegationTokenRenewer extends AbstractService {
   private long tokenRenewerThreadTimeout;
   private long tokenRenewerThreadRetryInterval;
   private int tokenRenewerThreadRetryMaxAttempts;
+  private long clockSkewExtraTime;
   private final Map<DelegationTokenRenewerEvent, Future<?>> futures =
       new ConcurrentHashMap<>();
   private boolean delegationTokenRenewerPoolTrackerFlag = true;
@@ -165,6 +167,8 @@ public class DelegationTokenRenewer extends AbstractService {
     tokenRenewerThreadRetryMaxAttempts =
         conf.getInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
             YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS);
+    clockSkewExtraTime = conf.getLong(YarnConfiguration.RM_DT_RENEWER_THREAD_CLOCK_SKEW_TIME,
+            YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_CLOCK_SKEW_TIME);
     setLocalSecretManagerAndServiceAddr();
     renewerService = createNewThreadPoolService(conf);
     pendingEventQueue = new LinkedBlockingQueue<DelegationTokenRenewerEvent>();
@@ -528,7 +532,8 @@ public class DelegationTokenRenewer extends AbstractService {
 
           try {
             // if expire date is not greater than now, renew token.
-            if (tokenExpiredTime.get() <= now) {
+            // add extra time in case of clock skew
+            if (tokenExpiredTime.get() <= now + clockSkewExtraTime) {
               renewToken(dttr);
             }
           } catch (IOException ioe) {
@@ -540,7 +545,7 @@ public class DelegationTokenRenewer extends AbstractService {
                   + " on recovery as it expired, requesting new hdfs token for "
                   + applicationId + ", user=" + evt.getUser(), ioe);
               requestNewHdfsDelegationTokenAsProxyUser(
-                      Arrays.asList(applicationId), evt.getUser(),
+                  Arrays.asList(applicationId), evt.getUser(),
                   evt.shouldCancelAtEnd());
               continue;
             }

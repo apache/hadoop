@@ -50,7 +50,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -69,6 +68,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -463,7 +463,7 @@ public class TestDelegationTokenRenewer {
 
     //to cause this one to be set for renew in 2 secs
     AbstractDelegationTokenIdentifier identifier1 = token1.decodeIdentifier();
-    identifier1.setMaxDate(System.currentTimeMillis() + 2 * 1000);
+    identifier1.setMaxDate(System.currentTimeMillis() + 2_000);
     token1.setID(identifier1.getBytes());
     LOG.info("token="+token1+" should be renewed for 2 secs");
     

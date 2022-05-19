@@ -814,6 +814,10 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "delegation-token-renewer.thread-retry-max-attempts";
   public static final int DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS =
       10;
+  public static final String RM_DT_RENEWER_THREAD_CLOCK_SKEW_TIME =
+          RM_PREFIX + "delegation-token-renewer.thread-clock-skew-time";
+  public static final long DEFAULT_RM_DT_RENEWER_THREAD_CLOCK_SKEW_TIME =
+          TimeUnit.MINUTES.toMillis(10); // 10 minutes
 
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
