@@ -22,18 +22,17 @@
 
 #include "dirent.h"
 
-std::variant<std::monostate, const std::filesystem::directory_entry &,
-             std::error_code>
+std::variant<std::monostate, std::filesystem::directory_entry, std::error_code>
 XPlatform::Dirent::NextFile() {
-  if (dir_it_ == std::filesystem::end(dir_it_)) {
-    return std::monostate();
-  }
-
   if (dir_it_err_) {
     return dir_it_err_;
   }
 
-  const auto &dir_entry = *dir_it_;
+  if (dir_it_ == std::filesystem::end(dir_it_)) {
+    return std::monostate();
+  }
+
+  const std::filesystem::directory_entry dir_entry = *dir_it_;
   dir_it_ = dir_it_.increment(dir_it_err_);
   return dir_entry;
 }
