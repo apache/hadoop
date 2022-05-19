@@ -76,6 +76,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.S
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 
 /**
  * AbfsClient.
@@ -101,6 +102,11 @@ public class AbfsClient implements Closeable {
   private final AbfsCounters abfsCounters;
 
   private final ListeningScheduledExecutorService executorService;
+
+  /**
+   * Has the Rename operation been retried once or not?
+   */
+  private boolean hasRetriedRenameOnce;
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
@@ -538,6 +544,23 @@ public class AbfsClient implements Closeable {
         if (!op.hasResult()) {
           throw e;
         }
+
+        // ref: HADOOP-18242. Rename failure occurring due to a rare case of
+        // tracking metadata being in incomplete state.
+        if (op.getResult().getStorageErrorCode()
+            .equals(RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode())
+            && !hasRetriedRenameOnce) {
+          LOG.info("Rename Failure attempting to resolve tracking metadata "
+              + "state and retrying.");
+
+          // Doing a HEAD call resolves the incomplete metadata state and
+          // then we can retry the rename operation.
+          getPathStatus(source, false, tracingContext);
+          hasRetriedRenameOnce = true;
+          renamePath(source, destination, continuation, tracingContext,
+              sourceEtag);
+        }
+
         boolean etagCheckSucceeded = renameIdempotencyCheckOp(
             source,
             sourceEtag, op, destination, tracingContext);
@@ -1242,5 +1265,10 @@ public class AbfsClient implements Closeable {
 
   public <V> void addCallback(ListenableFuture<V> future, FutureCallback<V> callback) {
     Futures.addCallback(future, callback, executorService);
+  }
+
+  @VisibleForTesting
+  public boolean isHasRetriedRenameOnce() {
+    return hasRetriedRenameOnce;
   }
 }

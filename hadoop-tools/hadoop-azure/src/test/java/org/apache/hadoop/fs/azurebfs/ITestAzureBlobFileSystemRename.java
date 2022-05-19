@@ -36,6 +36,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 
 /**
  * Test rename operation.
@@ -167,4 +169,30 @@ public class ITestAzureBlobFileSystemRename extends
         new Path(testDir2 + "/test1/test2/test3"));
   }
 
+  @Test
+  public void testRenameWithNoDestinationParentDir() throws Exception {
+    describe("Verifying the expected behaviour of ABFS rename when "
+        + "destination parent Dir doesn't exist.");
+
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path sourcePath = path(getMethodName());
+    Path destPath = new Path("falseParent", "someChildFile");
+
+    byte[] data = dataset(1024, 'a', 'z');
+    writeDataset(fs, sourcePath, data, data.length, 1024, true);
+
+    // Check if we have retried the rename operation.
+    boolean hasRenameRetriedOnce = fs.getAbfsClient().isHasRetriedRenameOnce();
+    assertFalse("Rename shouldn't be retried before attempting to rename",
+        hasRenameRetriedOnce);
+
+    // Verify that Renaming on a destination with no parent dir wasn't
+    // successful.
+    assertFalse(fs.rename(sourcePath, destPath));
+
+    // Verify that Rename operation was retried once after not succeeding.
+    hasRenameRetriedOnce = fs.getAbfsClient().isHasRetriedRenameOnce();
+    assertTrue("Rename should be retried once",
+        hasRenameRetriedOnce);
+  }
 }
