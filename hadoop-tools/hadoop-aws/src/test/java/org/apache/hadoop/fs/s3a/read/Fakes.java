@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -56,6 +57,7 @@ import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 /**
  * Provides 'fake' implementations of S3InputStream variants.
@@ -128,10 +130,6 @@ public final class Fakes {
         statistics,
         statisticsContext,
         fileStatus,
-        S3AInputPolicy.Random,  // seekPolicy
-        CHANGE_POLICY,
-        1L,                     // readAheadRange
-        NoopSpan.INSTANCE,      // auditSpan
         futurePool,
         prefetchBlockSize,
         prefetchBlockCount);
@@ -179,6 +177,11 @@ public final class Fakes {
       @Override
       public S3Object getObject(GetObjectRequest request) {
         return object;
+      }
+
+      @Override
+      public <T> CompletableFuture<T> submit(CallableRaisingIOE<T> operation) {
+        return null;
       }
 
       @Override
