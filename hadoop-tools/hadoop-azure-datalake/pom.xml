@@ -29,7 +29,6 @@
   </description>
   <packaging>jar</packaging>
   <properties>
-    <okHttpVersion>${okhttp.version}</okHttpVersion>
     <minimalJsonVersion>0.9.1</minimalJsonVersion>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
