@@ -22,6 +22,7 @@ package org.apache.hadoop.fs.s3a.read;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
 
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
@@ -29,6 +30,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 /**
  * A mock s3 file with some fault injection.
@@ -89,6 +91,11 @@ class MockS3File extends S3File {
     return new S3AInputStream.InputStreamCallbacks() {
       @Override
       public S3Object getObject(GetObjectRequest request) {
+        return null;
+      }
+
+      @Override
+      public <T> CompletableFuture<T> submit(CallableRaisingIOE<T> operation) {
         return null;
       }
 
