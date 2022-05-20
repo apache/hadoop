@@ -255,15 +255,6 @@ public class DatanodeAdminManager {
    */
   @VisibleForTesting
   public void stopMaintenance(DatanodeDescriptor node) {
-    boolean shouldStopTracking = node.isMaintenance();
-    stopMaintenanceInternal(node);
-    if (shouldStopTracking) {
-      // Remove from tracking in DatanodeAdminManager
-      monitor.stopTrackingNode(node);
-    }
-  }
-
-  protected void stopMaintenanceInternal(DatanodeDescriptor node) {
     if (node.isMaintenance()) {
       // Update DN stats maintained by HeartbeatManager
       hbManager.stopMaintenance(node);
@@ -296,6 +287,9 @@ public class DatanodeAdminManager {
         // c. Take the node out of maintenance mode.
         blockManager.processExtraRedundancyBlocksOnInService(node);
       }
+
+      // Remove from tracking in DatanodeAdminManager
+      monitor.stopTrackingNode(node);
     } else {
       LOG.trace("stopMaintenance: Node {} in {}, nothing to do.",
           node, node.getAdminState());
