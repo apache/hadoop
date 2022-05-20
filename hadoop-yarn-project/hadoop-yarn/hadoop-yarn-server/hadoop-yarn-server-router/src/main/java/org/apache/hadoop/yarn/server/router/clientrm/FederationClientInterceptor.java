@@ -413,7 +413,7 @@ public class FederationClientInterceptor
     for (int i = 0; i < numSubmitRetries; ++i) {
 
       SubClusterId subClusterId = policyFacade.getHomeSubcluster(
-              request.getApplicationSubmissionContext(), blacklist);
+          request.getApplicationSubmissionContext(), blacklist);
       LOG.info("submitApplication appId {} try #{} on SubCluster {}", applicationId, i,
           subClusterId);
 
@@ -466,7 +466,7 @@ public class FederationClientInterceptor
         response = clientRMProxy.submitApplication(request);
       } catch (Exception e) {
         LOG.warn("Unable to submit the application {} to SubCluster {} error = {}",
-                applicationId, subClusterId.getId(), e);
+            applicationId, subClusterId.getId(), e);
       }
 
       if (response != null) {
