@@ -241,7 +241,7 @@ com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:9.8.1
-com.squareup.okhttp:okhttp:2.7.5
+com.squareup.okhttp3:okhttp:4.9.3
 com.squareup.okio:okio:1.6.0
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.3
