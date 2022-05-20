@@ -414,7 +414,7 @@ public class FederationClientInterceptor
 
       SubClusterId subClusterId = policyFacade.getHomeSubcluster(
           request.getApplicationSubmissionContext(), blacklist);
-      LOG.info("submitApplication appId {} try #{} on SubCluster {}", applicationId, i,
+      LOG.info("submitApplication appId {} try #{} on SubCluster {}.", applicationId, i,
           subClusterId);
 
       ApplicationHomeSubCluster appHomeSubCluster =
@@ -446,7 +446,7 @@ public class FederationClientInterceptor
           SubClusterId subClusterIdInStateStore =
               federationFacade.getApplicationHomeSubCluster(applicationId);
           if (subClusterId == subClusterIdInStateStore) {
-            LOG.info("Application {} already submitted on SubCluster {} ", applicationId,
+            LOG.info("Application {} already submitted on SubCluster {}.", applicationId,
                 subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
@@ -465,7 +465,7 @@ public class FederationClientInterceptor
       try {
         response = clientRMProxy.submitApplication(request);
       } catch (Exception e) {
-        LOG.warn("Unable to submit the application {} to SubCluster {} error = {}",
+        LOG.warn("Unable to submit the application {} to SubCluster {} error = {}.",
             applicationId, subClusterId.getId(), e);
       }
 
