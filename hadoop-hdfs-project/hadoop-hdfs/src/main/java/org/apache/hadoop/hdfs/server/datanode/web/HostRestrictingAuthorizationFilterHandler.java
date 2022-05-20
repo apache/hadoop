@@ -197,7 +197,7 @@ final class HostRestrictingAuthorizationFilterHandler
     @Override
     public String getQueryString() {
       try {
-        return (new URI(req.getUri()).getQuery());
+        return (new URI(req.uri()).getQuery());
       } catch (URISyntaxException e) {
         return null;
       }
@@ -205,7 +205,7 @@ final class HostRestrictingAuthorizationFilterHandler
 
     @Override
     public String getRequestURI() {
-      String uri = req.getUri();
+      String uri = req.uri();
       // Netty's getUri includes the query string, while Servlet's does not
       return (uri.substring(0, uri.indexOf("?") >= 0 ? uri.indexOf("?") :
           uri.length()));
