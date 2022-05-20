@@ -125,7 +125,6 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   public void stopTrackingNode(DatanodeDescriptor dn) {
     getPendingNodes().remove(dn);
     getCancelledNodes().add(dn);
-    outOfServiceNodeBlocks.remove(dn);
   }
 
   @Override
