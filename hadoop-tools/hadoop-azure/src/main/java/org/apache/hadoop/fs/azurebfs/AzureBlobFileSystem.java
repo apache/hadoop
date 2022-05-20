@@ -114,8 +114,11 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -679,12 +682,20 @@ public class AzureBlobFileSystem extends FileSystem
       return;
     }
     try {
-      //String metric = abfsCounters.getAbfsDriverMetrics().toString();
-      String metric = "abcd";
-      URI metricUri = new URI(
-          "abfs://metric@snvarmacanary.dfs.core.windows.net");
-      AzureBlobFileSystem metricfs = (AzureBlobFileSystem) FileSystem.get(
-          metricUri, getConf());
+      String metric = abfsCounters.getAbfsDriverMetrics().toString();
+      Configuration metricConfig = getConf();
+      String metricAccountName = getConf().get(FS_AZURE_METRIC_ACCOUNT_NAME);
+      String metricAccountKey = getConf().get(FS_AZURE_METRIC_ACCOUNT_KEY);
+      final String abfsMetricUrl = "metrics" + "@" + metricAccountName;
+      metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
+      URI metricUri = null;
+      try {
+        metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
+      } catch (Exception ex) {
+        throw new AssertionError(ex);
+      }
+      AzureBlobFileSystem metricfs = (AzureBlobFileSystem) FileSystem.newInstance(
+          metricUri, metricConfig);
       metricfs.sentMetric(metric);
     } catch (Exception ex) {
       // do nothing

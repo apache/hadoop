@@ -219,24 +219,28 @@ public class AbfsRestOperation {
 
     retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
+    long sleepDuration = 0L;
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
         tracingContext.setRetryCount(retryCount);
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
-        Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
+        sleepDuration = client.getRetryPolicy().getRetryInterval(retryCount);
+        Thread.sleep(sleepDuration);
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
     }
     if(retryCount > 0) {
       if (retryCount == 1) {
+        long minSleepForFirstRetry = Math.min(abfsDriverMetrics.getMinBackoffForFirstRetry().get(), sleepDuration);
         long noOfRequests1Retry
             = abfsDriverMetrics.getNumberOfRequestsSucceededInFirstRetry()
             .incrementAndGet();
         abfsDriverMetrics.getNumberOfRequestsSucceededInFirstRetry()
             .set(noOfRequests1Retry);
+        abfsDriverMetrics.getMinBackoffForFirstRetry().set(minSleepForFirstRetry);
       } else if (retryCount == 2) {
         long noOfRequests2Retry
             = abfsDriverMetrics.getNumberOfRequestsSucceededInSecondRetry()

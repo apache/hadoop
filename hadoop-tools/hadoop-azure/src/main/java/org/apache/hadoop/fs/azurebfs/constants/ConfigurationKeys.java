@@ -36,6 +36,11 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
+
+  public static final String FS_AZURE_METRIC_ACCOUNT_NAME = "fs.azure.metric.account.name";
+
+  public static final String FS_AZURE_METRIC_ACCOUNT_KEY = "fs.azure.metric.account.key";
+
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
 

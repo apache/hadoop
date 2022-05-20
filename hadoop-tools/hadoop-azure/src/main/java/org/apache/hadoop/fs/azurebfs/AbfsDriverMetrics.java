@@ -11,6 +11,8 @@ public class AbfsDriverMetrics {
   private AtomicLong numberOfRequestsSucceededInFifteenToTwentyFiveRetry;
   private AtomicLong numberOfRequestsSucceededInTwentyFiveToThirtyRetry;
 
+  private AtomicLong minBackoffForFirstRetry;
+
   public AbfsDriverMetrics() {
     this.numberOfRequestsSucceededInFirstRetry = new AtomicLong();
     this.numberOfRequestsSucceededInSecondRetry = new AtomicLong();
@@ -19,6 +21,7 @@ public class AbfsDriverMetrics {
     this.numberOfRequestsSucceededInFiveToFifteenRetry = new AtomicLong();
     this.numberOfRequestsSucceededInFifteenToTwentyFiveRetry = new AtomicLong();
     this.numberOfRequestsSucceededInTwentyFiveToThirtyRetry = new AtomicLong();
+    this.minBackoffForFirstRetry = new AtomicLong(Long.MAX_VALUE);
   }
 
   public AtomicLong getNumberOfRequestsSucceededInFirstRetry() {
@@ -49,10 +52,15 @@ public class AbfsDriverMetrics {
     return numberOfRequestsSucceededInTwentyFiveToThirtyRetry;
   }
 
+  public AtomicLong getMinBackoffForFirstRetry() {
+    return minBackoffForFirstRetry;
+  }
+
   @Override
   public String toString() {
-    return "#RCTSI_1R_ " + numberOfRequestsSucceededInFirstRetry + "#RCTSI_2R_ " + numberOfRequestsSucceededInSecondRetry + "#RCTSI_3R_ " +
-        numberOfRequestsSucceededInThirdRetry + "#RCTSI_4R_ " + numberOfRequestsSucceededInFourthRetry + "#RCTSI_5-15R_ " + numberOfRequestsSucceededInFiveToFifteenRetry +
-        "#RCTSI_15-25R_ " + numberOfRequestsSucceededInFifteenToTwentyFiveRetry + "#RCTSI_25-30R_ " + numberOfRequestsSucceededInTwentyFiveToThirtyRetry;
+    return "#RCTSI_1R_" + numberOfRequestsSucceededInFirstRetry + " #RCTSI_2R_" + numberOfRequestsSucceededInSecondRetry + " #RCTSI_3R_" +
+        numberOfRequestsSucceededInThirdRetry + " #RCTSI_4R_" + numberOfRequestsSucceededInFourthRetry + " #RCTSI_5-15R_" + numberOfRequestsSucceededInFiveToFifteenRetry +
+        " #RCTSI_15-25R_" + numberOfRequestsSucceededInFifteenToTwentyFiveRetry + " #RCTSI_25-30R_" + numberOfRequestsSucceededInTwentyFiveToThirtyRetry +
+        " #Min_1R_ " + minBackoffForFirstRetry;
  }
 }
