@@ -175,7 +175,6 @@
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
 
     <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
-    <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
     <maven-install-plugin.version>2.5.1</maven-install-plugin.version>
     <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
     <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
@@ -1885,7 +1884,6 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>${maven-compiler-plugin.version}</version>
           <configuration>
             <source>${javac.version}</source>
             <target>${javac.version}</target>
