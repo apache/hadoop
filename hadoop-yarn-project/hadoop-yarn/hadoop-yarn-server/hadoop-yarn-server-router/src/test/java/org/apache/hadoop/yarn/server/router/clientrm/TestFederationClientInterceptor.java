@@ -617,7 +617,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    * with given YarnApplicationState does not exist.
    */
   @Test
-  public void testGetApplicationsApplicationStateNotExists() throws Exception{
+  public void testGetApplicationsApplicationStateNotExists() throws Exception {
     LOG.info("Test FederationClientInterceptor:" +
         " Application with state does not exist");
 
