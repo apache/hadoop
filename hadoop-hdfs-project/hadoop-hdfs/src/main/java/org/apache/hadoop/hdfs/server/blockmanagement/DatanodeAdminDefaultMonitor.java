@@ -124,6 +124,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   @Override
   public void stopTrackingNode(DatanodeDescriptor dn) {
     getPendingNodes().remove(dn);
+    getCancelledNodes().add(dn);
     outOfServiceNodeBlocks.remove(dn);
   }
 
@@ -152,6 +153,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
     // Check decommission or maintenance progress.
     namesystem.writeLock();
     try {
+      processCancelledNodes();
       processPendingNodes();
       check();
     } catch (Exception e) {
@@ -177,6 +179,20 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         (maxConcurrentTrackedNodes == 0 ||
             outOfServiceNodeBlocks.size() < maxConcurrentTrackedNodes)) {
       outOfServiceNodeBlocks.put(getPendingNodes().poll(), null);
+    }
+  }
+
+  /**
+   * Process any nodes which have had their decommission or maintenance mode
+   * cancelled by an administrator.
+   *
+   * This method must be executed under the write lock to prevent the
+   * internal structures being modified concurrently.
+   */
+  private void processCancelledNodes() {
+    while(!getCancelledNodes().isEmpty()) {
+      DatanodeDescriptor dn = getCancelledNodes().poll();
+      outOfServiceNodeBlocks.remove(dn);
     }
   }
 
