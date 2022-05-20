@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.*;
 
 /**

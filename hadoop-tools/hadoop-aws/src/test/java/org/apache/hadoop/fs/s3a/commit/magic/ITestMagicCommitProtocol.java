@@ -25,7 +25,6 @@ import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -151,7 +150,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     assertEquals("Wrong schema for working dir " + wd
         + " with committer " + committer,
         "s3a", wd.getScheme());
-    assertThat(wd.getPath(),
+    org.hamcrest.MatcherAssert.assertThat(wd.getPath(),
         containsString('/' + CommitConstants.MAGIC + '/'));
   }
 

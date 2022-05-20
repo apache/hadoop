@@ -400,7 +400,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
             writeBuffer,
             readBuffer);
       } else {
-        assertThat(
+          org.hamcrest.MatcherAssert.assertThat(
             "Bytes read unexpectedly match bytes written.",
             readBuffer,
             IsNot.not(IsEqual.equalTo(writeBuffer)));
@@ -418,7 +418,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
         assertArrayEquals(
                 String.format("Bytes read do not match bytes written to %1$s", filePath), writeBuffer, readBuffer);
       } else {
-        assertThat(
+          org.hamcrest.MatcherAssert.assertThat(
                 String.format("Bytes read unexpectedly match bytes written to %1$s",
                         filePath),
                 readBuffer,

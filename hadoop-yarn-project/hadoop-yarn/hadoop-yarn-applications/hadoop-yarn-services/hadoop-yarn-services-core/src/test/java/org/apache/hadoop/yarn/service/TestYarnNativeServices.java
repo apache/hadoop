@@ -283,7 +283,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     } catch (Exception e) {
       String expectedMsg = "Service Instance dir already exists:";
       if (e.getLocalizedMessage() != null) {
-        Assert.assertThat(e.getLocalizedMessage(),
+        org.hamcrest.MatcherAssert.assertThat(e.getLocalizedMessage(),
             CoreMatchers.containsString(expectedMsg));
       } else {
         Assert.fail("Message cannot be null. It has to say - " + expectedMsg);
@@ -303,7 +303,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       String expectedMsg = "Failed to create service " + sameAppName
           + ", because it already exists.";
       if (e.getLocalizedMessage() != null) {
-        Assert.assertThat(e.getLocalizedMessage(),
+        org.hamcrest.MatcherAssert.assertThat(e.getLocalizedMessage(),
             CoreMatchers.containsString(expectedMsg));
       } else {
         Assert.fail("Message cannot be null. It has to say - " + expectedMsg);

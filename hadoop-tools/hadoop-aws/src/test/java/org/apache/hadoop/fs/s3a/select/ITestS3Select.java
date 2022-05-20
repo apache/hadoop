@@ -409,9 +409,9 @@ public class ITestS3Select extends AbstractS3SelectTest {
         CSV_HEADER_OPT_USE,
         SELECT_ODD_ROWS);
     // the list includes odd values
-    assertThat(selected, hasItem(ENTRY_0001));
+    org.hamcrest.MatcherAssert.assertThat(selected, hasItem(ENTRY_0001));
     // but not the evens
-    assertThat(selected, not(hasItem(ENTRY_0002)));
+    org.hamcrest.MatcherAssert.assertThat(selected, not(hasItem(ENTRY_0002)));
   }
 
   @Test
@@ -449,9 +449,9 @@ public class ITestS3Select extends AbstractS3SelectTest {
         "SELECT s.name FROM S3OBJECT s WHERE NOT s.\"odd\" = %s",
         TRUE);
     // the list includes no odd values
-    assertThat(selected, not(hasItem(ENTRY_0001)));
+    org.hamcrest.MatcherAssert.assertThat(selected, not(hasItem(ENTRY_0001)));
     // but has the evens
-    assertThat(selected, hasItem(ENTRY_0002));
+    org.hamcrest.MatcherAssert.assertThat(selected, hasItem(ENTRY_0002));
   }
 
   @Test
@@ -631,9 +631,9 @@ public class ITestS3Select extends AbstractS3SelectTest {
             parseToLines(
                 select(fc, csvPath, selectConf, SELECT_ODD_ROWS)));
     // the list includes odd values
-    assertThat(selected, hasItem(ENTRY_0001));
+    org.hamcrest.MatcherAssert.assertThat(selected, hasItem(ENTRY_0001));
     // but not the evens
-    assertThat(selected, not(hasItem(ENTRY_0002)));
+    org.hamcrest.MatcherAssert.assertThat(selected, not(hasItem(ENTRY_0002)));
   }
 
   @Test
@@ -966,7 +966,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
 
     TextInputFormat tif = new TextInputFormat();
     List<InputSplit> splits = tif.getSplits(jobCtx);
-    assertThat("split count wrong", splits, hasSize(1));
+    org.hamcrest.MatcherAssert.assertThat("split count wrong", splits, hasSize(1));
 
   }
 

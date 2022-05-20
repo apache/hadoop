@@ -54,6 +54,6 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
     assertEquals("SSE Algorithm", EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,
             md.getSSEAlgorithm());
-    assertThat(md.getSSEAwsKmsKeyId(), containsString("arn:aws:kms:"));
+    org.hamcrest.MatcherAssert.assertThat(md.getSSEAwsKmsKeyId(), containsString("arn:aws:kms:"));
   }
 }
