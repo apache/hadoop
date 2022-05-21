@@ -23,10 +23,11 @@
 #include <system_error>
 #include <variant>
 
-#include "x-platform/c-api/dirent.h"
 #include "x-platform/dirent.h"
 
 extern "C" {
+#include "x-platform/c-api/dirent.h"
+
 DIR *opendir(const char *dir_path) {
   const auto dir = new DIR;
   dir->x_platform_dirent_ptr = new XPlatform::Dirent(dir_path);
