@@ -58,20 +58,20 @@ public class SlowPeerDisabledTracker extends SlowPeerTracker {
   }
 
   @Override
-  public void addReport(String slowNode, String reportingNode) {
+  public void addReport(String slowNode, String reportingNode, Double slowNodeLatency) {
     LOG.trace("Adding slow peer report is disabled. To enable it, please enable config {}.",
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY);
   }
 
   @Override
-  public Set<String> getReportsForNode(String slowNode) {
+  public Set<SlowPeerLatencyWithReportingNode> getReportsForNode(String slowNode) {
     LOG.trace("Retrieval of slow peer report is disabled. To enable it, please enable config {}.",
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY);
     return ImmutableSet.of();
   }
 
   @Override
-  public Map<String, SortedSet<String>> getReportsForAllDataNodes() {
+  public Map<String, SortedSet<SlowPeerLatencyWithReportingNode>> getReportsForAllDataNodes() {
     LOG.trace("Retrieval of slow peer report for all nodes is disabled. "
             + "To enable it, please enable config {}.",
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY);

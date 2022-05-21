@@ -88,12 +88,12 @@ public class TestReplicationPolicyExcludeSlowNodes
 
       // mock slow nodes
       SlowPeerTracker tracker = dnManager.getSlowPeerTracker();
-      tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[3].getInfoAddr());
-      tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[4].getInfoAddr());
-      tracker.addReport(dataNodes[1].getInfoAddr(), dataNodes[4].getInfoAddr());
-      tracker.addReport(dataNodes[1].getInfoAddr(), dataNodes[5].getInfoAddr());
-      tracker.addReport(dataNodes[2].getInfoAddr(), dataNodes[3].getInfoAddr());
-      tracker.addReport(dataNodes[2].getInfoAddr(), dataNodes[5].getInfoAddr());
+      tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[3].getInfoAddr(), 1.29463);
+      tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[4].getInfoAddr(), 2.9576);
+      tracker.addReport(dataNodes[1].getInfoAddr(), dataNodes[4].getInfoAddr(), 3.59674);
+      tracker.addReport(dataNodes[1].getInfoAddr(), dataNodes[5].getInfoAddr(), 4.238456);
+      tracker.addReport(dataNodes[2].getInfoAddr(), dataNodes[3].getInfoAddr(), 5.18375);
+      tracker.addReport(dataNodes[2].getInfoAddr(), dataNodes[5].getInfoAddr(), 6.39576);
 
       // waiting for slow nodes collector run
       Thread.sleep(3000);

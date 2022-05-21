@@ -1901,8 +1901,9 @@ public class DatanodeManager {
         if (LOG.isDebugEnabled()) {
           LOG.debug("DataNode " + nodeReg + " reported slow peers: " + slowPeersMap);
         }
-        for (String slowNodeId : slowPeersMap.keySet()) {
-          slowPeerTracker.addReport(slowNodeId, nodeReg.getIpcAddr(false));
+        for (Map.Entry<String, Double> slowNodeId : slowPeersMap.entrySet()) {
+          slowPeerTracker.addReport(slowNodeId.getKey(), nodeReg.getIpcAddr(false),
+              slowNodeId.getValue());
         }
       }
     }

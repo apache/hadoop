@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -37,7 +36,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +93,7 @@ public class SlowPeerTracker {
    * Stale reports are not evicted proactively and can potentially
    * hang around forever.
    */
-  private final ConcurrentMap<String, ConcurrentMap<String, Long>>
+  private final ConcurrentMap<String, ConcurrentMap<String, LatencyWithLastReportTime>>
       allReports;
 
   public SlowPeerTracker(Configuration conf, Timer timer) {
@@ -123,12 +121,12 @@ public class SlowPeerTracker {
    * Add a new report. DatanodeIds can be the DataNodeIds or addresses
    * We don't care as long as the caller is consistent.
    *
-   * @param reportingNode DataNodeId of the node reporting on its peer.
    * @param slowNode DataNodeId of the peer suspected to be slow.
+   * @param reportingNode DataNodeId of the node reporting on its peer.
+   * @param slowNodeLatency Aggregate latency of slownode as reported by the reporting node.
    */
-  public void addReport(String slowNode,
-                        String reportingNode) {
-    ConcurrentMap<String, Long> nodeEntries = allReports.get(slowNode);
+  public void addReport(String slowNode, String reportingNode, Double slowNodeLatency) {
+    ConcurrentMap<String, LatencyWithLastReportTime> nodeEntries = allReports.get(slowNode);
 
     if (nodeEntries == null) {
       // putIfAbsent guards against multiple writers.
@@ -137,7 +135,8 @@ public class SlowPeerTracker {
     }
 
     // Replace the existing entry from this node, if any.
-    nodeEntries.put(reportingNode, timer.monotonicNow());
+    nodeEntries.put(reportingNode,
+        new LatencyWithLastReportTime(timer.monotonicNow(), slowNodeLatency));
   }
 
   /**
@@ -147,8 +146,8 @@ public class SlowPeerTracker {
    * @param slowNode target node Id.
    * @return set of reports which implicate the target node as being slow.
    */
-  public Set<String> getReportsForNode(String slowNode) {
-    final ConcurrentMap<String, Long> nodeEntries =
+  public Set<SlowPeerLatencyWithReportingNode> getReportsForNode(String slowNode) {
+    final ConcurrentMap<String, LatencyWithLastReportTime> nodeEntries =
         allReports.get(slowNode);
 
     if (nodeEntries == null || nodeEntries.isEmpty()) {
@@ -163,17 +162,19 @@ public class SlowPeerTracker {
    *
    * @return map from SlowNodeId {@literal ->} (set of nodes reporting peers).
    */
-  public Map<String, SortedSet<String>> getReportsForAllDataNodes() {
+  public Map<String, SortedSet<SlowPeerLatencyWithReportingNode>> getReportsForAllDataNodes() {
     if (allReports.isEmpty()) {
       return ImmutableMap.of();
     }
 
-    final Map<String, SortedSet<String>> allNodesValidReports = new HashMap<>();
+    final Map<String, SortedSet<SlowPeerLatencyWithReportingNode>> allNodesValidReports =
+        new HashMap<>();
     final long now = timer.monotonicNow();
 
-    for (Map.Entry<String, ConcurrentMap<String, Long>> entry :
-        allReports.entrySet()) {
-      SortedSet<String> validReports = filterNodeReports(entry.getValue(), now);
+    for (Map.Entry<String, ConcurrentMap<String, LatencyWithLastReportTime>> entry
+        : allReports.entrySet()) {
+      SortedSet<SlowPeerLatencyWithReportingNode> validReports =
+          filterNodeReports(entry.getValue(), now);
       if (!validReports.isEmpty()) {
         allNodesValidReports.put(entry.getKey(), validReports);
       }
@@ -184,17 +185,18 @@ public class SlowPeerTracker {
   /**
    * Filter the given reports to return just the valid ones.
    *
-   * @param reports
-   * @param now
-   * @return
+   * @param reports Current set of reports.
+   * @param now Current time.
+   * @return Set of valid reports that were created within last reportValidityMs millis.
    */
-  private SortedSet<String> filterNodeReports(
-      ConcurrentMap<String, Long> reports, long now) {
-    final SortedSet<String> validReports = new TreeSet<>();
+  private SortedSet<SlowPeerLatencyWithReportingNode> filterNodeReports(
+      ConcurrentMap<String, LatencyWithLastReportTime> reports, long now) {
+    final SortedSet<SlowPeerLatencyWithReportingNode> validReports = new TreeSet<>();
 
-    for (Map.Entry<String, Long> entry : reports.entrySet()) {
-      if (now - entry.getValue() < reportValidityMs) {
-        validReports.add(entry.getKey());
+    for (Map.Entry<String, LatencyWithLastReportTime> entry : reports.entrySet()) {
+      if (now - entry.getValue().getTime() < reportValidityMs) {
+        validReports.add(
+            new SlowPeerLatencyWithReportingNode(entry.getKey(), entry.getValue().getLatency()));
       }
     }
     return validReports;
@@ -206,7 +208,7 @@ public class SlowPeerTracker {
    *         serialization failed.
    */
   public String getJson() {
-    Collection<ReportForJson> validReports = getJsonReports(
+    Collection<SlowPeerJsonReport> validReports = getJsonReports(
         maxNodesToReport);
     try {
       return WRITER.writeValueAsString(validReports);
@@ -218,41 +220,14 @@ public class SlowPeerTracker {
   }
 
   /**
-   * This structure is a thin wrapper over reports to make Json
-   * [de]serialization easy.
-   */
-  public static class ReportForJson {
-    @JsonProperty("SlowNode")
-    final private String slowNode;
-
-    @JsonProperty("ReportingNodes")
-    final private SortedSet<String> reportingNodes;
-
-    public ReportForJson(
-        @JsonProperty("SlowNode") String slowNode,
-        @JsonProperty("ReportingNodes") SortedSet<String> reportingNodes) {
-      this.slowNode = slowNode;
-      this.reportingNodes = reportingNodes;
-    }
-
-    public String getSlowNode() {
-      return slowNode;
-    }
-
-    public SortedSet<String> getReportingNodes() {
-      return reportingNodes;
-    }
-  }
-
-  /**
    * Returns all tracking slow peers.
    * @param numNodes
    * @return
    */
   public List<String> getSlowNodes(int numNodes) {
-    Collection<ReportForJson> jsonReports = getJsonReports(numNodes);
+    Collection<SlowPeerJsonReport> jsonReports = getJsonReports(numNodes);
     ArrayList<String> slowNodes = new ArrayList<>();
-    for (ReportForJson jsonReport : jsonReports) {
+    for (SlowPeerJsonReport jsonReport : jsonReports) {
       slowNodes.add(jsonReport.getSlowNode());
     }
     if (!slowNodes.isEmpty()) {
@@ -267,35 +242,30 @@ public class SlowPeerTracker {
    * @param numNodes number of nodes to return. This is to limit the
    *                 size of the generated JSON.
    */
-  private Collection<ReportForJson> getJsonReports(int numNodes) {
+  private Collection<SlowPeerJsonReport> getJsonReports(int numNodes) {
     if (allReports.isEmpty()) {
       return Collections.emptyList();
     }
 
-    final PriorityQueue<ReportForJson> topNReports =
-        new PriorityQueue<>(allReports.size(),
-            new Comparator<ReportForJson>() {
-          @Override
-          public int compare(ReportForJson o1, ReportForJson o2) {
-            return Ints.compare(o1.reportingNodes.size(),
-                o2.reportingNodes.size());
-          }
-        });
+    final PriorityQueue<SlowPeerJsonReport> topNReports = new PriorityQueue<>(allReports.size(),
+        (o1, o2) -> Ints.compare(o1.getSlowPeerLatencyWithReportingNodes().size(),
+            o2.getSlowPeerLatencyWithReportingNodes().size()));
 
     final long now = timer.monotonicNow();
 
-    for (Map.Entry<String, ConcurrentMap<String, Long>> entry :
-        allReports.entrySet()) {
-      SortedSet<String> validReports = filterNodeReports(
-          entry.getValue(), now);
+    for (Map.Entry<String, ConcurrentMap<String, LatencyWithLastReportTime>> entry
+        : allReports.entrySet()) {
+      SortedSet<SlowPeerLatencyWithReportingNode> validReports =
+          filterNodeReports(entry.getValue(), now);
       if (!validReports.isEmpty()) {
         if (topNReports.size() < numNodes) {
-          topNReports.add(new ReportForJson(entry.getKey(), validReports));
-        } else if (topNReports.peek().getReportingNodes().size() <
-            validReports.size()){
+          topNReports.add(new SlowPeerJsonReport(entry.getKey(), validReports));
+        } else if (topNReports.peek() != null
+            && topNReports.peek().getSlowPeerLatencyWithReportingNodes().size()
+            < validReports.size()) {
           // Remove the lowest element
           topNReports.poll();
-          topNReports.add(new ReportForJson(entry.getKey(), validReports));
+          topNReports.add(new SlowPeerJsonReport(entry.getKey(), validReports));
         }
       }
     }
@@ -306,4 +276,23 @@ public class SlowPeerTracker {
   long getReportValidityMs() {
     return reportValidityMs;
   }
+
+  private static class LatencyWithLastReportTime {
+    private final Long time;
+    private final Double latency;
+
+    LatencyWithLastReportTime(Long time, Double latency) {
+      this.time = time;
+      this.latency = latency;
+    }
+
+    public Long getTime() {
+      return time;
+    }
+
+    public Double getLatency() {
+      return latency;
+    }
+  }
+
 }
