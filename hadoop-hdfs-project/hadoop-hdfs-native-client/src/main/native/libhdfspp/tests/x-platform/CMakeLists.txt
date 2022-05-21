@@ -36,3 +36,8 @@ add_executable(x_platform_types_test types_test.cc)
 target_include_directories(x_platform_types_test PRIVATE ${LIBHDFSPP_LIB_DIR})
 target_link_libraries(x_platform_types_test gtest_main)
 add_test(x_platform_types_test x_platform_types_test)
+
+add_executable(x_platform_dirent_test $<TARGET_OBJECTS:x_platform_obj> dirent_test.cc)
+target_include_directories(x_platform_dirent_test PRIVATE ${LIBHDFSPP_LIB_DIR})
+target_link_libraries(x_platform_dirent_test PRIVATE gtest_main)
+add_test(x_platform_dirent_test x_platform_dirent_test)
