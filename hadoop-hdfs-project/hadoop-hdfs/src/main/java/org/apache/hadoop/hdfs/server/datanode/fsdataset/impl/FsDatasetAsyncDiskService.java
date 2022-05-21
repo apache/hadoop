@@ -108,8 +108,9 @@ class FsDatasetAsyncDiskService {
         synchronized (this) {
           thisIndex = counter++;
         }
-        Thread t = new Thread(r,
-            "Async disk worker #" + thisIndex + " for volume " + volume);
+        Thread t = new Thread(r);
+        t.setName("Async disk worker #" + thisIndex +
+            " for volume " + volume);
         return t;
       }
     };
