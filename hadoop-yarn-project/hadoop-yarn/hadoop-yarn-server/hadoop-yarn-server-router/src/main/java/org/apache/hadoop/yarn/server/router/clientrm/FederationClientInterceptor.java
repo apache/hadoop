@@ -639,8 +639,8 @@ public class FederationClientInterceptor
 
     if (response == null) {
       LOG.error("No response when attempting to retrieve the report of "
-          + "the application " + request.getApplicationId() + " to SubCluster "
-          + subClusterId.getId());
+          + "the application {} to SubCluster {}.",
+          request.getApplicationId(), subClusterId.getId());
     }
 
     long stopTime = clock.getTime();
@@ -1018,17 +1018,16 @@ public class FederationClientInterceptor
       response = clientRMProxy.getApplicationAttemptReport(request);
     } catch (Exception e) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
-      LOG.error("Unable to get the applicationAttempt report for "
-              + request.getApplicationAttemptId() + "to SubCluster "
-              + subClusterId.getId(), e);
+      LOG.error("Unable to get the applicationAttempt report for {} "
+          + "to SubCluster {}, error = {}.",
+          request.getApplicationAttemptId(), subClusterId.getId(), e);
       throw e;
     }
 
     if (response == null) {
       LOG.error("No response when attempting to retrieve the report of "
-              + "the applicationAttempt "
-              + request.getApplicationAttemptId() + " to SubCluster "
-              + subClusterId.getId());
+          + "the applicationAttempt {} to SubCluster {}.",
+          request.getApplicationAttemptId(), subClusterId.getId());
     }
 
     long stopTime = clock.getTime();
