@@ -57,6 +57,8 @@ struct dirent *readdir(const DIR *dir) {
     const auto entry = std::get<std::filesystem::directory_entry>(dir_entry);
     const auto filename = entry.path().filename().string();
     // TODO : Add a check - filename's length shouldn't exceed 256.
+    std::fill(std::begin(static_dir_entry.d_name),
+              std::end(static_dir_entry.d_name), '\0');
     std::copy(filename.begin(), filename.end(),
               std::begin(static_dir_entry.d_name));
   }
