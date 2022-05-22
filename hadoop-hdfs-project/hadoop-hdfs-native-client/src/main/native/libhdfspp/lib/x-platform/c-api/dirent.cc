@@ -64,6 +64,9 @@ struct dirent *readdir(const DIR *dir) {
 }
 
 int closedir(const DIR *dir) {
+  const auto x_platform_dirent =
+      static_cast<XPlatform::Dirent *>(dir->x_platform_dirent_ptr);
+  delete x_platform_dirent;
   delete dir;
   return 0;
 }
