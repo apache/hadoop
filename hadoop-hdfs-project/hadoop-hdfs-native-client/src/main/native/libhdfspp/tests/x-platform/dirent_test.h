@@ -30,12 +30,13 @@ protected:
   void SetUp() override;
   void TearDown() override;
 
-  [[nodiscard]] std::string CreateTempDir(const std::string &pattern) const;
+  [[nodiscard]] std::string
+  CreateTempDir(const std::string &pattern = "test_XXXXXX") const;
 
   [[nodiscard]] std::unordered_set<std::string>
   CreateTempDirAndFiles(std::size_t num_dirs, std::size_t num_files) const;
 
-  [[nodiscard]] std::unordered_set<std::string>
+  [[nodiscard]] virtual std::unordered_set<std::string>
   ListDirAndFiles(const std::string &path) const;
 
   std::filesystem::path tmp_root_;

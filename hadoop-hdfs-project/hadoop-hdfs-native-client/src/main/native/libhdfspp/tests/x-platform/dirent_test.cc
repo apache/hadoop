@@ -17,11 +17,12 @@
  */
 
 #include <algorithm>
-#include <cassert>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <unordered_set>
@@ -36,20 +37,26 @@
 
 void DirentTest::SetUp() {
   tmp_root_ = std::filesystem::temp_directory_path() / CreateTempDir();
+  if (!std::filesystem::create_directories(tmp_root_)) {
+    std::stringstream err_msg;
+    err_msg << "Unable to create temp directory " << tmp_root_.string();
+    throw std::runtime_error(err_msg.str());
+  }
 }
 
 void DirentTest::TearDown() { std::filesystem::remove_all(tmp_root_); }
 
-std::string
-DirentTest::CreateTempDir(const std::string &pattern = "test_XXXXXX") const {
+std::string DirentTest::CreateTempDir(const std::string &pattern) const {
   std::vector pattern_raw(pattern.begin(), pattern.end());
   if (!XPlatform::Syscall::CreateTempDir(pattern_raw)) {
-    assert(false, "Creating temp dir failed");
+    std::stringstream err_msg;
+    err_msg << "Creating temp dir failed" << std::endl;
+    throw std::runtime_error(err_msg.str());
   }
 
-  std::string temp_dir_path(pattern_raw.data());
-  std::filesystem::remove(temp_dir_path);
-  return temp_dir_path;
+  std::string tmp_dir_path(pattern_raw.data());
+  std::filesystem::remove(tmp_dir_path);
+  return tmp_dir_path;
 }
 
 std::unordered_set<std::string>
@@ -63,7 +70,7 @@ DirentTest::CreateTempDirAndFiles(std::size_t num_dirs,
       std::stringstream err_msg;
       err_msg << "Unable to create the temp dir "
               << tmp_dir_absolute_path.string() << " reason: " << err.message();
-      assert(false, err_msg.str());
+      throw std::runtime_error(err_msg.str());
     }
     paths.emplace(tmp_dir_absolute_path);
   }
@@ -87,10 +94,11 @@ DirentTest::ListDirAndFiles(const std::string &path) const {
        !std::holds_alternative<std::monostate>(dir_entry);
        dir_entry = dirent.NextFile()) {
     if (std::holds_alternative<std::error_code>(dir_entry)) {
-      const auto err = std::get<std::error_code>(dir_entry);
       std::stringstream err_msg;
-      err_msg << "Error in listing directory: " << err.message();
-      assert(false, err_msg.str());
+      const auto err = std::get<std::error_code>(dir_entry);
+      err_msg << "Error in listing directory " << path
+              << " cause: " << err.message();
+      throw std::runtime_error(err_msg.str());
     }
 
     if (std::holds_alternative<std::filesystem::directory_entry>(dir_entry)) {
