@@ -19,6 +19,8 @@
 #include <cassert>
 #include <cerrno>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 #include <unordered_set>
 
 #include "x-platform/c-api/dirent.h"
@@ -26,12 +28,13 @@
 
 std::unordered_set<std::string>
 DirentCApiTest::ListDirAndFiles(const std::string &path) const {
+  std::stringstream err_msg;
   std::unordered_set<std::string> paths;
 
   const DIR *dir = opendir(path.c_str());
   if (dir == nullptr) {
-    std::cerr << "Unable to open directory " << path << std::endl;
-    assert(false);
+    err_msg << "Unable to open directory " << path;
+    throw std::runtime_error(err_msg.str());
   }
 
   errno = 0;
@@ -40,15 +43,14 @@ DirentCApiTest::ListDirAndFiles(const std::string &path) const {
   }
 
   if (errno != 0) {
-    std::cerr << "Expected errno to be 0, instead it is " << errno << std::endl;
-    assert(false);
+    err_msg << "Expected errno to be 0, instead it is " << errno;
+    throw std::runtime_error(err_msg.str());
   }
 
   if (const auto result = closedir(dir); result != 0) {
-    std::cerr
-        << "Expected the return value of closedir() to be 0, instead it is "
-        << result << std::endl;
-    assert(false);
+    err_msg << "Expected the return value of closedir() to be 0, instead it is "
+            << result;
+    throw std::runtime_error(err_msg.str());
   }
   return paths;
 }
