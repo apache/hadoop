@@ -23,10 +23,8 @@
 #include <system_error>
 #include <variant>
 
-#include "x-platform/dirent.h"
-
-extern "C" {
 #include "x-platform/c-api/dirent.h"
+#include "x-platform/dirent.h"
 
 DIR *opendir(const char *dir_path) {
   const auto dir = new DIR;
@@ -68,5 +66,4 @@ struct dirent *readdir(const DIR *dir) {
 int closedir(const DIR *dir) {
   delete dir;
   return 0;
-}
 }
