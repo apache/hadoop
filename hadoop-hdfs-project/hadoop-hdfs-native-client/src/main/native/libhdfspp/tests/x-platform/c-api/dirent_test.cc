@@ -39,7 +39,9 @@ DirentCApiTest::ListDirAndFiles(const std::string &path) const {
 
   errno = 0;
   for (struct dirent *file; (file = readdir(dir)) != nullptr; errno = 0) {
-    paths.emplace(file->d_name);
+    std::filesystem::path absolute_path{path};
+    absolute_path = absolute_path / file->d_name;
+    paths.emplace(absolute_path.string());
   }
 
   if (errno != 0) {
