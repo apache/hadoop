@@ -86,13 +86,18 @@ public class TestSlowDatanodeReport {
         return false;
       }
     }, 2000, 180000, "Slow nodes could not be detected");
+    LOG.info("Slow peer report: {}", cluster.getNameNode().getSlowPeersReport());
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().length() > 0);
+    Assert.assertTrue(
+        cluster.getNameNode().getSlowPeersReport().contains(slowNode.getDatanodeHostname()));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("15.5"));
   }
 
   @Test
   public void testMultiNodesReport() throws Exception {
     List<DataNode> dataNodes = cluster.getDataNodes();
     dataNodes.get(0).getPeerMetrics().setTestOutliers(ImmutableMap.of(
-        dataNodes.get(1).getDatanodeHostname() + ":" + dataNodes.get(1).getIpcPort(), 15.5));
+        dataNodes.get(1).getDatanodeHostname() + ":" + dataNodes.get(1).getIpcPort(), 14.5));
     dataNodes.get(1).getPeerMetrics().setTestOutliers(ImmutableMap.of(
         dataNodes.get(2).getDatanodeHostname() + ":" + dataNodes.get(2).getIpcPort(), 18.7));
     DistributedFileSystem distributedFileSystem = cluster.getFileSystem();
@@ -107,6 +112,14 @@ public class TestSlowDatanodeReport {
         return false;
       }
     }, 2000, 200000, "Slow nodes could not be detected");
+    LOG.info("Slow peer report: {}", cluster.getNameNode().getSlowPeersReport());
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().length() > 0);
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport()
+        .contains(dataNodes.get(1).getDatanodeHostname()));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport()
+        .contains(dataNodes.get(2).getDatanodeHostname()));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("14.5"));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("18.7"));
   }
 
 }

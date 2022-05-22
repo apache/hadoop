@@ -20,9 +20,18 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -31,6 +40,9 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.junit.Assert;
 import org.junit.Test;
@@ -212,5 +224,147 @@ public class TestRouterYarnClientUtils {
     applications.add(appReport2);
 
     return GetApplicationsResponse.newInstance(applications);
+  }
+
+  @Test
+  public void testMergeNodesToLabelsResponse() {
+    NodeId node1 = NodeId.fromString("SubCluster1Node1:1111");
+    NodeId node2 = NodeId.fromString("SubCluster1Node2:2222");
+    NodeId node3 = NodeId.fromString("SubCluster2Node1:1111");
+
+    Map<NodeId, Set<String>> nodeLabelsMapSC1 = new HashMap<>();
+    nodeLabelsMapSC1.put(node1, ImmutableSet.of("node1"));
+    nodeLabelsMapSC1.put(node2, ImmutableSet.of("node2"));
+    nodeLabelsMapSC1.put(node3, ImmutableSet.of("node3"));
+
+    // normal response
+    GetNodesToLabelsResponse response1 = Records.newRecord(
+        GetNodesToLabelsResponse.class);
+    response1.setNodeToLabels(nodeLabelsMapSC1);
+
+    // empty response
+    Map<NodeId, Set<String>> nodeLabelsMapSC2 = new HashMap<>();
+    GetNodesToLabelsResponse response2 = Records.newRecord(
+        GetNodesToLabelsResponse.class);
+    response2.setNodeToLabels(nodeLabelsMapSC2);
+
+    // null response
+    GetNodesToLabelsResponse response3 = null;
+
+    Map<NodeId, Set<String>> expectedResponse = new HashMap<>();
+    expectedResponse.put(node1, ImmutableSet.of("node1"));
+    expectedResponse.put(node2, ImmutableSet.of("node2"));
+    expectedResponse.put(node3, ImmutableSet.of("node3"));
+
+    List<GetNodesToLabelsResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+
+    GetNodesToLabelsResponse response = RouterYarnClientUtils.
+        mergeNodesToLabelsResponse(responses);
+    Assert.assertEquals(expectedResponse, response.getNodeToLabels());
+  }
+
+  @Test
+  public void testMergeClusterNodeLabelsResponse() {
+    NodeLabel nodeLabel1 = NodeLabel.newInstance("nodeLabel1");
+    NodeLabel nodeLabel2 = NodeLabel.newInstance("nodeLabel2");
+    NodeLabel nodeLabel3 = NodeLabel.newInstance("nodeLabel3");
+
+    // normal response
+    List<NodeLabel> nodeLabelListSC1 = new ArrayList<>();
+    nodeLabelListSC1.add(nodeLabel1);
+    nodeLabelListSC1.add(nodeLabel2);
+    nodeLabelListSC1.add(nodeLabel3);
+
+    GetClusterNodeLabelsResponse response1 = Records.newRecord(
+        GetClusterNodeLabelsResponse.class);
+    response1.setNodeLabelList(nodeLabelListSC1);
+
+    // empty response
+    List<NodeLabel> nodeLabelListSC2 = new ArrayList<>();
+
+    GetClusterNodeLabelsResponse response2 = Records.newRecord(
+        GetClusterNodeLabelsResponse.class);
+    response2.setNodeLabelList(nodeLabelListSC2);
+
+    // null response
+    GetClusterNodeLabelsResponse response3 = null;
+
+    List<GetClusterNodeLabelsResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+
+    List<NodeLabel> expectedResponse = new ArrayList<>();
+    expectedResponse.add(nodeLabel1);
+    expectedResponse.add(nodeLabel2);
+    expectedResponse.add(nodeLabel3);
+
+    GetClusterNodeLabelsResponse response = RouterYarnClientUtils.
+        mergeClusterNodeLabelsResponse(responses);
+    Assert.assertTrue(CollectionUtils.isEqualCollection(expectedResponse,
+        response.getNodeLabelList()));
+  }
+
+  @Test
+  public void testMergeLabelsToNodes(){
+    NodeId node1 = NodeId.fromString("SubCluster1Node1:1111");
+    NodeId node2 = NodeId.fromString("SubCluster1Node2:2222");
+    NodeId node3 = NodeId.fromString("SubCluster2node1:1111");
+    NodeId node4 = NodeId.fromString("SubCluster2node2:2222");
+
+    Map<String, Set<NodeId>> labelsToNodesSC1 = new HashMap<>();
+
+    Set<NodeId> nodeIdSet1 = new HashSet<>();
+    nodeIdSet1.add(node1);
+    nodeIdSet1.add(node2);
+    labelsToNodesSC1.put("Label1", nodeIdSet1);
+
+    // normal response
+    GetLabelsToNodesResponse response1 = Records.newRecord(
+        GetLabelsToNodesResponse.class);
+    response1.setLabelsToNodes(labelsToNodesSC1);
+    Map<String, Set<NodeId>> labelsToNodesSC2 = new HashMap<>();
+    Set<NodeId> nodeIdSet2 = new HashSet<>();
+    nodeIdSet2.add(node3);
+    Set<NodeId> nodeIdSet3 = new HashSet<>();
+    nodeIdSet3.add(node4);
+    labelsToNodesSC2.put("Label1", nodeIdSet2);
+    labelsToNodesSC2.put("Label2", nodeIdSet3);
+
+    GetLabelsToNodesResponse response2 = Records.newRecord(
+        GetLabelsToNodesResponse.class);
+    response2.setLabelsToNodes(labelsToNodesSC2);
+
+    // empty response
+    GetLabelsToNodesResponse response3 = Records.newRecord(
+        GetLabelsToNodesResponse.class);
+
+    // null response
+    GetLabelsToNodesResponse response4 = null;
+
+    List<GetLabelsToNodesResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+    responses.add(response4);
+
+    Map<String, Set<NodeId>> expectedResponse = new HashMap<>();
+    Set<NodeId> nodeIdMergedSet1 = new HashSet<>();
+    nodeIdMergedSet1.add(node1);
+    nodeIdMergedSet1.add(node2);
+    nodeIdMergedSet1.add(node3);
+
+    Set<NodeId> nodeIdMergedSet2 = new HashSet<>();
+    nodeIdMergedSet2.add(node4);
+    expectedResponse.put("Label1", nodeIdMergedSet1);
+    expectedResponse.put("Label2", nodeIdMergedSet2);
+
+    GetLabelsToNodesResponse response = RouterYarnClientUtils.
+        mergeLabelsToNodes(responses);
+
+    Assert.assertEquals(expectedResponse, response.getLabelsToNodes());
   }
 }
