@@ -22,15 +22,22 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -218,4 +225,75 @@ public final class RouterYarnClientUtils {
     clusterNodesResponse.setNodeReports(nodeReports);
     return clusterNodesResponse;
   }
+
+  /**
+   * Merges a list of GetNodesToLabelsResponse.
+   *
+   * @param responses a list of GetNodesToLabelsResponse to merge.
+   * @return the merged GetNodesToLabelsResponse.
+   */
+  public static GetNodesToLabelsResponse mergeNodesToLabelsResponse(
+      Collection<GetNodesToLabelsResponse> responses) {
+    GetNodesToLabelsResponse nodesToLabelsResponse = Records.newRecord(
+         GetNodesToLabelsResponse.class);
+    Map<NodeId, Set<String>> nodesToLabelMap = new HashMap<>();
+    for (GetNodesToLabelsResponse response : responses) {
+      if (response != null && response.getNodeToLabels() != null) {
+        nodesToLabelMap.putAll(response.getNodeToLabels());
+      }
+    }
+    nodesToLabelsResponse.setNodeToLabels(nodesToLabelMap);
+    return nodesToLabelsResponse;
+  }
+
+  /**
+   * Merges a list of GetLabelsToNodesResponse.
+   *
+   * @param responses a list of GetLabelsToNodesResponse to merge.
+   * @return the merged GetLabelsToNodesResponse.
+   */
+  public static GetLabelsToNodesResponse mergeLabelsToNodes(
+      Collection<GetLabelsToNodesResponse> responses){
+    GetLabelsToNodesResponse labelsToNodesResponse = Records.newRecord(
+        GetLabelsToNodesResponse.class);
+    Map<String, Set<NodeId>> labelsToNodesMap = new HashMap<>();
+    for (GetLabelsToNodesResponse response : responses) {
+      if (response != null && response.getLabelsToNodes() != null) {
+        Map<String, Set<NodeId>> clusterLabelsToNodesMap = response.getLabelsToNodes();
+        for (Map.Entry<String, Set<NodeId>> entry : clusterLabelsToNodesMap.entrySet()) {
+          String label = entry.getKey();
+          Set<NodeId> clusterNodes = entry.getValue();
+          if (labelsToNodesMap.containsKey(label)) {
+            Set<NodeId> allNodes = labelsToNodesMap.get(label);
+            allNodes.addAll(clusterNodes);
+          } else {
+            labelsToNodesMap.put(label, clusterNodes);
+          }
+        }
+      }
+    }
+    labelsToNodesResponse.setLabelsToNodes(labelsToNodesMap);
+    return labelsToNodesResponse;
+  }
+
+  /**
+   * Merges a list of GetClusterNodeLabelsResponse.
+   *
+   * @param responses a list of GetClusterNodeLabelsResponse to merge.
+   * @return the merged GetClusterNodeLabelsResponse.
+   */
+  public static GetClusterNodeLabelsResponse mergeClusterNodeLabelsResponse(
+      Collection<GetClusterNodeLabelsResponse> responses) {
+    GetClusterNodeLabelsResponse nodeLabelsResponse = Records.newRecord(
+        GetClusterNodeLabelsResponse.class);
+    Set<NodeLabel> nodeLabelsList = new HashSet<>();
+    for (GetClusterNodeLabelsResponse response : responses) {
+      if (response != null && response.getNodeLabelList() != null) {
+        nodeLabelsList.addAll(response.getNodeLabelList());
+      }
+    }
+    nodeLabelsResponse.setNodeLabelList(new ArrayList<>(nodeLabelsList));
+    return nodeLabelsResponse;
+  }
 }
+

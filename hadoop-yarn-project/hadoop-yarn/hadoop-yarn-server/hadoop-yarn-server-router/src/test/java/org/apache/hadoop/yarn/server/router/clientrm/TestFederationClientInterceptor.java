@@ -46,6 +46,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -654,5 +660,41 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetClusterNodesResponse response =
         interceptor.getClusterNodes(GetClusterNodesRequest.newInstance());
     Assert.assertEquals(subClusters.size(), response.getNodeReports().size());
+  }
+
+  @Test
+  public void testGetNodeToLabelsRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor :  Get Node To Labels request");
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getNodesToLabels request.",
+        () -> interceptor.getNodeToLabels(null));
+    // normal request.
+    GetNodesToLabelsResponse response =
+        interceptor.getNodeToLabels(GetNodesToLabelsRequest.newInstance());
+    Assert.assertEquals(0, response.getNodeToLabels().size());
+  }
+
+  @Test
+  public void testGetLabelsToNodesRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor :  Get Labels To Node request");
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getLabelsToNodes request.",
+        () -> interceptor.getLabelsToNodes(null));
+    // normal request.
+    GetLabelsToNodesResponse response =
+        interceptor.getLabelsToNodes(GetLabelsToNodesRequest.newInstance());
+    Assert.assertEquals(0, response.getLabelsToNodes().size());
+  }
+
+  @Test
+  public void testClusterNodeLabelsRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor :  Get Cluster NodeLabels request");
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getClusterNodeLabels request.",
+        () -> interceptor.getClusterNodeLabels(null));
+    // normal request.
+    GetClusterNodeLabelsResponse response =
+        interceptor.getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
+    Assert.assertEquals(0, response.getNodeLabelList().size());
   }
 }
