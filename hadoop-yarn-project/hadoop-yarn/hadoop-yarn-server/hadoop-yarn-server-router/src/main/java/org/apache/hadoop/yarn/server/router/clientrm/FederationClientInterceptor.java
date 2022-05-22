@@ -1040,7 +1040,41 @@ public class FederationClientInterceptor
   @Override
   public GetApplicationAttemptsResponse getApplicationAttempts(
       GetApplicationAttemptsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getApplicationId() == null) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getApplicationAttempts " +
+          "request or application id.", null);
+    }
+    long startTime = clock.getTime();
+    ApplicationId applicationId = request.getApplicationId();
+    SubClusterId subClusterId = null;
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException ex) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " + applicationId + " can't " +
+          "find in yarn federation state store.", ex);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    GetApplicationAttemptsResponse response = null;
+    try {
+      response = clientRMProxy.getApplicationAttempts(request);
+    } catch (Exception ex) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get the application attempts for " +
+          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the attempts list of " +
+           "the application = {} to SubCluster = {}.", applicationId,
+           subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override
@@ -1140,5 +1174,62 @@ public class FederationClientInterceptor
   public GetNodesToAttributesResponse getNodesToAttributes(
       GetNodesToAttributesRequest request) throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
+  }
+
+  protected SubClusterId getApplicationHomeSubCluster(
+      ApplicationId applicationId) throws YarnException {
+    if (applicationId == null) {
+      LOG.error("ApplicationId is Null, Can't find in SubCluster.");
+      return null;
+    }
+
+    SubClusterId resultSubClusterId = null;
+
+    // try looking for applicationId in Home SubCluster
+    try {
+      resultSubClusterId = federationFacade.
+          getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException ex) {
+      if(LOG.isDebugEnabled()){
+        LOG.debug("can't find applicationId = {} in home sub cluster, " +
+             " try foreach sub clusters.", applicationId);
+      }
+    }
+    if (resultSubClusterId != null) {
+      return resultSubClusterId;
+    }
+
+    // if applicationId not found in Home SubCluster,
+    // foreach Clusters
+    Map<SubClusterId, SubClusterInfo> subClusters =
+        federationFacade.getSubClusters(true);
+    for (SubClusterId subClusterId : subClusters.keySet()) {
+      try {
+        ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+        if(clientRMProxy == null) {
+          continue;
+        }
+        GetApplicationReportRequest appReportRequest =
+            GetApplicationReportRequest.newInstance(applicationId);
+        GetApplicationReportResponse appReportResponse =
+            clientRMProxy.getApplicationReport(appReportRequest);
+
+        if(appReportResponse!=null && applicationId.equals(
+            appReportResponse.getApplicationReport().getApplicationId())){
+          resultSubClusterId = federationFacade.addApplicationHomeSubCluster(
+               ApplicationHomeSubCluster.newInstance(applicationId, subClusterId));
+          return resultSubClusterId;
+        }
+
+      } catch (Exception ex) {
+        if(LOG.isDebugEnabled()){
+          LOG.debug("Can't Find ApplicationId = {} in Sub Cluster!", applicationId);
+        }
+      }
+    }
+
+    String errorMsg = String.format("Can't Found applicationId = %s in any sub clusters",
+        applicationId);
+    throw new YarnException(errorMsg);
   }
 }
