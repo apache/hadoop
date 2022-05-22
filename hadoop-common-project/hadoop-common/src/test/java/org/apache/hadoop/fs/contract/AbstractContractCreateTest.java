@@ -568,13 +568,13 @@ public abstract class AbstractContractCreateTest extends
           in.close();
 
         } catch (FileNotFoundException e) {
-          // that's OK if it's an object store, but not if its a real
-          // FS
-          if (!isSupported(IS_BLOBSTORE)) {
+          // that's OK if it's an object store or some file systems that newly created files
+          // are not immediately visible, but not if its a real FS
+          if (!isSupported(IS_BLOBSTORE) && !isSupported(CREATE_VISIBILITY_DELAYED)) {
             throw e;
           } else {
             LOG.warn(
-                "Output file was not created; this is an object store with different"
+                "Output file was not created; this is an object store or a file system with different"
                     + " visibility semantics");
           }
         }
