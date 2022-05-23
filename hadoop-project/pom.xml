@@ -886,7 +886,7 @@
       <dependency>
           <groupId>org.ojalgo</groupId>
           <artifactId>ojalgo</artifactId>
-          <version>43.0</version>
+          <version>51.3.0</version>
       </dependency>
       <dependency>
         <groupId>com.sun.jersey</groupId>
