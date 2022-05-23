@@ -158,12 +158,12 @@ public class TestStagingPartitionedFileListing
     String oct2017 = "year=2017/month=10";
     Path octLog = new Path(attemptPath, oct2017 + "/log-2017-10-04.txt");
     touch(attemptFS, octLog);
-    org.hamcrest.MatcherAssert.assertThat(listPartitions(attemptFS, attemptPath), hasItem(oct2017));
+    assertThat(listPartitions(attemptFS, attemptPath), hasItem(oct2017));
 
     // add a root entry and it ends up under the table_root entry
     Path rootFile = new Path(attemptPath, "root.txt");
     touch(attemptFS, rootFile);
-    org.hamcrest.MatcherAssert.assertThat(listPartitions(attemptFS, attemptPath),
+    assertThat(listPartitions(attemptFS, attemptPath),
         allOf(hasItem(oct2017),
             hasItem(StagingCommitterConstants.TABLE_ROOT)));
   }

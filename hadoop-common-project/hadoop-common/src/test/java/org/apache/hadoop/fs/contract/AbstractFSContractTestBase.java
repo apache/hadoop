@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -399,5 +401,13 @@ public abstract class AbstractFSContractTestBase extends Assert
       destDirLS = destDirLS + "\n" + ContractTestUtils.ls(fs, dst);
     }
     return destDirLS;
+  }
+
+  public static <T> void assertThat(T actual, Matcher<? super T> matcher) {
+    assertThat("", actual, matcher);
+  }
+  
+  public static <T> void assertThat(String reason, T actual, Matcher<? super T> matcher) {
+    MatcherAssert.assertThat(reason, actual, matcher);
   }
 }

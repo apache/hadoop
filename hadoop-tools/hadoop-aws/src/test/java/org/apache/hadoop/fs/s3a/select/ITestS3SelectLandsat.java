@@ -231,7 +231,7 @@ public class ITestS3SelectLandsat extends AbstractS3SelectTest {
     LOG.info("Line count: {}", list.size());
     verifySelectionCount(1, SELECT_LIMIT, SELECT_ENTITY_ID_ALL_CLOUDS, list);
     String line1 = list.get(0);
-    org.hamcrest.MatcherAssert.assertThat("no column filtering from " + SELECT_ENTITY_ID_ALL_CLOUDS,
+    assertThat("no column filtering from " + SELECT_ENTITY_ID_ALL_CLOUDS,
         line1, not(containsString("100.0")));
     selectCount.assertDiffEquals("select count", 1);
   }

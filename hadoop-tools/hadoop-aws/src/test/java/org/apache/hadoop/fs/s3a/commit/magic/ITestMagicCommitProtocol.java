@@ -150,7 +150,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     assertEquals("Wrong schema for working dir " + wd
         + " with committer " + committer,
         "s3a", wd.getScheme());
-    org.hamcrest.MatcherAssert.assertThat(wd.getPath(),
+    assertThat(wd.getPath(),
         containsString('/' + CommitConstants.MAGIC + '/'));
   }
 

@@ -19,6 +19,8 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -124,6 +126,10 @@ public class AbstractAbfsTestWithTimeout extends Assert {
       return true;
     }
 
+  }
+
+  public static <T> void assertThat(String reason, T actual, Matcher<? super T> matcher) {
+    MatcherAssert.assertThat(reason, actual, matcher);
   }
 
 }

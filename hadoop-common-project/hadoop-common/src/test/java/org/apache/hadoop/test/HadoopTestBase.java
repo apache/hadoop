@@ -19,6 +19,8 @@ package org.apache.hadoop.test;
 
 import java.util.concurrent.TimeUnit;
 
+import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -104,5 +106,9 @@ public abstract class HadoopTestBase extends Assert {
   @Before
   public void nameThreadToMethod() {
     Thread.currentThread().setName("JUnit-" + getMethodName());
+  }
+
+  public static <T> void assertThat(T actual, Matcher<? super T> matcher) {
+    MatcherAssert.assertThat("", actual, matcher);
   }
 }

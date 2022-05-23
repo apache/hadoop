@@ -201,7 +201,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
           = (SessionTokenIdentifier) fs.getDelegationToken("")
           .decodeIdentifier();
       String ids = identifier.toString();
-      org.hamcrest.MatcherAssert.assertThat("origin in " + ids,
+      assertThat("origin in " + ids,
           identifier.getOrigin(),
           containsString(CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN));
 
@@ -233,7 +233,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
         expirationTimestamp);
     Duration offset = actualDuration.minus(TEST_SESSION_TOKEN_DURATION);
 
-    org.hamcrest.MatcherAssert.assertThat(
+    assertThat(
         "Duration of session " + actualDuration
             + " out of expected range of with " + offset
             + " this host's clock may be wrong.",

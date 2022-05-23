@@ -302,7 +302,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     describe("Add credentials to the current user, "
         + "then verify that they can be found when S3ADelegationTokens binds");
     Credentials cred = createDelegationTokens();
-    org.hamcrest.MatcherAssert.assertThat("Token size", cred.getAllTokens(), hasSize(1));
+    assertThat("Token size", cred.getAllTokens(), hasSize(1));
     UserGroupInformation.getCurrentUser().addCredentials(cred);
     delegationTokens.start();
     assertTrue("bind to existing DT failed",
@@ -759,8 +759,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         tokenfile.length() > 6);
 
     String printed = dtutil(0, "print", tfs);
-    org.hamcrest.MatcherAssert.assertThat(printed, containsString(fsURI));
-    org.hamcrest.MatcherAssert.assertThat(printed, containsString(getTokenKind().toString()));
+    assertThat(printed, containsString(fsURI));
+    assertThat(printed, containsString(getTokenKind().toString()));
 
   }
 

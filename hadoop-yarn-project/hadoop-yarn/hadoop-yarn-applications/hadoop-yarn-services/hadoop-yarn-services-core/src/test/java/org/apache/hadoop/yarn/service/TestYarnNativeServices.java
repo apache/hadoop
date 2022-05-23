@@ -66,11 +66,11 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.FINISHED;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.*;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_COMMAND_ARGUMENT_ERROR;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_NOT_FOUND;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * End to end tests to test deploying services with MiniYarnCluster and a in-JVM
@@ -283,7 +283,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     } catch (Exception e) {
       String expectedMsg = "Service Instance dir already exists:";
       if (e.getLocalizedMessage() != null) {
-        org.hamcrest.MatcherAssert.assertThat(e.getLocalizedMessage(),
+        assertThat(e.getLocalizedMessage(),
             CoreMatchers.containsString(expectedMsg));
       } else {
         Assert.fail("Message cannot be null. It has to say - " + expectedMsg);
@@ -303,7 +303,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       String expectedMsg = "Failed to create service " + sameAppName
           + ", because it already exists.";
       if (e.getLocalizedMessage() != null) {
-        org.hamcrest.MatcherAssert.assertThat(e.getLocalizedMessage(),
+        assertThat(e.getLocalizedMessage(),
             CoreMatchers.containsString(expectedMsg));
       } else {
         Assert.fail("Message cannot be null. It has to say - " + expectedMsg);
@@ -917,7 +917,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
     int i = 0;
     for (String s : instances) {
-      assertThat(s).isEqualTo(component.getName() + "-" + i);
+      assertThat(s,
+          CoreMatchers.containsString(component.getName() + "-" + i));
       i++;
     }
   }
