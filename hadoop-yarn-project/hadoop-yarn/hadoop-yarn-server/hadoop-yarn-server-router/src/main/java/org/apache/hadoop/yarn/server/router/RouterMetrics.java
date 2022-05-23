@@ -51,7 +51,7 @@ public final class RouterMetrics {
   private MutableGaugeInt numAppsFailedRetrieved;
   @Metric("# of multiple applications reports failed to be retrieved")
   private MutableGaugeInt numMultipleAppsFailedRetrieved;
-  @Metric("# of applicationAttempt reports failed to be retrieved")
+  @Metric("# of getApplicationAttempts failed to be retrieved")
   private MutableGaugeInt numAppAttemptsFailedRetrieved;
   @Metric("# of getClusterMetrics failed to be retrieved")
   private MutableGaugeInt numGetClusterMetricsFailedRetrieved;
@@ -63,6 +63,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numGetLabelsToNodesFailedRetrieved;
   @Metric("# of getClusterNodeLabels failed to be retrieved")
   private MutableGaugeInt numGetClusterNodeLabelsFailedRetrieved;
+  @Metric("# of getApplicationAttemptReports failed to be retrieved")
+  private MutableGaugeInt numAppAttemptReportFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -90,6 +92,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetLabelsToNodesRetrieved;
   @Metric("Total number of successful Retrieved getClusterNodeLabels and latency(ms)")
   private MutableRate totalSucceededGetClusterNodeLabelsRetrieved;
+  @Metric("Total number of successful Retrieved getApplicationAttemptReport and latency(ms)")
+  private MutableRate totalSucceededAppAttemptReportRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -105,6 +109,8 @@ public final class RouterMetrics {
   private MutableQuantiles getNodeToLabelsLatency;
   private MutableQuantiles getLabelToNodesLatency;
   private MutableQuantiles getClusterNodeLabelsLatency;
+
+  private MutableQuantiles getApplicationAttemptsLatency;
 
   private static volatile RouterMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -147,6 +153,10 @@ public final class RouterMetrics {
     getClusterNodeLabelsLatency =
         registry.newQuantiles("getClusterNodeLabelsLatency",
             "latency of get cluster node labels", "ops", "latency", 10);
+
+    getApplicationAttemptsLatency =
+        registry.newQuantiles("getApplicationAttemptsLatency",
+            "latency of get application attempts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -224,6 +234,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededAppAttemptReportRetrieved(){
+    return totalSucceededAppAttemptReportRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -276,6 +291,11 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededGetClusterNodeLabelsRetrieved() {
     return totalSucceededGetClusterNodeLabelsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededAppAttemptReportRetrieved() {
+    return totalSucceededAppAttemptReportRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -333,6 +353,11 @@ public final class RouterMetrics {
     return numGetClusterNodeLabelsFailedRetrieved.value();
   }
 
+  @VisibleForTesting
+  public int getNumAppAttemptReportFailedRetrieved() {
+    return numAppAttemptReportFailedRetrieved.value();
+  }
+
   public void succeededAppsCreated(long duration) {
     totalSucceededAppsCreated.add(duration);
     getNewApplicationLatency.add(duration);
@@ -360,7 +385,7 @@ public final class RouterMetrics {
 
   public void succeededAppAttemptsRetrieved(long duration) {
     totalSucceededAppAttemptsRetrieved.add(duration);
-    getApplicationAttemptReportLatency.add(duration);
+    getApplicationAttemptsLatency.add(duration);
   }
 
   public void succeededGetClusterMetricsRetrieved(long duration) {
@@ -386,6 +411,11 @@ public final class RouterMetrics {
   public void succeededGetClusterNodeLabelsRetrieved(long duration) {
     totalSucceededGetClusterNodeLabelsRetrieved.add(duration);
     getClusterNodeLabelsLatency.add(duration);
+  }
+
+  public void succeededAppAttemptReportRetrieved(long duration) {
+    totalSucceededAppAttemptReportRetrieved.add(duration);
+    getApplicationAttemptReportLatency.add(duration);
   }
 
   public void incrAppsFailedCreated() {
@@ -430,5 +460,9 @@ public final class RouterMetrics {
 
   public void incrClusterNodeLabelsFailedRetrieved() {
     numGetClusterNodeLabelsFailedRetrieved.incr();
+  }
+
+  public void incrAppAttemptReportFailedRetrieved() {
+    numAppAttemptReportFailedRetrieved.incr();
   }
 }

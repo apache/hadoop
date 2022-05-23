@@ -336,7 +336,7 @@ public class TestRouterMetrics {
 
     public void getApplicationAttemptReport() {
       LOG.info("Mocked: failed getApplicationAttemptReport call");
-      metrics.incrAppsFailedRetrieved();
+      metrics.incrAppAttemptReportFailedRetrieved();
     }
 
     public void getApplicationsReport() {
@@ -400,7 +400,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful " +
               "getApplicationAttemptReport call with duration {}",
           duration);
-      metrics.succeededAppAttemptsRetrieved(duration);
+      metrics.succeededAppAttemptReportRetrieved(duration);
     }
 
     public void getApplicationsReport(long duration) {
