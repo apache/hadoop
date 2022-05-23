@@ -154,13 +154,13 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
   int getResponseCode() {
     return (resp == null) ? INTERNAL_SERVER_ERROR.code() :
-        resp.getStatus().code();
+        resp.status().code();
   }
 
   public void handle(ChannelHandlerContext ctx, HttpRequest req)
     throws IOException, URISyntaxException {
     String op = params.op();
-    HttpMethod method = req.getMethod();
+    HttpMethod method = req.method();
     if (PutOpParam.Op.CREATE.name().equalsIgnoreCase(op)
       && method == PUT) {
       onCreate(ctx);
