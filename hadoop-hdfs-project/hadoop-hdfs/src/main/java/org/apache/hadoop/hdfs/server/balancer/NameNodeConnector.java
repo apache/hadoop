@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -255,6 +256,7 @@ public class NameNodeConnector implements Closeable {
     }
     boolean isRequestStandby = false;
     NamenodeProtocol nnproxy = null;
+    InetSocketAddress standbyAddress = null;
     try {
       if (requestToStandby && nsId != null
           && HAUtil.isHAEnabled(config, nsId)) {
@@ -264,8 +266,9 @@ public class NameNodeConnector implements Closeable {
           try {
             if (proxy.getHAServiceState().equals(
                 HAServiceProtocol.HAServiceState.STANDBY)) {
+              standbyAddress = RPC.getServerAddress(proxy);
               NamenodeProtocol sbn = NameNodeProxies.createNonHAProxy(
-                  config, RPC.getServerAddress(proxy), NamenodeProtocol.class,
+                  config, standbyAddress, NamenodeProtocol.class,
                   UserGroupInformation.getCurrentUser(), false).getProxy();
               nnproxy = sbn;
               isRequestStandby = true;
@@ -287,7 +290,8 @@ public class NameNodeConnector implements Closeable {
       return nnproxy.getBlocks(datanode, size, minBlockSize);
     } finally {
       if (isRequestStandby) {
-        LOG.info("Request #getBlocks to Standby NameNode success.");
+        LOG.info("Request #getBlocks to Standby NameNode success. " +
+            "remoteAddress: {}", standbyAddress.getHostString());
       }
     }
   }
