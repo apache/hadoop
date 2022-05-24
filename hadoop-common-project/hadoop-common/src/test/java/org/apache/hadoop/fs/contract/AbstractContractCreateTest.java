@@ -264,13 +264,8 @@ public abstract class AbstractContractCreateTest extends
     describe("verify a written to file is visible after the stream is closed");
     Path path = path("testCreatedFileIsEventuallyVisible");
     FileSystem fs = getFileSystem();
-    try(
-      FSDataOutputStream out = fs.create(path,
-          false,
-          4096,
-          (short) 1,
-          1024)
-      ) {
+    try(FSDataOutputStream out = fs.create(path, false, 4096, (short) 1,
+        1024)) {
       out.write(0x01);
       out.close();
       getFileStatusEventually(fs, path, CREATE_TIMEOUT);
@@ -574,8 +569,8 @@ public abstract class AbstractContractCreateTest extends
             throw e;
           } else {
             LOG.warn(
-                "Output file was not created; this is an object store or a file system with different"
-                    + " visibility semantics");
+                "Output file was not created; this is an object store or "
+                    + "a file system with different visibility semantics");
           }
         }
       }
