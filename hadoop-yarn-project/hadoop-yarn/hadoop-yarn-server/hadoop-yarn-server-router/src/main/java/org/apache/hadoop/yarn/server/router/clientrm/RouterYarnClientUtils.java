@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -294,6 +296,26 @@ public final class RouterYarnClientUtils {
     }
     nodeLabelsResponse.setNodeLabelList(new ArrayList<>(nodeLabelsList));
     return nodeLabelsResponse;
+  }
+
+  /**
+   * Merges a list of GetQueueUserAclsInfoResponse.
+   *
+   * @param responses a list of GetQueueUserAclsInfoResponse to merge.
+   * @return the merged GetQueueUserAclsInfoResponse.
+   */
+  public static GetQueueUserAclsInfoResponse mergeQueueUserAcls(
+      Collection<GetQueueUserAclsInfoResponse> responses) {
+    GetQueueUserAclsInfoResponse aclsInfoResponse = Records.newRecord(
+        GetQueueUserAclsInfoResponse.class);
+    Set<QueueUserACLInfo> queueUserACLInfos = new HashSet<>();
+    for (GetQueueUserAclsInfoResponse response : responses) {
+      if (response != null && response.getUserAclsInfoList() != null) {
+        queueUserACLInfos.addAll(response.getUserAclsInfoList());
+      }
+    }
+    aclsInfoResponse.setUserAclsInfoList(new ArrayList<>(queueUserACLInfos));
+    return aclsInfoResponse;
   }
 }
 

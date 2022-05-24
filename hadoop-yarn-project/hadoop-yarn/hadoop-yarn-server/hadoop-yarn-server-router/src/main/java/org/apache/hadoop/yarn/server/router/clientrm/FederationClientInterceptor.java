@@ -829,7 +829,26 @@ public class FederationClientInterceptor
   @Override
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if(request == null){
+      routerMetrics.incrGetQueueUserAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getQueueUserAcls request.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getQueueUserAcls",
+            new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
+    Collection<GetQueueUserAclsInfoResponse> queueUserAcls;
+    try {
+      queueUserAcls = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetQueueUserAclsInfoResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrGetQueueUserAclsFailedRetrieved();
+      LOG.error("Unable to get queue user Acls due to exception.", ex);
+      throw ex;
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetQueueUserAclsRetrieved(stopTime - startTime);
+    // Merge the QueueUserAclsInfoResponse
+    return RouterYarnClientUtils.mergeQueueUserAcls(queueUserAcls);
   }
 
   @Override
@@ -1073,7 +1092,44 @@ public class FederationClientInterceptor
   @Override
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if(request == null || request.getContainerId() == null){
+      routerMetrics.incrGetContainerReportFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getContainerReport request " +
+          " or containerId", null);
+    }
+
+    long startTime = clock.getTime();
+    ApplicationId applicationId = request.getContainerId().
+        getApplicationAttemptId().getApplicationId();
+    SubClusterId subClusterId = null;
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException ex) {
+      routerMetrics.incrGetContainerReportFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " + applicationId +
+              " does not exist in FederationStateStore.", ex);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    GetContainerReportResponse response = null;
+
+    try {
+      response = clientRMProxy.getContainerReport(request);
+    } catch (Exception ex) {
+      routerMetrics.incrGetContainerReportFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get the container report for " +
+          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the container report of " +
+           "the ContainerId = {} From SubCluster = {}.", request.getContainerId(),
+            subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetContainerReportRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override

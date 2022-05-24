@@ -210,21 +210,21 @@ public class TestRouterMetrics {
   @Test
   public void testSucceededAppAttemptReport() {
 
-    long totalGoodBefore = metrics.getNumSucceededAppAttemptsRetrieved();
+    long totalGoodBefore = metrics.getNumSucceededAppAttemptReportRetrieved();
 
     goodSubCluster.getApplicationAttemptReport(100);
 
     Assert.assertEquals(totalGoodBefore + 1,
-        metrics.getNumSucceededAppAttemptsRetrieved());
+        metrics.getNumSucceededAppAttemptReportRetrieved());
     Assert.assertEquals(100,
-        metrics.getLatencySucceededGetAppAttemptReport(), 0);
+        metrics.getLatencySucceededGetAppAttemptReport(), ASSERT_DOUBLE_DELTA);
 
     goodSubCluster.getApplicationAttemptReport(200);
 
     Assert.assertEquals(totalGoodBefore + 2,
-        metrics.getNumSucceededAppAttemptsRetrieved());
+        metrics.getNumSucceededAppAttemptReportRetrieved());
     Assert.assertEquals(150,
-        metrics.getLatencySucceededGetAppAttemptReport(), 0);
+        metrics.getLatencySucceededGetAppAttemptReport(), ASSERT_DOUBLE_DELTA);
   }
 
   /**
@@ -234,12 +234,12 @@ public class TestRouterMetrics {
   @Test
   public void testAppAttemptReportFailed() {
 
-    long totalBadbefore = metrics.getAppAttemptsFailedRetrieved();
+    long totalBadBefore = metrics.getAppAttemptReportFailedRetrieved();
 
     badSubCluster.getApplicationAttemptReport();
 
-    Assert.assertEquals(totalBadbefore + 1,
-        metrics.getAppAttemptsFailedRetrieved());
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getAppAttemptReportFailedRetrieved());
   }
 
   /**
