@@ -19,6 +19,8 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -124,6 +126,20 @@ public class AbstractAbfsTestWithTimeout extends Assert {
       return true;
     }
 
+  }
+
+  /**
+   * Override assertThat introduced by extending JUnit Assertions in base test class.
+   * If extending Assertions is removed, we can eliminate this method and import directly.
+   *
+   * @param reason additional information about the error.
+   * @param actual the computed value being compared.
+   * @param matcher an expression, built of Matchers, specifying allowed values.
+   * @param <T> the static type accepted by the matcher
+   * (this can flag obvious compile-time problems such as assertThat(1, is("a"))
+   */
+  public static <T> void assertThat(String reason, T actual, Matcher<? super T> matcher) {
+    MatcherAssert.assertThat(reason, actual, matcher);
   }
 
 }

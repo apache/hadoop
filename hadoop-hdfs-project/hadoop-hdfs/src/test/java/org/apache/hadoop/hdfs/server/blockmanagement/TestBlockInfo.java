@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -127,8 +128,8 @@ public class TestBlockInfo {
     // Try to move one of the blocks to a different storage.
     boolean added =
         storage2.addBlock(blockInfos[NUM_BLOCKS / 2]) == AddBlockResult.ADDED;
-    Assert.assertThat(added, is(false));
-    Assert.assertThat(blockInfos[NUM_BLOCKS/2].getStorageInfo(0), is(storage2));
+    assertThat(added, is(false));
+    assertThat(blockInfos[NUM_BLOCKS/2].getStorageInfo(0), is(storage2));
   }
 
   @Test(expected=IllegalArgumentException.class)
