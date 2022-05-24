@@ -97,13 +97,13 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
     zkManager.delete(fencingNodePath);
 
     if (!zkManager.exists(logsPath)) {
-      zkManager.create(logsPath);
+      zkManager.create(logsPath, zkAcl);
       zkManager.setData(logsPath,
           serializeObject(new LinkedList<LogMutation>()), -1);
     }
 
     if (!zkManager.exists(confStorePath)) {
-      zkManager.create(confStorePath);
+      zkManager.create(confStorePath, zkAcl);
       HashMap<String, String> mapSchedConf = new HashMap<>();
       for (Map.Entry<String, String> entry : schedConf) {
         mapSchedConf.put(entry.getKey(), entry.getValue());
