@@ -251,7 +251,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   private boolean createNewZkPath(String path) throws Exception {
     if (!zkManager.exists(path)) {
       try {
-        zkManager.create(path);
+        zkManager.create(path, zkAcl);
       } catch(NodeExistsException e) {
         LOG.warn(NODEEXISTS_MSG, e);
         return false;
