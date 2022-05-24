@@ -37,6 +37,9 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -187,6 +190,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private long asyncDrainThreshold;
 
+  /** Context used to capture per thread IOstats. */
+  private final IOStatisticsContext ioStatisticsContext;
+
   /**
    * Create the stream.
    * This does not attempt to open it; that is only done on the first
@@ -225,6 +231,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.asyncDrainThreshold = ctx.getAsyncDrainThreshold();
     this.unboundedThreadPool = unboundedThreadPool;
     this.vectoredIOContext = context.getVectoredIOContext();
+    this.ioStatisticsContext = ctx.getIoStatisticsContext();
   }
 
   /**
@@ -600,6 +607,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         stopVectoredIOOperations.set(true);
         // close or abort the stream; blocking
         awaitFuture(closeStream("close() operation", false, true));
+        // Collect ThreadLevel IOStats
+        if (ioStatisticsContext != null) {
+          ioStatisticsContext.getThreadIOStatistics().aggregate(streamStatistics.getIOStatistics());
+          LOG.debug("IOStatistics of thread: {}\n{}",
+              Thread.currentThread().getId(), ioStatisticsContext.toString());
+        }
         LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
         // end the client+audit span.
         client.close();
@@ -1348,6 +1361,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Override
   public IOStatistics getIOStatistics() {
     return ioStatistics;
+  }
+
+  public IOStatisticsContext getIoStatisticsContext() {
+    return ioStatisticsContext;
   }
 
   /**

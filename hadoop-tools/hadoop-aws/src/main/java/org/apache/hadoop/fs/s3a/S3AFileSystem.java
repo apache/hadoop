@@ -124,11 +124,13 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextImpl;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -385,6 +387,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private ArnResource accessPoint;
 
+  /**
+   * Does the fs have thread-level IOStats support enabled?
+   */
+  private boolean isThreadLevelIOStatsEnabled;
+
+  /**
+   * Thread-level IOStats context.
+   */
+  private IOStatisticsContext ioStatisticsContext;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -466,6 +478,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);
+      isThreadLevelIOStatsEnabled =
+          conf.getBoolean(THREAD_LEVEL_IOSTATS_ENABLED,
+              THREAD_LEVEL_IOSTATS_ENABLED_DEFAULT);
       initializeStatisticsBinding();
       // If CSE-KMS method is set then CSE is enabled.
       isCSEEnabled = S3AEncryptionMethods.CSE_KMS.getMethod()
@@ -699,6 +714,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             return S3AFileSystem.this.statistics;
           }
         });
+    // If Thread-level IOStats support is enabled, initialize the context.
+    // This would initialize a ThreadLocal Instance.
+    if(isIOStatsContextEnabled()) {
+      this.ioStatisticsContext = new IOStatisticsContextImpl();
+    }
+  }
+
+  /**
+   *
+   * @return
+   */
+  private boolean isIOStatsContextEnabled() {
+    return this.isThreadLevelIOStatsEnabled;
   }
 
   /**
@@ -1481,7 +1509,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             extractOrFetchSimpleFileStatus(path, fileInformation));
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
-        auditSpan);
+        auditSpan,
+        ioStatisticsContext);
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
     return new FSDataInputStream(
@@ -1568,14 +1597,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   protected S3AReadOpContext createReadContext(
       final FileStatus fileStatus,
-      final AuditSpan auditSpan) {
+      final AuditSpan auditSpan,
+      final IOStatisticsContext ioStatsContext) {
     final S3AReadOpContext roc = new S3AReadOpContext(
         fileStatus.getPath(),
         invoker,
         statistics,
         statisticsContext,
         fileStatus,
-        vectoredIOContext)
+        vectoredIOContext,
+        ioStatsContext)
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
     return roc.build();
@@ -2102,7 +2133,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public S3AReadOpContext createReadContext(final FileStatus fileStatus) {
       return S3AFileSystem.this.createReadContext(fileStatus,
-          auditSpan);
+          auditSpan,
+          ioStatisticsContext);
     }
 
     @Override
@@ -4974,7 +5006,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ChangeDetectionPolicy changePolicy = fileInformation.getChangePolicy();
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
-        auditSpan);
+        auditSpan,
+        ioStatisticsContext);
     fileInformation.applyOptions(readContext);
 
     if (changePolicy.getSource() != ChangeDetectionPolicy.Source.None

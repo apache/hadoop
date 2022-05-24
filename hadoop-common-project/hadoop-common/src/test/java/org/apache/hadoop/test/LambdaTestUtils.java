@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Class containing methods and associated classes to make the most of Lambda
@@ -64,6 +65,15 @@ public final class LambdaTestUtils {
    * the closure returned a null value.
    */
   public static final String NULL_RESULT = "(null)";
+
+  /**
+   * Atomic references to be used to re-throw an Exception or an ASE
+   * caught inside a lambda function.
+   */
+  public static final AtomicReference<Exception> futureExcp =
+      new AtomicReference<>();
+  public static final AtomicReference<AssertionError> futureASE =
+      new AtomicReference<>();
 
   /**
    * Interface to implement for converting a timeout into some form
@@ -1034,6 +1044,26 @@ public final class LambdaTestUtils {
     @Override
     public Void run() throws Exception {
       return callable.call();
+    }
+  }
+
+  public static void setFutureException(Exception excp) {
+    futureExcp.set(excp);
+  }
+
+  public static void setFutureASE(AssertionError ase) {
+    futureASE.set(ase);
+  }
+
+  public static void maybeReThrowFutureException() throws Exception {
+    if (futureExcp.get() != null) {
+      throw futureExcp.get();
+    }
+  }
+
+  public static void maybeReThrowFutureASE() throws Exception {
+    if (futureASE.get() != null) {
+      throw futureASE.get();
     }
   }
 }
