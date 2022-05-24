@@ -29,6 +29,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.monitoring.MonitoringListener;
 import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -59,6 +60,18 @@ public interface S3ClientFactory {
    */
   AmazonS3 createS3Client(URI uri,
       S3ClientCreationParameters parameters) throws IOException;
+
+  /**
+   * Creates a new {@link S3Client}
+   *
+   * @param uri S3A file system URI
+   * @param parameters parameter object
+   * @return S3 client
+   * @throws IOException
+   */
+  S3Client createS3ClientV2(URI uri,
+      S3ClientCreationParameters parameters) throws IOException;
+
 
   /**
    * Settings for the S3 Client.

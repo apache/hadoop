@@ -54,6 +54,11 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -69,6 +74,7 @@ import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1236,6 +1242,119 @@ public final class S3AUtils {
     return awsConf;
   }
 
+  /***
+   *
+   *
+   * @param conf
+   * @return
+   */
+  public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf) {
+    ClientOverrideConfiguration.Builder overrideConfigBuilder =
+        ClientOverrideConfiguration.builder();
+
+    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+
+    if (requestTimeoutMillis > Integer.MAX_VALUE) {
+      LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
+          requestTimeoutMillis, Integer.MAX_VALUE);
+      requestTimeoutMillis = Integer.MAX_VALUE;
+    }
+
+    if(requestTimeoutMillis > 0) {
+      overrideConfigBuilder.apiCallAttemptTimeout(Duration.ofMillis(requestTimeoutMillis));
+    }
+
+    initUserAgentV2(conf, overrideConfigBuilder);
+
+    // TODO: Look at signers. See issue https://github.com/aws/aws-sdk-java-v2/issues/1024
+    //    String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
+    //    if (!signerOverride.isEmpty()) {
+    //      LOG.debug("Signer override = {}", signerOverride);
+    //      overrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.SIGNER)
+    //    }
+
+    return overrideConfigBuilder;
+  }
+  
+  public static ApacheHttpClient.Builder createHttpClientBuilder(Configuration conf) {
+    ApacheHttpClient.Builder httpClientBuilder =
+        ApacheHttpClient.builder();
+
+    httpClientBuilder.maxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
+        DEFAULT_MAXIMUM_CONNECTIONS, 1));
+
+    httpClientBuilder.connectionTimeout(Duration.ofSeconds(intOption(conf, ESTABLISH_TIMEOUT,
+        DEFAULT_ESTABLISH_TIMEOUT, 0)));
+
+    httpClientBuilder.socketTimeout(Duration.ofSeconds(intOption(conf, SOCKET_TIMEOUT,
+        DEFAULT_SOCKET_TIMEOUT, 0)));
+
+    // NOT_SUPPORTED: The protocol is now HTTPS by default,
+    // and can only be modified by setting an HTTP endpoint on the client builder.
+    //TODO: See where this logic should go now
+    //initProtocolSettings(conf, awsConf);
+
+    return httpClientBuilder;
+  }
+
+  public static RetryPolicy.Builder createRetryPolicyBuilder(Configuration conf) {
+
+    RetryPolicy.Builder retryPolicyBuilder =
+        RetryPolicy.builder();
+
+    retryPolicyBuilder.numRetries(intOption(conf, MAX_ERROR_RETRIES,
+        DEFAULT_MAX_ERROR_RETRIES, 0));
+
+    return retryPolicyBuilder;
+  }
+
+  public static ProxyConfiguration.Builder createProxyConfigurationBuilder(Configuration conf,
+      String bucket) throws IOException {
+
+    ProxyConfiguration.Builder proxyConfigBuilder = ProxyConfiguration.builder();
+
+    String proxyHost = conf.getTrimmed(PROXY_HOST, "");
+    int proxyPort = conf.getInt(PROXY_PORT, -1);
+
+    if (!proxyHost.isEmpty()) {
+      if (proxyPort >= 0) {
+        // TODO: Check how URI should be created
+        proxyConfigBuilder.endpoint(URI.create(proxyHost + ":" + proxyPort));
+      } else {
+        if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
+          LOG.warn("Proxy host set without port. Using HTTPS default 443");
+          proxyConfigBuilder.endpoint(URI.create(proxyHost + ":" + 443));
+        } else {
+          LOG.warn("Proxy host set without port. Using HTTP default 80");
+          proxyConfigBuilder.endpoint(URI.create(proxyHost + ":" + 80));
+        }
+      }
+      final String proxyUsername = lookupPassword(bucket, conf, PROXY_USERNAME,
+          null, null);
+      final String proxyPassword = lookupPassword(bucket, conf, PROXY_PASSWORD,
+          null, null);
+      if ((proxyUsername == null) != (proxyPassword == null)) {
+        String msg = "Proxy error: " + PROXY_USERNAME + " or " +
+            PROXY_PASSWORD + " set without the other.";
+        LOG.error(msg);
+        throw new IllegalArgumentException(msg);
+      }
+      proxyConfigBuilder.username(proxyUsername);
+      proxyConfigBuilder.password(proxyPassword);
+      proxyConfigBuilder.ntlmDomain(conf.getTrimmed(PROXY_DOMAIN));
+      proxyConfigBuilder.ntlmWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
+    } else if (proxyPort >= 0) {
+      String msg =
+          "Proxy error: " + PROXY_PORT + " set without " + PROXY_HOST;
+      LOG.error(msg);
+      throw new IllegalArgumentException(msg);
+    }
+
+    return proxyConfigBuilder;
+  }
+
+
   /**
    * Initializes all AWS SDK settings related to connection management.
    *
@@ -1379,6 +1498,17 @@ public final class S3AUtils {
     }
     LOG.debug("Using User-Agent: {}", userAgent);
     awsConf.setUserAgentPrefix(userAgent);
+  }
+
+  private static void initUserAgentV2(Configuration conf,
+      ClientOverrideConfiguration.Builder clientConfig) {
+    String userAgent = "Hadoop " + VersionInfo.getVersion();
+    String userAgentPrefix = conf.getTrimmed(USER_AGENT_PREFIX, "");
+    if (!userAgentPrefix.isEmpty()) {
+      userAgent = userAgentPrefix + ", " + userAgent;
+    }
+    LOG.debug("Using User-Agent: {}", userAgent);
+    clientConfig.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, userAgent);
   }
 
   /**

@@ -78,6 +78,7 @@ import com.amazonaws.event.ProgressListener;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -260,6 +261,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private Path workingDir;
   private String username;
   private AmazonS3 s3;
+  private S3Client s3V2;
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
   // APIs on an uninitialized filesystem.
@@ -869,6 +871,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
         .createS3Client(getUri(),
             parameters);
+
+    s3V2 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
+        .createS3ClientV2(getUri(),
+            parameters);
+
   }
 
   /**

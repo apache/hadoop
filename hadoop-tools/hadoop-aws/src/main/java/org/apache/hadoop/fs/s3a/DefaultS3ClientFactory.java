@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
@@ -45,6 +46,13 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -159,6 +167,55 @@ public class DefaultS3ClientFactory extends Configured
       throw translateException("creating AWS S3 client", uri.toString(), e);
     }
   }
+
+  /**
+   * Creates a new {@link S3Client}
+   *
+   * @param uri S3A file system URI
+   * @param parameters parameter object
+   * @return S3 client
+   * @throws IOException
+   */
+  @Override
+  public S3Client createS3ClientV2(
+      final URI uri,
+      final S3ClientCreationParameters parameters) throws IOException {
+
+    Configuration conf = getConf();
+    bucket = uri.getHost();
+
+    final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
+        S3AUtils.createClientConfigBuilder(conf);
+
+    final ApacheHttpClient.Builder httpClientBuilder = S3AUtils.createHttpClientBuilder(conf);
+
+    final RetryPolicy.Builder retryPolicyBuilder = S3AUtils.createRetryPolicyBuilder(conf);
+
+    final ProxyConfiguration.Builder proxyConfigBuilder =
+        S3AUtils.createProxyConfigurationBuilder(conf, bucket);
+
+    S3ClientBuilder s3ClientBuilder = S3Client.builder();
+
+    // add any headers
+    parameters.getHeaders().forEach((h, v) ->
+        clientOverrideConfigBuilder.putHeader(h, v));
+
+    if (parameters.isRequesterPays()) {
+      // All calls must acknowledge requester will pay via header.
+      clientOverrideConfigBuilder.putHeader(REQUESTER_PAYS_HEADER, REQUESTER_PAYS_HEADER_VALUE);
+    }
+
+    if (!StringUtils.isEmpty(parameters.getUserAgentSuffix())) {
+      clientOverrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX,
+          parameters.getUserAgentSuffix());
+    }
+
+    return s3ClientBuilder.overrideConfiguration(
+            clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build()).build())
+        .httpClientBuilder(httpClientBuilder.proxyConfiguration(proxyConfigBuilder.build()))
+        .build();
+  }
+
 
   /**
    * Create an {@link AmazonS3} client of type

@@ -188,6 +188,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.132</aws-java-sdk.version>
+    <aws-java-sdk-v2.version>2.17.196</aws-java-sdk-v2.version>
     <hsqldb.version>2.3.4</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
@@ -1056,6 +1057,17 @@
         <groupId>com.amazonaws</groupId>
         <artifactId>aws-java-sdk-bundle</artifactId>
         <version>${aws-java-sdk.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bundle</artifactId>
+        <version>${aws-java-sdk-v2.version}</version>
         <exclusions>
           <exclusion>
             <groupId>io.netty</groupId>
