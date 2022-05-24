@@ -394,6 +394,8 @@ public class FederationClientInterceptor
 
     long startTime = clock.getTime();
 
+    Exception yarnResponseException = null;
+
     if (request == null || request.getApplicationSubmissionContext() == null
         || request.getApplicationSubmissionContext()
             .getApplicationId() == null) {
@@ -469,6 +471,8 @@ public class FederationClientInterceptor
       } catch (Exception e) {
         LOG.warn("Unable to submit the application " + applicationId
             + "to SubCluster " + subClusterId.getId(), e);
+        //Record yarn feedback error
+        yarnResponseException = e;
       }
 
       if (response != null) {
@@ -482,9 +486,14 @@ public class FederationClientInterceptor
             "RouterClientRMService", applicationId, subClusterId);
         return response;
       } else {
-        // Empty response from the ResourceManager.
-        // Blacklist this subcluster for this request.
-        blacklist.add(subClusterId);
+        //If last try still can't submit, the last sub-cluster feedback
+        // error message is thrown
+        if(i == (numSubmitRetries - 1)){
+          routerMetrics.incrAppsFailedSubmitted();
+          RouterServerUtil.logAndThrowException("Unable to submit the " +
+              "application " + applicationId + " to SubCluster " +
+              subClusterId.getId(), yarnResponseException);
+        }
       }
     }
 
