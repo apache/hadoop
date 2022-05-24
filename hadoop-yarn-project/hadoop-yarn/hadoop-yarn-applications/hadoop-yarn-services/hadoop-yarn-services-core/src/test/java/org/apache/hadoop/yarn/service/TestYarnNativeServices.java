@@ -917,8 +917,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
     int i = 0;
     for (String s : instances) {
-      assertThat(s,
-          CoreMatchers.containsString(component.getName() + "-" + i));
+      assertThat(s, CoreMatchers.equalTo(component.getName() + "-" + i));
       i++;
     }
   }
