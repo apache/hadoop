@@ -1123,7 +1123,9 @@ public class ContractTestUtils extends Assert {
       completableFutures[i++] = res.getData();
     }
     CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
-    //FutureIO.awaitFuture(combinedFuture, 5, TimeUnit.MINUTES);
+    FutureIO.awaitFuture(combinedFuture,
+            VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+            TimeUnit.SECONDS);
 
     for (FileRange res : fileRanges) {
       CompletableFuture<ByteBuffer> data = res.getData();
