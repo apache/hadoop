@@ -101,7 +101,6 @@ class FsDatasetAsyncDiskService {
   private void addExecutorForVolume(final FsVolumeImpl volume) {
     ThreadFactory threadFactory = new ThreadFactory() {
       int counter = 0;
-
       @Override
       public Thread newThread(Runnable r) {
         int thisIndex;
