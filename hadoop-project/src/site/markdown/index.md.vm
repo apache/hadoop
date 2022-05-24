@@ -15,48 +15,14 @@
 Apache Hadoop ${project.version}
 ================================
 
-Apache Hadoop ${project.version} is a minor release in the 2.x.y release
-line, building upon the previous stable release 2.4.1.
+Apache Hadoop ${project.version} is a point release in the 2.10.x release line,
+building upon the previous stable release 2.10.1.
 
-Here is a short overview of the major features and improvements.
-
-*   Common
-
-    *   Authentication improvements when using an HTTP proxy server. This is
-        useful when accessing WebHDFS via a proxy server.
-
-    *   A new Hadoop metrics sink that allows writing directly to Graphite.
-
-    *   [Specification work](./hadoop-project-dist/hadoop-common/filesystem/index.html)
-        related to the Hadoop Compatible Filesystem (HCFS) effort.
-
-*   HDFS
-
-    *   Support for POSIX-style filesystem extended attributes. See the
-        [user documentation](./hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html)
-        for more details.
-
-    *   Using the OfflineImageViewer, clients can now browse an fsimage via
-        the WebHDFS API.
-
-    *   The NFS gateway received a number of supportability improvements and
-        bug fixes. The Hadoop portmapper is no longer required to run the gateway,
-        and the gateway is now able to reject connections from unprivileged ports.
-
-    *   The SecondaryNameNode, JournalNode, and DataNode web UIs have been
-        modernized with HTML5 and Javascript.
-
-*   YARN
-
-    *   YARN's REST APIs now support write/modify operations. Users can submit and
-        kill applications through REST APIs.
-
-    *   The timeline store in YARN, used for storing generic and
-        application-specific information for applications, supports authentication
-        through Kerberos.
-
-    *   The Fair Scheduler supports dynamic hierarchical user queues, user queues
-        are created dynamically at runtime under any specified parent-queue.
+Users are encouraged to read
+[release notes](./hadoop-project-dist/hadoop-common/release/${project.version}/RELEASENOTES.${project.version}.html)
+for overview of the major changes and
+[change log](./hadoop-project-dist/hadoop-common/release/${project.version}/CHANGELOG.${project.version}.html)
+for list of all changes.
 
 Getting Started
 ===============
