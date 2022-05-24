@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.util.EnumDoubles;
  * Balancing policy.
  * Since a datanode may contain multiple block pools,
  * {@link Pool} implies {@link Node}
- * but NOT the other way around
+ * but not the other way around
  */
 @InterfaceAudience.Private
 abstract class BalancingPolicy {
