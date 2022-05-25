@@ -364,8 +364,8 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
-  public double getLatencySucceededAppAttemptReportRetrieved() {
-    return totalSucceededAppAttemptReportRetrieved.lastStat().mean();
+  public double getLatencySucceededAppAttemptRetrieved() {
+    return totalSucceededAppAttemptsRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -415,7 +415,7 @@ public final class RouterMetrics {
 
   @VisibleForTesting
   public int getAppAttemptsFailedRetrieved() {
-    return numAppsFailedRetrieved.value();
+    return numAppAttemptsFailedRetrieved.value();
   }
 
   @VisibleForTesting
@@ -454,27 +454,27 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
-  public int getNumGetQueueUserAclsFailedRetrieved() {
+  public int getQueueUserAclsFailedRetrieved() {
     return numGetQueueUserAclsFailedRetrieved.value();
   }
 
   @VisibleForTesting
-  public int getNumGetContainerReportFailedRetrieved() {
+  public int getContainerReportFailedRetrieved() {
     return numGetContainerReportFailedRetrieved.value();
   }
 
   @VisibleForTesting
-  public int getNumGetContainersFailedRetrieved() {
+  public int getContainersFailedRetrieved() {
     return numGetContainersFailedRetrieved.value();
   }
 
   @VisibleForTesting
-  public int getNumListReservationsFailedRetrieved() {
+  public int getListReservationsFailedRetrieved() {
     return numListReservationsFailedRetrieved.value();
   }
 
   @VisibleForTesting
-  public int getNumGetResourceTypeInfoRetrieved() {
+  public int getGetResourceTypeInfoRetrieved() {
     return numGetResourceTypeInfo.value();
   }
 
@@ -611,7 +611,7 @@ public final class RouterMetrics {
     numAppAttemptReportFailedRetrieved.incr();
   }
 
-  public void incrGetQueueUserAclsFailedRetrieved() {
+  public void incrQueueUserAclsFailedRetrieved() {
     numGetQueueUserAclsFailedRetrieved.incr();
   }
 

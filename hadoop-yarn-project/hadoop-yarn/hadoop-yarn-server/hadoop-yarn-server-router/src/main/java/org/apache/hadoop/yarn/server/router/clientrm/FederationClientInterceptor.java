@@ -829,7 +829,7 @@ public class FederationClientInterceptor
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) throws YarnException, IOException {
     if(request == null){
-      routerMetrics.incrGetQueueUserAclsFailedRetrieved();
+      routerMetrics.incrQueueUserAclsFailedRetrieved();
       RouterServerUtil.logAndThrowException("Missing getQueueUserAcls request.", null);
     }
     long startTime = clock.getTime();
@@ -840,7 +840,7 @@ public class FederationClientInterceptor
       queueUserAcls = invokeAppClientProtocolMethod(true, remoteMethod,
           GetQueueUserAclsInfoResponse.class);
     } catch (Exception ex) {
-      routerMetrics.incrGetQueueUserAclsFailedRetrieved();
+      routerMetrics.incrQueueUserAclsFailedRetrieved();
       LOG.error("Unable to get queue user Acls due to exception.", ex);
       throw ex;
     }
@@ -1165,7 +1165,7 @@ public class FederationClientInterceptor
     try {
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
-      routerMetrics.incrContainerReportFailedRetrieved();
+      routerMetrics.incrContainerFailedRetrieved();
       RouterServerUtil.logAndThrowException("Application " + applicationId +
               " does not exist in FederationStateStore.", ex);
     }
