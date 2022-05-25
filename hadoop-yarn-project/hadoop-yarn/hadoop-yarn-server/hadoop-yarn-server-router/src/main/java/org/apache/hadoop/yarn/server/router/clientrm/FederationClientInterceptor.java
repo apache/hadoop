@@ -872,7 +872,26 @@ public class FederationClientInterceptor
   @Override
   public ReservationListResponse listReservations(
       ReservationListRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getReservationId() == null) {
+      routerMetrics.incrListReservationsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing listReservations request.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("listReservations",
+            new Class[] {ReservationListRequest.class}, new Object[] {request});
+    Collection<ReservationListResponse> listResponses;
+    try {
+      listResponses = invokeAppClientProtocolMethod(true, remoteMethod,
+              ReservationListResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrListReservationsFailedRetrieved();
+      LOG.error("Unable to list reservations node due to exception.", ex);
+      throw ex;
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededListReservationsRetrieved(stopTime - startTime);
+    // Merge the ReservationListResponse
+    return RouterYarnClientUtils.mergeReservationsList(listResponses);
   }
 
   @Override
@@ -1133,11 +1152,11 @@ public class FederationClientInterceptor
 
   @Override
   public GetContainersResponse getContainers(GetContainersRequest request)
-          throws YarnException, IOException {
+      throws YarnException, IOException {
     if (request == null || request.getApplicationAttemptId() == null) {
       routerMetrics.incrContainerFailedRetrieved();
       RouterServerUtil.logAndThrowException(
-          "Missing getContainers request or ApplicationAttemptId", null);
+          "Missing getContainers request or ApplicationAttemptId.", null);
     }
 
     long startTime = clock.getTime();
@@ -1232,7 +1251,26 @@ public class FederationClientInterceptor
   @Override
   public GetAllResourceTypeInfoResponse getResourceTypeInfo(
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      routerMetrics.incrResourceTypeInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getResourceTypeInfo request.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getResourceTypeInfo",
+         new Class[] {GetAllResourceTypeInfoRequest.class}, new Object[] {request});
+    Collection<GetAllResourceTypeInfoResponse> listResourceTypeInfo;
+    try {
+      listResourceTypeInfo = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetAllResourceTypeInfoResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrResourceTypeInfoFailedRetrieved();
+      LOG.error("Unable to get all resource type info node due to exception.", ex);
+      throw ex;
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetResourceTypeInfoRetrieved(stopTime - startTime);
+    // Merge the GetAllResourceTypeInfoResponse
+    return RouterYarnClientUtils.mergeResourceTypes(listResourceTypeInfo);
   }
 
   @Override
