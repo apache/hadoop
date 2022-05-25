@@ -73,7 +73,6 @@ class FsDatasetAsyncDiskService {
   
   private final DataNode datanode;
   private final FsDatasetImpl fsdatasetImpl;
-  private final ThreadGroup threadGroup;
   private Map<String, ThreadPoolExecutor> executors
       = new HashMap<String, ThreadPoolExecutor>();
   private Map<String, Set<Long>> deletedBlockIds 
@@ -91,7 +90,6 @@ class FsDatasetAsyncDiskService {
   FsDatasetAsyncDiskService(DataNode datanode, FsDatasetImpl fsdatasetImpl) {
     this.datanode = datanode;
     this.fsdatasetImpl = fsdatasetImpl;
-    this.threadGroup = new ThreadGroup(getClass().getSimpleName());
     maxNumThreadsPerVolume = datanode.getConf().getInt(
       DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY,
           DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_DEFAULT);
@@ -110,7 +108,7 @@ class FsDatasetAsyncDiskService {
         synchronized (this) {
           thisIndex = counter++;
         }
-        Thread t = new Thread(threadGroup, r);
+        Thread t = new Thread(r);
         t.setName("Async disk worker #" + thisIndex +
             " for volume " + volume);
         return t;
