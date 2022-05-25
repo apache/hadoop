@@ -98,7 +98,7 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
   @Override
   public void channelRead0
     (final ChannelHandlerContext ctx, final HttpRequest req) {
-    uri = req.getUri();
+    uri = req.uri();
     final Channel client = ctx.channel();
     Bootstrap proxiedServer = new Bootstrap()
       .group(client.eventLoop())
@@ -117,8 +117,7 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
       public void operationComplete(ChannelFuture future) throws Exception {
         if (future.isSuccess()) {
           ctx.channel().pipeline().remove(HttpResponseEncoder.class);
-          HttpRequest newReq = new DefaultFullHttpRequest(HTTP_1_1,
-            req.getMethod(), req.getUri());
+          HttpRequest newReq = new DefaultFullHttpRequest(HTTP_1_1, req.method(), req.uri());
           newReq.headers().add(req.headers());
           newReq.headers().set(CONNECTION, Values.CLOSE);
           future.channel().writeAndFlush(newReq);
