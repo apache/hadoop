@@ -27,6 +27,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
@@ -54,12 +55,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -456,9 +456,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetApplicationAttemptsResponse attemptsResponse =
          interceptor.getApplicationAttempts(attemptsRequest);
 
+    Assert.assertNotNull(attemptsResponse);
+
     GetApplicationAttemptReportRequest requestGet =
          GetApplicationAttemptReportRequest.newInstance(
          attemptsResponse.getApplicationAttemptList().get(0).getApplicationAttemptId());
+
     GetApplicationAttemptReportResponse responseGet =
          interceptor.getApplicationAttemptReport(requestGet);
 
@@ -701,5 +704,50 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetClusterNodeLabelsResponse response =
         interceptor.getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
     Assert.assertEquals(0, response.getNodeLabelList().size());
+  }
+
+  @Test
+  public void testGetQueueUserAcls() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get QueueUserAcls request");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getQueueUserAcls request.",
+        () -> interceptor.getQueueUserAcls(null));
+
+    // noraml request
+    GetQueueUserAclsInfoResponse response = interceptor.getQueueUserAcls(
+        GetQueueUserAclsInfoRequest.newInstance());
+
+    Assert.assertNotNull(response);
+
+    List<QueueACL> submitAndAdministerAcl = new ArrayList<>();
+    submitAndAdministerAcl.add(QueueACL.SUBMIT_APPLICATIONS);
+    submitAndAdministerAcl.add(QueueACL.ADMINISTER_QUEUE);
+
+    QueueUserACLInfo exceptRootQueueACLInfo = QueueUserACLInfo.newInstance("root",
+        submitAndAdministerAcl);
+
+    QueueUserACLInfo queueRootQueueACLInfo = response.getUserAclsInfoList().stream().
+        filter(acl->acl.getQueueName().equals("root")).
+        collect(Collectors.toList()).get(0);
+
+
+    Assert.assertEquals(exceptRootQueueACLInfo, queueRootQueueACLInfo);
+  }
+
+  @Test
+  public void testListReservations() throws Exception {
+    LOG.info("Test FederationClientInterceptor :  Get Cluster NodeLabels request");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing listReservations request.",
+        () -> interceptor.listReservations(null));
+
+    // normal request.
+    ReservationId reservationId = ReservationId.newInstance(1653487680L, 1L);
+    ReservationListResponse response = interceptor.listReservations(
+        ReservationListRequest.newInstance("root.default", reservationId.toString()));
+    Assert.assertNotNull(response);
+    Assert.assertEquals(0, response.getReservationAllocationState().size());
   }
 }

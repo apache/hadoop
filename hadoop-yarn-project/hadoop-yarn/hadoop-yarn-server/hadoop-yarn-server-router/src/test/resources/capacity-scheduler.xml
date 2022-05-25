@@ -98,6 +98,15 @@
   </property>
 
   <property>
+    <name>yarn.scheduler.capacity.root.default.reservable</name>
+    <value>true</value>
+    <description>
+      indicates to the ReservationSystem that the queue’s resources
+      is available for users to reserve.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.scheduler.capacity.node-locality-delay</name>
     <value>-1</value>
     <description>

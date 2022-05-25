@@ -834,7 +834,7 @@ public class FederationClientInterceptor
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getQueueUserAcls",
-            new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
+            new Class[] {GetQueueUserAclsInfoRequest.class}, new Object[] {request});
     Collection<GetQueueUserAclsInfoResponse> queueUserAcls;
     try {
       queueUserAcls = invokeAppClientProtocolMethod(true, remoteMethod,
