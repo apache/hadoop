@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='11eb9b09786e401fbdeaa3be83a19a4066fd7813'
+        YETUS_VERSION='rel/0.14.0'
         MAVEN_OPTS='-Xms256m -Xmx1536m -Dhttps.protocols=TLSv1.2 -Dhttps.cipherSuites=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256'
     }
 
