@@ -281,10 +281,6 @@ public interface RequestFactory {
       String delimiter,
       int maxKeys);
 
-  ListObjectsV2Request.Builder newListObjectsV2RequestBuilder(String key,
-      String delimiter,
-      int maxKeys);
-
   /**
    * Create a request to delete a single object.
    * @param key object to delete

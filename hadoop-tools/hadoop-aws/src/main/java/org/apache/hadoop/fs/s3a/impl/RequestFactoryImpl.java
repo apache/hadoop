@@ -49,6 +49,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 
 import org.apache.hadoop.fs.PathIOException;
@@ -536,10 +537,7 @@ public class RequestFactoryImpl implements RequestFactory {
     if (delimiter != null) {
       requestBuilder.delimiter(delimiter);
     }
-
-    //TODO: add call to prepareRequest
     return requestBuilder.build();
-
     // return prepareRequest(request);
   }
 
@@ -556,35 +554,19 @@ public class RequestFactoryImpl implements RequestFactory {
       final int maxKeys) {
 
     final ListObjectsV2Request.Builder requestBuilder =
-        newListObjectsV2RequestBuilder(key, delimiter, maxKeys);
-
-    if (delimiter != null) {
-      requestBuilder.delimiter(delimiter);
-    }
-
-    //TODO: add call to prepareRequest
-    return requestBuilder.build();
-
-    // return prepareRequest(request);
-  }
-
-  @Override
-  public ListObjectsV2Request.Builder newListObjectsV2RequestBuilder(
-      final String key,
-      final String delimiter,
-      final int maxKeys) {
-
-    final ListObjectsV2Request.Builder requestBuilder =
         ListObjectsV2Request.builder().bucket(bucket).maxKeys(maxKeys).prefix(key);
 
     if (delimiter != null) {
       requestBuilder.delimiter(delimiter);
     }
 
-    return requestBuilder;
+    //TODO: add call to prepareRequest, not added for now as PrepareRequest is a functional interface,
+    // uses AmazonWebServiceRequest, SDKV2 uses AwsRequest. What will prepare request actually do?
+    // Requests are no longer mutable
+    return requestBuilder.build();
   }
 
-    @Override
+  @Override
   public DeleteObjectRequest newDeleteObjectRequest(String key) {
     return prepareRequest(new DeleteObjectRequest(bucket, key));
   }

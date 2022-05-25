@@ -2498,28 +2498,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               OBJECT_CONTINUE_LIST_REQUEST,
               () -> {
                 if (useListV1) {
-//                  return S3ListResult.v1(
-//                      s3.listNextBatchOfObjects(
-//                          getRequestFactory()
-//                              .newListNextBatchOfObjectsRequest(
-//                                  prevResult.getV1())))
+                  List<software.amazon.awssdk.services.s3.model.S3Object>
+                      prevListResult = prevResult.getV1().contents();
 
-                  //TODO: V1 does not seem to have a way to paginate?
-                  return S3ListResult.v1(s3V2.listObjects(request.getV1()));
+                  String nextMarker = prevListResult.get(prevListResult.size() - 1).key();
+
+                  return S3ListResult.v1(s3V2.listObjects(
+                      request.getV1().toBuilder().marker(nextMarker).build()));
                 } else {
-
-                  System.out.println("CONTINUING REQUEST HERE");
-
-                  //TODO: SDKV2 now supports automatic pagination, can we use that here instead?
-                  ListObjectsV2Request prevRequest = request.getV2();
-
-                  ListObjectsV2Request.Builder newRequestBuilder =
-                      getRequestFactory().newListObjectsV2RequestBuilder(prevRequest.prefix(),
-                          prevRequest.delimiter(), prevRequest.maxKeys());
-
-                  newRequestBuilder.continuationToken(prevResult.getV2().nextContinuationToken());
-
-                  return S3ListResult.v2(s3V2.listObjectsV2(newRequestBuilder.build()));
+                  //TODO: SDKV2 now supports automatic pagination, using that here requires
+                  // significant refactoring. Investigate performance benefits and if this is something we want to do.
+                  return S3ListResult.v2(s3V2.listObjectsV2(request.getV2().toBuilder()
+                      .continuationToken(prevResult.getV2().nextContinuationToken()).build()));
                 }
               }));
     }
