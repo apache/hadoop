@@ -335,8 +335,10 @@ public final class RouterYarnClientUtils {
     List<ReservationAllocationState> reservationAllocationStates =
         new ArrayList<>();
     for (ReservationListResponse response : responses) {
-      reservationAllocationStates.addAll(
-          response.getReservationAllocationState());
+      if (response != null && response.getReservationAllocationState() != null) {
+        reservationAllocationStates.addAll(
+            response.getReservationAllocationState());
+      }
     }
     reservationListResponse.setReservationAllocationState(
         reservationAllocationStates);
@@ -352,10 +354,12 @@ public final class RouterYarnClientUtils {
   public static GetAllResourceTypeInfoResponse mergeResourceTypes(
       Collection<GetAllResourceTypeInfoResponse> responses) {
     GetAllResourceTypeInfoResponse resourceTypeInfoResponse =
-            Records.newRecord(GetAllResourceTypeInfoResponse.class);
+        Records.newRecord(GetAllResourceTypeInfoResponse.class);
     Set<ResourceTypeInfo> resourceTypeInfoSet = new HashSet<>();
     for (GetAllResourceTypeInfoResponse response : responses) {
-      resourceTypeInfoSet.addAll(response.getResourceTypeInfo());
+      if (response != null && response.getResourceTypeInfo() != null) {
+        resourceTypeInfoSet.addAll(response.getResourceTypeInfo());
+      }
     }
     resourceTypeInfoResponse.setResourceTypeInfo(
         new ArrayList<>(resourceTypeInfoSet));
