@@ -30,28 +30,7 @@ import java.util.Set;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.*;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -435,13 +414,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetApplicationAttemptReport()
           throws YarnException, IOException, InterruptedException {
-    LOG.info("Test FederationClientInterceptor: " +
-            "Get ApplicationAttempt Report");
+    LOG.info("Test FederationClientInterceptor: Get ApplicationAttempt Report.");
 
     ApplicationId appId =
-            ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    ApplicationAttemptId appAttemptId =
-            ApplicationAttemptId.newInstance(appId, 1);
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
@@ -451,11 +427,16 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response);
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
-    GetApplicationAttemptReportRequest requestGet =
-            GetApplicationAttemptReportRequest.newInstance(appAttemptId);
+    // Call GetApplicationAttempts Get ApplicationAttemptId
+    GetApplicationAttemptsRequest attemptsRequest = GetApplicationAttemptsRequest.newInstance(appId);
+    GetApplicationAttemptsResponse attemptsResponse =
+         interceptor.getApplicationAttempts(attemptsRequest);
 
+    GetApplicationAttemptReportRequest requestGet =
+         GetApplicationAttemptReportRequest.newInstance(
+         attemptsResponse.getApplicationAttemptList().get(0).getApplicationAttemptId());
     GetApplicationAttemptReportResponse responseGet =
-            interceptor.getApplicationAttemptReport(requestGet);
+         interceptor.getApplicationAttemptReport(requestGet);
 
     Assert.assertNotNull(responseGet);
   }
@@ -479,8 +460,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
             GetApplicationAttemptReportRequest.newInstance(appAttemptID);
 
     LambdaTestUtils.intercept(YarnException.class, "ApplicationAttempt " +
-            appAttemptID + "belongs to Application " +
-            appId + " does not exist in FederationStateStore",
+            appAttemptID + " belongs to Application " +
+            appId + " does not exist in FederationStateStore.",
         () -> interceptor.getApplicationAttemptReport(requestGet));
   }
 
