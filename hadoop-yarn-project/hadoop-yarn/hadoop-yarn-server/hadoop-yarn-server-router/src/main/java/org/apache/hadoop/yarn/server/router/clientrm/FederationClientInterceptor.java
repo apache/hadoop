@@ -416,8 +416,8 @@ public class FederationClientInterceptor
 
       SubClusterId subClusterId = policyFacade.getHomeSubcluster(
           request.getApplicationSubmissionContext(), blacklist);
-      LOG.info("submitApplication appId" + applicationId + " try #" + i
-          + " on SubCluster " + subClusterId);
+      LOG.info("submitApplication appId {} try #{} on SubCluster {}.", applicationId, i,
+          subClusterId);
 
       ApplicationHomeSubCluster appHomeSubCluster =
           ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
@@ -448,8 +448,8 @@ public class FederationClientInterceptor
           SubClusterId subClusterIdInStateStore =
               federationFacade.getApplicationHomeSubCluster(applicationId);
           if (subClusterId == subClusterIdInStateStore) {
-            LOG.info("Application " + applicationId
-                + " already submitted on SubCluster " + subClusterId);
+            LOG.info("Application {} already submitted on SubCluster {}.", applicationId,
+                subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
             RouterAuditLogger.logFailure(user.getShortUserName(),
@@ -467,14 +467,14 @@ public class FederationClientInterceptor
       try {
         response = clientRMProxy.submitApplication(request);
       } catch (Exception e) {
-        LOG.warn("Unable to submit the application " + applicationId
-            + "to SubCluster " + subClusterId.getId(), e);
+        LOG.warn("Unable to submit the application {} to SubCluster {} error = {}.",
+            applicationId, subClusterId.getId(), e);
       }
 
       if (response != null) {
-        LOG.info("Application "
-            + request.getApplicationSubmissionContext().getApplicationName()
-            + " with appId " + applicationId + " submitted on " + subClusterId);
+        LOG.info("Application {} with appId {} submitted on {}.",
+            request.getApplicationSubmissionContext().getApplicationName(),
+            applicationId, subClusterId);
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
         RouterAuditLogger.logSuccess(user.getShortUserName(),
@@ -549,8 +549,7 @@ public class FederationClientInterceptor
 
     KillApplicationResponse response = null;
     try {
-      LOG.info("forceKillApplication " + applicationId + " on SubCluster "
-          + subClusterId);
+      LOG.info("forceKillApplication {} on SubCluster {}.", applicationId, subClusterId);
       response = clientRMProxy.forceKillApplication(request);
     } catch (Exception e) {
       routerMetrics.incrAppsFailedKilled();
@@ -640,8 +639,8 @@ public class FederationClientInterceptor
 
     if (response == null) {
       LOG.error("No response when attempting to retrieve the report of "
-          + "the application " + request.getApplicationId() + " to SubCluster "
-          + subClusterId.getId());
+          + "the application {} to SubCluster {}.",
+          request.getApplicationId(), subClusterId.getId());
     }
 
     long stopTime = clock.getTime();
@@ -1019,17 +1018,16 @@ public class FederationClientInterceptor
       response = clientRMProxy.getApplicationAttemptReport(request);
     } catch (Exception e) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
-      LOG.error("Unable to get the applicationAttempt report for "
-              + request.getApplicationAttemptId() + "to SubCluster "
-              + subClusterId.getId(), e);
+      LOG.error("Unable to get the applicationAttempt report for {} "
+          + "to SubCluster {}, error = {}.",
+          request.getApplicationAttemptId(), subClusterId.getId(), e);
       throw e;
     }
 
     if (response == null) {
       LOG.error("No response when attempting to retrieve the report of "
-              + "the applicationAttempt "
-              + request.getApplicationAttemptId() + " to SubCluster "
-              + subClusterId.getId());
+          + "the applicationAttempt {} to SubCluster {}.",
+          request.getApplicationAttemptId(), subClusterId.getId());
     }
 
     long stopTime = clock.getTime();

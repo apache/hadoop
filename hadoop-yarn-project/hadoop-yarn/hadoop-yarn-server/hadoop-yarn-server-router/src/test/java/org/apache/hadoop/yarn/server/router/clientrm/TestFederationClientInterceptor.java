@@ -175,7 +175,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testSubmitApplication()
-      throws YarnException, IOException, InterruptedException {
+      throws YarnException, IOException {
     LOG.info("Test FederationClientInterceptor: Submit Application");
 
     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
@@ -623,7 +623,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    * with given YarnApplicationState does not exist.
    */
   @Test
-  public void testGetApplicationsApplicationStateNotExists() throws Exception{
+  public void testGetApplicationsApplicationStateNotExists() throws Exception {
     LOG.info("Test FederationClientInterceptor:" +
         " Application with state does not exist");
 
