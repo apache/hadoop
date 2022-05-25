@@ -69,6 +69,9 @@ public final class RouterMetrics {
   private MutableGaugeInt numGetQueueUserAclsFailedRetrieved;
   @Metric("# of getContainerReport failed to be retrieved")
   private MutableGaugeInt numGetContainerReportFailedRetrieved;
+  @Metric("# of getContainers failed to be retrieved")
+  private MutableGaugeInt numGetContainersFailedRetrieved;
+
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -102,6 +105,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetQueueUserAclsRetrieved;
   @Metric("Total number of successful Retrieved getContainerReport and latency(ms)")
   private MutableRate totalSucceededGetContainerReportRetrieved;
+  @Metric("Total number of successful Retrieved getContainers and latency(ms)")
+  private MutableRate totalSucceededGetContainersRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -120,6 +125,7 @@ public final class RouterMetrics {
   private MutableQuantiles getApplicationAttemptsLatency;
   private MutableQuantiles getQueueUserAclsLatency;
   private MutableQuantiles getContainerReportLatency;
+  private MutableQuantiles getContainerLatency;
 
   private static volatile RouterMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -266,6 +272,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetContainersRetrieved(){
+    return totalSucceededGetContainersRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -333,6 +344,11 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededGetContainerReportRetrieved() {
     return totalSucceededGetContainerReportRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetContainersRetrieved() {
+    return totalSucceededGetContainersRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -405,6 +421,11 @@ public final class RouterMetrics {
     return numGetContainerReportFailedRetrieved.value();
   }
 
+  @VisibleForTesting
+  public int getNumGetContainersFailedRetrieved() {
+    return numGetContainersFailedRetrieved.value();
+  }
+
   public void succeededAppsCreated(long duration) {
     totalSucceededAppsCreated.add(duration);
     getNewApplicationLatency.add(duration);
@@ -475,6 +496,11 @@ public final class RouterMetrics {
     getContainerReportLatency.add(duration);
   }
 
+  public void succeededGetContainersRetrieved(long duration) {
+    totalSucceededGetContainersRetrieved.add(duration);
+    getContainerLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -527,7 +553,11 @@ public final class RouterMetrics {
     numGetQueueUserAclsFailedRetrieved.incr();
   }
 
-  public void incrGetContainerReportFailedRetrieved() {
+  public void incrContainerReportFailedRetrieved() {
     numGetContainerReportFailedRetrieved.incr();
+  }
+
+  public void incrContainerFailedRetrieved() {
+    numGetContainersFailedRetrieved.incr();
   }
 }

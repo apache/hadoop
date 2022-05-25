@@ -451,7 +451,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     // Call GetApplicationAttempts Get ApplicationAttemptId
-    GetApplicationAttemptsRequest attemptsRequest = GetApplicationAttemptsRequest.newInstance(appId);
+    GetApplicationAttemptsRequest attemptsRequest =
+         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
          interceptor.getApplicationAttempts(attemptsRequest);
 
