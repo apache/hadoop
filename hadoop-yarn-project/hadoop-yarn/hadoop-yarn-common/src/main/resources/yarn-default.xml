@@ -4180,6 +4180,18 @@
   </property>
 
   <property>
+    <description>The keytab for the router.</description>
+    <name>yarn.router.keytab</name>
+    <value>/etc/krb5.keytab</value>
+  </property>
+
+  <property>
+    <description>The Kerberos principal for the resource manager.</description>
+    <name>yarn.router.principal</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>
       The comma separated list of class names that implement the
       RequestInterceptor interface. This is used by the RouterClientRMService
