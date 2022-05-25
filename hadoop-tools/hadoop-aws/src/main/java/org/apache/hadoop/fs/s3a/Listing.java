@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -37,6 +36,8 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import org.slf4j.Logger;
+import software.amazon.awssdk.services.s3.model.CommonPrefix;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -287,7 +288,7 @@ public class Listing extends AbstractStoreOperation {
      * @return true if the entry is accepted (i.e. that a status entry
      * should be generated.
      */
-    boolean accept(Path keyPath, S3ObjectSummary summary);
+    boolean accept(Path keyPath, S3Object summary);
 
     /**
      * Predicate to decide whether or not to accept a prefix.
@@ -444,8 +445,8 @@ public class Listing extends AbstractStoreOperation {
           objects.getObjectSummaries().size() +
               objects.getCommonPrefixes().size());
       // objects
-      for (S3ObjectSummary summary : objects.getObjectSummaries()) {
-        String key = summary.getKey();
+      for (S3Object summary : objects.getObjectSummaries()) {
+        String key = summary.key();
         Path keyPath = getStoreContext().getContextAccessors().keyToPath(key);
         if (LOG.isDebugEnabled()) {
           LOG.debug("{}: {}", keyPath, stringify(summary));
@@ -455,7 +456,7 @@ public class Listing extends AbstractStoreOperation {
           S3AFileStatus status = createFileStatus(keyPath, summary,
                   listingOperationCallbacks.getDefaultBlockSize(keyPath),
                   getStoreContext().getUsername(),
-              summary.getETag(), null, isCSEEnabled);
+              summary.eTag(), null, isCSEEnabled);
           LOG.debug("Adding: {}", status);
           stats.add(status);
           added++;
@@ -466,11 +467,11 @@ public class Listing extends AbstractStoreOperation {
       }
 
       // prefixes: always directories
-      for (String prefix : objects.getCommonPrefixes()) {
+      for (CommonPrefix prefix : objects.getCommonPrefixes()) {
         Path keyPath = getStoreContext()
                 .getContextAccessors()
-                .keyToPath(prefix);
-        if (acceptor.accept(keyPath, prefix) && filter.accept(keyPath)) {
+                .keyToPath(prefix.prefix());
+        if (acceptor.accept(keyPath, prefix.prefix()) && filter.accept(keyPath)) {
           S3AFileStatus status = new S3AFileStatus(Tristate.FALSE, keyPath,
               getStoreContext().getUsername());
           LOG.debug("Adding directory: {}", status);
@@ -721,10 +722,10 @@ public class Listing extends AbstractStoreOperation {
      * should be generated.
      */
     @Override
-    public boolean accept(Path keyPath, S3ObjectSummary summary) {
+    public boolean accept(Path keyPath, S3Object summary) {
       return !keyPath.equals(qualifiedPath)
-          && !summary.getKey().endsWith(S3N_FOLDER_SUFFIX)
-          && !objectRepresentsDirectory(summary.getKey());
+          && !summary.key().endsWith(S3N_FOLDER_SUFFIX)
+          && !objectRepresentsDirectory(summary.key());
     }
 
     /**
@@ -749,8 +750,8 @@ public class Listing extends AbstractStoreOperation {
    */
   static class AcceptAllButS3nDirs implements FileStatusAcceptor {
 
-    public boolean accept(Path keyPath, S3ObjectSummary summary) {
-      return !summary.getKey().endsWith(S3N_FOLDER_SUFFIX);
+    public boolean accept(Path keyPath, S3Object summary) {
+      return !summary.key().endsWith(S3N_FOLDER_SUFFIX);
     }
 
     public boolean accept(Path keyPath, String prefix) {
@@ -789,9 +790,9 @@ public class Listing extends AbstractStoreOperation {
      * should be generated.)
      */
     @Override
-    public boolean accept(Path keyPath, S3ObjectSummary summary) {
+    public boolean accept(Path keyPath, S3Object summary) {
       return !keyPath.equals(qualifiedPath) &&
-          !summary.getKey().endsWith(S3N_FOLDER_SUFFIX);
+          !summary.key().endsWith(S3N_FOLDER_SUFFIX);
     }
 
     /**

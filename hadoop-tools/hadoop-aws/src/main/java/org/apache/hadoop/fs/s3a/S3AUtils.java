@@ -59,6 +59,7 @@ import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -479,20 +480,20 @@ public final class S3AUtils {
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
-      S3ObjectSummary summary,
+      S3Object summary,
       long blockSize,
       String owner,
       String eTag,
       String versionId,
       boolean isCSEEnabled) {
-    long size = summary.getSize();
+    long size = summary.size();
     // check if cse is enabled; strip out constant padding length.
     if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
       size -= CSE_PADDING_LENGTH;
     }
     return createFileStatus(keyPath,
-        objectRepresentsDirectory(summary.getKey()),
-        size, summary.getLastModified(), blockSize, owner, eTag, versionId);
+        objectRepresentsDirectory(summary.key()),
+        size, Date.from(summary.lastModified()), blockSize, owner, eTag, versionId);
   }
 
   /**
@@ -937,10 +938,10 @@ public final class S3AUtils {
    * @param summary summary object
    * @return string value
    */
-  public static String stringify(S3ObjectSummary summary) {
-    StringBuilder builder = new StringBuilder(summary.getKey().length() + 100);
-    builder.append(summary.getKey()).append(' ');
-    builder.append("size=").append(summary.getSize());
+  public static String stringify(S3Object summary) {
+    StringBuilder builder = new StringBuilder(summary.key().length() + 100);
+    builder.append(summary.key()).append(' ');
+    builder.append("size=").append(summary.size());
     return builder.toString();
   }
 
@@ -1242,12 +1243,6 @@ public final class S3AUtils {
     return awsConf;
   }
 
-  /***
-   *
-   *
-   * @param conf
-   * @return
-   */
   public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf) {
     ClientOverrideConfiguration.Builder overrideConfigBuilder =
         ClientOverrideConfiguration.builder();

@@ -58,8 +58,6 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -75,6 +73,10 @@ import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
+
+
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2451,9 +2453,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               OBJECT_LIST_REQUEST,
               () -> {
                 if (useListV1) {
-                  return S3ListResult.v1(s3.listObjects(request.getV1()));
+                  return S3ListResult.v1(s3V2.listObjects(request.getV1()));
                 } else {
-                  return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+                  return S3ListResult.v2(s3V2.listObjectsV2(request.getV2()));
                 }
               }));
     }
@@ -2496,15 +2498,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               OBJECT_CONTINUE_LIST_REQUEST,
               () -> {
                 if (useListV1) {
-                  return S3ListResult.v1(
-                      s3.listNextBatchOfObjects(
-                          getRequestFactory()
-                              .newListNextBatchOfObjectsRequest(
-                                  prevResult.getV1())));
+//                  return S3ListResult.v1(
+//                      s3.listNextBatchOfObjects(
+//                          getRequestFactory()
+//                              .newListNextBatchOfObjectsRequest(
+//                                  prevResult.getV1())))
+
+                  //TODO: V1 does not seem to have a way to paginate?
+                  return S3ListResult.v1(s3V2.listObjects(request.getV1()));
                 } else {
-                  request.getV2().setContinuationToken(prevResult.getV2()
-                      .getNextContinuationToken());
-                  return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+
+                  System.out.println("CONTINUING REQUEST HERE");
+
+                  //TODO: SDKV2 now supports automatic pagination, can we use that here instead?
+                  ListObjectsV2Request prevRequest = request.getV2();
+
+                  ListObjectsV2Request.Builder newRequestBuilder =
+                      getRequestFactory().newListObjectsV2RequestBuilder(prevRequest.prefix(),
+                          prevRequest.delimiter(), prevRequest.maxKeys());
+
+                  newRequestBuilder.continuationToken(prevResult.getV2().nextContinuationToken());
+
+                  return S3ListResult.v2(s3V2.listObjectsV2(newRequestBuilder.build()));
                 }
               }));
     }

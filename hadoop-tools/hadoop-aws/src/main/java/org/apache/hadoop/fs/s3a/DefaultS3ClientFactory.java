@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;

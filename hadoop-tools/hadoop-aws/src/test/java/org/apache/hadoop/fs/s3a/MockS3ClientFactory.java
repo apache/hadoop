@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.Region;
+import software.amazon.awssdk.services.s3.S3Client;
 
 /**
  * An {@link S3ClientFactory} that returns Mockito mocks of the {@link AmazonS3}
@@ -50,4 +51,11 @@ public class MockS3ClientFactory implements S3ClientFactory {
         .thenReturn(Region.US_West.toString());
     return s3;
   }
-}
+
+  //TODO: This is incomplete, add in mocks as we update operations
+  @Override
+  public S3Client createS3ClientV2(URI uri, final S3ClientCreationParameters parameters) {
+    S3Client s3 = mock(S3Client.class);
+    return s3;
+  }
+  }

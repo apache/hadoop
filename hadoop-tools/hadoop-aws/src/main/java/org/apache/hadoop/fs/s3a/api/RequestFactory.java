@@ -35,8 +35,8 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
@@ -278,6 +278,10 @@ public interface RequestFactory {
    * @return the request
    */
   ListObjectsV2Request newListObjectsV2Request(String key,
+      String delimiter,
+      int maxKeys);
+
+  ListObjectsV2Request.Builder newListObjectsV2RequestBuilder(String key,
       String delimiter,
       int maxKeys);
 
