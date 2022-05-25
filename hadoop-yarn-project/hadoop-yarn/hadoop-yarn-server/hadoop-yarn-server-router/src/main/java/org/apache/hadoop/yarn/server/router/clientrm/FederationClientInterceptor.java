@@ -834,7 +834,7 @@ public class FederationClientInterceptor
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getQueueUserAcls",
-            new Class[] {GetQueueUserAclsInfoRequest.class}, new Object[] {request});
+        new Class[] {GetQueueUserAclsInfoRequest.class}, new Object[] {request});
     Collection<GetQueueUserAclsInfoResponse> queueUserAcls;
     try {
       queueUserAcls = invokeAppClientProtocolMethod(true, remoteMethod,
@@ -878,11 +878,11 @@ public class FederationClientInterceptor
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("listReservations",
-            new Class[] {ReservationListRequest.class}, new Object[] {request});
+        new Class[] {ReservationListRequest.class}, new Object[] {request});
     Collection<ReservationListResponse> listResponses;
     try {
       listResponses = invokeAppClientProtocolMethod(true, remoteMethod,
-              ReservationListResponse.class);
+          ReservationListResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrListReservationsFailedRetrieved();
       LOG.error("Unable to list reservations node due to exception.", ex);
@@ -1125,7 +1125,7 @@ public class FederationClientInterceptor
     } catch (YarnException ex) {
       routerMetrics.incrContainerReportFailedRetrieved();
       RouterServerUtil.logAndThrowException("Application " + applicationId +
-              " does not exist in FederationStateStore.", ex);
+          " does not exist in FederationStateStore.", ex);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1142,7 +1142,7 @@ public class FederationClientInterceptor
     if (response == null) {
       LOG.error("No response when attempting to retrieve the container report of " +
            "the ContainerId = {} From SubCluster = {}.", request.getContainerId(),
-            subClusterId.getId());
+           subClusterId.getId());
     }
 
     long stopTime = clock.getTime();
@@ -1167,7 +1167,7 @@ public class FederationClientInterceptor
     } catch (YarnException ex) {
       routerMetrics.incrContainerFailedRetrieved();
       RouterServerUtil.logAndThrowException("Application " + applicationId +
-              " does not exist in FederationStateStore.", ex);
+          " does not exist in FederationStateStore.", ex);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1178,13 +1178,13 @@ public class FederationClientInterceptor
     } catch (Exception ex) {
       routerMetrics.incrContainerFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to get the containers for " +
-              applicationId + " from SubCluster " + subClusterId.getId(), ex);
+          applicationId + " from SubCluster " + subClusterId.getId(), ex);
     }
 
     if (response == null) {
       LOG.error("No response when attempting to retrieve the container report of " +
-           "the ApplicationId = {} From SubCluster = {}.", applicationId,
-           subClusterId.getId());
+          "the ApplicationId = {} From SubCluster = {}.", applicationId,
+          subClusterId.getId());
     }
 
     long stopTime = clock.getTime();
@@ -1257,7 +1257,7 @@ public class FederationClientInterceptor
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getResourceTypeInfo",
-         new Class[] {GetAllResourceTypeInfoRequest.class}, new Object[] {request});
+        new Class[] {GetAllResourceTypeInfoRequest.class}, new Object[] {request});
     Collection<GetAllResourceTypeInfoResponse> listResourceTypeInfo;
     try {
       listResourceTypeInfo = invokeAppClientProtocolMethod(true, remoteMethod,
