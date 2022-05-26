@@ -411,6 +411,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    * @param <T> the static type accepted by the matcher
    * (this can flag obvious compile-time problems such as assertThat(1, is("a"))
    */
+  @SuppressWarnings("deprecation")
   public static <T> void assertThat(T actual, Matcher<? super T> matcher) {
     assertThat("", actual, matcher);
   }
@@ -424,6 +425,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    * @param <T> the static type accepted by the matcher
    * (this can flag obvious compile-time problems such as assertThat(1, is("a"))
    */
+  @SuppressWarnings("deprecation")
   public static <T> void assertThat(String reason, T actual, Matcher<? super T> matcher) {
     MatcherAssert.assertThat(reason, actual, matcher);
   }
