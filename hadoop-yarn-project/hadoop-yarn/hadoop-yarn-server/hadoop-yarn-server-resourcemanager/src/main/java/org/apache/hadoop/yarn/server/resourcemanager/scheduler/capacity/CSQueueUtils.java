@@ -167,15 +167,10 @@ public class CSQueueUtils {
     queueCapacities
         .setAbsoluteReservedCapacity(nodePartition, absoluteReservedCapacity);
 
-    // QueueMetrics does not support per-label capacities,
-    // so we report values only for the default partition.
-
     queueMetrics.setUsedCapacity(nodePartition,
-        queueCapacities.getUsedCapacity(RMNodeLabelsManager.NO_LABEL));
+        queueCapacities.getUsedCapacity(nodePartition));
     queueMetrics.setAbsoluteUsedCapacity(nodePartition,
-        queueCapacities.getAbsoluteUsedCapacity(
-            RMNodeLabelsManager.NO_LABEL));
-
+        queueCapacities.getAbsoluteUsedCapacity(nodePartition));
   }
 
   private static Resource getMaxAvailableResourceToQueuePartition(
@@ -249,29 +244,6 @@ public class CSQueueUtils {
     }
    }
 
-  /**
-   * Updated configured capacity/max-capacity for queue.
-   * @param rc resource calculator
-   * @param partitionResource total cluster resources for this partition
-   * @param partition partition being updated
-   * @param queue queue
-   */
-   public static void updateConfiguredCapacityMetrics(ResourceCalculator rc,
-       Resource partitionResource, String partition, AbstractCSQueue queue) {
-     queue.getMetrics().setGuaranteedResources(partition, rc.multiplyAndNormalizeDown(
-         partitionResource, queue.getQueueCapacities().getAbsoluteCapacity(partition),
-         queue.getMinimumAllocation()));
-     queue.getMetrics().setMaxCapacityResources(partition, rc.multiplyAndNormalizeDown(
-         partitionResource, queue.getQueueCapacities().getAbsoluteMaximumCapacity(partition),
-         queue.getMinimumAllocation()));
-    queue.getMetrics().setGuaranteedCapacities(partition,
-        queue.getQueueCapacities().getCapacity(partition),
-        queue.getQueueCapacities().getAbsoluteCapacity(partition));
-    queue.getMetrics().setMaxCapacities(partition,
-        queue.getQueueCapacities().getMaximumCapacity(partition),
-        queue.getQueueCapacities().getAbsoluteMaximumCapacity(partition));
-   }
-
   public static void updateAbsoluteCapacitiesByNodeLabels(QueueCapacities queueCapacities,
                                                           QueueCapacities parentQueueCapacities,
                                                           Set<String> nodeLabels) {
@@ -300,5 +272,40 @@ public class CSQueueUtils {
                 parentQueueCapacities.getAbsoluteMaximumCapacity(label)));
       }
     }
+  }
+
+  /**
+   * Updated configured capacity/max-capacity for queue.
+   * @param rc resource calculator
+   * @param labelManager label manager
+   * @param clusterResource the resource of cluster
+   * @param queue queue
+   */
+  public static void updateConfiguredCapacityMetrics(ResourceCalculator rc,
+          RMNodeLabelsManager labelManager, Resource clusterResource,
+          AbstractCSQueue queue) {
+    Resource defaultPartitionResource = labelManager.getResourceByLabel(null, clusterResource);
+    updateConfiguredCapacityMetricsWithPartition(rc, defaultPartitionResource, RMNodeLabelsManager.NO_LABEL, queue);
+
+    for (String partition : queue.getNodeLabelsForQueue()) {
+      Resource partitionResource = labelManager.getResourceByLabel(partition, clusterResource);
+      updateConfiguredCapacityMetricsWithPartition(rc, partitionResource, partition, queue);
+    }
+  }
+
+  private static void updateConfiguredCapacityMetricsWithPartition(ResourceCalculator rc,
+          Resource partitionResource, String partition, AbstractCSQueue queue) {
+    queue.getMetrics().setGuaranteedResources(partition, rc.multiplyAndNormalizeDown(
+            partitionResource, queue.getQueueCapacities().getAbsoluteCapacity(partition),
+            queue.getMinimumAllocation()));
+    queue.getMetrics().setMaxCapacityResources(partition, rc.multiplyAndNormalizeDown(
+            partitionResource, queue.getQueueCapacities().getAbsoluteMaximumCapacity(partition),
+            queue.getMinimumAllocation()));
+    queue.getMetrics().setGuaranteedCapacities(partition,
+            queue.getQueueCapacities().getCapacity(partition),
+            queue.getQueueCapacities().getAbsoluteCapacity(partition));
+    queue.getMetrics().setMaxCapacities(partition,
+            queue.getQueueCapacities().getMaximumCapacity(partition),
+            queue.getQueueCapacities().getAbsoluteMaximumCapacity(partition));
   }
 }

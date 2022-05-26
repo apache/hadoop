@@ -22,9 +22,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueMetrics;
 
 @Metrics(context = "yarn")
-public class PartitionQueueMetrics extends QueueMetrics {
+public class PartitionQueueMetrics extends CSQueueMetrics {
 
   private String partition;
 

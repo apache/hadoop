@@ -219,13 +219,13 @@ public class QueueMetrics implements MetricsSource {
     return sb;
   }
 
-  static StringBuilder pSourceName(String partition) {
+  protected static StringBuilder pSourceName(String partition) {
     StringBuilder sb = new StringBuilder(P_RECORD_INFO.name());
     sb.append(",partition").append('=').append(partition);
     return sb;
   }
 
-  static StringBuilder qSourceName(String queueName) {
+  protected static StringBuilder qSourceName(String queueName) {
     StringBuilder sb = new StringBuilder();
     int i = 0;
     for (String node : Q_SPLITTER.split(queueName)) {

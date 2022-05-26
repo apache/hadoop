@@ -80,8 +80,8 @@ public class CSQueueMetrics extends QueueMetrics {
 
   private CSQueueMetricsForCustomResources csQueueMetricsForCustomResources;
 
-  CSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
-      boolean enableUserMetrics, Configuration conf) {
+  protected CSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
+          boolean enableUserMetrics, Configuration conf) {
     super(ms, queueName, parent, enableUserMetrics, conf);
   }
 
@@ -120,22 +120,38 @@ public class CSQueueMetrics extends QueueMetrics {
   }
 
   public void setAMResouceLimit(String partition, Resource res) {
-    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       AMResourceLimitMB.set(res.getMemorySize());
       AMResourceLimitVCores.set(res.getVirtualCores());
+    }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.AMResourceLimitMB.set(res.getMemorySize());
+      partitionQueueMetrics.AMResourceLimitVCores.set(res.getVirtualCores());
     }
   }
 
   public void setAMResouceLimitForUser(String partition,
       String user, Resource res) {
-    CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
-    if (userMetrics != null) {
-      userMetrics.setAMResouceLimit(partition, res);
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
+      if (userMetrics != null) {
+        userMetrics.setAMResouceLimit(partition, res);
+      }
+    }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      CSQueueMetrics userMetrics = (CSQueueMetrics) partitionQueueMetrics.getUserMetrics(user);
+      if (userMetrics != null) {
+        userMetrics.setAMResouceLimit(partition, res);
+      }
     }
   }
 
   public void incAMUsed(String partition, String user, Resource res) {
-    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       usedAMResourceMB.incr(res.getMemorySize());
       usedAMResourceVCores.incr(res.getVirtualCores());
       CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
@@ -143,13 +159,33 @@ public class CSQueueMetrics extends QueueMetrics {
         userMetrics.incAMUsed(partition, user, res);
       }
     }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.usedAMResourceMB.incr(res.getMemorySize());
+      partitionQueueMetrics.usedAMResourceVCores.incr(res.getVirtualCores());
+      CSQueueMetrics userMetrics = (CSQueueMetrics) partitionQueueMetrics.getUserMetrics(user);
+      if (userMetrics != null) {
+        userMetrics.incAMUsed(partition, user, res);
+      }
+    }
   }
 
   public void decAMUsed(String partition, String user, Resource res) {
-    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       usedAMResourceMB.decr(res.getMemorySize());
       usedAMResourceVCores.decr(res.getVirtualCores());
       CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
+      if (userMetrics != null) {
+        userMetrics.decAMUsed(partition, user, res);
+      }
+    }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.usedAMResourceMB.decr(res.getMemorySize());
+      partitionQueueMetrics.usedAMResourceVCores.decr(res.getVirtualCores());
+      CSQueueMetrics userMetrics = (CSQueueMetrics) partitionQueueMetrics.getUserMetrics(user);
       if (userMetrics != null) {
         userMetrics.decAMUsed(partition, user, res);
       }
@@ -161,8 +197,13 @@ public class CSQueueMetrics extends QueueMetrics {
   }
 
   public void setUsedCapacity(String partition, float usedCap) {
-    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       this.usedCapacity.set(usedCap);
+    }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.usedCapacity.set(usedCap);
     }
   }
 
@@ -172,8 +213,13 @@ public class CSQueueMetrics extends QueueMetrics {
 
   public void setAbsoluteUsedCapacity(String partition,
       Float absoluteUsedCap) {
-    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+    if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       this.absoluteUsedCapacity.set(absoluteUsedCap);
+    }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.absoluteUsedCapacity.set(absoluteUsedCap);
     }
   }
 
@@ -196,6 +242,19 @@ public class CSQueueMetrics extends QueueMetrics {
             GUARANTEED_CAPACITY_METRIC_PREFIX, GUARANTEED_CAPACITY_METRIC_DESC);
       }
     }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.guaranteedMB.set(res.getMemorySize());
+      partitionQueueMetrics.guaranteedVCores.set(res.getVirtualCores());
+      if (partitionQueueMetrics.csQueueMetricsForCustomResources != null) {
+        partitionQueueMetrics.csQueueMetricsForCustomResources.setGuaranteedCapacity(res);
+        partitionQueueMetrics.csQueueMetricsForCustomResources.registerCustomResources(
+                partitionQueueMetrics.csQueueMetricsForCustomResources.getGuaranteedCapacity(),
+                partitionQueueMetrics.registry, GUARANTEED_CAPACITY_METRIC_PREFIX,
+                GUARANTEED_CAPACITY_METRIC_DESC);
+      }
+    }
   }
 
   public long getMaxCapacityMB() {
@@ -215,6 +274,19 @@ public class CSQueueMetrics extends QueueMetrics {
         csQueueMetricsForCustomResources.registerCustomResources(
             csQueueMetricsForCustomResources.getMaxCapacity(), registry,
             MAX_CAPACITY_METRIC_PREFIX, MAX_CAPACITY_METRIC_DESC);
+      }
+    }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.maxCapacityMB.set(res.getMemorySize());
+      partitionQueueMetrics.maxCapacityVCores.set(res.getVirtualCores());
+      if (partitionQueueMetrics.csQueueMetricsForCustomResources != null) {
+        partitionQueueMetrics.csQueueMetricsForCustomResources.setMaxCapacity(res);
+        partitionQueueMetrics.csQueueMetricsForCustomResources.registerCustomResources(
+                partitionQueueMetrics.csQueueMetricsForCustomResources.getMaxCapacity(),
+                partitionQueueMetrics.registry,
+                MAX_CAPACITY_METRIC_PREFIX, MAX_CAPACITY_METRIC_DESC);
       }
     }
   }
@@ -283,6 +355,12 @@ public class CSQueueMetrics extends QueueMetrics {
       guaranteedCapacity.set(capacity);
       guaranteedAbsoluteCapacity.set(absoluteCapacity);
     }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.guaranteedCapacity.set(capacity);
+      partitionQueueMetrics.guaranteedAbsoluteCapacity.set(absoluteCapacity);
+    }
   }
 
   public float getMaxCapacity() {
@@ -298,6 +376,12 @@ public class CSQueueMetrics extends QueueMetrics {
     if (partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       maxCapacity.set(capacity);
       maxAbsoluteCapacity.set(absoluteCapacity);
+    }
+
+    CSQueueMetrics partitionQueueMetrics = (CSQueueMetrics) getPartitionQueueMetrics(partition);
+    if (partitionQueueMetrics != null) {
+      partitionQueueMetrics.maxCapacity.set(capacity);
+      partitionQueueMetrics.maxAbsoluteCapacity.set(absoluteCapacity);
     }
   }
 }

@@ -1289,8 +1289,7 @@ public class ParentQueue extends AbstractCSQueue {
           this, labelManager, null);
       // Update configured capacity/max-capacity for default partition only
       CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
-          labelManager.getResourceByLabel(null, clusterResource),
-          RMNodeLabelsManager.NO_LABEL, this);
+          labelManager, clusterResource, this);
     } catch (IOException e) {
       LOG.error("Error during updating cluster resource: ", e);
       throw new YarnRuntimeException("Fatal issue during scheduling", e);
