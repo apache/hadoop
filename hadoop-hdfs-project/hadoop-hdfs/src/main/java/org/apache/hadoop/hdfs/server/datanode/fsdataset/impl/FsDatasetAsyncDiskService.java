@@ -65,7 +65,7 @@ class FsDatasetAsyncDiskService {
       LoggerFactory.getLogger(FsDatasetAsyncDiskService.class);
   
   // ThreadPool core pool size
-  private static final int CORE_THREADS_PER_VOLUME = 1;
+  private final int coreNumThreadsPerVolume;
   // ThreadPool maximum pool size
   private final int maxNumThreadsPerVolume;
   // ThreadPool keep-alive time for threads over core pool size
@@ -90,6 +90,12 @@ class FsDatasetAsyncDiskService {
   FsDatasetAsyncDiskService(DataNode datanode, FsDatasetImpl fsdatasetImpl) {
     this.datanode = datanode;
     this.fsdatasetImpl = fsdatasetImpl;
+    this.coreNumThreadsPerVolume = datanode.getConf().getInt(
+      DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_CORE_THREADS_PER_VOLUME_KEY,
+          DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_CORE_THREADS_PER_VOLUME_DEFAULT);
+    Preconditions.checkArgument(coreNumThreadsPerVolume > 0,
+        DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_CORE_THREADS_PER_VOLUME_KEY +
+          " must be a positive integer.");
     maxNumThreadsPerVolume = datanode.getConf().getInt(
       DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY,
           DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_DEFAULT);
@@ -116,7 +122,7 @@ class FsDatasetAsyncDiskService {
     };
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor(
-        CORE_THREADS_PER_VOLUME, maxNumThreadsPerVolume,
+        this.coreNumThreadsPerVolume, maxNumThreadsPerVolume,
         THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(), threadFactory);
 
