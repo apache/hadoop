@@ -74,13 +74,12 @@ import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
-
-import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -2498,6 +2497,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               OBJECT_CONTINUE_LIST_REQUEST,
               () -> {
                 if (useListV1) {
+                  //TODO: Update to List<S3Object> once we can get rid of the other S3Object import
                   List<software.amazon.awssdk.services.s3.model.S3Object>
                       prevListResult = prevResult.getV1().contents();
 

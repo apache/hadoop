@@ -276,7 +276,7 @@ public class Listing extends AbstractStoreOperation {
   }
 
   /**
-   * Interface to implement by the logic deciding whether to accept a s3Object
+   * Interface to implement the logic deciding whether to accept a s3Object
    * entry or path as a valid file or directory.
    */
   interface FileStatusAcceptor {

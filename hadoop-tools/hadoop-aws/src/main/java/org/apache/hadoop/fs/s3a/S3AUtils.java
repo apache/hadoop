@@ -471,7 +471,7 @@ public final class S3AUtils {
   /**
    * Create a files status instance from a listing.
    * @param keyPath path to entry
-   * @param summary summary from AWS
+   * @param s3Object s3Object entry
    * @param blockSize block size to declare.
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
@@ -480,20 +480,20 @@ public final class S3AUtils {
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
-      S3Object summary,
+      S3Object s3Object,
       long blockSize,
       String owner,
       String eTag,
       String versionId,
       boolean isCSEEnabled) {
-    long size = summary.size();
+    long size = s3Object.size();
     // check if cse is enabled; strip out constant padding length.
     if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
       size -= CSE_PADDING_LENGTH;
     }
     return createFileStatus(keyPath,
-        objectRepresentsDirectory(summary.key()),
-        size, Date.from(summary.lastModified()), blockSize, owner, eTag, versionId);
+        objectRepresentsDirectory(s3Object.key()),
+        size, Date.from(s3Object.lastModified()), blockSize, owner, eTag, versionId);
   }
 
   /**
@@ -935,13 +935,13 @@ public final class S3AUtils {
 
   /**
    * String information about a summary entry for debug messages.
-   * @param summary summary object
+   * @param s3Object s3Object entry
    * @return string value
    */
-  public static String stringify(S3Object summary) {
-    StringBuilder builder = new StringBuilder(summary.key().length() + 100);
-    builder.append(summary.key()).append(' ');
-    builder.append("size=").append(summary.size());
+  public static String stringify(S3Object s3Object) {
+    StringBuilder builder = new StringBuilder(s3Object.key().length() + 100);
+    builder.append(s3Object.key()).append(' ');
+    builder.append("size=").append(s3Object.size());
     return builder.toString();
   }
 

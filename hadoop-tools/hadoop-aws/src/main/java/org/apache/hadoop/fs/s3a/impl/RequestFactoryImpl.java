@@ -562,8 +562,7 @@ public class RequestFactoryImpl implements RequestFactory {
     }
 
     //TODO: add call to prepareRequest, not added for now as PrepareRequest is a functional interface,
-    // uses AmazonWebServiceRequest, SDKV2 uses AwsRequest. What will prepare request actually do?
-    // Requests are no longer mutable
+    // uses AmazonWebServiceRequest, SDKV2 uses AwsRequest. 
     return requestBuilder.build();
   }
 
