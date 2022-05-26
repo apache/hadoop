@@ -1113,7 +1113,7 @@ public class FederationClientInterceptor
     if(request == null || request.getContainerId() == null){
       routerMetrics.incrContainerReportFailedRetrieved();
       RouterServerUtil.logAndThrowException("Missing getContainerReport request " +
-          " or containerId", null);
+          "or containerId", null);
     }
 
     long startTime = clock.getTime();
@@ -1135,8 +1135,8 @@ public class FederationClientInterceptor
       response = clientRMProxy.getContainerReport(request);
     } catch (Exception ex) {
       routerMetrics.incrContainerReportFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get the container report for " +
-          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+      LOG.error("Unable to get the container report for {} from SubCluster {}.",
+          applicationId, subClusterId.getId(), ex);
     }
 
     if (response == null) {

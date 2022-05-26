@@ -687,7 +687,7 @@ public class TestRouterMetrics {
   }
 
   @Test
-  public void testSucceededGetResourceTypeInfo () {
+  public void testSucceededGetResourceTypeInfo() {
     long totalGoodBefore = metrics.getNumSucceededGetResourceTypeInfoRetrieved();
     goodSubCluster.getResourceTypeInfo(150);
     Assert.assertEquals(totalGoodBefore + 1,

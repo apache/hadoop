@@ -61,6 +61,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -70,6 +72,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -103,8 +106,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   private String user = "test-user";
 
   private final static int NUM_SUBCLUSTER = 4;
-
-  private final static int MAX_COUNT = 100;
 
   @Override
   public void setUp() {
@@ -209,7 +210,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
     ApplicationSubmissionContext context = ApplicationSubmissionContext
         .newInstance(appId, MockApps.newAppName(), "default",
-            Priority.newInstance(0), amContainerSpec, false, false, -1,
+            Priority.newInstance(0), amContainerSpec, false, false, 1,
             Resources.createResource(
                 YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
             "MockApp");
@@ -467,6 +468,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
          GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
          interceptor.getApplicationAttempts(attemptsRequest);
+
+    // Wait for app to start
+    while(attemptsResponse.getApplicationAttemptList().size() == 0) {
+      attemptsResponse =
+          interceptor.getApplicationAttempts(attemptsRequest);
+    }
 
     Assert.assertNotNull(attemptsResponse);
 
@@ -784,9 +791,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // Call GetApplicationAttempts
     GetApplicationAttemptsRequest attemptsRequest =
-       GetApplicationAttemptsRequest.newInstance(appId);
+        GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
-       interceptor.getApplicationAttempts(attemptsRequest);
+        interceptor.getApplicationAttempts(attemptsRequest);
+
+    // Wait for app to start
+    while(attemptsResponse.getApplicationAttemptList().size() == 0) {
+      attemptsResponse =
+          interceptor.getApplicationAttempts(attemptsRequest);
+    }
 
     Assert.assertNotNull(attemptsResponse);
 
@@ -798,6 +811,51 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         interceptor.getContainers(containersRequest);
 
     Assert.assertNotNull(containersResponse);
+  }
+
+  @Test
+  public void testGetContainerReportRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get Container Report request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getContainerReport request " +
+        "or containerId", () -> interceptor.getContainerReport(null));
+
+    // normal request
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    // Call GetApplicationAttempts
+    GetApplicationAttemptsRequest attemptsRequest =
+         GetApplicationAttemptsRequest.newInstance(appId);
+    GetApplicationAttemptsResponse attemptsResponse =
+         interceptor.getApplicationAttempts(attemptsRequest);
+
+    // Wait for app to start
+    while(attemptsResponse.getApplicationAttemptList().size() == 0) {
+      attemptsResponse =
+          interceptor.getApplicationAttempts(attemptsRequest);
+    }
+    Assert.assertNotNull(attemptsResponse);
+
+    ApplicationAttemptId attemptId = attemptsResponse.getApplicationAttemptList().
+        get(0).getApplicationAttemptId();
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+
+    // Call ContainerReport, RM does not allocate Container, here is null
+    GetContainerReportRequest containerReportRequest =
+         GetContainerReportRequest.newInstance(containerId);
+    GetContainerReportResponse containerReportResponse =
+         interceptor.getContainerReport(containerReportRequest);
+
+    Assert.assertEquals(containerReportResponse, null);
   }
 
 }
