@@ -75,7 +75,7 @@ public class S3ListResult {
     return v2Result;
   }
 
-  public List<S3Object> getObjectSummaries() {
+  public List<S3Object> getS3Objects() {
     if (isV1()) {
       return v1Result.contents();
     } else {
@@ -100,12 +100,12 @@ public class S3ListResult {
   }
 
   /**
-   * Get the list of keys in the object summary.
+   * Get the list of keys in the list result.
    * @return a possibly empty list
    */
-  private List<String> objectSummaryKeys() {
-    return getObjectSummaries().stream()
-        .map(s3Object -> s3Object.key())
+  private List<String> objectKeys() {
+    return getS3Objects().stream()
+        .map(S3Object::key)
         .collect(Collectors.toList());
   }
 
@@ -114,9 +114,8 @@ public class S3ListResult {
    * @return true if the result is non-empty
    */
   public boolean hasPrefixesOrObjects() {
-
     return !(getCommonPrefixes()).isEmpty()
-        || !getObjectSummaries().isEmpty();
+        || !getS3Objects().isEmpty();
   }
 
   /**
@@ -130,7 +129,7 @@ public class S3ListResult {
     // no children.
     // So the listing must contain the marker entry only as an object,
     // and prefixes is null
-    List<String> keys = objectSummaryKeys();
+    List<String> keys = objectKeys();
     return keys.size() == 1 && keys.contains(dirKey)
         && getCommonPrefixes().isEmpty();
   }
@@ -141,11 +140,11 @@ public class S3ListResult {
    */
   public void logAtDebug(Logger log) {
     Collection<CommonPrefix> prefixes = getCommonPrefixes();
-    Collection<S3Object> summaries = getObjectSummaries();
+    Collection<S3Object> s3Objects = getS3Objects();
     log.debug("Prefix count = {}; object count={}",
-        prefixes.size(), summaries.size());
-    for (S3Object summary : summaries) {
-      log.debug("Summary: {} {}", summary.key(), summary.size());
+        prefixes.size(), s3Objects.size());
+    for (S3Object s3Object : s3Objects) {
+      log.debug("Summary: {} {}", s3Object.key(), s3Object.size());
     }
     for (CommonPrefix prefix : prefixes) {
       log.debug("Prefix: {}", prefix.prefix());

@@ -537,8 +537,9 @@ public class RequestFactoryImpl implements RequestFactory {
     if (delimiter != null) {
       requestBuilder.delimiter(delimiter);
     }
+
+    //TODO: add call to prepareRequest
     return requestBuilder.build();
-    // return prepareRequest(request);
   }
 
   @Override
