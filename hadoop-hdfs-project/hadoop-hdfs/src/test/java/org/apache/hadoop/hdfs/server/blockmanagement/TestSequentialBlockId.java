@@ -36,7 +36,11 @@ import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.any;
 
 /**
  * Tests the sequential block ID generation mechanism and block ID
