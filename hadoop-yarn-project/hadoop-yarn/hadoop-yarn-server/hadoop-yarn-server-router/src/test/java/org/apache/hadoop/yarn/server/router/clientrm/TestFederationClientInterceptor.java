@@ -63,6 +63,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -848,7 +850,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         get(0).getApplicationAttemptId();
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
 
-    // Call ContainerReport, RM does not allocate Container, here is null
+    // Call ContainerReport, RM does not allocate Container, Here is null
     GetContainerReportRequest containerReportRequest =
          GetContainerReportRequest.newInstance(containerId);
     GetContainerReportResponse containerReportResponse =
@@ -857,4 +859,43 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertEquals(containerReportResponse, null);
   }
 
+  @Test
+  public void getApplicationAttempts() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get Application Attempts request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getApplicationAttempts " +
+            "request or application id.", () -> interceptor.getApplicationAttempts(null));
+
+    // normal request
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    // Call GetApplicationAttempts
+    GetApplicationAttemptsRequest attemptsRequest =
+         GetApplicationAttemptsRequest.newInstance(appId);
+    GetApplicationAttemptsResponse attemptsResponse =
+         interceptor.getApplicationAttempts(attemptsRequest);
+
+    Assert.assertNotNull(attemptsResponse);
+  }
+
+  @Test
+  public void testGetResourceTypeInfoRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor :  Get Resource TypeInfo request");
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getResourceTypeInfo request.",
+        () -> interceptor.getResourceTypeInfo(null));
+    // normal request.
+    GetAllResourceTypeInfoResponse response =
+        interceptor.getResourceTypeInfo(GetAllResourceTypeInfoRequest.newInstance());
+    Assert.assertEquals(2, response.getResourceTypeInfo().size());
+  }
 }
