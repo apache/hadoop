@@ -746,7 +746,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request.
     ReservationId reservationId = ReservationId.newInstance(1653487680L, 1L);
     ReservationListResponse response = interceptor.listReservations(
-        ReservationListRequest.newInstance("root.default", reservationId.toString()));
+        ReservationListRequest.newInstance("root.decided", reservationId.toString()));
     Assert.assertNotNull(response);
     Assert.assertEquals(0, response.getReservationAllocationState().size());
   }
