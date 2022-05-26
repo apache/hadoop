@@ -41,6 +41,8 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -165,6 +167,9 @@ class S3ABlockOutputStream extends OutputStream implements
   /** is client side encryption enabled? */
   private final boolean isCSEEnabled;
 
+  /** Context for Thread level IOStatistics. */
+  private final IOStatisticsContext ioStatisticsContext;
+
   /**
    * An S3A output stream which uploads partitions in a separate pool of
    * threads; different {@link S3ADataBlocks.BlockFactory}
@@ -201,6 +206,7 @@ class S3ABlockOutputStream extends OutputStream implements
       initMultipartUpload();
     }
     this.isCSEEnabled = builder.isCSEEnabled;
+    this.ioStatisticsContext = builder.ioStatisticsContext;
   }
 
   /**
@@ -454,6 +460,9 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   private synchronized void cleanupOnClose() {
     cleanupWithLogger(LOG, getActiveBlock(), blockFactory);
+    if(ioStatisticsContext != null) {
+      ioStatisticsContext.getThreadIOStatistics().aggregate(statistics.getIOStatistics());
+    }
     LOG.debug("Statistics: {}", statistics);
     cleanupWithLogger(LOG, statistics);
     clearActiveBlock();
@@ -699,6 +708,11 @@ class S3ABlockOutputStream extends OutputStream implements
   @Override
   public IOStatistics getIOStatistics() {
     return iostatistics;
+  }
+
+  @VisibleForTesting
+  public IOStatisticsContext getIoStatisticsContext() {
+    return ioStatisticsContext;
   }
 
   /**
@@ -1092,6 +1106,9 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private PutObjectOptions putOptions;
 
+    /** IOStatistics Context for per thread iostats aggregation. */
+    private IOStatisticsContext ioStatisticsContext;
+
     private BlockOutputStreamBuilder() {
     }
 
@@ -1227,6 +1244,16 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withPutOptions(
         final PutObjectOptions value) {
       putOptions = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public BlockOutputStreamBuilder withThreadLevelIOStatistics(IOStatisticsContext value) {
+      ioStatisticsContext = value;
       return this;
     }
   }

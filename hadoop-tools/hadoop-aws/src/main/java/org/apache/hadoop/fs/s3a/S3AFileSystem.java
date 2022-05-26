@@ -1773,7 +1773,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
         .withCSEEnabled(isCSEEnabled)
-        .withPutOptions(putOptions);
+        .withPutOptions(putOptions)
+        .withThreadLevelIOStatistics(ioStatisticsContext);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);

@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.statistics;
+package org.apache.hadoop.fs.s3a;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -25,10 +25,8 @@ import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
@@ -118,6 +116,75 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     maybeReThrowFutureException();
     maybeReThrowFutureASE();
 
+  }
+
+  @Test
+  public void testS3ABlockOutputStreamIOStatisticsContext()
+      throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    Path path = path(getMethodName());
+    byte[] data = dataset(256, 'a', 'z');
+    byte[] writeDataFirst = new byte[READ_BYTES_FIRST];
+    byte[] writeDataSecond = new byte[READ_BYTES_SECOND];
+    writeDataset(fs, path, data, data.length, 1024, true);
+
+    final ExecutorService executor =
+        HadoopExecutors.newFixedThreadPool(SMALL_THREADS);
+    CountDownLatch latch = new CountDownLatch(SMALL_THREADS);
+
+    try {
+      for (int i = 0; i < SMALL_THREADS; i++) {
+        executor.submit(() -> {
+          try {
+            IOStatistics ioStatisticsFirst;
+            try (FSDataOutputStream out = fs.create(path)) {
+              out.write(writeDataFirst);
+              out.close();
+              ioStatisticsFirst = assertThreadStatisticsBytesWrite(out,
+                  READ_BYTES_FIRST);
+            }
+            // Stream is closed for a thread. Re-open and do more operations.
+            IOStatistics ioStatisticsSecond;
+            try (FSDataOutputStream out = fs.create(path)) {
+              out.write(writeDataSecond);
+              out.close();
+              ioStatisticsSecond = assertThreadStatisticsBytesWrite(out,
+                  READ_BYTES_FIRST + READ_BYTES_SECOND);
+            }
+            latch.countDown();
+          } catch (Exception e) {
+            latch.countDown();
+            setFutureException(e);
+            LOG.error("An error occurred while doing a task in the thread", e);
+          } catch (AssertionError ase) {
+            latch.countDown();
+            setFutureASE(ase);
+            throw ase;
+          }
+        });
+      }
+      // wait for tasks to finish.
+      latch.await();
+    } finally {
+      executor.shutdown();
+    }
+
+    // Check if an Excp or ASE was caught while the test threads were running.
+    maybeReThrowFutureException();
+    maybeReThrowFutureASE();
+
+  }
+
+  private IOStatistics assertThreadStatisticsBytesWrite(FSDataOutputStream out, int writeBytes) {
+    S3ABlockOutputStream s3aOut = (S3ABlockOutputStream) out.getWrappedStream();
+    IOStatisticsContext ioStatisticsContext = s3aOut.getIoStatisticsContext();
+    IOStatistics ioStatistics = ioStatisticsContext.getThreadIOStatistics();
+    IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
+        StreamStatisticNames.STREAM_WRITE_BYTES)
+        .describedAs("Bytes wrote are not as expected")
+        .isEqualTo(writeBytes);
+
+    return ioStatistics;
   }
 
   private IOStatistics assertThreadStatisticsBytesRead(FSDataInputStream in,
