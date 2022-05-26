@@ -59,7 +59,17 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
-import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -93,6 +103,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   private String user = "test-user";
 
   private final static int NUM_SUBCLUSTER = 4;
+
+  private final static int MAX_COUNT = 100;
 
   @Override
   public void setUp() {
@@ -737,17 +749,55 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testListReservations() throws Exception {
-    LOG.info("Test FederationClientInterceptor :  Get Cluster NodeLabels request");
+    LOG.info("Test FederationClientInterceptor :  Get ListReservations request");
 
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing listReservations request.",
         () -> interceptor.listReservations(null));
 
-    // normal request.
+    // normal request
     ReservationId reservationId = ReservationId.newInstance(1653487680L, 1L);
     ReservationListResponse response = interceptor.listReservations(
         ReservationListRequest.newInstance("root.decided", reservationId.toString()));
     Assert.assertNotNull(response);
     Assert.assertEquals(0, response.getReservationAllocationState().size());
   }
+
+  @Test
+  public void testGetContainersRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get Containers request");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getContainers request " +
+        "or ApplicationAttemptId.", () -> interceptor.getContainers(null));
+
+    // normal request
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    // Call GetApplicationAttempts
+    GetApplicationAttemptsRequest attemptsRequest =
+       GetApplicationAttemptsRequest.newInstance(appId);
+    GetApplicationAttemptsResponse attemptsResponse =
+       interceptor.getApplicationAttempts(attemptsRequest);
+
+    Assert.assertNotNull(attemptsResponse);
+
+    // Call GetContainers
+    GetContainersRequest containersRequest =
+        GetContainersRequest.newInstance(
+        attemptsResponse.getApplicationAttemptList().get(0).getApplicationAttemptId());
+    GetContainersResponse containersResponse =
+        interceptor.getContainers(containersRequest);
+
+    Assert.assertNotNull(containersResponse);
+  }
+
 }

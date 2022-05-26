@@ -697,8 +697,8 @@ public class TestRouterMetrics {
     goodSubCluster.getResourceTypeInfo(300);
     Assert.assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetResourceTypeInfoRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetResourceTypeInfoRetrieved(),
-        ASSERT_DOUBLE_DELTA);
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetResourceTypeInfoRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
   @Test
