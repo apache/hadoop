@@ -212,7 +212,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
     ApplicationSubmissionContext context = ApplicationSubmissionContext
         .newInstance(appId, MockApps.newAppName(), "default",
-            Priority.newInstance(0), amContainerSpec, false, false, 1,
+            Priority.newInstance(0), amContainerSpec, false, false, -1,
             Resources.createResource(
                 YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
             "MockApp");
