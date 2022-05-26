@@ -16,6 +16,9 @@
 # limitations under the License.
 #
 
-add_subdirectory(cat)
-add_subdirectory(connect_cancel)
-add_subdirectory(dirent)
+# Default LIBHDFSPP_DIR to the default install location.  You can override
+#    it by add -DLIBHDFSPP_DIR=... to your cmake invocation
+set(LIBHDFSPP_DIR CACHE STRING ${CMAKE_INSTALL_PREFIX})
+
+add_executable(x_platform_listdir $<TARGET_OBJECTS:x_platform_obj> $<TARGET_OBJECTS:x_platform_obj_c_api> listdir.c)
+target_include_directories(x_platform_listdir PRIVATE ${LIBHDFSPP_DIR}/lib)
