@@ -750,7 +750,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         filter(acl->acl.getQueueName().equals("root")).
         collect(Collectors.toList()).get(0);
 
-
     Assert.assertEquals(exceptRootQueueACLInfo, queueRootQueueACLInfo);
   }
 

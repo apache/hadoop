@@ -112,7 +112,6 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetContainersRetrieved;
   @Metric("Total number of successful Retrieved listReservations and latency(ms)")
   private MutableRate totalSucceededListReservationsRetrieved;
-
   @Metric("Total number of successful Retrieved getResourceTypeInfo and latency(ms)")
   private MutableRate totalSucceededGetResourceTypeInfoRetrieved;
 
