@@ -2372,8 +2372,7 @@ public class FileContext implements PathCapabilities {
   Set<AbstractFileSystem> resolveAbstractFileSystems(final Path f)
       throws IOException {
     final Path absF = fixRelativePart(f);
-    final HashSet<AbstractFileSystem> result 
-      = new HashSet<AbstractFileSystem>();
+    final HashSet<AbstractFileSystem> result = new HashSet<>();
     new FSLinkResolver<Void>() {
       @Override
       public Void next(final AbstractFileSystem fs, final Path p)
