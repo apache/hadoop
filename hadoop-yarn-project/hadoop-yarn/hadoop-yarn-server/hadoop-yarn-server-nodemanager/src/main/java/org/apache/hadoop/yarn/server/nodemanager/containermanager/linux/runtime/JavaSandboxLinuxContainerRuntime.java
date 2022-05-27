@@ -468,7 +468,7 @@ public class JavaSandboxLinuxContainerRuntime
         cacheDirs.add(path.getParent().toString());
       }
 
-      if (groupPolicyPaths != null) {
+      if (groupPolicyPaths != null && !groupPolicyPaths.isEmpty()) {
         for(String policyPath : groupPolicyPaths) {
           Files.copy(Paths.get(policyPath), policyOutStream);
         }
