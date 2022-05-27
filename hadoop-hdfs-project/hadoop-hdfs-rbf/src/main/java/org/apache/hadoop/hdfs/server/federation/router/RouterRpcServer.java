@@ -2061,12 +2061,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     public ListenableFuture<DatanodeInfo[]> reload(
         final DatanodeReportType type, DatanodeInfo[] oldValue)
         throws Exception {
-      return executorService.submit(new Callable<DatanodeInfo[]>() {
-        @Override
-        public DatanodeInfo[] call() throws Exception {
-          return load(type);
-        }
-      });
+      return executorService.submit(() -> load(type));
     }
   }
 }
