@@ -50,6 +50,8 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -66,6 +68,9 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   private static final int HANDLER_COUNT = 5;
   private final JournalNode jn;
   private Server server;
+  private boolean isPermissionEnabled;
+  private String superGroup;
+  private String superUser;
 
   JournalNodeRpcServer(Configuration conf, JournalNode jn) throws IOException {
     this.jn = jn;
@@ -112,7 +117,13 @@ public class JournalNodeRpcServer implements QJournalProtocol,
     DFSUtil.addPBProtocol(confCopy, InterQJournalProtocolPB.class,
         interQJournalProtocolService, server);
 
-
+    isPermissionEnabled = conf.getBoolean(
+            DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
+            DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
+    superGroup = conf.get(
+            DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
+            DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
+    superUser = UserGroupInformation.getCurrentUser().getShortUserName();
     // set service-level authorization security policy
     if (confCopy.getBoolean(
       CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
@@ -145,9 +156,34 @@ public class JournalNodeRpcServer implements QJournalProtocol,
         DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY);
   }
 
+  private void checkSuperuserPrivilege() throws IOException, AccessControlException {
+    if (!isPermissionEnabled) {
+      return;
+    }
+    // Try to get the ugi in the RPC call.
+    UserGroupInformation callerUgi = server.getRemoteUser();
+    if (callerUgi == null) {
+      // This is not from RPC.
+      callerUgi = UserGroupInformation.getCurrentUser();
+    }
+    // Is this by the JournalNode user itself?
+    assert superUser != null;
+    if (callerUgi.getUserName().equals(superUser)) {
+      return;
+    }
+
+    // Is the user a member of the super group?
+    if (callerUgi.getGroupsSet().contains(superGroup)) {
+      return;
+    }
+    // Not a superuser.
+    throw new AccessControlException();
+  }
+
   @Override
   public boolean isFormatted(String journalId,
                              String nameServiceId) throws IOException {
+    checkSuperuserPrivilege();
     return jn.getOrCreateJournal(journalId, nameServiceId).isFormatted();
   }
 
@@ -156,6 +192,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   public GetJournalStateResponseProto getJournalState(String journalId,
                                                       String nameServiceId)
         throws IOException {
+    checkSuperuserPrivilege();
     long epoch = jn.getOrCreateJournal(journalId,
         nameServiceId).getLastPromisedEpoch();
     return GetJournalStateResponseProto.newBuilder()
@@ -170,6 +207,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
                                         String nameServiceId,
                                         NamespaceInfo nsInfo,
       long epoch) throws IOException {
+    checkSuperuserPrivilege();
     return jn.getOrCreateJournal(journalId,
         nameServiceId).newEpoch(nsInfo, epoch);
   }
@@ -180,6 +218,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
                      NamespaceInfo nsInfo,
                      boolean force)
       throws IOException {
+    checkSuperuserPrivilege();
     jn.getOrCreateJournal(journalId, nameServiceId).format(nsInfo, force);
   }
 
@@ -187,12 +226,14 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   public void journal(RequestInfo reqInfo,
       long segmentTxId, long firstTxnId,
       int numTxns, byte[] records) throws IOException {
+    checkSuperuserPrivilege();
     jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
        .journal(reqInfo, segmentTxId, firstTxnId, numTxns, records);
   }
   
   @Override
   public void heartbeat(RequestInfo reqInfo) throws IOException {
+    checkSuperuserPrivilege();
     jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .heartbeat(reqInfo);
   }
@@ -200,6 +241,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public void startLogSegment(RequestInfo reqInfo, long txid, int layoutVersion)
       throws IOException {
+    checkSuperuserPrivilege();
     jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .startLogSegment(reqInfo, txid, layoutVersion);
   }
@@ -207,6 +249,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public void finalizeLogSegment(RequestInfo reqInfo, long startTxId,
       long endTxId) throws IOException {
+    checkSuperuserPrivilege();
     jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .finalizeLogSegment(reqInfo, startTxId, endTxId);
   }
@@ -214,6 +257,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public void purgeLogsOlderThan(RequestInfo reqInfo, long minTxIdToKeep)
       throws IOException {
+    checkSuperuserPrivilege();
     jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .purgeLogsOlderThan(reqInfo, minTxIdToKeep);
   }
@@ -224,7 +268,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
       String jid, String nameServiceId,
       long sinceTxId, boolean inProgressOk)
       throws IOException {
-    
+    checkSuperuserPrivilege();
     RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
         .getEditLogManifest(sinceTxId, inProgressOk);
     
@@ -238,6 +282,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public GetJournaledEditsResponseProto getJournaledEdits(String jid,
       String nameServiceId, long sinceTxId, int maxTxns) throws IOException {
+    checkSuperuserPrivilege();
     return jn.getOrCreateJournal(jid, nameServiceId)
         .getJournaledEdits(sinceTxId, maxTxns);
   }
@@ -245,6 +290,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public PrepareRecoveryResponseProto prepareRecovery(RequestInfo reqInfo,
       long segmentTxId) throws IOException {
+    checkSuperuserPrivilege();
     return jn.getOrCreateJournal(reqInfo.getJournalId(),
         reqInfo.getNameServiceId())
         .prepareRecovery(reqInfo, segmentTxId);
@@ -253,23 +299,27 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public void acceptRecovery(RequestInfo reqInfo, SegmentStateProto log,
       URL fromUrl) throws IOException {
+    checkSuperuserPrivilege();
     jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
         .acceptRecovery(reqInfo, log, fromUrl);
   }
 
   @Override
   public void doPreUpgrade(String journalId) throws IOException {
+    checkSuperuserPrivilege();
     jn.doPreUpgrade(journalId);
   }
 
   @Override
   public void doUpgrade(String journalId, StorageInfo sInfo) throws IOException {
+    checkSuperuserPrivilege();
     jn.doUpgrade(journalId, sInfo);
   }
 
   @Override
   public void doFinalize(String journalId,
                          String nameServiceId) throws IOException {
+    checkSuperuserPrivilege();
     jn.doFinalize(journalId, nameServiceId);
   }
 
@@ -278,6 +328,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
                              String nameServiceId, StorageInfo storage,
       StorageInfo prevStorage, int targetLayoutVersion)
       throws IOException {
+    checkSuperuserPrivilege();
     return jn.canRollBack(journalId, storage, prevStorage, targetLayoutVersion,
         nameServiceId);
   }
@@ -285,6 +336,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public void doRollback(String journalId,
                          String nameServiceId) throws IOException {
+    checkSuperuserPrivilege();
     jn.doRollback(journalId, nameServiceId);
   }
 
@@ -292,12 +344,14 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   public void discardSegments(String journalId,
                               String nameServiceId, long startTxId)
       throws IOException {
+    checkSuperuserPrivilege();
     jn.discardSegments(journalId, startTxId, nameServiceId);
   }
 
   @Override
   public Long getJournalCTime(String journalId,
                               String nameServiceId) throws IOException {
+    checkSuperuserPrivilege();
     return jn.getJournalCTime(journalId, nameServiceId);
   }
 
@@ -307,7 +361,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
       String jid, String nameServiceId,
       long sinceTxId, boolean inProgressOk)
       throws IOException {
-
+    checkSuperuserPrivilege();
     RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
         .getEditLogManifest(sinceTxId, inProgressOk);
 
