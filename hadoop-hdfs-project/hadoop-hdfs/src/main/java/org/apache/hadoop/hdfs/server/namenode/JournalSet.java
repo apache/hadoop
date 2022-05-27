@@ -29,9 +29,12 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +45,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -677,7 +679,9 @@ public class JournalSet implements JournalManager {
         // storage directory with ancient logs. Clear out any logs we've
         // accumulated so far, and then skip to the next segment of logs
         // after the gap.
-        SortedSet<Long> startTxIds = Sets.newTreeSet(logsByStartTxId.keySet());
+        SortedSet<Long> startTxIds =
+            logsByStartTxId.keySet().stream().filter(Objects::nonNull)
+                .collect(Collectors.toCollection(TreeSet::new));
         startTxIds = startTxIds.tailSet(curStartTxId);
         if (startTxIds.isEmpty()) {
           break;

@@ -121,7 +121,6 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 
@@ -404,11 +403,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   private static List<VolumeFailureInfo> getInitialVolumeFailureInfos(
       Collection<StorageLocation> dataLocations, DataStorage storage) {
-    Set<StorageLocation> failedLocationSet = Sets.newHashSetWithExpectedSize(
-        dataLocations.size());
-    for (StorageLocation sl: dataLocations) {
-      failedLocationSet.add(sl);
-    }
+    Set<StorageLocation> failedLocationSet = new HashSet<>(dataLocations);
+    failedLocationSet.remove(null);
     for (Iterator<Storage.StorageDirectory> it = storage.dirIterator();
          it.hasNext(); ) {
       Storage.StorageDirectory sd = it.next();
