@@ -56,6 +56,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -2003,5 +2004,47 @@ public class TestRouterRpc {
     // set by client.
     assertFalse(auditLog.getOutput().contains("clientIp:1.1.1.1"));
     assertFalse(auditLog.getOutput().contains("clientPort:1234"));
+  }
+
+  @Test
+  public void testContentSummaryWithSnapshot() throws Exception {
+    DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
+    Path dirPath = new Path("/testdir");
+    Path subdirPath = new Path(dirPath, "subdir");
+    Path filePath1 = new Path(dirPath, "file");
+    Path filePath2 = new Path(subdirPath, "file2");
+
+    // Create directories.
+    routerDFS.mkdirs(dirPath);
+    routerDFS.mkdirs(subdirPath);
+
+    // Create files.
+    createFile(routerDFS, filePath1.toString(), 32);
+    createFile(routerDFS, filePath2.toString(), 16);
+
+    // Allow & Create snapshot.
+    routerDFS.allowSnapshot(dirPath);
+    routerDFS.createSnapshot(dirPath, "s1");
+
+    try {
+      // Check content summary, snapshot count should be 0
+      ContentSummary contentSummary = routerDFS.getContentSummary(dirPath);
+      assertEquals(0, contentSummary.getSnapshotDirectoryCount());
+      assertEquals(0, contentSummary.getSnapshotFileCount());
+
+      // Delete the file & subdir(Total 2 files deleted & 1 directory)
+      routerDFS.delete(filePath1, true);
+      routerDFS.delete(subdirPath, true);
+
+      // Get the Content Summary
+      contentSummary = routerDFS.getContentSummary(dirPath);
+      assertEquals(1, contentSummary.getSnapshotDirectoryCount());
+      assertEquals(2, contentSummary.getSnapshotFileCount());
+    } finally {
+      // Cleanup
+      routerDFS.deleteSnapshot(dirPath, "s1");
+      routerDFS.disallowSnapshot(dirPath);
+      routerDFS.delete(dirPath, true);
+    }
   }
 }
