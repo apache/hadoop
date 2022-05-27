@@ -132,7 +132,7 @@ public class StaticRouterRpcFairnessPolicyController extends
       if (dedicatedHandlers > 0) {
         if (dedicatedHandlers < minimumHandlerPerNs) {
           String msg = String.format(ERROR_NS_MSG, DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + nsId,
-              handlerCount, minimumHandlerPerNs);
+              dedicatedHandlers, minimumHandlerPerNs);
           LOG.error(msg);
           throw new IllegalArgumentException(msg);
         }

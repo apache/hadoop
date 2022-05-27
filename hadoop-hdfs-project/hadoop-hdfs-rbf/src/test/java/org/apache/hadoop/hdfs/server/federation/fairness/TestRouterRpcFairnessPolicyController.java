@@ -108,7 +108,7 @@ public class TestRouterRpcFairnessPolicyController {
     Configuration conf = createConf(9);
     conf.setInt(DFS_ROUTER_FAIR_MINIMUM_HANDLER_COUNT_KEY, 3);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + CONCURRENT_NS, 1);
-    verifyInstantiationError(conf, CONCURRENT_NS,  9, 3);
+    verifyInstantiationError(conf, CONCURRENT_NS,  1, 3);
   }
 
   @Test

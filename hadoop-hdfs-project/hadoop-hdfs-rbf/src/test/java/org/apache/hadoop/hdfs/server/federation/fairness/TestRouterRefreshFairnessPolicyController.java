@@ -165,9 +165,9 @@ public class TestRouterRefreshFairnessPolicyController {
     RouterRpcClient client = Mockito.spy(routerContext.getRouterRpcClient());
     final long sleepTime = 3000;
     Mockito.doAnswer(invocationOnMock -> {
-          Thread.sleep(sleepTime);
-          return null;
-        }).when(client)
+      Thread.sleep(sleepTime);
+      return null;
+    }).when(client)
         .invokeMethod(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
     // No calls yet
