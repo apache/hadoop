@@ -281,7 +281,10 @@ public class ChangeTracker {
       LOG.debug("Setting revision ID for object at {}: {}",
           uri, newRevisionId);
       revisionId = newRevisionId;
-    } else if (!revisionId.equals(newRevisionId)) {
+      //TODO: Remove this. This is a temporary fix to prevent tests from failing. Needed because
+      // SDKV2 returns etag with quotation marks, and V1 does not use quotations so this equality
+      // fails. Regex removes quotation marks.
+    } else if (!revisionId.replaceAll("^\"|\"$", "").equals(newRevisionId)) {
       LOG.debug("Revision ID changed from {} to {}",
           revisionId, newRevisionId);
       ImmutablePair<Boolean, RemoteFileChangedException> pair =

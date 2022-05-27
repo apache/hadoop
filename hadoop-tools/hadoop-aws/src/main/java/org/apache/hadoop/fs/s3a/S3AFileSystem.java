@@ -2501,7 +2501,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                   List<software.amazon.awssdk.services.s3.model.S3Object>
                       prevListResult = prevResult.getV1().contents();
 
-                  String nextMarker = prevListResult.get(prevListResult.size() - 1).key();
+                  // Next markers are only present when a delimiter is specified.
+                  String nextMarker;
+                  if(prevResult.getV1().nextMarker() != null) {
+                    nextMarker = prevResult.getV1().nextMarker();
+                  } else {
+                   nextMarker = prevListResult.get(prevListResult.size() - 1).key();
+                  }
 
                   return S3ListResult.v1(s3V2.listObjects(
                       request.getV1().toBuilder().marker(nextMarker).build()));

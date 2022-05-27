@@ -52,6 +52,8 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.apache.hadoop.util.Lists;
+import org.apache.http.client.utils.URIBuilder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -74,6 +76,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -1314,15 +1317,14 @@ public final class S3AUtils {
 
     if (!proxyHost.isEmpty()) {
       if (proxyPort >= 0) {
-        // TODO: Check how URI should be created
-        proxyConfigBuilder.endpoint(URI.create(proxyHost + ":" + proxyPort));
+        proxyConfigBuilder.endpoint(buildURI(proxyHost, proxyPort));
       } else {
         if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
           LOG.warn("Proxy host set without port. Using HTTPS default 443");
-          proxyConfigBuilder.endpoint(URI.create(proxyHost + ":" + 443));
+          proxyConfigBuilder.endpoint(buildURI(proxyHost, 443));
         } else {
           LOG.warn("Proxy host set without port. Using HTTP default 80");
-          proxyConfigBuilder.endpoint(URI.create(proxyHost + ":" + 80));
+          proxyConfigBuilder.endpoint(buildURI(proxyHost, 80));
         }
       }
       final String proxyUsername = lookupPassword(bucket, conf, PROXY_USERNAME,
@@ -1347,6 +1349,17 @@ public final class S3AUtils {
     }
 
     return proxyConfigBuilder;
+  }
+
+  private static URI buildURI(String host, int port) {
+    try {
+      return new URIBuilder().setHost(host).setPort(port).build();
+    } catch (URISyntaxException e) {
+      String msg =
+          "Proxy error: incrorect " + PROXY_HOST + " or " + PROXY_PORT;
+      LOG.error(msg);
+      throw new IllegalArgumentException(msg);
+    }
   }
 
 
