@@ -688,14 +688,13 @@ public class AzureBlobFileSystem extends FileSystem
       String metricAccountKey = getConf().get(FS_AZURE_METRIC_ACCOUNT_KEY);
       final String abfsMetricUrl = "metrics" + "@" + metricAccountName;
       metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
-      URI metricUri = null;
+      URI metricUri;
       try {
         metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
       } catch (Exception ex) {
         throw new AssertionError(ex);
       }
-      AzureBlobFileSystem metricfs = (AzureBlobFileSystem) FileSystem.newInstance(
-          metricUri, metricConfig);
+      AzureBlobFileSystem metricfs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
       metricfs.sentMetric(metric);
     } catch (Exception ex) {
       // do nothing

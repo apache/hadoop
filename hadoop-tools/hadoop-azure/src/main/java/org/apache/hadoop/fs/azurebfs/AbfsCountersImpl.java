@@ -120,7 +120,7 @@ public class AbfsCountersImpl implements AbfsCounters {
       ioStatisticsStoreBuilder.withDurationTracking(durationStats.getStatName());
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
-    abfsDriverMetrics = new AtomicReference<AbfsDriverMetrics>(new AbfsDriverMetrics());
+    abfsDriverMetrics = new AtomicReference<>(new AbfsDriverMetrics());
   }
 
   /**

@@ -1,66 +1,115 @@
 package org.apache.hadoop.fs.azurebfs;
 
-import  java.util.concurrent.atomic.AtomicLong;
-
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 public class AbfsDriverMetrics {
-  private AtomicLong numberOfRequestsSucceededInFirstRetry;
-  private AtomicLong numberOfRequestsSucceededInSecondRetry;
-  private AtomicLong numberOfRequestsSucceededInThirdRetry;
-  private AtomicLong numberOfRequestsSucceededInFourthRetry;
-  private AtomicLong numberOfRequestsSucceededInFiveToFifteenRetry;
-  private AtomicLong numberOfRequestsSucceededInFifteenToTwentyFiveRetry;
-  private AtomicLong numberOfRequestsSucceededInTwentyFiveToThirtyRetry;
+  private AtomicLong numberOfRequestsSucceeded;
+  private AtomicLong minBackoff;
+  private AtomicLong maxBackoff;
+  private AtomicLong totalRequests;
+  private AtomicLong totalBackoff;
+  private String retryCount;
+  private AtomicLong numberOfIOPSThrottledRequests;
+  private AtomicLong numberOfBandwidthThrottledRequests;
 
-  private AtomicLong minBackoffForFirstRetry;
+  private AtomicLong numberOfOtherThrottledRequests;
+
+  private static final Map<String, AbfsDriverMetrics> metricsMap = new LinkedHashMap<>();
 
   public AbfsDriverMetrics() {
-    this.numberOfRequestsSucceededInFirstRetry = new AtomicLong();
-    this.numberOfRequestsSucceededInSecondRetry = new AtomicLong();
-    this.numberOfRequestsSucceededInThirdRetry = new AtomicLong();
-    this.numberOfRequestsSucceededInFourthRetry = new AtomicLong();
-    this.numberOfRequestsSucceededInFiveToFifteenRetry = new AtomicLong();
-    this.numberOfRequestsSucceededInFifteenToTwentyFiveRetry = new AtomicLong();
-    this.numberOfRequestsSucceededInTwentyFiveToThirtyRetry = new AtomicLong();
-    this.minBackoffForFirstRetry = new AtomicLong(Long.MAX_VALUE);
+    initializeMap();
+    this.numberOfIOPSThrottledRequests = new AtomicLong();
+    this.numberOfBandwidthThrottledRequests = new AtomicLong();
+    this.numberOfOtherThrottledRequests = new AtomicLong();
+  }
+  public AbfsDriverMetrics(String retryCount) {
+    this.retryCount = retryCount;
+    this.numberOfRequestsSucceeded = new AtomicLong();
+    this.minBackoff = new AtomicLong(Long.MAX_VALUE);
+    this.maxBackoff = new AtomicLong();
+    this.totalRequests = new AtomicLong();
+    this.totalBackoff = new AtomicLong();
   }
 
-  public AtomicLong getNumberOfRequestsSucceededInFirstRetry() {
-    return numberOfRequestsSucceededInFirstRetry;
+  private void initializeMap() {
+    ArrayList<String> retryCountList = new ArrayList<String>(Arrays.asList("1","2","3","4","5_15","15_25","25_30"));
+    for (String s : retryCountList) {
+      metricsMap.put(s, new AbfsDriverMetrics(s));
+    }
   }
 
-  public AtomicLong getNumberOfRequestsSucceededInSecondRetry() {
-    return numberOfRequestsSucceededInSecondRetry;
+  public AtomicLong getNumberOfRequestsSucceeded() {
+    return numberOfRequestsSucceeded;
   }
 
-  public AtomicLong getNumberOfRequestsSucceededInThirdRetry() {
-    return numberOfRequestsSucceededInThirdRetry;
+  public AtomicLong getMinBackoff() {
+    return minBackoff;
   }
 
-  public AtomicLong getNumberOfRequestsSucceededInFourthRetry() {
-    return numberOfRequestsSucceededInFourthRetry;
+  public AtomicLong getMaxBackoff() {
+    return maxBackoff;
   }
 
-  public AtomicLong getNumberOfRequestsSucceededInFiveToFifteenRetry() {
-    return numberOfRequestsSucceededInFiveToFifteenRetry;
+  public AtomicLong getTotalRequests() {
+    return totalRequests;
   }
 
-  public AtomicLong getNumberOfRequestsSucceededInFifteenToTwentyFiveRetry() {
-    return numberOfRequestsSucceededInFifteenToTwentyFiveRetry;
+  public AtomicLong getTotalBackoff() {
+    return totalBackoff;
   }
 
-  public AtomicLong getNumberOfRequestsSucceededInTwentyFiveToThirtyRetry() {
-    return numberOfRequestsSucceededInTwentyFiveToThirtyRetry;
+  public String getRetryCount() {
+    return retryCount;
   }
 
-  public AtomicLong getMinBackoffForFirstRetry() {
-    return minBackoffForFirstRetry;
+  public AtomicLong getNumberOfIOPSThrottledRequests() {
+    return numberOfIOPSThrottledRequests;
+  }
+
+  public AtomicLong getNumberOfBandwidthThrottledRequests() {
+    return numberOfBandwidthThrottledRequests;
+  }
+
+  public AtomicLong getNumberOfOtherThrottledRequests() {
+    return numberOfOtherThrottledRequests;
+  }
+
+  public Map<String, AbfsDriverMetrics> getMetricsMap() {
+    return metricsMap;
   }
 
   @Override
   public String toString() {
-    return "#RCTSI_1R_" + numberOfRequestsSucceededInFirstRetry + " #RCTSI_2R_" + numberOfRequestsSucceededInSecondRetry + " #RCTSI_3R_" +
-        numberOfRequestsSucceededInThirdRetry + " #RCTSI_4R_" + numberOfRequestsSucceededInFourthRetry + " #RCTSI_5-15R_" + numberOfRequestsSucceededInFiveToFifteenRetry +
-        " #RCTSI_15-25R_" + numberOfRequestsSucceededInFifteenToTwentyFiveRetry + " #RCTSI_25-30R_" + numberOfRequestsSucceededInTwentyFiveToThirtyRetry +
-        " #Min_1R_ " + minBackoffForFirstRetry;
- }
+    StringBuilder requestsSucceeded = new StringBuilder();
+    StringBuilder minMaxAvg = new StringBuilder();
+    StringBuilder throttledRequests = new StringBuilder();
+    for (Map.Entry<String, AbfsDriverMetrics> entry : metricsMap.entrySet()) {
+      requestsSucceeded.append("#RCTSI#_").append(entry.getKey())
+          .append("R_").append("=")
+          .append(entry.getValue().getNumberOfRequestsSucceeded()).append(" ");
+      long totalRequests = entry.getValue().getTotalRequests().get();
+      if(totalRequests > 0) {
+        minMaxAvg.append("MinMaxAvg#_").append(entry.getKey())
+            .append("R_").append("=")
+            .append(String.format("%.5f", (double) entry.getValue().getMinBackoff().get() / 1000L))
+            .append(" seconds ")
+            .append(String.format("%.5f", (double) entry.getValue().getMaxBackoff().get() / 1000L))
+            .append(" seconds ")
+            .append(String.format("%.5f", (double) ((entry.getValue().getTotalBackoff().get() / totalRequests) / 1000L)))
+            .append(" seconds ");
+      }else {
+        minMaxAvg.append("MinMaxAvg#_").append(entry.getKey())
+            .append("R_").append("= 0 seconds ");
+      }
+    }
+    throttledRequests.append("BandwidthThrottled = ").append(numberOfBandwidthThrottledRequests)
+        .append("IOPSThrottled = ").append(numberOfIOPSThrottledRequests)
+        .append("OtherThrottled = ").append(numberOfOtherThrottledRequests);
+
+    return requestsSucceeded + " " + minMaxAvg + " " + throttledRequests;
+  }
 }
+

@@ -36,8 +36,10 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import java.util.Map;
 import org.apache.hadoop.fs.azurebfs.AbfsDriverMetrics;
-import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -73,7 +75,7 @@ public class AbfsRestOperation {
   private AbfsCounters abfsCounters;
 
   private AbfsDriverMetrics abfsDriverMetrics;
-
+  private Map<String, AbfsDriverMetrics> metricsMap;
   /**
    * Checks if there is non-null HTTP response.
    * @return true if there is a non-null HTTP response from the ABFS call.
@@ -149,6 +151,7 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
+    this.metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -180,6 +183,7 @@ public class AbfsRestOperation {
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
+    this.metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -227,56 +231,25 @@ public class AbfsRestOperation {
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         sleepDuration = client.getRetryPolicy().getRetryInterval(retryCount);
+        updateTimeMetrics(retryCount, sleepDuration);
         Thread.sleep(sleepDuration);
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
     }
     if(retryCount > 0) {
-      if (retryCount == 1) {
-        long minSleepForFirstRetry = Math.min(abfsDriverMetrics.getMinBackoffForFirstRetry().get(), sleepDuration);
-        long noOfRequests1Retry
-            = abfsDriverMetrics.getNumberOfRequestsSucceededInFirstRetry()
-            .incrementAndGet();
-        abfsDriverMetrics.getNumberOfRequestsSucceededInFirstRetry()
-            .set(noOfRequests1Retry);
-        abfsDriverMetrics.getMinBackoffForFirstRetry().set(minSleepForFirstRetry);
-      } else if (retryCount == 2) {
-        long noOfRequests2Retry
-            = abfsDriverMetrics.getNumberOfRequestsSucceededInSecondRetry()
-            .incrementAndGet();
-        abfsDriverMetrics.getNumberOfRequestsSucceededInSecondRetry()
-            .set(noOfRequests2Retry);
-      } else if (retryCount == 3) {
-        long noOfRequests3Retry
-            = abfsDriverMetrics.getNumberOfRequestsSucceededInThirdRetry()
-            .incrementAndGet();
-        abfsDriverMetrics.getNumberOfRequestsSucceededInThirdRetry()
-            .set(noOfRequests3Retry);
-      } else if (retryCount == 4) {
-        long noOfRequests4Retry
-            = abfsDriverMetrics.getNumberOfRequestsSucceededInFourthRetry()
-            .incrementAndGet();
-        abfsDriverMetrics.getNumberOfRequestsSucceededInFourthRetry()
-            .set(noOfRequests4Retry);
-      } else if (retryCount >= 5 && retryCount < 15) {
-        long noOfRequests5_15Retry
-            = abfsDriverMetrics.getNumberOfRequestsSucceededInFiveToFifteenRetry()
-            .incrementAndGet();
-        abfsDriverMetrics.getNumberOfRequestsSucceededInFiveToFifteenRetry()
-            .set(noOfRequests5_15Retry);
-      } else if (retryCount >= 15 && retryCount < 25) {
-        long noOfRequests15_25Retry
-            = abfsDriverMetrics.getNumberOfRequestsSucceededInFifteenToTwentyFiveRetry()
-            .incrementAndGet();
-        abfsDriverMetrics.getNumberOfRequestsSucceededInFifteenToTwentyFiveRetry()
-            .set(noOfRequests15_25Retry);
-      } else {
-        long noOfRequests25_30Retry
-            = abfsDriverMetrics.getNumberOfRequestsSucceededInTwentyFiveToThirtyRetry()
-            .incrementAndGet();
-        abfsDriverMetrics.getNumberOfRequestsSucceededInTwentyFiveToThirtyRetry()
-            .set(noOfRequests25_30Retry);
+     updateCount(retryCount);
+    }
+    if(result.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE){
+      AzureServiceErrorCode serviceErrorCode =
+          AzureServiceErrorCode.getAzureServiceCode(result.getStatusCode(), result.getStorageErrorCode(), result.getStorageErrorMessage());
+      if(serviceErrorCode.equals(AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT) ||
+          serviceErrorCode.equals(AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)){
+        abfsDriverMetrics.getNumberOfBandwidthThrottledRequests().getAndIncrement();
+      }else if(serviceErrorCode.equals(AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)){
+        abfsDriverMetrics.getNumberOfIOPSThrottledRequests().getAndIncrement();
+      }else{
+        abfsDriverMetrics.getNumberOfOtherThrottledRequests().getAndIncrement();
       }
     }
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
@@ -387,7 +360,7 @@ public class AbfsRestOperation {
   /**
    * Incrementing Abfs counters with a long value.
    *
-   * @param statistic the Abfs statistic that needs to be incremented.
+   * @param statistic the Abfs statistic that needs to be incremented.f
    * @param value     the value to be incremented by.
    */
   private void incrementCounter(AbfsStatistic statistic, long value) {
@@ -395,4 +368,35 @@ public class AbfsRestOperation {
       abfsCounters.incrementCounter(statistic, value);
     }
   }
+
+  private void updateCount(int retryCount){
+      String retryCounter = getKey(retryCount);
+      metricsMap.get(retryCounter).getNumberOfRequestsSucceeded().getAndIncrement();
+  }
+
+  private void updateTimeMetrics(int retryCount, long sleepDuration){
+      String retryCounter = getKey(retryCount);
+      long minBackoffTime = Math.min(metricsMap.get(retryCounter).getMinBackoff().get(), sleepDuration);
+      long maxBackoffForTime = Math.max(metricsMap.get(retryCounter).getMaxBackoff().get(), sleepDuration);
+      long totalBackoffTime = metricsMap.get(retryCounter).getTotalBackoff().get() + sleepDuration;
+      long totalRequests = metricsMap.get(retryCounter).getTotalRequests().incrementAndGet();
+      metricsMap.get(retryCounter).getMinBackoff().set(minBackoffTime);
+      metricsMap.get(retryCounter).getMaxBackoff().set(maxBackoffForTime);
+      metricsMap.get(retryCounter).getTotalBackoff().set(totalBackoffTime);
+      metricsMap.get(retryCounter).getTotalRequests().set(totalRequests);
+    }
+
+    private String getKey(int retryCount) {
+      String retryCounter;
+      if(retryCount >= 1 && retryCount <= 4){
+        retryCounter = Integer.toString(retryCount);
+      }else if(retryCount >= 5 && retryCount < 15){
+        retryCounter = "5_15";
+      }else if(retryCount >= 15 && retryCount < 25){
+        retryCounter = "15_25";
+      }else{
+        retryCounter = "25_30";
+      }
+      return retryCounter;
+    }
 }
