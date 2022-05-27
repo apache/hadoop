@@ -19,10 +19,6 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_DIRENT_H
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_DIRENT_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct DIR {
   void *x_platform_dirent_ptr;
 } DIR;
@@ -36,9 +32,5 @@ DIR *opendir(const char *dir_path);
 struct dirent *readdir(const DIR *dir);
 
 int closedir(const DIR *dir);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
