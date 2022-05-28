@@ -44,6 +44,7 @@ target_link_libraries(x_platform_dirent_test PRIVATE gtest_main)
 add_test(x_platform_dirent_test x_platform_dirent_test)
 
 add_executable(x_platform_dirent_c_test $<TARGET_OBJECTS:x_platform_dirent_test_obj> $<TARGET_OBJECTS:x_platform_obj> $<TARGET_OBJECTS:x_platform_obj_c_api> c-api/dirent_test.cc)
+target_compile_definitions(x_platform_dirent_c_test PRIVATE USE_X_PLATFORM_DIRENT)
 target_include_directories(x_platform_dirent_c_test PRIVATE ${LIBHDFSPP_LIB_DIR} ../)
 target_link_libraries(x_platform_dirent_c_test PRIVATE gtest_main)
 add_test(x_platform_dirent_c_test x_platform_dirent_c_test)

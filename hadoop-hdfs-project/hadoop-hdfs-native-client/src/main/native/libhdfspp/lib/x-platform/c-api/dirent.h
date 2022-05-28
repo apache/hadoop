@@ -19,6 +19,8 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_DIRENT_H
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_DIRENT_H
 
+#if defined(WIN32) || defined(USE_X_PLATFORM_DIRENT)
+
 typedef struct DIR {
   void *x_platform_dirent_ptr;
 } DIR;
@@ -32,5 +34,11 @@ DIR *opendir(const char *dir_path);
 struct dirent *readdir(const DIR *dir);
 
 int closedir(const DIR *dir);
+
+#else
+
+#include <dirent.h>
+
+#endif
 
 #endif
