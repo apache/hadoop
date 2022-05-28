@@ -542,6 +542,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
           <plugin>
             <artifactId>maven-compiler-plugin</artifactId>
             <configuration>
+              <maxmem>4096m</maxmem>
               <testExcludes>
                 <testExclude>org/apache/hadoop/hdfs/TestDFSClientFailover.java</testExclude>
               </testExcludes>
