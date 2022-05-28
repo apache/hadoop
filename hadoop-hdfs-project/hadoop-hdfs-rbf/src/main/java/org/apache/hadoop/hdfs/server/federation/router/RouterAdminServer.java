@@ -752,9 +752,9 @@ public class RouterAdminServer extends AbstractService
   }
 
   /**
-   * Get superUser name.
+   * Get super user name.
    *
-   * @return String superUser name.
+   * @return String super user name.
    */
   public static String getSuperUser() {
     return routerOwner;
