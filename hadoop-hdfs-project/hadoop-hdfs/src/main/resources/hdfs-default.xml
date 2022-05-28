@@ -6254,6 +6254,15 @@
   </property>
 
   <property>
+    <name>dfs.journalnode.handler.count</name>
+    <value>5</value>
+    <description>
+      The number of JournalNode RPC server threads that listen to
+      requests from clients.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.lease-hard-limit-sec</name>
     <value>1200</value>
     <description>
