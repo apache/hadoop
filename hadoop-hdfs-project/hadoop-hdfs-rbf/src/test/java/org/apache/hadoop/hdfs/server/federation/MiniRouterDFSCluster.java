@@ -644,7 +644,7 @@ public class MiniRouterDFSCluster {
   /**
    * Set custom storage type configuration for each datanode.
    * If storageTypes is uninitialized or passed null then
-   * StorageType. DEFAULT is used.
+   * StorageType.DEFAULT is used.
    */
   public void setStorageTypes(StorageType[][] storageTypes) {
     this.storageTypes = storageTypes;

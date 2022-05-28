@@ -100,7 +100,7 @@ public class MountTableStoreImpl extends MountTableStore {
 
   /**
    * When add mount table entry, it needs WRITE permission of the nearest parent
-   * entry if existe, and EXECUTE permission of other ancestor entries.
+   * entry if exist, and EXECUTE permission of other ancestor entries.
    * @param request add mount table entry request
    * @return add mount table entry response
    * @throws IOException if mount table cannot be accessed

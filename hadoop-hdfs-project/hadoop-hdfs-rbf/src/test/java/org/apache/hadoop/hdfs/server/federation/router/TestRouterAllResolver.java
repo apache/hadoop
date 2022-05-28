@@ -102,7 +102,7 @@ public class TestRouterAllResolver {
     cluster.registerNamenodes();
     cluster.waitNamenodeRegistration();
 
-    // Set up the test mount point
+    // Setup the test mount point
     createMountTableEntry(TEST_DIR_HASH_ALL, DestinationOrder.HASH_ALL);
     createMountTableEntry(TEST_DIR_RANDOM, DestinationOrder.RANDOM);
     createMountTableEntry(TEST_DIR_SPACE, DestinationOrder.SPACE);
