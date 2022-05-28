@@ -139,7 +139,7 @@ public class RouterRpcClient {
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
    *
-   * @param conf Hdfs Configuation.
+   * @param conf Hdfs Configuration.
    * @param router A router using this RPC client.
    * @param resolver A NN resolver to determine the currently active NN in HA.
    * @param monitor Optional performance monitor.
