@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -2061,12 +2060,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     public ListenableFuture<DatanodeInfo[]> reload(
         final DatanodeReportType type, DatanodeInfo[] oldValue)
         throws Exception {
-      return executorService.submit(new Callable<DatanodeInfo[]>() {
-        @Override
-        public DatanodeInfo[] call() throws Exception {
-          return load(type);
-        }
-      });
+      return executorService.submit(() -> load(type));
     }
   }
 }
