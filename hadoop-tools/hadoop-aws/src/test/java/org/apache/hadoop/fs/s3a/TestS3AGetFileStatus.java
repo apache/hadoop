@@ -25,17 +25,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +39,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
+import software.amazon.awssdk.services.s3.model.CommonPrefix;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
  * S3A tests for getFileStatus using mock S3 client.
@@ -77,14 +79,12 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
       .thenThrow(NOT_FOUND);
     String keyDir = key + "/";
-    ListObjectsV2Result listResult = new ListObjectsV2Result();
-    S3ObjectSummary objectSummary = new S3ObjectSummary();
-    objectSummary.setKey(keyDir);
-    objectSummary.setSize(0L);
-    listResult.getObjectSummaries().add(objectSummary);
-    when(s3.listObjectsV2(argThat(
+    List<S3Object> s3Objects = new ArrayList<>(1);
+    s3Objects.add(S3Object.builder().key(keyDir).size(0L).build());
+    ListObjectsV2Response listObjectsV2Response = ListObjectsV2Response.builder().contents(s3Objects).build();
+    when(s3V2.listObjectsV2(argThat(
         matchListV2Request(BUCKET, keyDir))
-    )).thenReturn(listResult);
+    )).thenReturn(listObjectsV2Response);
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -100,7 +100,8 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     when(s3.getObjectMetadata(argThat(
       correctGetMetadataRequest(BUCKET, key + "/"))
     )).thenThrow(NOT_FOUND);
-    setupListMocks(Collections.singletonList("dir/"), Collections.emptyList());
+    setupListMocks(Collections.singletonList(CommonPrefix.builder().prefix("dir/").build()),
+        Collections.emptyList());
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -142,20 +143,20 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     fs.getFileStatus(path);
   }
 
-  private void setupListMocks(List<String> prefixes,
-      List<S3ObjectSummary> summaries) {
+  private void setupListMocks(List<CommonPrefix> prefixes,
+      List<S3Object> s3Objects) {
 
     // V1 list API mock
-    ObjectListing objects = mock(ObjectListing.class);
-    when(objects.getCommonPrefixes()).thenReturn(prefixes);
-    when(objects.getObjectSummaries()).thenReturn(summaries);
-    when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
+    ListObjectsResponse v1Response = mock(ListObjectsResponse.class);
+    when(v1Response.commonPrefixes()).thenReturn(prefixes);
+    when(v1Response.contents()).thenReturn(s3Objects);
+    when(s3V2.listObjects(any(ListObjectsRequest.class))).thenReturn(v1Response);
 
     // V2 list API mock
-    ListObjectsV2Result v2Result = mock(ListObjectsV2Result.class);
-    when(v2Result.getCommonPrefixes()).thenReturn(prefixes);
-    when(v2Result.getObjectSummaries()).thenReturn(summaries);
-    when(s3.listObjectsV2(any(ListObjectsV2Request.class)))
+    ListObjectsV2Response v2Result = mock(ListObjectsV2Response.class);
+    when(v2Result.commonPrefixes()).thenReturn(prefixes);
+    when(v2Result.contents()).thenReturn(s3Objects);
+    when(s3V2.listObjectsV2(any(software.amazon.awssdk.services.s3.model.ListObjectsV2Request.class)))
         .thenReturn(v2Result);
   }
 
@@ -170,8 +171,8 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
       String bucket, String key) {
     return (ListObjectsV2Request request) -> {
       return request != null
-          && request.getBucketName().equals(bucket)
-          && request.getPrefix().equals(key);
+          && request.bucket().equals(bucket)
+          && request.prefix().equals(key);
     };
   }
 

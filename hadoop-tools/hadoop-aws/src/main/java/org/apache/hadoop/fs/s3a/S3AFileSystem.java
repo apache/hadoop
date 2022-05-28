@@ -1153,6 +1153,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return s3;
   }
 
+  @VisibleForTesting
+  public S3Client getAmazonS3V2ClientForTesting(String reason) {
+    LOG.warn("Access to S3A client requested, reason {}", reason);
+    return s3V2;
+  }
+
   /**
    * Set the client -used in mocking tests to force in a different client.
    * @param client client.

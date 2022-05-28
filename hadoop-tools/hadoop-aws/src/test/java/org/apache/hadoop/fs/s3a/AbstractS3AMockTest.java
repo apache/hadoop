@@ -31,6 +31,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
+import software.amazon.awssdk.services.s3.S3Client;
 
 /**
  * Abstract base class for S3A unit tests using a mock S3 client and a null
@@ -50,6 +51,7 @@ public abstract class AbstractS3AMockTest {
 
   protected S3AFileSystem fs;
   protected AmazonS3 s3;
+  protected S3Client s3V2;
 
   @Before
   public void setup() throws Exception {
@@ -60,6 +62,7 @@ public abstract class AbstractS3AMockTest {
     conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     fs.initialize(uri, conf);
     s3 = fs.getAmazonS3ClientForTesting("mocking");
+    s3V2 = fs.getAmazonS3V2ClientForTesting("mocking");
   }
 
   public Configuration createConfiguration() {
