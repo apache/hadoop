@@ -444,7 +444,7 @@ public class RouterRpcClient {
    * @param ugi User group information.
    * @param namenodes A prioritized list of namenodes within the same
    *                  nameservice.
-   * @param method Remote ClientProtcol method to invoke.
+   * @param method Remote ClientProtocol method to invoke.
    * @param params Variable list of parameters matching the method.
    * @return The result of invoking the method.
    * @throws ConnectException If it cannot connect to any Namenode.
@@ -624,7 +624,7 @@ public class RouterRpcClient {
    * @param nsId Identifier for the namespace
    * @param retryCount Current retry times
    * @param method Method to invoke
-   * @param obj Target object for the method
+   * @param obj Target Object for the method
    * @param params Variable parameters
    * @return Response from the remote server
    * @throws IOException
@@ -789,7 +789,7 @@ public class RouterRpcClient {
    * @param block Block used to determine appropriate nameservice.
    * @param method The remote method and parameters to invoke.
    * @return The result of invoking the method.
-   * @throws IOException If the invoke generated an error.
+   * @throws IOException If to invoke generated an error.
    */
   public Object invokeSingle(final ExtendedBlock block, RemoteMethod method)
       throws IOException {
@@ -807,7 +807,7 @@ public class RouterRpcClient {
    * @param bpId Block pool identifier.
    * @param method The remote method and parameters to invoke.
    * @return The result of invoking the method.
-   * @throws IOException If the invoke generated an error.
+   * @throws IOException If to invoke generated an error.
    */
   public Object invokeSingleBlockPool(final String bpId, RemoteMethod method)
       throws IOException {
@@ -824,7 +824,7 @@ public class RouterRpcClient {
    * @param nsId Target namespace for the method.
    * @param method The remote method and parameters to invoke.
    * @return The result of invoking the method.
-   * @throws IOException If the invoke generated an error.
+   * @throws IOException If to invoke generated an error.
    */
   public Object invokeSingle(final String nsId, RemoteMethod method)
       throws IOException {
@@ -855,7 +855,7 @@ public class RouterRpcClient {
    * @param method The remote method and parameters to invoke.
    * @param clazz Class for the return type.
    * @return The result of invoking the method.
-   * @throws IOException If the invoke generated an error.
+   * @throws IOException If to invoke generated an error.
    */
   public <T> T invokeSingle(final String nsId, RemoteMethod method,
       Class<T> clazz) throws IOException {
@@ -875,7 +875,7 @@ public class RouterRpcClient {
    * @param method The remote method and parameters to invoke.
    * @param clazz Class for the return type.
    * @return The result of invoking the method.
-   * @throws IOException If the invoke generated an error.
+   * @throws IOException If to invoke generated an error.
    */
   public <T> T invokeSingle(final ExtendedBlock extendedBlock,
       RemoteMethod method, Class<T> clazz) throws IOException {
@@ -894,7 +894,7 @@ public class RouterRpcClient {
    * @param location RemoteLocation to invoke.
    * @param remoteMethod The remote method and parameters to invoke.
    * @return The result of invoking the method if successful.
-   * @throws IOException If the invoke generated an error.
+   * @throws IOException If to invoke generated an error.
    */
   public <T> T invokeSingle(final RemoteLocationContext location,
       RemoteMethod remoteMethod, Class<T> clazz) throws IOException {
@@ -1027,7 +1027,7 @@ public class RouterRpcClient {
       } catch (Exception e) {
         // Unusual error, ClientProtocol calls always use IOException (or
         // RemoteException). Re-wrap in IOException for compatibility with
-        // ClientProtcol.
+        // ClientProtocol.
         LOG.error("Unexpected exception {} proxying {} to {}",
             e.getClass(), m.getName(), ns, e);
         IOException ioe = new IOException(
@@ -1449,7 +1449,7 @@ public class RouterRpcClient {
           results.add(new RemoteResult<>(location, ioe));
         } catch (ExecutionException ex) {
           Throwable cause = ex.getCause();
-          LOG.debug("Canot execute {} in {}: {}",
+          LOG.debug("Cannot execute {} in {}: {}",
               m.getName(), location, cause.getMessage());
 
           // Convert into IOException if needed
