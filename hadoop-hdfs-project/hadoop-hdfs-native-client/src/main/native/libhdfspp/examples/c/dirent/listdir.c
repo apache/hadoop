@@ -33,5 +33,6 @@ int main(int argc, char **argv) {
   if (closedir(dir) != 0) {
     printf("Unable to close the directory: %s, error: %d\n", path, errno);
   }
+
   return 0;
 }
