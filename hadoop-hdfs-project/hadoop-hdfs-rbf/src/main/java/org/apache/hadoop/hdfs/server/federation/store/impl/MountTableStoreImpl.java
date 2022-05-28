@@ -84,7 +84,7 @@ public class MountTableStoreImpl extends MountTableStore {
   }
 
   /**
-   * Check parent path permission recursively. It needs WRITE permission
+   * Check parent path permission recursively. It needs to write permission
    * of the nearest parent entry and other EXECUTE permission.
    * @param src mount entry being checked
    * @throws AccessControlException if mount table cannot be accessed
@@ -99,8 +99,8 @@ public class MountTableStoreImpl extends MountTableStore {
   }
 
   /**
-   * When add mount table entry, it needs WRITE permission of the nearest parent
-   * entry if exist, and EXECUTE permission of other ancestor entries.
+   * When add mount table entry, it needs to write permission of the nearest parent
+   * entry if existed, and EXECUTE permission of other ancestor entries.
    * @param request add mount table entry request
    * @return add mount table entry response
    * @throws IOException if mount table cannot be accessed

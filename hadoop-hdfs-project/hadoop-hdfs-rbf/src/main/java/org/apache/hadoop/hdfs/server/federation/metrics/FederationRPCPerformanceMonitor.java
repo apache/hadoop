@@ -52,7 +52,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /** Time for an operation to be received in the Router. */
   private static final ThreadLocal<Long> START_TIME = new ThreadLocal<>();
-  /** Time for an operation to be send to the Namenode. */
+  /** Time for an operation to be sent to the Namenode. */
   private static final ThreadLocal<Long> PROXY_TIME = new ThreadLocal<>();
 
   /** Configuration for the performance monitor. */
@@ -246,7 +246,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
 
   /**
-   * Get time between we receiving the operation and sending it to the Namenode.
+   * Get time between we're receiving the operation and sending it to the Namenode.
    * @return Processing time in milliseconds.
    */
   private long getProcessingTime() {

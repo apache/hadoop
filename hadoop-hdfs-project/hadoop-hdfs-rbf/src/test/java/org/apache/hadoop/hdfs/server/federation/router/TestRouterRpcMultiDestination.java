@@ -75,7 +75,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 /**
- * The the RPC interface of the {@link getRouter()} implemented by
+ * The RPC interface of the {@link getRouter()} implemented by
  * {@link RouterRpcServer}.
  */
 public class TestRouterRpcMultiDestination extends TestRouterRpc {
@@ -130,7 +130,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     this.setNamenode(cluster.getNamenode(ns, null));
 
     // Create a test file on a single NN that is accessed via a getRouter() path
-    // with 2 destinations. All tests should failover to the alternate
+    // with 2 destinations. All tests should fail over to the alternate
     // destination if the wrong NN is attempted first.
     Random r = new Random();
     String randomString = "testfile-" + r.nextInt();

@@ -102,7 +102,7 @@ public class TestDisableNameservices {
 
   private static void setupNamespace() throws IOException {
 
-    // Setup a mount table to map to the two namespaces
+    // Set up a mount table to map to the two namespaces
     MountTableManager mountTable = routerAdminClient.getMountTableManager();
     Map<String, String> destinations = new TreeMap<>();
     destinations.put("ns0", "/dirns0");

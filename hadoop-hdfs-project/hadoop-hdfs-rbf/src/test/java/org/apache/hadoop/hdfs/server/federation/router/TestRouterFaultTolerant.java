@@ -178,7 +178,7 @@ public class TestRouterFaultTolerant {
   }
 
   /**
-   * Update a mount table entry to be fault tolerant.
+   * Update a mount table entry to be fault-tolerant.
    * @param mountPoint Mount point to update.
    * @throws IOException If it cannot update the mount point.
    */
@@ -278,8 +278,8 @@ public class TestRouterFaultTolerant {
 
   /**
    * Check directory creation on a mount point.
-   * If it is fault tolerant, it should be able to write everything.
-   * If it is not fault tolerant, it should fail to write some.
+   * If it is fault-tolerant, it should be able to write everything.
+   * If it is not fault-tolerant, it should fail to write some.
    */
   private void checkDirectoriesFaultTolerant(
       Path mountPoint, DestinationOrder order,
@@ -322,8 +322,8 @@ public class TestRouterFaultTolerant {
 
   /**
    * Check file creation on a mount point.
-   * If it is fault tolerant, it should be able to write everything.
-   * If it is not fault tolerant, it should fail to write some of the files.
+   * If it is fault-tolerant, it should be able to write everything.
+   * If it is not fault-tolerant, it should fail to write some files.
    */
   private void checkFilesFaultTolerant(
       Path mountPoint, DestinationOrder order,
@@ -582,7 +582,7 @@ public class TestRouterFaultTolerant {
   }
 
   /**
-   * Asserts that the results are the expected amount and it has both success
+   * Asserts that the results are the expected amount, and it has both success
    * and failure.
    * @param msg Message to show when the assertion fails.
    * @param expected Expected number of results.

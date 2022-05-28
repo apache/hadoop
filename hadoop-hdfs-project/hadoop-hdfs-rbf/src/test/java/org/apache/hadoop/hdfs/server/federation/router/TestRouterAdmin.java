@@ -466,7 +466,7 @@ public class TestRouterAdmin {
     disabled = getDisabledNameservices(nsManager);
     assertTrue(disabled.isEmpty());
 
-    // Non existing name services should fail
+    // Non-existing name services should fail
     disableReq = DisableNameserviceRequest.newInstance("nsunknown");
     disableResp = nsManager.disableNameservice(disableReq);
     assertFalse(disableResp.getStatus());

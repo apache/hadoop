@@ -32,8 +32,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Driver class for an implementation of a {@link StateStoreService}
- * provider. Driver implementations will extend this class and implement some of
- * the default methods.
+ * provider. Driver implementations will extend this class and implement some
+ * default methods.
  */
 public abstract class StateStoreDriver implements StateStoreRecordOperations {
 
@@ -97,7 +97,7 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
   }
 
   /**
-   * Gets a unique identifier for the running task/process. Typically the
+   * Gets a unique identifier for the running task/process. Typically, the
    * router address.
    *
    * @return Unique identifier for the running task.

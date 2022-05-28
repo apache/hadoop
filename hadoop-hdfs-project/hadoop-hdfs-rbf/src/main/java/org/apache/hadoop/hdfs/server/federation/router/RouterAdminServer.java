@@ -104,7 +104,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
- * This class is responsible for handling all of the Admin calls to the HDFS
+ * This class is responsible for handling all the Admin calls to the HDFS
  * router. It is created, started, and stopped by {@link Router}.
  */
 public class RouterAdminServer extends AbstractService
@@ -439,7 +439,7 @@ public class RouterAdminServer extends AbstractService
       }
       return false;
     } else {
-      // If old entry is not available, sync quota always, since we can't
+      // If old entry is not available, sync quota always, since we can
       // conclude no change in quota.
       return true;
     }
@@ -489,7 +489,7 @@ public class RouterAdminServer extends AbstractService
       synchronizeQuota(request.getSrcPath(), HdfsConstants.QUOTA_RESET,
           HdfsConstants.QUOTA_RESET, null);
     } catch (Exception e) {
-      // Ignore exception, if any while reseting quota. Specifically to handle
+      // Ignore exception, if any while resting quota. Specifically to handle
       // if the actual destination doesn't exist.
       LOG.warn("Unable to clear quota at the destinations for {}: {}",
           request.getSrcPath(), e.getMessage());
@@ -752,9 +752,9 @@ public class RouterAdminServer extends AbstractService
   }
 
   /**
-   * Get super user name.
+   * Get superUser name.
    *
-   * @return String super user name.
+   * @return String superUser name.
    */
   public static String getSuperUser() {
     return routerOwner;

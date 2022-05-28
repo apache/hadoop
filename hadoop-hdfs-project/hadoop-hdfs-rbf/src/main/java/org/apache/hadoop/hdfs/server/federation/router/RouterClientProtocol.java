@@ -305,7 +305,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * Check if an exception is caused by an unavailable subcluster or not. It
    * also checks the causes.
    * @param ioe IOException to check.
-   * @return If caused by an unavailable subcluster. False if the should not be
+   * @return If caused by an unavailable subcluster. False if they should not be
    *         retried (e.g., NSQuotaExceededException).
    */
   protected static boolean isUnavailableSubclusterException(
@@ -325,14 +325,14 @@ public class RouterClientProtocol implements ClientProtocol {
   /**
    * Check if a remote method can be retried in other subclusters when it
    * failed in the original destination. This method returns the list of
-   * locations to retry in. This is used by fault tolerant mount points.
+   * locations to retry in. This is used by fault-tolerant mount points.
    * @param method Method that failed and might be retried.
    * @param src Path where the method was invoked.
    * @param ioe Exception that was triggered.
    * @param excludeLoc Location that failed and should be excluded.
    * @param locations All the locations to retry.
    * @return The locations where we should retry (excluding the failed ones).
-   * @throws IOException If this path is not fault tolerant or the exception
+   * @throws IOException If this path is not fault-tolerant or the exception
    *                     should not be retried (e.g., NSQuotaExceededException).
    */
   private List<RemoteLocation> checkFaultTolerantRetry(
@@ -1830,8 +1830,8 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   /**
-   * Determines combinations of eligible src/dst locations for a rename. A
-   * rename cannot change the namespace. Renames are only allowed if there is an
+   * Determines combinations of eligible src/dst locations for a renamed. A
+   * renamed cannot change the namespace. Renames are only allowed if there is an
    * eligible dst location in the same namespace as the source.
    *
    * @param srcLocations List of all potential source destinations where the

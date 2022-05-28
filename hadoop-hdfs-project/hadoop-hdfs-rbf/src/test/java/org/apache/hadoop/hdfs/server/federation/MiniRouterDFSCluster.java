@@ -644,7 +644,7 @@ public class MiniRouterDFSCluster {
   /**
    * Set custom storage type configuration for each datanode.
    * If storageTypes is uninitialized or passed null then
-   * StorageType.DEFAULT is used.
+   * StorageType. DEFAULT is used.
    */
   public void setStorageTypes(StorageType[][] storageTypes) {
     this.storageTypes = storageTypes;
@@ -789,7 +789,7 @@ public class MiniRouterDFSCluster {
       Configuration nnConf = generateNamenodeConfiguration(ns0);
       if (overrideConf != null) {
         nnConf.addResource(overrideConf);
-        // Router also uses this configurations as initial values.
+        // Router also uses these configurations as initial values.
         routerConf = new Configuration(overrideConf);
       }
 
@@ -924,7 +924,7 @@ public class MiniRouterDFSCluster {
 
   /**
    * Wait for name spaces to be active.
-   * @throws Exception If we cannot check the status or we timeout.
+   * @throws Exception If we cannot check the status or we time out.
    */
   public void waitActiveNamespaces() throws Exception {
     for (RouterContext r : this.routers) {

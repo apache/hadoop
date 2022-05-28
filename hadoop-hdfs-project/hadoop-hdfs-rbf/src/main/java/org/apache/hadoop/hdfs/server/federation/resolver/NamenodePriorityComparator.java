@@ -60,7 +60,7 @@ public class NamenodePriorityComparator
    */
   private int compareModDates(FederationNamenodeContext o1,
       FederationNamenodeContext o2) {
-    // Reverse sort, lowest position is highest priority.
+    // Reverse sort, the lowest position is the highest priority.
     return (int) (o2.getDateModified() - o1.getDateModified());
   }
 }

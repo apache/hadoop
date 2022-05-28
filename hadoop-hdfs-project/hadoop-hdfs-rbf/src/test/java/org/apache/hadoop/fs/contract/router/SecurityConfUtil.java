@@ -99,7 +99,7 @@ public final class SecurityConfUtil {
     assertTrue("Expected configuration to enable security",
         UserGroupInformation.isSecurityEnabled());
 
-    // Setup the keytab
+    // Set up the keytab
     File keytabFile = new File(baseDir, "test.keytab");
     String keytab = keytabFile.getAbsolutePath();
 

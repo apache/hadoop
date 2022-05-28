@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Service to periodically check if the {@link
  * org.apache.hadoop.hdfs.server.federation.store.StateStoreService
- * StateStoreService} cached information in the {@link Router} is up to date.
+ * StateStoreService} cached information in the {@link Router} is up-to-date.
  * This is for performance and removes the {@link
  * org.apache.hadoop.hdfs.server.federation.store.StateStoreService
  * StateStoreService} from the critical path in common operations.
