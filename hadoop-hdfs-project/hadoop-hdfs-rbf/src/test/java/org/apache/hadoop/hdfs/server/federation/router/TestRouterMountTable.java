@@ -594,7 +594,7 @@ public class TestRouterMountTable {
   }
 
   /**
-   * Validate the number of children for the mount point to multiple
+   * Validate the number of children for the mount point pointing to multiple
    * destinations.It must be equal to the sum of number of children of the
    * destinations pointed by the mount point.
    */

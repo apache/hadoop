@@ -924,7 +924,7 @@ public class MiniRouterDFSCluster {
 
   /**
    * Wait for name spaces to be active.
-   * @throws Exception If we cannot check the status or we time out.
+   * @throws Exception If we cannot check the status or we timeout.
    */
   public void waitActiveNamespaces() throws Exception {
     for (RouterContext r : this.routers) {

@@ -355,7 +355,7 @@ public class ConnectionManager {
   /**
    * Clean the unused connections for this pool.
    *
-   * @param pool Connection pool to clean up.
+   * @param pool Connection pool to cleanup.
    */
   @VisibleForTesting
   void cleanup(ConnectionPool pool) {

@@ -153,7 +153,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
   }
 
   /**
-   * Check if it's time to update the cache. Update it is never updated.
+   * Check if it's time to update the cache. Update it was never updated.
    *
    * @return If it's time to update this cache.
    */

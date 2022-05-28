@@ -51,7 +51,7 @@ public class TestSafeMode {
     cluster.registerNamenodes();
     cluster.waitNamenodeRegistration();
 
-    // Set up the mount table
+    // Setup the mount table
     cluster.installMockLocations();
 
     // Making one Namenodes active per nameservice

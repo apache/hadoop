@@ -246,7 +246,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
 
   /**
-   * Get time between we're receiving the operation and sending it to the Namenode.
+   * Get time between we receiving the operation and sending it to the Namenode.
    * @return Processing time in milliseconds.
    */
   private long getProcessingTime() {

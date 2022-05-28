@@ -130,7 +130,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     this.setNamenode(cluster.getNamenode(ns, null));
 
     // Create a test file on a single NN that is accessed via a getRouter() path
-    // with 2 destinations. All tests should fail over to the alternate
+    // with 2 destinations. All tests should failover to the alternate
     // destination if the wrong NN is attempted first.
     Random r = new Random();
     String randomString = "testfile-" + r.nextInt();

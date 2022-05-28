@@ -32,8 +32,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Driver class for an implementation of a {@link StateStoreService}
- * provider. Driver implementations will extend this class and implement some
- * default methods.
+ * provider. Driver implementations will extend this class and implement some of
+ * the default methods.
  */
 public abstract class StateStoreDriver implements StateStoreRecordOperations {
 

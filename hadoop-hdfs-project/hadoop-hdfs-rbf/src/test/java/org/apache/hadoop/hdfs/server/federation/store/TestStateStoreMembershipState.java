@@ -186,7 +186,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     // 1) ns0:nn0 - Standby (newest)
     // 2) ns0:nn0 - Active (oldest)
     // 3) ns0:nn0 - Active (2nd oldest)
-    // 4) ns0:nn0 - Active (3nd the oldest element, the newest active element)
+    // 4) ns0:nn0 - Active (3rd oldest element, newest active element)
     // Verify the selected entry is the newest majority opinion (4)
     String ns = "ns0";
     String nn = "nn0";
@@ -208,7 +208,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
         ns, nn, ROUTERS[3], FederationNamenodeServiceState.ACTIVE);
     assertTrue(namenodeHeartbeat(report));
 
-    // standby - the newest overall
+    // standby - newest overall
     report = createRegistration(
         ns, nn, ROUTERS[0], FederationNamenodeServiceState.STANDBY);
     assertTrue(namenodeHeartbeat(report));

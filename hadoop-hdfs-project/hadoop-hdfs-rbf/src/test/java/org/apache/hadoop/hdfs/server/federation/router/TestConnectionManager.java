@@ -268,10 +268,10 @@ public class TestConnectionManager {
 
   @Test
   public void testConfigureConnectionActiveRatio() throws IOException {
-    // test 1 conn below the threshold and This conns are closed
+    // test 1 conn below the threshold and these conns are closed
     testConnectionCleanup(0.8f, 10, 7, 9);
 
-    // test 2 conn below the threshold and This conns are closed
+    // test 2 conn below the threshold and these conns are closed
     testConnectionCleanup(0.8f, 10, 6, 8);
   }
 
@@ -304,7 +304,7 @@ public class TestConnectionManager {
     addConnectionsToPool(pool, totalConns - 1, activeConns - 1);
 
     // There are activeConn connections.
-    // We can clean up the pool
+    // We can cleanup the pool
     tmpConnManager.cleanup(pool);
     assertEquals(leftConns, pool.getNumConnections());
 

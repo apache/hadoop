@@ -345,7 +345,7 @@ public interface FederationMBean {
   long getHighestPriorityLowRedundancyECBlocks();
 
   /**
-   * Returns the number of paths to be processed by storage policy satisfies.
+   * Returns the number of paths to be processed by storage policy satisfier.
    *
    * @return The number of paths to be processed by sps.
    */

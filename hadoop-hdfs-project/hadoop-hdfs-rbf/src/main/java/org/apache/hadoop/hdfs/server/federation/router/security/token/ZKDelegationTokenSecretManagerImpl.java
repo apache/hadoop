@@ -95,7 +95,7 @@ public class ZKDelegationTokenSecretManagerImpl extends
     if (!isTokenWatcherEnabled()) {
       LOG.info("Watcher for tokens is disabled in this secret manager");
       try {
-        // By default, set this variable
+        // By default set this variable
         checkAgainstZkBeforeDeletion.set(true);
         // Ensure the token root path exists
         if (zkClient.checkExists().forPath(ZK_DTSM_TOKENS_ROOT) == null) {
@@ -159,7 +159,7 @@ public class ZKDelegationTokenSecretManagerImpl extends
   private void rebuildTokenCache(boolean initial) throws IOException {
     localTokenCache.clear();
     // Use bare zookeeper client to get all children since curator will
-    // wrap the same API with a sorting process. This is time-consuming given
+    // wrap the same API with a sorting process. This is time consuming given
     // millions of tokens
     List<String> zkTokens;
     try {

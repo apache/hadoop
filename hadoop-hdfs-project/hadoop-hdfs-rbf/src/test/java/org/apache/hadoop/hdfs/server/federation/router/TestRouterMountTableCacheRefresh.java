@@ -234,7 +234,7 @@ public class TestRouterMountTableCacheRefresh {
       assertEquals(srcPath, mountTableResult.getSourcePath());
     }
 
-    // Let's stop one router
+    // Lets stop one router
     for (RouterContext rc : routers) {
       InetSocketAddress adminServerAddress =
           rc.getRouter().getAdminServerAddress();
@@ -308,7 +308,7 @@ public class TestRouterMountTableCacheRefresh {
         TimeUnit.SECONDS);
     mountTableRefresherService.init(config);
     // One router is not responding for 1 minute, still refresh should
-    // be finished in 5 second as cache update timeout is set 5 second.
+    // finish in 5 second as cache update timeout is set 5 second.
     mountTableRefresherService.refresh();
     // Test case timeout is asserted for this test case.
   }
