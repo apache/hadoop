@@ -302,7 +302,7 @@ public class DatanodeHttpServer implements Closeable {
   public void start() throws IOException {
     if (httpServer != null) {
       InetSocketAddress infoAddr = DataNode.getInfoAddr(conf);
-      httpAddress = getChannelLocalAddress(infoAddr);
+      httpAddress = getChannelLocalAddress(httpServer, infoAddr);
       LOG.info("Listening HTTP traffic on " + httpAddress);
     }
 
@@ -311,14 +311,14 @@ public class DatanodeHttpServer implements Closeable {
           NetUtils.createSocketAddr(conf.getTrimmed(
               DFS_DATANODE_HTTPS_ADDRESS_KEY,
               DFS_DATANODE_HTTPS_ADDRESS_DEFAULT));
-      httpsAddress = getChannelLocalAddress(secInfoSocAddr);
+      httpsAddress = getChannelLocalAddress(httpsServer, secInfoSocAddr);
       LOG.info("Listening HTTPS traffic on " + httpsAddress);
     }
   }
 
   private InetSocketAddress getChannelLocalAddress(
-      InetSocketAddress address) throws IOException {
-    ChannelFuture f = httpsServer.bind(address);
+      ServerBootstrap server, InetSocketAddress address) throws IOException {
+    ChannelFuture f = server.bind(address);
     try {
       f.syncUninterruptibly();
     } catch (Throwable e) {
