@@ -41,13 +41,13 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
  *
  * To use this class, the following configurations need to be added in
  * core-site.xml file.
- * 1) fs.<scheme>.impl
+ * 1) fs.&lt;scheme&gt;.impl
  *    = org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme
- * 2) fs.viewfs.overload.scheme.target.<scheme>.impl
- *    = <hadoop compatible file system implementation class name for the
- *    <scheme>"
+ * 2) fs.viewfs.overload.scheme.target.&lt;scheme&gt;.impl
+ *    = &lt;hadoop compatible file system implementation class name for the
+ *    &lt;scheme&gt;"
  *
- * Here <scheme> can be any scheme, but with that scheme there should be a
+ * Here &lt;scheme&gt; can be any scheme, but with that scheme there should be a
  * hadoop compatible file system available. Second configuration value should
  * be the respective scheme's file system implementation class.
  * Example: if scheme is configured with "hdfs", then the 2nd configuration
@@ -97,7 +97,7 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
  * the mount table name.
  * (3) If there are no mount links configured with the initializing uri's
  * hostname as the mount table name, then it will automatically consider the
- * current uri as fallback( ex: fs.viewfs.mounttable.<mycluster>.linkFallBack)
+ * current uri as fallback( ex: fs.viewfs.mounttable.&lt;mycluster&gt;.linkFallBack)
  * target fs uri.
  *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
@@ -124,6 +124,8 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
 
   /**
    * Sets whether to add fallback automatically when no mount points found.
+   *
+   * @param addAutoFallbackOnNoMounts addAutoFallbackOnNoMounts.
    */
   public void setSupportAutoAddingFallbackOnNoMounts(
       boolean addAutoFallbackOnNoMounts) {
@@ -164,12 +166,12 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * This method is overridden because in ViewFileSystemOverloadScheme if
    * overloaded scheme matches with mounted target fs scheme, file system
-   * should be created without going into fs.<scheme>.impl based resolution.
+   * should be created without going into fs.&lt;scheme&gt;.impl based resolution.
    * Otherwise it will end up in an infinite loop as the target will be
-   * resolved again to ViewFileSystemOverloadScheme as fs.<scheme>.impl points
+   * resolved again to ViewFileSystemOverloadScheme as fs.&lt;scheme&gt;.impl points
    * to ViewFileSystemOverloadScheme. So, below method will initialize the
-   * fs.viewfs.overload.scheme.target.<scheme>.impl. Other schemes can
-   * follow fs.newInstance
+   * fs.viewfs.overload.scheme.target.&lt;scheme&gt;.impl. Other schemes can
+   * follow fs.newInstance.
    */
   @Override
   protected FsGetter fsGetter() {
@@ -280,7 +282,8 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
    *
    * @param path - fs uri path
    * @param conf - configuration
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
+   * @return file system.
    */
   public FileSystem getRawFileSystem(Path path, Configuration conf)
       throws IOException {
@@ -299,6 +302,11 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * Gets the mount path info, which contains the target file system and
    * remaining path to pass to the target file system.
+   *
+   * @param path the path.
+   * @param conf configuration.
+   * @return mount path info.
+   * @throws IOException raised on errors performing I/O.
    */
   public MountPathInfo<FileSystem> getMountPathInfo(Path path,
       Configuration conf) throws IOException {

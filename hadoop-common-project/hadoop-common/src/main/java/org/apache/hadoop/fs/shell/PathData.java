@@ -610,10 +610,11 @@ public class PathData implements Comparable<PathData> {
 
   /**
    * Open a file for sequential IO.
-   * <p></p>
+   * <p>
    * This uses FileSystem.openFile() to request sequential IO;
    * the file status is also passed in.
    * Filesystems may use to optimize their IO.
+   * </p>
    * @return an input stream
    * @throws IOException failure
    */

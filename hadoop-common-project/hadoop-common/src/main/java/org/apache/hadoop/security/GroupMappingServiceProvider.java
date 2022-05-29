@@ -38,18 +38,18 @@ public interface GroupMappingServiceProvider {
    * Returns EMPTY list in case of non-existing user
    * @param user User's name
    * @return group memberships of user
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public List<String> getGroups(String user) throws IOException;
   /**
    * Refresh the cache of groups and user mapping
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void cacheGroupsRefresh() throws IOException;
   /**
    * Caches the group user information
    * @param groups list of groups to add to cache
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void cacheGroupsAdd(List<String> groups) throws IOException;
 }

@@ -27,10 +27,11 @@ import java.io.IOException;
 import java.util.List;
 
 /**
+ * <p>
  * A partial listing of the children of a parent directory. Since it is a
  * partial listing, multiple PartialListing may need to be combined to obtain
  * the full listing of a parent directory.
- * <p/>
+ * </p>
  * ListingBatch behaves similar to a Future, in that getting the result via
  * {@link #get()} will throw an Exception if there was a failure.
  */

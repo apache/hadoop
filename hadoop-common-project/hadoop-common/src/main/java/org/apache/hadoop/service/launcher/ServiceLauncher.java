@@ -412,7 +412,7 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * This creates all the configurations defined by
+   * @return This creates all the configurations defined by
    * {@link #getConfigurationsToCreate()} , ensuring that
    * the resources have been pushed in.
    * If one cannot be loaded it is logged and the operation continues
@@ -566,6 +566,7 @@ public class ServiceLauncher<S extends Service>
    * @throws Exception any other failure -if it implements
    * {@link ExitCodeProvider} then it defines the exit code for any
    * containing exception
+   * @return status code.
    */
 
   protected int coreServiceLaunch(Configuration conf,
@@ -647,7 +648,7 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Instantiate the service defined in {@code serviceClassName}.
+   * @return Instantiate the service defined in {@code serviceClassName}.
    *
    * Sets the {@code configuration} field
    * to the the value of {@code conf},
@@ -851,6 +852,7 @@ public class ServiceLauncher<S extends Service>
    * The service launcher code assumes that after this method is invoked,
    * no other code in the same method is called.
    * @param exitCode code to exit
+   * @param message input message.
    */
   protected void exit(int exitCode, String message) {
     ExitUtil.terminate(exitCode, message);
@@ -1002,7 +1004,7 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Build a log message for starting up and shutting down. 
+   * @return Build a log message for starting up and shutting down.
    * @param classname the class of the server
    * @param args arguments
    */

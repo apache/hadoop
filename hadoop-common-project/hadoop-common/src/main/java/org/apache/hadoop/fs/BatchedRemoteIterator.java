@@ -68,6 +68,7 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
    * 
    * @param prevKey The key to send.
    * @return A list of replies.
+   * @throws IOException If an I/O error occurred.
    */
   public abstract BatchedEntries<E> makeRequest(K prevKey) throws IOException;
 
@@ -102,6 +103,8 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
 
   /**
    * Return the next list key associated with an element.
+   * @param element element.
+   * @return K Generics Type.
    */
   public abstract K elementToPrevKey(E element);
 

@@ -54,7 +54,6 @@ import org.slf4j.LoggerFactory;
  *     <li>Default_JSSE_with_GCM: Delegates to the JSSE implementation of
  *     SSL with no modification to the list of enabled ciphers.</li>
  *   </ul>
- * </p>
  *
  * In order to load OpenSSL, applications must ensure the wildfly-openssl
  * artifact is on the classpath. Currently, only ABFS declares

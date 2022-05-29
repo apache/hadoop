@@ -280,7 +280,9 @@ public final class Options {
     }
 
     /**
-     * Create a ChecksumOpts that disables checksum
+     * Create a ChecksumOpts that disables checksum.
+     *
+     * @return ChecksumOpt.
      */
     public static ChecksumOpt createDisabled() {
       return new ChecksumOpt(DataChecksum.Type.NULL, -1);
@@ -295,6 +297,7 @@ public final class Options {
      * @param userOpt User-specified checksum option. Ignored if null.
      * @param userBytesPerChecksum User-specified bytesPerChecksum
      *                Ignored if {@literal <} 0.
+     * @return ChecksumOpt.
      */
     public static ChecksumOpt processChecksumOpt(ChecksumOpt defaultOpt, 
         ChecksumOpt userOpt, int userBytesPerChecksum) {
@@ -330,6 +333,8 @@ public final class Options {
      *
      * @param defaultOpt Default checksum option
      * @param userOpt User-specified checksum option
+     *
+     * @return ChecksumOpt.
      */
     public static ChecksumOpt processChecksumOpt(ChecksumOpt defaultOpt,
         ChecksumOpt userOpt) {

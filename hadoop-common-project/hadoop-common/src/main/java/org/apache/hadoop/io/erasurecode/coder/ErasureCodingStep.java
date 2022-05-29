@@ -46,8 +46,9 @@ public interface ErasureCodingStep {
   /**
    * Perform encoding or decoding given the input chunks, and generated results
    * will be written to the output chunks.
-   * @param inputChunks
-   * @param outputChunks
+   * @param inputChunks inputChunks.
+   * @param outputChunks outputChunks.
+   * @throws IOException raised on errors performing I/O.
    */
   void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks)
       throws IOException;

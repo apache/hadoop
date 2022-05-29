@@ -99,7 +99,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param out        the location for the final output stream
    * @return a stream the user can write uncompressed data to, to have it 
    *         compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
@@ -116,7 +116,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param compressor compressor to use
    * @return a stream the user can write uncompressed data to, to have it 
    *         compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
@@ -154,7 +154,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    *
    * @param in the stream to read compressed bytes from
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in)
@@ -171,7 +171,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param in           the stream to read compressed bytes from
    * @param decompressor decompressor to use
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in,

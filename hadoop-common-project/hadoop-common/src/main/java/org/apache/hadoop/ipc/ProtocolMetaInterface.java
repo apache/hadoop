@@ -36,7 +36,7 @@ public interface ProtocolMetaInterface {
    * It is assumed that all method names are unique for a protocol.
    * @param methodName The name of the method
    * @return true if method is supported, otherwise false.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public boolean isMethodSupported(String methodName) throws IOException;
 }

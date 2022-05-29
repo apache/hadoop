@@ -33,10 +33,16 @@ public class FloatWritable implements WritableComparable<FloatWritable> {
 
   public FloatWritable(float value) { set(value); }
 
-  /** Set the value of this FloatWritable. */
+  /**
+   * Set the value of this FloatWritable.
+   * @param value value.
+   */
   public void set(float value) { this.value = value; }
 
-  /** Return the value of this FloatWritable. */
+  /**
+   * Return the value of this FloatWritable.
+   * @return value.
+   */
   public float get() { return value; }
 
   @Override

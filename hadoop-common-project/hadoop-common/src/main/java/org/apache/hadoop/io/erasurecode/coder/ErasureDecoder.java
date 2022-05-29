@@ -65,7 +65,7 @@ public abstract class ErasureDecoder extends Configured
   /**
    * We have all the data blocks and parity blocks as input blocks for
    * recovering by default. It's codec specific
-   * @param blockGroup
+   * @param blockGroup blockGroup.
    * @return input blocks
    */
   protected ECBlock[] getInputBlocks(ECBlockGroup blockGroup) {
@@ -83,7 +83,7 @@ public abstract class ErasureDecoder extends Configured
 
   /**
    * Which blocks were erased ?
-   * @param blockGroup
+   * @param blockGroup blockGroup.
    * @return output blocks to recover
    */
   protected ECBlock[] getOutputBlocks(ECBlockGroup blockGroup) {
@@ -118,7 +118,7 @@ public abstract class ErasureDecoder extends Configured
 
   /**
    * Perform decoding against a block blockGroup.
-   * @param blockGroup
+   * @param blockGroup blockGroup.
    * @return decoding step for caller to do the real work
    */
   protected abstract ErasureCodingStep prepareDecodingStep(
@@ -126,7 +126,7 @@ public abstract class ErasureDecoder extends Configured
 
   /**
    * Get the number of erased blocks in the block group.
-   * @param blockGroup
+   * @param blockGroup blockGroup.
    * @return number of erased blocks
    */
   protected int getNumErasedBlocks(ECBlockGroup blockGroup) {
@@ -153,7 +153,7 @@ public abstract class ErasureDecoder extends Configured
 
   /**
    * Get indexes of erased blocks from inputBlocks
-   * @param inputBlocks
+   * @param inputBlocks inputBlocks.
    * @return indexes of erased blocks from inputBlocks
    */
   protected int[] getErasedIndexes(ECBlock[] inputBlocks) {
@@ -174,8 +174,8 @@ public abstract class ErasureDecoder extends Configured
   }
 
   /**
-   * Get erased input blocks from inputBlocks
-   * @param inputBlocks
+   * Get erased input blocks from inputBlocks.
+   * @param inputBlocks input inputBlocks.
    * @return an array of erased blocks from inputBlocks
    */
   protected ECBlock[] getErasedBlocks(ECBlock[] inputBlocks) {

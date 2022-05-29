@@ -235,7 +235,10 @@ public class CodecPool {
 
   /**
    * Return the number of leased {@link Compressor}s for this
-   * {@link CompressionCodec}
+   * {@link CompressionCodec}.
+   *
+   * @param codec codec.
+   * @return the number of leased.
    */
   public static int getLeasedCompressorsCount(CompressionCodec codec) {
     return (codec == null) ? 0 : getLeaseCount(compressorCounts,
@@ -244,7 +247,10 @@ public class CodecPool {
 
   /**
    * Return the number of leased {@link Decompressor}s for this
-   * {@link CompressionCodec}
+   * {@link CompressionCodec}.
+   *
+   * @param codec codec.
+   * @return the number of leased
    */
   public static int getLeasedDecompressorsCount(CompressionCodec codec) {
     return (codec == null) ? 0 : getLeaseCount(decompressorCounts,

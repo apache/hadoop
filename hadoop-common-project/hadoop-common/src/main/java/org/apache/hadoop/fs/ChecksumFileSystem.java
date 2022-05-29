@@ -102,25 +102,44 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     return fs;
   }
 
-  /** Return the name of the checksum file associated with a file.*/
+  /**
+   * Return the name of the checksum file associated with a file.
+   *
+   * @param file the file path.
+   * @return name of the checksum file associated with a file.
+   */
   public Path getChecksumFile(Path file) {
     return new Path(file.getParent(), "." + file.getName() + ".crc");
   }
 
-  /** Return true iff file is a checksum file name.*/
+  /**
+   * Return true if file is a checksum file name.
+   *
+   * @param file the file path.
+   * @return if file is a checksum file true, not false.
+   */
   public static boolean isChecksumFile(Path file) {
     String name = file.getName();
     return name.startsWith(".") && name.endsWith(".crc");
   }
 
-  /** Return the length of the checksum file given the size of the 
+  /**
+   * Return the length of the checksum file given the size of the
    * actual file.
-   **/
+   *
+   * @param file the file path.
+   * @param fileSize file size.
+   * @return checksum length.
+   */
   public long getChecksumFileLength(Path file, long fileSize) {
     return getChecksumLength(fileSize, getBytesPerSum());
   }
 
-  /** Return the bytes Per Checksum */
+  /**
+   * Return the bytes Per Checksum.
+   *
+   * @return bytes per check sum.
+   */
   public int getBytesPerSum() {
     return bytesPerChecksum;
   }
@@ -362,6 +381,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.
+   * @throws IOException if an I/O error occurs.
    */
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
@@ -669,7 +689,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Implement the abstract <tt>setReplication</tt> of <tt>FileSystem</tt>
    * @param src file name
    * @param replication new replication
-   * @throws IOException
+   * @throws IOException if an I/O error occurs.
    * @return true if successful;
    *         false if file does not exist or is a directory
    */
@@ -754,7 +774,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @param f
    *          given path
    * @return the statuses of the files/directories in the given path
-   * @throws IOException
+   * @throws IOException if an I/O error occurs.
    */
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
@@ -775,7 +795,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @param f
    *          given path
    * @return the statuses of the files/directories in the given patch
-   * @throws IOException
+   * @throws IOException if an I/O error occurs.
    */
   @Override
   public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
@@ -811,6 +831,10 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Copy it from FS control to the local dst name.
    * If src and dst are directories, the copyCrc parameter
    * determines whether to copy CRC files.
+   * @param src src path.
+   * @param dst dst path.
+   * @param copyCrc copy csc flag.
+   * @throws IOException if an I/O error occurs.
    */
   @SuppressWarnings("deprecation")
   public void copyToLocalFile(Path src, Path dst, boolean copyCrc)

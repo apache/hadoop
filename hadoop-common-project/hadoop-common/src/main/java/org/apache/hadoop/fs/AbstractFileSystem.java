@@ -273,7 +273,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param supportedScheme the scheme supported by the implementor
    * @param authorityNeeded if true then theURI must have authority, if false
    *          then the URI must have null authority.
-   *
+   * @param defaultPort default port to use if port is not specified in the URI.
    * @throws URISyntaxException <code>uri</code> has syntax error
    */
   public AbstractFileSystem(final URI uri, final String supportedScheme,
@@ -282,11 +282,12 @@ public abstract class AbstractFileSystem implements PathCapabilities {
     myUri = getUri(uri, supportedScheme, authorityNeeded, defaultPort);
     statistics = getStatistics(uri); 
   }
-  
+
   /**
-   * Check that the Uri's scheme matches
-   * @param uri
-   * @param supportedScheme
+   * Check that the Uri's scheme matches.
+   *
+   * @param uri name URI of the FS.
+   * @param supportedScheme supported scheme.
    */
   public void checkScheme(URI uri, String supportedScheme) {
     String scheme = uri.getScheme();
@@ -363,7 +364,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * If the path is fully qualified URI, then its scheme and authority
    * matches that of this file system. Otherwise the path must be 
    * slash-relative name.
-   * 
+   * @param path the path.
    * @throws InvalidPathException if the path is invalid
    */
   public void checkPath(Path path) {
@@ -432,7 +433,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   
   /**
    * Make the path fully qualified to this file system
-   * @param path
+   * @param path the path.
    * @return the qualified path
    */
   public Path makeQualified(Path path) {
@@ -497,9 +498,9 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * through any internal symlinks or mount point
    * @param p path to be resolved
    * @return fully qualified path 
-   * @throws FileNotFoundException
-   * @throws AccessControlException
-   * @throws IOException
+   * @throws FileNotFoundException when file not find throw.
+   * @throws AccessControlException when accees control error throw.
+   * @throws IOException raised on errors performing I/O.
    * @throws UnresolvedLinkException if symbolic link on path cannot be
    * resolved internally
    */
@@ -514,6 +515,18 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * {@link FileContext#create(Path, EnumSet, Options.CreateOpts...)} except
    * that the Path f must be fully qualified and the permission is absolute
    * (i.e. umask has been applied).
+   *
+   * @param f the path.
+   * @param createFlag create_flag.
+   * @param opts create ops.
+   * @throws AccessControlException access controll exception.
+   * @throws FileAlreadyExistsException file already exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws ParentNotDirectoryException parent not dir exception.
+   * @throws UnsupportedFileSystemException unsupported file system exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return output stream.
    */
   public final FSDataOutputStream create(final Path f,
       final EnumSet<CreateFlag> createFlag, Options.CreateOpts... opts)
@@ -631,6 +644,24 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link #create(Path, EnumSet, Options.CreateOpts...)} except that the opts
    * have been declared explicitly.
+   *
+   * @param f the path.
+   * @param flag create flag.
+   * @param absolutePermission absolute permission.
+   * @param bufferSize buffer size.
+   * @param replication replications.
+   * @param blockSize block size.
+   * @param progress progress.
+   * @param checksumOpt check sum opt.
+   * @param createParent create parent.
+   * @throws AccessControlException access control exception.
+   * @throws FileAlreadyExistsException file already exists exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws ParentNotDirectoryException parent not directory exception.
+   * @throws UnsupportedFileSystemException unsupported filesystem exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return output stream.
    */
   public abstract FSDataOutputStream createInternal(Path f,
       EnumSet<CreateFlag> flag, FsPermission absolutePermission,
@@ -645,6 +676,14 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * {@link FileContext#mkdir(Path, FsPermission, boolean)} except that the Path
    * f must be fully qualified and the permission is absolute (i.e. 
    * umask has been applied).
+   * @param dir directory.
+   * @param permission permission.
+   * @param createParent create parent flag.
+   * @throws AccessControlException access control exception.
+   * @throws FileAlreadyExistsException file already exists exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void mkdir(final Path dir, final FsPermission permission,
       final boolean createParent) throws AccessControlException,
@@ -655,6 +694,14 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#delete(Path, boolean)} except that Path f must be for
    * this file system.
+   *
+   * @param f the path.
+   * @param recursive recursive flag.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return if successfully deleted success true, not false.
    */
   public abstract boolean delete(final Path f, final boolean recursive)
       throws AccessControlException, FileNotFoundException,
@@ -664,6 +711,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#open(Path)} except that Path f must be for this
    * file system.
+   *
+   * @param f the path.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return input stream.
    */
   public FSDataInputStream open(final Path f) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
@@ -674,6 +728,14 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#open(Path, int)} except that Path f must be for this
    * file system.
+   *
+   * @param f the path.
+   * @param bufferSize buffer size.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return if successfully open success true, not false.
    */
   public abstract FSDataInputStream open(final Path f, int bufferSize)
       throws AccessControlException, FileNotFoundException,
@@ -683,6 +745,14 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#truncate(Path, long)} except that Path f must be for
    * this file system.
+   *
+   * @param f the path.
+   * @param newLength new length.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return if successfully truncate success true, not false.
    */
   public boolean truncate(Path f, long newLength)
       throws AccessControlException, FileNotFoundException,
@@ -695,6 +765,14 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#setReplication(Path, short)} except that Path f must be
    * for this file system.
+   *
+   * @param f the path.
+   * @param replication replication.
+   * @return if successfully set replication success true, not false.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract boolean setReplication(final Path f,
       final short replication) throws AccessControlException,
@@ -704,6 +782,16 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#rename(Path, Path, Options.Rename...)} except that Path
    * f must be for this file system.
+   *
+   * @param src src.
+   * @param dst dst.
+   * @param options options.
+   * @throws AccessControlException access control exception.
+   * @throws FileAlreadyExistsException file already exists exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws ParentNotDirectoryException parent not directory exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public final void rename(final Path src, final Path dst,
       final Options.Rename... options) throws AccessControlException,
@@ -728,6 +816,15 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * File systems that do not have a built in overwrite need implement only this
    * method and can take advantage of the default impl of the other
    * {@link #renameInternal(Path, Path, boolean)}
+   *
+   * @param src src.
+   * @param dst dst.
+   * @throws AccessControlException access control exception.
+   * @throws FileAlreadyExistsException file already exists exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws ParentNotDirectoryException parent not directory exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void renameInternal(final Path src, final Path dst)
       throws AccessControlException, FileAlreadyExistsException,
@@ -738,6 +835,16 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#rename(Path, Path, Options.Rename...)} except that Path
    * f must be for this file system.
+   *
+   * @param src src.
+   * @param dst dst.
+   * @param overwrite overwrite flag.
+   * @throws AccessControlException access control exception.
+   * @throws FileAlreadyExistsException file already exists exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws ParentNotDirectoryException parent not directory exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public void renameInternal(final Path src, final Path dst,
       boolean overwrite) throws AccessControlException,
@@ -801,6 +908,12 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   /**
    * The specification of this method matches that of  
    * {@link FileContext#createSymlink(Path, Path, boolean)};
+   *
+   * @param target target.
+   * @param link link.
+   * @param createParent create parent.
+   * @throws IOException raised on errors performing I/O.
+   * @throws UnresolvedLinkException unresolved link exception.
    */
   public void createSymlink(final Path target, final Path link,
       final boolean createParent) throws IOException, UnresolvedLinkException {
@@ -811,6 +924,8 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * Partially resolves the path. This is used during symlink resolution in
    * {@link FSLinkResolver}, and differs from the similarly named method
    * {@link FileContext#getLinkTarget(Path)}.
+   * @param f the path.
+   * @return target path.
    * @throws IOException subclass implementations may throw IOException 
    */
   public Path getLinkTarget(final Path f) throws IOException {
@@ -823,6 +938,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#setPermission(Path, FsPermission)} except that Path f
    * must be for this file system.
+   *
+   * @param f the path.
+   * @param permission permission.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void setPermission(final Path f,
       final FsPermission permission) throws AccessControlException,
@@ -832,6 +954,14 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#setOwner(Path, String, String)} except that Path f must
    * be for this file system.
+   *
+   * @param f the path.
+   * @param username username.
+   * @param groupname groupname.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void setOwner(final Path f, final String username,
       final String groupname) throws AccessControlException,
@@ -841,6 +971,14 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#setTimes(Path, long, long)} except that Path f must be
    * for this file system.
+   *
+   * @param f the path.
+   * @param mtime modify time.
+   * @param atime access time.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void setTimes(final Path f, final long mtime,
     final long atime) throws AccessControlException, FileNotFoundException,
@@ -850,6 +988,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#getFileChecksum(Path)} except that Path f must be for
    * this file system.
+   *
+   * @param f the path.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return File Check sum.
    */
   public abstract FileChecksum getFileChecksum(final Path f)
       throws AccessControlException, FileNotFoundException,
@@ -860,6 +1005,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * {@link FileContext#getFileStatus(Path)} 
    * except that an UnresolvedLinkException may be thrown if a symlink is 
    * encountered in the path.
+   *
+   * @param f the path.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return File Status
    */
   public abstract FileStatus getFileStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
@@ -871,8 +1023,8 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * In some FileSystem implementations such as HDFS metadata
    * synchronization is essential to guarantee consistency of read requests
    * particularly in HA setting.
-   * @throws IOException
-   * @throws UnsupportedOperationException
+   * @throws IOException raised on errors performing I/O.
+   * @throws UnsupportedOperationException Unsupported Operation Exception.
    */
   public void msync() throws IOException, UnsupportedOperationException {
     throw new UnsupportedOperationException(getClass().getCanonicalName() +
@@ -884,6 +1036,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * {@link FileContext#access(Path, FsAction)}
    * except that an UnresolvedLinkException may be thrown if a symlink is
    * encountered in the path.
+   *
+   * @param path the path.
+   * @param mode fsaction mode.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "Hive"})
   public void access(Path path, FsAction mode) throws AccessControlException,
@@ -898,6 +1057,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * encountered in the path leading up to the final path component.
    * If the file system does not support symlinks then the behavior is
    * equivalent to {@link AbstractFileSystem#getFileStatus(Path)}.
+   *
+   * @param f the path.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnsupportedFileSystemException UnSupported File System Exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return file status.
    */
   public FileStatus getFileLinkStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
@@ -909,6 +1075,15 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#getFileBlockLocations(Path, long, long)} except that
    * Path f must be for this file system.
+   *
+   * @param f the path.
+   * @param start start.
+   * @param len length.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return BlockLocation Array.
    */
   public abstract BlockLocation[] getFileBlockLocations(final Path f,
       final long start, final long len) throws AccessControlException,
@@ -918,6 +1093,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#getFsStatus(Path)} except that Path f must be for this
    * file system.
+   *
+   * @param f the path.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return Fs Status.
    */
   public FsStatus getFsStatus(final Path f) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
@@ -928,6 +1110,11 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   /**
    * The specification of this method matches that of
    * {@link FileContext#getFsStatus(Path)}.
+   *
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return Fs Status.
    */
   public abstract FsStatus getFsStatus() throws AccessControlException,
       FileNotFoundException, IOException;
@@ -936,6 +1123,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#listStatus(Path)} except that Path f must be for this
    * file system.
+   *
+   * @param f path.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return FileStatus Iterator.
    */
   public RemoteIterator<FileStatus> listStatusIterator(final Path f)
       throws AccessControlException, FileNotFoundException,
@@ -968,6 +1162,13 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * will have different formats for replicated and erasure coded file. Please
    * refer to {@link FileSystem#getFileBlockLocations(FileStatus, long, long)}
    * for more details.
+   *
+   * @param f the path.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return FileStatus Iterator.
    */
   public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
@@ -1000,6 +1201,12 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext.Util#listStatus(Path)} except that Path f must be 
    * for this file system.
+   * @param f the path.
+   * @throws AccessControlException access control exception.
+   * @throws FileNotFoundException file not found exception.
+   * @throws UnresolvedLinkException unresolved link exception.
+   * @throws IOException raised on errors performing I/O.
+   * @return FileStatus Iterator.
    */
   public abstract FileStatus[] listStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
@@ -1008,7 +1215,8 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   /**
    * @return an iterator over the corrupt files under the given path
    * (may contain duplicates if a file has more than one corrupt block)
-   * @throws IOException
+   * @param path the path.
+   * @throws IOException raised on errors performing I/O.
    */
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
@@ -1021,6 +1229,10 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * The specification of this method matches that of
    * {@link FileContext#setVerifyChecksum(boolean, Path)} except that Path f
    * must be for this file system.
+   *
+   * @param verifyChecksum verify check sum flag.
+   * @throws AccessControlException access control exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void setVerifyChecksum(final boolean verifyChecksum)
       throws AccessControlException, IOException;
@@ -1042,7 +1254,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param renewer the account name that is allowed to renew the token.
    * @return List of delegation tokens.
    *   If delegation tokens not supported then return a list of size zero.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
@@ -1142,7 +1354,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param path Path to modify
    * @param name xattr name.
    * @param value xattr value.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void setXAttr(Path path, String name, byte[] value)
       throws IOException {
@@ -1161,7 +1373,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param name xattr name.
    * @param value xattr value.
    * @param flag xattr set flag
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void setXAttr(Path path, String name, byte[] value,
       EnumSet<XAttrSetFlag> flag) throws IOException {
@@ -1179,7 +1391,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param path Path to get extended attribute
    * @param name xattr name.
    * @return byte[] xattr value.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public byte[] getXAttr(Path path, String name) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
@@ -1197,7 +1409,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    *
    * @return {@literal Map<String, byte[]>} describing the XAttrs of the file
    * or directory
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public Map<String, byte[]> getXAttrs(Path path) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
@@ -1215,7 +1427,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param names XAttr names.
    * @return {@literal Map<String, byte[]>} describing the XAttrs of the file
    * or directory
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public Map<String, byte[]> getXAttrs(Path path, List<String> names)
       throws IOException {
@@ -1233,7 +1445,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param path Path to get extended attributes
    * @return {@literal Map<String, byte[]>} describing the XAttrs of the file
    * or directory
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public List<String> listXAttrs(Path path)
           throws IOException {
@@ -1250,7 +1462,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    *
    * @param path Path to remove extended attribute
    * @param name xattr name
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void removeXAttr(Path path, String name) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
@@ -1260,6 +1472,11 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   /**
    * The specification of this method matches that of
    * {@link FileContext#createSnapshot(Path, String)}.
+   *
+   * @param path the path.
+   * @param snapshotName snapshot name.
+   * @throws IOException raised on errors performing I/O.
+   * @return path.
    */
   public Path createSnapshot(final Path path, final String snapshotName)
       throws IOException {
@@ -1270,6 +1487,11 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   /**
    * The specification of this method matches that of
    * {@link FileContext#renameSnapshot(Path, String, String)}.
+   *
+   * @param path the path.
+   * @param snapshotOldName snapshot old name.
+   * @param snapshotNewName snapshot new name.
+   * @throws IOException raised on errors performing I/O.
    */
   public void renameSnapshot(final Path path, final String snapshotOldName,
       final String snapshotNewName) throws IOException {
@@ -1280,6 +1502,10 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   /**
    * The specification of this method matches that of
    * {@link FileContext#deleteSnapshot(Path, String)}.
+   *
+   * @param snapshotDir snapshot dir.
+   * @param snapshotName snapshot name.
+   * @throws IOException raised on errors performing I/O.
    */
   public void deleteSnapshot(final Path snapshotDir, final String snapshotName)
       throws IOException {
@@ -1290,7 +1516,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   /**
    * Set the source path to satisfy storage policy.
    * @param path The source path referring to either a directory or a file.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void satisfyStoragePolicy(final Path path) throws IOException {
     throw new UnsupportedOperationException(
@@ -1304,6 +1530,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * @param policyName the name of the target storage policy. The list
    *                   of supported Storage policies can be retrieved
    *                   via {@link #getAllStoragePolicies}.
+   * @throws IOException raised on errors performing I/O.
    */
   public void setStoragePolicy(final Path path, final String policyName)
       throws IOException {
@@ -1315,7 +1542,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   /**
    * Unset the storage policy set for a given file or directory.
    * @param src file or directory path.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void unsetStoragePolicy(final Path src) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
@@ -1327,7 +1554,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    *
    * @param src file or directory path.
    * @return storage policy for give file.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public BlockStoragePolicySpi getStoragePolicy(final Path src)
       throws IOException {
@@ -1339,7 +1566,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * Retrieve all the storage policies supported by this file system.
    *
    * @return all storage policies supported by this filesystem.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
       throws IOException {

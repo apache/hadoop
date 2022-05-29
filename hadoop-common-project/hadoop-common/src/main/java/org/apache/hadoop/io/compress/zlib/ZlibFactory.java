@@ -66,7 +66,7 @@ public class ZlibFactory {
   /**
    * Set the flag whether to use native library. Used for testing non-native
    * libraries
-   *
+   * @param isLoaded isLoaded.
    */
   @VisibleForTesting
   public static void setNativeZlibLoaded(final boolean isLoaded) {

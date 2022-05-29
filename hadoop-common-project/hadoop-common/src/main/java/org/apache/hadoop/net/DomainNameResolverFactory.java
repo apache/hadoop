@@ -47,6 +47,7 @@ public final class DomainNameResolverFactory {
    * @param configKey The config key name suffixed with
    *                  the nameservice/yarnservice.
    * @return Domain name resolver.
+   * @throws IOException raised on errors performing I/O.
    */
   public static DomainNameResolver newInstance(
       Configuration conf, URI uri, String configKey) throws IOException {
@@ -61,7 +62,6 @@ public final class DomainNameResolverFactory {
    * @param conf Configuration
    * @param configKey config key name.
    * @return Domain name resolver.
-   * @throws IOException when the class cannot be found or initiated.
    */
   public static DomainNameResolver newInstance(
       Configuration conf, String configKey) {
