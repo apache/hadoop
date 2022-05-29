@@ -71,7 +71,7 @@ DirentTest::CreateTempDirAndFiles(std::size_t num_dirs,
               << tmp_dir_absolute_path.string() << " reason: " << err.message();
       throw std::runtime_error(err_msg.str());
     }
-    paths.emplace(tmp_dir_absolute_path);
+    paths.emplace(tmp_dir_absolute_path.string());
   }
 
   for (std::size_t i = 0; i < num_files; ++i) {
@@ -79,7 +79,7 @@ DirentTest::CreateTempDirAndFiles(std::size_t num_dirs,
     tmp_filename << i << ".txt";
     const auto tmp_file_absolute_path = tmp_root_ / tmp_filename.str();
     std::ofstream{tmp_file_absolute_path};
-    paths.emplace(tmp_file_absolute_path);
+    paths.emplace(tmp_file_absolute_path.string());
   }
   return paths;
 }

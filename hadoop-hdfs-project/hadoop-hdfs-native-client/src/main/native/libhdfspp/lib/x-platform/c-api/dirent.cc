@@ -26,6 +26,7 @@
 #include "x-platform/c-api/dirent.h"
 #include "x-platform/dirent.h"
 
+extern "C" {
 DIR *opendir(const char *dir_path) {
   const auto dir = new DIR;
   dir->x_platform_dirent_ptr = new XPlatform::Dirent(dir_path);
@@ -71,4 +72,5 @@ int closedir(const DIR *dir) {
   delete x_platform_dirent;
   delete dir;
   return 0;
+}
 }
