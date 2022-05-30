@@ -158,10 +158,9 @@ public class MockNamenode {
 
     when(mockNn.getServiceStatus()).
         thenAnswer((Answer<HAServiceStatus>) invocation -> {
-            HAServiceStatus haStatus = new HAServiceStatus(getHAServiceState());
-            haStatus.setNotReadyToBecomeActive("");
-      return haStatus;
-    });
+        HAServiceStatus haStatus = new HAServiceStatus(getHAServiceState());
+        haStatus.setNotReadyToBecomeActive("");
+      return haStatus; });
   }
 
   /**
