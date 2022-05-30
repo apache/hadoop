@@ -282,7 +282,7 @@ public class TestFileCreation {
           // do nothing;
           return false;
         }
-      }, 1, 3000);
+      }, 1, 6000);
 
     } finally {
       cluster.shutdown();
