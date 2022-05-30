@@ -28,7 +28,6 @@ import org.apache.hadoop.yarn.webapp.view.HeaderBlock;
 import org.apache.hadoop.yarn.webapp.view.JQueryUI;
 
 import org.junit.Test;
-import static org.mockito.Mockito.*;
 
 public class TestCommonViews {
 
