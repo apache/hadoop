@@ -52,12 +52,15 @@ find_package(Threads)
 
 include(CheckCXXSourceCompiles)
 include(CheckSymbolExists)
-
 include(FetchContent)
+
+# Install googletest
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/703bd9caab50b139428cea1aaff9974ebee5742e.zip
 )
+# The commit SHA 703bd9caab50b139428cea1aaff9974ebee5742e in the URL above corresponds to the
+# tag release-1.10.0 in the googletest repository.
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
