@@ -305,7 +305,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * Check if an exception is caused by an unavailable subcluster or not. It
    * also checks the causes.
    * @param ioe IOException to check.
-   * @return If caused by an unavailable subcluster. False if the should not be
+   * @return If caused by an unavailable subcluster. False if they should not be
    *         retried (e.g., NSQuotaExceededException).
    */
   protected static boolean isUnavailableSubclusterException(

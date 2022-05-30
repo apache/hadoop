@@ -742,7 +742,7 @@ public class TestRouterAdminCLI {
    * @param mount
    *          target mount table
    * @param canRead
-   *          whether can list mount tables under specified mount
+   *          whether you can list mount tables under specified mount
    * @param addCommandCode
    *          expected return code of add command executed for specified mount
    * @param rmCommandCode
@@ -1467,7 +1467,7 @@ public class TestRouterAdminCLI {
         err.toString().contains("update: /noMount doesn't exist."));
     err.reset();
 
-    // Check update if non true/false value is passed for readonly.
+    // Check update if no true/false value is passed for readonly.
     argv = new String[] {"-update", src, "-readonly", "check"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(err.toString(), err.toString().contains("update: "

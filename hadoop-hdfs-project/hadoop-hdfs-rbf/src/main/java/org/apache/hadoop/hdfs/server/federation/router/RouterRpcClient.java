@@ -139,7 +139,7 @@ public class RouterRpcClient {
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
    *
-   * @param conf Hdfs Configuation.
+   * @param conf Hdfs Configuration.
    * @param router A router using this RPC client.
    * @param resolver A NN resolver to determine the currently active NN in HA.
    * @param monitor Optional performance monitor.
@@ -444,7 +444,7 @@ public class RouterRpcClient {
    * @param ugi User group information.
    * @param namenodes A prioritized list of namenodes within the same
    *                  nameservice.
-   * @param method Remote ClientProtcol method to invoke.
+   * @param method Remote ClientProtocol method to invoke.
    * @param params Variable list of parameters matching the method.
    * @return The result of invoking the method.
    * @throws ConnectException If it cannot connect to any Namenode.
@@ -1027,7 +1027,7 @@ public class RouterRpcClient {
       } catch (Exception e) {
         // Unusual error, ClientProtocol calls always use IOException (or
         // RemoteException). Re-wrap in IOException for compatibility with
-        // ClientProtcol.
+        // ClientProtocol.
         LOG.error("Unexpected exception {} proxying {} to {}",
             e.getClass(), m.getName(), ns, e);
         IOException ioe = new IOException(
@@ -1449,7 +1449,7 @@ public class RouterRpcClient {
           results.add(new RemoteResult<>(location, ioe));
         } catch (ExecutionException ex) {
           Throwable cause = ex.getCause();
-          LOG.debug("Canot execute {} in {}: {}",
+          LOG.debug("Cannot execute {} in {}: {}",
               m.getName(), location, cause.getMessage());
 
           // Convert into IOException if needed
