@@ -1274,7 +1274,13 @@ public final class S3AUtils {
 
     return overrideConfigBuilder;
   }
-  
+
+  /**
+   * Configures the http client
+   *
+   * @param conf The Hadoop configuration
+   * @return Http client builder
+   */
   public static ApacheHttpClient.Builder createHttpClientBuilder(Configuration conf) {
     ApacheHttpClient.Builder httpClientBuilder =
         ApacheHttpClient.builder();
@@ -1288,7 +1294,7 @@ public final class S3AUtils {
     httpClientBuilder.socketTimeout(Duration.ofSeconds(intOption(conf, SOCKET_TIMEOUT,
         DEFAULT_SOCKET_TIMEOUT, 0)));
 
-    // NOT_SUPPORTED: The protocol is now HTTPS by default,
+     // The protocol is now HTTPS by default,
     // and can only be modified by setting an HTTP endpoint on the client builder.
     //TODO: See where this logic should go now
     //initProtocolSettings(conf, awsConf);
@@ -1296,6 +1302,12 @@ public final class S3AUtils {
     return httpClientBuilder;
   }
 
+  /**
+   * Configures the retry policy
+   *
+   * @param conf The Hadoop configuration
+   * @return Retry policy builder
+   */
   public static RetryPolicy.Builder createRetryPolicyBuilder(Configuration conf) {
 
     RetryPolicy.Builder retryPolicyBuilder =
@@ -1307,6 +1319,14 @@ public final class S3AUtils {
     return retryPolicyBuilder;
   }
 
+  /**
+   * Configures the proxy
+   *
+   * @param conf The Hadoop configuration
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @return Proxy configuration builder
+   * @throws IOException
+   */
   public static ProxyConfiguration.Builder createProxyConfigurationBuilder(Configuration conf,
       String bucket) throws IOException {
 
@@ -1351,6 +1371,13 @@ public final class S3AUtils {
     return proxyConfigBuilder;
   }
 
+  /***
+   * Builds a URI, throws an IllegalArgumentException in case of errors.
+   *
+   * @param host proxy host
+   * @param port proxy port
+   * @return
+   */
   private static URI buildURI(String host, int port) {
     try {
       return new URIBuilder().setHost(host).setPort(port).build();
@@ -1497,6 +1524,7 @@ public final class S3AUtils {
    * @param conf Hadoop configuration
    * @param awsConf AWS SDK configuration to update
    */
+  // TODO: Remove when we remove S3V1 client
   private static void initUserAgent(Configuration conf,
       ClientConfiguration awsConf) {
     String userAgent = "Hadoop " + VersionInfo.getVersion();
@@ -1508,6 +1536,16 @@ public final class S3AUtils {
     awsConf.setUserAgentPrefix(userAgent);
   }
 
+  /**
+   * Initializes the User-Agent header to send in HTTP requests to AWS
+   * services.  We always include the Hadoop version number.  The user also
+   * may set an optional custom prefix to put in front of the Hadoop version
+   * number.  The AWS SDK internally appends its own information, which seems
+   * to include the AWS SDK version, OS and JVM version.
+   *
+   * @param conf Hadoop configuration
+   * @param awsConf AWS SDK configuration to update
+   */
   private static void initUserAgentV2(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig) {
     String userAgent = "Hadoop " + VersionInfo.getVersion();

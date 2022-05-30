@@ -1147,12 +1147,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param reason a justification for requesting access.
    * @return AmazonS3Client
    */
+  // TODO: Remove when we remove S3V1 client
   @VisibleForTesting
   public AmazonS3 getAmazonS3ClientForTesting(String reason) {
     LOG.warn("Access to S3A client requested, reason {}", reason);
     return s3;
   }
 
+  /**
+   * Returns the S3 client used by this filesystem.
+   * <i>Warning: this must only be used for testing, as it bypasses core
+   * S3A operations. </i>
+   * @param reason a justification for requesting access.
+   * @return S3Client
+   */
   @VisibleForTesting
   public S3Client getAmazonS3V2ClientForTesting(String reason) {
     LOG.warn("Access to S3A client requested, reason {}", reason);

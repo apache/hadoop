@@ -127,8 +127,6 @@ public class ITestS3AConfiguration {
 
   @Test
   public void testProxyConnection() throws Exception {
-    // FIXME Fails because SDKV2 throws SdkException,
-    //  will work once errors are handled and translated properly.
     useFailFastConfiguration();
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.setInt(Constants.PROXY_PORT, 1);
@@ -184,8 +182,6 @@ public class ITestS3AConfiguration {
 
   @Test
   public void testAutomaticProxyPortSelection() throws Exception {
-    // FIXME Fails because SDKV2 throws SdkException,
-    //  will work once errors are handled and translated properly.
     useFailFastConfiguration();
     conf.unset(Constants.PROXY_PORT);
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
