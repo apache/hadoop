@@ -405,7 +405,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
                 .asMap()
                 .keySet()
                 .parallelStream()
-                .forEach((key) -> this.dnCache.refresh(key)),
+                .forEach(this.dnCache::refresh),
             0,
             dnCacheExpire, TimeUnit.MILLISECONDS);
     initRouterFedRename();
