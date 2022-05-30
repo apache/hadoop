@@ -1544,7 +1544,7 @@ public final class S3AUtils {
    * to include the AWS SDK version, OS and JVM version.
    *
    * @param conf Hadoop configuration
-   * @param awsConf AWS SDK configuration to update
+   * @param clientConfig AWS SDK configuration to update
    */
   private static void initUserAgentV2(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig) {
