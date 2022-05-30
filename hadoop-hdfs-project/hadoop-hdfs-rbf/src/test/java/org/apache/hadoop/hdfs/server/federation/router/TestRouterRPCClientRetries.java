@@ -54,8 +54,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.util.function.Supplier;
-
 /**
  * Test retry behavior of the Router RPC Client.
  */
@@ -237,11 +235,6 @@ public class TestRouterRPCClientRetries {
   private static void waitUpdateLiveNodes(
       final String oldValue, final NamenodeBeanMetrics metrics)
           throws Exception {
-    waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return !oldValue.equals(metrics.getLiveNodes());
-      }
-    }, 500, 5 * 1000);
+    waitFor(() -> !oldValue.equals(metrics.getLiveNodes()), 500, 5 * 1000);
   }
 }
