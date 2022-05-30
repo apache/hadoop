@@ -2787,7 +2787,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           OBJECT_PUT_REQUESTS.getSymbol(), () ->
               s3.putObject(putObjectRequest));
       incrementPutCompletedStatistics(true, len);
-      // update metadata
+      // apply any post-write actions.
       finishedWrite(putObjectRequest.getKey(), len,
           result.getETag(), result.getVersionId(),
           putOptions);
@@ -4052,10 +4052,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Perform post-write actions.
-   * <p></p>
+   * <p>
    * This operation MUST be called after any PUT/multipart PUT completes
    * successfully.
-   * <p></p>
+   * <p>
    * The actions include calling
    * {@link #deleteUnnecessaryFakeDirectories(Path)}
    * if directory markers are not being retained.
@@ -4067,7 +4067,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   @Retries.RetryExceptionsSwallowed
-  void finishedWrite(String key,
+  void finishedWrite(
+      String key,
       long length,
       String eTag,
       String versionId,
@@ -4075,8 +4076,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Finished write to {}, len {}. etag {}, version {}",
         key, length, eTag, versionId);
     Preconditions.checkArgument(length >= 0, "content length is negative");
-    Path p = keyToQualifiedPath(key);
     if (!putOptions.isKeepMarkers()) {
+      Path p = keyToQualifiedPath(key);
       deleteUnnecessaryFakeDirectories(p.getParent());
     }
   }
