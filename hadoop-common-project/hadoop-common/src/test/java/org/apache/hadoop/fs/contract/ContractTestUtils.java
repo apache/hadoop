@@ -76,10 +76,9 @@ public class ContractTestUtils extends Assert {
   public static final int DEFAULT_IO_CHUNK_MODULUS_SIZE = 128;
 
   /**
-   * Timeout in seconds for vectored read
-   * operation in tests : {@value}.
+   * Timeout in seconds for vectored read operation in tests : {@value}.
    */
-  public static int VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS = 5 * 60;
+  public static final int VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS = 5 * 60;
 
   /**
    * Assert that a property in the property set matches the expected value.
