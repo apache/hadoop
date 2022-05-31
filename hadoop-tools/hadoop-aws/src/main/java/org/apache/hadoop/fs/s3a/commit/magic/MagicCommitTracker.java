@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.util.Preconditions;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_MARKER_PUT;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.X_HEADER_MAGIC_MARKER;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 
@@ -176,14 +176,14 @@ public class MagicCommitTracker extends PutTracker {
 
   }
   /**
-   * PUT an object via the transfer manager.
+   * PUT an object.
    * @param request the request
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   private void upload(PutObjectRequest request) throws IOException {
     trackDurationOfInvocation(trackerStatistics,
-        OBJECT_PUT_REQUESTS.getSymbol(), () ->
+        COMMITTER_MAGIC_MARKER_PUT.getSymbol(), () ->
             writer.uploadObject(request, PutObjectOptions.keepingDirs()));
   }
 

@@ -471,6 +471,11 @@ public enum Statistic {
       "committer_magic_files_created",
       "Count of files created under 'magic' paths",
       TYPE_COUNTER),
+
+  COMMITTER_MAGIC_MARKER_PUT(
+      "committer_magic_marker_put",
+      "Duration Tracking of marker files created under 'magic' paths",
+      TYPE_DURATION),
   COMMITTER_MATERIALIZE_FILE(
       "committer_materialize_file",
       "Duration Tracking of time to materialize a file in job commit",

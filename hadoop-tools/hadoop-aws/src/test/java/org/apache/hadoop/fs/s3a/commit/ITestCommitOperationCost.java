@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
 import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_FILES_CREATED;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_MARKER_PUT;
 import static org.apache.hadoop.fs.s3a.Statistic.DIRECTORIES_CREATED;
 import static org.apache.hadoop.fs.s3a.Statistic.FAKE_DIRECTORIES_DELETED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
@@ -121,7 +122,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
   @Test
   public void testMagicMkdir() throws Throwable {
-    describe("Mkdirs __magic always skips marker deletion");
+    describe("Mkdirs __magic always skips dir marker deletion");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
     // create dest dir marker, always
@@ -149,7 +150,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
    */
   @Test
   public void testMagicMkdirs() throws Throwable {
-    describe("Mkdirs __magic/subdir always skips marker deletion");
+    describe("Mkdirs __magic/subdir always skips dir marker deletion");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
     Path magicDir = new Path(baseDir, MAGIC);
@@ -214,6 +215,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
       },
           always(NO_HEAD_OR_LIST),
           with(COMMITTER_MAGIC_FILES_CREATED, 1),
+          with(COMMITTER_MAGIC_MARKER_PUT, 0),
           with(OBJECT_MULTIPART_UPLOAD_INITIATED, 1));
       assertIsMagicStream(stream);
 
@@ -229,6 +231,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
       },
           always(NO_HEAD_OR_LIST),
           with(OBJECT_PUT_REQUESTS, 2),
+          with(COMMITTER_MAGIC_MARKER_PUT, 2),
           with(OBJECT_BULK_DELETE_REQUEST, 0),
           with(OBJECT_DELETE_REQUEST, 0));
 
@@ -317,6 +320,5 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
         always(NO_HEAD_OR_LIST),
         with(ACTION_HTTP_GET_REQUEST, 1));
   }
-
 
 }

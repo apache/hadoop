@@ -103,18 +103,6 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     assertIsFile(shouldWork);
   }
 
-  @Test(expected = FileNotFoundException.class)
-  public void testCreateNonRecursiveNoParent() throws IOException {
-    createNonRecursive(path("/recursive/node"));
-  }
-
-  @Test(expected = FileAlreadyExistsException.class)
-  public void testCreateNonRecursiveParentIsFile() throws IOException {
-    Path parent = path("/file.txt");
-    touch(getFileSystem(), parent);
-    createNonRecursive(new Path(parent, "fail"));
-  }
-
   @Test
   public void testPutObjectDirect() throws Throwable {
     final S3AFileSystem fs = getFileSystem();

@@ -1316,6 +1316,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     // propagate any extra values into the FS-level stats.
     incrementMutableCounter(OBJECT_PUT_REQUESTS.getSymbol(),
         sourceIOStatistics.counters().get(OBJECT_PUT_REQUESTS.getSymbol()));
+    incrementMutableCounter(
+        COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
+        sourceIOStatistics.counters().get(COMMITTER_MAGIC_MARKER_PUT.getSymbol()));
+
   }
 
   /**
@@ -1372,6 +1376,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
           .withDurationTracking(
               ACTION_EXECUTOR_ACQUIRED,
+              COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
               INVOCATION_ABORT.getSymbol(),
               MULTIPART_UPLOAD_COMPLETED.getSymbol(),
               OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(),
