@@ -49,9 +49,9 @@ public class TestSeveralNameNodes {
   private static final int TIME_BETWEEN_FAILOVERS = 1000;
   private static final int NUM_NAMENODES = 3;
   private static final int NUM_THREADS = 3;
-  private static final int LIST_LENGTH = 50;
+  private static final int LIST_LENGTH = 40;
   /** ms for length of test */
-  private static final long RUNTIME = 100000;
+  private static final long RUNTIME = 120000;
 
   @Test
   public void testCircularLinkedListWrites() throws Exception {
