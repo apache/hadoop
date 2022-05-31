@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.AbstractList;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -138,6 +139,11 @@ public class DatanodeAdminManager {
    * outOfServiceNodeBlocks. Additional nodes wait in pendingNodes.
    */
   private final PriorityQueue<DatanodeDescriptor> pendingNodes;
+  /**
+   * Any nodes where decommission or maintenance has been cancelled are added
+   * to this queue for later processing.
+   */
+  private final Queue<DatanodeDescriptor> cancelledNodes = new ArrayDeque<>();
   private Monitor monitor = null;
 
   DatanodeAdminManager(final Namesystem namesystem,
@@ -251,7 +257,7 @@ public class DatanodeAdminManager {
       }
       // Remove from tracking in DatanodeAdminManager
       pendingNodes.remove(node);
-      outOfServiceNodeBlocks.remove(node);
+      cancelledNodes.add(node);
     } else {
       LOG.trace("stopDecommission: Node {} in {}, nothing to do.",
           node, node.getAdminState());
@@ -330,7 +336,7 @@ public class DatanodeAdminManager {
 
       // Remove from tracking in DatanodeAdminManager
       pendingNodes.remove(node);
-      outOfServiceNodeBlocks.remove(node);
+      cancelledNodes.add(node);
     } else {
       LOG.trace("stopMaintenance: Node {} in {}, nothing to do.",
           node, node.getAdminState());
@@ -513,6 +519,7 @@ public class DatanodeAdminManager {
       // Check decommission or maintenance progress.
       namesystem.writeLock();
       try {
+        processCancelledNodes();
         processPendingNodes();
         check();
       } catch (Exception e) {
@@ -538,6 +545,20 @@ public class DatanodeAdminManager {
           (maxConcurrentTrackedNodes == 0 ||
           outOfServiceNodeBlocks.size() < maxConcurrentTrackedNodes)) {
         outOfServiceNodeBlocks.put(pendingNodes.poll(), null);
+      }
+    }
+
+    /**
+     * Process any nodes which have had their decommission or maintenance mode
+     * cancelled by an administrator.
+     *
+     * This method must be executed under the write lock to prevent the
+     * internal structures being modified concurrently.
+     */
+    private void processCancelledNodes() {
+      while(!cancelledNodes.isEmpty()) {
+        DatanodeDescriptor dn = cancelledNodes.poll();
+        outOfServiceNodeBlocks.remove(dn);
       }
     }
 
