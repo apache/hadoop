@@ -77,8 +77,8 @@ public class TestLocalResolver {
     StringBuilder sb = new StringBuilder("clientX");
     LocalResolver localResolver = new LocalResolver(conf, router);
     LocalResolver spyLocalResolver = spy(localResolver);
-    doAnswer((Answer<String>) invocation ->
-        sb.toString()).when(spyLocalResolver).getClientAddr();
+    doAnswer((Answer<String>) invocation -> sb.toString()
+        ).when(spyLocalResolver).getClientAddr();
 
     // Add the mocks to the resolver
     MultipleDestinationMountTableResolver resolver =
