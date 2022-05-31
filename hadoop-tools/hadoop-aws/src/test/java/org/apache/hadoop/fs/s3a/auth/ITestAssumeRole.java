@@ -610,7 +610,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       // we expect to be able to list all the files here
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
           pendingCommits = operations.loadSinglePendingCommits(readOnlyDir,
-          true, commitContext, false);
+          true, commitContext);
 
       // all those commits must fail
       List<SinglePendingCommit> commits = pendingCommits.getLeft().getCommits();

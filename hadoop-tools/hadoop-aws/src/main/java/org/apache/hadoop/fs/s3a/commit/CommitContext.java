@@ -169,8 +169,10 @@ public final class CommitContext implements Closeable {
   /**
    * Build the submitters and thread pools if the number of committerThreads
    * is greater than zero.
+   * This should only be called in constructors; it is synchronized to keep
+   * SpotBugs happy.
    */
-  private void buildSubmitters() {
+  private synchronized void buildSubmitters() {
     if (committerThreads != 0) {
       outerSubmitter = new PoolSubmitter(buildThreadPool(committerThreads));
     }
@@ -292,7 +294,7 @@ public final class CommitContext implements Closeable {
    * TaskPool knows to run it in the current thread.
    * @return a submitter or null
    */
-  public TaskPool.Submitter getOuterSubmitter() {
+  public synchronized TaskPool.Submitter getOuterSubmitter() {
     return outerSubmitter;
   }
 

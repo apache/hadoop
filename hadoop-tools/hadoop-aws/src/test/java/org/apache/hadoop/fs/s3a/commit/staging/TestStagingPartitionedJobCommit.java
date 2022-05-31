@@ -67,7 +67,7 @@ public class TestStagingPartitionedJobCommit
 
     private PartitionedStagingCommitterForTesting(TaskAttemptContext context)
         throws IOException {
-      super(StagingTestBase.outputPath, context);
+      super(StagingTestBase.getOutputPath(), context);
     }
 
     /**
@@ -243,7 +243,7 @@ public class TestStagingPartitionedJobCommit
     pathsExist(mockS3, "dateint=20161116/hour=14");
     when(mockS3
         .delete(
-            new Path(outputPath, "dateint=20161116/hour=14"),
+            new Path(getOutputPath(), "dateint=20161116/hour=14"),
             true))
         .thenThrow(new PathCommitException("fake",
             "Fake IOException for delete"));

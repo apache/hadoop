@@ -164,7 +164,9 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       throw e;
     } finally {
       // delete the task attempt so there's no possibility of a second attempt
-      //deleteTaskAttemptPathQuietly(context);
+      // incurs a LIST, a bulk DELETE and maybe a parent dir creation, however
+      // as it happens during task commit, it should be off the critical path.
+      deleteTaskAttemptPathQuietly(context);
     }
     getCommitOperations().taskCompleted(true);
     LOG.debug("aggregate statistics\n{}",
@@ -190,7 +192,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     try (CommitContext commitContext = initiateTaskOperation(context)) {
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
           loaded = actions.loadSinglePendingCommits(
-              taskAttemptPath, true, commitContext, false);
+              taskAttemptPath, true, commitContext);
       pendingSet = loaded.getKey();
       List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
       if (!failures.isEmpty()) {

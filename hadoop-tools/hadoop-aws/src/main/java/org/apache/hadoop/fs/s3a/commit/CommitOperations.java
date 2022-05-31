@@ -130,7 +130,7 @@ public class CommitOperations extends AbstractStoreOperation
    * the commit operations.
    * @param fs FS to bind to
    * @param committerStatistics committer statistics
-   * @param outputPath
+   * @param outputPath destination of work.
    * @throws IOException failure to bind.
    */
   public CommitOperations(S3AFileSystem fs,
@@ -258,20 +258,21 @@ public class CommitOperations extends AbstractStoreOperation
    * outer submitter.
    * All load failures are logged and then added to list of files which would
    * not load.
+   *
    * @param pendingDir directory containing commits
    * @param recursive do a recursive scan?
    * @param commitContext commit context
-   * @param deleteSource delete the source file and stub file without prefix?
+   *
    * @return tuple of loaded entries and those pending files which would
    * not load/validate.
+   *
    * @throws IOException on a failure to list the files.
    */
   public Pair<PendingSet,
       List<Pair<LocatedFileStatus, IOException>>>
       loadSinglePendingCommits(Path pendingDir,
       boolean recursive,
-      CommitContext commitContext,
-      boolean deleteSource)
+      CommitContext commitContext)
       throws IOException {
 
     PendingSet commits = new PendingSet();
@@ -300,11 +301,6 @@ public class CommitOperations extends AbstractStoreOperation
             // then clear so they aren't marshalled again.
             singleCommit.getIOStatistics().clear();
             pendingFiles.add(singleCommit);
-            if (deleteSource) {
-              // TODO, delete files here
-
-
-            }
           } catch (IOException e) {
             LOG.warn("Failed to load commit file {}", path, e);
             failures.add(Pair.of(status, e));

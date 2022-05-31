@@ -1457,7 +1457,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       LOG.debug("No summary directory set in " + OPT_SUMMARY_REPORT_DIR);
       return null;
     }
-    LOG.debug("Summary directory set to {}" , reportDir);
+    LOG.debug("Summary directory set to {}", reportDir);
 
     Path reportDirPath = new Path(reportDir);
     Path path = new Path(reportDirPath,

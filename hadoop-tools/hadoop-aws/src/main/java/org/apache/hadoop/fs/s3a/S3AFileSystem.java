@@ -1639,14 +1639,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * parent directory existing, and doesn't attempt to delete
    * dir markers, irrespective of FS settings.
    * If true, this method call does no IO at all.
-   *
    * @param path the file name to open
    * @param flags flags for the operation
    * @param progress the progress reporter.
    * @param performance fast creation over safety
    * @param auditSpan audit span
    * @param recursive create all parents too?
-   *
    * @throws IOException in the event of IO related errors.
    */
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
@@ -1665,8 +1663,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (skipProbes) {
       LOG.debug("Skipping existence/overwrite checks");
     } else {
-      // look to see if there is a file/dir at the path
-      boolean fileKnownToExist = false;
       try {
         // get the status or throw an FNFE.
         // when overwriting, there is no need to look for any existing file,
@@ -1685,37 +1681,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           // path references a file and overwrite is disabled
           throw new FileAlreadyExistsException(path + " already exists");
         }
-
         LOG.debug("Overwriting file {}", path);
-        fileKnownToExist = true;
       } catch (FileNotFoundException e) {
         // this means there is nothing at the path; all good.
       }
-      // now if recursive is false, verify that there is a parent dir
-      // this span is passed into the stream.
-
-      if (!recursive && !fileKnownToExist) {
-        Path parent = path.getParent();
-        // expect this to raise an exception if there is no parent dir
-        if (parent != null && !parent.isRoot()) {
-          S3AFileStatus status;
-          try {
-            // optimize for the directory existing: Call list first
-            status = innerGetFileStatus(parent, false,
-                StatusProbeEnum.DIRECTORIES);
-          } catch (FileNotFoundException e) {
-            // no dir, fall back to looking for a file
-            // (failure condition if true)
-            status = innerGetFileStatus(parent, false,
-                StatusProbeEnum.HEAD_ONLY);
-          }
-          if (!status.isDirectory()) {
-            throw new FileAlreadyExistsException("Not a directory: " + parent);
-          }
-        }
-      }
     }
-
     instrumentation.fileCreated();
     final BlockOutputStreamStatistics outputStreamStatistics
         = statisticsContext.newOutputStreamStatistics();
@@ -1729,7 +1699,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         performance
             ? PutObjectOptions.keepingDirs()
             : putOptionsForPath(path);
-
 
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
@@ -1834,24 +1803,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public FSDataOutputStream createFileFromBuilder(final Path path,
+    public FSDataOutputStream createFileFromBuilder(
+        final Path path,
         final EnumSet<CreateFlag> flags,
-        boolean recursive, final Progressable progress,
+        boolean recursive,
+        final Progressable progress,
         final boolean performance) throws IOException {
       // the span will be picked up inside the output stream
-      return trackDuration(
-          getDurationTrackerFactory(),
-          statistic.getSymbol(),
-          () -> innerCreateFile(path, flags, progress, performance, span,
-              recursive));
+      return trackDuration(getDurationTrackerFactory(), statistic.getSymbol(), () ->
+          innerCreateFile(path, flags, progress, performance, span, recursive));
     }
   }
 
-
   /**
    * {@inheritDoc}
-   * @throws FileNotFoundException if the parent directory is not present -or
-   * is not a directory.
+   * The S3A implementations downgrades to the recursive creation, to avoid
+   * any race conditions with parent entries "disappearing".
    */
   @Override
   @AuditEntryPoint
@@ -1868,16 +1835,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final AuditSpan span = entryPoint(INVOCATION_CREATE_NON_RECURSIVE,
         pathToKey(path),
         null);
-    // create the builder. this is non-recursive by default.
-    return new CreateFileBuilder(this,
+    // uses the CreateFileBuilder, filling it in with the relevant arguments.
+    final CreateFileBuilder builder = new CreateFileBuilder(this,
         path,
         new CreateFileBuilderCallbacksImpl(INVOCATION_CREATE_NON_RECURSIVE, span))
         .create()
         .withFlags(flags)
-        .progress(progress)
         .blockSize(blockSize)
-        .bufferSize(bufferSize)
-        .build();
+        .bufferSize(bufferSize);
+    if (progress != null) {
+      builder.progress(progress);
+    }
+    return builder.build();
   }
 
   /**

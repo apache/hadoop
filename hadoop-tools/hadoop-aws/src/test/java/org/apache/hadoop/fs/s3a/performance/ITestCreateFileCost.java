@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.performance;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
 
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
@@ -36,7 +37,11 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_NO_
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_ALL_PROBES;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_DIR_PROBE;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_FILE_PROBE;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_FNFE;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_DIR_MARKER;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_EMPTY_DIR;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_FILE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.HEAD_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
 
@@ -55,7 +60,73 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
   }
 
   @Test
-  public void testWritingPerformanceFile() throws Throwable {
+  public void testCreateNoOverwrite() throws Throwable {
+    describe("Test file creation with outoverwrite");
+    Path testFile = methodPath();
+    // when overwrite is false, the path is checked for existence.
+    create(testFile, false,
+        CREATE_FILE_NO_OVERWRITE);
+  }
+
+  @Test
+  public void testCreateOverwrite() throws Throwable {
+    describe("Test file creation with overwrite");
+    Path testFile = methodPath();
+    // when overwrite is true: only the directory checks take place.
+    create(testFile, true, CREATE_FILE_OVERWRITE);
+  }
+
+  @Test
+  public void testCreateNoOverwriteFileExists() throws Throwable {
+    describe("Test cost of create file failing with existing file");
+    Path testFile = file(methodPath());
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    interceptOperation(FileAlreadyExistsException.class, "",
+        FILE_STATUS_FILE_PROBE,
+        () -> file(testFile, false));
+  }
+
+  @Test
+  public void testCreateFileOverDir() throws Throwable {
+    describe("Test cost of create file failing with existing dir");
+    Path testFile = dir(methodPath());
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    interceptOperation(FileAlreadyExistsException.class, "",
+        GET_FILE_STATUS_ON_DIR_MARKER,
+        () -> file(testFile, false));
+  }
+
+  /**
+   * Use the builder API.
+   * on s3a this skips parent checks, always.
+   */
+  @Test
+  public void testCreateBuilderSequence() throws Throwable {
+    describe("Test builder file creation cost");
+    Path testFile = methodPath();
+    dir(testFile.getParent());
+
+    // s3a fs skips the recursive checks to avoid race
+    // conditions with other processes/threads deleting
+    // files and so briefly the path not being present
+    // only make sure the dest path isn't a directory.
+    buildFile(testFile, true, false,
+        FILE_STATUS_DIR_PROBE);
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    interceptOperation(FileAlreadyExistsException.class, "",
+        GET_FILE_STATUS_ON_FILE,
+        () -> buildFile(testFile, false, true,
+            GET_FILE_STATUS_ON_FILE));
+  }
+
+  @Test
+  public void testCreateFilePerformanceFlag() throws Throwable {
     describe("createFile with performance flag skips safety checks");
     S3AFileSystem fs = getFileSystem();
 
@@ -66,19 +137,18 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     // this has a broken return type; not sure why
     builder.must(FS_S3A_CREATE_PERFORMANCE, true);
 
-    verifyMetrics(() ->build(builder),
+    verifyMetrics(() -> build(builder),
         always(NO_HEAD_OR_LIST),
         with(OBJECT_BULK_DELETE_REQUEST, 0),
         with(OBJECT_DELETE_REQUEST, 0));
   }
 
   @Test
-  public void tesCreateNormalFileRecursive() throws Throwable {
-    describe("createFile without performance flag performs safety checks");
+  public void testCreateFileRecursive() throws Throwable {
+    describe("createFile without performance flag performs overwrite safety checks");
     S3AFileSystem fs = getFileSystem();
 
-    Path path = methodPath();
-    FSDataOutputStreamBuilder builder = fs.createFile(path)
+    FSDataOutputStreamBuilder builder = fs.createFile(methodPath())
         .recursive()
         .overwrite(false);
 
@@ -87,24 +157,27 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
   }
 
   @Test
-  public void tesCreateNormalFileNonRecursive() throws Throwable {
-    describe("nonrecursive createFile without performance flag also checks for parent");
+  public void testCreateFileNonRecursive() throws Throwable {
+    describe("nonrecursive createFile does not check parents");
     S3AFileSystem fs = getFileSystem();
 
-    final Path base = methodPath();
-    // make the parent dir to ensure that there's a marker, so only a HEAD
-    // request is needed to probe it.
-    fs.mkdirs(base);
-    Path path = new Path(base, "file");
-    FSDataOutputStreamBuilder builder = fs.createFile(path)
-        .overwrite(false);
+    verifyMetrics(() ->
+            build(fs.createFile(methodPath()).overwrite(true)),
+        always(CREATE_FILE_OVERWRITE));
+  }
 
-    verifyMetrics(() -> build(builder),
-        always(CREATE_FILE_NO_OVERWRITE.plus(FILE_STATUS_DIR_PROBE)));
 
-    FSDataOutputStreamBuilder builder2 = fs.createFile(path)
-        .overwrite(true);
-    verifyMetrics(() -> build(builder2),
+  @Test
+  public void testCreateNonRecursive() throws Throwable {
+    describe("nonrecursive createFile does not check parents");
+    S3AFileSystem fs = getFileSystem();
+
+    verifyMetrics(() -> {
+          fs.createNonRecursive(methodPath(),
+              true,1000, (short)1, 0L, null)
+              .close();
+          return "";
+        },
         always(CREATE_FILE_OVERWRITE));
   }
 
@@ -119,7 +192,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
    * Shows how the performance option allows the FS to become ill-formed.
    */
   @Test
-  public void testWritingPerformanceFileOverDir() throws Throwable {
+  public void testPerformanceFlagPermitsInvalidStores() throws Throwable {
     describe("createFile with performance flag over a directory");
     S3AFileSystem fs = getFileSystem();
 
@@ -129,7 +202,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     try {
       FSDataOutputStreamBuilder builder = fs.createFile(path)
           .overwrite(false);
-      // this has a broken return type; not sure why
+      // this has a broken return type; a java typesystem quirk.
       builder.must(FS_S3A_CREATE_PERFORMANCE, true);
 
       verifyMetrics(() -> build(builder),
