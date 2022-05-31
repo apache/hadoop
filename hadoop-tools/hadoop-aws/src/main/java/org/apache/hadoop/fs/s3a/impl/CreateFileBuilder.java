@@ -36,9 +36,16 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CREATE_FILE_KEYS;
 /**
  * Builder used in create file; takes a callback to the operation
  * to create the file.
+ * Is non-recursive unless changed.
  */
 public class CreateFileBuilder extends
     FSDataOutputStreamBuilder<FSDataOutputStream, CreateFileBuilder> {
+
+  public static final EnumSet<CreateFlag> CREATE_OVERWRITE =
+      EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
+
+    public static final EnumSet<CreateFlag> CREATE_NO_OVERWRITE =
+        EnumSet.of(CreateFlag.CREATE);
 
   private final CreateFileBuilderCallbacks callbacks;
 
@@ -67,9 +74,10 @@ public class CreateFileBuilder extends
 
       return callbacks.createFileFromBuilder(
           path,
-          flags.contains(CreateFlag.OVERWRITE),
-          getProgress(),
-          getOptions().getBoolean(Constants.FS_S3A_CREATE_PERFORMANCE, false));
+          flags,
+          isRecursive(), getProgress(),
+          getOptions().getBoolean(Constants.FS_S3A_CREATE_PERFORMANCE, false)
+      );
 
     } else if (flags.contains(CreateFlag.APPEND)) {
       throw new UnsupportedOperationException("Append is not supported");
@@ -79,13 +87,51 @@ public class CreateFileBuilder extends
   }
 
   /**
-   * Callback into the FS for creating the file.
+   * Pass flags down.
+   * @param flags input flags.
+   * @return this builder.
+   */
+  public CreateFileBuilder withFlags(EnumSet<CreateFlag> flags) {
+    if (flags.contains(CreateFlag.CREATE)) {
+      create();
+    }
+    if (flags.contains(CreateFlag.APPEND)) {
+      append();
+    }
+    overwrite(flags.contains(CreateFlag.OVERWRITE));
+    return this;
+  }
+
+  /**
+   * make the flag getter public.
+   * @return creation flags.
+   */
+  public EnumSet<CreateFlag> getFlags() {
+    return super.getFlags();
+  }
+
+  /**
+   * Callbacks for creating the file.
    */
   public interface CreateFileBuilderCallbacks {
+
+    /**
+     * Create a file from the builder.
+     *
+     * @param path path to file
+     * @param flags creation flags
+     * @param recursive create parent dirs?
+     * @param progress progress callback
+     * @param performance performance flag
+     *
+     * @return the stream
+     *
+     * @throws IOException any IO problem
+     */
     FSDataOutputStream createFileFromBuilder(
         Path path,
-        boolean overwrite,
-        Progressable progress,
+        EnumSet<CreateFlag> flags,
+        boolean recursive, Progressable progress,
         boolean performance) throws IOException;
   }
 }

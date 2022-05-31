@@ -16,7 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit;
+package org.apache.hadoop.fs.s3a.performance;
+
+import javax.annotation.Nonnull;
+import java.io.IOException;
 
 import org.junit.Test;
 
@@ -25,12 +28,16 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_NO_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_ALL_PROBES;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_DIR_PROBE;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_EMPTY_DIR;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.HEAD_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
 
 /**
@@ -59,31 +66,53 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     // this has a broken return type; not sure why
     builder.must(FS_S3A_CREATE_PERFORMANCE, true);
 
-    verifyMetrics(() -> {
-      FSDataOutputStream out = builder.build();
-      out.close();
-      return out;
-    },
+    verifyMetrics(() ->build(builder),
         always(NO_HEAD_OR_LIST),
         with(OBJECT_BULK_DELETE_REQUEST, 0),
         with(OBJECT_DELETE_REQUEST, 0));
   }
 
   @Test
-  public void testWritingNonPerformanceFile() throws Throwable {
+  public void tesCreateNormalFileRecursive() throws Throwable {
     describe("createFile without performance flag performs safety checks");
     S3AFileSystem fs = getFileSystem();
 
     Path path = methodPath();
     FSDataOutputStreamBuilder builder = fs.createFile(path)
+        .recursive()
         .overwrite(false);
 
-    verifyMetrics(() -> {
-      FSDataOutputStream out = builder.build();
-      out.close();
-      return out;
-    },
+    verifyMetrics(() -> build(builder),
         always(CREATE_FILE_NO_OVERWRITE));
+  }
+
+  @Test
+  public void tesCreateNormalFileNonRecursive() throws Throwable {
+    describe("nonrecursive createFile without performance flag also checks for parent");
+    S3AFileSystem fs = getFileSystem();
+
+    final Path base = methodPath();
+    // make the parent dir to ensure that there's a marker, so only a HEAD
+    // request is needed to probe it.
+    fs.mkdirs(base);
+    Path path = new Path(base, "file");
+    FSDataOutputStreamBuilder builder = fs.createFile(path)
+        .overwrite(false);
+
+    verifyMetrics(() -> build(builder),
+        always(CREATE_FILE_NO_OVERWRITE.plus(FILE_STATUS_DIR_PROBE)));
+
+    FSDataOutputStreamBuilder builder2 = fs.createFile(path)
+        .overwrite(true);
+    verifyMetrics(() -> build(builder2),
+        always(CREATE_FILE_OVERWRITE));
+  }
+
+  private FSDataOutputStream build(final FSDataOutputStreamBuilder builder)
+      throws IOException {
+    FSDataOutputStream out = builder.build();
+    out.close();
+    return out;
   }
 
   /**
@@ -103,11 +132,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
       // this has a broken return type; not sure why
       builder.must(FS_S3A_CREATE_PERFORMANCE, true);
 
-      verifyMetrics(() -> {
-        FSDataOutputStream out = builder.build();
-        out.close();
-        return out;
-      },
+      verifyMetrics(() -> build(builder),
           always(NO_HEAD_OR_LIST),
           with(OBJECT_BULK_DELETE_REQUEST, 0),
           with(OBJECT_DELETE_REQUEST, 0));

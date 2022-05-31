@@ -20,11 +20,13 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.EnumSet;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileSystem;
@@ -87,11 +89,14 @@ public class TestCreateFileBuilder extends HadoopTestBase {
 
     @Override
     public FSDataOutputStream createFileFromBuilder(final Path path,
-        final boolean overwrite,
-        final Progressable progress,
+        final EnumSet<CreateFlag> flags,
+        boolean recursive, final Progressable progress,
         final boolean performance) throws IOException {
       return new FSDataOutputStream(
-          new BuilderOutputStream(overwrite, progress, performance),
+          new BuilderOutputStream(
+              flags.contains(CreateFlag.OVERWRITE),
+              progress,
+              performance),
           null);
     }
   }

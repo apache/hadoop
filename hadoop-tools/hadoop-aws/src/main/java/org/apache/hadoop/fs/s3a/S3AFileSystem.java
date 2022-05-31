@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.text.DateFormat;
@@ -210,6 +211,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDe
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
+import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.CREATE_NO_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.CREATE_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_INACCESSIBLE;
@@ -1616,10 +1619,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     final Path path = qualify(f);
+    EnumSet<CreateFlag> flags =
+        overwrite
+            ? CREATE_OVERWRITE
+            : CREATE_NO_OVERWRITE;
     // the span will be picked up inside the output stream
     return trackDurationAndSpan(INVOCATION_CREATE, path, () ->
-        innerCreateFile(path, overwrite,
-            progress, false));
+        innerCreateFile(path,
+            flags,
+            progress, false, getActiveAuditSpan(), true));
   }
 
   /**
@@ -1631,25 +1639,34 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * parent directory existing, and doesn't attempt to delete
    * dir markers, irrespective of FS settings.
    * If true, this method call does no IO at all.
+   *
    * @param path the file name to open
-   * @param overwrite if a file with this name already exists, then if true,
-   *   the file will be overwritten, and if false an error will be thrown.
+   * @param flags flags for the operation
    * @param progress the progress reporter.
    * @param performance fast creation over safety
+   * @param auditSpan audit span
+   * @param recursive create all parents too?
+   *
    * @throws IOException in the event of IO related errors.
    */
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   @Retries.RetryTranslated
-  private FSDataOutputStream innerCreateFile(Path path,
-      boolean overwrite,
-      Progressable progress,
-      boolean performance) throws IOException {
+  private FSDataOutputStream innerCreateFile(
+      final Path path,
+      final EnumSet<CreateFlag> flags,
+      final Progressable progress,
+      final boolean performance,
+      final AuditSpan auditSpan,
+      final boolean recursive) throws IOException {
+    auditSpan.activate();
     String key = pathToKey(path);
-
-    final boolean skipProbes = performance || isUnderMagicCommitPath(path);
+    boolean skipProbes = performance || isUnderMagicCommitPath(path);
+    boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
     if (skipProbes) {
-      LOG.debug("Skipping existence/overwrite checkse");
+      LOG.debug("Skipping existence/overwrite checks");
     } else {
+      // look to see if there is a file/dir at the path
+      boolean fileKnownToExist = false;
       try {
         // get the status or throw an FNFE.
         // when overwriting, there is no need to look for any existing file,
@@ -1668,12 +1685,37 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           // path references a file and overwrite is disabled
           throw new FileAlreadyExistsException(path + " already exists");
         }
-        LOG.debug("Overwriting file {}", path);
-      } catch (FileNotFoundException e) {
-        // this means the file is not found
 
+        LOG.debug("Overwriting file {}", path);
+        fileKnownToExist = true;
+      } catch (FileNotFoundException e) {
+        // this means there is nothing at the path; all good.
+      }
+      // now if recursive is false, verify that there is a parent dir
+      // this span is passed into the stream.
+
+      if (!recursive && !fileKnownToExist) {
+        Path parent = path.getParent();
+        // expect this to raise an exception if there is no parent dir
+        if (parent != null && !parent.isRoot()) {
+          S3AFileStatus status;
+          try {
+            // optimize for the directory existing: Call list first
+            status = innerGetFileStatus(parent, false,
+                StatusProbeEnum.DIRECTORIES);
+          } catch (FileNotFoundException e) {
+            // no dir, fall back to looking for a file
+            // (failure condition if true)
+            status = innerGetFileStatus(parent, false,
+                StatusProbeEnum.HEAD_ONLY);
+          }
+          if (!status.isDirectory()) {
+            throw new FileAlreadyExistsException("Not a directory: " + parent);
+          }
+        }
       }
     }
+
     instrumentation.fileCreated();
     final BlockOutputStreamStatistics outputStreamStatistics
         = statisticsContext.newOutputStreamStatistics();
@@ -1688,6 +1730,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             ? PutObjectOptions.keepingDirs()
             : putOptionsForPath(path);
 
+
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
         .withKey(destKey)
@@ -1697,7 +1740,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withProgress(progress)
         .withPutTracker(putTracker)
         .withWriteOperations(
-            createWriteOperationHelper(getActiveAuditSpan()))
+            createWriteOperationHelper(auditSpan))
         .withExecutorService(
             new SemaphoredDelegatingExecutor(
                 boundedThreadPool,
@@ -1714,42 +1757,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new S3ABlockOutputStream(builder),
         null);
   }
-
-  /**
-   * Create instance of an FSDataOutputStreamBuilder for
-   * creating a file at the given path.
-   * The audit entry point is set up when the build() call is invoked,
-   * rather than ths method.
-   * @param path path to create
-   * @return a builder.
-   */
-  @Override
-  @AuditEntryPoint
-  public FSDataOutputStreamBuilder createFile(final Path path) {
-    return new CreateFileBuilder(this,
-        qualify(path),
-        new CreateFileBuilderCallbacksImpl())
-        .create()
-        .overwrite(true);
-  }
-
-  /**
-   * Callbackd for create file operations.
-   */
-  private class CreateFileBuilderCallbacksImpl implements
-      CreateFileBuilder.CreateFileBuilderCallbacks {
-    @Override
-    public FSDataOutputStream createFileFromBuilder(final Path path,
-        final boolean overwrite,
-        final Progressable progress,
-        final boolean performance) throws IOException {
-      // the span will be picked up inside the output stream
-      return trackDurationAndSpan(INVOCATION_CREATE_FILE, path, () ->
-          innerCreateFile(path, overwrite, progress, performance));
-    }
-  }
-
-
   /**
    * Create a Write Operation Helper with the current active span.
    * All operations made through this helper will activate the
@@ -1783,6 +1790,65 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Create instance of an FSDataOutputStreamBuilder for
+   * creating a file at the given path.
+   * @param path path to create
+   * @return a builder.
+   * @throws UncheckedIOException for problems creating the audit span
+   */
+  @Override
+  @AuditEntryPoint
+  public FSDataOutputStreamBuilder createFile(final Path path) {
+    try {
+      final Path qualified = qualify(path);
+      final AuditSpan span = entryPoint(INVOCATION_CREATE_FILE,
+          pathToKey(qualified),
+          null);
+      return new CreateFileBuilder(this,
+          qualified,
+          new CreateFileBuilderCallbacksImpl(INVOCATION_CREATE_FILE, span))
+            .create()
+            .overwrite(true);
+    } catch (IOException e) {
+      // catch any IOEs raised in span creation and convert to
+      // an UncheckedIOException
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  /**
+   * Callback for create file operations.
+   */
+  private final class CreateFileBuilderCallbacksImpl implements
+      CreateFileBuilder.CreateFileBuilderCallbacks {
+
+    private final Statistic statistic;
+    /** span for operations. */
+    private final AuditSpan span;
+
+    private CreateFileBuilderCallbacksImpl(
+        final Statistic statistic,
+        final AuditSpan span) {
+      this.statistic = statistic;
+      this.span = span;
+    }
+
+    @Override
+    public FSDataOutputStream createFileFromBuilder(final Path path,
+        final EnumSet<CreateFlag> flags,
+        boolean recursive, final Progressable progress,
+        final boolean performance) throws IOException {
+      // the span will be picked up inside the output stream
+      return trackDuration(
+          getDurationTrackerFactory(),
+          statistic.getSymbol(),
+          () -> innerCreateFile(path, flags, progress, performance, span,
+              recursive));
+    }
+  }
+
+
+  /**
    * {@inheritDoc}
    * @throws FileNotFoundException if the parent directory is not present -or
    * is not a directory.
@@ -1797,31 +1863,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       long blockSize,
       Progressable progress) throws IOException {
     final Path path = makeQualified(p);
-    // this span is passed into the stream.
-    try (AuditSpan span = entryPoint(INVOCATION_CREATE_NON_RECURSIVE, path)) {
-      Path parent = path.getParent();
-      // expect this to raise an exception if there is no parent dir
-      if (parent != null && !parent.isRoot()) {
-        S3AFileStatus status;
-        try {
-          // optimize for the directory existing: Call list first
-          status = innerGetFileStatus(parent, false,
-              StatusProbeEnum.DIRECTORIES);
-        } catch (FileNotFoundException e) {
-          // no dir, fall back to looking for a file
-          // (failure condition if true)
-          status = innerGetFileStatus(parent, false,
-              StatusProbeEnum.HEAD_ONLY);
-        }
-        if (!status.isDirectory()) {
-          throw new FileAlreadyExistsException("Not a directory: " + parent);
-        }
-      }
-      return innerCreateFile(path,
-          flags.contains(CreateFlag.OVERWRITE),
-          progress,
-          false);
-    }
+
+    // span is created and passed in to the callbacks.
+    final AuditSpan span = entryPoint(INVOCATION_CREATE_NON_RECURSIVE,
+        pathToKey(path),
+        null);
+    // create the builder. this is non-recursive by default.
+    return new CreateFileBuilder(this,
+        path,
+        new CreateFileBuilderCallbacksImpl(INVOCATION_CREATE_NON_RECURSIVE, span))
+        .create()
+        .withFlags(flags)
+        .progress(progress)
+        .blockSize(blockSize)
+        .bufferSize(bufferSize)
+        .build();
   }
 
   /**
