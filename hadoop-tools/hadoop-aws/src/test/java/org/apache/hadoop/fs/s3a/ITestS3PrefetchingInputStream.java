@@ -76,13 +76,15 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
     fs = largeFile.getFileSystem(getConfiguration());
     FileStatus fileStatus = fs.getFileStatus(largeFile);
     largeFileSize = fileStatus.getLen();
-    calculateNumBlocks();
+    numBlocks = calculateNumBlocks(largeFileSize, blockSize);
   }
 
-  private void calculateNumBlocks() {
-    numBlocks = (largeFileSize == 0) ?
-        0 :
-        ((int) (largeFileSize / blockSize)) + (largeFileSize % blockSize > 0 ? 1 : 0);
+  private static int calculateNumBlocks(long largeFileSize, int blockSize) {
+    if (largeFileSize == 0) {
+      return 0;
+    } else {
+      return ((int) (largeFileSize / blockSize)) + (largeFileSize % blockSize > 0 ? 1 : 0);
+    }
   }
 
   @Test

@@ -115,7 +115,7 @@ public abstract class S3InputStream
     this.context = context;
     this.s3Attributes = s3Attributes;
     this.client = client;
-    this.streamStatistics = context.getS3AStatisticsContext().newInputStreamStatistics();
+    this.streamStatistics = streamStatistics;
     this.ioStatistics = streamStatistics.getIOStatistics();
     this.name = S3File.getPath(s3Attributes);
     this.changeTracker = new ChangeTracker(
