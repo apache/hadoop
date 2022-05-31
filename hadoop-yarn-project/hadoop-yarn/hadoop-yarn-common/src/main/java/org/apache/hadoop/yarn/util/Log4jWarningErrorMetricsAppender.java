@@ -27,7 +27,19 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.HashMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.Iterator;
+import java.util.Enumeration;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

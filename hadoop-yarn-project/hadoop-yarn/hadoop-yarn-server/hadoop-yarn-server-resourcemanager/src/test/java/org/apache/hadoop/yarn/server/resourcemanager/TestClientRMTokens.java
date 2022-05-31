@@ -39,7 +39,6 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.token.delegation.TestDelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
 import org.junit.AfterClass;
 import org.junit.Assert;
