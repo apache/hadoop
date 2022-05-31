@@ -20,7 +20,9 @@ package org.apache.hadoop.examples;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.*;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -31,7 +33,11 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.ClusterStatus;
 import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -54,9 +60,9 @@ import org.apache.hadoop.util.ToolRunner;
  *            [-totalOrder <i>pcnt</i> <i>num samples</i> <i>max splits</i>]
  *            <i>in-dir</i> <i>out-dir</i> 
  */
-public class Sort<K,V> extends Configured implements Tool {
+public class Sort<K, V> extends Configured implements Tool {
   public static final String REDUCES_PER_HOST = 
-    "mapreduce.sort.reducesperhost";
+      "mapreduce.sort.reducesperhost";
   private Job job = null;
 
   static int printUsage() {
@@ -85,17 +91,17 @@ public class Sort<K,V> extends Configured implements Tool {
     int num_reduces = (int) (cluster.getMaxReduceTasks() * 0.9);
     String sort_reduces = conf.get(REDUCES_PER_HOST);
     if (sort_reduces != null) {
-       num_reduces = cluster.getTaskTrackers() * 
+      num_reduces = cluster.getTaskTrackers() *
                        Integer.parseInt(sort_reduces);
     }
     Class<? extends InputFormat> inputFormatClass = 
-      SequenceFileInputFormat.class;
+        SequenceFileInputFormat.class;
     Class<? extends OutputFormat> outputFormatClass = 
-      SequenceFileOutputFormat.class;
+        SequenceFileOutputFormat.class;
     Class<? extends WritableComparable> outputKeyClass = BytesWritable.class;
     Class<? extends Writable> outputValueClass = BytesWritable.class;
     List<String> otherArgs = new ArrayList<String>();
-    InputSampler.Sampler<K,V> sampler = null;
+    InputSampler.Sampler<K, V> sampler = null;
     for(int i=0; i < args.length; ++i) {
       try {
         if ("-r".equals(args[i])) {
@@ -116,9 +122,11 @@ public class Sort<K,V> extends Configured implements Tool {
           double pcnt = Double.parseDouble(args[++i]);
           int numSamples = Integer.parseInt(args[++i]);
           int maxSplits = Integer.parseInt(args[++i]);
-          if (0 >= maxSplits) maxSplits = Integer.MAX_VALUE;
+          if (0 >= maxSplits) {
+            maxSplits = Integer.MAX_VALUE;
+          }
           sampler =
-            new InputSampler.RandomSampler<K,V>(pcnt, numSamples, maxSplits);
+              new InputSampler.RandomSampler<K, V>(pcnt, numSamples, maxSplits);
         } else {
           otherArgs.add(args[i]);
         }
@@ -164,7 +172,7 @@ public class Sort<K,V> extends Configured implements Tool {
       inputDir = inputDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
       Path partitionFile = new Path(inputDir, "_sortPartitioning");
       TotalOrderPartitioner.setPartitionFile(conf, partitionFile);
-      InputSampler.<K,V>writePartitionFile(job, sampler);
+      InputSampler.<K, V>writePartitionFile(job, sampler);
       URI partitionUri = new URI(partitionFile.toString() +
                                  "#" + "_sortPartitioning");
       job.addCacheFile(partitionUri);
