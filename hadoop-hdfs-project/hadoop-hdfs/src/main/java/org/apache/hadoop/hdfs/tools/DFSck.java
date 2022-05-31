@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -137,8 +138,15 @@ public class DFSck extends Configured implements Tool {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.out = out;
+    int connectTimeout = conf.getInt(
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_CONNECT_TIMEOUT_MS,
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_CONNECT_TIMEOUT_MS_DEFAULT);
+    int readTimeout = conf.getInt(
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_READ_TIMEOUT_MS,
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_READ_TIMEOUT_MS_DEFAULT);
+
     this.connectionFactory = URLConnectionFactory
-        .newDefaultURLConnectionFactory(conf);
+        .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);
     this.isSpnegoEnabled = UserGroupInformation.isSecurityEnabled();
   }
 

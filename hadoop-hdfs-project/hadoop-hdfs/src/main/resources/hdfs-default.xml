@@ -6429,4 +6429,21 @@
       problem. In produce default set false, because it's have little performance loss.
     </description>
   </property>
+  <property>
+    <name>dfs.client.fsck.connect.timeout.ms</name>
+    <value>60000</value>
+    <description>
+      The amount of time in milliseconds the fsck client will wait to connect
+      to the namenode before timing out.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.fsck.read.timeout.ms</name>
+    <value>60000</value>
+    <description>
+      The amount of time in milliseconds the fsck client will wait to read
+      from the namenode before timing out. If the namenode does not report
+      progress more frequently than this time, the client will give up waiting.
+    </description>
+  </property>
 </configuration>
