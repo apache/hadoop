@@ -94,7 +94,7 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
       s = Response.Status.BAD_REQUEST;
     } else {
       LOG.warn("INTERNAL_SERVER_ERROR", e);
-      s = Response.Status.INTERNAL_SERVER_ERROR;
+      s = Response.Status.SERVICE_UNAVAILABLE;
     }
 
     // let jaxb handle marshalling data out in the same format requested
