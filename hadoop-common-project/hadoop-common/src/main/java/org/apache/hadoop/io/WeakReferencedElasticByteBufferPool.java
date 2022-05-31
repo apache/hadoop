@@ -23,6 +23,8 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
@@ -35,14 +37,33 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * smallest buffer whose size is just greater than requested length.
  * This is a thread safe implementation.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public final class WeakReferencedElasticByteBufferPool extends ElasticByteBufferPool {
 
+  /**
+   * Map to store direct byte buffers of different sizes in the pool.
+   * Used tree map such that we can return next greater than capacity
+   * buffer if buffer with exact capacity is unavailable.
+   * This must be accessed in synchronized blocks.
+   */
   private final TreeMap<Key, WeakReference<ByteBuffer>> directBuffers =
           new TreeMap<>();
 
+  /**
+   * Map to store heap based byte buffers of different sizes in the pool.
+   * Used tree map such that we can return next greater than capacity
+   * buffer if buffer with exact capacity is unavailable.
+   * This must be accessed in synchronized blocks.
+   */
   private final TreeMap<Key, WeakReference<ByteBuffer>> heapBuffers =
           new TreeMap<>();
 
+  /**
+   * Method to get desired buffer tree.
+   * @param isDirect whether the buffer is heap based or direct.
+   * @return corresponding buffer tree.
+   */
   private TreeMap<Key, WeakReference<ByteBuffer>> getBufferTree(boolean isDirect) {
     return isDirect
             ? directBuffers
@@ -80,8 +101,9 @@ public final class WeakReferencedElasticByteBufferPool extends ElasticByteBuffer
       return buffer;
     }
     // buffer was in pool but already got garbage collected.
-    return direct ? ByteBuffer.allocateDirect(length) :
-            ByteBuffer.allocate(length);
+    return direct
+            ? ByteBuffer.allocateDirect(length)
+            : ByteBuffer.allocate(length);
   }
 
   /**
@@ -119,8 +141,15 @@ public final class WeakReferencedElasticByteBufferPool extends ElasticByteBuffer
     directBuffers.clear();
   }
 
+  /**
+   * Get current buffers count in the pool.
+   * @param isDirect whether we want to count the heap or direct buffers.
+   * @return count of buffers.
+   */
   @VisibleForTesting
-  public int getCurrentBuffersCount(boolean isDirect) {
-    return isDirect ? directBuffers.size() : heapBuffers.size();
+  public synchronized int getCurrentBuffersCount(boolean isDirect) {
+    return isDirect
+            ? directBuffers.size()
+            : heapBuffers.size();
   }
 }

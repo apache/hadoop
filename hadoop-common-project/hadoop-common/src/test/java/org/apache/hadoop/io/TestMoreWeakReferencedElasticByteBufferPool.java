@@ -71,6 +71,10 @@ public class TestMoreWeakReferencedElasticByteBufferPool
     // Expected IllegalArgumentException as negative length buffer is requested.
     intercept(IllegalArgumentException.class,
         () -> pool.getBuffer(true, -5));
+
+    // test returning null buffer to the pool.
+    intercept(NullPointerException.class,
+        () -> pool.putBuffer(null));
   }
 
   /**
