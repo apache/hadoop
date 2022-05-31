@@ -36,7 +36,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CREATE_FILE_KEYS;
 /**
  * Builder used in create file; takes a callback to the operation
  * to create the file.
- * Is non-recursive unless changed.
+ * Is non-recursive unless explicitly changed.
  */
 public class CreateFileBuilder extends
     FSDataOutputStreamBuilder<FSDataOutputStream, CreateFileBuilder> {
@@ -44,17 +44,26 @@ public class CreateFileBuilder extends
   public static final EnumSet<CreateFlag> CREATE_OVERWRITE =
       EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
 
-    public static final EnumSet<CreateFlag> CREATE_NO_OVERWRITE =
-        EnumSet.of(CreateFlag.CREATE);
+  public static final EnumSet<CreateFlag> CREATE_NO_OVERWRITE =
+      EnumSet.of(CreateFlag.CREATE);
 
+  /**
+   * Callback interface.
+   */
   private final CreateFileBuilderCallbacks callbacks;
 
+  /**
+   * Constructor.
+   * @param fileSystem fs; used by superclass.
+   * @param path qualified path to create
+   * @param callbacks callbacks.
+   */
   public CreateFileBuilder(
       @Nonnull final FileSystem fileSystem,
-      @Nonnull final Path p,
-      final CreateFileBuilderCallbacks callbacks) {
+      @Nonnull final Path path,
+      @Nonnull final CreateFileBuilderCallbacks callbacks) {
 
-    super(fileSystem, p);
+    super(fileSystem, path);
     this.callbacks = callbacks;
   }
 
@@ -69,21 +78,22 @@ public class CreateFileBuilder extends
     rejectUnknownMandatoryKeys(CREATE_FILE_KEYS,
         " for " + path);
     EnumSet<CreateFlag> flags = getFlags();
-    if (flags.contains(CreateFlag.CREATE) ||
-        flags.contains(CreateFlag.OVERWRITE)) {
-
-      return callbacks.createFileFromBuilder(
-          path,
-          flags,
-          isRecursive(), getProgress(),
-          getOptions().getBoolean(Constants.FS_S3A_CREATE_PERFORMANCE, false)
-      );
-
-    } else if (flags.contains(CreateFlag.APPEND)) {
+    if (flags.contains(CreateFlag.APPEND)) {
       throw new UnsupportedOperationException("Append is not supported");
     }
-    throw new PathIOException(path.toString(),
-        "Must specify either create, overwrite or append");
+    if (!flags.contains(CreateFlag.CREATE) &&
+        !flags.contains(CreateFlag.OVERWRITE)) {
+      throw new PathIOException(path.toString(),
+          "Must specify either create or overwrite");
+    }
+
+    return callbacks.createFileFromBuilder(
+        path,
+        flags,
+        isRecursive(),
+        getProgress(),
+        getOptions().getBoolean(Constants.FS_S3A_CREATE_PERFORMANCE, false));
+
   }
 
   /**
@@ -123,15 +133,14 @@ public class CreateFileBuilder extends
      * @param recursive create parent dirs?
      * @param progress progress callback
      * @param performance performance flag
-     *
      * @return the stream
-     *
      * @throws IOException any IO problem
      */
     FSDataOutputStream createFileFromBuilder(
         Path path,
         EnumSet<CreateFlag> flags,
-        boolean recursive, Progressable progress,
+        boolean recursive,
+        Progressable progress,
         boolean performance) throws IOException;
   }
 }

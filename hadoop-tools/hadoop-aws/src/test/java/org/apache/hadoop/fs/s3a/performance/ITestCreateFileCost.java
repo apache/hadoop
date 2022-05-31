@@ -28,21 +28,16 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_NO_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_OVERWRITE;
-import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_ALL_PROBES;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_DIR_PROBE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_FILE_PROBE;
-import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_FNFE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_DIR_MARKER;
-import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_EMPTY_DIR;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_FILE;
-import static org.apache.hadoop.fs.s3a.performance.OperationCost.HEAD_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
 
 /**
@@ -132,9 +127,11 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
 
     Path path = methodPath();
     FSDataOutputStreamBuilder builder = fs.createFile(path)
-        .overwrite(false);
-    builder.recursive();
-    // this has a broken return type; not sure why
+        .overwrite(false)
+        .recursive();
+
+    // this has a broken return type; something to do with the return value of
+    // the createFile() call. only fixable via risky changes to the FileSystem class
     builder.must(FS_S3A_CREATE_PERFORMANCE, true);
 
     verifyMetrics(() -> build(builder),
