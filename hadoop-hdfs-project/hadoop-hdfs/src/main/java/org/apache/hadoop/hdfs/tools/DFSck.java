@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -138,12 +139,14 @@ public class DFSck extends Configured implements Tool {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.out = out;
-    int connectTimeout = conf.getInt(
-        HdfsClientConfigKeys.DFS_CLIENT_FSCK_CONNECT_TIMEOUT_MS,
-        HdfsClientConfigKeys.DFS_CLIENT_FSCK_CONNECT_TIMEOUT_MS_DEFAULT);
-    int readTimeout = conf.getInt(
-        HdfsClientConfigKeys.DFS_CLIENT_FSCK_READ_TIMEOUT_MS,
-        HdfsClientConfigKeys.DFS_CLIENT_FSCK_READ_TIMEOUT_MS_DEFAULT);
+    int connectTimeout = (int) conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_CONNECT_TIMEOUT,
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_CONNECT_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    int readTimeout = (int) conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_READ_TIMEOUT,
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_READ_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
 
     this.connectionFactory = URLConnectionFactory
         .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);

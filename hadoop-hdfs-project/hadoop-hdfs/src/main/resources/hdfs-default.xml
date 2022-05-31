@@ -6430,20 +6430,20 @@
     </description>
   </property>
   <property>
-    <name>dfs.client.fsck.connect.timeout.ms</name>
-    <value>60000</value>
+    <name>dfs.client.fsck.connect.timeout</name>
+    <value>60000ms</value>
     <description>
-      The amount of time in milliseconds the fsck client will wait to connect
-      to the namenode before timing out.
+      The amount of time the fsck client will wait to connect to the namenode
+      before timing out.
     </description>
   </property>
   <property>
-    <name>dfs.client.fsck.read.timeout.ms</name>
-    <value>60000</value>
+    <name>dfs.client.fsck.read.timeout</name>
+    <value>60000ms</value>
     <description>
-      The amount of time in milliseconds the fsck client will wait to read
-      from the namenode before timing out. If the namenode does not report
-      progress more frequently than this time, the client will give up waiting.
+      The amount of time the fsck client will wait to read from the namenode
+      before timing out. If the namenode does not report progress more
+      frequently than this time, the client will give up waiting.
     </description>
   </property>
 </configuration>
