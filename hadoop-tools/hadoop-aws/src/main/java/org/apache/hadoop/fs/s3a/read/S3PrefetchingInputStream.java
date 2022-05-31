@@ -66,7 +66,8 @@ public class S3PrefetchingInputStream
   public S3PrefetchingInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client) {
+      S3AInputStream.InputStreamCallbacks client,
+      S3AInputStreamStatistics streamStatistics) {
 
     Validate.checkNotNull(context, "context");
     Validate.checkNotNull(s3Attributes, "s3Attributes");
@@ -74,12 +75,13 @@ public class S3PrefetchingInputStream
     Validate.checkNotNullAndNotEmpty(s3Attributes.getKey(), "s3Attributes.getKey()");
     Validate.checkNotNegative(s3Attributes.getLen(), "s3Attributes.getLen()");
     Validate.checkNotNull(client, "client");
+    Validate.checkNotNull(streamStatistics, "streamStatistics");
 
     long fileSize = s3Attributes.getLen();
     if (fileSize <= context.getPrefetchBlockSize()) {
-      this.inputStream = new S3InMemoryInputStream(context, s3Attributes, client);
+      this.inputStream = new S3InMemoryInputStream(context, s3Attributes, client, streamStatistics);
     } else {
-      this.inputStream = new S3CachingInputStream(context, s3Attributes, client);
+      this.inputStream = new S3CachingInputStream(context, s3Attributes, client, streamStatistics);
     }
   }
 

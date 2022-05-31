@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
@@ -217,11 +218,13 @@ public final class Fakes {
         prefetchBlockCount);
 
     S3AInputStream.InputStreamCallbacks callbacks = createInputStreamCallbacks(bucket, key);
+    S3AInputStreamStatistics stats =
+        s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics();
 
     if (clazz == TestS3InMemoryInputStream.class) {
-      return new TestS3InMemoryInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks);
+      return new TestS3InMemoryInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
     } else if (clazz == TestS3CachingInputStream.class) {
-      return new TestS3CachingInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks);
+      return new TestS3CachingInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
     }
 
     throw new RuntimeException("Unsupported class: " + clazz);
@@ -259,8 +262,9 @@ public final class Fakes {
     public TestS3InMemoryInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
-        S3AInputStream.InputStreamCallbacks client) {
-      super(context, s3Attributes, client);
+        S3AInputStream.InputStreamCallbacks client,
+        S3AInputStreamStatistics streamStatistics) {
+      super(context, s3Attributes, client, streamStatistics);
     }
 
     @Override
@@ -350,8 +354,9 @@ public final class Fakes {
     public TestS3CachingInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
-        S3AInputStream.InputStreamCallbacks client) {
-      super(context, s3Attributes, client);
+        S3AInputStream.InputStreamCallbacks client,
+        S3AInputStreamStatistics streamStatistics) {
+      super(context, s3Attributes, client, streamStatistics);
     }
 
     @Override

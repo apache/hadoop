@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.junit.Assert.assertEquals;
@@ -51,24 +52,31 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
   public void testArgChecks() throws Exception {
     S3AReadOpContext readContext = Fakes.createReadContext(futurePool, "key", 10, 10, 1);
     S3ObjectAttributes attrs = Fakes.createObjectAttributes("bucket", "key", 10);
+    S3AInputStreamStatistics stats =
+        readContext.getS3AStatisticsContext().newInputStreamStatistics();
 
     // Should not throw.
-    new S3CachingInputStream(readContext, attrs, client);
+    new S3CachingInputStream(readContext, attrs, client, stats);
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'context' must not be null",
-        () -> new S3CachingInputStream(null, attrs, client));
+        () -> new S3CachingInputStream(null, attrs, client, stats));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'s3Attributes' must not be null",
-        () -> new S3CachingInputStream(readContext, null, client));
+        () -> new S3CachingInputStream(readContext, null, client, stats));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'client' must not be null",
-        () -> new S3CachingInputStream(readContext, attrs, null));
+        () -> new S3CachingInputStream(readContext, attrs, null, stats));
+
+    ExceptionAsserts.assertThrows(
+        IllegalArgumentException.class,
+        "'streamStatistics' must not be null",
+        () -> new S3CachingInputStream(readContext, attrs, client, null));
   }
 
   @Test

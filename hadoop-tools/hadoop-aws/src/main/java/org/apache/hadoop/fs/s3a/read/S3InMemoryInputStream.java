@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.common.BufferData;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
@@ -56,8 +57,9 @@ public class S3InMemoryInputStream extends S3InputStream {
   public S3InMemoryInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client) {
-    super(context, s3Attributes, client);
+      S3AInputStream.InputStreamCallbacks client,
+      S3AInputStreamStatistics streamStatistics) {
+    super(context, s3Attributes, client, streamStatistics);
     int fileSize = (int) s3Attributes.getLen();
     this.buffer = ByteBuffer.allocate(fileSize);
     LOG.debug("Created in-memory input stream for {} (size = {})", this.getName(), fileSize);
