@@ -27,7 +27,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 
-import java.util.*;
+import java.util.Map;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

@@ -19,9 +19,11 @@ package org.apache.hadoop.yarn.util;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.hamcrest.core.IsInstanceOf.*;
-import static org.hamcrest.core.IsSame.*;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertNotNull;
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.hamcrest.core.IsSame.sameInstance;
 
 /**
  * A JUnit test to test {@link ResourceCalculatorPlugin}

@@ -43,7 +43,12 @@ import org.junit.Test;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.atLeastOnce;
 
 public class TestAsyncDispatcher {
 

@@ -30,8 +30,11 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
 
 public class TestYarnApiClasses {
   private final org.apache.hadoop.yarn.factories.RecordFactory recordFactory = RecordFactoryProvider

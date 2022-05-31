@@ -26,7 +26,8 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.inject.Injector;
 
 import org.junit.Test;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 public class TestSubViews {
 
