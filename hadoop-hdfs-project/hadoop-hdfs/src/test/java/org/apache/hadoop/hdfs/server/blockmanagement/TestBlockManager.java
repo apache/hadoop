@@ -888,7 +888,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 2 nodes reach maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.maxDecommissionStreams; i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
       ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
@@ -932,7 +932,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 1 node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.maxDecommissionStreams; i++){
       ds2.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -941,7 +941,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 1 more node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.maxDecommissionStreams; i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 

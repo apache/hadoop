@@ -1791,7 +1791,7 @@ public class DatanodeManager {
   public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
       StorageReport[] reports, final String blockPoolId,
       long cacheCapacity, long cacheUsed, int xceiverCount, 
-      int maxTransfers, int failedVolumes,
+      int xmitsInProgress, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary,
       @Nonnull SlowPeerReports slowPeers,
       @Nonnull SlowDiskReports slowDisks) throws IOException {
@@ -1835,6 +1835,14 @@ public class DatanodeManager {
     int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
     int totalBlocks = totalReplicateBlocks + totalECBlocks;
     if (totalBlocks > 0) {
+      int maxTransfers = 0;
+      if (nodeinfo.isDecommissionInProgress()) {
+        maxTransfers = blockManager.getMaxEcStreams()
+            - xmitsInProgress;
+      } else {
+        maxTransfers = blockManager.getMaxReplicationStreams()
+            - xmitsInProgress;
+      }
       int numReplicationTasks = (int) Math.ceil(
           (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
       int numECTasks = (int) Math.ceil(
@@ -2249,4 +2257,3 @@ public class DatanodeManager {
     return datanodeMap;
   }
 }
-

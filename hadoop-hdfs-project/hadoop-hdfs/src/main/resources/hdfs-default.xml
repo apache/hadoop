@@ -5344,6 +5344,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.decommission.max-streams</name>
+  <value>8</value>
+  <description>
+    Hard limit for the number of replication streams of decommissioning node,
+    spacial for ec blocks.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.reconstruction.pending.timeout-sec</name>
   <value>300</value>
   <description>

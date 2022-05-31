@@ -86,6 +86,7 @@ public class TestDatanodeManager {
   private static DatanodeManager mockDatanodeManager(
       FSNamesystem fsn, Configuration conf) throws IOException {
     BlockManager bm = Mockito.mock(BlockManager.class);
+    Mockito.when(bm.getMaxReplicationStreams()).thenReturn(conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 2));
     BlockReportLeaseManager blm = new BlockReportLeaseManager(conf);
     Mockito.when(bm.getBlockReportLeaseManager()).thenReturn(blm);
     DatanodeManager dm = new DatanodeManager(bm, fsn, conf);
@@ -978,6 +979,7 @@ public class TestDatanodeManager {
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
     Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, maxTransfers);
     DatanodeManager dm = Mockito.spy(mockDatanodeManager(fsn, conf));
 
     DatanodeDescriptor nodeInfo = Mockito.mock(DatanodeDescriptor.class);
@@ -1010,7 +1012,7 @@ public class TestDatanodeManager {
     DatanodeRegistration dnReg = Mockito.mock(DatanodeRegistration.class);
     Mockito.when(dm.getDatanode(dnReg)).thenReturn(nodeInfo);
     DatanodeCommand[] cmds = dm.handleHeartbeat(
-        dnReg, new StorageReport[1], "bp-123", 0, 0, 10, maxTransfers, 0, null,
+        dnReg, new StorageReport[1], "bp-123", 0, 0, 10, 0, 0, null,
         SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
 
     long expectedNumCmds = Arrays.stream(

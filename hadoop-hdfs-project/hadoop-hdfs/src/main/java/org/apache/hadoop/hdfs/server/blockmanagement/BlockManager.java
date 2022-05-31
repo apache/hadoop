@@ -401,6 +401,11 @@ public class BlockManager implements BlockStatsMXBean {
    * at one time.
    */
   int replicationStreamsHardLimit;
+  /**
+   * The maximum number of decommission node's outgoing streams a given node
+   * should have at one time, especially for ec blocks.
+   */
+  int maxDecommissionStreams;
   /** Minimum copies needed or else write is disallowed */
   public final short minReplication;
   /** Default number of replicas */
@@ -541,6 +546,9 @@ public class BlockManager implements BlockStatsMXBean {
         conf.getInt(
             DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY,
             DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT);
+    this.maxDecommissionStreams =
+        conf.getInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_KEY,
+            DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_DEFAULT);
     this.blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
     this.blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
 
@@ -663,6 +671,7 @@ public class BlockManager implements BlockStatsMXBean {
     LOG.info("maxReplication             = {}", maxReplication);
     LOG.info("minReplication             = {}", minReplication);
     LOG.info("maxReplicationStreams      = {}", maxReplicationStreams);
+    LOG.info("maxDecommissionStreams     = {}", maxDecommissionStreams);
     LOG.info("redundancyRecheckInterval  = {}ms", redundancyRecheckIntervalMs);
     LOG.info("encryptDataTransfer        = {}", encryptDataTransfer);
     LOG.info("maxNumBlocksToLog          = {}", maxNumBlocksToLog);
@@ -1002,6 +1011,15 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public int getMaxReplicationStreams() {
     return maxReplicationStreams;
+  }
+
+  /** Returns the current setting for maxDecommissionStreams, which is set by
+   *  {@code DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_KEY}.
+   *
+   *  @return maxDecommissionStreams
+   */
+  public int getMaxEcStreams() {
+    return maxDecommissionStreams;
   }
 
   static private void ensurePositiveInt(int val, String key) {
@@ -2565,22 +2583,32 @@ public class BlockManager implements BlockStatsMXBean {
             liveBitSet, decommissioningBitSet, blockIndex);
       }
 
-      if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
-          && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
-          && node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
-        if (isStriped && (state == StoredReplicaState.LIVE
-            || state == StoredReplicaState.DECOMMISSIONING)) {
-          liveBusyBlockIndices.add(blockIndex);
+      if (isStriped && (node.isDecommissionInProgress() || node.isEnteringMaintenance())) {
+        if (node.getNumberOfBlocksToBeReplicated() >= maxDecommissionStreams) {
+          if (state == StoredReplicaState.LIVE
+              || state == StoredReplicaState.DECOMMISSIONING) {
+            liveBusyBlockIndices.add(blockIndex);
+          }
+          continue;
         }
-        continue; // already reached replication limit
-      }
+      } else {
+        if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
+            && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
+            && node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
+          if (isStriped && (state == StoredReplicaState.LIVE
+              || state == StoredReplicaState.DECOMMISSIONING)) {
+            liveBusyBlockIndices.add(blockIndex);
+          }
+          continue; // already reached replication limit
+        }
 
-      if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
-        if (isStriped && (state == StoredReplicaState.LIVE
-            || state == StoredReplicaState.DECOMMISSIONING)) {
-          liveBusyBlockIndices.add(blockIndex);
+        if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
+          if (isStriped && (state == StoredReplicaState.LIVE
+              || state == StoredReplicaState.DECOMMISSIONING)) {
+            liveBusyBlockIndices.add(blockIndex);
+          }
+          continue;
         }
-        continue;
       }
 
       if(isStriped || srcNodes.isEmpty()) {
