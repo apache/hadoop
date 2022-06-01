@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit;
+package org.apache.hadoop.fs.s3a.commit.impl;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -49,6 +49,8 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.WriteOperations;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.PathCommitException;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
@@ -177,7 +179,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @param commit commit to execute
    * @throws IOException on a failure
    */
-  void commitOrFail(
+  public void commitOrFail(
       final SinglePendingCommit commit) throws IOException {
     commit(commit, commit.getFilename()).maybeRethrow();
   }
@@ -189,7 +191,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @param origin origin path/string for outcome text
    * @return the outcome
    */
-  MaybeIOE commit(
+  public MaybeIOE commit(
       final SinglePendingCommit commit,
       final String origin) {
     LOG.debug("Committing single commit {}", commit);
@@ -330,7 +332,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @throws FileNotFoundException if the abort ID is unknown
    * @throws IOException on any failure
    */
-  void abortSingleCommit(SinglePendingCommit commit)
+  public void abortSingleCommit(SinglePendingCommit commit)
       throws IOException {
     String destKey = commit.getDestinationKey();
     String origin = commit.getFilename() != null
@@ -349,7 +351,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @throws FileNotFoundException if the abort ID is unknown
    * @throws IOException on any failure
    */
-  void abortMultipartCommit(String destKey, String uploadId)
+  public void abortMultipartCommit(String destKey, String uploadId)
       throws IOException {
     try (DurationInfo d = new DurationInfo(LOG,
         "Aborting commit ID %s to path %s", uploadId, destKey)) {

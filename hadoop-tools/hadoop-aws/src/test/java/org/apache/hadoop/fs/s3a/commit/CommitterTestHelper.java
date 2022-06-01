@@ -39,7 +39,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.STREAM_CAPABILITY_MAGIC_OUTPUT;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.XA_MAGIC_MARKER;
-import static org.apache.hadoop.fs.s3a.commit.CommitOperations.extractMagicFileLength;
+import static org.apache.hadoop.fs.s3a.commit.impl.CommitOperations.extractMagicFileLength;
 
 /**
  * Helper for committer tests: extra assertions and the like.

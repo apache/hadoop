@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.ProgressCounter;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;

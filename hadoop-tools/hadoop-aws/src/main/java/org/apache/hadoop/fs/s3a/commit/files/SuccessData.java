@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys;
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
@@ -456,7 +455,7 @@ public class SuccessData extends PersistentCommitData<SuccessData> {
   public void recordJobFailure(Throwable thrown) {
     setSuccess(false);
     String stacktrace = ExceptionUtils.getStackTrace(thrown);
-    diagnostics.put(DiagnosticKeys.EXCEPTION, thrown.toString());
-    diagnostics.put(DiagnosticKeys.STACKTRACE, stacktrace);
+    diagnostics.put("exception", thrown.toString());
+    diagnostics.put("stacktrace", stacktrace);
   }
 }

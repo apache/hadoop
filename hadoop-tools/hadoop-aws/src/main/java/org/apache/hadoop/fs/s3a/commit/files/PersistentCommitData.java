@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
@@ -41,9 +41,8 @@ import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 /**
  * Class for single/multiple commit data structures.
  * The mapreduce hierarchy {@code AbstractManifestData} is a fork
- * of this; the Success data JSON format must stay the same.
+ * of this; the Success data JSON format must stay compatible
  */
-@SuppressWarnings("serial")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public abstract class PersistentCommitData<T extends PersistentCommitData>
@@ -140,6 +139,7 @@ public abstract class PersistentCommitData<T extends PersistentCommitData>
         .create()
         .recursive()
         .overwrite(true);
+    // switch to performance mode
     builder.opt(FS_S3A_CREATE_PERFORMANCE, performance);
     return saveToStream(path, instance, builder, serializer);
   }

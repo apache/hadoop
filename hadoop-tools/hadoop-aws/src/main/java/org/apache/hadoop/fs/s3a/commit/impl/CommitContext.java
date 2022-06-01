@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit;
+package org.apache.hadoop.fs.s3a.commit.impl;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.io.IOUtils;
@@ -46,7 +47,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY_SECONDS;
 import static org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.THREAD_PREFIX;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.THREAD_KEEP_ALIVE_TIME;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.THREAD_KEEP_ALIVE_TIME;
 
 /**
  * Commit context.
@@ -128,7 +129,7 @@ public final class CommitContext implements Closeable {
    * @param jobContext job context
    * @param committerThreads number of commit threads
    */
-  CommitContext(
+  public CommitContext(
       final CommitOperations commitOperations,
       final JobContext jobContext,
       final int committerThreads) {
@@ -152,7 +153,7 @@ public final class CommitContext implements Closeable {
    * @param jobId ID
    * @param committerThreads number of commit threads
    */
-  CommitContext(final CommitOperations commitOperations,
+  public CommitContext(final CommitOperations commitOperations,
       final Configuration conf,
       final String jobId,
       final int committerThreads) {
@@ -183,7 +184,7 @@ public final class CommitContext implements Closeable {
    * threads in the thread-pool is set by fs.s3a.committer.threads.
    * If num-threads is 0, this will raise an exception.
    * The threads have a lifespan set by
-   * {@link CommitConstants#THREAD_KEEP_ALIVE_TIME}.
+   * {@link InternalCommitterConstants#THREAD_KEEP_ALIVE_TIME}.
    * When the thread pool is full, the caller runs
    * policy takes over.
    * @param numThreads thread count, may be negative.

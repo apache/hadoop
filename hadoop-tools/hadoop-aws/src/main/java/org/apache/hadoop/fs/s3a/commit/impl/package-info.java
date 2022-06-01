@@ -17,28 +17,15 @@
  */
 
 /**
- * Persistent data formats for the committers.
- *
- * All of these formats share a base class of
- * {@link org.apache.hadoop.fs.s3a.commit.files.PersistentCommitData};
- * the subclasses record
- * <ol>
- *   <li>The content of a single pending commit
- *   (used by the Magic committer).</li>
- *   <li>The list of all the files uploaded by a staging committer.</li>
- *   <li>The summary information saved in the {@code _SUCCESS} file.</li>
- * </ol>
- *
- *
- * The {@link org.apache.hadoop.fs.s3a.commit.files.SuccessData} file is
- * the one visible to callers after a job completes; it is compatible with
- * the manifest committer format persisted in
- * {@code org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData}
- *
+ * Internal classes which make use of mapreduce code.
+ * These MUST NOT be referred to in production code except
+ * in org.apache.hadoop.fs.s3a.commit classes which are only
+ * used within job/task committers.
  */
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-package org.apache.hadoop.fs.s3a.commit.files;
+package org.apache.hadoop.fs.s3a.commit.impl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

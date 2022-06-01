@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
-import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.COMMITTER_FACTORY_SCHEME_PATTERN;
 
 /**
  * Constants for working with committers.
@@ -150,7 +149,7 @@ public final class CommitConstants {
    * Key to set for the S3A schema to use the specific committer.
    */
   public static final String S3A_COMMITTER_FACTORY_KEY = String.format(
-      COMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
+      "mapreduce.outputcommitter.factory.scheme.s3a");
 
   /**
    * S3 Committer factory: {@value}.
@@ -345,13 +344,6 @@ public final class CommitConstants {
    * Task Attempt ID query header: {@value}.
    */
   public static final String PARAM_TASK_ATTEMPT_ID = "ta";
-
-  /**
-   * How long threads in the thread pool stay alive when
-   * idle. Value in seconds: {@value}.
-   */
-  static final long THREAD_KEEP_ALIVE_TIME = 60L;
-
 
   /**
    * Directory for saving job summary reports.

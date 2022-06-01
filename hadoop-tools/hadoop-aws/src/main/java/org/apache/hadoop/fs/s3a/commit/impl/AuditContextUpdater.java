@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit;
+package org.apache.hadoop.fs.s3a.commit.impl;
 
 import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -30,7 +31,7 @@ import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
  * Class to track/update context information to set
  * in threads.
  */
-final class AuditContextUpdater {
+public final class AuditContextUpdater {
 
   /**
    * Job ID.
@@ -47,7 +48,7 @@ final class AuditContextUpdater {
    * to attach to thread contexts.
    * @param jobContext job/task context.
    */
-  AuditContextUpdater(final JobContext jobContext) {
+  public AuditContextUpdater(final JobContext jobContext) {
     this.jobId = jobContext.getJobID().toString();
 
     if (jobContext instanceof TaskAttemptContext) {
@@ -59,7 +60,7 @@ final class AuditContextUpdater {
     }
   }
 
-  AuditContextUpdater(String jobId) {
+  public AuditContextUpdater(String jobId) {
     this.jobId = jobId;
     this.taskAttemptId = null;
   }
@@ -67,7 +68,7 @@ final class AuditContextUpdater {
   /**
    * Add job/task info to current audit context.
    */
-  void updateCurrentAuditContext() {
+  public void updateCurrentAuditContext() {
     final CommonAuditContext auditCtx = currentAuditContext();
     auditCtx.put(AuditConstants.PARAM_JOB_ID, jobId);
     if (taskAttemptId != null) {
@@ -81,7 +82,7 @@ final class AuditContextUpdater {
   /**
    * Remove job/task info from the current audit context.
    */
-  void resetCurrentAuditContext() {
+  public void resetCurrentAuditContext() {
     currentAuditContext().remove(AuditConstants.PARAM_JOB_ID);
     currentAuditContext().remove(CommitConstants.PARAM_TASK_ATTEMPT_ID);
   }
