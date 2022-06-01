@@ -122,6 +122,10 @@ public class RouterRpcClient {
   private final ThreadPoolExecutor executorService;
   /** Retry policy for router -> NN communication. */
   private final RetryPolicy retryPolicy;
+  /** Retry time interval for router -> NN communication when cluster is unavailable. */
+  private long retryTimeInterval;
+  /** Maximum number of retries for router -> NN communication when cluster is unavailable. */
+  private int maxRetryCount;
   /** Optional perf monitor. */
   private final RouterRpcMonitor rpcMonitor;
   /** Field separator of CallerContext. */
@@ -193,6 +197,13 @@ public class RouterRpcClient {
     this.retryPolicy = RetryPolicies.failoverOnNetworkException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, maxFailoverAttempts, maxRetryAttempts,
         failoverSleepBaseMillis, failoverSleepMaxMillis);
+    this.retryTimeInterval = conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_ROUTER_RPC_RETRY_INTERVAL_KEY,
+        HdfsClientConfigKeys.DFS_ROUTER_RPC_RETRY_INTERVAL_DEFAULT,
+        TimeUnit.SECONDS);
+    this.maxRetryCount = conf.getInt(
+        HdfsClientConfigKeys.DFS_ROUTER_RPC_RETRY_COUNT_KEY,
+        HdfsClientConfigKeys.DFS_ROUTER_RPC_RETRY_COUNT_DEFAULT);
   }
 
   /**
@@ -416,7 +427,7 @@ public class RouterRpcClient {
     // check for the case of cluster unavailable state
     if (isClusterUnAvailable(nsId)) {
       // we allow to retry once if cluster is unavailable
-      if (retryCount == 0) {
+      if (retryCount < maxRetryCount) {
         return RetryDecision.RETRY;
       } else {
         throw new NoNamenodesAvailableException(nsId, ioe);
@@ -653,6 +664,19 @@ public class RouterRpcClient {
           }
 
           // retry
+          try {
+            for (int i = 0; i < maxRetryCount; i++) {
+              if (retryCount == i) {
+                TimeUnit.SECONDS.sleep(retryTimeInterval * i);
+                break;
+              }
+            }
+          } catch (InterruptedException ex) {
+            LOG.warn("Router rpc retry sleep encounter exception.");
+          } finally {
+            LOG.info("Router rpc retry, maxRetryCount={}, retryCount={}, method={}, params={} ",
+                    maxRetryCount, retryCount, method, params);
+          }
           return invoke(nsId, ++retryCount, method, obj, params);
         } else if (decision == RetryDecision.FAILOVER_AND_RETRY) {
           // failover, invoker looks for standby exceptions for failover.

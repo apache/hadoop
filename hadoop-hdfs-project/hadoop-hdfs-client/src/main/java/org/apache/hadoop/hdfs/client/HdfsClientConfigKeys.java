@@ -273,6 +273,11 @@ public interface HdfsClientConfigKeys {
   String DFS_LEASE_HARDLIMIT_KEY = "dfs.namenode.lease-hard-limit-sec";
   long DFS_LEASE_HARDLIMIT_DEFAULT = 20 * 60;
 
+  String DFS_ROUTER_RPC_RETRY_INTERVAL_KEY = "dfs.router.rpc.retry.interval.seconds";
+  int DFS_ROUTER_RPC_RETRY_INTERVAL_DEFAULT = 10;
+  String DFS_ROUTER_RPC_RETRY_COUNT_KEY = "dfs.router.rpc.retry.count";
+  int DFS_ROUTER_RPC_RETRY_COUNT_DEFAULT = 3;
+
   /**
    * These are deprecated config keys to client code.
    */
