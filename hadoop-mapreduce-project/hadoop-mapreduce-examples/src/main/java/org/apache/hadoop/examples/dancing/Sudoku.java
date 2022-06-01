@@ -18,8 +18,15 @@
 
 package org.apache.hadoop.examples.dancing;
 
-import java.io.*;
-import java.util.*;
+import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import java.io.BufferedReader;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.StringTokenizer;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
@@ -30,23 +37,23 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 public class Sudoku {
 
   /**
-   * The preset values in the board
+   * The preset values in the board.
    * board[y][x] is the value at x,y with -1 = any
    */ 
   private int[][] board;
   
   /**
-   * The size of the board
+   * The size of the board.
    */
   private int size;
   
   /**
-   * The size of the sub-squares in cells across
+   * The size of the sub-squares in cells across.
    */
   private int squareXSize;
   
   /**
-   * The size of the sub-squares in celss up and down
+   * The size of the sub-squares in celss up and down.
    */
   private int squareYSize;
   
@@ -99,7 +106,7 @@ public class Sudoku {
    * print them to the console.
    */
   private static class SolutionPrinter 
-  implements DancingLinks.SolutionAcceptor<ColumnName> {
+      implements DancingLinks.SolutionAcceptor<ColumnName> {
     int size;
 
     public SolutionPrinter(int size) {
@@ -147,7 +154,7 @@ public class Sudoku {
       while(tokenizer.hasMoreElements()) {
         String word = tokenizer.nextToken();
         if ("?".equals(word)) {
-          col[y] = - 1;
+          col[y] = -1;
         } else {
           col[y] = Integer.parseInt(word);
         }
@@ -157,7 +164,7 @@ public class Sudoku {
       line = file.readLine();
     }
     size = result.size();
-    board = result.toArray(new int [size][]);
+    board = result.toArray(new int[size][]);
     squareYSize = (int) Math.sqrt(size);
     squareXSize = size / squareYSize;
     file.close();

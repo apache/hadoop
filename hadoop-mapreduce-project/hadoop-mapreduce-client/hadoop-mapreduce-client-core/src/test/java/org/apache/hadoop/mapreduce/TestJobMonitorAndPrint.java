@@ -35,7 +35,7 @@ import java.io.StringReader;
 
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskReport;

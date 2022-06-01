@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapreduce;
 
-import org.apache.hadoop.classification.*;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Job related ACLs
