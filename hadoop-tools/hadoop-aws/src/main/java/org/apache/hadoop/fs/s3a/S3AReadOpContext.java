@@ -153,7 +153,6 @@ public class S3AReadOpContext extends S3AOpContext {
   }
 
   /**
-<<<<<<< HEAD
    * Set builder value.
    * @param value new value
    * @return the builder
