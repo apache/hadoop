@@ -405,7 +405,7 @@ public class BlockManager implements BlockStatsMXBean {
    * The maximum number of decommission node's outgoing streams a given node
    * should have at one time, especially for ec blocks.
    */
-  int maxDecommissionStreams;
+  private int maxDecommissionStreams;
   /** Minimum copies needed or else write is disallowed */
   public final short minReplication;
   /** Default number of replicas */
@@ -1018,8 +1018,20 @@ public class BlockManager implements BlockStatsMXBean {
    *
    *  @return maxDecommissionStreams
    */
-  public int getMaxEcStreams() {
+  public int getMaxDecommissionStreams() {
     return maxDecommissionStreams;
+  }
+
+  /**
+   * Updates the value used for maxDecommissionStreams, which is set by
+   * {@code DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_KEY} initially.
+   *
+   * @param newVal - Must be a positive non-zero integer.
+   */
+  public void setMaxDecommissionStreams(int newVal) {
+    ensurePositiveInt(newVal,
+        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_KEY);
+    maxDecommissionStreams = newVal;
   }
 
   static private void ensurePositiveInt(int val, String key) {
@@ -2583,10 +2595,10 @@ public class BlockManager implements BlockStatsMXBean {
             liveBitSet, decommissioningBitSet, blockIndex);
       }
 
-      if (isStriped && (node.isDecommissionInProgress() || node.isEnteringMaintenance())) {
+      if (node.isDecommissionInProgress() || node.isEnteringMaintenance()) {
         if (node.getNumberOfBlocksToBeReplicated() >= maxDecommissionStreams) {
-          if (state == StoredReplicaState.LIVE
-              || state == StoredReplicaState.DECOMMISSIONING) {
+          if (isStriped && (state == StoredReplicaState.LIVE
+              || state == StoredReplicaState.DECOMMISSIONING)) {
             liveBusyBlockIndices.add(blockIndex);
           }
           continue;

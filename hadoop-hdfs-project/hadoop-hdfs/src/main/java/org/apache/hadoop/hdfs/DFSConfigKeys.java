@@ -306,7 +306,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT = 2;
   public static final String  DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY = "dfs.namenode.replication.max-streams-hard-limit";
   public static final int     DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT = 4;
-  public static final String  DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_KEY = "dfs.namenode.decommission.max-streams";
+  public static final String  DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_KEY =
+      "dfs.namenode.decommission.max-streams";
   public static final int     DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_DEFAULT = 8;
   public static final String DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_KEY
       = "dfs.namenode.blockreport.queue.size";

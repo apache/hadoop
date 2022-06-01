@@ -1790,7 +1790,7 @@ public class DatanodeManager {
   /** Handle heartbeat from datanodes. */
   public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
       StorageReport[] reports, final String blockPoolId,
-      long cacheCapacity, long cacheUsed, int xceiverCount, 
+      long cacheCapacity, long cacheUsed, int xceiverCount,
       int xmitsInProgress, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary,
       @Nonnull SlowPeerReports slowPeers,
@@ -1837,7 +1837,7 @@ public class DatanodeManager {
     if (totalBlocks > 0) {
       int maxTransfers = 0;
       if (nodeinfo.isDecommissionInProgress()) {
-        maxTransfers = blockManager.getMaxEcStreams()
+        maxTransfers = blockManager.getMaxDecommissionStreams()
             - xmitsInProgress;
       } else {
         maxTransfers = blockManager.getMaxReplicationStreams()

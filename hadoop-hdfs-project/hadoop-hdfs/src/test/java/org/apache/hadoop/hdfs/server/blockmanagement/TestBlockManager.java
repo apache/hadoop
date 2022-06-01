@@ -887,8 +887,8 @@ public class TestBlockManager {
     BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
     assertNotNull(work);
 
-    // simulate the 2 nodes reach maxReplicationStreams
-    for(int i = 0; i < bm.maxDecommissionStreams; i++){
+    // simulate the 2 nodes reach maxDecommissionStreams
+    for(int i = 0; i < bm.getMaxDecommissionStreams(); i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
       ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
@@ -931,8 +931,8 @@ public class TestBlockManager {
     BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
     assertNotNull(work);
 
-    // simulate the 1 node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxDecommissionStreams; i++){
+    // simulate the 1 node reaches maxDecommissionStreams
+    for(int i = 0; i < bm.getMaxDecommissionStreams(); i++){
       ds2.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -940,8 +940,8 @@ public class TestBlockManager {
     work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
     assertNotNull(work);
 
-    // simulate the 1 more node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxDecommissionStreams; i++){
+    // simulate the 1 more node reaches maxDecommissionStreams
+    for(int i = 0; i < bm.getMaxDecommissionStreams(); i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -954,6 +954,7 @@ public class TestBlockManager {
   public void testFavorDecomUntilHardLimit() throws Exception {
     bm.maxReplicationStreams = 0;
     bm.replicationStreamsHardLimit = 1;
+    bm.setMaxDecommissionStreams(1);
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);

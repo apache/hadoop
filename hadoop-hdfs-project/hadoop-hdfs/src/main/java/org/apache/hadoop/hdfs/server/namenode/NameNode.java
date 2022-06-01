@@ -182,6 +182,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_SLEEP_INTERVAL_MS;
@@ -2242,6 +2244,13 @@ public class NameNode extends ReconfigurableBase implements
             adjustNewVal(DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT,
                 newVal));
         newSetting = bm.getReplicationStreamsHardLimit();
+      } else if (
+          property.equals(
+              DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_KEY)) {
+        bm.setMaxDecommissionStreams(
+            adjustNewVal(DFS_NAMENODE_DECOMMISSION_MAX_STREAMS_DEFAULT,
+                newVal));
+        newSetting = bm.getMaxDecommissionStreams();
       } else if (
           property.equals(
               DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION)) {
