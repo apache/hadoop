@@ -22,7 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import static org.apache.hadoop.mapred.QueueManager.*;
+import static org.apache.hadoop.mapred.QueueManager.QUEUE_CONF_FILE_NAME;
+import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

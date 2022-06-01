@@ -32,7 +32,8 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.hadoop.util.*;
+import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** 
  * An {@link OutputFormat} that writes plain text files. 
@@ -42,7 +43,7 @@ import org.apache.hadoop.util.*;
 public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
 
   protected static class LineRecordWriter<K, V>
-    implements RecordWriter<K, V> {
+      implements RecordWriter<K, V> {
     private static final byte[] NEWLINE =
       "\n".getBytes(StandardCharsets.UTF_8);
 
@@ -75,7 +76,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
     }
 
     public synchronized void write(K key, V value)
-      throws IOException {
+        throws IOException {
 
       boolean nullKey = key == null || key instanceof NullWritable;
       boolean nullValue = value == null || value instanceof NullWritable;
@@ -103,7 +104,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
                                                   JobConf job,
                                                   String name,
                                                   Progressable progress)
-    throws IOException {
+      throws IOException {
     boolean isCompressed = getCompressOutput(job);
     String keyValueSeparator = job.get("mapreduce.output.textoutputformat.separator", 
                                        "\t");
@@ -114,12 +115,12 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
       return new LineRecordWriter<K, V>(fileOut, keyValueSeparator);
     } else {
       Class<? extends CompressionCodec> codecClass =
-        getOutputCompressorClass(job, GzipCodec.class);
+          getOutputCompressorClass(job, GzipCodec.class);
       // create the named codec
       CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job);
       // build the filename including the extension
       Path file = 
-        FileOutputFormat.getTaskOutputPath(job, 
+          FileOutputFormat.getTaskOutputPath(job,
                                            name + codec.getDefaultExtension());
       FileSystem fs = file.getFileSystem(job);
       FSDataOutputStream fileOut = fs.create(file, progress);
