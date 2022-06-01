@@ -43,7 +43,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.FutureIOSupport;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDatasetEquals;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 
 @RunWith(Parameterized.class)
 public abstract class AbstractContractVectoredReadTest extends AbstractFSContractTestBase {
@@ -53,8 +55,6 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   public static final int DATASET_LEN = 64 * 1024;
   private static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   protected static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
-  private static final String VECTORED_READ_FILE_1MB_NAME = "vectored_file_1M.txt";
-  private static final byte[] DATASET_MB = ContractTestUtils.dataset(1024 * 1024, 'a', 256);
 
   private final IntFunction<ByteBuffer> allocate;
 
@@ -77,8 +77,6 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     Path path = path(VECTORED_READ_FILE_NAME);
     FileSystem fs = getFileSystem();
     createFile(fs, path, true, DATASET);
-    Path bigFile = path(VECTORED_READ_FILE_1MB_NAME);
-    createFile(fs, bigFile, true, DATASET_MB);
   }
 
   @Test
@@ -99,7 +97,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
       combinedFuture.get();
 
-      validateVectoredReadResult(fileRanges);
+      validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
@@ -132,7 +130,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     fileRanges.add(new FileRangeImpl(16 * 1024 + 101, 100));
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges);
+      validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
@@ -149,7 +147,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     fileRanges.add(new FileRangeImpl(8*1024 - 101, 100));
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges);
+      validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
@@ -168,7 +166,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     fileRanges.add(new FileRangeImpl(40*1024, 1024));
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges);
+      validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
@@ -184,24 +182,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
                     .build();
     try (FSDataInputStream in = builder.get()) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges);
-    }
-  }
-
-  @Test
-  public void testVectoredRead1MBFile()  throws Exception {
-    FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(new FileRangeImpl(1293, 25837));
-    CompletableFuture<FSDataInputStream> builder =
-            fs.openFile(path(VECTORED_READ_FILE_1MB_NAME))
-            .build();
-    try (FSDataInputStream in = builder.get()) {
-      in.readVectored(fileRanges, allocate);
-      ByteBuffer vecRes = FutureIOSupport.awaitFuture(fileRanges.get(0).getData());
-      FileRange resRange = fileRanges.get(0);
-      assertDatasetEquals((int) resRange.getOffset(), "vecRead",
-              vecRes, resRange.getLength(), DATASET_MB);
+      validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
@@ -215,7 +196,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     fileRanges.add(new FileRangeImpl(10, 980));
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges);
+      validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
@@ -272,7 +253,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       Assertions.assertThat(in.getPos())
               .describedAs("Vectored read shouldn't change file pointer.")
               .isEqualTo(200);
-      validateVectoredReadResult(fileRanges);
+      validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
@@ -290,7 +271,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
               .describedAs("Vectored read shouldn't change file pointer.")
               .isEqualTo(200);
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges);
+      validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
@@ -302,8 +283,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges1, allocate);
       in.readVectored(fileRanges2, allocate);
-      validateVectoredReadResult(fileRanges2);
-      validateVectoredReadResult(fileRanges1);
+      validateVectoredReadResult(fileRanges2, DATASET);
+      validateVectoredReadResult(fileRanges1, DATASET);
     }
   }
 
@@ -314,27 +295,6 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     return fileRanges;
   }
 
-  protected void validateVectoredReadResult(List<FileRange> fileRanges)
-          throws ExecutionException, InterruptedException {
-    CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
-    int i = 0;
-    for (FileRange res : fileRanges) {
-      completableFutures[i++] = res.getData();
-    }
-    CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
-    combinedFuture.get();
-
-    for (FileRange res : fileRanges) {
-      CompletableFuture<ByteBuffer> data = res.getData();
-      try {
-        ByteBuffer buffer = FutureIOSupport.awaitFuture(data);
-        assertDatasetEquals((int) res.getOffset(), "vecRead", buffer, res.getLength(), DATASET);
-      } catch (Exception ex) {
-        LOG.error("Exception while running vectored read ", ex);
-        Assert.fail("Exception while running vectored read " + ex);
-      }
-    }
-  }
 
   protected void testExceptionalVectoredRead(FileSystem fs,
                                              List<FileRange> fileRanges,
@@ -350,27 +310,5 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     Assertions.assertThat(exRaised)
             .describedAs(s)
             .isTrue();
-  }
-
-  /**
-   * Assert that the data read matches the dataset at the given offset.
-   * This helps verify that the seek process is moving the read pointer
-   * to the correct location in the file.
-   *  @param readOffset the offset in the file where the read began.
-   * @param operation  operation name for the assertion.
-   * @param data       data read in.
-   * @param length     length of data to check.
-   * @param originalData
-   */
-  private void assertDatasetEquals(
-          final int readOffset, final String operation,
-          final ByteBuffer data,
-          int length, byte[] originalData) {
-    for (int i = 0; i < length; i++) {
-      int o = readOffset + i;
-      assertEquals(operation + " with read offset " + readOffset
-                      + ": data[" + i + "] != DATASET[" + o + "]",
-              originalData[o], data.get());
-    }
   }
 }
