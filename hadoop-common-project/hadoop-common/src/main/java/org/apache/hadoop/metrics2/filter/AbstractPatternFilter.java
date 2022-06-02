@@ -44,7 +44,7 @@ public abstract class AbstractPatternFilter extends MetricsFilter {
   private Pattern excludePattern;
   private final Map<String, Pattern> includeTagPatterns;
   private final Map<String, Pattern> excludeTagPatterns;
-  private final Pattern tagPattern = Pattern.compile("^(\\w+):(.*)");
+  protected final Pattern tagPattern = Pattern.compile("^(\\w+):(.*)");
 
   AbstractPatternFilter() {
     includeTagPatterns = Maps.newHashMap();

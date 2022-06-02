@@ -79,6 +79,16 @@ class MetricsRecordBuilderImpl extends MetricsRecordBuilder {
   }
 
   @Override
+  public MetricsRecordBuilderImpl tag(MetricsInfo info, String value,
+      boolean transform) {
+    if (acceptable && (!transform || (metricFilter == null) || metricFilter
+        .accepts(info.name()))) {
+      tags.add(Interns.tag(info, value));
+    }
+    return this;
+  }
+
+  @Override
   public MetricsRecordBuilderImpl add(MetricsTag tag) {
     tags.add(tag);
     return this;

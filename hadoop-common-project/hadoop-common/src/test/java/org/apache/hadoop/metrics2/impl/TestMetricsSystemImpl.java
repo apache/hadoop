@@ -20,10 +20,12 @@ package org.apache.hadoop.metrics2.impl;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.StreamSupport;
+import org.apache.hadoop.metrics2.sink.PrometheusMetricsSink;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -649,5 +651,51 @@ public class TestMetricsSystemImpl {
     } finally {
       ms.stop();
     }
+  }
+
+  @Metrics(context = "MyMetrics")
+  static class MyMetrics {
+
+    @Metric({"Int", "Test Tag Int"})
+    int getInt() {
+      return 1;
+    }
+
+    @Metric({"String1", "Test Tag String"})
+    String getString1() {
+      return "string";
+    }
+
+    @Metric({"String2", "Test Tag String"})
+    String getString2() {
+      return "string";
+    }
+
+    @Metric({"String3", "Test Tag String"})
+    String getString3() {
+      return "string";
+    }
+  }
+
+  @Test
+  public void testIgnoreMetricTag() throws Exception {
+    String filename = TestMetricsConfig.getTestFilename("hadoop-metrics2-p1");
+    new ConfigBuilder().add("p1.source.metric.filter.exclude",
+        "String1,String2").save(filename);
+
+    MetricsSystemImpl ms = new MetricsSystemImpl("p1");
+    ms.start();
+    MyMetrics myMetrics = new MyMetrics();
+    ms.register(myMetrics);
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+    ms.register("prom", "prom desc", sink);
+    ms.publishMetricsNow();
+    StringWriter stringWriter = new StringWriter();
+    sink.writeMetrics(stringWriter);
+    String metrics = stringWriter.toString();
+    assertTrue(metrics.contains(
+        "my_metrics_int{context=\"MyMetrics\",string3=\"string\",hostname=\"bogon\"} 1"));
+    assertFalse(metrics.contains("string1"));
+    assertFalse(metrics.contains("string2"));
   }
 }
