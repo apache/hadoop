@@ -650,8 +650,7 @@ public class CommitOperations extends AbstractStoreOperation
 
   /**
    * Create a stub commit context for tests.
-   * There's no job context and the thread pool is
-   * not set up.
+   * There's no job context.
    * @param path path for all work.
    * @param jobId job ID; if null a random UUID is generated.
    * @param committerThreads number of committer threads.
