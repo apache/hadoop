@@ -24,7 +24,7 @@
 
 int main(int argc, char **argv) {
   const char *path = "/tmp/some-test-dir";
-  const DIR *dir = opendir(path);
+  DIR *dir = opendir(path);
   if (dir == NULL) {
     printf("Unable to open the directory: %s, error: %d\n", path, errno);
     return 1;
