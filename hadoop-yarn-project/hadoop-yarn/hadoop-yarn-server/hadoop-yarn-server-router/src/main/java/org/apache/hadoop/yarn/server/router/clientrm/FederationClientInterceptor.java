@@ -1241,7 +1241,7 @@ public class FederationClientInterceptor
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
       LOG.error("Unable to get the applicationAttempt report for {} " +
-          "to SubCluster {}, error = {}.",
+          "to SubCluster {}.",
           request.getApplicationAttemptId(), subClusterId.getId(), e);
       throw e;
     }
@@ -1290,9 +1290,15 @@ public class FederationClientInterceptor
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
       LOG.error("Unable to update application priority for {} " +
-          "to SubCluster {}, error = {}.",
+          "to SubCluster {}.",
           request.getApplicationId(), subClusterId.getId(), e);
       throw e;
+    }
+
+    if (response == null) {
+      LOG.error("No response when update application priority of " +
+           "the applicationId {} to SubCluster {}.",
+           applicationId, subClusterId.getId());
     }
 
     long stopTime = clock.getTime();
@@ -1336,10 +1342,16 @@ public class FederationClientInterceptor
       response = clientRMProxy.updateApplicationTimeouts(request);
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      LOG.error("Unable to update application priority for {} " +
-          "to SubCluster {}, error = {}.",
+      LOG.error("Unable to update application timeout for {} " +
+          "to SubCluster {}.",
           request.getApplicationId(), subClusterId.getId(), e);
       throw e;
+    }
+
+    if (response == null) {
+      LOG.error("No response when update application timeout of " +
+          "the applicationId {} to SubCluster {}.",
+          applicationId, subClusterId.getId());
     }
 
     long stopTime = clock.getTime();

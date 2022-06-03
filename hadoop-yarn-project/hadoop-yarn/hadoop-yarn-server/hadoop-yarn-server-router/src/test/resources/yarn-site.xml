@@ -27,4 +27,8 @@
     <name>yarn.resourcemanager.webapp.address</name>
     <value>0.0.0.0:8080</value>
   </property>
+  <property>
+    <name>yarn.cluster.max-application-priority</name>
+    <value>50</value>
+  </property>
 </configuration>
