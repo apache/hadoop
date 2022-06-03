@@ -126,9 +126,8 @@ public final class CommitConstants {
 
   /**
    * Temp data which is not auto-committed: {@value}.
-   * Uses a different name from normal just to make clear it is different.
    */
-  public static final String TEMP_DATA = "__temp-data";
+  public static final String TEMP_DATA = TEMPORARY;
 
 
   /**

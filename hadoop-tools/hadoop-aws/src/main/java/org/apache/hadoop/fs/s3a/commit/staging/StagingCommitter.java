@@ -244,8 +244,16 @@ public class StagingCommitter extends AbstractS3ACommitter {
 
   @Override
   protected Path getJobAttemptPath(int appAttemptId) {
-    return new Path(getPendingJobAttemptsPath(commitsDirectory),
+    return new Path(getJobPath(),
         String.valueOf(appAttemptId));
+  }
+
+  /**
+   * Compute the path under which all job attempts will be placed.
+   * @return the path to store job attempt data.
+   */
+  protected Path getJobPath() {
+    return getPendingJobAttemptsPath(commitsDirectory);
   }
 
   /**
@@ -491,6 +499,14 @@ public class StagingCommitter extends AbstractS3ACommitter {
     }
   }
 
+  /**
+   * Staging committer cleanup includes calling wrapped committer's
+   * cleanup method, and removing all destination paths in the final
+   * filesystem.
+   * @param commitContext commit context
+   * @param suppressExceptions should exceptions be suppressed?
+   * @throws IOException IO failures if exceptions are not suppressed.
+   */
   @Override
   @SuppressWarnings("deprecation")
   protected void cleanup(CommitContext commitContext,

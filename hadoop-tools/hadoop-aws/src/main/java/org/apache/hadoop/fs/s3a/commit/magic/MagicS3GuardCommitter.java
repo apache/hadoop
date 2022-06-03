@@ -46,6 +46,7 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TASK_ATTEMPT_ID;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TEMP_DATA;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.*;
@@ -101,9 +102,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     try (DurationInfo d = new DurationInfo(LOG,
         "Setup Job %s", jobIdString(context))) {
       super.setupJob(context);
-      Path jobAttemptPath = getJobAttemptPath(context);
-      getDestinationFS(jobAttemptPath,
-          context.getConfiguration()).mkdirs(jobAttemptPath);
+      Path jobPath = getJobPath();
+      final FileSystem destFS = getDestinationFS(jobPath,
+          context.getConfiguration());
+      destFS.delete(jobPath, true);
+      destFS.mkdirs(jobPath);
     }
   }
 
@@ -128,11 +131,16 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * Delete the magic directory.
    */
   public void cleanupStagingDirs() {
-    Path path = magicSubdir(getOutputPath());
+    final Path out = getOutputPath();
+    Path path = magicSubdir(out);
     try(DurationInfo ignored = new DurationInfo(LOG, true,
         "Deleting magic directory %s", path)) {
       Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
           () -> deleteWithWarning(getDestFS(), path, true));
+      // and the job temp directory with manifests
+      Invoker.ignoreIOExceptions(LOG, "cleanup job directory", path.toString(),
+          () -> deleteWithWarning(getDestFS(),
+              new Path(out, TEMP_DATA), true));
     }
   }
 
@@ -261,13 +269,22 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   }
 
   /**
+   * Compute the path under which all job attempts will be placed.
+   * @return the path to store job attempt data.
+   */
+  @Override
+  protected Path getJobPath() {
+    return getMagicJobPath(getUUID(), getOutputPath());
+  }
+
+  /**
    * Compute the path where the output of a given job attempt will be placed.
    * For the magic committer, the path includes the job UUID.
    * @param appAttemptId the ID of the application attempt for this job.
    * @return the path to store job attempt data.
    */
-  protected Path getJobAttemptPath(int appAttemptId) {
-    return getMagicJobAttemptPath(getUUID(), getOutputPath());
+  protected final Path getJobAttemptPath(int appAttemptId) {
+    return getMagicJobAttemptPath(getUUID(), appAttemptId, getOutputPath());
   }
 
   /**
@@ -277,12 +294,12 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @param context the context of the task attempt.
    * @return the path where a task attempt should be stored.
    */
-  public Path getTaskAttemptPath(TaskAttemptContext context) {
+  public final Path getTaskAttemptPath(TaskAttemptContext context) {
     return getMagicTaskAttemptPath(context, getUUID(), getOutputPath());
   }
 
   @Override
-  protected Path getBaseTaskAttemptPath(TaskAttemptContext context) {
+  protected final Path getBaseTaskAttemptPath(TaskAttemptContext context) {
     return getBaseMagicTaskAttemptPath(context, getUUID(), getOutputPath());
   }
 

@@ -617,6 +617,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertNotNull("null outputPath in committer " + committer,
         committer.getOutputPath());
 
+    // note the task attempt path.
+    Path job1TaskAttempt0Path = committer.getTaskAttemptPath(tContext);
+
     // Commit the task. This will promote data and metadata to where
     // job commits will pick it up on commit or abort.
     commitTask(committer, tContext);
@@ -635,6 +638,15 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         committer2.isRecoverySupported());
     intercept(PathCommitException.class, "recover",
         () -> committer2.recoverTask(tContext2));
+
+    // the new task attempt path is different from the first, because the
+    // job attempt counter is used in the path
+    final Path job2TaskAttempt0Path = committer2.getTaskAttemptPath(tContext2);
+    LOG.info("Job attempt 1 task attempt path {}; attempt 2 path {}",
+        job1TaskAttempt0Path, job2TaskAttempt0Path);
+    assertNotEquals("Task attempt paths must differ",
+        job1TaskAttempt0Path,
+        job2TaskAttempt0Path);
 
     // at this point, task attempt 0 has failed to recover
     // it should be abortable though. This will be a no-op as it already

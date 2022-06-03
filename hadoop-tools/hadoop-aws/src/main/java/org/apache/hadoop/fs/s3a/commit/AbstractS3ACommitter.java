@@ -340,6 +340,12 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   }
 
   /**
+   * Compute the path under which all job attempts will be placed.
+   * @return the path to store job attempt data.
+   */
+  protected abstract Path getJobPath();
+
+  /**
    * Compute the path where the output of a given job attempt will be placed.
    * @param appAttemptId the ID of the application attempt for this job.
    * @return the path to store job attempt data.
@@ -628,6 +634,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       }
       Path taskAttemptPath = getTaskAttemptPath(context);
       FileSystem fs = taskAttemptPath.getFileSystem(getConf());
+      // delete that ta path if somehow it was there
+      fs.delete(taskAttemptPath, true);
+      // create an empty directory
       fs.mkdirs(taskAttemptPath);
     }
   }
