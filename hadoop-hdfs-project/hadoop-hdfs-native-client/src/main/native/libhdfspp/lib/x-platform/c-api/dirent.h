@@ -21,7 +21,7 @@
 
 #if defined(WIN32) || defined(USE_X_PLATFORM_DIRENT)
 
-#ifdef __cplusplus
+#if defined(WIN32) && defined(__cplusplus)
 extern "C" {
 #endif
 
@@ -39,7 +39,7 @@ struct dirent *readdir(const DIR *dir);
 
 int closedir(const DIR *dir);
 
-#ifdef __cplusplus
+#if defined(WIN32) && defined(__cplusplus)
 }
 #endif
 

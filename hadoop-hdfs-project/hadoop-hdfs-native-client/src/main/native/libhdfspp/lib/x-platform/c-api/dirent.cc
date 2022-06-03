@@ -26,7 +26,10 @@
 #include "x-platform/c-api/dirent.h"
 #include "x-platform/dirent.h"
 
+#if defined(WIN32) && defined(__cplusplus)
 extern "C" {
+#endif
+
 DIR *opendir(const char *dir_path) {
   const auto dir = new DIR;
   dir->x_platform_dirent_ptr = new XPlatform::Dirent(dir_path);
@@ -73,4 +76,7 @@ int closedir(const DIR *dir) {
   delete dir;
   return 0;
 }
+
+#if defined(WIN32) && defined(__cplusplus)
 }
+#endif
