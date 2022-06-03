@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Before;
 import org.junit.Rule;
@@ -44,8 +45,7 @@ import static org.junit.Assert.assertTrue;
  * Tests for {@link SlowPeerTracker}.
  */
 public class TestSlowPeerTracker {
-  public static final Logger LOG = LoggerFactory.getLogger(
-      TestSlowPeerTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSlowPeerTracker.class);
 
   /**
    * Set a timeout for every test case.
@@ -79,9 +79,9 @@ public class TestSlowPeerTracker {
 
   @Test
   public void testReportsAreRetrieved() {
-    tracker.addReport("node2", "node1", 1.2);
-    tracker.addReport("node3", "node1", 2.1);
-    tracker.addReport("node3", "node2", 1.22);
+    tracker.addReport("node2", "node1", new OutlierMetrics(0.0, 0.0, 0.0, 1.2));
+    tracker.addReport("node3", "node1", new OutlierMetrics(0.0, 0.0, 0.0, 2.1));
+    tracker.addReport("node3", "node2", new OutlierMetrics(0.0, 0.0, 0.0, 1.22));
 
     assertThat(tracker.getReportsForAllDataNodes().size(), is(2));
     assertThat(tracker.getReportsForNode("node2").size(), is(1));
@@ -94,9 +94,9 @@ public class TestSlowPeerTracker {
    */
   @Test
   public void testAllReportsAreExpired() {
-    tracker.addReport("node2", "node1", 0.123);
-    tracker.addReport("node3", "node2", 0.2334);
-    tracker.addReport("node1", "node3", 1.234);
+    tracker.addReport("node2", "node1", new OutlierMetrics(0.0, 0.0, 0.0, 0.123));
+    tracker.addReport("node3", "node2", new OutlierMetrics(0.0, 0.0, 0.0, 0.2334));
+    tracker.addReport("node1", "node3", new OutlierMetrics(0.0, 0.0, 0.0, 1.234));
 
     // No reports should expire after 1ms.
     timer.advance(1);
@@ -116,10 +116,10 @@ public class TestSlowPeerTracker {
    */
   @Test
   public void testSomeReportsAreExpired() {
-    tracker.addReport("node3", "node1", 1.234);
-    tracker.addReport("node3", "node2", 1.222);
+    tracker.addReport("node3", "node1", new OutlierMetrics(0.0, 0.0, 0.0, 1.234));
+    tracker.addReport("node3", "node2", new OutlierMetrics(0.0, 0.0, 0.0, 1.222));
     timer.advance(reportValidityMs);
-    tracker.addReport("node3", "node4", 1.20);
+    tracker.addReport("node3", "node4", new OutlierMetrics(0.0, 0.0, 0.0, 1.20));
     assertThat(tracker.getReportsForAllDataNodes().size(), is(1));
     assertThat(tracker.getReportsForNode("node3").size(), is(1));
     assertEquals(1, tracker.getReportsForNode("node3").stream()
@@ -131,22 +131,28 @@ public class TestSlowPeerTracker {
    */
   @Test
   public void testReplacement() {
-    tracker.addReport("node2", "node1", 2.1);
+    OutlierMetrics outlierMetrics1 = new OutlierMetrics(0.0, 0.0, 0.0, 2.1);
+    tracker.addReport("node2", "node1", outlierMetrics1);
     timer.advance(reportValidityMs); // Expire the report.
     assertThat(tracker.getReportsForAllDataNodes().size(), is(0));
 
     // This should replace the expired report with a newer valid one.
-    tracker.addReport("node2", "node1", 0.001);
+    OutlierMetrics outlierMetrics2 = new OutlierMetrics(0.0, 0.0, 0.0, 0.001);
+    tracker.addReport("node2", "node1", outlierMetrics2);
     assertThat(tracker.getReportsForAllDataNodes().size(), is(1));
     assertThat(tracker.getReportsForNode("node2").size(), is(1));
   }
 
   @Test
   public void testGetJson() throws IOException {
-    tracker.addReport("node1", "node2", 1.1);
-    tracker.addReport("node2", "node3", 1.23);
-    tracker.addReport("node2", "node1", 2.13);
-    tracker.addReport("node4", "node1", 1.244);
+    OutlierMetrics outlierMetrics1 = new OutlierMetrics(0.0, 0.0, 0.0, 1.1);
+    tracker.addReport("node1", "node2", outlierMetrics1);
+    OutlierMetrics outlierMetrics2 = new OutlierMetrics(0.0, 0.0, 0.0, 1.23);
+    tracker.addReport("node2", "node3", outlierMetrics2);
+    OutlierMetrics outlierMetrics3 = new OutlierMetrics(0.0, 0.0, 0.0, 2.13);
+    tracker.addReport("node2", "node1", outlierMetrics3);
+    OutlierMetrics outlierMetrics4 = new OutlierMetrics(0.0, 0.0, 0.0, 1.244);
+    tracker.addReport("node4", "node1", outlierMetrics4);
 
     final Set<SlowPeerJsonReport> reports = getAndDeserializeJson();
 
@@ -161,17 +167,17 @@ public class TestSlowPeerTracker {
 
   @Test
   public void testGetJsonSizeIsLimited() throws IOException {
-    tracker.addReport("node1", "node2", 1.634);
-    tracker.addReport("node1", "node3", 2.3566);
-    tracker.addReport("node2", "node3", 3.869);
-    tracker.addReport("node2", "node4", 4.1356);
-    tracker.addReport("node3", "node4", 1.73057);
-    tracker.addReport("node3", "node5", 2.4956730);
-    tracker.addReport("node4", "node6", 3.29847);
-    tracker.addReport("node5", "node6", 4.13444);
-    tracker.addReport("node5", "node7", 5.10845);
-    tracker.addReport("node6", "node8", 2.37464);
-    tracker.addReport("node6", "node7", 1.29475656);
+    tracker.addReport("node1", "node2", new OutlierMetrics(0.0, 0.0, 0.0, 1.634));
+    tracker.addReport("node1", "node3", new OutlierMetrics(0.0, 0.0, 0.0, 2.3566));
+    tracker.addReport("node2", "node3", new OutlierMetrics(0.0, 0.0, 0.0, 3.869));
+    tracker.addReport("node2", "node4", new OutlierMetrics(0.0, 0.0, 0.0, 4.1356));
+    tracker.addReport("node3", "node4", new OutlierMetrics(0.0, 0.0, 0.0, 1.73057));
+    tracker.addReport("node3", "node5", new OutlierMetrics(0.0, 0.0, 0.0, 2.4956730));
+    tracker.addReport("node4", "node6", new OutlierMetrics(0.0, 0.0, 0.0, 3.29847));
+    tracker.addReport("node5", "node6", new OutlierMetrics(0.0, 0.0, 0.0, 4.13444));
+    tracker.addReport("node5", "node7", new OutlierMetrics(0.0, 0.0, 0.0, 5.10845));
+    tracker.addReport("node6", "node8", new OutlierMetrics(0.0, 0.0, 0.0, 2.37464));
+    tracker.addReport("node6", "node7", new OutlierMetrics(0.0, 0.0, 0.0, 1.29475656));
 
     final Set<SlowPeerJsonReport> reports = getAndDeserializeJson();
 
@@ -215,13 +221,16 @@ public class TestSlowPeerTracker {
   public void testLowRankedElementsIgnored() throws IOException {
     // Insert 5 nodes with 2 peer reports each.
     for (int i = 0; i < 5; ++i) {
-      tracker.addReport("node" + i, "reporter1", 1.295673);
-      tracker.addReport("node" + i, "reporter2", 2.38560);
+      OutlierMetrics outlierMetrics1 = new OutlierMetrics(0.0, 0.0, 0.0, 1.295673);
+      tracker.addReport("node" + i, "reporter1", outlierMetrics1);
+      OutlierMetrics outlierMetrics2 = new OutlierMetrics(0.0, 0.0, 0.0, 2.38560);
+      tracker.addReport("node" + i, "reporter2", outlierMetrics2);
     }
 
     // Insert 10 nodes with 1 peer report each.
     for (int i = 10; i < 20; ++i) {
-      tracker.addReport("node" + i, "reporter1", 3.4957);
+      OutlierMetrics outlierMetrics = new OutlierMetrics(0.0, 0.0, 0.0, 3.4957);
+      tracker.addReport("node" + i, "reporter1", outlierMetrics);
     }
 
     final Set<SlowPeerJsonReport> reports = getAndDeserializeJson();
