@@ -27,7 +27,8 @@
 namespace XPlatform {
 /**
  * {@class XPlatform::Dirent} provides the functionality to perform a one-time
- * iteration through the child files or folders under a given path.
+ * iteration per {@link XPlatform::Dirent} through the child files or folders
+ * under a given path.
  */
 class Dirent {
 public:

@@ -19,10 +19,17 @@
 #ifndef LIBHDFSPP_CROSS_PLATFORM_C_API_DIRENT_TEST
 #define LIBHDFSPP_CROSS_PLATFORM_C_API_DIRENT_TEST
 
+#include "x-platform/dirent.h"
 #include "x-platform/dirent_test.h"
 
+/**
+ * Test fixture for testing {@link XPlatform::Dirent}'s C APIs.
+ */
 class DirentCApiTest : public DirentTest {
 protected:
+  /**
+   * {@inheritdoc}
+   */
   [[nodiscard]] std::unordered_set<std::string>
   ListDirAndFiles(const std::string &path) const override;
 };

@@ -35,7 +35,7 @@
 #include "x-platform/syscall.h"
 
 void DirentTest::SetUp() {
-  tmp_root_ = std::filesystem::temp_directory_path() / CreateTempDir();
+  tmp_root_ = std::filesystem::temp_directory_path() / GetTempName();
   if (!std::filesystem::create_directories(tmp_root_)) {
     std::stringstream err_msg;
     err_msg << "Unable to create temp directory " << tmp_root_.string();
@@ -45,7 +45,7 @@ void DirentTest::SetUp() {
 
 void DirentTest::TearDown() { std::filesystem::remove_all(tmp_root_); }
 
-std::string DirentTest::CreateTempDir(const std::string &pattern) const {
+std::string DirentTest::GetTempName(const std::string &pattern) const {
   std::vector pattern_raw(pattern.begin(), pattern.end());
   if (!XPlatform::Syscall::CreateTempDir(pattern_raw)) {
     std::stringstream err_msg;

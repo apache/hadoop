@@ -25,20 +25,53 @@
 
 #include <gtest/gtest.h>
 
+#include "x-platform/dirent.h"
+
+/**
+ * Test fixture for testing {@link XPlatform::Dirent}.
+ */
 class DirentTest : public ::testing::Test {
 protected:
   void SetUp() override;
   void TearDown() override;
 
+  /**
+   * Gets a name for creating temporary file or folder. This also ensures that
+   * the temporary file or folder does not exist.
+   *
+   * @param pattern The pattern to use for naming the temporary directory.
+   * @return The temporary file or folder name that can be used for creating the
+   * same.
+   */
   [[nodiscard]] std::string
-  CreateTempDir(const std::string &pattern = "test_XXXXXX") const;
+  GetTempName(const std::string &pattern = "test_XXXXXX") const;
 
+  /**
+   * Creates the given number of temporary files and directories under the
+   * {@link DirentTest#tmp_root_}.
+   *
+   * @param num_dirs The number of temporary directories to create.
+   * @param num_files The number of temporary files to create.
+   * @return An {@link std::unordered_set> of the absolute paths of all the
+   * temporary files and folders that were created.
+   */
   [[nodiscard]] std::unordered_set<std::string>
   CreateTempDirAndFiles(std::size_t num_dirs, std::size_t num_files) const;
 
+  /**
+   * Lists all the children of the given path.
+   *
+   * @param path The path whose children must be listed.
+   * @return An {@link std::unordered_set} containing the absolute paths of all
+   * the children of the given path.
+   */
   [[nodiscard]] virtual std::unordered_set<std::string>
   ListDirAndFiles(const std::string &path) const;
 
+  /**
+   * The root in temp folder under which the rest of all the temporary files and
+   * folders will be created for the purpose of testing.
+   */
   std::filesystem::path tmp_root_;
 };
 

@@ -31,7 +31,7 @@ DirentCApiTest::ListDirAndFiles(const std::string &path) const {
   std::stringstream err_msg;
   std::unordered_set<std::string> paths;
 
-  const DIR *dir = opendir(path.c_str());
+  DIR *dir = opendir(path.c_str());
   if (dir == nullptr) {
     err_msg << "Unable to open directory " << path;
     throw std::runtime_error(err_msg.str());

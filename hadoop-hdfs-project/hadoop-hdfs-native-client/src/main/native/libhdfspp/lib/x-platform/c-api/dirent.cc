@@ -36,16 +36,24 @@ DIR *opendir(const char *dir_path) {
   return dir;
 }
 
-struct dirent *readdir(const DIR *dir) {
+struct dirent *readdir(DIR *dir) {
+  /*
+   * We will use a static variable to hold the dirent, so that we align with the
+   * readdir's implementation in dirent.h header file in Linux.
+   */
   static struct dirent static_dir_entry;
+
+  // Get the XPlatform::Dirent instance and move the iterator.
   const auto x_platform_dirent =
       static_cast<XPlatform::Dirent *>(dir->x_platform_dirent_ptr);
   const auto dir_entry = x_platform_dirent->NextFile();
 
+  // End of iteration.
   if (std::holds_alternative<std::monostate>(dir_entry)) {
     return nullptr;
   }
 
+  // Error in iteration.
   if (std::holds_alternative<std::error_code>(dir_entry)) {
     const auto err = std::get<std::error_code>(dir_entry);
     errno = err.value();
@@ -57,10 +65,17 @@ struct dirent *readdir(const DIR *dir) {
     return nullptr;
   }
 
+  // Return the current child file/folder's name.
   if (std::holds_alternative<std::filesystem::directory_entry>(dir_entry)) {
     const auto entry = std::get<std::filesystem::directory_entry>(dir_entry);
     const auto filename = entry.path().filename().string();
-    // TODO : Add a check - filename's length shouldn't exceed 256.
+
+    // The file name's length shouldn't exceed 256.
+    if (filename.length() >= 256) {
+      errno = 1;
+      return nullptr;
+    }
+
     std::fill(std::begin(static_dir_entry.d_name),
               std::end(static_dir_entry.d_name), '\0');
     std::copy(filename.begin(), filename.end(),
@@ -69,11 +84,14 @@ struct dirent *readdir(const DIR *dir) {
   return &static_dir_entry;
 }
 
-int closedir(const DIR *dir) {
+int closedir(DIR *dir) {
   const auto x_platform_dirent =
       static_cast<XPlatform::Dirent *>(dir->x_platform_dirent_ptr);
   delete x_platform_dirent;
   delete dir;
+
+  // We can't use the void return type for closedir since we want to align the
+  // closedir method's signature in dirent.h header file in Linux.
   return 0;
 }
 
