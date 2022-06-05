@@ -137,7 +137,7 @@ public class MockResolver
           break;
         }
       }
-      // This operation modifies the list so we need to be careful
+      // This operation modifies the list, so we need to be careful
       synchronized(namenodes) {
         Collections.sort(namenodes, new NamenodePriorityComparator());
       }

@@ -828,7 +828,26 @@ public class FederationClientInterceptor
   @Override
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if(request == null){
+      routerMetrics.incrQueueUserAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getQueueUserAcls request.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getQueueUserAcls",
+        new Class[] {GetQueueUserAclsInfoRequest.class}, new Object[] {request});
+    Collection<GetQueueUserAclsInfoResponse> queueUserAcls;
+    try {
+      queueUserAcls = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetQueueUserAclsInfoResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrQueueUserAclsFailedRetrieved();
+      LOG.error("Unable to get queue user Acls due to exception.", ex);
+      throw ex;
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetQueueUserAclsRetrieved(stopTime - startTime);
+    // Merge the QueueUserAclsInfoResponse
+    return RouterYarnClientUtils.mergeQueueUserAcls(queueUserAcls);
   }
 
   @Override
@@ -853,7 +872,26 @@ public class FederationClientInterceptor
   @Override
   public ReservationListResponse listReservations(
       ReservationListRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getReservationId() == null) {
+      routerMetrics.incrListReservationsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing listReservations request.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("listReservations",
+        new Class[] {ReservationListRequest.class}, new Object[] {request});
+    Collection<ReservationListResponse> listResponses;
+    try {
+      listResponses = invokeAppClientProtocolMethod(true, remoteMethod,
+          ReservationListResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrListReservationsFailedRetrieved();
+      LOG.error("Unable to list reservations node due to exception.", ex);
+      throw ex;
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededListReservationsRetrieved(stopTime - startTime);
+    // Merge the ReservationListResponse
+    return RouterYarnClientUtils.mergeReservationsList(listResponses);
   }
 
   @Override
@@ -982,38 +1020,31 @@ public class FederationClientInterceptor
       GetApplicationAttemptReportRequest request)
       throws YarnException, IOException {
 
-    long startTime = clock.getTime();
-
     if (request == null || request.getApplicationAttemptId() == null
             || request.getApplicationAttemptId().getApplicationId() == null) {
-      routerMetrics.incrAppAttemptsFailedRetrieved();
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
       RouterServerUtil.logAndThrowException(
-              "Missing getApplicationAttemptReport " +
-                      "request or applicationId " +
-                      "or applicationAttemptId information.",
-              null);
+          "Missing getApplicationAttemptReport request or applicationId " +
+          "or applicationAttemptId information.", null);
     }
 
+    long startTime = clock.getTime();
     SubClusterId subClusterId = null;
-
+    ApplicationId applicationId = request.getApplicationAttemptId().getApplicationId();
     try {
-      subClusterId = federationFacade
-              .getApplicationHomeSubCluster(
-                      request.getApplicationAttemptId().getApplicationId());
+      subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
-      routerMetrics.incrAppAttemptsFailedRetrieved();
-      RouterServerUtil
-              .logAndThrowException("ApplicationAttempt " +
-                      request.getApplicationAttemptId() +
-                      "belongs to Application " +
-                      request.getApplicationAttemptId().getApplicationId() +
-                      " does not exist in FederationStateStore", e);
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
+      RouterServerUtil.logAndThrowException("ApplicationAttempt " +
+          request.getApplicationAttemptId() + " belongs to Application " +
+          request.getApplicationAttemptId().getApplicationId() +
+          " does not exist in FederationStateStore.", e);
     }
 
     ApplicationClientProtocol clientRMProxy =
-            getClientRMProxyForSubCluster(subClusterId);
+        getClientRMProxyForSubCluster(subClusterId);
 
-    GetApplicationAttemptReportResponse response = null;
+    GetApplicationAttemptReportResponse response;
     try {
       response = clientRMProxy.getApplicationAttemptReport(request);
     } catch (Exception e) {
@@ -1031,26 +1062,134 @@ public class FederationClientInterceptor
     }
 
     long stopTime = clock.getTime();
-    routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
+    routerMetrics.succeededAppAttemptReportRetrieved(stopTime - startTime);
     return response;
   }
 
   @Override
   public GetApplicationAttemptsResponse getApplicationAttempts(
       GetApplicationAttemptsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getApplicationId() == null) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getApplicationAttempts " +
+          "request or application id.", null);
+    }
+
+    long startTime = clock.getTime();
+    ApplicationId applicationId = request.getApplicationId();
+    SubClusterId subClusterId = null;
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException ex) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " + applicationId +
+          " does not exist in FederationStateStore.", ex);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    GetApplicationAttemptsResponse response = null;
+    try {
+      response = clientRMProxy.getApplicationAttempts(request);
+    } catch (Exception ex) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get the application attempts for " +
+          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the attempts list of " +
+           "the application = {} to SubCluster = {}.", applicationId,
+           subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if(request == null || request.getContainerId() == null){
+      routerMetrics.incrContainerReportFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getContainerReport request " +
+          "or containerId", null);
+    }
+
+    long startTime = clock.getTime();
+    ApplicationId applicationId = request.getContainerId().
+        getApplicationAttemptId().getApplicationId();
+    SubClusterId subClusterId = null;
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException ex) {
+      routerMetrics.incrContainerReportFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " + applicationId +
+          " does not exist in FederationStateStore.", ex);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    GetContainerReportResponse response = null;
+
+    try {
+      response = clientRMProxy.getContainerReport(request);
+    } catch (Exception ex) {
+      routerMetrics.incrContainerReportFailedRetrieved();
+      LOG.error("Unable to get the container report for {} from SubCluster {}.",
+          applicationId, subClusterId.getId(), ex);
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the container report of " +
+           "the ContainerId = {} From SubCluster = {}.", request.getContainerId(),
+           subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetContainerReportRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override
   public GetContainersResponse getContainers(GetContainersRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getApplicationAttemptId() == null) {
+      routerMetrics.incrContainerFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing getContainers request or ApplicationAttemptId.", null);
+    }
+
+    long startTime = clock.getTime();
+    ApplicationId applicationId = request.getApplicationAttemptId().getApplicationId();
+    SubClusterId subClusterId = null;
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException ex) {
+      routerMetrics.incrContainerFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " + applicationId +
+          " does not exist in FederationStateStore.", ex);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    GetContainersResponse response = null;
+
+    try {
+      response = clientRMProxy.getContainers(request);
+    } catch (Exception ex) {
+      routerMetrics.incrContainerFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get the containers for " +
+          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the container report of " +
+          "the ApplicationId = {} From SubCluster = {}.", applicationId,
+          subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetContainersRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override
@@ -1112,7 +1251,26 @@ public class FederationClientInterceptor
   @Override
   public GetAllResourceTypeInfoResponse getResourceTypeInfo(
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      routerMetrics.incrResourceTypeInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getResourceTypeInfo request.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getResourceTypeInfo",
+        new Class[] {GetAllResourceTypeInfoRequest.class}, new Object[] {request});
+    Collection<GetAllResourceTypeInfoResponse> listResourceTypeInfo;
+    try {
+      listResourceTypeInfo = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetAllResourceTypeInfoResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrResourceTypeInfoFailedRetrieved();
+      LOG.error("Unable to get all resource type info node due to exception.", ex);
+      throw ex;
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetResourceTypeInfoRetrieved(stopTime - startTime);
+    // Merge the GetAllResourceTypeInfoResponse
+    return RouterYarnClientUtils.mergeResourceTypes(listResourceTypeInfo);
   }
 
   @Override
@@ -1138,5 +1296,62 @@ public class FederationClientInterceptor
   public GetNodesToAttributesResponse getNodesToAttributes(
       GetNodesToAttributesRequest request) throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
+  }
+
+  protected SubClusterId getApplicationHomeSubCluster(
+      ApplicationId applicationId) throws YarnException {
+    if (applicationId == null) {
+      LOG.error("ApplicationId is Null, Can't find in SubCluster.");
+      return null;
+    }
+
+    SubClusterId resultSubClusterId = null;
+
+    // try looking for applicationId in Home SubCluster
+    try {
+      resultSubClusterId = federationFacade.
+          getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException ex) {
+      if(LOG.isDebugEnabled()){
+        LOG.debug("can't find applicationId = {} in home sub cluster, " +
+             " try foreach sub clusters.", applicationId);
+      }
+    }
+    if (resultSubClusterId != null) {
+      return resultSubClusterId;
+    }
+
+    // if applicationId not found in Home SubCluster,
+    // foreach Clusters
+    Map<SubClusterId, SubClusterInfo> subClusters =
+        federationFacade.getSubClusters(true);
+    for (SubClusterId subClusterId : subClusters.keySet()) {
+      try {
+        ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+        if(clientRMProxy == null) {
+          continue;
+        }
+        GetApplicationReportRequest appReportRequest =
+            GetApplicationReportRequest.newInstance(applicationId);
+        GetApplicationReportResponse appReportResponse =
+            clientRMProxy.getApplicationReport(appReportRequest);
+
+        if(appReportResponse!=null && applicationId.equals(
+            appReportResponse.getApplicationReport().getApplicationId())){
+          resultSubClusterId = federationFacade.addApplicationHomeSubCluster(
+               ApplicationHomeSubCluster.newInstance(applicationId, subClusterId));
+          return resultSubClusterId;
+        }
+
+      } catch (Exception ex) {
+        if(LOG.isDebugEnabled()){
+          LOG.debug("Can't Find ApplicationId = {} in Sub Cluster!", applicationId);
+        }
+      }
+    }
+
+    String errorMsg =
+        String.format("Can't Found applicationId = %s in any sub clusters", applicationId);
+    throw new YarnException(errorMsg);
   }
 }

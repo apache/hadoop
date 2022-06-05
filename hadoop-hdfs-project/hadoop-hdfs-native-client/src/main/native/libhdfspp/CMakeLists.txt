@@ -52,31 +52,20 @@ find_package(Threads)
 
 include(CheckCXXSourceCompiles)
 include(CheckSymbolExists)
+include(FetchContent)
 
-# Download and build gtest
-configure_file(CMakeLists-gtest.txt.in googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
-if(result)
-  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
-if(result)
-  message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif()
-
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
+# Install googletest
+# As per the approach documented in the GoogleTest repo -
+# https://github.com/google/googletest/blob/e649993a402d96afe25fbf3413749adf0f2947f6/googletest/README.md#incorporating-into-an-existing-cmake-project
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/703bd9caab50b139428cea1aaff9974ebee5742e.zip
+)
+# The commit SHA 703bd9caab50b139428cea1aaff9974ebee5742e in the URL above corresponds to the
+# tag release-1.10.0 in the googletest repository.
+# For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-# Add googletest directly to our build. This defines
-# the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
-                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
-                 EXCLUDE_FROM_ALL)
+FetchContent_MakeAvailable(googletest)
 
 # Check if thread_local is supported
 unset (THREAD_LOCAL_SUPPORTED CACHE)

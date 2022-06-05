@@ -789,7 +789,7 @@ public class MiniRouterDFSCluster {
       Configuration nnConf = generateNamenodeConfiguration(ns0);
       if (overrideConf != null) {
         nnConf.addResource(overrideConf);
-        // Router also uses this configurations as initial values.
+        // Router also uses these configurations as initial values.
         routerConf = new Configuration(overrideConf);
       }
 
