@@ -916,7 +916,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing failApplicationAttempt request " +
-        "or applicationId or applicationAttemptId information." ,
+        "or applicationId or applicationAttemptId information.",
         () -> interceptor.failApplicationAttempt(null));
 
     // normal request
@@ -960,7 +960,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing updateApplicationPriority request " +
-        "or applicationId or applicationPriority information." ,
+        "or applicationId or applicationPriority information.",
         () -> interceptor.updateApplicationPriority(null));
 
     // normal request

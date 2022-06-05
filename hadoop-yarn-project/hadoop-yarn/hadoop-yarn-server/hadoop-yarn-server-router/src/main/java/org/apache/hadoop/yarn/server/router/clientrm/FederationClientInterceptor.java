@@ -1240,10 +1240,8 @@ public class FederationClientInterceptor
       response = clientRMProxy.failApplicationAttempt(request);
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      LOG.error("Unable to get the applicationAttempt report for {} " +
-          "to SubCluster {}.",
-          request.getApplicationAttemptId(), subClusterId.getId(), e);
-      throw e;
+      RouterServerUtil.logAndThrowException("Unable to get the applicationAttempt report for " +
+          request.getApplicationAttemptId() + " to SubCluster " + subClusterId.getId(), e);
     }
 
     if (response == null) {
@@ -1283,16 +1281,13 @@ public class FederationClientInterceptor
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-
     UpdateApplicationPriorityResponse response;
     try {
       response = clientRMProxy.updateApplicationPriority(request);
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      LOG.error("Unable to update application priority for {} " +
-          "to SubCluster {}.",
-          request.getApplicationId(), subClusterId.getId(), e);
-      throw e;
+      RouterServerUtil.logAndThrowException("Unable to update application priority for " +
+          request.getApplicationId() + " to SubCluster " + subClusterId.getId(), e);
     }
 
     if (response == null) {
@@ -1342,10 +1337,8 @@ public class FederationClientInterceptor
       response = clientRMProxy.updateApplicationTimeouts(request);
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      LOG.error("Unable to update application timeout for {} " +
-          "to SubCluster {}.",
-          request.getApplicationId(), subClusterId.getId(), e);
-      throw e;
+      RouterServerUtil.logAndThrowException("Unable to update application timeout for " +
+          request.getApplicationId() + " to SubCluster " + subClusterId.getId(), e);
     }
 
     if (response == null) {
