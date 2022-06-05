@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.metrics2.sink;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -195,5 +196,10 @@ public class PrometheusMetricsSink implements MetricsSink {
       }
     }
     return topMetricsTags;
+  }
+
+  @VisibleForTesting
+  public Map<String, Map<Collection<MetricsTag>, AbstractMetric>> getPromMetrics() {
+    return promMetrics;
   }
 }

@@ -20,7 +20,6 @@ package org.apache.hadoop.metrics2.impl;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -690,12 +689,28 @@ public class TestMetricsSystemImpl {
     PrometheusMetricsSink sink = new PrometheusMetricsSink();
     ms.register("prom", "prom desc", sink);
     ms.publishMetricsNow();
-    StringWriter stringWriter = new StringWriter();
-    sink.writeMetrics(stringWriter);
-    String metrics = stringWriter.toString();
-    assertTrue(metrics.contains(
-        "my_metrics_int{context=\"MyMetrics\",string3=\"string\",hostname=\"bogon\"} 1"));
-    assertFalse(metrics.contains("string1"));
-    assertFalse(metrics.contains("string2"));
+    Map<String, Map<Collection<MetricsTag>, AbstractMetric>> metrics =
+        sink.getPromMetrics();
+    assertTrue(metrics.containsKey("my_metrics_int"));
+    Collection<MetricsTag> metricsTags = metrics.get("my_metrics_int").keySet()
+        .iterator().next();
+    boolean found = false;
+    for (MetricsTag metricsTag : metricsTags) {
+      if (metricsTag.equals(
+          new MetricsTag(info("String1", "Test Tag String"), "string"))) {
+        fail("getString1 should be filtered");
+      }
+      if (metricsTag.equals(
+          new MetricsTag(info("String2", "Test Tag String"), "string"))) {
+        fail("getString2 should be filtered");
+      }
+      if (metricsTag.equals(
+          new MetricsTag(info("String3", "Test Tag String"), "string"))) {
+        found = true;
+      }
+    }
+    if (!found) {
+      fail("getString2 should not be filtered");
+    }
   }
 }
