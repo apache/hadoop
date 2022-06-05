@@ -26,7 +26,7 @@ import static org.mockito.AdditionalMatchers.geq;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.stubbing.Answer;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -256,8 +256,8 @@ public class MetricsAsserts {
 
   public static String getTagFromMetric(String name, MetricsRecordBuilder rb) {
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(rb, atLeast(0))
-        .tag(eqName(info(name, "")), captor.capture(), Matchers.anyBoolean());
+    verify(rb, atLeast(0)).tag(eqName(info(name, "")), captor.capture(),
+        ArgumentMatchers.anyBoolean());
     checkCaptured(captor, name);
     return captor.getValue();
   }
