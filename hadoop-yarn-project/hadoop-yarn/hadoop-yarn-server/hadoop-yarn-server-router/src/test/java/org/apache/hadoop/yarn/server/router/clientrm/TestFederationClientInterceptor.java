@@ -118,7 +118,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   private final static int NUM_SUBCLUSTER = 4;
 
-  private final static int APP_PRIORITY_ZERO = 10;
+  private final static int APP_PRIORITY_ZERO = 0;
 
   @Override
   public void setUp() {

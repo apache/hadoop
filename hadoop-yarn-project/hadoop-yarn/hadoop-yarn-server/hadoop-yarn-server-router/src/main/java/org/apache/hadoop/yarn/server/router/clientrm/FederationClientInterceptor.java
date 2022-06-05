@@ -1235,7 +1235,7 @@ public class FederationClientInterceptor
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-    FailApplicationAttemptResponse response;
+    FailApplicationAttemptResponse response = null;
     try {
       response = clientRMProxy.failApplicationAttempt(request);
     } catch (Exception e) {
@@ -1281,7 +1281,7 @@ public class FederationClientInterceptor
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-    UpdateApplicationPriorityResponse response;
+    UpdateApplicationPriorityResponse response = null;
     try {
       response = clientRMProxy.updateApplicationPriority(request);
     } catch (Exception e) {
@@ -1332,7 +1332,7 @@ public class FederationClientInterceptor
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-    UpdateApplicationTimeoutsResponse response;
+    UpdateApplicationTimeoutsResponse response = null;
     try {
       response = clientRMProxy.updateApplicationTimeouts(request);
     } catch (Exception e) {
