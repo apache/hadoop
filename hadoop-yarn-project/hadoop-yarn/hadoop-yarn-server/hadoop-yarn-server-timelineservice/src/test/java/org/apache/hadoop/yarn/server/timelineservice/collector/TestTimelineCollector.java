@@ -38,6 +38,7 @@ import org.mockito.internal.stubbing.answers.AnswersWithDelay;
 import org.mockito.internal.stubbing.answers.Returns;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -303,7 +304,7 @@ public class TestTimelineCollector {
     // Aggregate the entities.
     Map<String, AggregationStatusTable> aggregationGroups
         = collector.getAggregationGroups();
-    assertEquals(Sets.newHashSet("type"), aggregationGroups.keySet());
+    assertEquals(new HashSet<>(Collections.singleton("type")), aggregationGroups.keySet());
     TimelineEntity aggregatedEntity = TimelineCollector.
         aggregateWithoutGroupId(aggregationGroups, currContext.getAppId(),
             TimelineEntityType.YARN_APPLICATION.toString());

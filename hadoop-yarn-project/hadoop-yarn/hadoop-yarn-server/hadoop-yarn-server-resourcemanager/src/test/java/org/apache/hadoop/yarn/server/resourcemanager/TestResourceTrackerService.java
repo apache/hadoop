@@ -3161,7 +3161,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     assertEquals(rmNode1.getState(), NodeState.DECOMMISSIONED);
     assertEquals(3, rm.getRMContext().getRMNodes().size());
     assertEquals(1, rm.getRMContext().getInactiveRMNodes().size());
-    assertEquals(Sets.newHashSet(nm1.getNodeId()),
+    assertEquals(new HashSet<>(Collections.singleton(nm1.getNodeId())),
         rm.getRMContext().getInactiveRMNodes().keySet());
 
     // remove nm1 from exclude hosts, so that it will be marked as untracked
@@ -3180,7 +3180,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     assertEquals(rmNode2.getState(), NodeState.LOST);
     assertEquals(2, rm.getRMContext().getRMNodes().size());
     assertEquals(1, rm.getRMContext().getInactiveRMNodes().size());
-    assertEquals(Sets.newHashSet(nm2.getNodeId()),
+    assertEquals(new HashSet<>(Collections.singleton(nm2.getNodeId())),
         rm.getRMContext().getInactiveRMNodes().keySet());
     // confirmed that nm2 should be removed from inactive nodes in 1 second
     GenericTestUtils.waitFor(
@@ -3194,14 +3194,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     assertEquals(rmNode3.getState(), NodeState.SHUTDOWN);
     assertEquals(1, rm.getRMContext().getRMNodes().size());
     assertEquals(1, rm.getRMContext().getInactiveRMNodes().size());
-    assertEquals(Sets.newHashSet(nm3.getNodeId()),
+    assertEquals(new HashSet<>(Collections.singleton(nm3.getNodeId())),
         rm.getRMContext().getInactiveRMNodes().keySet());
     // confirmed that nm3 should be removed from inactive nodes in 1 second
     GenericTestUtils.waitFor(
         () -> rm.getRMContext().getInactiveRMNodes().size() == 0, 100, 1000);
 
     // nm4 is still active node at last
-    assertEquals(Sets.newHashSet(nm4.getNodeId()),
+    assertEquals(new HashSet<>(Collections.singleton(nm4.getNodeId())),
         rm.getRMContext().getRMNodes().keySet());
 
     rm.close();

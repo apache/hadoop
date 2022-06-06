@@ -29,7 +29,6 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -153,8 +152,7 @@ public class TestNodeLabelContainerAllocation {
   
   @SuppressWarnings("unchecked")
   private <E> Set<E> toSet(E... elements) {
-    Set<E> set = Sets.newHashSet(elements);
-    return set;
+    return new HashSet<>(Arrays.asList(elements));
   }
   
   

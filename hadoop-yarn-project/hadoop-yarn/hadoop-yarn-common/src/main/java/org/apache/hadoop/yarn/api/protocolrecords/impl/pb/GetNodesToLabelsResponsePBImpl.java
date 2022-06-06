@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,7 @@ public class GetNodesToLabelsResponsePBImpl extends
 
     for (NodeIdToLabelsProto c : list) {
       this.nodeToLabels.put(new NodeIdPBImpl(c.getNodeId()),
-          Sets.newHashSet(c.getNodeLabelsList()));
+          new HashSet<>(c.getNodeLabelsList()));
     }
   }
 

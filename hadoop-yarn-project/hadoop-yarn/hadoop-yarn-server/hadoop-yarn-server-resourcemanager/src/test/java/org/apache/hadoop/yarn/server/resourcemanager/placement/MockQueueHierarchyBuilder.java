@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedP
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +43,7 @@ public class MockQueueHierarchyBuilder {
   private List<String> queuePaths = Lists.newArrayList();
   private List<String> managedParentQueues = Lists.newArrayList();
   private List<String> dynamicParentQueues = Lists.newArrayList();
-  private Set<String> ambiguous = Sets.newHashSet();
+  private Set<String> ambiguous = new HashSet<>();
   private Map<String, String> shortNameMapping = Maps.newHashMap();
   private CapacitySchedulerQueueManager queueManager;
   private Map<String, List<CSQueue>> childrenMap = Maps.newHashMap();

@@ -74,12 +74,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -642,7 +642,7 @@ public class TestCapacityScheduler {
     conf.setQueues("root", new String[] {childQueue});
     conf.setCapacity("root." + childQueue, "[memory=20480,vcores=200]");
     conf.setAccessibleNodeLabels("root." + childQueue,
-        Sets.newHashSet(labelName));
+        new HashSet<>(Collections.singleton(labelName)));
     conf.setCapacityByLabel("root", labelName, "[memory=10240,vcores=100]");
     conf.setCapacityByLabel("root." + childQueue, labelName,
         "[memory=4096,vcores=10]");

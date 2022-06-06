@@ -22,7 +22,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -195,10 +197,9 @@ public class TestCapacitySchedulerMaxParallelApps {
     // Check that app attempt #3 and #4 are non-runnable
     rootQueue = getRootQueue();
     defaultQueue = getDefaultQueue();
-    Set<ApplicationAttemptId> nonRunnables =
-        Sets.newHashSet(
+    Set<ApplicationAttemptId> nonRunnables = new HashSet<>(Arrays.asList(
             attempt3.getAppAttemptId(),
-            attempt4.getAppAttemptId());
+            attempt4.getAppAttemptId()));
     verifyRunnableAppsInParent(rootQueue, 2);
     verifyRunnableAppsInLeaf(defaultQueue, 2, nonRunnables);
     verifyRunningAndAcceptedApps(2, 2);

@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 public class TestMappingRuleMatchers extends TestCase {
@@ -43,14 +45,15 @@ public class TestMappingRuleMatchers extends TestCase {
     matchingContext.put("%primary_group", "developers");
     matchingContext.put("%application", "TurboMR");
     matchingContext.put("%custom", "Matching string");
-    matchingContext.putExtraDataset("groups", Sets.newHashSet("developers"));
+    matchingContext.putExtraDataset("groups", new HashSet<>(Collections.singleton("developers")));
 
     VariableContext mismatchingContext = new VariableContext();
     mismatchingContext.put("%user", "dave");
     mismatchingContext.put("%primary_group", "testers");
     mismatchingContext.put("%application", "Tester APP");
     mismatchingContext.put("%custom", "Not matching string");
-    mismatchingContext.putExtraDataset("groups", Sets.newHashSet("testers"));
+    mismatchingContext.putExtraDataset("groups",
+        new HashSet<>(Collections.singleton("testers")));
 
     VariableContext emptyContext = new VariableContext();
 
@@ -188,17 +191,18 @@ public class TestMappingRuleMatchers extends TestCase {
     VariableContext developerBob = new VariableContext();
     developerBob.put("%user", "bob");
     developerBob.put("%primary_group", "developers");
-    developerBob.putExtraDataset("groups", Sets.newHashSet("developers"));
+    developerBob.putExtraDataset("groups",
+        new HashSet<>(Collections.singleton("developers")));
 
     VariableContext testerBob = new VariableContext();
     testerBob.put("%user", "bob");
     testerBob.put("%primary_group", "testers");
-    testerBob.putExtraDataset("groups", Sets.newHashSet("testers"));
+    testerBob.putExtraDataset("groups",new HashSet<>(Collections.singleton("testers")));
 
     VariableContext testerDave = new VariableContext();
     testerDave.put("%user", "dave");
     testerDave.put("%primary_group", "testers");
-    testerDave.putExtraDataset("groups", Sets.newHashSet("testers"));
+    testerDave.putExtraDataset("groups", new HashSet<>(Collections.singleton("testers")));
 
     VariableContext accountantDave = new VariableContext();
     accountantDave.put("%user", "dave");
@@ -260,10 +264,10 @@ public class TestMappingRuleMatchers extends TestCase {
   @Test
   public void testGroupMatching() {
     VariableContext letterGroups = new VariableContext();
-    letterGroups.putExtraDataset("groups", Sets.newHashSet("a", "b", "c"));
+    letterGroups.putExtraDataset("groups", new HashSet<>(Arrays.asList("a", "b", "c")));
 
     VariableContext numberGroups = new VariableContext();
-    numberGroups.putExtraDataset("groups", Sets.newHashSet("1", "2", "3"));
+    numberGroups.putExtraDataset("groups", new HashSet<>(Arrays.asList("1", "2", "3")));
 
     VariableContext noGroups = new VariableContext();
 

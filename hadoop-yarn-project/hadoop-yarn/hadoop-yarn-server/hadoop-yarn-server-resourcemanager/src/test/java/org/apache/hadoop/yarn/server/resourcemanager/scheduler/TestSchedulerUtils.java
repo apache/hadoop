@@ -48,7 +48,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -243,7 +242,7 @@ public class TestSchedulerUtils {
           throws IOException {
     // mock queue and scheduler
     ResourceScheduler scheduler = mock(ResourceScheduler.class);
-    Set<String> queueAccessibleNodeLabels = Sets.newHashSet();
+    Set<String> queueAccessibleNodeLabels = new HashSet<>();
     QueueInfo queueInfo = mock(QueueInfo.class);
     when(queueInfo.getQueueName()).thenReturn("queue");
     when(queueInfo.getAccessibleNodeLabels())
@@ -792,7 +791,7 @@ public class TestSchedulerUtils {
           throws IOException {
     // mock queue and scheduler
     ResourceScheduler scheduler = mock(ResourceScheduler.class);
-    Set<String> queueAccessibleNodeLabels = Sets.newHashSet();
+    Set<String> queueAccessibleNodeLabels = new HashSet<>();
     QueueInfo queueInfo = mock(QueueInfo.class);
     when(queueInfo.getQueueName()).thenReturn("queue");
     when(queueInfo.getAccessibleNodeLabels()).thenReturn(queueAccessibleNodeLabels);

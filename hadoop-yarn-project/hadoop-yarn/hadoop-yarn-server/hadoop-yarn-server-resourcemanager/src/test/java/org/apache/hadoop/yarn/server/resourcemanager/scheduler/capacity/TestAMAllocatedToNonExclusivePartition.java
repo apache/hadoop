@@ -20,10 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -64,8 +64,7 @@ public class TestAMAllocatedToNonExclusivePartition {
 
   @SuppressWarnings("unchecked")
   private <E> Set<E> toSet(E... elements) {
-    Set<E> set = Sets.newHashSet(elements);
-    return set;
+    return new HashSet<>(Arrays.asList(elements));
   }
 
   /**

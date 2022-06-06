@@ -59,7 +59,9 @@ import javax.ws.rs.core.Response.Status;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS;
@@ -838,9 +840,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
-    assertEquals(Sets.newHashSet("*"),
+    assertEquals(new HashSet<>(Collections.singleton("*")),
         cs.getConfiguration().getAccessibleNodeLabels(ROOT.getFullPath()));
-    assertEquals(Sets.newHashSet(LABEL_1),
+    assertEquals(new HashSet<>(Collections.singleton(LABEL_1)),
         cs.getConfiguration().getAccessibleNodeLabels(ROOT_A.getFullPath()));
 
     // 4. Set partition capacities to queues as below
@@ -937,7 +939,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
                 SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
-    assertEquals(Sets.newHashSet("*"),
+    assertEquals(new HashSet<>(Collections.singleton("*")),
         cs.getConfiguration().getAccessibleNodeLabels(ROOT.getFullPath()));
     assertNull(cs.getConfiguration().getAccessibleNodeLabels(ROOT_A.getFullPath()));
 

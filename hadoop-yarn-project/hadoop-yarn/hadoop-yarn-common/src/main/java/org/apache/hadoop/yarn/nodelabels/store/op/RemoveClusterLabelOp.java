@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.nodelabels.store.op;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
 import org.apache.hadoop.yarn.server.api.protocolrecords
@@ -29,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
+import java.util.HashSet;
 
 /**
  * Remove label from cluster log store operation.
@@ -45,7 +45,7 @@ public class RemoveClusterLabelOp
       throws IOException {
     ((RemoveFromClusterNodeLabelsRequestPBImpl)
         RemoveFromClusterNodeLabelsRequest
-        .newInstance(Sets.newHashSet(labels.iterator()))).getProto()
+        .newInstance(new HashSet<>(labels))).getProto()
         .writeDelimitedTo(os);
   }
 

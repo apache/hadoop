@@ -21,9 +21,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -41,7 +43,6 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -179,7 +180,7 @@ public class QueueMetrics implements MetricsSource {
     "AggregatePreemptedSeconds.";
   private static final String AGGREGATE_PREEMPTED_SECONDS_METRIC_DESC =
     "Aggregate Preempted Seconds for NAME";
-  protected Set<String> storedPartitionMetrics = Sets.newConcurrentHashSet();
+  protected Set<String> storedPartitionMetrics = Collections.newSetFromMap(new ConcurrentHashMap());
 
   public QueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {

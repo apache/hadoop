@@ -27,6 +27,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -43,14 +45,14 @@ import static org.junit.Assert.assertTrue;
  */
 public class FairSchedulerXmlVerifications {
 
-  private static final Set<String> RESOURCE_FIELDS = Sets.newHashSet(
+  private static final Set<String> RESOURCE_FIELDS = new HashSet<>(Arrays.asList(
       "minResources", "amUsedResources", "amMaxResources", "fairResources",
       "clusterResources", "reservedResources", "maxResources", "usedResources",
-      "steadyFairResources", "demandResources");
+      "steadyFairResources", "demandResources"));
   private final Set<String> customResourceTypes;
 
   FairSchedulerXmlVerifications(List<String> customResourceTypes) {
-    this.customResourceTypes = Sets.newHashSet(customResourceTypes);
+    this.customResourceTypes = new HashSet<>(customResourceTypes);
   }
 
   public void verify(Element element) {

@@ -121,6 +121,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -4469,7 +4470,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // apps in subqueues should be included
     apps = scheduler.getAppsInQueue("queue1");
     Assert.assertEquals(2, apps.size());
-    Set<ApplicationAttemptId> appAttIds = Sets.newHashSet(apps.get(0), apps.get(1));
+    Set<ApplicationAttemptId> appAttIds = new HashSet<>(Arrays.asList(apps.get(0), apps.get(1)));
     assertTrue(appAttIds.contains(appAttId1));
     assertTrue(appAttIds.contains(appAttId2));
   }

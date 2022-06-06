@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,7 +38,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -468,7 +468,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       SchedulingRequest sr = SchedulingRequest
           .newInstance(1l, Priority.newInstance(1),
               ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
-              Sets.newHashSet(testTag1),
+              new HashSet<>(Collections.singleton(testTag1)),
               ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
               null);
 
@@ -476,7 +476,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       SchedulingRequest sr1 = SchedulingRequest
           .newInstance(2l, Priority.newInstance(1),
               ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
-              Sets.newHashSet(testTag2),
+              new HashSet<>(Collections.singleton(testTag2)),
               ResourceSizing.newInstance(3, Resource.newInstance(1024, 1)),
               null);
 
@@ -577,7 +577,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       SchedulingRequest sr = SchedulingRequest
           .newInstance(1L, Priority.newInstance(1),
               ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
-              Sets.newHashSet(testTag1),
+              new HashSet<>(Collections.singleton(testTag1)),
               ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
               null);
 

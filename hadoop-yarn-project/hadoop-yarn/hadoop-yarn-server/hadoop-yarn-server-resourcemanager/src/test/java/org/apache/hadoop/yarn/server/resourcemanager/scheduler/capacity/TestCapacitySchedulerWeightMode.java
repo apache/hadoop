@@ -49,6 +49,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 public class TestCapacitySchedulerWeightMode {
@@ -72,8 +74,7 @@ public class TestCapacitySchedulerWeightMode {
   }
 
   public static <E> Set<E> toSet(E... elements) {
-    Set<E> set = Sets.newHashSet(elements);
-    return set;
+    return new HashSet<>(Arrays.asList(elements));
   }
 
   public static CapacitySchedulerConfiguration getConfigWithInheritedAccessibleNodeLabel(

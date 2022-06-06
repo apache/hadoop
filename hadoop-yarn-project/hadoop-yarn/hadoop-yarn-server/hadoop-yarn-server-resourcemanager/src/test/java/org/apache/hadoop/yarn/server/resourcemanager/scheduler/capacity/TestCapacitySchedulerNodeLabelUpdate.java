@@ -21,12 +21,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -141,8 +141,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
   }
 
   private Set<String> toSet(String... elements) {
-    Set<String> set = Sets.newHashSet(elements);
-    return set;
+    return new HashSet<>(Arrays.asList(elements));
   }
   
   private void checkUsedResource(MockRM rm, String queueName, int memory) {

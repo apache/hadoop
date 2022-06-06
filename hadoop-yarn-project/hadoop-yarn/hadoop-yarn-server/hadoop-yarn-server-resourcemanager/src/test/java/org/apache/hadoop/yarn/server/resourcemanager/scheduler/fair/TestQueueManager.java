@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.util.Sets;
@@ -183,7 +185,7 @@ public class TestQueueManager {
     AllocationConfiguration allocConf =
         new AllocationConfiguration(scheduler);
     allocConf.configuredQueues.get(FSQueueType.LEAF)
-        .addAll(Sets.newHashSet(confLeafQueues));
+        .addAll(new HashSet<>(Arrays.asList(confLeafQueues)));
     queueMgr.updateAllocationConfiguration(allocConf);
   }
 

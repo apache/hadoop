@@ -1029,7 +1029,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           .withUser("hadoop")
           .withAcls(null)
           .withUnmanagedAM(false)
-          .withApplicationTags(Sets.newHashSet("userid=testuser"))
+          .withApplicationTags(new HashSet<>(Collections.singleton("userid=testuser")))
           .build();
       RMApp app = MockRMAppSubmitter.submit(mockRM, data);
       MockRM.launchAndRegisterAM(app, mockRM, nm);

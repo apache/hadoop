@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -39,14 +40,14 @@ import static org.junit.Assert.assertTrue;
 public class FairSchedulerJsonVerifications {
 
   private static final Set<String> RESOURCE_FIELDS =
-      Sets.newHashSet("minResources", "amUsedResources", "amMaxResources",
+      new HashSet<>(Arrays.asList("minResources", "amUsedResources", "amMaxResources",
           "fairResources", "clusterResources", "reservedResources",
               "maxResources", "usedResources", "steadyFairResources",
-              "demandResources");
+              "demandResources"));
   private final Set<String> customResourceTypes;
 
   FairSchedulerJsonVerifications(List<String> customResourceTypes) {
-    this.customResourceTypes = Sets.newHashSet(customResourceTypes);
+    this.customResourceTypes = new HashSet<>(customResourceTypes);
   }
 
   public void verify(JSONObject jsonObject) {

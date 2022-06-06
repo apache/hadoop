@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -5286,7 +5287,7 @@ public class TestLeafQueue {
 
     ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
 
-    Assert.assertEquals(Sets.newHashSet("", "test", "test2"),
+    Assert.assertEquals(new HashSet<>(Arrays.asList("", "test", "test2")),
         rootQueue.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 

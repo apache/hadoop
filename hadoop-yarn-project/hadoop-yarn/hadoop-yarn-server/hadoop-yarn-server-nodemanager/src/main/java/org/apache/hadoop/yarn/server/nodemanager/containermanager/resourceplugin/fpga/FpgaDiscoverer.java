@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -30,7 +32,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -120,7 +121,7 @@ public class FpgaDiscoverer extends Configured {
       currentFpgaInfo = ImmutableList.copyOf(list);
       return list;
     } else if (allowed.matches("(\\d,)*\\d")){
-      Set<String> minors = Sets.newHashSet(allowed.split(","));
+      Set<String> minors = new HashSet<>(Arrays.asList(allowed.split(",")));
 
       // Replace list with a filtered one
       list = list

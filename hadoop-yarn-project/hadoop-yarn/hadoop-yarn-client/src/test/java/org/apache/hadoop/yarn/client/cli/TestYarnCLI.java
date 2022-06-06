@@ -39,6 +39,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
@@ -407,7 +408,7 @@ public class TestYarnCLI {
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null,
-        Sets.newHashSet("tag1", "tag3"), false, Priority.UNDEFINED, "", "");
+        new HashSet<>(Arrays.asList("tag1", "tag3")), false, Priority.UNDEFINED, "", "");
     List<ApplicationReport> applicationReports =
         new ArrayList<ApplicationReport>();
     applicationReports.add(newApplicationReport);
@@ -418,7 +419,7 @@ public class TestYarnCLI {
         "user2", "queue2", "appname2", "host2", 125, null,
         YarnApplicationState.FINISHED, "diagnostics2", "url2", 2, 2, 2,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.63789f, "NON-YARN", 
-        null, Sets.newHashSet("tag2", "tag3"), false, Priority.UNDEFINED,
+        null, new HashSet<>(Arrays.asList("tag2", "tag3")), false, Priority.UNDEFINED,
         "", "");
     applicationReports.add(newApplicationReport2);
 
@@ -428,7 +429,7 @@ public class TestYarnCLI {
         "user3", "queue3", "appname3", "host3", 126, null,
         YarnApplicationState.RUNNING, "diagnostics3", "url3", 3, 3, 3,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE", 
-        null, Sets.newHashSet("tag1", "tag4"), false, Priority.UNDEFINED,
+        null, new HashSet<>(Arrays.asList("tag1", "tag4")), false, Priority.UNDEFINED,
         "", "");
     applicationReports.add(newApplicationReport3);
 
@@ -438,7 +439,8 @@ public class TestYarnCLI {
         "user4", "queue4", "appname4", "host4", 127, null,
         YarnApplicationState.FAILED, "diagnostics4", "url4", 4, 4, 4,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.83789f,
-        "NON-MAPREDUCE", null, Sets.newHashSet("tag1"), false,
+        "NON-MAPREDUCE", null,
+        new HashSet<>(Collections.singleton("tag1")), false,
         Priority.UNDEFINED, "", "");
     applicationReports.add(newApplicationReport4);
 
@@ -448,7 +450,7 @@ public class TestYarnCLI {
         "user5", "queue5", "appname5", "host5", 128, null,
         YarnApplicationState.ACCEPTED, "diagnostics5", "url5", 5, 5, 5,
         FinalApplicationStatus.KILLED, null, "N/A", 0.93789f, "HIVE", null,
-        Sets.newHashSet("tag2", "tag4"), false, Priority.UNDEFINED, "", "");
+        new HashSet<>(Arrays.asList("tag2", "tag4")), false, Priority.UNDEFINED, "", "");
     applicationReports.add(newApplicationReport5);
 
     ApplicationId applicationId6 = ApplicationId.newInstance(1234, 10);
@@ -753,7 +755,7 @@ public class TestYarnCLI {
 
     // Test command yarn application with tags.
     sysOutStream.reset();
-    Set<String> appTag1 = Sets.newHashSet("tag1");
+    Set<String> appTag1 = new HashSet<>(Collections.singleton("tag1"));
     when(client.getApplications(appType1, appState1, appTag1)).thenReturn(
         getApplicationReports(
             applicationReports, appType1, appState1, appTag1, false));
@@ -826,8 +828,8 @@ public class TestYarnCLI {
     verify(sysOut, times(8)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
-    Set<String> appType9 = Sets.newHashSet("YARN");
-    Set<String> appTag2 = Sets.newHashSet("tag3");
+    Set<String> appType9 = new HashSet<>(Collections.singleton("YARN"));
+    Set<String> appTag2 = new HashSet<>(Collections.singleton("tag3"));
     when(client.getApplications(appType9, appState1, appTag2)).thenReturn(
         getApplicationReports(
             applicationReports, appType9, appState1, appTag2, false));
@@ -855,8 +857,8 @@ public class TestYarnCLI {
     verify(sysOut, times(9)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
-    Set<String> appType10 = Sets.newHashSet("HIVE");
-    Set<String> appTag3 = Sets.newHashSet("tag4");
+    Set<String> appType10 = new HashSet<>(Collections.singleton("HIVE"));
+    Set<String> appTag3 = new HashSet<>(Collections.singleton("tag4"));
     EnumSet<YarnApplicationState> appState10 =
         EnumSet.of(YarnApplicationState.ACCEPTED);
     when(client.getApplications(appType10, appState10, appTag3)).thenReturn(

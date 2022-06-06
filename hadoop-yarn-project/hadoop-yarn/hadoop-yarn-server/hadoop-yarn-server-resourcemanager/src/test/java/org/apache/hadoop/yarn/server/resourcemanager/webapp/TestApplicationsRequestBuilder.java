@@ -16,7 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -25,6 +24,9 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.webapp.WebServices.parseQueries;
@@ -83,7 +85,7 @@ public class TestApplicationsRequestBuilder {
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
     Set<String> appStates =
-        Sets.newHashSet(YarnApplicationState.NEW_SAVING.toString());
+        new HashSet<>(Collections.singleton(YarnApplicationState.NEW_SAVING.toString()));
     Set<String> appStatesLowerCase = parseQueries(appStates, true);
     expectedRequest.setApplicationStates(appStatesLowerCase);
 
@@ -93,7 +95,7 @@ public class TestApplicationsRequestBuilder {
   @Test
   public void testRequestWithEmptyStateQueries() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withStatesQuery(Sets.newHashSet()).build();
+        .withStatesQuery(new HashSet<>()).build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
 
@@ -103,7 +105,7 @@ public class TestApplicationsRequestBuilder {
   @Test(expected = BadRequestException.class)
   public void testRequestWithInvalidStateQueries() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withStatesQuery(Sets.newHashSet("a1", "a2", "")).build();
+        .withStatesQuery(new HashSet<>(Arrays.asList("a1", "a2", ""))).build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
 
@@ -124,14 +126,14 @@ public class TestApplicationsRequestBuilder {
   public void testRequestWithValidStateQueries() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withStatesQuery(
-            Sets.newHashSet(YarnApplicationState.NEW_SAVING.toString(),
-                YarnApplicationState.NEW.toString()))
+            new HashSet<>(Arrays.asList(YarnApplicationState.NEW_SAVING.toString(),
+                YarnApplicationState.NEW.toString())))
         .build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
     Set<String> appStates =
-        Sets.newHashSet(YarnApplicationState.NEW_SAVING.toString(),
-            YarnApplicationState.NEW.toString());
+        new HashSet<>(Arrays.asList(YarnApplicationState.NEW_SAVING.toString(),
+            YarnApplicationState.NEW.toString()));
     Set<String> appStatesLowerCase = parseQueries(appStates, true);
     expectedRequest.setApplicationStates(appStatesLowerCase);
 
@@ -162,7 +164,7 @@ public class TestApplicationsRequestBuilder {
         ApplicationsRequestBuilder.create().withUserQuery("user1").build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
-    expectedRequest.setUsers(Sets.newHashSet("user1"));
+    expectedRequest.setUsers(new HashSet<>(Collections.singleton("user1")));
     assertEquals(expectedRequest, request);
   }
 
@@ -193,7 +195,7 @@ public class TestApplicationsRequestBuilder {
         .withQueueQuery(rm, "queue1").build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
-    expectedRequest.setQueues(Sets.newHashSet("queue1"));
+    expectedRequest.setQueues(new HashSet<>(Collections.singleton("queue1")));
     assertEquals(expectedRequest, request);
   }
 
@@ -209,7 +211,7 @@ public class TestApplicationsRequestBuilder {
         .withQueueQuery(rm, "queue1").build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
-    expectedRequest.setQueues(Sets.newHashSet("queue1"));
+    expectedRequest.setQueues(new HashSet<>(Collections.singleton("queue1")));
     assertEquals(expectedRequest, request);
   }
 
@@ -484,20 +486,20 @@ public class TestApplicationsRequestBuilder {
   @Test
   public void testRequestWithEmptyApplicationTypesQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withApplicationTypes(Sets.newHashSet()).build();
+        .withApplicationTypes(new HashSet<>()).build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
-    expectedRequest.setApplicationTypes(Sets.newHashSet());
+    expectedRequest.setApplicationTypes(new HashSet<>());
     assertEquals(expectedRequest, request);
   }
 
   @Test
   public void testRequestWithValidApplicationTypesQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withApplicationTypes(Sets.newHashSet("type1")).build();
+        .withApplicationTypes(new HashSet<>(Collections.singleton("type1"))).build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
-    expectedRequest.setApplicationTypes(Sets.newHashSet("type1"));
+    expectedRequest.setApplicationTypes(new HashSet<>(Collections.singleton("type1")));
     assertEquals(expectedRequest, request);
   }
 
@@ -510,20 +512,20 @@ public class TestApplicationsRequestBuilder {
   @Test
   public void testRequestWithEmptyApplicationTagsQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withApplicationTags(Sets.newHashSet()).build();
+        .withApplicationTags(new HashSet<>()).build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
-    expectedRequest.setApplicationTags(Sets.newHashSet());
+    expectedRequest.setApplicationTags(new HashSet<>());
     assertEquals(expectedRequest, request);
   }
 
   @Test
   public void testRequestWithValidApplicationTagsQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withApplicationTags(Sets.newHashSet("tag1")).build();
+        .withApplicationTags(new HashSet<>(Collections.singleton("tag1"))).build();
 
     GetApplicationsRequest expectedRequest = getDefaultRequest();
-    expectedRequest.setApplicationTags(Sets.newHashSet("tag1"));
+    expectedRequest.setApplicationTags(new HashSet<>(Collections.singleton("tag1")));
     assertEquals(expectedRequest, request);
   }
 }

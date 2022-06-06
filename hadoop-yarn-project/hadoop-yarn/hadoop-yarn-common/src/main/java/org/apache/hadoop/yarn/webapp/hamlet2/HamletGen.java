@@ -24,6 +24,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -61,8 +62,8 @@ public class HamletGen {
 
   int bytes = 0;
   PrintWriter out;
-  final Set<String> endTagOptional = Sets.newHashSet();
-  final Set<String> inlineElements = Sets.newHashSet();
+  final Set<String> endTagOptional = new HashSet<>();
+  final Set<String> inlineElements = new HashSet<>();
   Class<?> top; // html top-level interface
   String hamlet; // output class simple name;
   boolean topMode;

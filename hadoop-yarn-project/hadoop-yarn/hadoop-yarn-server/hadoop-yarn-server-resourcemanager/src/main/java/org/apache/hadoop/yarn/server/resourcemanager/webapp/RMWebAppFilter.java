@@ -25,6 +25,8 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
@@ -67,9 +69,9 @@ public class RMWebAppFilter extends GuiceContainer {
   private static final long serialVersionUID = 1L;
 
   // define a set of URIs which do not need to do redirection
-  private static final Set<String> NON_REDIRECTED_URIS = Sets.newHashSet(
+  private static final Set<String> NON_REDIRECTED_URIS = new HashSet<>(Arrays.asList(
       "/conf", "/stacks", "/logLevel", "/logs", IsActiveServlet.PATH_SPEC,
-      "/jmx", "/prom");
+      "/jmx", "/prom"));
   private String path;
   private boolean ahsEnabled;
   private String ahsPageURLPrefix;

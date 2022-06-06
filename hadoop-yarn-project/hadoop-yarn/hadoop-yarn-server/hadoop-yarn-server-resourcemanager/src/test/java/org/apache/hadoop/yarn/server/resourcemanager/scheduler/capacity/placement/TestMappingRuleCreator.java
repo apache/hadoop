@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placeme
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
@@ -69,7 +71,8 @@ public class TestMappingRuleCreator {
     variableContext.put("%secondary_group", SECONDARY_GROUP);
     variableContext.put("%default", DEFAULT_QUEUE);
     variableContext.putExtraDataset("groups",
-        Sets.newLinkedHashSet(PRIMARY_GROUP, SECONDARY_GROUP));
+        new LinkedHashSet<>(Arrays.asList(PRIMARY_GROUP, SECONDARY_GROUP)));
+
   }
 
   @Test

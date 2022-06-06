@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -52,6 +51,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -259,8 +260,7 @@ public class TestUtils {
 
   @SuppressWarnings("unchecked")
   public static <E> Set<E> toSet(E... elements) {
-    Set<E> set = Sets.newHashSet(elements);
-    return set;
+    return new HashSet<>(Arrays.asList(elements));
   }
 
   /**

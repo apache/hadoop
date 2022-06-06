@@ -30,7 +30,6 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -68,6 +67,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
@@ -115,7 +115,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   }
 
   private Set<String> getApplicationIds(JSONArray array) throws JSONException {
-    Set<String> ids = Sets.newHashSet();
+    Set<String> ids = new HashSet<>();
     for (int i = 0; i < array.length(); i++) {
       JSONObject app = array.getJSONObject(i);
       String appId = (String) app.get("id");

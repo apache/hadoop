@@ -26,6 +26,9 @@ import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -59,7 +62,7 @@ public class TestFSQueueConverter {
   private static final Resource CLUSTER_RESOURCE =
       Resource.newInstance(16384, 16);
   private final static Set<String> ALL_QUEUES =
-      Sets.newHashSet("root",
+      new HashSet<>(Arrays.asList("root",
           "root.default",
           "root.admins",
           "root.users",
@@ -69,7 +72,7 @@ public class TestFSQueueConverter {
           "root.users.john",
           "root.misc",
           "root.misc.a",
-          "root.misc.b");
+          "root.misc.b"));
 
   private static final String FILE_PREFIX = "file:";
   private static final String FAIR_SCHEDULER_XML =
@@ -165,11 +168,11 @@ public class TestFSQueueConverter {
         csConfig.get(PREFIX + "root.users.queues"));
 
     Set<String> leafs = Sets.difference(ALL_QUEUES,
-        Sets.newHashSet("root",
+        new HashSet<>(Arrays.asList("root",
             "root.default",
             "root.admins",
             "root.users",
-            "root.misc"));
+            "root.misc")));
 
     assertNoValueForQueues(leafs, ".queues", csConfig);
   }
@@ -190,7 +193,7 @@ public class TestFSQueueConverter {
             "root.admins.alice.maximum-am-resource-percent"));
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
-        Sets.newHashSet("root.admins.bob", "root.admins.alice"));
+        new HashSet<>(Arrays.asList("root.admins.bob", "root.admins.alice")));
     assertNoValueForQueues(remaining, ".maximum-am-resource-percent",
         csConfig);
   }
@@ -206,7 +209,7 @@ public class TestFSQueueConverter {
             -1));
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
-        Sets.newHashSet("root.admins.alice"));
+        new HashSet<>(Collections.singleton("root.admins.alice")));
     assertNoValueForQueues(remaining, ".max-parallel-apps", csConfig);
   }
 
@@ -230,7 +233,7 @@ public class TestFSQueueConverter {
         csConfig.getInt(PREFIX + "root.users.john.maximum-allocation-mb", -1));
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
-        Sets.newHashSet("root.admins", "root.users.john"));
+        new HashSet<>(Arrays.asList("root.admins", "root.users.john")));
     assertNoValueForQueues(remaining, ".maximum-allocation-vcores", csConfig);
     assertNoValueForQueues(remaining, ".maximum-allocation-mb", csConfig);
   }
@@ -249,7 +252,7 @@ public class TestFSQueueConverter {
             false));
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
-        Sets.newHashSet("root.admins.alice", "root.users.joe"));
+        new HashSet<>(Arrays.asList("root.admins.alice", "root.users.joe")));
     assertNoValueForQueues(remaining, ".disable_preemption", csConfig);
   }
 
@@ -352,11 +355,11 @@ public class TestFSQueueConverter {
             PREFIX + "root.misc.auto-queue-creation-v2.enabled", false));
 
     Set<String> leafs = Sets.difference(ALL_QUEUES,
-        Sets.newHashSet("root",
+        new HashSet<>(Arrays.asList("root",
             "root.default",
             "root.admins",
             "root.users",
-            "root.misc"));
+            "root.misc")));
     assertNoValueForQueues(leafs, "auto-queue-creation-v2.enabled",
         csConfig);
   }
@@ -368,7 +371,7 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     Set<String> noZeroSumAllowedQueues = Sets.difference(ALL_QUEUES,
-        Sets.newHashSet("root.misc"));
+        new HashSet<>(Collections.singleton("root.misc")));
     assertNoValueForQueues(noZeroSumAllowedQueues, ".allow-zero-capacity-sum",
         csConfig);
 

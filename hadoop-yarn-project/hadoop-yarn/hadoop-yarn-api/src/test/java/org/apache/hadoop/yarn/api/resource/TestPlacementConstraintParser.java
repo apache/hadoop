@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.api.resource;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -112,10 +114,10 @@ class TestPlacementConstraintParser {
     assertEquals(0, single.getMinCardinality());
     assertEquals(0, single.getMaxCardinality());
     assertEquals(3, single.getTargetExpressions().size());
-    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+    Set<TargetExpression> expectedTargetExpressions = new HashSet<>(Arrays.asList(
         PlacementTargets.allocationTag("foo"),
         PlacementTargets.allocationTag("bar"),
-        PlacementTargets.allocationTag("exp"));
+        PlacementTargets.allocationTag("exp")));
     assertTrue(Sets.difference(expectedTargetExpressions,
         single.getTargetExpressions()).isEmpty());
     verifyConstraintToString(expressionStr, constraint);
@@ -165,10 +167,10 @@ class TestPlacementConstraintParser {
     assertEquals(0, single.getMinCardinality());
     assertEquals(1, single.getMaxCardinality());
     assertEquals(3, single.getTargetExpressions().size());
-    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+    Set<TargetExpression> expectedTargetExpressions = new HashSet(Arrays.asList(
         PlacementTargets.allocationTag("foo"),
         PlacementTargets.allocationTag("bar"),
-        PlacementTargets.allocationTag("moo"));
+        PlacementTargets.allocationTag("moo")));
     assertTrue(Sets.difference(expectedTargetExpressions,
         single.getTargetExpressions()).isEmpty());
     verifyConstraintToString(expressionExpr, constraint);
@@ -579,9 +581,9 @@ class TestPlacementConstraintParser {
     result = PlacementConstraintParser
         .parsePlacementSpec("foo(2),notin,node,not-self/bar,all/moo");
     assertEquals(1, result.size());
-    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+    Set<TargetExpression> expectedTargetExpressions = new HashSet<>(Arrays.asList(
         PlacementTargets.allocationTagWithNamespace("not-self", "bar"),
-        PlacementTargets.allocationTagWithNamespace("all", "moo"));
+        PlacementTargets.allocationTagWithNamespace("all", "moo")));
     AbstractConstraint constraint = result.values().iterator().next().
         getConstraintExpr();
     assertTrue(constraint instanceof SingleConstraint);

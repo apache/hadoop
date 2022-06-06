@@ -16,7 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -25,15 +24,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.webapp.WebServices.parseQueries;
 
 public class ApplicationsRequestBuilder {
 
-  private Set<String> statesQuery = Sets.newHashSet();
-  private Set<String> users = Sets.newHashSetWithExpectedSize(1);
-  private Set<String> queues = Sets.newHashSetWithExpectedSize(1);
+  private Set<String> statesQuery = new HashSet<>();
+  private Set<String> users = new HashSet<>(1);
+  private Set<String> queues = new HashSet<>(1);
   private String limit = null;
   private Long limitNumber;
 
@@ -42,8 +42,8 @@ public class ApplicationsRequestBuilder {
   private long startedTimeEnd = Long.MAX_VALUE;
   private long finishTimeBegin = 0;
   private long finishTimeEnd = Long.MAX_VALUE;
-  private Set<String> appTypes = Sets.newHashSet();
-  private Set<String> appTags = Sets.newHashSet();
+  private Set<String> appTypes = new HashSet<>();
+  private Set<String> appTags = new HashSet<>();
   private String name = null;
   private ResourceManager rm;
 

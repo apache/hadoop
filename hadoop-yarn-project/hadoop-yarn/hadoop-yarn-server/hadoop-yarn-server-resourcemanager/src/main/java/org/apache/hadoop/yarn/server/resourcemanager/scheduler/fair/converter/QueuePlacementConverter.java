@@ -16,10 +16,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.DefaultPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.FSPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
@@ -40,12 +41,12 @@ class QueuePlacementConverter {
   private static final FallbackResult SKIP_RESULT = FallbackResult.SKIP;
   private static final String DEFAULT_QUEUE = "root.default";
   private static final String MATCH_ALL_USER = "*";
-  private static final Set<Policy> NEED_ROOT_PARENT = Sets.newHashSet(
+  private static final Set<Policy> NEED_ROOT_PARENT = new HashSet<>(Arrays.asList(
       Policy.USER,
       Policy.PRIMARY_GROUP,
       Policy.PRIMARY_GROUP_USER,
       Policy.SECONDARY_GROUP,
-      Policy.SECONDARY_GROUP_USER);
+      Policy.SECONDARY_GROUP_USER));
 
   MappingRulesDescription convertPlacementPolicy(
       PlacementManager placementManager,

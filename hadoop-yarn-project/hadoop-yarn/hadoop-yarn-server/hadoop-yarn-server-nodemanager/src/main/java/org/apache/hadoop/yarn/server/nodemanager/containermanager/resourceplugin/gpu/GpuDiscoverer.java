@@ -25,7 +25,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
@@ -42,6 +41,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -328,7 +328,7 @@ public class GpuDiscoverer extends Configured {
   }
 
   private File lookupBinaryInDefaultDirsInternal() {
-    Set<String> triedBinaryPaths = Sets.newHashSet();
+    Set<String> triedBinaryPaths = new HashSet<>();
     for (String dir : DEFAULT_BINARY_SEARCH_DIRS) {
       File binaryPath = new File(dir, DEFAULT_BINARY_NAME);
       if (binaryPath.exists()) {

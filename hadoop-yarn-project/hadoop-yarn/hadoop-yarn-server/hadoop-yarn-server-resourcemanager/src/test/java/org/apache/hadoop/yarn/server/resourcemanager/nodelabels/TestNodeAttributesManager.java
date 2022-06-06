@@ -35,6 +35,8 @@ import org.junit.After;
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -129,13 +131,13 @@ public class TestNodeAttributesManager {
     //  yarn.test1.io/A2
     //  yarn.test1.io/A3
     Set<NodeAttribute> clusterAttributes = attributesManager
-        .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[0]));
+        .getClusterNodeAttributes(new HashSet<>(Collections.singleton(PREFIXES[0])));
     Assert.assertEquals(3, clusterAttributes.size());
 
     // Query for attributes under a non-exist prefix,
     // ensure it returns an empty set.
     clusterAttributes = attributesManager
-        .getClusterNodeAttributes(Sets.newHashSet("non_exist_prefix"));
+        .getClusterNodeAttributes(new HashSet<>(Collections.singleton("non_exist_prefix")));
     Assert.assertEquals(0, clusterAttributes.size());
 
     // Not provide any prefix, ensure it returns all attributes.
@@ -216,13 +218,13 @@ public class TestNodeAttributesManager {
     Assert.assertEquals(4, nodeAttributes.size());
 
     allAttributesPerPrefix = attributesManager
-        .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[0]));
+        .getClusterNodeAttributes(new HashSet<>(Collections.singleton(PREFIXES[0])));
     Assert.assertEquals(3, allAttributesPerPrefix.size());
     allAttributesPerPrefix = attributesManager
-        .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[1]));
+        .getClusterNodeAttributes(new HashSet<>(Collections.singleton(PREFIXES[1])));
     Assert.assertEquals(5, allAttributesPerPrefix.size());
     allAttributesPerPrefix = attributesManager
-        .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[2]));
+        .getClusterNodeAttributes(new HashSet<>(Collections.singleton(PREFIXES[2])));
     Assert.assertEquals(2, allAttributesPerPrefix.size());
 
     // Remove "yarn.test1.io/A_2" from host1
@@ -260,7 +262,7 @@ public class TestNodeAttributesManager {
     // get all attributes under prefix "yarn.test1.io" should only return
     // us A_1 and A_3.
     allAttributesPerPrefix = attributesManager
-        .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[0]));
+        .getClusterNodeAttributes(new HashSet<>(Collections.singleton(PREFIXES[0])));
     Assert.assertEquals(2, allAttributesPerPrefix.size());
   }
 
@@ -296,7 +298,7 @@ public class TestNodeAttributesManager {
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
     Assert.assertEquals(13, nodeAttributes.size());
     clusterAttributes = attributesManager.getClusterNodeAttributes(
-        Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED, PREFIXES[0]));
+        new HashSet<>(Arrays.asList(NodeAttribute.PREFIX_DISTRIBUTED, PREFIXES[0])));
     Assert.assertEquals(13, clusterAttributes.size());
 
     // Replace by prefix
@@ -310,7 +312,7 @@ public class TestNodeAttributesManager {
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
     Assert.assertEquals(8, nodeAttributes.size());
     clusterAttributes = attributesManager.getClusterNodeAttributes(
-        Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED, PREFIXES[0]));
+        new HashSet<>(Arrays.asList(NodeAttribute.PREFIX_DISTRIBUTED, PREFIXES[0])));
     Assert.assertEquals(8, clusterAttributes.size());
 
     // Now we have 5 distributed attributes
@@ -337,7 +339,7 @@ public class TestNodeAttributesManager {
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
     Assert.assertEquals(4, nodeAttributes.size());
     clusterAttributes = attributesManager.getClusterNodeAttributes(
-        Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED));
+        new HashSet<>(Collections.singleton(NodeAttribute.PREFIX_DISTRIBUTED)));
     Assert.assertEquals(1, clusterAttributes.size());
     NodeAttribute attr = clusterAttributes.iterator().next();
     Assert.assertEquals("dist-node-attribute-v2_0",
@@ -354,11 +356,11 @@ public class TestNodeAttributesManager {
     nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
     Assert.assertEquals(2, nodeAttributes.size());
     clusterAttributes = attributesManager
-        .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[1]));
+        .getClusterNodeAttributes(new HashSet<>(Collections.singleton(PREFIXES[1])));
     Assert.assertEquals(2, clusterAttributes.size());
     clusterAttributes = attributesManager
-        .getClusterNodeAttributes(Sets.newHashSet(
-            NodeAttribute.PREFIX_DISTRIBUTED));
+        .getClusterNodeAttributes(new HashSet<>(Collections.singleton(
+            NodeAttribute.PREFIX_DISTRIBUTED)));
     Assert.assertEquals(0, clusterAttributes.size());
   }
 }

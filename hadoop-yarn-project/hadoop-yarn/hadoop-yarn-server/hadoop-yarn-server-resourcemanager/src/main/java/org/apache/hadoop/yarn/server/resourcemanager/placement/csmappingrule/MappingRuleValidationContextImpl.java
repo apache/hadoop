@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
@@ -36,12 +35,12 @@ public class MappingRuleValidationContextImpl
   /**
    * We store all known variables in this set.
    */
-  private Set<String> knownVariables = Sets.newHashSet();
+  private Set<String> knownVariables = new HashSet<>();
 
   /**
    * This set is to determine which variables are immutable.
    */
-  private Set<String> immutableVariables = Sets.newHashSet();
+  private Set<String> immutableVariables = new HashSet<>();
 
   /**
    * For queue path validations we need an instance of the queue manager

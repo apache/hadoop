@@ -30,6 +30,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.StringReader;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,7 +42,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.http.JettyUtils;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -270,7 +270,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   public void testPartitionInSchedulerActivities() throws Exception {
     rm.start();
     rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
-        .of(NodeId.newInstance("127.0.0.1", 0), Sets.newHashSet(LABEL_LX)));
+        .of(NodeId.newInstance("127.0.0.1", 0),
+            new HashSet<>(Collections.singleton(LABEL_LX))));
 
     MockNM nm1 = new MockNM("127.0.0.1:1234", 2 * 1024,
         rm.getResourceTrackerService());

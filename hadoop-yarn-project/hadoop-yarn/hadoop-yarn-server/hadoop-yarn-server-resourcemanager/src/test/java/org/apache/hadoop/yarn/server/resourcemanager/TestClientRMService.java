@@ -59,7 +59,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
@@ -1439,17 +1438,17 @@ public class TestClientRMService {
     assertEquals("Incorrect number of matching tags", 6,
         rmService.getApplications(request).getApplicationList().size());
 
-    tagSet = Sets.newHashSet(tags.get(0));
+    tagSet = new HashSet<>(Collections.singleton(tags.get(0)));
     request.setApplicationTags(tagSet);
     assertEquals("Incorrect number of matching tags", 3,
         rmService.getApplications(request).getApplicationList().size());
 
-    tagSet = Sets.newHashSet(tags.get(1));
+    tagSet = new HashSet<>(Collections.singleton(tags.get(1)));
     request.setApplicationTags(tagSet);
     assertEquals("Incorrect number of matching tags", 2,
         rmService.getApplications(request).getApplicationList().size());
 
-    tagSet = Sets.newHashSet(tags.get(2));
+    tagSet = new HashSet<>(Collections.singleton(tags.get(2)));
     request.setApplicationTags(tagSet);
     assertEquals("Incorrect number of matching tags", 1,
         rmService.getApplications(request).getApplicationList().size());

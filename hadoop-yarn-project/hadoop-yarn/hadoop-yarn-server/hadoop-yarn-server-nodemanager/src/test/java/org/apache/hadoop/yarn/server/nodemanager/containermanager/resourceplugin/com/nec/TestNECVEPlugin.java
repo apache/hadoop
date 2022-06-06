@@ -44,7 +44,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.apache.commons.compress.utils.Sets;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Shell.CommandExecutor;
@@ -385,7 +384,7 @@ public class TestNECVEPlugin {
     when(mockEnvProvider.apply(eq("NEC_USE_UDEV"))).thenReturn("true");
     Device testDevice = getTestDevice(0);
     when(veDeviceDiscoverer.getDevicesFromPath(anyString()))
-      .thenReturn(Sets.newHashSet(testDevice));
+      .thenReturn(new HashSet<>(Collections.singleton(testDevice)));
     plugin = new NECVEPlugin(mockEnvProvider, defaultSearchDirs, udevUtil);
     plugin.setVeDeviceDiscoverer(veDeviceDiscoverer);
 

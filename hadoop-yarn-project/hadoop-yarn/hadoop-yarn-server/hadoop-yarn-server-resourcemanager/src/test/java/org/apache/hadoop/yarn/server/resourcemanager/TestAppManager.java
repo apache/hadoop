@@ -103,6 +103,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1644,7 +1645,7 @@ public class TestAppManager extends AppManagerTestBase{
     when(app.getApplicationType()).thenReturn("MAPREDUCE");
     when(app.getSubmitTime()).thenReturn(1000L);
     when(app.getLaunchTime()).thenReturn(2000L);
-    when(app.getApplicationTags()).thenReturn(Sets.newHashSet("tag2", "tag1"));
+    when(app.getApplicationTags()).thenReturn(new HashSet<>(Arrays.asList("tag2", "tag1")));
 
     RMAppAttempt mockRMAppAttempt = mock(RMAppAttempt.class);
     Container mockContainer = mock(Container.class);

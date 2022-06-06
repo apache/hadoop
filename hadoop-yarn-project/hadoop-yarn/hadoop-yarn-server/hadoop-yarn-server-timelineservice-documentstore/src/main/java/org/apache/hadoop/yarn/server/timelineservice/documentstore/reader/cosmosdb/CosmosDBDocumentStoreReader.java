@@ -23,7 +23,6 @@ import com.microsoft.azure.cosmosdb.FeedOptions;
 import com.microsoft.azure.cosmosdb.FeedResponse;
 import com.microsoft.azure.cosmosdb.rx.AsyncDocumentClient;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStoreUtils;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.NoDocumentFoundException;
@@ -36,6 +35,7 @@ import rx.Observable;
 import rx.Scheduler;
 import rx.schedulers.Schedulers;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -115,7 +115,7 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
     LOG.debug("Querying Collection : {} , with query {}", collectionName,
         sqlQuery);
 
-    return Sets.newHashSet(client.queryDocuments(
+    return new HashSet<>(client.queryDocuments(
         String.format(COLLECTION_LINK, databaseName, collectionName),
         sqlQuery, new FeedOptions())
         .map(FeedResponse::getResults) // Map the page to the list of documents

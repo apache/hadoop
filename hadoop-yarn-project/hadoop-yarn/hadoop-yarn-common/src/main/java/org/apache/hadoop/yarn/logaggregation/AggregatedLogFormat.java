@@ -45,6 +45,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.io.output.WriterOutputStream;
 import org.apache.commons.math3.util.Pair;
@@ -66,7 +68,6 @@ import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.file.tfile.TFile;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
@@ -76,7 +77,6 @@ import org.apache.hadoop.yarn.util.Times;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
@@ -360,10 +360,9 @@ public class AggregatedLogFormat {
               : this.logAggregationContext.getRolledLogsExcludePattern(),
           candidates, true);
 
-      Iterable<File> mask = Iterables.filter(candidates, (input) ->
-          !alreadyUploadedLogFiles
-              .contains(getLogFileMetaData(input)));
-      return Sets.newHashSet(mask);
+      return candidates.stream().filter(x -> x.isFile() &&
+          !alreadyUploadedLogFiles.contains(x)).collect(Collectors.toSet());
+
     }
 
     private void filterFiles(String pattern, Set<File> candidates,

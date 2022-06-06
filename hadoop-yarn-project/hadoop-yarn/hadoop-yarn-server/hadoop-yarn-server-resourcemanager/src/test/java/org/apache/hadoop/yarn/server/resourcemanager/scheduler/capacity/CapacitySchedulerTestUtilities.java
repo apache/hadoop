@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -54,6 +53,8 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfAmbiguousQueue;
@@ -69,7 +70,7 @@ public final class CapacitySchedulerTestUtilities {
 
   @SuppressWarnings("unchecked")
   public static <E> Set<E> toSet(E... elements) {
-    return Sets.newHashSet(elements);
+    return new HashSet<>(Arrays.asList(elements));
   }
 
   public static void checkPendingResource(MockRM rm, String queueName, int memory,
