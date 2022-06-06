@@ -100,7 +100,14 @@ public enum AbfsStatistic {
       AbfsHttpConstants.HTTP_METHOD_PATCH),
   HTTP_POST_REQUEST(StoreStatisticNames.ACTION_HTTP_POST_REQUEST,
       "Time taken to complete a POST request",
-      AbfsHttpConstants.HTTP_METHOD_POST);
+      AbfsHttpConstants.HTTP_METHOD_POST),
+
+  // Rename recovery
+  RENAME_RECOVERY("rename_recovery",
+      "Number of times Rename recoveries happened"),
+  METADATA_INCOMPLETE_FAILURES("metadata_incomplete_failures",
+      "Number of times rename operation failed due to metadata being "
+          + "incomplete");
 
   private String statName;
   private String statDescription;

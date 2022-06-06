@@ -527,7 +527,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .renamePath(testFileName, newName, null,
             getTestTracingContext(fs, false), null)
-        .getLeft();
+        .getOp();
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
 

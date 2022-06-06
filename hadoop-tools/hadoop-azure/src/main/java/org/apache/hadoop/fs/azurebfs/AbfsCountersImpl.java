@@ -88,6 +88,7 @@ public class AbfsCountersImpl implements AbfsCounters {
       READ_THROTTLES,
       WRITE_THROTTLES,
       SERVER_UNAVAILABLE
+
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
