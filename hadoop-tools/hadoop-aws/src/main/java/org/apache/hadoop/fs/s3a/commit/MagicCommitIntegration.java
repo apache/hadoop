@@ -89,6 +89,7 @@ public class MagicCommitIntegration extends AbstractStoreOperation {
    * for the commit tracker.
    * @param path path of nominal write
    * @param key key of path of nominal write
+   * @param trackerStatistics tracker statistics
    * @return the tracker for this operation.
    */
   public PutTracker createTracker(Path path, String key,

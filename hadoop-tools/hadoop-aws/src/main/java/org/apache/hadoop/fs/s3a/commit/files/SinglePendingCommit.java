@@ -166,6 +166,7 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
    * Load an instance from a file, then validate it.
    * @param fs filesystem
    * @param path path
+   * @param serDeser deserializer
    * @param status status of file to load or null
    * @return the loaded instance
    * @throws IOException IO failure

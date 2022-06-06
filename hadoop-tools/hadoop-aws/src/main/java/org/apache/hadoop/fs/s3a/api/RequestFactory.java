@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -190,10 +191,12 @@ public interface RequestFactory {
   /**
    * Start a multipart upload.
    * @param destKey destination object key
+   * @param headers headers
    * @return the request.
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(
-      String destKey);
+      String destKey,
+      @Nullable final Map<String, String> headers);
 
   /**
    * Complete a multipart upload.

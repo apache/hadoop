@@ -211,8 +211,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDe
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
-import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.CREATE_NO_OVERWRITE;
-import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.CREATE_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_NO_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_INACCESSIBLE;
@@ -1619,15 +1619,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     final Path path = qualify(f);
-    EnumSet<CreateFlag> flags =
-        overwrite
-            ? CREATE_OVERWRITE
-            : CREATE_NO_OVERWRITE;
+
     // the span will be picked up inside the output stream
     return trackDurationAndSpan(INVOCATION_CREATE, path, () ->
         innerCreateFile(path,
-            flags,
-            progress, false, getActiveAuditSpan(), true));
+            progress,
+            getActiveAuditSpan(),
+            overwrite
+                ? OPTIONS_CREATE_FILE_OVERWRITE
+                : OPTIONS_CREATE_FILE_NO_OVERWRITE));
   }
 
   /**
@@ -1639,27 +1639,29 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * parent directory existing, and doesn't attempt to delete
    * dir markers, irrespective of FS settings.
    * If true, this method call does no IO at all.
-   * @param path the file name to open
    * @param flags flags for the operation
-   * @param progress the progress reporter.
    * @param performance fast creation over safety
-   * @param auditSpan audit span
    * @param recursive create all parents too?
+   * @param path the file name to open
+   * @param progress the progress reporter.
+   * @param auditSpan audit span
+   * @param options options for the file
    * @throws IOException in the event of IO related errors.
    */
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   @Retries.RetryTranslated
   private FSDataOutputStream innerCreateFile(
       final Path path,
-      final EnumSet<CreateFlag> flags,
       final Progressable progress,
-      final boolean performance,
       final AuditSpan auditSpan,
-      final boolean recursive) throws IOException {
+      final CreateFileBuilder.CreateFileOptions options) throws IOException {
     auditSpan.activate();
     String key = pathToKey(path);
-    boolean skipProbes = performance || isUnderMagicCommitPath(path);
+    EnumSet<CreateFlag> flags = options.getFlags();
     boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
+    boolean performance = options.isPerformance();
+    boolean recursive = options.isRecursive();
+    boolean skipProbes = performance || isUnderMagicCommitPath(path);
     if (skipProbes) {
       LOG.debug("Skipping existence/overwrite checks");
     } else {
@@ -1695,10 +1697,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // put options are from the path, unless performance is requested,
     // where it is always keeping dirs.
+    boolean keep = performance || keepDirectoryMarkers(path);
     final PutObjectOptions putOptions =
-        performance
-            ? PutObjectOptions.keepingDirs()
-            : putOptionsForPath(path);
+        new PutObjectOptions(keep, options.getHeaders());
 
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
@@ -1805,13 +1806,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public FSDataOutputStream createFileFromBuilder(
         final Path path,
-        final EnumSet<CreateFlag> flags,
-        boolean recursive,
         final Progressable progress,
-        final boolean performance) throws IOException {
+        final CreateFileBuilder.CreateFileOptions options) throws IOException {
       // the span will be picked up inside the output stream
       return trackDuration(getDurationTrackerFactory(), statistic.getSymbol(), () ->
-          innerCreateFile(path, flags, progress, performance, span, recursive));
+          innerCreateFile(path, progress, span, options));
     }
   }
 
@@ -3728,9 +3727,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws InterruptedIOException if the blocking was interrupted.
    */
   @Retries.OnceRaw("For PUT; post-PUT actions are RetrySwallowed")
-  UploadResult executePut(PutObjectRequest putObjectRequest,
-      Progressable progress,
-      PutObjectOptions putOptions)
+  UploadResult executePut(
+      final PutObjectRequest putObjectRequest,
+      final Progressable progress,
+      final PutObjectOptions putOptions)
       throws InterruptedIOException {
     String key = putObjectRequest.getKey();
     long len = getPutRequestLength(putObjectRequest);
@@ -4884,6 +4884,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // delete is the opposite of keep
     case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE:
       return !keepDirectoryMarkers(path);
+
+    // create file options
+    case FS_S3A_CREATE_PERFORMANCE:
+    case FS_S3A_CREATE_HEADER:
+      return true;
 
     default:
       return super.hasPathCapability(p, cap);

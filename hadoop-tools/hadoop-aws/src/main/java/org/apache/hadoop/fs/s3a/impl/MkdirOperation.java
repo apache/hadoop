@@ -228,6 +228,6 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
      * @throws IOException IO failure
      */
     @Retries.RetryTranslated
-    void createFakeDirectory(final Path dir, boolean keepMarkers) throws IOException;
+    void createFakeDirectory(Path dir, boolean keepMarkers) throws IOException;
   }
 }

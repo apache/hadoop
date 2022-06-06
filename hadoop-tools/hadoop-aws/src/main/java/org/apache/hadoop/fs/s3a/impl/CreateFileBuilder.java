@@ -20,8 +20,13 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
@@ -31,6 +36,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CREATE_FILE_KEYS;
 
 /**
@@ -41,11 +47,29 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CREATE_FILE_KEYS;
 public class CreateFileBuilder extends
     FSDataOutputStreamBuilder<FSDataOutputStream, CreateFileBuilder> {
 
-  public static final EnumSet<CreateFlag> CREATE_OVERWRITE =
+  /**
+   * Flag set to create with overwrite.
+   */
+  public static final EnumSet<CreateFlag> CREATE_OVERWRITE_FLAGS =
       EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
 
-  public static final EnumSet<CreateFlag> CREATE_NO_OVERWRITE =
+  /**
+    * Flag set to create without overwrite.
+   */
+  public static final EnumSet<CreateFlag> CREATE_NO_OVERWRITE_FLAGS =
       EnumSet.of(CreateFlag.CREATE);
+
+  /**
+   * Classic create file option set: overwriting.
+   */
+  public static final CreateFileOptions OPTIONS_CREATE_FILE_OVERWRITE =
+      new CreateFileOptions(CREATE_OVERWRITE_FLAGS, true, false, null);
+
+  /**
+   * Classic create file option set: no overwrite.
+   */
+  public static final CreateFileOptions OPTIONS_CREATE_FILE_NO_OVERWRITE =
+      new CreateFileOptions(CREATE_NO_OVERWRITE_FLAGS, true, false, null);
 
   /**
    * Callback interface.
@@ -75,8 +99,32 @@ public class CreateFileBuilder extends
   @Override
   public FSDataOutputStream build() throws IOException {
     Path path = getPath();
-    rejectUnknownMandatoryKeys(CREATE_FILE_KEYS,
-        " for " + path);
+
+    final Configuration options = getOptions();
+    final Map<String, String> headers = new HashMap<>();
+    final Set<String> mandatoryKeys = getMandatoryKeys();
+    final Set<String> keysToValidate = new HashSet<>();
+
+    // pick up all headers from the mandatory list and strip them before
+    // validating the keys
+    String headerPrefix = FS_S3A_CREATE_HEADER + ".";
+    final int prefixLen = headerPrefix.length();
+    mandatoryKeys.stream().forEach(key -> {
+          if (key.startsWith(headerPrefix) && key.length() > prefixLen) {
+            headers.put(key.substring(prefixLen), options.get(key));
+          } else {
+            keysToValidate.add(key);
+          }
+        });
+
+    rejectUnknownMandatoryKeys(keysToValidate, CREATE_FILE_KEYS, "for " + path);
+
+    // and add any optional headers
+    getOptionalKeys().stream()
+        .filter(key -> key.startsWith(headerPrefix) && key.length() > prefixLen)
+        .forEach(key -> headers.put(key.substring(prefixLen), options.get(key)));
+
+
     EnumSet<CreateFlag> flags = getFlags();
     if (flags.contains(CreateFlag.APPEND)) {
       throw new UnsupportedOperationException("Append is not supported");
@@ -87,12 +135,12 @@ public class CreateFileBuilder extends
           "Must specify either create or overwrite");
     }
 
+    final boolean performance =
+        options.getBoolean(Constants.FS_S3A_CREATE_PERFORMANCE, false);
     return callbacks.createFileFromBuilder(
         path,
-        flags,
-        isRecursive(),
         getProgress(),
-        getOptions().getBoolean(Constants.FS_S3A_CREATE_PERFORMANCE, false));
+        new CreateFileOptions(flags, isRecursive(), performance, headers));
 
   }
 
@@ -127,20 +175,89 @@ public class CreateFileBuilder extends
 
     /**
      * Create a file from the builder.
-     *
      * @param path path to file
-     * @param flags creation flags
-     * @param recursive create parent dirs?
      * @param progress progress callback
-     * @param performance performance flag
+     * @param options options for the file
      * @return the stream
      * @throws IOException any IO problem
      */
     FSDataOutputStream createFileFromBuilder(
         Path path,
-        EnumSet<CreateFlag> flags,
-        boolean recursive,
         Progressable progress,
-        boolean performance) throws IOException;
+        CreateFileOptions options) throws IOException;
   }
+
+  /**
+   * Create file options as built from the builder set or the classic
+   * entry point.
+   */
+  public static final class CreateFileOptions {
+
+    /**
+     * creation flags.
+     * create parent dirs?
+     * progress callback.
+     * performance flag.
+     */
+    private final EnumSet<CreateFlag> flags;
+
+    /**
+     * create parent dirs?
+     */
+    private final boolean recursive;
+
+    /**
+     * performance flag.
+     */
+    private final boolean performance;
+
+    /**
+     * Headers; may be null.
+     */
+    private final Map<String, String> headers;
+
+    /**
+     * @param flags creation flags
+     * @param recursive create parent dirs?
+     * @param performance performance flag
+     * @param headers nullable header map.
+     */
+    public CreateFileOptions(
+        final EnumSet<CreateFlag> flags,
+        final boolean recursive,
+        final boolean performance,
+        final Map<String, String> headers) {
+      this.flags = flags;
+      this.recursive = recursive;
+      this.performance = performance;
+      this.headers = headers;
+    }
+
+    @Override
+    public String toString() {
+      return "CreateFileOptions{" +
+          "flags=" + flags +
+          ", recursive=" + recursive +
+          ", performance=" + performance +
+          ", headers=" + headers +
+          '}';
+    }
+
+    public EnumSet<CreateFlag> getFlags() {
+      return flags;
+    }
+
+    public boolean isRecursive() {
+      return recursive;
+    }
+
+    public boolean isPerformance() {
+      return performance;
+    }
+
+    public Map<String, String> getHeaders() {
+      return headers;
+    }
+  }
+
 }

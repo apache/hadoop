@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -29,7 +30,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
+
+import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_NO_OVERWRITE;
@@ -38,6 +44,7 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_DIR
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_FILE_PROBE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_DIR_MARKER;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.GET_FILE_STATUS_ON_FILE;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.HEAD_OPERATION;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.NO_HEAD_OR_LIST;
 
 /**
@@ -145,12 +152,26 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     describe("createFile without performance flag performs overwrite safety checks");
     S3AFileSystem fs = getFileSystem();
 
-    FSDataOutputStreamBuilder builder = fs.createFile(methodPath())
+    final Path path = methodPath();
+    FSDataOutputStreamBuilder builder = fs.createFile(path)
         .recursive()
         .overwrite(false);
 
+    // include a custom header to probe for after
+    final String custom = "custom";
+    builder.must(FS_S3A_CREATE_HEADER + ".h1", custom);
+
     verifyMetrics(() -> build(builder),
         always(CREATE_FILE_NO_OVERWRITE));
+
+    // the header is there and the probe should be a single HEAD call.
+    String header = verifyMetrics(() ->
+            toChar(requireNonNull(
+              fs.getXAttr(path, XA_HEADER_PREFIX + "h1"),
+              "no header")),
+        always(HEAD_OPERATION));
+    Assertions.assertThat(header)
+        .isEqualTo(custom);
   }
 
   @Test
@@ -170,11 +191,11 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
 
     verifyMetrics(() -> {
-          fs.createNonRecursive(methodPath(),
+      fs.createNonRecursive(methodPath(),
               true,1000, (short)1, 0L, null)
-              .close();
-          return "";
-        },
+          .close();
+      return "";
+      },
         always(CREATE_FILE_OVERWRITE));
   }
 

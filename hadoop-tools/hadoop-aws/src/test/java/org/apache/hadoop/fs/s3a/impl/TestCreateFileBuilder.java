@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.EnumSet;
+import java.util.Map;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -84,19 +85,36 @@ public class TestCreateFileBuilder extends HadoopTestBase {
         .matches(p -> p.isPerformance());
   }
 
+  @Test
+  public void testHeaderOptions() throws Throwable {
+    final CreateFileBuilder builder = mkBuilder().create()
+        .must(FS_S3A_CREATE_HEADER + ".retention", "permanent")
+        .opt(FS_S3A_CREATE_HEADER + ".owner", "engineering");
+    final Map<String, String> headers = build(builder).getHeaders();
+    Assertions.assertThat(headers)
+        .containsEntry("retention", "permanent")
+        .containsEntry("owner", "engineering");
+  }
+
+  @Test
+  public void testIncompleteHeader() throws Throwable {
+    final CreateFileBuilder builder = mkBuilder().create()
+        .must(FS_S3A_CREATE_HEADER, "permanent");
+    intercept(IllegalArgumentException.class, () ->
+        build(builder));
+  }
+
   private static final class BuilderCallbacks implements
       CreateFileBuilder.CreateFileBuilderCallbacks {
 
     @Override
     public FSDataOutputStream createFileFromBuilder(final Path path,
-        final EnumSet<CreateFlag> flags,
-        boolean recursive, final Progressable progress,
-        final boolean performance) throws IOException {
+        final Progressable progress,
+        final CreateFileBuilder.CreateFileOptions options) throws IOException {
       return new FSDataOutputStream(
           new BuilderOutputStream(
-              flags.contains(CreateFlag.OVERWRITE),
               progress,
-              performance),
+              options),
           null);
     }
   }
@@ -107,22 +125,19 @@ public class TestCreateFileBuilder extends HadoopTestBase {
    */
   private static final class BuilderOutputStream extends OutputStream {
 
-    private final boolean overwrite;
-
     private final Progressable progress;
 
-    private final boolean performance;
 
-    private BuilderOutputStream(final boolean overwrite,
-        final Progressable progress,
-        final boolean performance) {
-      this.overwrite = overwrite;
+    private final CreateFileBuilder.CreateFileOptions options;
+
+    private BuilderOutputStream(final Progressable progress,
+        final CreateFileBuilder.CreateFileOptions options) {
       this.progress = progress;
-      this.performance = performance;
+      this.options = options;
     }
 
     private boolean isOverwrite() {
-      return overwrite;
+      return options.getFlags().contains(CreateFlag.OVERWRITE);
     }
 
     private Progressable getProgress() {
@@ -130,7 +145,15 @@ public class TestCreateFileBuilder extends HadoopTestBase {
     }
 
     private boolean isPerformance() {
-      return performance;
+      return options.isPerformance();
+    }
+
+    private CreateFileBuilder.CreateFileOptions getOptions() {
+      return options;
+    }
+
+    private Map<String, String> getHeaders() {
+      return options.getHeaders();
     }
 
     @Override
@@ -141,9 +164,8 @@ public class TestCreateFileBuilder extends HadoopTestBase {
     @Override
     public String toString() {
       return "BuilderOutputStream{" +
-          "overwrite=" + overwrite +
-          ", progress=" + progress +
-          ", performance=" + performance +
+          "progress=" + progress +
+          ", options=" + options +
           "} " + super.toString();
     }
   }

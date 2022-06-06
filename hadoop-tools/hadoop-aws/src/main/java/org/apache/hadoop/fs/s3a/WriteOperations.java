@@ -91,10 +91,13 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * Create a {@link PutObjectRequest} request to upload a file.
    * @param dest key to PUT to.
    * @param sourceFile source file
+   * @param headers optional map of custom headers.
    * @return the request
    */
-  PutObjectRequest createPutObjectRequest(String dest,
-      File sourceFile);
+  PutObjectRequest createPutObjectRequest(
+      String dest,
+      File sourceFile,
+      @Nullable Map<String, String> headers);
 
   /**
    * Callback on a successful write.
@@ -121,11 +124,12 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * Start the multipart upload process.
    * Retry policy: retrying, translated.
    * @param destKey destination of upload
+   * @param options options for the put request
    * @return the upload result containing the ID
    * @throws IOException IO problem
    */
   @Retries.RetryTranslated
-  String initiateMultiPartUpload(String destKey) throws IOException;
+  String initiateMultiPartUpload(String destKey, PutObjectOptions options) throws IOException;
 
   /**
    * This completes a multipart upload to the destination key via

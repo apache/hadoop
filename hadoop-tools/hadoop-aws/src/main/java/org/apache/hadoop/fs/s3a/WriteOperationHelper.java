@@ -241,7 +241,7 @@ public class WriteOperationHelper implements WriteOperations {
   public PutObjectRequest createPutObjectRequest(String destKey,
       InputStream inputStream,
       long length,
-      final Map<String, String> headers) {
+      @Nullable final Map<String, String> headers) {
     activateAuditSpan();
     ObjectMetadata objectMetadata = newObjectMetadata(length);
     if (headers != null) {
@@ -257,17 +257,25 @@ public class WriteOperationHelper implements WriteOperations {
    * Create a {@link PutObjectRequest} request to upload a file.
    * @param dest key to PUT to.
    * @param sourceFile source file
+   * @param headers optional map of custom headers.
    * @return the request
    */
   @Retries.OnceRaw
-  public PutObjectRequest createPutObjectRequest(String dest,
-      File sourceFile) {
+  public PutObjectRequest createPutObjectRequest(
+      String dest,
+      File sourceFile,
+      @Nullable final Map<String, String> headers) {
     Preconditions.checkState(sourceFile.length() < Integer.MAX_VALUE,
         "File length is too big for a single PUT upload");
     activateAuditSpan();
+    final ObjectMetadata objectMetadata =
+        newObjectMetadata((int) sourceFile.length());
+    if (headers != null) {
+      objectMetadata.setUserMetadata(headers);
+    }
     return getRequestFactory().
         newPutObjectRequest(dest,
-            newObjectMetadata((int) sourceFile.length()),
+            objectMetadata,
             sourceFile);
   }
 
@@ -298,21 +306,20 @@ public class WriteOperationHelper implements WriteOperations {
   }
 
   /**
-   * Start the multipart upload process.
-   * Retry policy: retrying, translated.
-   * @param destKey destination of upload
-   * @return the upload result containing the ID
-   * @throws IOException IO problem
+   * {@inheritDoc}
    */
   @Retries.RetryTranslated
-  public String initiateMultiPartUpload(String destKey) throws IOException {
+  public String initiateMultiPartUpload(
+      final String destKey,
+      final PutObjectOptions options)
+      throws IOException {
     LOG.debug("Initiating Multipart upload to {}", destKey);
     try (AuditSpan span = activateAuditSpan()) {
       return retry("initiate MultiPartUpload", destKey, true,
           () -> {
             final InitiateMultipartUploadRequest initiateMPURequest =
                 getRequestFactory().newMultipartUploadRequest(
-                    destKey);
+                    destKey, options.getHeaders());
             return owner.initiateMultipartUpload(initiateMPURequest)
                 .getUploadId();
           });

@@ -556,9 +556,15 @@ class S3ABlockOutputStream extends OutputStream implements
     int size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
     final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
-        writeOperationHelper.createPutObjectRequest(key, uploadData.getFile())
-        : writeOperationHelper.createPutObjectRequest(key,
-            uploadData.getUploadStream(), size, null);
+        writeOperationHelper.createPutObjectRequest(
+            key,
+            uploadData.getFile(),
+            builder.putOptions.getHeaders())
+        : writeOperationHelper.createPutObjectRequest(
+            key,
+            uploadData.getUploadStream(),
+            size,
+            builder.putOptions.getHeaders());
     BlockUploadProgress callback =
         new BlockUploadProgress(
             block, progressListener,  now());
@@ -723,7 +729,9 @@ class S3ABlockOutputStream extends OutputStream implements
     MultiPartUpload(String key) throws IOException {
       this.uploadId = trackDuration(statistics,
           OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
-          () -> writeOperationHelper.initiateMultiPartUpload(key));
+          () -> writeOperationHelper.initiateMultiPartUpload(
+              key,
+              builder.putOptions));
 
       this.partETagsFutures = new ArrayList<>(2);
       LOG.debug("Initiated multi-part upload for {} with " +

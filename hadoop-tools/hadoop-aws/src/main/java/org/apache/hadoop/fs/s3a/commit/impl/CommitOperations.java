@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -534,7 +535,8 @@ public class CommitOperations extends AbstractStoreOperation
         destPath)) {
 
       statistics.commitCreated();
-      uploadId = writeOperations.initiateMultiPartUpload(destKey);
+      uploadId = writeOperations.initiateMultiPartUpload(destKey,
+          PutObjectOptions.keepingDirs());
       long length = localFile.length();
 
       SinglePendingCommit commitData = new SinglePendingCommit();

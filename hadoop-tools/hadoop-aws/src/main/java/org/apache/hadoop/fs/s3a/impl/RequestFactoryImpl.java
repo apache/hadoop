@@ -23,7 +23,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -444,11 +447,16 @@ public class RequestFactoryImpl implements RequestFactory {
 
   @Override
   public InitiateMultipartUploadRequest newMultipartUploadRequest(
-      String destKey) {
+      String destKey,
+      @Nullable final Map<String, String> headers) {
+    final ObjectMetadata objectMetadata = newObjectMetadata(-1);
+    if (headers != null) {
+      objectMetadata.setUserMetadata(headers);
+    }
     final InitiateMultipartUploadRequest initiateMPURequest =
         new InitiateMultipartUploadRequest(getBucket(),
             destKey,
-            newObjectMetadata(-1));
+            objectMetadata);
     initiateMPURequest.setCannedACL(getCannedACL());
     if (getStorageClass() != null) {
       initiateMPURequest.withStorageClass(getStorageClass());

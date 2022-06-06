@@ -18,26 +18,50 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.util.Map;
+import javax.annotation.Nullable;
+
 /**
- * Structure for options when putting/writing objects.
- * The init set of options is minimal, but as it will
- * be passed around, making it a structure makes it
- * easier to add more.
+ * Extensible structure for options when putting/writing objects.
  */
 public final class PutObjectOptions {
 
   /**
-   * Can the operation skip marker deletion
-   * afterwards?
+   * Can the PUT operation skip marker deletion?
    */
   private final boolean keepMarkers;
 
-  public PutObjectOptions(final boolean keepMarkers) {
+  /**
+   * Headers; may be null.
+   */
+  private final Map<String, String> headers;
+
+  /**
+   * Constructor.
+   * @param keepMarkers Can the PUT operation skip marker deletion?
+   * @param headers Headers; may be null.
+   */
+  public PutObjectOptions(
+      final boolean keepMarkers,
+      @Nullable final Map<String, String> headers) {
     this.keepMarkers = keepMarkers;
+    this.headers = headers;
   }
 
+  /**
+   * Get the marker retention flag.
+   * @return true if markers are to be retained.
+   */
   public boolean isKeepMarkers() {
     return keepMarkers;
+  }
+
+  /**
+   * Headers for the put/post request.
+   * @return headers or null.
+   */
+  public Map<String, String> getHeaders() {
+    return headers;
   }
 
   @Override
@@ -47,8 +71,8 @@ public final class PutObjectOptions {
         '}';
   }
 
-  private static final PutObjectOptions KEEP_DIRS = new PutObjectOptions(true);
-  private static final PutObjectOptions DELETE_DIRS = new PutObjectOptions(false);
+  private static final PutObjectOptions KEEP_DIRS = new PutObjectOptions(true, null);
+  private static final PutObjectOptions DELETE_DIRS = new PutObjectOptions(false,  null);
 
   /**
    * Get the options to keep directories.
