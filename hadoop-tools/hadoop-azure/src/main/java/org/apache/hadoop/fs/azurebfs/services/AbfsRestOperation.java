@@ -63,19 +63,19 @@ public class AbfsRestOperation {
   private final String sasToken;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
-
+  private static final Logger LOG1 = LoggerFactory.getLogger(AbfsRestOperation.class);
   // For uploads, this is the request entity body.  For downloads,
   // this will hold the response entity body.
   private byte[] buffer;
   private int bufferOffset;
   private int bufferLength;
   private int retryCount = 0;
-
+  private boolean isThrottledRequest = false;
+  private long maxRetryCount = 0L;
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
-
   private AbfsDriverMetrics abfsDriverMetrics;
-  private Map<String, AbfsDriverMetrics> metricsMap;
+  private static Map<String, AbfsDriverMetrics> metricsMap;
   /**
    * Checks if there is non-null HTTP response.
    * @return true if there is a non-null HTTP response from the ABFS call.
@@ -123,6 +123,8 @@ public class AbfsRestOperation {
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders) {
     this(operationType, client, method, url, requestHeaders, null);
+    this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
+    metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -151,7 +153,7 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    this.metricsMap = abfsDriverMetrics.getMetricsMap();
+    metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -183,7 +185,7 @@ public class AbfsRestOperation {
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    this.metricsMap = abfsDriverMetrics.getMetricsMap();
+    metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -237,20 +239,11 @@ public class AbfsRestOperation {
         Thread.currentThread().interrupt();
       }
     }
+    abfsDriverMetrics.getTotalNumberOfRequests().getAndIncrement();
     if(retryCount > 0) {
-     updateCount(retryCount);
-    }
-    if(result.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE){
-      AzureServiceErrorCode serviceErrorCode =
-          AzureServiceErrorCode.getAzureServiceCode(result.getStatusCode(), result.getStorageErrorCode(), result.getStorageErrorMessage());
-      if(serviceErrorCode.equals(AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT) ||
-          serviceErrorCode.equals(AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)){
-        abfsDriverMetrics.getNumberOfBandwidthThrottledRequests().getAndIncrement();
-      }else if(serviceErrorCode.equals(AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)){
-        abfsDriverMetrics.getNumberOfIOPSThrottledRequests().getAndIncrement();
-      }else{
-        abfsDriverMetrics.getNumberOfOtherThrottledRequests().getAndIncrement();
-      }
+      maxRetryCount = Math.max(abfsDriverMetrics.getMaxRetryCount().get(), retryCount);
+      abfsDriverMetrics.getMaxRetryCount().set(maxRetryCount);
+      updateCount(retryCount);
     }
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
@@ -314,7 +307,22 @@ public class AbfsRestOperation {
       }
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
-      incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
+      if(!isThrottledRequest && httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE){
+        isThrottledRequest = true;
+        AzureServiceErrorCode serviceErrorCode =
+            AzureServiceErrorCode.getAzureServiceCode(httpOperation.getStatusCode(), httpOperation.getStorageErrorCode(), httpOperation.getStorageErrorMessage());
+        LOG1.trace("Service code is " + serviceErrorCode + " status code is " + httpOperation.getStatusCode() + " error code is " + httpOperation.getStorageErrorCode()
+            + " error message is " + httpOperation.getStorageErrorMessage());
+        if(serviceErrorCode.equals(AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT) ||
+            serviceErrorCode.equals(AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)){
+          abfsDriverMetrics.getNumberOfBandwidthThrottledRequests().getAndIncrement();
+        }else if(serviceErrorCode.equals(AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)){
+          abfsDriverMetrics.getNumberOfIOPSThrottledRequests().getAndIncrement();
+        }else{
+          abfsDriverMetrics.getNumberOfOtherThrottledRequests().getAndIncrement();
+        }
+      }
+        incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
       if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK
           && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
