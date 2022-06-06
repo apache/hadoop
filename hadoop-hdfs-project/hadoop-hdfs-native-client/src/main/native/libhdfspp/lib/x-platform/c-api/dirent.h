@@ -19,11 +19,16 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_DIRENT_H
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_DIRENT_H
 
+#if !(defined(WIN32) || defined(USE_X_PLATFORM_DIRENT))
 /*
- * We will use XPlatform's dirent on Windows or when the macro
- * USE_X_PLATFORM_DIRENT is defined.
+ * For non-Windows environments, we use the dirent.h header itself.
  */
-#if defined(WIN32) || defined(USE_X_PLATFORM_DIRENT)
+#include <dirent.h>
+#else
+/*
+ * If it's a Windows environment or if the macro USE_X_PLATFORM_DIRENT is
+ * defined, we switch to using dirent from the XPlatform library.
+ */
 
 /*
  * We will use extern "C" only on Windows.
@@ -81,12 +86,6 @@ int closedir(DIR *dir);
 #if defined(WIN32) && defined(__cplusplus)
 }
 #endif
-
-#else
-/*
- * For non-Windows environments, we use the dirent.h header itself.
- */
-#include <dirent.h>
 
 #endif
 
