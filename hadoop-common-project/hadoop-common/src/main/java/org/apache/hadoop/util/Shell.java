@@ -26,6 +26,7 @@ import java.io.InterruptedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -1441,7 +1442,7 @@ public abstract class Shell {
    */
   public static Set<Shell> getAllShells() {
     synchronized (CHILD_SHELLS) {
-      return CHILD_SHELLS.keySet();
+      return new HashSet<>(CHILD_SHELLS.keySet());
     }
   }
 
