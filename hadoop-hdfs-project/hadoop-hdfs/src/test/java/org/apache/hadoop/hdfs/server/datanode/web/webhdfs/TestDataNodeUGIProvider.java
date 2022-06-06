@@ -246,9 +246,9 @@ public class TestDataNodeUGIProvider {
       DelegationTokenSecretManager dtSecretManager = new DelegationTokenSecretManager(
           86400000, 86400000, 86400000, 86400000, namesystem);
       dtSecretManager.startThreads();
-      Token<DelegationTokenIdentifier> token1 = new Token<DelegationTokenIdentifier>(
+      Token<DelegationTokenIdentifier> token1 = new Token<>(
           dtId, dtSecretManager);
-      Token<DelegationTokenIdentifier> token2 = new Token<DelegationTokenIdentifier>(
+      Token<DelegationTokenIdentifier> token2 = new Token<>(
           dtId, dtSecretManager);
       SecurityUtil.setTokenService(token1,
           NetUtils.createSocketAddr(uri.getAuthority()));
