@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
@@ -72,8 +73,10 @@ public class TestSlowDatanodeReport {
   public void testSingleNodeReport() throws Exception {
     List<DataNode> dataNodes = cluster.getDataNodes();
     DataNode slowNode = dataNodes.get(1);
+    OutlierMetrics outlierMetrics = new OutlierMetrics(1.245, 2.69375, 4.5667, 15.5);
     dataNodes.get(0).getPeerMetrics().setTestOutliers(
-        ImmutableMap.of(slowNode.getDatanodeHostname() + ":" + slowNode.getIpcPort(), 15.5));
+        ImmutableMap.of(slowNode.getDatanodeHostname() + ":" + slowNode.getIpcPort(),
+            outlierMetrics));
     DistributedFileSystem distributedFileSystem = cluster.getFileSystem();
     Assert.assertEquals(3, distributedFileSystem.getDataNodeStats().length);
     GenericTestUtils.waitFor(() -> {
@@ -91,15 +94,22 @@ public class TestSlowDatanodeReport {
     Assert.assertTrue(
         cluster.getNameNode().getSlowPeersReport().contains(slowNode.getDatanodeHostname()));
     Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("15.5"));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("1.245"));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("2.69375"));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("4.5667"));
   }
 
   @Test
   public void testMultiNodesReport() throws Exception {
     List<DataNode> dataNodes = cluster.getDataNodes();
+    OutlierMetrics outlierMetrics1 = new OutlierMetrics(2.498237, 19.2495, 23.568204, 14.5);
+    OutlierMetrics outlierMetrics2 = new OutlierMetrics(3.2535, 22.4945, 44.5667, 18.7);
     dataNodes.get(0).getPeerMetrics().setTestOutliers(ImmutableMap.of(
-        dataNodes.get(1).getDatanodeHostname() + ":" + dataNodes.get(1).getIpcPort(), 14.5));
+        dataNodes.get(1).getDatanodeHostname() + ":" + dataNodes.get(1).getIpcPort(),
+        outlierMetrics1));
     dataNodes.get(1).getPeerMetrics().setTestOutliers(ImmutableMap.of(
-        dataNodes.get(2).getDatanodeHostname() + ":" + dataNodes.get(2).getIpcPort(), 18.7));
+        dataNodes.get(2).getDatanodeHostname() + ":" + dataNodes.get(2).getIpcPort(),
+        outlierMetrics2));
     DistributedFileSystem distributedFileSystem = cluster.getFileSystem();
     Assert.assertEquals(3, distributedFileSystem.getDataNodeStats().length);
     GenericTestUtils.waitFor(() -> {
@@ -120,6 +130,8 @@ public class TestSlowDatanodeReport {
         .contains(dataNodes.get(2).getDatanodeHostname()));
     Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("14.5"));
     Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("18.7"));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("23.568204"));
+    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("22.4945"));
   }
 
 }
