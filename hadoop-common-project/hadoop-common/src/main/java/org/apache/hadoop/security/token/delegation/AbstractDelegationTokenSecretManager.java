@@ -518,9 +518,9 @@ extends AbstractDelegationTokenIdentifier>
     }
     long now = Time.now();
     if (info.getRenewDate() < now) {
-      err =
-          "Token has" + identifier.getRealUser() + "expired, current time: " + Time.formatTime(now)
-              + " expected renewal time: " + Time.formatTime(info.getRenewDate());
+      err = "Token " + identifier.getRealUser() + " has expired, current time: "
+          + Time.formatTime(now) + " expected renewal time: " + Time
+          .formatTime(info.getRenewDate());
       LOG.info("{}, Token={}", err, formatTokenId(identifier));
       throw new InvalidToken(err);
     }
