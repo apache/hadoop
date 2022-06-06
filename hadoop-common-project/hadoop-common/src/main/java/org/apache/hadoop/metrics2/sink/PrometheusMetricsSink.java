@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.metrics2.sink;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import org.apache.commons.configuration2.SubsetConfiguration;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
 import org.apache.hadoop.metrics2.MetricsRecord;
