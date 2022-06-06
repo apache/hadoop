@@ -223,11 +223,11 @@ class FsDatasetAsyncDiskService {
         streams.syncFileRangeIfPossible(offset, nbytes, flags);
       } catch (NativeIOException e) {
         try {
-          LOG.warn("sync_file_range error. Volume: {} , Capacity: {}, Available space: {}, "
+          LOG.warn("sync_file_range error. Volume: {}, Capacity: {}, Available space: {}, "
                   + "File range offset: {}, length: {}, flags: {}", volume, volume.getCapacity(),
               volume.getAvailable(), offset, nbytes, flags, e);
         } catch (IOException ioe) {
-          LOG.warn("sync_file_range error. Volume: {} , Capacity: {}, "
+          LOG.warn("sync_file_range error. Volume: {}, Capacity: {}, "
                   + "File range offset: {}, length: {}, flags: {}", volume, volume.getCapacity(),
               offset, nbytes, flags, e);
         }
