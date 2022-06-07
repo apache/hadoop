@@ -2068,51 +2068,51 @@ public class DFSAdmin extends FsShell {
       errMsg = String.format("Node [%s] reloading configuration: %s.", address,
           e.toString());
     }
-    synchronized (this) {
-      if (errMsg != null) {
-        err.println(errMsg);
-        return 1;
-      } else {
-        out.print(outMsg);
-      }
 
-      if (status != null) {
-        if (!status.hasTask()) {
-          out.println("no task was found.");
-          return 0;
-        }
-        out.print("started at " + new Date(status.getStartTime()));
-        if (!status.stopped()) {
-          out.println(" and is still running.");
-          return 0;
-        }
-
-        out.println(" and finished at "
-                + new Date(status.getEndTime()).toString() + ".");
-        if (status.getStatus() == null) {
-          // Nothing to report.
-          return 0;
-        }
-        for (Map.Entry<PropertyChange, Optional<String>> result : status
-                .getStatus().entrySet()) {
-          if (!result.getValue().isPresent()) {
-            out.printf(
-                    "SUCCESS: Changed property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
-                    result.getKey().prop, result.getKey().oldVal,
-                    result.getKey().newVal);
-          } else {
-            final String errorMsg = result.getValue().get();
-            out.printf(
-                    "FAILED: Change property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
-                    result.getKey().prop, result.getKey().oldVal,
-                    result.getKey().newVal);
-            out.println("\tError: " + errorMsg + ".");
-          }
-        }
-      } else {
-        return 1;
-      }
+    if (errMsg != null) {
+      err.println(errMsg);
+      return 1;
+    } else {
+      out.print(outMsg);
     }
+
+    if (status != null) {
+      if (!status.hasTask()) {
+        out.println("no task was found.");
+        return 0;
+      }
+      out.print("started at " + new Date(status.getStartTime()));
+      if (!status.stopped()) {
+        out.println(" and is still running.");
+        return 0;
+      }
+
+      out.println(" and finished at "
+          + new Date(status.getEndTime()).toString() + ".");
+      if (status.getStatus() == null) {
+        // Nothing to report.
+        return 0;
+      }
+      for (Map.Entry<PropertyChange, Optional<String>> result : status
+          .getStatus().entrySet()) {
+        if (!result.getValue().isPresent()) {
+          out.printf(
+              "SUCCESS: Changed property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
+              result.getKey().prop, result.getKey().oldVal,
+              result.getKey().newVal);
+        } else {
+          final String errorMsg = result.getValue().get();
+          out.printf(
+              "FAILED: Change property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
+              result.getKey().prop, result.getKey().oldVal,
+              result.getKey().newVal);
+          out.println("\tError: " + errorMsg + ".");
+        }
+      }
+    } else {
+      return 1;
+    }
+
     return 0;
   }
 
