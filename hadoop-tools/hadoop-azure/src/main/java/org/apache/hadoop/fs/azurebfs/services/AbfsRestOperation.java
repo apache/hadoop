@@ -75,7 +75,7 @@ public class AbfsRestOperation {
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
   private AbfsDriverMetrics abfsDriverMetrics;
-  private static Map<String, AbfsDriverMetrics> metricsMap;
+  private static final Map<String, AbfsDriverMetrics> metricsMap = AbfsDriverMetrics.getMetricsMap();
   /**
    * Checks if there is non-null HTTP response.
    * @return true if there is a non-null HTTP response from the ABFS call.
@@ -124,7 +124,6 @@ public class AbfsRestOperation {
                     final List<AbfsHttpHeader> requestHeaders) {
     this(operationType, client, method, url, requestHeaders, null);
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -153,7 +152,6 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -185,7 +183,6 @@ public class AbfsRestOperation {
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**

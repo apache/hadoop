@@ -691,12 +691,12 @@ public class AzureBlobFileSystem extends FileSystem
       URI metricUri;
       try {
         metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
-      } catch (Exception ex) {
+      } catch (URISyntaxException ex) {
         throw new AssertionError(ex);
       }
       AzureBlobFileSystem metricfs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
       metricfs.sentMetric(metric);
-    } catch (Exception ex) {
+    } catch (AzureBlobFileSystemException ex) {
       // do nothing
     }
     // does all the delete-on-exit calls, and may be slow.
