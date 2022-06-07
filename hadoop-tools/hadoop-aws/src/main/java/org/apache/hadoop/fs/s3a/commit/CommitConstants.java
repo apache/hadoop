@@ -234,10 +234,11 @@ public final class CommitConstants {
    */
   public static final String FS_S3A_COMMITTER_THREADS =
       "fs.s3a.committer.threads";
+
   /**
    * Default value for {@link #FS_S3A_COMMITTER_THREADS}: {@value}.
    */
-  public static final int DEFAULT_COMMITTER_THREADS = -4;
+  public static final int DEFAULT_COMMITTER_THREADS = 32;
 
   /**
    * Path  in the cluster filesystem for temporary data: {@value}.

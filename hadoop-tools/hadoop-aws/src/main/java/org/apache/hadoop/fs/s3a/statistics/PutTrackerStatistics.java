@@ -19,11 +19,11 @@
 package org.apache.hadoop.fs.s3a.statistics;
 
 /**
- * Interface for put tracking.
- * It is sublclassed by {@link BlockOutputStreamStatistics},
+ * Interface for PUT tracking.
+ * It is subclassed by {@link BlockOutputStreamStatistics},
  * so that operations performed by the PutTracker update
  * the stream statistics.
- * having a separate interface helps isolate operations.
+ * Having a separate interface helps isolate operations.
  */
 public interface PutTrackerStatistics extends S3AStatisticInterface {
 }

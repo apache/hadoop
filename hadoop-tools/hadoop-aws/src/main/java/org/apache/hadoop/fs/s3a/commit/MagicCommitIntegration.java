@@ -39,6 +39,7 @@ import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
  * in this case:
  * <ol>
  *   <li>{@link #isMagicCommitPath(Path)} will always return false.</li>
+ *   <li>{@link #isUnderMagicPath(Path)} will always return false.</li>
  *   <li>{@link #createTracker(Path, String, PutTrackerStatistics)} will always
  *   return an instance of {@link PutTracker}.</li>
  * </ol>

@@ -63,7 +63,7 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
 
   @Test
   public void testCreateNoOverwrite() throws Throwable {
-    describe("Test file creation with outoverwrite");
+    describe("Test file creation without overwrite");
     Path testFile = methodPath();
     // when overwrite is false, the path is checked for existence.
     create(testFile, false,
@@ -192,10 +192,10 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
 
     verifyMetrics(() -> {
       fs.createNonRecursive(methodPath(),
-              true,1000, (short)1, 0L, null)
+              true, 1000, (short)1, 0L, null)
           .close();
       return "";
-      },
+    },
         always(CREATE_FILE_OVERWRITE));
   }
 

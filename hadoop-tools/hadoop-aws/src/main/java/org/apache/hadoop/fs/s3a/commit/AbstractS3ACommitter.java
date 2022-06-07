@@ -1585,6 +1585,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
      * @param pendingFS source filesystem.
      * @param statuses iterator of file status or subclass to use.
      * @return the commit
+     * @throws if the iterator raises one.
      */
     public static ActiveCommit fromStatusIterator(
         final FileSystem pendingFS,

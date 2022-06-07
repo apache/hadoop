@@ -1639,9 +1639,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * parent directory existing, and doesn't attempt to delete
    * dir markers, irrespective of FS settings.
    * If true, this method call does no IO at all.
-   * @param flags flags for the operation
-   * @param performance fast creation over safety
-   * @param recursive create all parents too?
    * @param path the file name to open
    * @param progress the progress reporter.
    * @param auditSpan audit span
@@ -1660,7 +1657,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     EnumSet<CreateFlag> flags = options.getFlags();
     boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
     boolean performance = options.isPerformance();
-    boolean recursive = options.isRecursive();
     boolean skipProbes = performance || isUnderMagicCommitPath(path);
     if (skipProbes) {
       LOG.debug("Skipping existence/overwrite checks");

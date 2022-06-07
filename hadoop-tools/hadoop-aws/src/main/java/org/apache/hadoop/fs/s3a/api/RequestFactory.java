@@ -196,7 +196,7 @@ public interface RequestFactory {
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(
       String destKey,
-      @Nullable final Map<String, String> headers);
+      @Nullable Map<String, String> headers);
 
   /**
    * Complete a multipart upload.

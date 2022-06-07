@@ -110,12 +110,12 @@ public class CreateFileBuilder extends
     String headerPrefix = FS_S3A_CREATE_HEADER + ".";
     final int prefixLen = headerPrefix.length();
     mandatoryKeys.stream().forEach(key -> {
-          if (key.startsWith(headerPrefix) && key.length() > prefixLen) {
-            headers.put(key.substring(prefixLen), options.get(key));
-          } else {
-            keysToValidate.add(key);
-          }
-        });
+      if (key.startsWith(headerPrefix) && key.length() > prefixLen) {
+        headers.put(key.substring(prefixLen), options.get(key));
+      } else {
+        keysToValidate.add(key);
+      }
+    });
 
     rejectUnknownMandatoryKeys(keysToValidate, CREATE_FILE_KEYS, "for " + path);
 
