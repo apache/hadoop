@@ -1134,7 +1134,7 @@
                         <goal>run</goal>
                     </goals>
                     <configuration>
-                      <failOnError>false</failOnError>
+                      <failOnError>${batsFailOnError}</failOnError>
                       <target>
                           <exec dir="src/test/scripts"
                            executable="bash"

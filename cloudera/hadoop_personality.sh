@@ -405,7 +405,7 @@ function personality_modules
     extra="${extra} ${flags}"
   fi
 
-  extra="-Ptest-patch ${extra}"
+  extra="-Ptest-patch -Dmaven.test.failure.ignore=true -DbatsFailOnError=false ${extra}"
   for module in $(hadoop_order ${ordering}); do
     # shellcheck disable=SC2086
     personality_enqueue_module ${module} ${extra}
