@@ -273,6 +273,14 @@ public interface HdfsClientConfigKeys {
   String DFS_LEASE_HARDLIMIT_KEY = "dfs.namenode.lease-hard-limit-sec";
   long DFS_LEASE_HARDLIMIT_DEFAULT = 20 * 60;
 
+  String DFS_CLIENT_FSCK_CONNECT_TIMEOUT =
+      "dfs.client.fsck.connect.timeout";
+  int DFS_CLIENT_FSCK_CONNECT_TIMEOUT_DEFAULT = 60 * 1000;
+
+  String DFS_CLIENT_FSCK_READ_TIMEOUT =
+      "dfs.client.fsck.read.timeout";
+  int DFS_CLIENT_FSCK_READ_TIMEOUT_DEFAULT = 60 * 1000;
+
   /**
    * These are deprecated config keys to client code.
    */

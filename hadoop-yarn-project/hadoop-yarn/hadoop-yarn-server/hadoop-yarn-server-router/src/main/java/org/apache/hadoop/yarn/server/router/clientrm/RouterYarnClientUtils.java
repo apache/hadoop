@@ -31,6 +31,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -38,6 +41,9 @@ import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -294,6 +300,70 @@ public final class RouterYarnClientUtils {
     }
     nodeLabelsResponse.setNodeLabelList(new ArrayList<>(nodeLabelsList));
     return nodeLabelsResponse;
+  }
+
+  /**
+   * Merges a list of GetQueueUserAclsInfoResponse.
+   *
+   * @param responses a list of GetQueueUserAclsInfoResponse to merge.
+   * @return the merged GetQueueUserAclsInfoResponse.
+   */
+  public static GetQueueUserAclsInfoResponse mergeQueueUserAcls(
+      Collection<GetQueueUserAclsInfoResponse> responses) {
+    GetQueueUserAclsInfoResponse aclsInfoResponse = Records.newRecord(
+        GetQueueUserAclsInfoResponse.class);
+    Set<QueueUserACLInfo> queueUserACLInfos = new HashSet<>();
+    for (GetQueueUserAclsInfoResponse response : responses) {
+      if (response != null && response.getUserAclsInfoList() != null) {
+        queueUserACLInfos.addAll(response.getUserAclsInfoList());
+      }
+    }
+    aclsInfoResponse.setUserAclsInfoList(new ArrayList<>(queueUserACLInfos));
+    return aclsInfoResponse;
+  }
+
+  /**
+   * Merges a list of ReservationListResponse.
+   *
+   * @param responses a list of ReservationListResponse to merge.
+   * @return the merged ReservationListResponse.
+   */
+  public static ReservationListResponse mergeReservationsList(
+      Collection<ReservationListResponse> responses) {
+    ReservationListResponse reservationListResponse =
+        Records.newRecord(ReservationListResponse.class);
+    List<ReservationAllocationState> reservationAllocationStates =
+        new ArrayList<>();
+    for (ReservationListResponse response : responses) {
+      if (response != null && response.getReservationAllocationState() != null) {
+        reservationAllocationStates.addAll(
+            response.getReservationAllocationState());
+      }
+    }
+    reservationListResponse.setReservationAllocationState(
+        reservationAllocationStates);
+    return reservationListResponse;
+  }
+
+  /**
+   * Merges a list of GetAllResourceTypeInfoResponse.
+   *
+   * @param responses a list of GetAllResourceTypeInfoResponse to merge.
+   * @return the merged GetAllResourceTypeInfoResponse.
+   */
+  public static GetAllResourceTypeInfoResponse mergeResourceTypes(
+      Collection<GetAllResourceTypeInfoResponse> responses) {
+    GetAllResourceTypeInfoResponse resourceTypeInfoResponse =
+        Records.newRecord(GetAllResourceTypeInfoResponse.class);
+    Set<ResourceTypeInfo> resourceTypeInfoSet = new HashSet<>();
+    for (GetAllResourceTypeInfoResponse response : responses) {
+      if (response != null && response.getResourceTypeInfo() != null) {
+        resourceTypeInfoSet.addAll(response.getResourceTypeInfo());
+      }
+    }
+    resourceTypeInfoResponse.setResourceTypeInfo(
+        new ArrayList<>(resourceTypeInfoSet));
+    return resourceTypeInfoResponse;
   }
 }
 

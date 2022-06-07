@@ -1896,14 +1896,14 @@ public class DatanodeManager {
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
 
     if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
-      final Map<String, Double> slowPeersMap = slowPeers.getSlowPeers();
+      final Map<String, OutlierMetrics> slowPeersMap = slowPeers.getSlowPeers();
       if (!slowPeersMap.isEmpty()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("DataNode " + nodeReg + " reported slow peers: " + slowPeersMap);
         }
-        for (Map.Entry<String, Double> slowNodeId : slowPeersMap.entrySet()) {
-          slowPeerTracker.addReport(slowNodeId.getKey(), nodeReg.getIpcAddr(false),
-              slowNodeId.getValue());
+        for (Map.Entry<String, OutlierMetrics> slowNodeEntry : slowPeersMap.entrySet()) {
+          slowPeerTracker.addReport(slowNodeEntry.getKey(), nodeReg.getIpcAddr(false),
+              slowNodeEntry.getValue());
         }
       }
     }
