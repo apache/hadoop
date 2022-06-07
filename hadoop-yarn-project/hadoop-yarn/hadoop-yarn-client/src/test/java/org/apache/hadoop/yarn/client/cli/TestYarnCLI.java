@@ -53,7 +53,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;

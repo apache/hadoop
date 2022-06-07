@@ -167,7 +167,7 @@ class TestPlacementConstraintParser {
     assertEquals(0, single.getMinCardinality());
     assertEquals(1, single.getMaxCardinality());
     assertEquals(3, single.getTargetExpressions().size());
-    Set<TargetExpression> expectedTargetExpressions = new HashSet(Arrays.asList(
+    Set<TargetExpression> expectedTargetExpressions = new HashSet<>(Arrays.asList(
         PlacementTargets.allocationTag("foo"),
         PlacementTargets.allocationTag("bar"),
         PlacementTargets.allocationTag("moo")));

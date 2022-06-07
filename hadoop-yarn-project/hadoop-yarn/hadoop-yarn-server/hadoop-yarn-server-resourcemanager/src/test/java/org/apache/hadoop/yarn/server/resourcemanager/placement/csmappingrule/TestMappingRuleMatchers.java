@@ -197,7 +197,7 @@ public class TestMappingRuleMatchers extends TestCase {
     VariableContext testerBob = new VariableContext();
     testerBob.put("%user", "bob");
     testerBob.put("%primary_group", "testers");
-    testerBob.putExtraDataset("groups",new HashSet<>(Collections.singleton("testers")));
+    testerBob.putExtraDataset("groups", new HashSet<>(Collections.singleton("testers")));
 
     VariableContext testerDave = new VariableContext();
     testerDave.put("%user", "dave");

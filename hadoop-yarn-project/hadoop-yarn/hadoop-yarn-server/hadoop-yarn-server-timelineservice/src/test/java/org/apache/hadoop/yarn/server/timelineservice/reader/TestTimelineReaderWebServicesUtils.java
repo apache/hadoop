@@ -757,7 +757,7 @@ public class TestTimelineReaderWebServicesUtils {
     expectedList = new TimelineFilterList(Operator.OR,
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                "type1",new HashSet<>(Collections.singleton((Object)"entity11"))),
+                "type1", new HashSet<>(Collections.singleton((Object)"entity11"))),
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
                 "type2", new HashSet<>(Arrays.asList((Object)"entity21", "entity22"))),
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
@@ -768,7 +768,7 @@ public class TestTimelineReaderWebServicesUtils {
                 "type3", new HashSet<>(Arrays.asList(
                     (Object)"entity31", "entity32", "entity33"))),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type1",new HashSet<>(Arrays.asList((Object)"entity11", "entity12"))
+                "type1", new HashSet<>(Arrays.asList((Object)"entity11", "entity12"))
         )
     ));
     verifyFilterList(expr, TimelineReaderWebServicesUtils.

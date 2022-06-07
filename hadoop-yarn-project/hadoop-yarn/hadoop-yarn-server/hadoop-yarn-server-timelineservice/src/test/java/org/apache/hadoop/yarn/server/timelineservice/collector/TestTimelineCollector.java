@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;

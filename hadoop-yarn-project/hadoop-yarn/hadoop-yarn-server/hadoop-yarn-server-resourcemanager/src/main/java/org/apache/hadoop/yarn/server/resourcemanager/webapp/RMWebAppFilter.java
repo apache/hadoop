@@ -40,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.IsActiveServlet;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;

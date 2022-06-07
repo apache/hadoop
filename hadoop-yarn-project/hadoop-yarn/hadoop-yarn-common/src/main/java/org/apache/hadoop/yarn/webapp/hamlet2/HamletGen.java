@@ -33,7 +33,6 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 

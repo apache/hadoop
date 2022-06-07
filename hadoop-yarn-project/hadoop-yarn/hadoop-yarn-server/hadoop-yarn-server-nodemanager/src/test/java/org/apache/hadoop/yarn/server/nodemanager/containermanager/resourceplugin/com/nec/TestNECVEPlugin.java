@@ -383,8 +383,8 @@ public class TestNECVEPlugin {
     VEDeviceDiscoverer veDeviceDiscoverer = mock(VEDeviceDiscoverer.class);
     when(mockEnvProvider.apply(eq("NEC_USE_UDEV"))).thenReturn("true");
     Device testDevice = getTestDevice(0);
-    when(veDeviceDiscoverer.getDevicesFromPath(anyString()))
-      .thenReturn(new HashSet<>(Collections.singleton(testDevice)));
+    when(veDeviceDiscoverer.getDevicesFromPath(anyString())).thenReturn(
+        new HashSet<>(Collections.singleton(testDevice)));
     plugin = new NECVEPlugin(mockEnvProvider, defaultSearchDirs, udevUtil);
     plugin.setVeDeviceDiscoverer(veDeviceDiscoverer);
 

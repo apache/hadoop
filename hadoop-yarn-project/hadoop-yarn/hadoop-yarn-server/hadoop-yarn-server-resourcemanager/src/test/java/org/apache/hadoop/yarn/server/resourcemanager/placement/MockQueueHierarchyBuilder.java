@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.commons.compress.utils.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
