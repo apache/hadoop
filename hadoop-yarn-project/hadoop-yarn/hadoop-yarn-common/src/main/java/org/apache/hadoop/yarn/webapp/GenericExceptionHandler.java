@@ -93,7 +93,7 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
         && e.getCause() instanceof UnmarshalException) {
       s = Response.Status.BAD_REQUEST;
     } else {
-      LOG.warn("INTERNAL_SERVER_ERROR", e);
+      LOG.warn("SERVICE_UNAVAILABLE", e);
       s = Response.Status.SERVICE_UNAVAILABLE;
     }
 
