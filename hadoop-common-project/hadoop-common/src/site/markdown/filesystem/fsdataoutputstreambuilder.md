@@ -191,7 +191,7 @@ Here are the custom options which the S3A Connector supports.
 | Name                        | Type      | Meaning                                |
 |-----------------------------|-----------|----------------------------------------|
 | `fs.s3a.create.performance` | `boolean` | create a file with maximum performance |
-| `fs.s3a.create.header` | `string` | prefix for user supplied headers |
+| `fs.s3a.create.header`      | `string`  | prefix for user supplied headers       |
 
 ### `fs.s3a.create.performance`
 
@@ -218,10 +218,11 @@ trigger this are undefined and may change between even minor releases.
 Using this option is the equivalent of pressing and holding down the 
 "Electronic Stability Control"
 button on a rear-wheel drive car for five seconds: the safety checks are off.
-Things wil be faster if the driver knew what you are doing.
-If you don't, the fact they had held the button down will
-be used as evidence that they made a conscious decision to choose speed over
-safety and that all consequences are their fault.
+Things wil be faster if the driver knew what they were doing.
+If they didn't, the fact they had held the button down will
+be used as evidence at the inquest as proof that they made a
+conscious decision to choose speed over safety and
+that the outcome was their own fault.
 
 Accordingly: *Use if and only if you are confident that the conditions are met.*
 
