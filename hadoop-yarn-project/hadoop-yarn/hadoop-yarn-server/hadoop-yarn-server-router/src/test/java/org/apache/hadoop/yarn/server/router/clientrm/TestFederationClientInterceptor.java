@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -1042,10 +1041,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         interceptor.getApplicationAttempts(attemptsRequest);
     Assert.assertNotNull(attemptsResponse);
 
-    String formatISO8601 =
+    String appTimeout =
         Times.formatISO8601(System.currentTimeMillis() + 5 * 1000);
     Map<ApplicationTimeoutType, String> applicationTimeouts = new HashMap<>();
-    applicationTimeouts.put(ApplicationTimeoutType.LIFETIME, formatISO8601);
+    applicationTimeouts.put(ApplicationTimeoutType.LIFETIME, appTimeout);
 
     UpdateApplicationTimeoutsRequest timeoutsRequest =
         UpdateApplicationTimeoutsRequest.newInstance(appId, applicationTimeouts);
@@ -1055,6 +1054,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     String responseTimeOut =
         timeoutsResponse.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME);
     Assert.assertNotNull(timeoutsResponse);
-    Assert.assertEquals(formatISO8601, responseTimeOut);
+    Assert.assertEquals(appTimeout, responseTimeOut);
   }
 }
