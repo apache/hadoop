@@ -197,19 +197,26 @@ Here are the custom options which the S3A Connector supports.
 
 Prioritize file creation performance over safety checks for filesystem consistency.
 
-This
+This:
 1. Skips the `LIST` call which makes sure a file is being created over a directory.
    Risk: a file is created over a directory.
 1. Ignores the overwrite flag.
 1. Never issues a `DELETE` call to delete parent directory markers.
-   Risk: if directory markers have not already been leaned up, such as when creating the
-   parent directory or when a least one file has been created in or under the same
-   directory using the `create()` API or `createFile()` without this option.
 
 It is possible to probe an S3A Filesystem instance for this capability through
 the `hasPathCapability(path, "fs.s3a.create.performance")` check.
 
-Using this option is the equivalent of pressing and holding down the "Electronic Stability Control"
+Creating files with this option over existing directories is likely
+to make S3A filesystem clients behave inconsistently.
+
+Operations optimized for directories (e.g. listing calls) are likely
+to see the directory tree not the file; operations optimized for
+files (`getFileStatus()`, `isFile()`) more likely to see the file.
+The exact form of the inconsistencies, and which operations/parameters
+trigger this are undefined and may change between even minor releases.
+
+Using this option is the equivalent of pressing and holding down the 
+"Electronic Stability Control"
 button on a rear-wheel drive car for five seconds: the safety checks are off.
 Things wil be faster if the driver knew what you are doing.
 If you don't, the fact they had held the button down will
