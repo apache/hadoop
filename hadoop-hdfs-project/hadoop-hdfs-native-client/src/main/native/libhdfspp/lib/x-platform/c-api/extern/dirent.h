@@ -16,24 +16,20 @@
  * limitations under the License.
  */
 
-#ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_DIRENT_H
-#define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_DIRENT_H
-
-#if !(defined(WIN32) || defined(USE_X_PLATFORM_DIRENT))
+#ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_EXTERN_DIRENT_H
+#define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_EXTERN_DIRENT_H
 
 /*
- * For non-Windows environments, we use the dirent.h header itself.
+ * We will use extern "C" only on Windows.
  */
-#include <dirent.h>
+#if defined(WIN32) && defined(__cplusplus)
+extern "C" {
+#endif
 
-#else
+#include "x-platform/c-api/core/dirent.h"
 
-/*
- * If it's a Windows environment or if the macro USE_X_PLATFORM_DIRENT is
- * defined, we switch to using dirent from the XPlatform library.
- */
-#include "x-platform/c-api/extern/dirent.h"
-
+#if defined(WIN32) && defined(__cplusplus)
+}
 #endif
 
 #endif
