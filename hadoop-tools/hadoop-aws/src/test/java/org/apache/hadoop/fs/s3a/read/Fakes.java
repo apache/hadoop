@@ -133,7 +133,10 @@ public final class Fakes {
         fileStatus,
         futurePool,
         prefetchBlockSize,
-        prefetchBlockCount);
+        prefetchBlockCount)
+        .withChangeDetectionPolicy(ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,
+            ChangeDetectionPolicy.Source.ETag, false))
+        .withInputPolicy(S3AInputPolicy.Normal);
   }
 
   public static URI createUri(String bucket, String key) {

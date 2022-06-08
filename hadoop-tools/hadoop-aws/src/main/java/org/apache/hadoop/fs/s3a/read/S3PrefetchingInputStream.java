@@ -58,6 +58,7 @@ public class S3PrefetchingInputStream
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
+   * @param streamStatistics statistics for this stream.
    *
    * @throws IllegalArgumentException if context is null.
    * @throws IllegalArgumentException if s3Attributes is null.
