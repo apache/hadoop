@@ -15,4 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocolPB;
+
+/**
+ * This package provides the ability to expose external SPS metrics to JMX.
+ */
+package org.apache.hadoop.hdfs.server.sps.metrics;

@@ -127,7 +127,7 @@ public abstract class AbstractMultipartUploader implements MultipartUploader {
    * {@inheritDoc}.
    * @param path path to abort uploads under.
    * @return a future to -1.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public CompletableFuture<Integer> abortUploadsUnderPath(Path path)
       throws IOException {

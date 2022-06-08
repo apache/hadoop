@@ -31,3 +31,8 @@ add_test(x_platform_utils_test x_platform_utils_test)
 target_include_directories(x_platform_syscall_test PRIVATE ${LIBHDFSPP_LIB_DIR})
 target_link_libraries(x_platform_syscall_test gmock_main)
 add_test(x_platform_syscall_test x_platform_syscall_test)
+
+add_executable(x_platform_types_test types_test.cc)
+target_include_directories(x_platform_types_test PRIVATE ${LIBHDFSPP_LIB_DIR})
+target_link_libraries(x_platform_types_test gtest_main)
+add_test(x_platform_types_test x_platform_types_test)

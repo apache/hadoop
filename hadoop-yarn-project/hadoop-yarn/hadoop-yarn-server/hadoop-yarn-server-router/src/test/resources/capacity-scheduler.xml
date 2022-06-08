@@ -45,7 +45,7 @@
 
   <property>
     <name>yarn.scheduler.capacity.root.queues</name>
-    <value>default</value>
+    <value>default,decided</value>
     <description>
       The queues at the this level (root is the root queue).
     </description>
@@ -94,6 +94,15 @@
     <value>*</value>
     <description>
       The ACL of who can administer jobs on the default queue.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.decided.reservable</name>
+    <value>true</value>
+    <description>
+      indicates to the ReservationSystem that the queue’s resources
+      is available for users to reserve.
     </description>
   </property>
 

@@ -171,6 +171,8 @@ public class CompressionCodecFactory {
   /**
    * Find the codecs specified in the config value io.compression.codecs 
    * and register them. Defaults to gzip and deflate.
+   *
+   * @param conf configuration.
    */
   public CompressionCodecFactory(Configuration conf) {
     codecs = new TreeMap<String, CompressionCodec>();
@@ -293,7 +295,8 @@ public class CompressionCodecFactory {
   
   /**
    * A little test program.
-   * @param args
+   * @param args arguments.
+   * @throws Exception exception.
    */
   public static void main(String[] args) throws Exception {
     Configuration conf = new Configuration();

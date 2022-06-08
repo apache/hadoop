@@ -95,7 +95,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
     <!-- maven plugin versions -->
     <maven-deploy-plugin.version>2.8.1</maven-deploy-plugin.version>
-    <maven-site-plugin.version>3.6</maven-site-plugin.version>
+    <maven-site-plugin.version>3.11.0</maven-site-plugin.version>
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
@@ -117,6 +117,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <spotbugs.version>4.2.2</spotbugs.version>
     <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
+    <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
 
     <shell-executable>bash</shell-executable>
 
@@ -313,11 +314,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
               <artifactId>wagon-ssh</artifactId>
               <version>${wagon-ssh.version}</version>
             </dependency>
-            <dependency>
-              <groupId>org.apache.maven.doxia</groupId>
-              <artifactId>doxia-module-markdown</artifactId>
-              <version>1.8</version>
-            </dependency>
           </dependencies>
         </plugin>
         <!--This plugin's configuration is used to store Eclipse m2e settings only.
@@ -482,6 +478,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>org.jsonschema2pojo</groupId>
           <artifactId>jsonschema2pojo-maven-plugin</artifactId>
           <version>${jsonschema2pojo-maven-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>

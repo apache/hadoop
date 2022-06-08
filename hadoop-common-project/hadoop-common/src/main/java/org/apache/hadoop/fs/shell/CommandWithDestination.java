@@ -55,6 +55,9 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
  * Provides: argument processing to ensure the destination is valid
@@ -116,6 +119,8 @@ abstract class CommandWithDestination extends FsCommand {
    * owner, group and permission information of the source
    * file will be preserved as far as target {@link FileSystem}
    * implementation allows.
+   *
+   * @param preserve preserve.
    */
   protected void setPreserve(boolean preserve) {
     if (preserve) {
@@ -172,6 +177,7 @@ abstract class CommandWithDestination extends FsCommand {
    *  The last arg is expected to be a local path, if only one argument is
    *  given then the destination will be the current directory 
    *  @param args is the list of arguments
+   * @throws IOException raised on errors performing I/O.
    */
   protected void getLocalDestination(LinkedList<String> args)
   throws IOException {
@@ -348,7 +354,11 @@ abstract class CommandWithDestination extends FsCommand {
     src.fs.setVerifyChecksum(verifyChecksum);
     InputStream in = null;
     try {
-      in = src.fs.open(src.path);
+      in = awaitFuture(src.fs.openFile(src.path)
+          .withFileStatus(src.stat)
+          .opt(FS_OPTION_OPENFILE_READ_POLICY,
+              FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
+          .build());
       copyStreamToTarget(in, target);
       preserveAttributes(src, target, preserveRawXattrs);
     } finally {

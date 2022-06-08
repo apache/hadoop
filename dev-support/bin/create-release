@@ -293,6 +293,7 @@ function usage
   echo "--security              Emergency security release"
   echo "--sign                  Use .gnupg dir to sign the artifacts and jars"
   echo "--version=[version]     Use an alternative version string"
+  echo "--mvnargs=[args]        Extra Maven args to be provided when running mvn commands"
 }
 
 function option_parse
@@ -346,6 +347,9 @@ function option_parse
       ;;
       --version=*)
         HADOOP_VERSION=${i#*=}
+      ;;
+      --mvnargs=*)
+        MVNEXTRAARGS=${i#*=}
       ;;
     esac
   done
@@ -412,6 +416,9 @@ function option_parse
     if [[ -d "${MVNCACHE}" ]]; then
       MVN_ARGS=("-Dmaven.repo.local=${MVNCACHE}")
     fi
+  fi
+  if [ -n "$MVNEXTRAARGS" ]; then
+    MVN_ARGS+=("$MVNEXTRAARGS")
   fi
 
   if [[ "${SECURITYRELEASE}" = true ]]; then
@@ -534,6 +541,10 @@ function makearelease
   run cd "${BASEDIR}"
 
   big_console_header "Cleaning the Source Tree"
+
+  # Since CVE-2022-24765 in April 2022, git refuses to work in directories
+  # whose owner != the current user, unless explicitly told to trust it.
+  git config --global --add safe.directory /build/source
 
   # git clean to clear any remnants from previous build
   run "${GIT}" clean -xdf -e /patchprocess

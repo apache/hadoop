@@ -68,7 +68,7 @@ public class TestRouterRPCClientRetries {
   private static ClientProtocol routerProtocol;
 
   @Rule
-  public final Timeout testTimeout = new Timeout(100000);
+  public final Timeout testTimeout = new Timeout(100000L, TimeUnit.MILLISECONDS);
 
   @Before
   public void setUp() throws Exception {

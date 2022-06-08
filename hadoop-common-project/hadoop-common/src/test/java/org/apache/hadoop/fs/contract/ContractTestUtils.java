@@ -1642,17 +1642,22 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Read a whole stream; downgrades an IOE to a runtime exception.
+   * Closes the stream afterwards.
    * @param in input
    * @return the number of bytes read.
    * @throws AssertionError on any IOException
    */
   public static long readStream(InputStream in) {
-    long count = 0;
+    try {
+      long count = 0;
 
-    while (read(in) >= 0) {
-      count++;
+      while (read(in) >= 0) {
+        count++;
+      }
+      return count;
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, in);
     }
-    return count;
   }
 
 

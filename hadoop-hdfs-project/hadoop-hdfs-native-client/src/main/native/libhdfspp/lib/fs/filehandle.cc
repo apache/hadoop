@@ -22,6 +22,7 @@
 #include "connection/datanodeconnection.h"
 #include "reader/block_reader.h"
 #include "hdfspp/events.h"
+#include "x-platform/types.h"
 
 #include <future>
 #include <memory>

@@ -122,8 +122,8 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
   @Override
   public void channelRead0(final ChannelHandlerContext ctx,
                            final HttpRequest req) throws Exception {
-    Preconditions.checkArgument(req.getUri().startsWith(WEBHDFS_PREFIX));
-    QueryStringDecoder queryString = new QueryStringDecoder(req.getUri());
+    Preconditions.checkArgument(req.uri().startsWith(WEBHDFS_PREFIX));
+    QueryStringDecoder queryString = new QueryStringDecoder(req.uri());
     params = new ParameterParser(queryString, conf);
     DataNodeUGIProvider ugiProvider = new DataNodeUGIProvider(params);
     ugi = ugiProvider.ugi();
@@ -144,7 +144,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
             LOG.warn("Error retrieving hostname: ", e);
             host = "unknown";
           }
-          REQLOG.info(host + " " + req.getMethod() + " "  + req.getUri() + " " +
+          REQLOG.info(host + " " + req.method() + " "  + req.uri() + " " +
               getResponseCode());
         }
         return null;
@@ -154,13 +154,13 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
   int getResponseCode() {
     return (resp == null) ? INTERNAL_SERVER_ERROR.code() :
-        resp.getStatus().code();
+        resp.status().code();
   }
 
   public void handle(ChannelHandlerContext ctx, HttpRequest req)
     throws IOException, URISyntaxException {
     String op = params.op();
-    HttpMethod method = req.getMethod();
+    HttpMethod method = req.method();
     if (PutOpParam.Op.CREATE.name().equalsIgnoreCase(op)
       && method == PUT) {
       onCreate(ctx);

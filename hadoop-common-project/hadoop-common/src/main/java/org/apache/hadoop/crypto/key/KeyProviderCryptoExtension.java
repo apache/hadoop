@@ -178,6 +178,7 @@ public class KeyProviderCryptoExtension extends
      * Calls to this method allows the underlying KeyProvider to warm-up any
      * implementation specific caches used to store the Encrypted Keys.
      * @param keyNames Array of Key Names
+     * @throws IOException thrown if the key material could not be encrypted.
      */
     public void warmUpEncryptedKeys(String... keyNames)
         throws IOException;
@@ -474,8 +475,9 @@ public class KeyProviderCryptoExtension extends
   /**
    * This constructor is to be used by sub classes that provide
    * delegating/proxying functionality to the {@link KeyProviderCryptoExtension}
-   * @param keyProvider
-   * @param extension
+   *
+   * @param keyProvider key provider.
+   * @param extension crypto extension.
    */
   protected KeyProviderCryptoExtension(KeyProvider keyProvider,
       CryptoExtension extension) {
@@ -486,6 +488,7 @@ public class KeyProviderCryptoExtension extends
    * Notifies the Underlying CryptoExtension implementation to warm up any
    * implementation specific caches for the specified KeyVersions
    * @param keyNames Arrays of key Names
+   * @throws IOException raised on errors performing I/O.
    */
   public void warmUpEncryptedKeys(String... keyNames)
       throws IOException {
@@ -557,7 +560,7 @@ public class KeyProviderCryptoExtension extends
    * Calls {@link CryptoExtension#drain(String)} for the given key name on the
    * underlying {@link CryptoExtension}.
    *
-   * @param keyName
+   * @param keyName key name.
    */
   public void drain(String keyName) {
     getExtension().drain(keyName);

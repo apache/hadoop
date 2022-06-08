@@ -15,4 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocolPB;
+
+#ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
+#define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
+
+#if defined(_WIN64)
+// Windows 64-bit.
+typedef long int ssize_t;
+#elif defined(_WIN32)
+// Windows 32-bit.
+typedef int ssize_t;
+#else
+// ssize_t is correctly defined by taking bit-ness into account on non-Windows
+// systems. So we just include the header file where ssize_t is defined.
+#include <sys/types.h>
+#endif
+
+#endif

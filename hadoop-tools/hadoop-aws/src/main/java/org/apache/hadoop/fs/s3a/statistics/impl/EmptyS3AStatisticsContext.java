@@ -337,6 +337,10 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
       return stubDurationTracker();
     }
 
+    @Override
+    public DurationTracker initiateInnerStreamClose(final boolean abort) {
+      return stubDurationTracker();
+    }
   }
 
   /**

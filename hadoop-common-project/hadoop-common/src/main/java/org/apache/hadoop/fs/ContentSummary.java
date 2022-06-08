@@ -149,17 +149,31 @@ public class ContentSummary extends QuotaUsage implements Writable{
   @Deprecated
   public ContentSummary() {}
   
-  /** Constructor, deprecated by ContentSummary.Builder
+  /**
+   *  Constructor, deprecated by ContentSummary.Builder
    *  This constructor implicitly set spaceConsumed the same as length.
    *  spaceConsumed and length must be set explicitly with
-   *  ContentSummary.Builder
+   *  ContentSummary.Builder.
+   *
+   * @param length length.
+   * @param fileCount file count.
+   * @param directoryCount directory count.
    * */
   @Deprecated
   public ContentSummary(long length, long fileCount, long directoryCount) {
     this(length, fileCount, directoryCount, -1L, length, -1L);
   }
 
-  /** Constructor, deprecated by ContentSummary.Builder */
+  /**
+   * Constructor, deprecated by ContentSummary.Builder.
+   *
+   * @param length length.
+   * @param fileCount file count.
+   * @param directoryCount directory count.
+   * @param quota quota.
+   * @param spaceConsumed space consumed.
+   * @param spaceQuota space quota.
+   * */
   @Deprecated
   public ContentSummary(
       long length, long fileCount, long directoryCount, long quota,
@@ -172,7 +186,11 @@ public class ContentSummary extends QuotaUsage implements Writable{
     setSpaceQuota(spaceQuota);
   }
 
-  /** Constructor for ContentSummary.Builder*/
+  /**
+   * Constructor for ContentSummary.Builder.
+   *
+   * @param builder builder.
+   */
   private ContentSummary(Builder builder) {
     super(builder);
     this.length = builder.length;

@@ -46,6 +46,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
@@ -482,6 +483,34 @@ public class TestNameNodeReconfigure {
     // Hence, invalid block limit should be reset to 10000
     assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not reconfigured correctly", 10000,
         datanodeManager.getBlockInvalidateLimit());
+  }
+
+  @Test
+  public void testSlowPeerTrackerEnabled() throws Exception {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager = nameNode.namesystem.getBlockManager()
+        .getDatanodeManager();
+
+    assertFalse("SlowNode tracker is already enabled. It should be disabled by default",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+
+    try {
+      nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "non-boolean");
+      fail("should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals(
+          "Could not change property dfs.datanode.peer.stats.enabled from 'false' to 'non-boolean'",
+          e.getMessage());
+    }
+
+    nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "True");
+    assertTrue("SlowNode tracker is still disabled. Reconfiguration could not be successful",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+
+    nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, null);
+    assertFalse("SlowNode tracker is still enabled. Reconfiguration could not be successful",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+
   }
 
   @After
