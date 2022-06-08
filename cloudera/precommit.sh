@@ -119,7 +119,7 @@ YETUS_ARGS+=("--sentinel")
 YETUS_ARGS+=("--resetrepo")
 YETUS_ARGS+=("--tests-filter=checkstyle,pylint")
 YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
-YETUS_ARGS+=("--skip-dirs=dev-support,cloudera")
+YETUS_ARGS+=("--skip-dirs=dev-support,cloudera,hadoop-hdfs-project")
 YETUS_ARGS+=("--excludes=${SOURCEDIR}/cloudera/precommit-excludes.txt")
 
 YETUS_ARGS+=("${PATCH_FILE}")
