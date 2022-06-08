@@ -80,7 +80,7 @@ public class DecompressorStream extends CompressionInputStream {
    * Allow derived classes to directly set the underlying stream.
    * 
    * @param in Underlying input stream.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   protected DecompressorStream(InputStream in) throws IOException {
     super(in);

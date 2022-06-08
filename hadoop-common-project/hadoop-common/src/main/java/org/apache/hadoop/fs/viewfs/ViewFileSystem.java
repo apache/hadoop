@@ -107,6 +107,8 @@ public class ViewFileSystem extends FileSystem {
 
   /**
    * Gets file system creator instance.
+   *
+   * @return fs getter.
    */
   protected FsGetter fsGetter() {
     return new FsGetter();
@@ -253,9 +255,9 @@ public class ViewFileSystem extends FileSystem {
   private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
   /**
    * Make the path Absolute and get the path-part of a pathname.
-   * Checks that URI matches this file system 
+   * Checks that URI matches this file system
    * and that the path-part is a valid name.
-   * 
+   *
    * @param p path
    * @return path-part of the Path p
    */
@@ -263,17 +265,17 @@ public class ViewFileSystem extends FileSystem {
     checkPath(p);
     return makeAbsolute(p).toUri().getPath();
   }
-  
+
   private Path makeAbsolute(final Path f) {
     return f.isAbsolute() ? f : new Path(workingDir, f);
   }
-  
+
   /**
    * This is the  constructor with the signature needed by
    * {@link FileSystem#createFileSystem(URI, Configuration)}
-   * 
+   *
    * After this constructor is called initialize() is called.
-   * @throws IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public ViewFileSystem() throws IOException {
     ugi = UserGroupInformation.getCurrentUser();
@@ -382,31 +384,31 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Convenience Constructor for apps to call directly
+   * Convenience Constructor for apps to call directly.
    * @param theUri which must be that of ViewFileSystem
-   * @param conf
-   * @throws IOException
+   * @param conf conf configuration.
+   * @throws IOException raised on errors performing I/O.
    */
   ViewFileSystem(final URI theUri, final Configuration conf)
       throws IOException {
     this();
     initialize(theUri, conf);
   }
-  
+
   /**
-   * Convenience Constructor for apps to call directly
-   * @param conf
-   * @throws IOException
+   * Convenience Constructor for apps to call directly.
+   * @param conf configuration.
+   * @throws IOException raised on errors performing I/O.
    */
   public ViewFileSystem(final Configuration conf) throws IOException {
     this(FsConstants.VIEWFS_URI, conf);
   }
-  
+
   @Override
   public URI getUri() {
     return myUri;
   }
-  
+
   @Override
   public Path resolvePath(final Path f) throws IOException {
     final InodeTree.ResolveResult<FileSystem> res;
@@ -416,7 +418,7 @@ public class ViewFileSystem extends FileSystem {
     }
     return res.targetFileSystem.resolvePath(res.remainingPath);
   }
-  
+
   @Override
   public Path getHomeDirectory() {
     if (homeDir == null) {
@@ -424,13 +426,13 @@ public class ViewFileSystem extends FileSystem {
       if (base == null) {
         base = "/user";
       }
-      homeDir = (base.equals("/") ? 
+      homeDir = (base.equals("/") ?
           this.makeQualified(new Path(base + ugi.getShortUserName())):
           this.makeQualified(new Path(base + "/" + ugi.getShortUserName())));
     }
     return homeDir;
   }
-  
+
   @Override
   public Path getWorkingDirectory() {
     return workingDir;
@@ -441,11 +443,11 @@ public class ViewFileSystem extends FileSystem {
     getUriPath(new_dir); // this validates the path
     workingDir = makeAbsolute(new_dir);
   }
-  
+
   @Override
   public FSDataOutputStream append(final Path f, final int bufferSize,
       final Progressable progress) throws IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.append(res.remainingPath, bufferSize, progress);
   }
@@ -464,7 +466,7 @@ public class ViewFileSystem extends FileSystem {
     return res.targetFileSystem.createNonRecursive(res.remainingPath,
         permission, flags, bufferSize, replication, blockSize, progress);
   }
-  
+
   @Override
   public FSDataOutputStream create(final Path f, final FsPermission permission,
       final boolean overwrite, final int bufferSize, final short replication,
@@ -480,11 +482,11 @@ public class ViewFileSystem extends FileSystem {
         overwrite, bufferSize, replication, blockSize, progress);
   }
 
-  
+
   @Override
   public boolean delete(final Path f, final boolean recursive)
       throws AccessControlException, FileNotFoundException, IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
         fsState.resolve(getUriPath(f), true);
     // If internal dir or target is a mount link (ie remainingPath is Slash)
     if (res.isInternalDir() || res.remainingPath == InodeTree.SlashPath) {
@@ -492,18 +494,18 @@ public class ViewFileSystem extends FileSystem {
     }
     return res.targetFileSystem.delete(res.remainingPath, recursive);
   }
-  
+
   @Override
   @SuppressWarnings("deprecation")
   public boolean delete(final Path f)
       throws AccessControlException, FileNotFoundException, IOException {
     return delete(f, true);
   }
-  
+
   @Override
-  public BlockLocation[] getFileBlockLocations(FileStatus fs, 
+  public BlockLocation[] getFileBlockLocations(FileStatus fs,
       long start, long len) throws IOException {
-    final InodeTree.ResolveResult<FileSystem> res = 
+    final InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(fs.getPath()), true);
     return res.targetFileSystem.getFileBlockLocations(
         new ViewFsFileStatus(fs, res.remainingPath), start, len);
@@ -513,7 +515,7 @@ public class ViewFileSystem extends FileSystem {
   public FileChecksum getFileChecksum(final Path f)
       throws AccessControlException, FileNotFoundException,
       IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.getFileChecksum(res.remainingPath);
   }
@@ -570,7 +572,7 @@ public class ViewFileSystem extends FileSystem {
     FileStatus status =  res.targetFileSystem.getFileStatus(res.remainingPath);
     return fixFileStatus(status, this.makeQualified(f));
   }
-  
+
   @Override
   public void access(Path path, FsAction mode) throws AccessControlException,
       FileNotFoundException, IOException {
@@ -611,7 +613,7 @@ public class ViewFileSystem extends FileSystem {
       FileNotFoundException, IOException {
     InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
-    
+
     FileStatus[] statusLst = res.targetFileSystem.listStatus(res.remainingPath);
     if (!res.isInternalDir()) {
       // We need to change the name in the FileStatus as described in
@@ -675,7 +677,7 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public boolean mkdirs(final Path dir, final FsPermission permission)
       throws IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
         fsState.resolve(getUriPath(dir), false);
     return res.targetFileSystem.mkdirs(res.remainingPath, permission);
   }
@@ -683,15 +685,15 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(final Path f, final int bufferSize)
       throws AccessControlException, FileNotFoundException, IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
         fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.open(res.remainingPath, bufferSize);
   }
 
-  
+
   @Override
   public boolean rename(final Path src, final Path dst) throws IOException {
-    // passing resolveLastComponet as false to catch renaming a mount point to 
+    // passing resolveLastComponet as false to catch renaming a mount point to
     // itself. We need to catch this as an internal operation and fail if no
     // fallback.
     InodeTree.ResolveResult<FileSystem> resSrc =
@@ -802,28 +804,28 @@ public class ViewFileSystem extends FileSystem {
         fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.truncate(res.remainingPath, newLength);
   }
-  
+
   @Override
   public void setOwner(final Path f, final String username,
       final String groupname) throws AccessControlException,
       FileNotFoundException, IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
-    res.targetFileSystem.setOwner(res.remainingPath, username, groupname); 
+    res.targetFileSystem.setOwner(res.remainingPath, username, groupname);
   }
 
   @Override
   public void setPermission(final Path f, final FsPermission permission)
       throws AccessControlException, FileNotFoundException, IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
-    res.targetFileSystem.setPermission(res.remainingPath, permission); 
+    res.targetFileSystem.setPermission(res.remainingPath, permission);
   }
 
   @Override
   public boolean setReplication(final Path f, final short replication)
       throws AccessControlException, FileNotFoundException, IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.setReplication(res.remainingPath, replication);
   }
@@ -831,9 +833,9 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public void setTimes(final Path f, final long mtime, final long atime)
       throws AccessControlException, FileNotFoundException, IOException {
-    InodeTree.ResolveResult<FileSystem> res = 
+    InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
-    res.targetFileSystem.setTimes(res.remainingPath, mtime, atime); 
+    res.targetFileSystem.setTimes(res.remainingPath, mtime, atime);
   }
 
   @Override
@@ -955,7 +957,7 @@ public class ViewFileSystem extends FileSystem {
     }
     return fsMap;
   }
-  
+
   @Override
   public long getDefaultBlockSize() {
     throw new NotInMountpointException("getDefaultBlockSize");
@@ -978,7 +980,7 @@ public class ViewFileSystem extends FileSystem {
         fsState.resolve(getUriPath(f), true);
       return res.targetFileSystem.getDefaultBlockSize(res.remainingPath);
     } catch (FileNotFoundException e) {
-      throw new NotInMountpointException(f, "getDefaultBlockSize"); 
+      throw new NotInMountpointException(f, "getDefaultBlockSize");
     } catch (IOException e) {
       throw new RuntimeException("Not able to initialize fs in "
           + " getDefaultBlockSize for path " + f + " with exception", e);
@@ -992,7 +994,7 @@ public class ViewFileSystem extends FileSystem {
         fsState.resolve(getUriPath(f), true);
       return res.targetFileSystem.getDefaultReplication(res.remainingPath);
     } catch (FileNotFoundException e) {
-      throw new NotInMountpointException(f, "getDefaultReplication"); 
+      throw new NotInMountpointException(f, "getDefaultReplication");
     } catch (IOException e) {
       throw new RuntimeException("Not able to initialize fs in "
           + " getDefaultReplication for path " + f + " with exception", e);
@@ -1054,11 +1056,11 @@ public class ViewFileSystem extends FileSystem {
     }
     return children.toArray(new FileSystem[]{});
   }
-  
+
   public MountPoint[] getMountPoints() {
-    List<InodeTree.MountPoint<FileSystem>> mountPoints = 
+    List<InodeTree.MountPoint<FileSystem>> mountPoints =
                   fsState.getMountPoints();
-    
+
     MountPoint[] result = new MountPoint[mountPoints.size()];
     for ( int i = 0; i < mountPoints.size(); ++i ) {
       result[i] = new MountPoint(new Path(mountPoints.get(i).src),
@@ -1314,7 +1316,7 @@ public class ViewFileSystem extends FileSystem {
    * Constants#CONFIG_VIEWFS_LINK_MERGE_SLASH} is supported and is a valid
    * mount point. Else, throw NotInMountpointException.
    *
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public long getUsed() throws IOException {
@@ -1375,9 +1377,9 @@ public class ViewFileSystem extends FileSystem {
    * are not allowed.
    * If called on create or mkdir then this target is the parent of the
    * directory in which one is trying to create or mkdir; hence
-   * in this case the path name passed in is the last component. 
+   * in this case the path name passed in is the last component.
    * Otherwise this target is the end point of the path and hence
-   * the path name passed in is null. 
+   * the path name passed in is null.
    */
   static class InternalDirOfViewFs extends FileSystem {
     final InodeTree.INodeDir<FileSystem>  theInternalDir;
@@ -1386,7 +1388,7 @@ public class ViewFileSystem extends FileSystem {
     final URI myUri;
     private final boolean showMountLinksAsSymlinks;
     private InodeTree<FileSystem> fsState;
-    
+
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
         final long cTime, final UserGroupInformation ugi, URI uri,
         Configuration config, InodeTree fsState) throws URISyntaxException {
@@ -1411,7 +1413,7 @@ public class ViewFileSystem extends FileSystem {
             "Internal implementation error: expected file name to be /");
       }
     }
-    
+
     @Override
     public URI getUri() {
       return myUri;
@@ -1481,7 +1483,7 @@ public class ViewFileSystem extends FileSystem {
       checkPathIsSlash(f);
       throw readOnlyMountTable("delete", f);
     }
-    
+
     @Override
     @SuppressWarnings("deprecation")
     public boolean delete(final Path f)
@@ -1529,7 +1531,7 @@ public class ViewFileSystem extends FileSystem {
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, ROOT_PATH));
     }
-    
+
 
     @Override
     public FileStatus[] listStatus(Path f) throws AccessControlException,
@@ -1544,7 +1546,7 @@ public class ViewFileSystem extends FileSystem {
         INode<FileSystem> inode = iEntry.getValue();
         Path path = new Path(inode.fullPath).makeQualified(myUri, null);
         if (inode.isLink()) {
-          INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
+          INodeLink<FileSystem> link = inode.getLink();
 
           if (showMountLinksAsSymlinks) {
             // To maintain backward compatibility, with default option(showing
@@ -1721,7 +1723,7 @@ public class ViewFileSystem extends FileSystem {
         IOException {
       checkPathIsSlash(src);
       checkPathIsSlash(dst);
-      throw readOnlyMountTable("rename", src);     
+      throw readOnlyMountTable("rename", src);
     }
 
     @Override
@@ -1740,7 +1742,7 @@ public class ViewFileSystem extends FileSystem {
     public void setPermission(Path f, FsPermission permission)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw readOnlyMountTable("setPermission", f);    
+      throw readOnlyMountTable("setPermission", f);
     }
 
     @Override
@@ -1754,7 +1756,7 @@ public class ViewFileSystem extends FileSystem {
     public void setTimes(Path f, long mtime, long atime)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw readOnlyMountTable("setTimes", f);    
+      throw readOnlyMountTable("setTimes", f);
     }
 
     @Override
@@ -1766,7 +1768,7 @@ public class ViewFileSystem extends FileSystem {
     public FsServerDefaults getServerDefaults(Path f) throws IOException {
       throw new NotInMountpointException(f, "getServerDefaults");
     }
-    
+
     @Override
     public long getDefaultBlockSize(Path f) {
       throw new NotInMountpointException(f, "getDefaultBlockSize");

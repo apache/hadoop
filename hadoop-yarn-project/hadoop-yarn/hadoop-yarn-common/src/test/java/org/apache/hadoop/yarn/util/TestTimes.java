@@ -21,6 +21,12 @@ package org.apache.hadoop.yarn.util;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import static org.apache.hadoop.yarn.util.Times.ISO8601_DATE_FORMAT;
+
 public class TestTimes {
 
   @Test
@@ -60,5 +66,16 @@ public class TestTimes {
     // use Long.MAX_VALUE to ensure started time is after the current one
     elapsed = Times.elapsed(Long.MAX_VALUE, 0, true);
     Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
+  }
+
+  @Test
+  public void validateISO() throws IOException {
+    SimpleDateFormat isoFormat = new SimpleDateFormat(ISO8601_DATE_FORMAT);
+    for (int i = 0; i < 1000; i++) {
+      long now = System.currentTimeMillis();
+      String instant =  Times.formatISO8601(now);
+      String date = isoFormat.format(new Date(now));
+      Assert.assertEquals(date, instant);
+    }
   }
 }

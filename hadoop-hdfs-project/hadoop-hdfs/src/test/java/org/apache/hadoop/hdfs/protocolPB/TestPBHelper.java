@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.protocolPB;
 import org.apache.hadoop.thirdparty.protobuf.UninitializedMessageException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -805,8 +806,14 @@ public class TestPBHelper {
   @Test
   public void testSlowPeerInfoPBHelper() {
     // Test with a map that has a few slow peer entries.
+    OutlierMetrics outlierMetrics1 = new OutlierMetrics(0.0, 0.0, 0.0, 0.0);
+    OutlierMetrics outlierMetrics2 = new OutlierMetrics(0.0, 0.0, 0.0, 1.0);
+    OutlierMetrics outlierMetrics3 = new OutlierMetrics(0.0, 0.0, 0.0, 2.0);
     final SlowPeerReports slowPeers = SlowPeerReports.create(
-        ImmutableMap.of("peer1", 0.0, "peer2", 1.0, "peer3", 2.0));
+        ImmutableMap.of(
+            "peer1", outlierMetrics1,
+            "peer2", outlierMetrics2,
+            "peer3", outlierMetrics3));
     SlowPeerReports slowPeersConverted1 = PBHelper.convertSlowPeerInfo(
         PBHelper.convertSlowPeerInfo(slowPeers));
     assertTrue(

@@ -30,6 +30,8 @@
     <final>false</final>
   </property>
 
+  <!-- Per-bucket configurations: landsat-pds -->
+
   <property>
     <name>fs.s3a.bucket.landsat-pds.endpoint</name>
     <value>${central.endpoint}</value>
@@ -53,6 +55,31 @@
     <name>fs.s3a.bucket.landsat-pds.audit.add.referrer.header</name>
     <value>false</value>
     <description>Do not add the referrer header to landsat operations</description>
+  </property>
+
+  <!-- Per-bucket configurations: usgs-landsat -->
+
+  <property>
+    <name>fs.s3a.bucket.usgs-landsat.endpoint</name>
+    <value>${central.endpoint}</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.usgs-landsat.requester.pays.enabled</name>
+    <value>true</value>
+    <description>usgs-landsat requires requester pays enabled</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.usgs-landsat.multipart.purge</name>
+    <value>false</value>
+    <description>Don't try to purge uploads in the read-only bucket, as
+      it will only create log noise.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.usgs-landsat.audit.add.referrer.header</name>
+    <value>false</value>
   </property>
 
 

@@ -16,18 +16,12 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+add_library(hdfs_tail_lib STATIC $<TARGET_OBJECTS:hdfs_tool_obj> hdfs-tail.cc)
+target_include_directories(hdfs_tail_lib PRIVATE ../../tools ${Boost_INCLUDE_DIRS})
+target_link_libraries(hdfs_tail_lib PRIVATE Boost::boost Boost::program_options tools_common hdfspp_static)
 
-project(googletest-download NONE)
+add_executable(hdfs_tail main.cc)
+target_include_directories(hdfs_tail PRIVATE ../../tools)
+target_link_libraries(hdfs_tail PRIVATE hdfs_tail_lib)
 
-include(ExternalProject)
-ExternalProject_Add(googletest
-  GIT_REPOSITORY    https://github.com/google/googletest.git
-  GIT_TAG           release-1.10.0
-  SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/googletest-src"
-  BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/googletest-build"
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND     ""
-  INSTALL_COMMAND   ""
-  TEST_COMMAND      ""
-)
+install(TARGETS hdfs_tail RUNTIME DESTINATION bin)

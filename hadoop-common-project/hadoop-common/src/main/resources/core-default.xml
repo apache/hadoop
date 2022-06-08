@@ -793,7 +793,8 @@
   <description>The size of buffer for use in sequence files.
   The size of this buffer should probably be a multiple of hardware
   page size (4096 on Intel x86), and it determines how much data is
-  buffered during read and write operations.</description>
+  buffered during read and write operations. Must be greater than zero.
+  </description>
 </property>
 
 <property>

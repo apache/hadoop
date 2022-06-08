@@ -38,8 +38,8 @@ public abstract class HHErasureCodingStep
   /**
    * Constructor given input blocks and output blocks.
    *
-   * @param inputBlocks
-   * @param outputBlocks
+   * @param inputBlocks inputBlocks.
+   * @param outputBlocks outputBlocks.
    */
   public HHErasureCodingStep(ECBlock[] inputBlocks,
                                      ECBlock[] outputBlocks) {

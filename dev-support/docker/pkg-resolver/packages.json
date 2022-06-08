@@ -62,7 +62,6 @@
     "centos:8": "clang"
   },
   "cmake": {
-    "debian:10": "cmake",
     "ubuntu:focal": "cmake",
     "ubuntu:focal::arch64": "cmake"
   },

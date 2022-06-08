@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "syscall.h"
+#include "types.h"
 
 bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
   return WriteToStdoutImpl(message.c_str());

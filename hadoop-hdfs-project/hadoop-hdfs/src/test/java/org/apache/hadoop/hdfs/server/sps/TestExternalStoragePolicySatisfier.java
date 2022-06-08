@@ -44,6 +44,7 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -84,6 +85,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockStorageMovementAttemptedItems;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
+import org.apache.hadoop.hdfs.server.sps.metrics.ExternalSPSBeanMetrics;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
@@ -102,6 +104,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.util.function.Supplier;
 
 /**
@@ -199,6 +203,20 @@ public class TestExternalStoragePolicySatisfier {
     if (externalSps != null) {
       externalSps.stopGracefully();
     }
+  }
+
+  private void stopExternalSps() {
+    if (externalSps != null) {
+      externalSps.stopGracefully();
+    }
+  }
+
+  private void startExternalSps() {
+    externalSps = new StoragePolicySatisfier(getConf());
+    externalCtxt = new ExternalSPSContext(externalSps, nnc);
+
+    externalSps.init(externalCtxt);
+    externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
   }
 
   private void createCluster() throws IOException {
@@ -1446,6 +1464,45 @@ public class TestExternalStoragePolicySatisfier {
   }
 
   /**
+   * Test SPS that satisfy the files and then delete the files before start SPS.
+   */
+  @Test(timeout = 300000)
+  public void testSPSSatisfyAndThenDeleteFileBeforeStartSPS() throws Exception {
+    try {
+      createCluster();
+      HdfsAdmin hdfsAdmin =
+          new HdfsAdmin(FileSystem.getDefaultUri(config), config);
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
+              {StorageType.DISK, StorageType.ARCHIVE},
+              {StorageType.DISK, StorageType.ARCHIVE}};
+      startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
+
+      stopExternalSps();
+
+      dfs.setStoragePolicy(new Path(FILE), COLD);
+      hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
+      dfs.delete(new Path(FILE), true);
+
+      startExternalSps();
+
+      String file1 = "/testMoveToSatisfyStoragePolicy_1";
+      writeContent(file1);
+      dfs.setStoragePolicy(new Path(file1), COLD);
+      hdfsAdmin.satisfyStoragePolicy(new Path(file1));
+
+      hdfsCluster.triggerHeartbeats();
+      DFSTestUtil.waitExpectedStorageType(file1, StorageType.ARCHIVE, 3, 30000,
+          dfs);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+
+  /**
    * Test SPS for directory which has multilevel directories.
    */
   @Test(timeout = 300000)
@@ -1762,6 +1819,36 @@ public class TestExternalStoragePolicySatisfier {
 
     public void clear() {
       actualBlockMovements.clear();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testExternalSPSMetricsExposedToJMX() throws Exception {
+    try {
+      createCluster();
+      // Start JMX but stop SPS thread to prevent mock data from being consumed.
+      externalSps.stop(true);
+      externalCtxt.initMetrics(externalSps);
+
+      ExternalSPSBeanMetrics spsBeanMetrics = externalCtxt.getSpsBeanMetrics();
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxBeanName = new ObjectName("Hadoop:service=ExternalSPS,name=ExternalSPS");
+      // Assert metrics before update.
+      assertEquals(0, mbs.getAttribute(mxBeanName, "AttemptedItemsCount"));
+      assertEquals(0, mbs.getAttribute(mxBeanName, "ProcessingQueueSize"));
+      assertEquals(0, mbs.getAttribute(mxBeanName, "MovementFinishedBlocksCount"));
+
+      // Update metrics.
+      spsBeanMetrics.updateAttemptedItemsCount();
+      spsBeanMetrics.updateProcessingQueueSize();
+      spsBeanMetrics.updateMovementFinishedBlocksCount();
+
+      // Assert metrics after update.
+      assertEquals(1, mbs.getAttribute(mxBeanName, "AttemptedItemsCount"));
+      assertEquals(1, mbs.getAttribute(mxBeanName, "ProcessingQueueSize"));
+      assertEquals(1, mbs.getAttribute(mxBeanName, "MovementFinishedBlocksCount"));
+    } finally {
+      shutdownCluster();
     }
   }
 }

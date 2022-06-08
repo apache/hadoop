@@ -141,6 +141,7 @@ public final class IOStatisticsBinding {
   /**
    * Convert entry values to the string format used in logging.
    *
+   * @param <E> type of values.
    * @param name statistic name
    * @param value stat value
    * @return formatted string
@@ -178,6 +179,8 @@ public final class IOStatisticsBinding {
   /**
    * A passthrough copy operation suitable for immutable
    * types, including numbers.
+   *
+   * @param <E> type of values.
    * @param src source object
    * @return the source object
    */
@@ -437,6 +440,7 @@ public final class IOStatisticsBinding {
    * @param input input callable.
    * @param <B> return type.
    * @return the result of the operation.
+   * @throws IOException raised on errors performing I/O.
    */
   public static <B> B trackDuration(
       DurationTrackerFactory factory,
@@ -521,21 +525,37 @@ public final class IOStatisticsBinding {
       // create the tracker outside try-with-resources so
       // that failures can be set in the catcher.
       DurationTracker tracker = createTracker(factory, statistic);
-      try {
-        // exec the input function and return its value
-        return input.apply();
-      } catch (IOException | RuntimeException e) {
-        // input function failed: note it
-        tracker.failed();
-        // and rethrow
-        throw e;
-      } finally {
-        // update the tracker.
-        // this is called after the catch() call would have
-        // set the failed flag.
-        tracker.close();
-      }
+      return invokeTrackingDuration(tracker, input);
     };
+  }
+
+  /**
+   * Given an IOException raising callable/lambda expression,
+   * execute it, updating the tracker on success/failure.
+   * @param tracker duration tracker.
+   * @param input input callable.
+   * @param <B> return type.
+   * @return the result of the invocation
+   * @throws IOException on failure.
+   */
+  public static <B> B invokeTrackingDuration(
+      final DurationTracker tracker,
+      final CallableRaisingIOE<B> input)
+      throws IOException {
+    try {
+      // exec the input function and return its value
+      return input.apply();
+    } catch (IOException | RuntimeException e) {
+      // input function failed: note it
+      tracker.failed();
+      // and rethrow
+      throw e;
+    } finally {
+      // update the tracker.
+      // this is called after the catch() call would have
+      // set the failed flag.
+      tracker.close();
+    }
   }
 
   /**

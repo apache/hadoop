@@ -139,6 +139,35 @@ public class TestDatanodeManager {
   }
 
   /**
+   * This test checks that if a node is re-registered with a different ip, its
+   * host2DatanodeMap is correctly updated with the new ip.
+   */
+  @Test
+  public void testHost2NodeMapCorrectAfterReregister()
+          throws IOException, InterruptedException {
+    //Create the DatanodeManager which will be tested
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Configuration conf = new Configuration();
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    String storageID = "someStorageID1";
+    String ipOld = "someIPOld" + storageID;
+    String ipNew = "someIPNew" + storageID;
+
+    dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID(ipOld, "", storageID, 9000, 0, 0, 0),
+            null, null, "version"));
+
+    dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID(ipNew, "", storageID, 9000, 0, 0, 0),
+            null, null, "version"));
+
+    assertNull("should be no node with old ip", dm.getDatanodeByHost(ipOld));
+    assertNotNull("should be a node with new ip", dm.getDatanodeByHost(ipNew));
+  }
+
+  /**
    * This test sends a random sequence of node registrations and node removals
    * to the DatanodeManager (of nodes with different IDs and versions), and
    * checks that the DatanodeManager keeps a correct count of different software

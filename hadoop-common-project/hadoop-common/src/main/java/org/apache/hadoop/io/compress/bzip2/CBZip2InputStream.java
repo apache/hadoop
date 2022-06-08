@@ -152,6 +152,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
   * This method reports the processed bytes so far. Please note that this
   * statistic is only updated on block boundaries and only when the stream is
   * initiated in BYBLOCK mode.
+  * @return ProcessedByteCount.
   */
   public long getProcessedByteCount() {
     return reportedBytesReadFromCompressedStream;
@@ -209,7 +210,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
    * @param marker The bit pattern to be found in the stream
    * @param markerBitLength No of bits in the marker
    * @return true if the marker was found otherwise false
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws IllegalArgumentException if marketBitLength is greater than 63
    */
   public boolean skipToNextMarker(long marker, int markerBitLength)
@@ -282,7 +283,8 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
   * the magic. Thus callers have to skip the first two bytes. Otherwise this
   * constructor will throw an exception.
   * </p>
-  *
+  * @param in in.
+  * @param readMode READ_MODE.
   * @throws IOException
   *             if the stream content is malformed or an I/O error occurs.
   * @throws NullPointerException
@@ -326,7 +328,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
    *
    * @return long Number of bytes between current stream position and the
    * next BZip2 block start marker.
- * @throws IOException
+ * @throws IOException raised on errors performing I/O.
    *
    */
   public static long numberOfBytesTillNextMarker(final InputStream in) throws IOException{

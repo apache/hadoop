@@ -136,6 +136,7 @@ public final class ProviderUtils {
    * @param config the existing configuration with provider path
    * @param fileSystemClass the class which providers must be compatible
    * @return Configuration clone with new provider path
+   * @throws IOException raised on errors performing I/O.
    */
   public static Configuration excludeIncompatibleCredentialProviders(
       Configuration config, Class<? extends FileSystem> fileSystemClass)

@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -41,6 +42,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -707,16 +709,18 @@ public class TestLoadBalancingKMSClientProvider {
       throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(
-        CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 3);
+        CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 5);
     final String keyName = "test";
     KMSClientProvider p1 = mock(KMSClientProvider.class);
     when(p1.createKey(Mockito.anyString(), Mockito.any(Options.class)))
         .thenThrow(new SSLHandshakeException("p1"))
+        .thenThrow(new SSLException("p1"))
         .thenReturn(new KMSClientProvider.KMSKeyVersion(keyName, "v1",
             new byte[0]));
     KMSClientProvider p2 = mock(KMSClientProvider.class);
     when(p2.createKey(Mockito.anyString(), Mockito.any(Options.class)))
-        .thenThrow(new ConnectException("p2"));
+        .thenThrow(new ConnectException("p2"))
+        .thenThrow(new SocketException("p1"));
 
     when(p1.getKMSUrl()).thenReturn("p1");
     when(p2.getKMSUrl()).thenReturn("p2");
@@ -725,9 +729,9 @@ public class TestLoadBalancingKMSClientProvider {
         new KMSClientProvider[] {p1, p2}, 0, conf);
 
     kp.createKey(keyName, new Options(conf));
-    verify(p1, Mockito.times(2)).createKey(Mockito.eq(keyName),
+    verify(p1, Mockito.times(3)).createKey(Mockito.eq(keyName),
         Mockito.any(Options.class));
-    verify(p2, Mockito.times(1)).createKey(Mockito.eq(keyName),
+    verify(p2, Mockito.times(2)).createKey(Mockito.eq(keyName),
         Mockito.any(Options.class));
   }
 

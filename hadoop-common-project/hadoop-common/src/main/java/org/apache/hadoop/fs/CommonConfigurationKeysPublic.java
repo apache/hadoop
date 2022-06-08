@@ -169,11 +169,11 @@ public class CommonConfigurationKeysPublic {
 
   /**
    * Number of filesystems instances can be created in parallel.
-   * <p></p>
+   * <p>
    * A higher number here does not necessarily improve performance, especially
    * for object stores, where multiple threads may be attempting to create an FS
    * instance for the same URI.
-   * <p></p>
+   * </p>
    * Default value: {@value}.
    */
   public static final String FS_CREATION_PARALLEL_COUNT =
@@ -181,8 +181,9 @@ public class CommonConfigurationKeysPublic {
 
   /**
    * Default value for {@link #FS_CREATION_PARALLEL_COUNT}.
-   * <p></p>
+   * <p>
    * Default value: {@value}.
+   * </p>
    */
   public static final int FS_CREATION_PARALLEL_COUNT_DEFAULT =
       64;
