@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -90,7 +91,11 @@ import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationState
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
@@ -208,7 +213,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
         1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
@@ -219,11 +224,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   }
 
   private SubmitApplicationRequest mockSubmitApplicationRequest(
-      ApplicationId appId, int priority) {
+      ApplicationId appId) {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
     ApplicationSubmissionContext context = ApplicationSubmissionContext
         .newInstance(appId, MockApps.newAppName(), "default",
-            Priority.newInstance(priority), amContainerSpec, false, false, -1,
+            Priority.newInstance(APP_PRIORITY_ZERO), amContainerSpec, false, false, -1,
             Resources.createResource(
                 YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
             "MockApp");
@@ -245,7 +250,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // First attempt
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -313,7 +318,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application we are going to kill later
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -388,7 +393,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application we want the report later
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -468,7 +473,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application we want the applicationAttempt report later
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -597,7 +602,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
     Assert.assertNotNull(response);
@@ -639,7 +644,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
     Assert.assertNotNull(response);
@@ -670,7 +675,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
     Assert.assertNotNull(response);
@@ -793,7 +798,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -836,7 +841,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -881,7 +886,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -920,9 +925,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         () -> interceptor.failApplicationAttempt(null));
 
     // normal request
-    ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -930,17 +934,20 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response);
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
+
     // Call GetApplicationAttempts
     GetApplicationAttemptsRequest attemptsRequest =
         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
         interceptor.getApplicationAttempts(attemptsRequest);
-
-    // Wait for app to start
-    while(attemptsResponse.getApplicationAttemptList().size() == 0) {
-      attemptsResponse =
-          interceptor.getApplicationAttempts(attemptsRequest);
-    }
     Assert.assertNotNull(attemptsResponse);
 
     ApplicationAttemptId attemptId = attemptsResponse.getApplicationAttemptList().
@@ -964,9 +971,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         () -> interceptor.updateApplicationPriority(null));
 
     // normal request
-    ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -974,17 +980,20 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response);
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
+
     // Call GetApplicationAttempts
     GetApplicationAttemptsRequest attemptsRequest =
         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
         interceptor.getApplicationAttempts(attemptsRequest);
-
-    // Wait for app to start
-    while(attemptsResponse.getApplicationAttemptList().size() == 0) {
-      attemptsResponse =
-          interceptor.getApplicationAttempts(attemptsRequest);
-    }
     Assert.assertNotNull(attemptsResponse);
 
     Priority priority = Priority.newInstance(20);
@@ -1008,9 +1017,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         () -> interceptor.updateApplicationTimeouts(null));
 
     // normal request
-    ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId, APP_PRIORITY_ZERO);
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -1018,21 +1026,24 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response);
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
+
     // Call GetApplicationAttempts
     GetApplicationAttemptsRequest attemptsRequest =
         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
         interceptor.getApplicationAttempts(attemptsRequest);
-
-    // Wait for app to start
-    while(attemptsResponse.getApplicationAttemptList().size() == 0) {
-      attemptsResponse =
-          interceptor.getApplicationAttempts(attemptsRequest);
-    }
     Assert.assertNotNull(attemptsResponse);
 
     String formatISO8601 =
-            Times.formatISO8601(System.currentTimeMillis() + 5 * 1000);
+        Times.formatISO8601(System.currentTimeMillis() + 5 * 1000);
     Map<ApplicationTimeoutType, String> applicationTimeouts = new HashMap<>();
     applicationTimeouts.put(ApplicationTimeoutType.LIFETIME, formatISO8601);
 
