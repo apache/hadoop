@@ -44,6 +44,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.fs.PathIOException;
@@ -105,6 +106,12 @@ public interface RequestFactory {
    * @return content encoding
    */
   String getContentEncoding();
+
+  /**
+   * Get the object storage class, return null if none.
+   * @return storage class
+   */
+  StorageClass getStorageClass();
 
   /**
    * Create a new object metadata instance.

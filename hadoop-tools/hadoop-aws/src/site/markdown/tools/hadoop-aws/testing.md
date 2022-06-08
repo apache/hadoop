@@ -572,6 +572,18 @@ can be turned off.
 Encryption is only used for those specific test suites with `Encryption` in
 their classname.
 
+### Disabling the storage class tests
+
+When running storage class tests against third party object store that doesn't support
+S3 storage class, these tests might fail. They can be disabled.
+
+```xml
+<property>
+  <name>test.fs.s3a.create.storage.class.enabled</name>
+  <value>false</value>
+</property>
+```
+
 ### Configuring the CSV file read tests**
 
 To test on alternate infrastructures supporting
