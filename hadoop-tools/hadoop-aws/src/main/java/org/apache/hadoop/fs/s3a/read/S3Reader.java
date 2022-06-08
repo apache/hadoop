@@ -158,7 +158,7 @@ public class S3Reader implements Closeable {
       }
       while (!this.closed && (numRemainingBytes > 0));
     } finally {
-      s3File.close(inputStream);
+      s3File.close(inputStream, numRemainingBytes);
     }
   }
 }
