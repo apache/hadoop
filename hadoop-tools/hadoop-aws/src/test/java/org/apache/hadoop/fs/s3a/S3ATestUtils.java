@@ -466,6 +466,17 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Skip a test if storage class tests are disabled.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfStorageClassTestsDisabled(
+      Configuration configuration) {
+    if (!configuration.getBoolean(KEY_STORAGE_CLASS_TESTS_ENABLED, true)) {
+      skip("Skipping storage class tests");
+    }
+  }
+
+  /**
    * Create a test path, using the value of
    * {@link S3ATestConstants#TEST_UNIQUE_FORK_ID} if it is set.
    * @param defVal default value
