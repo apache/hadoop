@@ -559,12 +559,12 @@ class S3ABlockOutputStream extends OutputStream implements
         writeOperationHelper.createPutObjectRequest(
             key,
             uploadData.getFile(),
-            builder.putOptions.getHeaders())
+            builder.putOptions)
         : writeOperationHelper.createPutObjectRequest(
             key,
             uploadData.getUploadStream(),
             size,
-            builder.putOptions.getHeaders());
+            builder.putOptions);
     BlockUploadProgress callback =
         new BlockUploadProgress(
             block, progressListener,  now());

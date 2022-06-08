@@ -25,7 +25,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
@@ -79,25 +78,25 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param destKey destination key
    * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
-   * @param headers optional map of custom headers.
+   * @param options
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
       InputStream inputStream,
       long length,
-      @Nullable Map<String, String> headers);
+      @Nullable PutObjectOptions options);
 
   /**
    * Create a {@link PutObjectRequest} request to upload a file.
    * @param dest key to PUT to.
    * @param sourceFile source file
-   * @param headers optional map of custom headers.
+   * @param options
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(
       String dest,
       File sourceFile,
-      @Nullable Map<String, String> headers);
+      @Nullable PutObjectOptions options);
 
   /**
    * Callback on a successful write.

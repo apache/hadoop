@@ -24,7 +24,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -234,22 +233,20 @@ public class WriteOperationHelper implements WriteOperations {
    * @param destKey destination key
    * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
-   * @param headers optional map of custom headers.
+   * @param options options for the request
    * @return the request
    */
   @Retries.OnceRaw
   public PutObjectRequest createPutObjectRequest(String destKey,
       InputStream inputStream,
       long length,
-      @Nullable final Map<String, String> headers) {
+      final PutObjectOptions options) {
     activateAuditSpan();
     ObjectMetadata objectMetadata = newObjectMetadata(length);
-    if (headers != null) {
-      objectMetadata.setUserMetadata(headers);
-    }
     return getRequestFactory().newPutObjectRequest(
         destKey,
         objectMetadata,
+        options,
         inputStream);
   }
 
@@ -257,26 +254,26 @@ public class WriteOperationHelper implements WriteOperations {
    * Create a {@link PutObjectRequest} request to upload a file.
    * @param dest key to PUT to.
    * @param sourceFile source file
-   * @param headers optional map of custom headers.
+   * @param options options for the request
    * @return the request
    */
   @Retries.OnceRaw
   public PutObjectRequest createPutObjectRequest(
       String dest,
       File sourceFile,
-      @Nullable final Map<String, String> headers) {
+      final PutObjectOptions options) {
     Preconditions.checkState(sourceFile.length() < Integer.MAX_VALUE,
         "File length is too big for a single PUT upload");
     activateAuditSpan();
     final ObjectMetadata objectMetadata =
         newObjectMetadata((int) sourceFile.length());
-    if (headers != null) {
-      objectMetadata.setUserMetadata(headers);
-    }
-    return getRequestFactory().
+
+    PutObjectRequest putObjectRequest = getRequestFactory().
         newPutObjectRequest(dest,
             objectMetadata,
+            options,
             sourceFile);
+    return putObjectRequest;
   }
 
   /**
@@ -319,7 +316,7 @@ public class WriteOperationHelper implements WriteOperations {
           () -> {
             final InitiateMultipartUploadRequest initiateMPURequest =
                 getRequestFactory().newMultipartUploadRequest(
-                    destKey, options.getHeaders());
+                    destKey, options);
             return owner.initiateMultipartUpload(initiateMPURequest)
                 .getUploadId();
           });

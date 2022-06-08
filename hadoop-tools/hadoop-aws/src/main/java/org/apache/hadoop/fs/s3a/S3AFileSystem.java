@@ -1691,11 +1691,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         committerIntegration.createTracker(path, key, outputStreamStatistics);
     String destKey = putTracker.getDestKey();
 
-    // put options are from the path, unless performance is requested,
-    // where it is always keeping dirs.
+    // put options are derived from the path and the
+    // option builder.
     boolean keep = performance || keepDirectoryMarkers(path);
     final PutObjectOptions putOptions =
-        new PutObjectOptions(keep, options.getHeaders());
+        new PutObjectOptions(keep, null, options.getHeaders());
 
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
@@ -2739,7 +2739,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata, File srcfile) {
-    return requestFactory.newPutObjectRequest(key, metadata, srcfile);
+    return requestFactory.newPutObjectRequest(key, metadata, null, srcfile);
   }
 
   /**

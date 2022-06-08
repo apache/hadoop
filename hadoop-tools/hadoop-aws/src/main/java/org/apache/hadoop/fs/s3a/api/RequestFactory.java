@@ -22,7 +22,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -51,6 +50,7 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 
 /**
  * Factory for S3 objects.
@@ -142,11 +142,12 @@ public interface RequestFactory {
    * Adds the ACL and metadata
    * @param key key of object
    * @param metadata metadata header
+   * @param options
    * @param srcfile source file
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, File srcfile);
+      ObjectMetadata metadata, final PutObjectOptions options, File srcfile);
 
   /**
    * Create a {@link PutObjectRequest} request.
@@ -154,11 +155,13 @@ public interface RequestFactory {
    * operation.
    * @param key key of object
    * @param metadata metadata header
+   * @param options options for the request
    * @param inputStream source data.
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata,
+      PutObjectOptions options,
       InputStream inputStream);
 
   /**
@@ -196,7 +199,7 @@ public interface RequestFactory {
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(
       String destKey,
-      @Nullable Map<String, String> headers);
+      @Nullable PutObjectOptions options);
 
   /**
    * Complete a multipart upload.

@@ -258,7 +258,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
         ObjectMetadata om = fs.newObjectMetadata(0L);
         PutObjectRequest put = requestFactory
             .newPutObjectRequest(fs.pathToKey(file), om,
-                new FailingInputStream());
+                null, new FailingInputStream());
         futures.add(submit(executorService, () ->
             writeOperationHelper.putObject(put, PutObjectOptions.keepingDirs())));
       }

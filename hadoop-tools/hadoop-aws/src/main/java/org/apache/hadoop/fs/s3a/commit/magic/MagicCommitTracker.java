@@ -146,7 +146,7 @@ public class MagicCommitTracker extends PutTracker {
         originalDestKey,
         new ByteArrayInputStream(EMPTY),
         0,
-        headers);
+        new PutObjectOptions(true, null, headers));
     upload(originalDestPut);
 
     // build the commit summary
