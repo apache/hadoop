@@ -244,6 +244,16 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /** Used by metrics. */
+  public long getNumReplicatedPendingBlocks() {
+    return pendingReconstruction.getNumReplicatedPendingBlocks();
+  }
+
+  /** Used by metrics. */
+  public long getNumEcPendingBlocks() {
+    return pendingReconstruction.getNumEcPendingBlocks();
+  }
+
+  /** Used by metrics. */
   public long getLowRedundancyBlocks() {
     return neededReconstruction.getLowRedundancyBlocks();
   }
