@@ -29,10 +29,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.junit.Test;
 
-import static org.hamcrest.core.IsNot.not;
-import static org.junit.Assert.*;
-
-
 /**
  * Test to verify that the DataNode Uuid is correctly initialized before
  * FsDataSet initialization.
