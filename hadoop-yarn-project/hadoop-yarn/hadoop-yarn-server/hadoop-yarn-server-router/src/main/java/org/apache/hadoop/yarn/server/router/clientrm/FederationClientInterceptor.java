@@ -1335,8 +1335,7 @@ public class FederationClientInterceptor
 
     if (response == null) {
       LOG.error("No response when signal to container of " +
-           "the applicationId {} to SubCluster {}.",
-           applicationId, subClusterId.getId());
+          "the applicationId {} to SubCluster {}.", applicationId, subClusterId.getId());
     }
 
     long stopTime = clock.getTime();

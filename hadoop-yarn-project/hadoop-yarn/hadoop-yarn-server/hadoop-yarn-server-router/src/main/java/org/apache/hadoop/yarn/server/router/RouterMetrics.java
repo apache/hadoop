@@ -236,7 +236,7 @@ public final class RouterMetrics {
 
     signalToContainerLatency =
         registry.newQuantiles("signalToContainerLatency",
-             "latency of signal to container timeouts", "ops", "latency", 10);
+            "latency of signal to container timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
