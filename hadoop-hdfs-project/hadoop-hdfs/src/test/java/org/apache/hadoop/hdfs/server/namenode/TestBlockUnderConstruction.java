@@ -45,9 +45,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-
 public class TestBlockUnderConstruction {
   static final String BASE_DIR = "/test/TestBlockUnderConstruction";
   static final int BLOCK_SIZE = 8192; // same as TestFileCreation.blocksize
