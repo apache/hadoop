@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,6 +66,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -75,6 +82,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -82,7 +90,12 @@ import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationState
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
@@ -108,6 +121,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   private String user = "test-user";
 
   private final static int NUM_SUBCLUSTER = 4;
+
+  private final static int APP_PRIORITY_ZERO = 0;
 
   @Override
   public void setUp() {
@@ -212,7 +227,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
     ApplicationSubmissionContext context = ApplicationSubmissionContext
         .newInstance(appId, MockApps.newAppName(), "default",
-            Priority.newInstance(0), amContainerSpec, false, false, -1,
+            Priority.newInstance(APP_PRIORITY_ZERO), amContainerSpec, false, false, -1,
             Resources.createResource(
                 YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
             "MockApp");
@@ -897,5 +912,148 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetAllResourceTypeInfoResponse response =
         interceptor.getResourceTypeInfo(GetAllResourceTypeInfoRequest.newInstance());
     Assert.assertEquals(2, response.getResourceTypeInfo().size());
+  }
+
+  @Test
+  public void testFailApplicationAttempt() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Fail Application Attempt request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing failApplicationAttempt request " +
+        "or applicationId or applicationAttemptId information.",
+        () -> interceptor.failApplicationAttempt(null));
+
+    // normal request
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
+
+    // Call GetApplicationAttempts
+    GetApplicationAttemptsRequest attemptsRequest =
+        GetApplicationAttemptsRequest.newInstance(appId);
+    GetApplicationAttemptsResponse attemptsResponse =
+        interceptor.getApplicationAttempts(attemptsRequest);
+    Assert.assertNotNull(attemptsResponse);
+
+    ApplicationAttemptId attemptId = attemptsResponse.getApplicationAttemptList().
+        get(0).getApplicationAttemptId();
+
+    FailApplicationAttemptRequest requestFailAppAttempt =
+        FailApplicationAttemptRequest.newInstance(attemptId);
+    FailApplicationAttemptResponse responseFailAppAttempt =
+        interceptor.failApplicationAttempt(requestFailAppAttempt);
+
+    Assert.assertNotNull(responseFailAppAttempt);
+  }
+
+  @Test
+  public void testUpdateApplicationPriority() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Update Application Priority request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing updateApplicationPriority request " +
+        "or applicationId or applicationPriority information.",
+        () -> interceptor.updateApplicationPriority(null));
+
+    // normal request
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
+
+    // Call GetApplicationAttempts
+    GetApplicationAttemptsRequest attemptsRequest =
+        GetApplicationAttemptsRequest.newInstance(appId);
+    GetApplicationAttemptsResponse attemptsResponse =
+        interceptor.getApplicationAttempts(attemptsRequest);
+    Assert.assertNotNull(attemptsResponse);
+
+    Priority priority = Priority.newInstance(20);
+    UpdateApplicationPriorityRequest requestUpdateAppPriority =
+        UpdateApplicationPriorityRequest.newInstance(appId, priority);
+    UpdateApplicationPriorityResponse responseAppPriority =
+        interceptor.updateApplicationPriority(requestUpdateAppPriority);
+
+    Assert.assertNotNull(responseAppPriority);
+    Assert.assertEquals(20,
+        responseAppPriority.getApplicationPriority().getPriority());
+  }
+
+  @Test
+  public void testUpdateApplicationTimeouts() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Update Application Timeouts request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing updateApplicationTimeouts request " +
+        "or applicationId or applicationTimeouts information.",
+        () -> interceptor.updateApplicationTimeouts(null));
+
+    // normal request
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
+
+    // Call GetApplicationAttempts
+    GetApplicationAttemptsRequest attemptsRequest =
+        GetApplicationAttemptsRequest.newInstance(appId);
+    GetApplicationAttemptsResponse attemptsResponse =
+        interceptor.getApplicationAttempts(attemptsRequest);
+    Assert.assertNotNull(attemptsResponse);
+
+    String appTimeout =
+        Times.formatISO8601(System.currentTimeMillis() + 5 * 1000);
+    Map<ApplicationTimeoutType, String> applicationTimeouts = new HashMap<>();
+    applicationTimeouts.put(ApplicationTimeoutType.LIFETIME, appTimeout);
+
+    UpdateApplicationTimeoutsRequest timeoutsRequest =
+        UpdateApplicationTimeoutsRequest.newInstance(appId, applicationTimeouts);
+    UpdateApplicationTimeoutsResponse timeoutsResponse =
+        interceptor.updateApplicationTimeouts(timeoutsRequest);
+
+    String responseTimeOut =
+        timeoutsResponse.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME);
+    Assert.assertNotNull(timeoutsResponse);
+    Assert.assertEquals(appTimeout, responseTimeOut);
   }
 }

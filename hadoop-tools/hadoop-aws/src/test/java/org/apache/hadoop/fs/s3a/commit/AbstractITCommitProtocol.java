@@ -71,6 +71,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_INTELLIGENT_TIERING;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.E_SELF_GENERATED_JOB_UUID;
@@ -696,6 +698,22 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   /**
+   * Verify storage class of output file matches the expected storage class.
+   * @param dir output directory.
+   * @param expectedStorageClass expected storage class value.
+   * @throws Exception failure.
+   */
+  private void validateStorageClass(Path dir, String expectedStorageClass) throws Exception {
+    Path expectedFile = getPart0000(dir);
+    S3AFileSystem fs = getFileSystem();
+    String actualStorageClass = fs.getObjectMetadata(expectedFile).getStorageClass();
+
+    Assertions.assertThat(actualStorageClass)
+        .describedAs("Storage class of object %s", expectedFile)
+        .isEqualToIgnoringCase(expectedStorageClass);
+  }
+
+  /**
    * Identify any path under the directory which begins with the
    * {@code "part-m-00000"} sequence.
    * @param dir directory to scan
@@ -794,6 +812,41 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     validateContent(outDir, shouldExpectSuccessMarker(),
         committer.getUUID());
     assertNoMultipartUploadsPending(outDir);
+  }
+
+  @Test
+  public void testCommitWithStorageClassConfig() throws Exception {
+    describe("Commit with specific storage class configuration;" +
+        " expect the final file has correct storage class.");
+
+    Configuration conf = getConfiguration();
+    skipIfStorageClassTestsDisabled(conf);
+    conf.set(STORAGE_CLASS, STORAGE_CLASS_INTELLIGENT_TIERING);
+
+    JobData jobData = startJob(false);
+    JobContext jContext = jobData.jContext;
+    TaskAttemptContext tContext = jobData.tContext;
+    AbstractS3ACommitter committer = jobData.committer;
+    validateTaskAttemptWorkingDirectory(committer, tContext);
+
+    // write output
+    writeTextOutput(tContext);
+
+    // commit task
+    dumpMultipartUploads();
+    commitTask(committer, tContext);
+
+    // commit job
+    assertMultipartUploadsPending(outDir);
+    commitJob(committer, jContext);
+
+    // validate output
+    validateContent(outDir, shouldExpectSuccessMarker(),
+        committer.getUUID());
+    assertNoMultipartUploadsPending(outDir);
+
+    // validate storage class
+    validateStorageClass(outDir, STORAGE_CLASS_INTELLIGENT_TIERING);
   }
 
   @Test
