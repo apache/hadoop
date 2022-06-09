@@ -176,7 +176,7 @@ public final class AWSClientConfig {
    *
    * @param host proxy host
    * @param port proxy port
-   * @return uri with host & port
+   * @return uri with host and port
    */
   private static URI buildURI(String host, int port) {
     try {
