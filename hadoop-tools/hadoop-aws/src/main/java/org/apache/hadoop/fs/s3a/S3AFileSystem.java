@@ -2517,10 +2517,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
                   // Next markers are only present when a delimiter is specified.
                   String nextMarker;
-                  if(prevResult.getV1().nextMarker() != null) {
+                  if (prevResult.getV1().nextMarker() != null) {
                     nextMarker = prevResult.getV1().nextMarker();
                   } else {
-                   nextMarker = prevListResult.get(prevListResult.size() - 1).key();
+                    nextMarker = prevListResult.get(prevListResult.size() - 1).key();
                   }
 
                   return S3ListResult.v1(s3V2.listObjects(

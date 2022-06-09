@@ -35,8 +35,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class MockS3ClientFactory implements S3ClientFactory {
 
   @Override
-  public AmazonS3 createS3Client(URI uri,
-      final S3ClientCreationParameters parameters) {
+  public AmazonS3 createS3Client(URI uri, final S3ClientCreationParameters parameters) {
     AmazonS3 s3 = mock(AmazonS3.class);
     String bucket = uri.getHost();
     when(s3.doesBucketExist(bucket)).thenReturn(true);
@@ -45,10 +44,8 @@ public class MockS3ClientFactory implements S3ClientFactory {
     // return a stub value
     MultipartUploadListing noUploads = new MultipartUploadListing();
     noUploads.setMultipartUploads(new ArrayList<>(0));
-    when(s3.listMultipartUploads(any()))
-        .thenReturn(noUploads);
-    when(s3.getBucketLocation(anyString()))
-        .thenReturn(Region.US_West.toString());
+    when(s3.listMultipartUploads(any())).thenReturn(noUploads);
+    when(s3.getBucketLocation(anyString())).thenReturn(Region.US_West.toString());
     return s3;
   }
 
@@ -58,4 +55,4 @@ public class MockS3ClientFactory implements S3ClientFactory {
     S3Client s3 = mock(S3Client.class);
     return s3;
   }
-  }
+}

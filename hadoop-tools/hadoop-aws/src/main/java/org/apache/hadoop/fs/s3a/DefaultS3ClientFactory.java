@@ -185,20 +185,20 @@ public class DefaultS3ClientFactory extends Configured
     bucket = uri.getHost();
 
     final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
-        S3AUtils.createClientConfigBuilder(conf);
+        AWSClientConfig.createClientConfigBuilder(conf);
 
-    final ApacheHttpClient.Builder httpClientBuilder = S3AUtils.createHttpClientBuilder(conf);
+    final ApacheHttpClient.Builder httpClientBuilder =
+        AWSClientConfig.createHttpClientBuilder(conf);
 
-    final RetryPolicy.Builder retryPolicyBuilder = S3AUtils.createRetryPolicyBuilder(conf);
+    final RetryPolicy.Builder retryPolicyBuilder = AWSClientConfig.createRetryPolicyBuilder(conf);
 
     final ProxyConfiguration.Builder proxyConfigBuilder =
-        S3AUtils.createProxyConfigurationBuilder(conf, bucket);
+        AWSClientConfig.createProxyConfigurationBuilder(conf, bucket);
 
     S3ClientBuilder s3ClientBuilder = S3Client.builder();
 
     // add any headers
-    parameters.getHeaders().forEach((h, v) ->
-        clientOverrideConfigBuilder.putHeader(h, v));
+    parameters.getHeaders().forEach((h, v) -> clientOverrideConfigBuilder.putHeader(h, v));
 
     if (parameters.isRequesterPays()) {
       // All calls must acknowledge requester will pay via header.
@@ -210,10 +210,13 @@ public class DefaultS3ClientFactory extends Configured
           parameters.getUserAgentSuffix());
     }
 
-    return s3ClientBuilder.overrideConfiguration(
-            clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build()).build())
-        .httpClientBuilder(httpClientBuilder.proxyConfiguration(proxyConfigBuilder.build()))
-        .build();
+    clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build());
+    httpClientBuilder.proxyConfiguration(proxyConfigBuilder.build());
+
+    s3ClientBuilder.httpClientBuilder(httpClientBuilder)
+        .overrideConfiguration(clientOverrideConfigBuilder.build());
+
+    return s3ClientBuilder.build();
   }
 
 
