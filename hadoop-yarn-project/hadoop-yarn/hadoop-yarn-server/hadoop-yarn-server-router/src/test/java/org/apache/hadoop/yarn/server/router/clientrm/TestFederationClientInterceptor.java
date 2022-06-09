@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -83,6 +85,7 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -91,6 +94,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -1055,5 +1059,46 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         timeoutsResponse.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME);
     Assert.assertNotNull(timeoutsResponse);
     Assert.assertEquals(appTimeout, responseTimeOut);
+  }
+
+  @Test
+  public void testSignalContainer() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Signal Container request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing signalToContainer request " +
+        "or containerId or command information.", () -> interceptor.signalToContainer(null));
+
+    // normal request
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
+    MockNM nm = interceptor.getMockNMs().get(subClusterId);
+    nm.nodeHeartbeat(true);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
+    mockRM.sendAMLaunched(rmApp.getCurrentAppAttempt().getAppAttemptId());
+
+    ContainerId containerId = rmApp.getCurrentAppAttempt().getMasterContainer().getId();
+
+    SignalContainerRequest signalContainerRequest =
+        SignalContainerRequest.newInstance(containerId, SignalContainerCommand.GRACEFUL_SHUTDOWN);
+    SignalContainerResponse signalContainerResponse =
+        interceptor.signalToContainer(signalContainerRequest);
+
+    Assert.assertNotNull(signalContainerResponse);
   }
 }
