@@ -76,7 +76,7 @@ public class TestDatanodeRegister {
     actor = new BPServiceActor("test", "test", INVALID_ADDR, null, mockBPOS);
 
     fakeNsInfo = mock(NamespaceInfo.class);
-    // Return a a good software version.
+    // Return a good software version.
     doReturn(VersionInfo.getVersion()).when(fakeNsInfo).getSoftwareVersion();
     // Return a good layout version for now.
     doReturn(HdfsServerConstants.NAMENODE_LAYOUT_VERSION).when(fakeNsInfo)
@@ -144,7 +144,7 @@ public class TestDatanodeRegister {
     DataNode dn = new DataNode(conf, locations, null, null);
     BPOfferService bpos = new BPOfferService("test_ns",
         Lists.newArrayList("nn0"), Lists.newArrayList(nnADDR),
-        Collections.<InetSocketAddress>nCopies(1, null), dn);
+        Collections.nCopies(1, null), dn);
     DatanodeProtocolClientSideTranslatorPB fakeDnProt =
         mock(DatanodeProtocolClientSideTranslatorPB.class);
     when(fakeDnProt.versionRequest()).thenReturn(fakeNsInfo);
