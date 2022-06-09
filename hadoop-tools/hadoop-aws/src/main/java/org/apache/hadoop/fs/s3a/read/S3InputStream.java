@@ -44,6 +44,8 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Provides an {@link InputStream} that allows reading from an S3 file.
  */
@@ -108,15 +110,10 @@ public abstract class S3InputStream
       S3AInputStream.InputStreamCallbacks client,
       S3AInputStreamStatistics streamStatistics) {
 
-    Validate.checkNotNull(context, "context");
-    Validate.checkNotNull(s3Attributes, "s3Attributes");
-    Validate.checkNotNull(client, "client");
-    Validate.checkNotNull(streamStatistics, "streamStatistics");
-
-    this.context = context;
-    this.s3Attributes = s3Attributes;
-    this.client = client;
-    this.streamStatistics = streamStatistics;
+    this.context = requireNonNull(context);
+    this.s3Attributes = requireNonNull(s3Attributes);
+    this.client = requireNonNull(client);
+    this.streamStatistics = requireNonNull(streamStatistics);
     this.ioStatistics = streamStatistics.getIOStatistics();
     this.name = S3File.getPath(s3Attributes);
     this.changeTracker = new ChangeTracker(

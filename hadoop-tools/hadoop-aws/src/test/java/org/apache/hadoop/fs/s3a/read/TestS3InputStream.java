@@ -59,23 +59,19 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
     new S3CachingInputStream(readContext, attrs, client, stats);
 
     ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'context' must not be null",
+        NullPointerException.class,
         () -> new S3CachingInputStream(null, attrs, client, stats));
 
     ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'s3Attributes' must not be null",
+        NullPointerException.class,
         () -> new S3CachingInputStream(readContext, null, client, stats));
 
     ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'client' must not be null",
+        NullPointerException.class,
         () -> new S3CachingInputStream(readContext, attrs, null, stats));
 
     ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'streamStatistics' must not be null",
+        NullPointerException.class,
         () -> new S3CachingInputStream(readContext, attrs, client, null));
   }
 
