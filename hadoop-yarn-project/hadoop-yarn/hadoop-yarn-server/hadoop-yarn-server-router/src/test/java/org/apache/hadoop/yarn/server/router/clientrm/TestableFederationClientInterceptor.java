@@ -75,7 +75,7 @@ public class TestableFederationClientInterceptor
         mockRM.init(super.getConf());
         mockRM.start();
         try {
-          MockNM nm = mockRM.registerNode("127.0.0.1:1234", 8092,4);
+          MockNM nm = mockRM.registerNode("127.0.0.1:1234", 8 * 1024,4);
           mockNMs.put(subClusterId, nm);
         } catch (Exception e) {
           Assert.fail(e.getMessage());
