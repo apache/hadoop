@@ -115,4 +115,7 @@ public class TestableFederationClientInterceptor
     }
   }
 
+  public ConcurrentHashMap<SubClusterId, MockRM> getMockRMs() {
+    return mockRMs;
+  }
 }
