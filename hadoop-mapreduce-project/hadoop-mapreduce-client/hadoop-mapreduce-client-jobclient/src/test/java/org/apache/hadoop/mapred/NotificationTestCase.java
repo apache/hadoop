@@ -180,7 +180,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
       String localPathRoot = System.getProperty("test.build.data","/tmp")
-        .toString().replace(' ', '+');;
+        .toString().replace(' ', '+');
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }
@@ -218,7 +218,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
       String localPathRoot = System.getProperty("test.build.data","/tmp")
-        .toString().replace(' ', '+');;
+        .toString().replace(' ', '+');
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }

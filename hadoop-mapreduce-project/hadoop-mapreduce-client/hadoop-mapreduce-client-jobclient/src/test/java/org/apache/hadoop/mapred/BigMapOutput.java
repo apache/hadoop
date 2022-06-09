@@ -70,7 +70,7 @@ public class BigMapOutput extends Configured implements Tool {
                                 BytesWritable.class, BytesWritable.class,
                                 CompressionType.NONE);
     long numBytesToWrite = fileSizeInMB * 1024 * 1024;
-    int minKeySize = conf.getInt(MIN_KEY, 10);;
+    int minKeySize = conf.getInt(MIN_KEY, 10);
     int keySizeRange = 
       conf.getInt(MAX_KEY, 1000) - minKeySize;
     int minValueSize = conf.getInt(MIN_VALUE, 0);

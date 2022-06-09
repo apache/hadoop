@@ -109,7 +109,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestRMAdminService {
 
-  private Configuration configuration;;
+  private Configuration configuration;
   private MockRM rm = null;
   private FileSystem fs;
   private Path workingPath;
