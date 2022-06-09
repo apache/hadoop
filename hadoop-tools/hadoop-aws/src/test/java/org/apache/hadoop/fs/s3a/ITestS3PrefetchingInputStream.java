@@ -165,7 +165,6 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 1);
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, 1);
     }
-
   }
 
 }
