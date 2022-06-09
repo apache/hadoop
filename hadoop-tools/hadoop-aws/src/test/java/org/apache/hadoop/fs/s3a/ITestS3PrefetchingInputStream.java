@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.io.IOException;
+import java.net.URI;
 
+import org.junit.After;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -37,6 +40,7 @@ import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Test the prefetching input stream, validates that the underlying S3CachingInputStream and
@@ -48,15 +52,19 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
     super(true);
   }
 
-  private static final int _1K = 1024;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ITestS3PrefetchingInputStream.class);
+
+  private static final int S_1K = 1024;
+  private static final int S_1M = S_1K * S_1K;
   // Path for file which should have length > block size so S3CachingInputStream is used
   private Path largeFile;
-  private FileSystem fs;
+  private FileSystem largeFileFS;
   private int numBlocks;
   private int blockSize;
   private long largeFileSize;
   // Size should be < block size so S3InMemoryInputStream is used
-  private static final int SMALL_FILE_SIZE = _1K * 16;
+  private static final int SMALL_FILE_SIZE = S_1K * 16;
 
 
   @Override
@@ -67,14 +75,21 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
     return conf;
   }
 
+  @After
+  public void teardown() throws Exception {
+    super.teardown();
+    cleanupWithLogger(LOG, largeFileFS);
+    largeFileFS = null;
+  }
 
-  private void openFS() throws IOException {
+  private void openFS() throws Exception {
     Configuration conf = getConfiguration();
 
     largeFile = new Path(DEFAULT_CSVTEST_FILE);
     blockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE);
-    fs = largeFile.getFileSystem(getConfiguration());
-    FileStatus fileStatus = fs.getFileStatus(largeFile);
+    largeFileFS = new S3AFileSystem();
+    largeFileFS.initialize(new URI(DEFAULT_CSVTEST_FILE), getConfiguration());
+    FileStatus fileStatus = largeFileFS.getFileStatus(largeFile);
     largeFileSize = fileStatus.getLen();
     numBlocks = calculateNumBlocks(largeFileSize, blockSize);
   }
@@ -92,12 +107,16 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
     describe("read a large file fully, uses S3CachingInputStream");
     openFS();
 
-    try (FSDataInputStream in = fs.open(largeFile)) {
+    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
       IOStatistics ioStats = in.getIOStatistics();
 
-      byte[] buffer = new byte[(int) largeFileSize];
+      byte[] buffer = new byte[S_1M * 10];
+      long bytesRead = 0;
 
-      in.read(buffer, 0, (int) largeFileSize);
+      while (bytesRead < largeFileSize) {
+        in.readFully(buffer, 0, (int) Math.min(buffer.length, largeFileSize - bytesRead));
+        bytesRead += buffer.length;
+      }
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, numBlocks);
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, numBlocks);
@@ -109,16 +128,16 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
     describe("random read on a large file, uses S3CachingInputStream");
     openFS();
 
-    try (FSDataInputStream in = fs.open(largeFile)) {
+    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
       IOStatistics ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[blockSize];
 
       // Don't read the block completely so it gets cached on seek
-      in.read(buffer, 0, blockSize - _1K * 10);
-      in.seek(blockSize + _1K * 10);
+      in.read(buffer, 0, blockSize - S_1K * 10);
+      in.seek(blockSize + S_1K * 10);
       // Backwards seek, will use cached block
-      in.seek(_1K * 5);
+      in.seek(S_1K * 5);
       in.read();
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 2);
@@ -139,13 +158,14 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
       byte[] buffer = new byte[SMALL_FILE_SIZE];
 
-      in.read(buffer, 0, _1K * 4);
-      in.seek(_1K * 12);
-      in.read(buffer, 0, _1K * 4);
+      in.read(buffer, 0, S_1K * 4);
+      in.seek(S_1K * 12);
+      in.read(buffer, 0, S_1K * 4);
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 1);
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, 1);
     }
 
   }
+
 }

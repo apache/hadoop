@@ -30,7 +30,6 @@ import com.amazonaws.services.s3.model.S3Object;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.common.Io;
 import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -41,6 +40,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Encapsulates low level interactions with S3 object on AWS.
@@ -48,29 +48,45 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTra
 public class S3File {
   private static final Logger LOG = LoggerFactory.getLogger(S3File.class);
 
-  // Read-specific operation context.
+  /**
+   * Read-specific operation context.
+   */
   private final S3AReadOpContext context;
 
-  // S3 object attributes.
+  /**
+   * S3 object attributes.
+   */
   private final S3ObjectAttributes s3Attributes;
 
-  // Callbacks used for interacting with the underlying S3 client.
+  /**
+   * Callbacks used for interacting with the underlying S3 client.
+   */
   private final S3AInputStream.InputStreamCallbacks client;
 
-  // Used for reporting input stream access statistics.
+  /**
+   * Used for reporting input stream access statistics.
+   */
   private final S3AInputStreamStatistics streamStatistics;
 
-  // Enforces change tracking related policies.
+  /**
+   * Enforces change tracking related policies.
+   */
   private final ChangeTracker changeTracker;
 
-  // Maps a stream returned by openForRead() to the associated S3 object.
-  // That allows us to close the object when closing the stream.
+  /**
+   * Maps a stream returned by openForRead() to the associated S3 object.
+   * That allows us to close the object when closing the stream.
+   */
   private Map<InputStream, S3Object> s3Objects;
 
-  // uri of the object being read
+  /**
+   * uri of the object being read
+   */
   private final String uri;
 
-  // size of a buffer to create when draining the stream.
+  /**
+   * size of a buffer to create when draining the stream.
+   */
   private static final int DRAIN_BUFFER_SIZE = 16384;
 
   /**
@@ -106,7 +122,7 @@ public class S3File {
     this.client = client;
     this.streamStatistics = streamStatistics;
     this.changeTracker = changeTracker;
-    this.s3Objects = new IdentityHashMap<InputStream, S3Object>();
+    this.s3Objects = new IdentityHashMap<>();
     this.uri = "s3a://" + this.s3Attributes.getBucket() + "/" + this.s3Attributes.getKey();
   }
 
@@ -236,8 +252,12 @@ public class S3File {
    * @param inputStream   stream to close.
    * @return was the stream aborted?
    */
-  private boolean drain(final boolean shouldAbort, final String reason, final long remaining,
-      final S3Object requestObject, final InputStream inputStream) {
+  private boolean drain(
+      final boolean shouldAbort,
+      final String reason,
+      final long remaining,
+      final S3Object requestObject,
+      final InputStream inputStream) {
 
     try {
       return invokeTrackingDuration(streamStatistics.initiateInnerStreamClose(shouldAbort),
@@ -262,8 +282,12 @@ public class S3File {
    * @param inputStream   stream to close.
    * @return was the stream aborted?
    */
-  private boolean drainOrAbortHttpStream(boolean shouldAbort, final String reason,
-      final long remaining, final S3Object requestObject, final InputStream inputStream) {
+  private boolean drainOrAbortHttpStream(
+      boolean shouldAbort,
+      final String reason,
+      final long remaining,
+      final S3Object requestObject,
+      final InputStream inputStream) {
 
     if (!shouldAbort && remaining > 0) {
       try {
@@ -284,8 +308,8 @@ public class S3File {
         shouldAbort = true;
       }
     }
-    Io.closeIgnoringIoException(inputStream);
-    Io.closeIgnoringIoException(requestObject);
+    cleanupWithLogger(LOG, inputStream);
+    cleanupWithLogger(LOG, requestObject);
     streamStatistics.streamClose(shouldAbort, remaining);
 
     LOG.debug("Stream {} {}: {}; remaining={}", uri, (shouldAbort ? "aborted" : "closed"), reason,
