@@ -76,20 +76,20 @@ public class LogAggregationFileControllerFactory {
           +" is invalid." + "The valid File Controller name should only "
           + "contain a-zA-Z0-9_ and can not start with numbers");
 
-      String remoteDirStr = String.format(
+      String remoteDirConfKey = String.format(
           YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
           fileController);
-      String remoteDir = conf.get(remoteDirStr);
+      String remoteDir = conf.get(remoteDirConfKey);
       boolean defaultRemoteDir = false;
       if (remoteDir == null || remoteDir.isEmpty()) {
         remoteDir = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
         defaultRemoteDir = true;
       }
-      String suffixStr = String.format(
+      String suffixConfKey = String.format(
           YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
           fileController);
-      String suffix = conf.get(suffixStr);
+      String suffix = conf.get(suffixConfKey);
       boolean defaultSuffix = false;
       if (suffix == null || suffix.isEmpty()) {
         suffix = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
@@ -107,8 +107,8 @@ public class LogAggregationFileControllerFactory {
           controllerChecker.put(dirSuffix, fileControllerStr);
         } else {
           String conflictController = controllerChecker.get(dirSuffix);
-          throw new RuntimeException("The combined value of " + remoteDirStr
-              + " and " + suffixStr + " should not be the same as the value"
+          throw new RuntimeException("The combined value of " + remoteDirConfKey
+              + " and " + suffixConfKey + " should not be the same as the value"
               + " set for " + conflictController);
         }
       } else {
@@ -131,8 +131,7 @@ public class LogAggregationFileControllerFactory {
       LogAggregationFileController s = ReflectionUtils.newInstance(
           sClass, conf);
       if (s == null) {
-        throw new RuntimeException("No object created for "
-            + controllerClassName);
+        throw new RuntimeException("No object created for " + controllerClassName);
       }
       s.initialize(conf, fileController);
       controllers.add(s);
