@@ -215,7 +215,7 @@ files (`getFileStatus()`, `isFile()`) more likely to see the file.
 The exact form of the inconsistencies, and which operations/parameters
 trigger this are undefined and may change between even minor releases.
 
-Using this option is the equivalent of pressing and holding down the 
+Using this option is the equivalent of pressing and holding down the
 "Electronic Stability Control"
 button on a rear-wheel drive car for five seconds: the safety checks are off.
 Things wil be faster if the driver knew what they were doing.

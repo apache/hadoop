@@ -142,12 +142,12 @@ public interface RequestFactory {
    * Adds the ACL and metadata
    * @param key key of object
    * @param metadata metadata header
-   * @param options
+   * @param options options for the request
    * @param srcfile source file
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, final PutObjectOptions options, File srcfile);
+      ObjectMetadata metadata, PutObjectOptions options, File srcfile);
 
   /**
    * Create a {@link PutObjectRequest} request.
@@ -194,7 +194,7 @@ public interface RequestFactory {
   /**
    * Start a multipart upload.
    * @param destKey destination object key
-   * @param headers headers
+   * @param options options for the request
    * @return the request.
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(

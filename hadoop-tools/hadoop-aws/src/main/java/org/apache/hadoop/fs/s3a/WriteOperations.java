@@ -78,7 +78,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param destKey destination key
    * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
-   * @param options
+   * @param options options for the request
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
@@ -90,7 +90,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * Create a {@link PutObjectRequest} request to upload a file.
    * @param dest key to PUT to.
    * @param sourceFile source file
-   * @param options
+   * @param options options for the request
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(
