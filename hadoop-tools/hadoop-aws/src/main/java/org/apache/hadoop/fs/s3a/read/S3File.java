@@ -80,7 +80,7 @@ public class S3File {
   private Map<InputStream, S3Object> s3Objects;
 
   /**
-   * uri of the object being read
+   * uri of the object being read.
    */
   private final String uri;
 
@@ -123,7 +123,7 @@ public class S3File {
     this.streamStatistics = streamStatistics;
     this.changeTracker = changeTracker;
     this.s3Objects = new IdentityHashMap<>();
-    this.uri = "s3a://" + this.s3Attributes.getBucket() + "/" + this.s3Attributes.getKey();
+    this.uri = this.getPath();
   }
 
   /**
@@ -195,7 +195,6 @@ public class S3File {
         .withRange(offset, offset + size - 1);
     this.changeTracker.maybeApplyConstraint(request);
 
-    String uri = this.getPath();
     String operation = String.format(
         "%s %s at %d", S3AInputStream.OPERATION_OPEN, uri, offset);
     DurationTracker tracker = streamStatistics.initiateGetRequest();

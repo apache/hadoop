@@ -134,8 +134,9 @@ public final class Fakes {
         futurePool,
         prefetchBlockSize,
         prefetchBlockCount)
-        .withChangeDetectionPolicy(ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,
-            ChangeDetectionPolicy.Source.ETag, false))
+        .withChangeDetectionPolicy(
+            ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,
+                ChangeDetectionPolicy.Source.ETag, false))
         .withInputPolicy(S3AInputPolicy.Normal);
   }
 
