@@ -523,12 +523,12 @@ public class TestAggregatedLogDeletionService {
   }
 
   private static ApplicationClientProtocol createMockRMClient(
-      List<ApplicationId> finishedApplicaitons,
+      List<ApplicationId> finishedApplications,
       List<ApplicationId> runningApplications) throws Exception {
     final ApplicationClientProtocol mockProtocol =
         mock(ApplicationClientProtocol.class);
-    if (finishedApplicaitons != null && !finishedApplicaitons.isEmpty()) {
-      for (ApplicationId appId : finishedApplicaitons) {
+    if (finishedApplications != null && !finishedApplications.isEmpty()) {
+      for (ApplicationId appId : finishedApplications) {
         GetApplicationReportRequest request =
             GetApplicationReportRequest.newInstance(appId);
         GetApplicationReportResponse response =
