@@ -75,7 +75,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
     return conf;
   }
 
-  @After
+  @Override
   public void teardown() throws Exception {
     super.teardown();
     cleanupWithLogger(LOG, largeFileFS);
