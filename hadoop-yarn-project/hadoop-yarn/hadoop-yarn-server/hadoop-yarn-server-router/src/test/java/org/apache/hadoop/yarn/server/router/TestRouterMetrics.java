@@ -828,7 +828,7 @@ public class TestRouterMetrics {
     Assert.assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededSignalToContainerRetrieved());
     Assert.assertEquals(225,
-       metrics.getLatencySucceededSignalToContainerRetrieved(), ASSERT_DOUBLE_DELTA);
+        metrics.getLatencySucceededSignalToContainerRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
   @Test
