@@ -1241,7 +1241,8 @@ class BPServiceActor implements Runnable {
     }
 
     long getLifelineWaitTime() {
-      return nextLifelineTime - monotonicNow();
+      long waitTime = nextLifelineTime - monotonicNow();
+      return waitTime > 0 ? waitTime : 0;
     }
 
     /**
