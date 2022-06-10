@@ -76,29 +76,13 @@ public class LogAggregationFileControllerFactory {
           +" is invalid." + "The valid File Controller name should only "
           + "contain a-zA-Z0-9_ and can not start with numbers");
 
-      String remoteDirConfKey = String.format(
-          YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
-          fileController);
-      String remoteDir = conf.get(remoteDirConfKey);
-      boolean defaultRemoteDir = false;
-      if (remoteDir == null || remoteDir.isEmpty()) {
-        remoteDir = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
-        defaultRemoteDir = true;
-      }
-      String suffixConfKey = String.format(
-          YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
-          fileController);
-      String suffix = conf.get(suffixConfKey);
-      boolean defaultSuffix = false;
-      if (suffix == null || suffix.isEmpty()) {
-        suffix = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
-        defaultSuffix = true;
-      }
-      String dirSuffix = remoteDir + "-" + suffix;
+      DeterminedLogAggregationRemoteDir remoteDir =
+          new DeterminedLogAggregationRemoteDir(conf, fileController);
+      DeterminedLogAggregationSuffix suffix =
+          new DeterminedLogAggregationSuffix(conf, fileController);
+      String dirSuffix = remoteDir.value + "-" + suffix.value;
       if (controllerChecker.containsKey(dirSuffix)) {
-        if (defaultRemoteDir && defaultSuffix) {
+        if (remoteDir.usingDefault && suffix.usingDefault) {
           String fileControllerStr = controllerChecker.get(dirSuffix);
           List<String> controllersList = new ArrayList<>();
           controllersList.add(fileControllerStr);
@@ -107,8 +91,8 @@ public class LogAggregationFileControllerFactory {
           controllerChecker.put(dirSuffix, fileControllerStr);
         } else {
           String conflictController = controllerChecker.get(dirSuffix);
-          throw new RuntimeException("The combined value of " + remoteDirConfKey
-              + " and " + suffixConfKey + " should not be the same as the value"
+          throw new RuntimeException("The combined value of " + remoteDir.configKey
+              + " and " + suffix.configKey + " should not be the same as the value"
               + " set for " + conflictController);
         }
       } else {
@@ -203,5 +187,44 @@ public class LogAggregationFileControllerFactory {
   public LinkedList<LogAggregationFileController>
       getConfiguredLogAggregationFileControllerList() {
     return this.controllers;
+  }
+
+  private class DeterminedLogAggregationRemoteDir {
+    private String value;
+    private boolean usingDefault = false;
+    private String configKey;
+
+    public DeterminedLogAggregationRemoteDir(Configuration conf,
+        String fileController) {
+      configKey = String.format(
+          YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
+          fileController);
+      String remoteDir = conf.get(configKey);
+      
+      if (remoteDir == null || remoteDir.isEmpty()) {
+        this.value = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
+        this.usingDefault = true;
+      }
+    }
+  }
+
+  private class DeterminedLogAggregationSuffix {
+    private String value;
+    private boolean usingDefault = false;
+    private String configKey;
+    
+    public DeterminedLogAggregationSuffix(Configuration conf,
+        String fileController) {
+      configKey = String.format(
+          YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
+          fileController);
+      String suffix = conf.get(configKey);
+      if (suffix == null || suffix.isEmpty()) {
+        this.value = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
+        this.usingDefault = true;
+      }
+    }
   }
 }
