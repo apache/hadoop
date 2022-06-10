@@ -75,28 +75,7 @@ public class LogAggregationFileControllerFactory {
           "a-zA-Z0-9_ and cannot start with numbers", fileController,
           YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS));
 
-      DeterminedLogAggregationRemoteDir remoteDir =
-          new DeterminedLogAggregationRemoteDir(conf, fileController);
-      DeterminedLogAggregationSuffix suffix =
-          new DeterminedLogAggregationSuffix(conf, fileController);
-      String dirSuffix = remoteDir.value + "-" + suffix.value;
-      if (controllerChecker.containsKey(dirSuffix)) {
-        if (remoteDir.usingDefault && suffix.usingDefault) {
-          String fileControllerStr = controllerChecker.get(dirSuffix);
-          List<String> controllersList = new ArrayList<>();
-          controllersList.add(fileControllerStr);
-          controllersList.add(fileController);
-          fileControllerStr = StringUtils.join(controllersList, ",");
-          controllerChecker.put(dirSuffix, fileControllerStr);
-        } else {
-          String conflictController = controllerChecker.get(dirSuffix);
-          throw new RuntimeException(String.format("The combined value of %s " +
-              "and %s should not be the same as the value set for %s",
-              remoteDir.configKey, suffix.configKey, conflictController));
-        }
-      } else {
-        controllerChecker.put(dirSuffix, fileController);
-      }
+      validateDuplicateRemoteAppLogDirs(conf, controllerChecker, fileController);
       String classKey = String.format(
           YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT,
           fileController);
@@ -118,6 +97,32 @@ public class LogAggregationFileControllerFactory {
       }
       s.initialize(conf, fileController);
       controllers.add(s);
+    }
+  }
+
+  private void validateDuplicateRemoteAppLogDirs(Configuration conf,
+      Map<String, String> controllerChecker, String fileController) {
+    DeterminedLogAggregationRemoteDir remoteDir =
+        new DeterminedLogAggregationRemoteDir(conf, fileController);
+    DeterminedLogAggregationSuffix suffix =
+        new DeterminedLogAggregationSuffix(conf, fileController);
+    String dirSuffix = remoteDir.value + "-" + suffix.value;
+    if (controllerChecker.containsKey(dirSuffix)) {
+      if (remoteDir.usingDefault && suffix.usingDefault) {
+        String fileControllerStr = controllerChecker.get(dirSuffix);
+        List<String> controllersList = new ArrayList<>();
+        controllersList.add(fileControllerStr);
+        controllersList.add(fileController);
+        fileControllerStr = StringUtils.join(controllersList, ",");
+        controllerChecker.put(dirSuffix, fileControllerStr);
+      } else {
+        String conflictController = controllerChecker.get(dirSuffix);
+        throw new RuntimeException(String.format("The combined value of %s " +
+            "and %s should not be the same as the value set for %s",
+            remoteDir.configKey, suffix.configKey, conflictController));
+      }
+    } else {
+      controllerChecker.put(dirSuffix, fileController);
     }
   }
 
