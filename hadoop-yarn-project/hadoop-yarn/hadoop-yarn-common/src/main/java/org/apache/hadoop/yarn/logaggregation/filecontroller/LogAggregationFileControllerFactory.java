@@ -207,6 +207,8 @@ public class LogAggregationFileControllerFactory {
         this.value = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
         this.usingDefault = true;
+      } else {
+        this.value = remoteDir;
       }
     }
   }
@@ -226,6 +228,8 @@ public class LogAggregationFileControllerFactory {
         this.value = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
         this.usingDefault = true;
+      } else {
+        this.value = suffix;
       }
     }
   }
