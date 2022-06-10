@@ -104,7 +104,7 @@ public class TestPmemCacheRecovery {
 
   @BeforeClass
   public static void setUpClass() throws Exception {
-    assumeTrue ("Requires PMDK", NativeIO.POSIX.isPmdkAvailable());
+    assumeTrue("Requires PMDK", NativeIO.POSIX.isPmdkAvailable());
 
     oldInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector.set(new DataNodeFaultInjector() {
