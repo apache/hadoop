@@ -66,15 +66,14 @@ public class LogAggregationFileControllerFactory {
     Collection<String> fileControllers = conf.getStringCollection(
         YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS);
     List<String> controllerClassName = new ArrayList<>();
-
     Map<String, String> controllerChecker = new HashMap<>();
 
     for (String fileController : fileControllers) {
       Preconditions.checkArgument(validateAggregatedFileControllerName(
-          fileController), "The FileControllerName: " + fileController
-          + " set in " + YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS
-          +" is invalid." + "The valid File Controller name should only "
-          + "contain a-zA-Z0-9_ and can not start with numbers");
+          fileController), String.format("The FileControllerName: %s set in " +
+          "%s is invalid.The valid File Controller name should only contain " +
+          "a-zA-Z0-9_ and cannot start with numbers", fileController,
+          YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS));
 
       DeterminedLogAggregationRemoteDir remoteDir =
           new DeterminedLogAggregationRemoteDir(conf, fileController);
@@ -91,9 +90,9 @@ public class LogAggregationFileControllerFactory {
           controllerChecker.put(dirSuffix, fileControllerStr);
         } else {
           String conflictController = controllerChecker.get(dirSuffix);
-          throw new RuntimeException("The combined value of " + remoteDir.configKey
-              + " and " + suffix.configKey + " should not be the same as the value"
-              + " set for " + conflictController);
+          throw new RuntimeException(String.format("The combined value of %s " +
+              "and %s should not be the same as the value set for %s",
+              remoteDir.configKey, suffix.configKey, conflictController));
         }
       } else {
         controllerChecker.put(dirSuffix, fileController);
