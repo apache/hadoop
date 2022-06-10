@@ -53,9 +53,8 @@ public class LogAggregationFileControllerFactory {
       LogAggregationFileControllerFactory.class);
   private final Pattern p = Pattern.compile(
       "^[A-Za-z_]+[A-Za-z0-9_]*$");
-  private LinkedList<LogAggregationFileController> controllers
-      = new LinkedList<>();
-  private Configuration conf;
+  private final LinkedList<LogAggregationFileController> controllers = new LinkedList<>();
+  private final Configuration conf;
 
   /**
    * Construct the LogAggregationFileControllerFactory object.
@@ -68,21 +67,21 @@ public class LogAggregationFileControllerFactory {
     List<String> controllerClassName = new ArrayList<>();
     Map<String, String> controllerChecker = new HashMap<>();
 
-    for (String fileController : fileControllers) {
+    for (String controllerName : fileControllers) {
       Preconditions.checkArgument(validateAggregatedFileControllerName(
-          fileController), String.format("The FileControllerName: %s set in " +
+          controllerName), String.format("The FileControllerName: %s set in " +
           "%s is invalid.The valid File Controller name should only contain " +
-          "a-zA-Z0-9_ and cannot start with numbers", fileController,
+          "a-zA-Z0-9_ and cannot start with numbers", controllerName,
           YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS));
 
-      validateDuplicateRemoteAppLogDirs(conf, controllerChecker, fileController);
+      validateDuplicateRemoteAppLogDirs(conf, controllerChecker, controllerName);
       DeterminedControllerClassName className =
-          new DeterminedControllerClassName(conf, fileController);
+          new DeterminedControllerClassName(conf, controllerName);
       controllerClassName.add(className.value);
-      LogAggregationFileController s = createFileControllerInstance(conf,
-          controllerClassName, fileController, className);
-      s.initialize(conf, fileController);
-      controllers.add(s);
+      LogAggregationFileController controller = createFileControllerInstance(conf,
+          controllerClassName, controllerName, className);
+      controller.initialize(conf, controllerName);
+      controllers.add(controller);
     }
   }
 
@@ -157,8 +156,7 @@ public class LogAggregationFileControllerFactory {
             return fileController;
           }
         } catch (Exception ex) {
-          diagnosticsMsg.append(ex.getMessage() + "\n");
-          continue;
+          diagnosticsMsg.append(ex.getMessage()).append("\n");
         }
       }
     }
@@ -172,8 +170,7 @@ public class LogAggregationFileControllerFactory {
           return fileController;
         }
       } catch (Exception ex) {
-        diagnosticsMsg.append(ex.getMessage() + "\n");
-        continue;
+        diagnosticsMsg.append(ex.getMessage()).append("\n");
       }
     }
 
@@ -194,10 +191,10 @@ public class LogAggregationFileControllerFactory {
     return this.controllers;
   }
 
-  private class DeterminedLogAggregationRemoteDir {
+  private static class DeterminedLogAggregationRemoteDir {
     private String value;
     private boolean usingDefault = false;
-    private String configKey;
+    private final String configKey;
 
     public DeterminedLogAggregationRemoteDir(Configuration conf,
         String fileController) {
@@ -214,10 +211,10 @@ public class LogAggregationFileControllerFactory {
     }
   }
 
-  private class DeterminedLogAggregationSuffix {
+  private static class DeterminedLogAggregationSuffix {
     private String value;
     private boolean usingDefault = false;
-    private String configKey;
+    private final String configKey;
     
     public DeterminedLogAggregationSuffix(Configuration conf,
         String fileController) {
@@ -233,7 +230,7 @@ public class LogAggregationFileControllerFactory {
     }
   }
 
-  private class DeterminedControllerClassName {
+  private static class DeterminedControllerClassName {
     private final String configKey;
     private final String value;
 
