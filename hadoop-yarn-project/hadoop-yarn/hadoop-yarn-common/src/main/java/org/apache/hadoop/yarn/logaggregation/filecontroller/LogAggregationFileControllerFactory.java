@@ -76,28 +76,29 @@ public class LogAggregationFileControllerFactory {
           YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS));
 
       validateDuplicateRemoteAppLogDirs(conf, controllerChecker, fileController);
-      String classKey = String.format(
-          YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT,
-          fileController);
-      String className = conf.get(classKey);
-      if (className == null || className.isEmpty()) {
-        throw new RuntimeException("No class configured for "
-            + fileController);
-      }
-      controllerClassName.add(className);
-      Class<? extends LogAggregationFileController> sClass = conf.getClass(
-          classKey, null, LogAggregationFileController.class);
-      if (sClass == null) {
-        throw new RuntimeException("No class defined for " + fileController);
-      }
-      LogAggregationFileController s = ReflectionUtils.newInstance(
-          sClass, conf);
-      if (s == null) {
-        throw new RuntimeException("No object created for " + controllerClassName);
-      }
+      DeterminedControllerClassName className =
+          new DeterminedControllerClassName(conf, fileController);
+      controllerClassName.add(className.value);
+      LogAggregationFileController s = createFileControllerInstance(conf,
+          controllerClassName, fileController, className);
       s.initialize(conf, fileController);
       controllers.add(s);
     }
+  }
+
+  private LogAggregationFileController createFileControllerInstance(
+      Configuration conf, List<String> controllerClassName,
+      String fileController, DeterminedControllerClassName className) {
+    Class<? extends LogAggregationFileController> clazz = conf.getClass(
+        className.configKey, null, LogAggregationFileController.class);
+    if (clazz == null) {
+      throw new RuntimeException("No class defined for " + fileController);
+    }
+    LogAggregationFileController instance = ReflectionUtils.newInstance(clazz, conf);
+    if (instance == null) {
+      throw new RuntimeException("No object created for " + controllerClassName);
+    }
+    return instance;
   }
 
   private void validateDuplicateRemoteAppLogDirs(Configuration conf,
@@ -228,6 +229,23 @@ public class LogAggregationFileControllerFactory {
         this.value = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
         this.usingDefault = true;
+      }
+    }
+  }
+
+  private class DeterminedControllerClassName {
+    private final String configKey;
+    private final String value;
+
+    public DeterminedControllerClassName(Configuration conf,
+        String fileController) {
+      this.configKey = String.format(
+          YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT,
+          fileController);
+      this.value = conf.get(configKey);
+      if (value == null || value.isEmpty()) {
+        throw new RuntimeException("No class configured for "
+            + fileController);
       }
     }
   }
