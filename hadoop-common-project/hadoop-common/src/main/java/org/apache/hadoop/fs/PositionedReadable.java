@@ -121,7 +121,6 @@ public interface PositionedReadable {
    */
   default void readVectored(List<? extends FileRange> ranges,
                             IntFunction<ByteBuffer> allocate) throws IOException {
-    VectoredReadUtils.readVectored(this, ranges, allocate,  minSeekForVectorReads(),
-        maxReadSizeForVectorReads());
+    VectoredReadUtils.readVectored(this, ranges, allocate);
   }
 }

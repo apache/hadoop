@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,7 +34,9 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
 public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTest {
@@ -98,5 +101,53 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
                 "default s3a max read size for vectored reads");
       }
     }
+  }
+
+  @Test
+  public void testStopVectoredIoOperationsCloseStream() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = createSomeRandomRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+      in.readVectored(fileRanges, allocate);
+      in.close();
+      LambdaTestUtils.intercept(InterruptedIOException.class,
+        () -> validateVectoredReadResult(fileRanges, DATASET));
+    }
+    // reopening the stream should succeed.
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges, DATASET);
+    }
+  }
+
+  @Test
+  public void testStopVectoredIoOperationsUnbuffer() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = createSomeRandomRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+      in.readVectored(fileRanges, allocate);
+      in.unbuffer();
+      LambdaTestUtils.intercept(InterruptedIOException.class,
+              () -> validateVectoredReadResult(fileRanges, DATASET));
+      // re-initiating the vectored reads after unbuffer should succeed.
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges, DATASET);
+    }
+
+  }
+
+  @Override
+  public void testOverlappingRanges() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = getSampleOverlappingRanges();
+    validateUnsupportedOperation(fs, fileRanges);
+  }
+
+  @Override
+  public void testSameRanges() throws Exception {
+    // Same ranges are special case of overlapping only.
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = getSampleSameRanges();
+    validateUnsupportedOperation(fs, fileRanges);
   }
 }

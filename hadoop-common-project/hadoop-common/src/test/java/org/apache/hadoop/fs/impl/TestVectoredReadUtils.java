@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileRangeImpl;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.test.HadoopTestBase;
 
+import static org.apache.hadoop.fs.impl.VectoredReadUtils.sortRanges;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionally;
 
@@ -141,8 +142,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         new FileRangeImpl(1000, 100)
         );
     assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
-    List<CombinedFileRange> outputList = VectoredReadUtils.sortAndMergeRanges(
-        input, 100, 1001, 2500);
+    List<CombinedFileRange> outputList = VectoredReadUtils.mergeSortedRanges(
+            Arrays.asList(sortRanges(input)), 100, 1001, 2500);
     assertEquals("merged range size", 1, outputList.size());
     CombinedFileRange output = outputList.get(0);
     assertEquals("merged range underlying size", 3, output.getUnderlying().size());
@@ -152,7 +153,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
     // the minSeek doesn't allow the first two to merge
     assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 1000));
-    outputList = VectoredReadUtils.sortAndMergeRanges(input, 100, 1000, 2100);
+    outputList = VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(input)), 100, 1000, 2100);
     assertEquals("merged range size", 2, outputList.size());
     assertEquals("range[1000,1100)", outputList.get(0).toString());
     assertEquals("range[2100,3100)", outputList.get(1).toString());
@@ -161,7 +162,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
     // the maxSize doesn't allow the third range to merge
     assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
-    outputList = VectoredReadUtils.sortAndMergeRanges(input, 100, 1001, 2099);
+    outputList = VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(input)), 100, 1001, 2099);
     assertEquals("merged range size", 2, outputList.size());
     assertEquals("range[1000,2200)", outputList.get(0).toString());
     assertEquals("range[3000,3100)", outputList.get(1).toString());
@@ -170,7 +171,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
     // test the round up and round down (the maxSize doesn't allow any merges)
     assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 16, 700));
-    outputList = VectoredReadUtils.sortAndMergeRanges(input, 16, 1001, 100);
+    outputList = VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(input)), 16, 1001, 100);
     assertEquals("merged range size", 3, outputList.size());
     assertEquals("range[992,1104)", outputList.get(0).toString());
     assertEquals("range[2096,2208)", outputList.get(1).toString());
@@ -188,8 +189,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             new FileRangeImpl(1000, 100)
     );
     assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
-    List<CombinedFileRange> outputList = VectoredReadUtils.sortAndMergeRanges(
-            input, 1, 1001, 2500);
+    List<CombinedFileRange> outputList = VectoredReadUtils.mergeSortedRanges(
+            Arrays.asList(sortRanges(input)), 1, 1001, 2500);
     assertEquals("merged range size", 1, outputList.size());
     CombinedFileRange output = outputList.get(0);
     assertEquals("merged range underlying size", 4, output.getUnderlying().size());
@@ -197,8 +198,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertTrue("merged output ranges are disjoint",
             VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
 
-    outputList = VectoredReadUtils.sortAndMergeRanges(
-            input, 100, 1001, 2500);
+    outputList = VectoredReadUtils.mergeSortedRanges(
+            Arrays.asList(sortRanges(input)), 100, 1001, 2500);
     assertEquals("merged range size", 1, outputList.size());
     output = outputList.get(0);
     assertEquals("merged range underlying size", 4, output.getUnderlying().size());
@@ -225,7 +226,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
                                                   int minimumSeek,
                                                   int maxSize) {
     List<CombinedFileRange> combinedFileRanges = VectoredReadUtils
-            .sortAndMergeRanges(inputRanges, chunkSize, minimumSeek, maxSize);
+            .mergeSortedRanges(inputRanges, chunkSize, minimumSeek, maxSize);
     Assertions.assertThat(combinedFileRanges)
             .describedAs("Mismatch in number of ranges post merging")
             .hasSize(inputRanges.size());
@@ -338,7 +339,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
         ArgumentMatchers.any(ByteBuffer.class));
     // should not merge the ranges
-    VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate, 100, 100);
+    VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate);
     Mockito.verify(stream, Mockito.times(3))
         .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
     for(int b=0; b < input.size(); ++b) {
@@ -346,6 +347,11 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     }
   }
 
+  /**
+   * TODO: Honestly this test doesn't makes sense much now as it is similar to above.
+   * Took time to fix this though. If you guys approve, I will remove.
+   * @throws Exception
+   */
   @Test
   public void testReadVectoredMerge() throws Exception {
     List<FileRange> input = Arrays.asList(new FileRangeImpl(2000, 100),
@@ -357,12 +363,14 @@ public class TestVectoredReadUtils extends HadoopTestBase {
       return null;
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
         ArgumentMatchers.any(ByteBuffer.class));
-    // should merge the ranges into a single read
-    VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate, 1000, 2100);
-    Mockito.verify(stream, Mockito.times(1))
+    // Default vectored read implementation doesn't do merging thus
+    // number of invocation should be equal to number of ranges.
+    VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate);
+    Mockito.verify(stream, Mockito.times(input.size()))
         .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
     for(int b=0; b < input.size(); ++b) {
-      validateBuffer("buffer " + b, input.get(b).getData().get(), (2 - b) * 1000);
+      // setting the start to zero as buffer will be filled separately for each range.
+      validateBuffer("buffer " + b, input.get(b).getData().get(), 0);
     }
   }
 }

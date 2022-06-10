@@ -42,6 +42,8 @@ import org.apache.hadoop.fs.FileRangeImpl;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.FutureIOSupport;
+import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDatasetEquals;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -53,10 +55,12 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   private static final Logger LOG = LoggerFactory.getLogger(AbstractContractVectoredReadTest.class);
 
   public static final int DATASET_LEN = 64 * 1024;
-  private static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
+  protected static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   protected static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
 
-  private final IntFunction<ByteBuffer> allocate;
+  protected final IntFunction<ByteBuffer> allocate;
+
+  private WeakReferencedElasticByteBufferPool pool = new WeakReferencedElasticByteBufferPool();
 
   private final String bufferType;
 
@@ -67,8 +71,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   public AbstractContractVectoredReadTest(String bufferType) {
     this.bufferType = bufferType;
-    this.allocate = "array".equals(bufferType) ?
-            ByteBuffer::allocate : ByteBuffer::allocateDirect;
+    this.allocate = value -> {
+      boolean isDirect = !"array".equals(bufferType);
+      return pool.getBuffer(isDirect, value);
+    };
   }
 
   @Override
@@ -77,6 +83,12 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     Path path = path(VECTORED_READ_FILE_NAME);
     FileSystem fs = getFileSystem();
     createFile(fs, path, true, DATASET);
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    super.teardown();
+    pool.release();
   }
 
   @Test
@@ -171,29 +183,73 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   }
 
   @Test
-  public void testSameRanges() throws Exception {
+  public void testOverlappingRanges() throws Exception {
     FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(new FileRangeImpl(8*1024, 1000));
-    fileRanges.add(new FileRangeImpl(8*1024, 1000));
-    fileRanges.add(new FileRangeImpl(8*1024, 1000));
-    CompletableFuture<FSDataInputStream> builder =
-            fs.openFile(path(VECTORED_READ_FILE_NAME))
-                    .build();
-    try (FSDataInputStream in = builder.get()) {
+    List<FileRange> fileRanges = getSampleOverlappingRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET);
     }
   }
 
   @Test
-  public void testOverlappingRanges() throws Exception {
+  public void testSameRanges() throws Exception {
+    // Same ranges are special case of overlapping only.
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = getSampleSameRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges, DATASET);
+    }
+  }
+
+  protected List<FileRange> getSampleSameRanges() {
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(8*1024, 1000));
+    fileRanges.add(new FileRangeImpl(8*1024, 1000));
+    fileRanges.add(new FileRangeImpl(8*1024, 1000));
+    return fileRanges;
+  }
+
+  protected List<FileRange> getSampleOverlappingRanges() {
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(100, 500));
+    fileRanges.add(new FileRangeImpl(400, 500));
+    return fileRanges;
+  }
+  protected void validateUnsupportedOperation(FileSystem fs,
+                                            List<? extends FileRange> fileRanges)
+          throws Exception {
+    CompletableFuture<FSDataInputStream> builder =
+            fs.openFile(path(VECTORED_READ_FILE_NAME))
+                    .build();
+    try (FSDataInputStream in = builder.get()) {
+      LambdaTestUtils.intercept(UnsupportedOperationException.class,
+              () -> in.readVectored(fileRanges, allocate));
+    }
+  }
+
+  @Test
+  public void testSomeRandomNonOverlappingRanges() throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(new FileRangeImpl(0, 1000));
-    fileRanges.add(new FileRangeImpl(90, 900));
-    fileRanges.add(new FileRangeImpl(50, 900));
-    fileRanges.add(new FileRangeImpl(10, 980));
+    fileRanges.add(new FileRangeImpl(500, 100));
+    fileRanges.add(new FileRangeImpl(1000, 200));
+    fileRanges.add(new FileRangeImpl(50, 10));
+    fileRanges.add(new FileRangeImpl(10, 5));
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges, DATASET);
+    }
+  }
+
+  @Test
+  public void testConsecutiveRanges() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(500, 100));
+    fileRanges.add(new FileRangeImpl(600, 200));
+    fileRanges.add(new FileRangeImpl(800, 100));
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET);
@@ -242,7 +298,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testNormalReadAfterVectoredRead() throws Exception {
     FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = createSomeOverlappingRanges();
+    List<FileRange> fileRanges = createSomeRandomRanges();
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
       // read starting 200 bytes
@@ -260,7 +316,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testVectoredReadAfterNormalRead() throws Exception {
     FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = createSomeOverlappingRanges();
+    List<FileRange> fileRanges = createSomeRandomRanges();
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       // read starting 200 bytes
       byte[] res = new byte[200];
@@ -278,8 +334,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testMultipleVectoredReads() throws Exception {
     FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges1 = createSomeOverlappingRanges();
-    List<FileRange> fileRanges2 = createSomeOverlappingRanges();
+    List<FileRange> fileRanges1 = createSomeRandomRanges();
+    List<FileRange> fileRanges2 = createSomeRandomRanges();
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges1, allocate);
       in.readVectored(fileRanges2, allocate);
@@ -288,10 +344,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
-  protected List<FileRange> createSomeOverlappingRanges() {
+  protected List<FileRange> createSomeRandomRanges() {
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(new FileRangeImpl(0, 100));
-    fileRanges.add(new FileRangeImpl(90, 50));
+    fileRanges.add(new FileRangeImpl(110, 50));
     return fileRanges;
   }
 

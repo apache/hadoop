@@ -18,9 +18,27 @@
 
 package org.apache.hadoop.fs.contract.localfs;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.FileRangeImpl;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestLocalFSContractVectoredRead extends AbstractContractVectoredReadTest {
 
@@ -31,5 +49,39 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new LocalFSContract(conf);
+  }
+
+  @Test
+  public void testChecksumValidationDuringVectoredRead() throws Exception {
+    Path testPath = path("big_range_checksum");
+    LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+    byte[] DATASET_CORRECT = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
+    try (FSDataOutputStream out = localFs.create(testPath, true)){
+      out.write(DATASET_CORRECT);
+    }
+    Path checksumPath = localFs.getChecksumFile(testPath);
+    Assertions.assertThat(localFs.exists(checksumPath))
+            .describedAs("Checksum file should be present")
+            .isTrue();
+    CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
+    List<FileRange> someRandomRanges = new ArrayList<>();
+    someRandomRanges.add(new FileRangeImpl(10, 1024));
+    someRandomRanges.add(new FileRangeImpl(1025, 1024));
+    try (FSDataInputStream in = fis.get()){
+      in.readVectored(someRandomRanges, allocate);
+      validateVectoredReadResult(someRandomRanges, DATASET_CORRECT);
+    }
+    byte[] DATASET_CORRUPTED = ContractTestUtils.dataset(DATASET_LEN, 'a', 64);
+    try (FSDataOutputStream out = localFs.getRaw().create(testPath, true)){
+      out.write(DATASET_CORRUPTED);
+    }
+    CompletableFuture<FSDataInputStream> fisN = localFs.openFile(testPath).build();
+    try (FSDataInputStream in = fisN.get()){
+      in.readVectored(someRandomRanges, allocate);
+      // Expect checksum exception when data is updated directly through
+      // raw local fs instance.
+      intercept(ChecksumException.class,
+         () -> validateVectoredReadResult(someRandomRanges, DATASET_CORRUPTED));
+    }
   }
 }
