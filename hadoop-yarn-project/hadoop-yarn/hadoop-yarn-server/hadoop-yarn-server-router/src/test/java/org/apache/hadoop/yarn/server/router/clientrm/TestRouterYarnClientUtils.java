@@ -32,6 +32,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -42,6 +45,12 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.junit.Assert;
@@ -366,5 +375,168 @@ public class TestRouterYarnClientUtils {
         mergeLabelsToNodes(responses);
 
     Assert.assertEquals(expectedResponse, response.getLabelsToNodes());
+  }
+
+  @Test
+  public void testMergeQueueUserAclsResponse() {
+
+    List<QueueACL> submitOnlyAcl = new ArrayList<>();
+    submitOnlyAcl.add(QueueACL.SUBMIT_APPLICATIONS);
+
+    List<QueueACL> administerOnlyAcl = new ArrayList<>();
+    administerOnlyAcl.add(QueueACL.ADMINISTER_QUEUE);
+
+    List<QueueACL> submitAndAdministerAcl = new ArrayList<>();
+    submitAndAdministerAcl.add(QueueACL.ADMINISTER_QUEUE);
+    submitAndAdministerAcl.add(QueueACL.SUBMIT_APPLICATIONS);
+
+    QueueUserACLInfo queueUserACLInfo1 = QueueUserACLInfo.newInstance(
+        "root", submitAndAdministerAcl);
+
+    QueueUserACLInfo queueUserACLInfo2 = QueueUserACLInfo.newInstance(
+        "default", submitOnlyAcl);
+
+    QueueUserACLInfo queueUserACLInfo3 = QueueUserACLInfo.newInstance(
+        "root", submitAndAdministerAcl);
+
+    QueueUserACLInfo queueUserACLInfo4 = QueueUserACLInfo.newInstance(
+        "yarn", administerOnlyAcl);
+
+    List<QueueUserACLInfo> queueUserACLInfoList1 = new ArrayList<>();
+    List<QueueUserACLInfo> queueUserACLInfoList2 = new ArrayList<>();
+
+    queueUserACLInfoList1.add(queueUserACLInfo1);
+    queueUserACLInfoList1.add(queueUserACLInfo2);
+    queueUserACLInfoList2.add(queueUserACLInfo3);
+    queueUserACLInfoList2.add(queueUserACLInfo4);
+
+    // normal response
+    GetQueueUserAclsInfoResponse response1 = Records.newRecord(
+        GetQueueUserAclsInfoResponse.class);
+    response1.setUserAclsInfoList(queueUserACLInfoList1);
+    GetQueueUserAclsInfoResponse response2 = Records.newRecord(
+        GetQueueUserAclsInfoResponse.class);
+    response2.setUserAclsInfoList(queueUserACLInfoList2);
+
+    // empty response
+    GetQueueUserAclsInfoResponse response3 = Records.newRecord(
+        GetQueueUserAclsInfoResponse.class);
+
+    // null responce
+    GetQueueUserAclsInfoResponse response4 = null;
+
+    List<GetQueueUserAclsInfoResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+    responses.add(response4);
+
+    // expected user acls
+    List<QueueUserACLInfo> expectedOutput = new ArrayList<>();
+    expectedOutput.add(queueUserACLInfo1);
+    expectedOutput.add(queueUserACLInfo2);
+    expectedOutput.add(queueUserACLInfo4);
+
+    GetQueueUserAclsInfoResponse response =
+        RouterYarnClientUtils.mergeQueueUserAcls(responses);
+    Assert.assertTrue(CollectionUtils.isEqualCollection(expectedOutput,
+        response.getUserAclsInfoList()));
+  }
+
+  @Test
+  public void testMergeReservationsList() {
+
+    // normal response
+    ReservationListResponse response1 = createReservationListResponse(
+        165348678000L, 165348690000L, 165348678000L, 1L);
+
+    ReservationListResponse response2 = createReservationListResponse(
+        165348750000L, 165348768000L, 165348750000L, 1L);
+
+    // empty response
+    ReservationListResponse response3 = ReservationListResponse.newInstance(new ArrayList<>());
+
+    // null response
+    ReservationListResponse response4 = null;
+
+    List<ReservationListResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+    responses.add(response4);
+
+    // expected response
+    List<ReservationAllocationState> expectedResponse = new ArrayList<>();
+    expectedResponse.addAll(response1.getReservationAllocationState());
+    expectedResponse.addAll(response2.getReservationAllocationState());
+
+    ReservationListResponse response =
+        RouterYarnClientUtils.mergeReservationsList(responses);
+    Assert.assertEquals(expectedResponse, response.getReservationAllocationState());
+  }
+
+  private ReservationListResponse createReservationListResponse(long startTime,
+      long endTime, long reservationTime, long reservationNumber) {
+    List<ReservationAllocationState> reservationsList = new ArrayList<>();
+    ReservationDefinition reservationDefinition =
+        Records.newRecord(ReservationDefinition.class);
+    reservationDefinition.setArrival(startTime);
+    reservationDefinition.setDeadline(endTime);
+    ReservationAllocationState reservationAllocationState =
+        Records.newRecord(ReservationAllocationState.class);
+    ReservationId reservationId = ReservationId.newInstance(reservationTime,
+        reservationNumber);
+    reservationAllocationState.setReservationDefinition(reservationDefinition);
+    reservationAllocationState.setReservationId(reservationId);
+    reservationsList.add(reservationAllocationState);
+    return ReservationListResponse.newInstance(reservationsList);
+  }
+
+  @Test
+  public void testMergeResourceTypes() {
+
+    ResourceTypeInfo resourceTypeInfo1 = ResourceTypeInfo.newInstance("vcores");
+    ResourceTypeInfo resourceTypeInfo2 = ResourceTypeInfo.newInstance("gpu");
+    ResourceTypeInfo resourceTypeInfo3 = ResourceTypeInfo.newInstance("memory-mb");
+
+    List<ResourceTypeInfo> resourceTypeInfoList1 = new ArrayList<>();
+    resourceTypeInfoList1.add(resourceTypeInfo1);
+    resourceTypeInfoList1.add(resourceTypeInfo3);
+
+    List<ResourceTypeInfo> resourceTypeInfoList2 = new ArrayList<>();
+    resourceTypeInfoList2.add(resourceTypeInfo3);
+    resourceTypeInfoList2.add(resourceTypeInfo2);
+
+    // normal response
+    GetAllResourceTypeInfoResponse response1 =
+        Records.newRecord(GetAllResourceTypeInfoResponse.class);
+    response1.setResourceTypeInfo(resourceTypeInfoList1);
+
+    GetAllResourceTypeInfoResponse response2 =
+        Records.newRecord(GetAllResourceTypeInfoResponse.class);
+    response2.setResourceTypeInfo(resourceTypeInfoList2);
+
+    // empty response
+    GetAllResourceTypeInfoResponse response3 =
+        Records.newRecord(GetAllResourceTypeInfoResponse.class);
+
+    // null response
+    GetAllResourceTypeInfoResponse response4 = null;
+
+    List<GetAllResourceTypeInfoResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+    responses.add(response4);
+
+    // expected response
+    List<ResourceTypeInfo> expectedResponse = new ArrayList<>();
+    expectedResponse.add(resourceTypeInfo1);
+    expectedResponse.add(resourceTypeInfo2);
+    expectedResponse.add(resourceTypeInfo3);
+    GetAllResourceTypeInfoResponse response =
+        RouterYarnClientUtils.mergeResourceTypes(responses);
+    Assert.assertTrue(CollectionUtils.isEqualCollection(expectedResponse,
+        response.getResourceTypeInfo()));
   }
 }

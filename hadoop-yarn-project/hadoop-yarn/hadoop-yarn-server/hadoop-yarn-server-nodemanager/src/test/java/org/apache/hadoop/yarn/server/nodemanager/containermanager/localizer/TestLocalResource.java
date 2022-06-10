@@ -27,7 +27,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import static org.apache.hadoop.yarn.api.records.LocalResourceType.*;
 import static org.apache.hadoop.yarn.api.records.LocalResourceVisibility.*;

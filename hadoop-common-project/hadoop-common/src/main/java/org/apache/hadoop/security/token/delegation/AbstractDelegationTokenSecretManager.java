@@ -510,15 +510,19 @@ extends AbstractDelegationTokenIdentifier>
       throws InvalidToken {
     assert Thread.holdsLock(this);
     DelegationTokenInformation info = getTokenInfo(identifier);
+    String err;
     if (info == null) {
-      throw new InvalidToken("token " + formatTokenId(identifier)
-          + " can't be found in cache");
+      err = "Token for real user: " + identifier.getRealUser() + ", can't be found in cache";
+      LOG.warn("{}, Token={}", err, formatTokenId(identifier));
+      throw new InvalidToken(err);
     }
     long now = Time.now();
     if (info.getRenewDate() < now) {
-      throw new InvalidToken("token " + formatTokenId(identifier) + " is " +
-          "expired, current time: " + Time.formatTime(now) +
-          " expected renewal time: " + Time.formatTime(info.getRenewDate()));
+      err =
+          "Token has" + identifier.getRealUser() + "expired, current time: " + Time.formatTime(now)
+              + " expected renewal time: " + Time.formatTime(info.getRenewDate());
+      LOG.info("{}, Token={}", err, formatTokenId(identifier));
+      throw new InvalidToken(err);
     }
     return info;
   }

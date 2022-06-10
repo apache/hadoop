@@ -429,6 +429,57 @@ public final class Constants {
    */
   public static final String CONTENT_ENCODING = "fs.s3a.object.content.encoding";
 
+  /**
+   * S3 storage class: standard, reduced_redundancy, intelligent_tiering etc.
+   * Value {@value }.
+   */
+  public static final String STORAGE_CLASS = "fs.s3a.create.storage.class";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_STANDARD = "standard";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_REDUCED_REDUNDANCY = "reduced_redundancy";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_GLACIER = "glacier";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_STANDARD_INFREQUENT_ACCESS = "standard_ia";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_ONEZONE_INFREQUENT_ACCESS = "onezone_ia";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_INTELLIGENT_TIERING = "intelligent_tiering";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_DEEP_ARCHIVE = "deep_archive";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_OUTPOSTS = "outposts";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_GLACIER_INSTANT_RETRIEVAL = "glacier_ir";
+
   // should we try to purge old multipart uploads when starting up
   public static final String PURGE_EXISTING_MULTIPART =
       "fs.s3a.multipart.purge";

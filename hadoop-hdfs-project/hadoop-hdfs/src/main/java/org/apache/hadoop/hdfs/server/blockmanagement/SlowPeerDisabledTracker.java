@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Timer;
 
@@ -58,7 +59,7 @@ public class SlowPeerDisabledTracker extends SlowPeerTracker {
   }
 
   @Override
-  public void addReport(String slowNode, String reportingNode, Double slowNodeLatency) {
+  public void addReport(String slowNode, String reportingNode, OutlierMetrics slowNodeMetrics) {
     LOG.trace("Adding slow peer report is disabled. To enable it, please enable config {}.",
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY);
   }

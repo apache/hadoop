@@ -46,6 +46,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -117,6 +118,11 @@ public class RequestFactoryImpl implements RequestFactory {
   private final String contentEncoding;
 
   /**
+   * Storage class.
+   */
+  private final StorageClass storageClass;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -128,6 +134,7 @@ public class RequestFactoryImpl implements RequestFactory {
     this.multipartPartCountLimit = builder.multipartPartCountLimit;
     this.requestPreparer = builder.requestPreparer;
     this.contentEncoding = builder.contentEncoding;
+    this.storageClass = builder.storageClass;
   }
 
   /**
@@ -198,6 +205,15 @@ public class RequestFactoryImpl implements RequestFactory {
   @Override
   public String getContentEncoding() {
     return contentEncoding;
+  }
+
+  /**
+   * Get the object storage class, return null if none.
+   * @return storage class
+   */
+  @Override
+  public StorageClass getStorageClass() {
+    return storageClass;
   }
 
   /**
@@ -343,7 +359,7 @@ public class RequestFactoryImpl implements RequestFactory {
   }
   /**
    * Create a putObject request.
-   * Adds the ACL and metadata
+   * Adds the ACL, storage class and metadata
    * @param key key of object
    * @param metadata metadata header
    * @param srcfile source file
@@ -357,6 +373,9 @@ public class RequestFactoryImpl implements RequestFactory {
         srcfile);
     setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
+    if (storageClass != null) {
+      putObjectRequest.setStorageClass(storageClass);
+    }
     putObjectRequest.setMetadata(metadata);
     return prepareRequest(putObjectRequest);
   }
@@ -431,6 +450,9 @@ public class RequestFactoryImpl implements RequestFactory {
             destKey,
             newObjectMetadata(-1));
     initiateMPURequest.setCannedACL(getCannedACL());
+    if (getStorageClass() != null) {
+      initiateMPURequest.withStorageClass(getStorageClass());
+    }
     setOptionalMultipartUploadRequestParameters(initiateMPURequest);
     return prepareRequest(initiateMPURequest);
   }
@@ -611,6 +633,11 @@ public class RequestFactoryImpl implements RequestFactory {
     private String contentEncoding;
 
     /**
+     * Storage class.
+     */
+    private StorageClass storageClass;
+
+    /**
      * Multipart limit.
      */
     private long multipartPartCountLimit = DEFAULT_UPLOAD_PART_COUNT_LIMIT;
@@ -638,6 +665,16 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     public RequestFactoryBuilder withContentEncoding(final String value) {
       contentEncoding = value;
+      return this;
+    }
+
+    /**
+     * Storage class.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withStorageClass(final StorageClass value) {
+      storageClass = value;
       return this;
     }
 

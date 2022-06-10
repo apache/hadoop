@@ -186,7 +186,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     // 1) ns0:nn0 - Standby (newest)
     // 2) ns0:nn0 - Active (oldest)
     // 3) ns0:nn0 - Active (2nd oldest)
-    // 4) ns0:nn0 - Active (3nd oldest element, newest active element)
+    // 4) ns0:nn0 - Active (3rd oldest element, newest active element)
     // Verify the selected entry is the newest majority opinion (4)
     String ns = "ns0";
     String nn = "nn0";
