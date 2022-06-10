@@ -62,12 +62,12 @@ import java.util.concurrent.locks.ReentrantLock;
  * Here is the high level logic executed by this class. Users can submit disk
  * balancing plans using submitPlan calls. After a set of sanity checks the plan
  * is admitted and put into workMap.
- * <p>
+ * </p>
  * The executePlan launches a thread that picks up work from workMap and hands
  * it over to the BlockMover#copyBlocks function.
  * <p>
  * Constraints :
- * <p>
+ * </p>
  * Only one plan can be executing in a datanode at any given time. This is
  * ensured by checking the future handle of the worker thread in submitPlan.
  */
