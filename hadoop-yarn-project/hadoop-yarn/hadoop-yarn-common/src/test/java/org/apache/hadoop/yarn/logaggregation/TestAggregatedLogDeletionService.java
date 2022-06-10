@@ -44,6 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.Assert;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class TestAggregatedLogDeletionService {
@@ -166,7 +167,7 @@ public class TestAggregatedLogDeletionService {
     final List<ApplicationId> finishedApplications =
         Collections.unmodifiableList(Arrays.asList(appId1, appId2, appId3));
     final List<ApplicationId> runningApplications =
-        Collections.unmodifiableList(Arrays.asList(appId4));
+        Collections.singletonList(appId4);
 
     AggregatedLogDeletionService deletionService =
         new AggregatedLogDeletionService() {
@@ -316,13 +317,13 @@ public class TestAggregatedLogDeletionService {
     conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
         "2");
     //We have not called refreshLogSettings,hence don't expect to see the changed conf values
-    Assert.assertTrue(2000l != deletionSvc.getCheckIntervalMsecs());
+    assertTrue(2000L != deletionSvc.getCheckIntervalMsecs());
     
     //refresh the log settings
     deletionSvc.refreshLogRetentionSettings();
 
     //Check interval time should reflect the new value
-    Assert.assertTrue(2000l == deletionSvc.getCheckIntervalMsecs());
+    Assert.assertEquals(2000L, deletionSvc.getCheckIntervalMsecs());
     //app2Dir should be deleted since it falls above the threshold
     verify(mockFs, timeout(10000)).delete(app2Dir, true);
     deletionSvc.stop();
@@ -392,7 +393,7 @@ public class TestAggregatedLogDeletionService {
         new FileStatus[]{app1Log1Status});
 
     final List<ApplicationId> finishedApplications =
-        Collections.unmodifiableList(Arrays.asList(appId1));
+        Collections.singletonList(appId1);
 
     AggregatedLogDeletionService deletionSvc =
         new AggregatedLogDeletionService() {
