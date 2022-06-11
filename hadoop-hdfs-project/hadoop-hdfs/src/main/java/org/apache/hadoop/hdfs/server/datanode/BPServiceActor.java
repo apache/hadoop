@@ -816,7 +816,7 @@ class BPServiceActor implements Runnable {
     // off disk - so update the bpRegistration object from that info
     DatanodeRegistration newBpRegistration = bpos.createRegistration();
 
-    LOG.info(this + " beginning handshake with NN");
+    LOG.info("{} beginning handshake with NN: {}.", this, nnAddr);
 
     while (shouldRun()) {
       try {
@@ -826,15 +826,14 @@ class BPServiceActor implements Runnable {
         bpRegistration = newBpRegistration;
         break;
       } catch(EOFException e) {  // namenode might have just restarted
-        LOG.info("Problem connecting to server: " + nnAddr + " :"
-            + e.getLocalizedMessage());
+        LOG.info("Problem connecting to server: {} : {}.", nnAddr, e.getLocalizedMessage());
       } catch(SocketTimeoutException e) {  // namenode is busy
-        LOG.info("Problem connecting to server: " + nnAddr);
+        LOG.info("Problem connecting to server: {}.", nnAddr);
       } catch(RemoteException e) {
-        LOG.warn("RemoteException in register", e);
+        LOG.warn("RemoteException in register to server: {}.", nnAddr, e);
         throw e;
       } catch(IOException e) {
-        LOG.warn("Problem connecting to server: " + nnAddr);
+        LOG.warn("Problem connecting to server: {}.", nnAddr);
       }
       // Try again in a second
       sleepAndLogInterrupts(1000, "connecting to server");
@@ -844,7 +843,7 @@ class BPServiceActor implements Runnable {
       throw new IOException("DN shut down before block pool registered");
     }
 
-    LOG.info(this + " successfully registered with NN");
+    LOG.info("{} successfully registered with NN: {}.", this, nnAddr);
     bpos.registrationSucceeded(this, bpRegistration);
 
     // reset lease id whenever registered to NN.
