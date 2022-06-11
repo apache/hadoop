@@ -66,8 +66,8 @@ public class TestAggregatedLogDeletionService {
     String newSuffix = LogAggregationUtils.getBucketSuffix() + suffix;
     final Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_ENABLED, "true");
-    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "1800");
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+      conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 1800);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
     conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
@@ -212,8 +212,8 @@ public class TestAggregatedLogDeletionService {
     String newSuffix = LogAggregationUtils.getBucketSuffix() + suffix;
     final Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_ENABLED, "true");
-    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "1800");
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+      conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 1800);
     conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
         "1");
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
@@ -309,13 +309,12 @@ public class TestAggregatedLogDeletionService {
     
     //app1Dir would be deleted since its done above log retention period
     verify(mockFs, timeout(10000)).delete(app1Dir, true);
-    //app2Dir is not expected to be deleted since its below the threshold
+    //app2Dir is not expected to be deleted since it is below the threshold
     verify(mockFs, timeout(3000).times(0)).delete(app2Dir, true);
 
     //Now,lets change the confs
-    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "50");
-    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
-        "2");
+      conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 50);
+    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, 2);
     //We have not called refreshLogSettings,hence don't expect to see the changed conf values
     assertTrue(2000L != deletionSvc.getCheckIntervalMsecs());
     
@@ -341,9 +340,9 @@ public class TestAggregatedLogDeletionService {
     String newSuffix = LogAggregationUtils.getBucketSuffix() + suffix;
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_ENABLED, "true");
-    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "864000");
-    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, "1");
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 864000);
+    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, 1);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
     conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
@@ -446,8 +445,8 @@ public class TestAggregatedLogDeletionService {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class,
         FileSystem.class);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_ENABLED, "true");
-    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "864000");
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+      conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 864000);
     conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
         "1");
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
