@@ -969,9 +969,11 @@ public class TestDatanodeManager {
    * @param numReplicationBlocks the number of replication blocks in the queue.
    * @param numECBlocks number of EC blocks in the queue.
    * @param maxTransfers the maxTransfer value.
+   * @param maxTransfersHardLimit the maxTransfer hard limit value.
    * @param numReplicationTasks the number of replication tasks polled from
    *                            the queue.
    * @param numECTasks the number of EC tasks polled from the queue.
+   * @param isDecommissioning if the node is in the decommissioning process.
    *
    * @throws IOException
    */
