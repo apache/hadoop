@@ -64,29 +64,22 @@ public class LogAggregationFileControllerFactory {
     this.conf = conf;
     Collection<String> fileControllers = conf.getStringCollection(
         YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS);
-    List<String> controllerClassName = new ArrayList<>();
     Map<String, String> controllerChecker = new HashMap<>();
 
     for (String controllerName : fileControllers) {
-      Preconditions.checkArgument(validateAggregatedFileControllerName(
-          controllerName), String.format("The FileControllerName: %s set in " +
-          "%s is invalid.The valid File Controller name should only contain " +
-          "a-zA-Z0-9_ and cannot start with numbers", controllerName,
-          YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS));
+      validateAggregatedFileControllerName(controllerName);
 
-      validateDuplicateRemoteAppLogDirs(conf, controllerChecker, controllerName);
+      validateConflictingControllers(conf, controllerChecker, controllerName);
       DeterminedControllerClassName className =
           new DeterminedControllerClassName(conf, controllerName);
-      controllerClassName.add(className.value);
-      LogAggregationFileController controller = createFileControllerInstance(conf,
-          controllerClassName, controllerName, className);
+      LogAggregationFileController controller = createFileControllerInstance(conf, controllerName, className);
       controller.initialize(conf, controllerName);
       controllers.add(controller);
     }
   }
 
   private LogAggregationFileController createFileControllerInstance(
-      Configuration conf, List<String> controllerClassName,
+      Configuration conf,
       String fileController, DeterminedControllerClassName className) {
     Class<? extends LogAggregationFileController> clazz = conf.getClass(
         className.configKey, null, LogAggregationFileController.class);
@@ -95,13 +88,13 @@ public class LogAggregationFileControllerFactory {
     }
     LogAggregationFileController instance = ReflectionUtils.newInstance(clazz, conf);
     if (instance == null) {
-      throw new RuntimeException("No object created for " + controllerClassName);
+      throw new RuntimeException("No object created for " + className.value);
     }
     return instance;
   }
 
-  private void validateDuplicateRemoteAppLogDirs(Configuration conf,
-      Map<String, String> controllerChecker, String fileController) {
+  private void validateConflictingControllers(Configuration conf,
+                                              Map<String, String> controllerChecker, String fileController) {
     DeterminedLogAggregationRemoteDir remoteDir =
         new DeterminedLogAggregationRemoteDir(conf, fileController);
     DeterminedLogAggregationSuffix suffix =
@@ -177,11 +170,19 @@ public class LogAggregationFileControllerFactory {
     throw new IOException(diagnosticsMsg.toString());
   }
 
-  private boolean validateAggregatedFileControllerName(String name) {
+  private void validateAggregatedFileControllerName(String name) {
+    boolean valid;
     if (name == null || name.trim().isEmpty()) {
-      return false;
+      valid = false;
+    } else {
+      valid = p.matcher(name).matches();
     }
-    return p.matcher(name).matches();
+
+    Preconditions.checkArgument(valid,
+            String.format("The FileControllerName: %s set in " +
+                            "%s is invalid.The valid File Controller name should only contain " +
+                            "a-zA-Z0-9_ and cannot start with numbers", name,
+                    YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS));
   }
 
   @Private
