@@ -135,7 +135,6 @@ GzipDecompressStream::GzipDecompressStream(InputStream * stream, uint32_t buffer
   }
   zstream->next_in = NULL;
   zstream->avail_in = 0;
-  _eof = false;
 }
 
 GzipDecompressStream::~GzipDecompressStream() {
@@ -156,7 +155,6 @@ int32_t GzipDecompressStream::read(void * buff, uint32_t length) {
     if (zstream->avail_in == 0) {
       int32_t rd = _stream->read(_buffer, _capacity);
       if (rd <= 0) {
-        _eof = true;
         size_t wt = zstream->next_out - (Bytef*)buff;
         return wt > 0 ? wt : -1;
       } else {
