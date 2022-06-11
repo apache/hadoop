@@ -101,6 +101,14 @@ public class TestAggregatedLogDeletionService {
     return new PathWithFileStatus(logPath, fStatus);
   }
 
+  private static PathWithFileStatus createDirBucketDirLogPathWithFileStatus(Path remoteRootLogPath, String user,
+                                                                   String suffix, ApplicationId appId, 
+                                                                   long modificationTime) {
+    Path bucketDir = LogAggregationUtils.getRemoteBucketDir(remoteRootLogPath, user, suffix, appId);
+    FileStatus fStatus = new FileStatus(0, true, 0, 0, modificationTime, bucketDir);
+    return new PathWithFileStatus(bucketDir, fStatus);
+  }
+
   private static FileStatus createFileStatusWithLengthForFile(long length, long modificationTime, Path logPath) {
     return new FileStatus(length, false, 1, 1, modificationTime, logPath);
   }
@@ -136,30 +144,26 @@ public class TestAggregatedLogDeletionService {
     FileSystem mockFs = ((FilterFileSystem)rootFs).getRawFileSystem();
     
     Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
-    Path userDir = new Path(remoteRootLogPath, USER_ME);
-    FileStatus userDirStatus = new FileStatus(0, true, 0, 0, toKeepTime, userDir); 
-    
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDirStatus});
+    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, toKeepTime);
+
+    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
 
     ApplicationId appId1 = ApplicationId.newInstance(now, 1);
     ApplicationId appId2 = ApplicationId.newInstance(now, 2);
     ApplicationId appId3 = ApplicationId.newInstance(now, 3);
     ApplicationId appId4 = ApplicationId.newInstance(now, 4);
     
-    Path suffixDir = new Path(userDir, NEW_SUFFIX);
-    FileStatus suffixDirStatus = new FileStatus(0, true, 0, 0, toDeleteTime, suffixDir);
-    Path bucketDir = LogAggregationUtils.getRemoteBucketDir(
-        remoteRootLogPath, USER_ME, SUFFIX, appId1);
-    FileStatus bucketDirStatus = new FileStatus(0, true, 0, 0, toDeleteTime, bucketDir);
+    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX, toDeleteTime);
+    PathWithFileStatus bucketDir = createDirLogPathWithFileStatus(remoteRootLogPath, SUFFIX, toDeleteTime);
 
     PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1, USER_ME, SUFFIX, toDeleteTime);
     PathWithFileStatus app2 = createPathWithFileStatusForAppId(remoteRootLogPath, appId2, USER_ME, SUFFIX, toDeleteTime);
     PathWithFileStatus app3 = createPathWithFileStatusForAppId(remoteRootLogPath, appId3, USER_ME, SUFFIX, toDeleteTime);
     PathWithFileStatus app4 = createPathWithFileStatusForAppId(remoteRootLogPath, appId4, USER_ME, SUFFIX, toDeleteTime);
 
-    when(mockFs.listStatus(userDir)).thenReturn(new FileStatus[] {suffixDirStatus});
-    when(mockFs.listStatus(suffixDir)).thenReturn(new FileStatus[] {bucketDirStatus});
-    when(mockFs.listStatus(bucketDir)).thenReturn(new FileStatus[] {
+    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
+    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus});
+    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[] {
             app1.fileStatus, app2.fileStatus, 
             app3.fileStatus, app4.fileStatus});
     
@@ -229,30 +233,26 @@ public class TestAggregatedLogDeletionService {
     FileSystem rootFs = rootPath.getFileSystem(conf);
     FileSystem mockFs = ((FilterFileSystem) rootFs).getRawFileSystem();
 
-    Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
-
-    Path userDir = new Path(remoteRootLogPath, USER_ME);
-    FileStatus userDirStatus = new FileStatus(0, true, 0, 0, before50Secs, userDir);
-
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[] { userDirStatus });
-
-    Path suffixDir = new Path(userDir, NEW_SUFFIX);
-    FileStatus suffixStatus = new FileStatus(0, true, 0, 0, before50Secs, suffixDir);
-
     ApplicationId appId1 = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     ApplicationId appId2 = ApplicationId.newInstance(System.currentTimeMillis(), 2);
+    
+    Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
+
+    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, before50Secs);
+    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX, before50Secs);
+    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, SUFFIX, appId1, before50Secs);
+
+    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[] { userDir.fileStatus });
+
     //Set time last modified of app1Dir directory and its files to before2000Secs 
     PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1, USER_ME, SUFFIX, before2000Secs);
 
     //Set time last modified of app1Dir directory and its files to before50Secs 
     PathWithFileStatus app2 = createPathWithFileStatusForAppId(remoteRootLogPath, appId2, USER_ME, SUFFIX, before50Secs);
 
-    Path bucketDir = LogAggregationUtils.getRemoteBucketDir(remoteRootLogPath, USER_ME, SUFFIX, appId1);
-    FileStatus bucketDirStatus = new FileStatus(0, true, 0, 0, before50Secs, bucketDir);
-    
-    when(mockFs.listStatus(userDir)).thenReturn(new FileStatus[]{suffixStatus});
-    when(mockFs.listStatus(suffixDir)).thenReturn(new FileStatus[]{bucketDirStatus});
-    when(mockFs.listStatus(bucketDir)).thenReturn(new FileStatus[]{app1.fileStatus, app2.fileStatus});
+    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[]{suffixDir.fileStatus});
+    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[]{bucketDir.fileStatus});
+    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[]{app1.fileStatus, app2.fileStatus});
 
     PathWithFileStatus app1Log1 = createFileLogPathWithFileStatus(app1.path, DIR_HOST1, before2000Secs);
     PathWithFileStatus app2Log1 = createFileLogPathWithFileStatus(app2.path, DIR_HOST1, before50Secs);
@@ -333,23 +333,20 @@ public class TestAggregatedLogDeletionService {
 
     Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
 
-    Path userDir = new Path(remoteRootLogPath, USER_ME);
-    FileStatus userDirStatus = new FileStatus(0, true, 0, 0, now, userDir);
+    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, now);
+    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX, now);
 
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDirStatus});
+    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
 
     ApplicationId appId1 = ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    Path suffixDir = new Path(userDir, NEW_SUFFIX);
-    FileStatus suffixDirStatus = new FileStatus(0, true, 0, 0, now, suffixDir);
-    Path bucketDir = LogAggregationUtils.getRemoteBucketDir(remoteRootLogPath, USER_ME, SUFFIX, appId1);
-    FileStatus bucketDirStatus = new FileStatus(0, true, 0, 0, now, bucketDir);
+    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, SUFFIX, appId1, now);
 
     PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1, USER_ME, SUFFIX, now);
     PathWithFileStatus app1Log1 = createFileLogPathWithFileStatus(app1.path, DIR_HOST1, now);
 
-    when(mockFs.listStatus(userDir)).thenReturn(new FileStatus[] {suffixDirStatus});
-    when(mockFs.listStatus(suffixDir)).thenReturn(new FileStatus[] {bucketDirStatus});
-    when(mockFs.listStatus(bucketDir)).thenReturn(new FileStatus[] {app1.fileStatus});
+    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
+    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus});
+    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[] {app1.fileStatus});
     when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[]{app1Log1.fileStatus});
 
     final List<ApplicationId> finishedApplications = Collections.singletonList(appId1);
@@ -374,13 +371,13 @@ public class TestAggregatedLogDeletionService {
     verify(mockFs, timeout(10000).atLeast(4)).listStatus(any(Path.class));
     verify(mockFs, never()).delete(app1.path, true);
 
-    // modify the timestamp of the logs and verify it's picked up quickly
-    bucketDirStatus = new FileStatus(0, true, 0, 0, toDeleteTime, bucketDir);
+    // modify the timestamp of the logs and verify if it's picked up quickly
     app1.changeModificationTime(toDeleteTime);
     app1Log1.changeModificationTime(toDeleteTime);
-    when(mockFs.listStatus(userDir)).thenReturn(new FileStatus[] {suffixDirStatus});
-    when(mockFs.listStatus(suffixDir)).thenReturn(new FileStatus[] {bucketDirStatus });
-    when(mockFs.listStatus(bucketDir)).thenReturn(new FileStatus[] {app1.fileStatus });
+    bucketDir.changeModificationTime(toDeleteTime);
+    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
+    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus });
+    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[] {app1.fileStatus });
     when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[]{app1Log1.fileStatus});
 
     verify(mockFs, timeout(10000)).delete(app1.path, true);
@@ -411,27 +408,24 @@ public class TestAggregatedLogDeletionService {
 
     Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
 
-    Path userDir = new Path(remoteRootLogPath, USER_ME);
-    Path suffixDir = new Path(userDir, NEW_SUFFIX);
-    FileStatus userDirStatus = new FileStatus(0, true, 0, 0, 0, userDir);
-    FileStatus suffixStatus = new FileStatus(0, true, 0, 0, 0, suffixDir);
-    Path bucketDir = new Path(suffixDir, String.valueOf(0));
-    FileStatus bucketDirStatus = new FileStatus(0, true, 0, 0, 0, bucketDir);
+    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, 0);
+    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX, 0);
+    PathWithFileStatus bucketDir = createDirLogPathWithFileStatus(suffixDir.path, "0", 0);
 
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDirStatus});
-    when(mockFs.listStatus(userDir)).thenReturn(new FileStatus[]{suffixStatus});
-    when(mockFs.listStatus(suffixDir)).thenReturn(new FileStatus[]{bucketDirStatus});
+    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
+    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[]{suffixDir.fileStatus});
+    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[]{bucketDir.fileStatus});
 
     ApplicationId appId1 = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     ApplicationId appId2 = ApplicationId.newInstance(System.currentTimeMillis(), 2);
     ApplicationId appId3 = ApplicationId.newInstance(System.currentTimeMillis(), 3);
 
-    PathWithFileStatus app1 = createDirLogPathWithFileStatus(bucketDir, appId1.toString(), 0);
-    PathWithFileStatus app2 = createDirLogPathWithFileStatus(bucketDir, "application_a", 0);
-    PathWithFileStatus app3 = createDirLogPathWithFileStatus(bucketDir, appId3.toString(), 0);
+    PathWithFileStatus app1 = createDirLogPathWithFileStatus(bucketDir.path, appId1.toString(), 0);
+    PathWithFileStatus app2 = createDirLogPathWithFileStatus(bucketDir.path, "application_a", 0);
+    PathWithFileStatus app3 = createDirLogPathWithFileStatus(bucketDir.path, appId3.toString(), 0);
     PathWithFileStatus app3Log3 = createDirLogPathWithFileStatus(app3.path, DIR_HOST1, 0);
     
-    when(mockFs.listStatus(bucketDir)).thenReturn(new FileStatus[]{app1.fileStatus, app2.fileStatus, app3.fileStatus});
+    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[]{app1.fileStatus, app2.fileStatus, app3.fileStatus});
     when(mockFs.listStatus(app1.path)).thenThrow(new RuntimeException("Should be caught and logged"));
     when(mockFs.listStatus(app2.path)).thenReturn(new FileStatus[]{});
     when(mockFs.listStatus(app3.path)).thenReturn(new FileStatus[]{app3Log3.fileStatus});
