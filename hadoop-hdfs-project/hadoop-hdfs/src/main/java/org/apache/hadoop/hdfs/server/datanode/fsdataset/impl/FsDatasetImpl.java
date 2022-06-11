@@ -906,9 +906,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return info;
   }
 
-  ReplicaInfo getReplicaInfoForLock(ExtendedBlock b)
+  String getStorageUuidForLock(ExtendedBlock b)
       throws ReplicaNotFoundException {
-    return getReplicaInfo(b.getBlockPoolId(), b.getBlockId());
+    ReplicaInfo replicaInfo = getReplicaInfo(
+        b.getBlockPoolId(), b.getBlockId());
+    return replicaInfo.getStorageUuid();
   }
 
   /**
@@ -918,7 +920,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public ReplicaInputStreams getTmpInputStreams(ExtendedBlock b,
       long blkOffset, long metaOffset) throws IOException {
     try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.VOLUME,
-        b.getBlockPoolId(), getReplicaInfoForLock(b).getStorageUuid())) {
+        b.getBlockPoolId(), getStorageUuidForLock(b))) {
       ReplicaInfo info = getReplicaInfo(b);
       FsVolumeReference ref = info.getVolume().obtainReference();
       try {
@@ -1384,7 +1386,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public ReplicaHandler append(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException {
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
-        b.getBlockPoolId(), getReplicaInfoForLock(b).getStorageUuid())) {
+        b.getBlockPoolId(), getStorageUuidForLock(b))) {
       // If the block was successfully finalized because all packets
       // were successfully processed at the Datanode but the ack for
       // some of the packets were not received by the client. The client
@@ -1567,7 +1569,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     while (true) {
       try {
         try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
-            b.getBlockPoolId(), getReplicaInfoForLock(b).getStorageUuid())) {
+            b.getBlockPoolId(), getStorageUuidForLock(b))) {
           // check replica's state
           ReplicaInfo replicaInfo = recoverCheck(b, newGS, expectedBlockLen);
           // bump the replica's GS
@@ -1670,7 +1672,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       while (true) {
         try {
           try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
-              b.getBlockPoolId(), getReplicaInfoForLock(b).getStorageUuid())) {
+              b.getBlockPoolId(), getStorageUuidForLock(b))) {
             ReplicaInfo replicaInfo =
                 getReplicaInfo(b.getBlockPoolId(), b.getBlockId());
             // check the replica's state
@@ -1702,7 +1704,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ExtendedBlock b, long newGS, long minBytesRcvd, long maxBytesRcvd)
       throws IOException {
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
-        b.getBlockPoolId(), getReplicaInfoForLock(b).getStorageUuid())) {
+        b.getBlockPoolId(), getStorageUuidForLock(b))) {
       // check generation stamp
       long replicaGenerationStamp = rbw.getGenerationStamp();
       if (replicaGenerationStamp < b.getGenerationStamp() ||
@@ -1764,7 +1766,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       final ExtendedBlock b) throws IOException {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
-        b.getBlockPoolId(), getReplicaInfoForLock(b).getStorageUuid())) {
+        b.getBlockPoolId(), getStorageUuidForLock(b))) {
       final long blockId = b.getBlockId();
       final long expectedGs = b.getGenerationStamp();
       final long visible = b.getNumBytes();
@@ -1962,7 +1964,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInfo finalizedReplicaInfo = null;
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
-        b.getBlockPoolId(), getReplicaInfoForLock(b).getStorageUuid())) {
+        b.getBlockPoolId(), getStorageUuidForLock(b))) {
       if (Thread.interrupted()) {
         // Don't allow data modifications from interrupted threads
         throw new IOException("Cannot finalize block from Interrupted Thread");
@@ -2046,7 +2048,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public void unfinalizeBlock(ExtendedBlock b) throws IOException {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
-        b.getBlockPoolId(), getReplicaInfoForLock(b).getStorageUuid())) {
+        b.getBlockPoolId(), getStorageUuidForLock(b))) {
       ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
           b.getLocalBlock());
       if (replicaInfo != null &&
@@ -2997,7 +2999,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
                                     final long newlength) throws IOException {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
-        oldBlock.getBlockPoolId(), getReplicaInfoForLock(oldBlock).getStorageUuid())) {
+        oldBlock.getBlockPoolId(), getStorageUuidForLock(oldBlock))) {
       //get replica
       final String bpid = oldBlock.getBlockPoolId();
       final ReplicaInfo replica = volumeMap.get(bpid, oldBlock.getBlockId());
