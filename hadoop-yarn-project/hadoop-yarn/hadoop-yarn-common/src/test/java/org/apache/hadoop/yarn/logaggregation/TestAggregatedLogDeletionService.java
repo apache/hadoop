@@ -58,6 +58,7 @@ public class TestAggregatedLogDeletionService {
   private static final String REMOTE_ROOT_LOG_DIR = ROOT + "tmp/logs";
   private static final String SUFFIX = "logs";
   private static final String NEW_SUFFIX = LogAggregationUtils.getBucketSuffix() + SUFFIX;
+  private static final int TEN_DAYS_IN_SECONDS = 10 * 24 * 3600;
 
   private static class PathWithFileStatus {
     private final Path path;
@@ -123,21 +124,27 @@ public class TestAggregatedLogDeletionService {
     FileSystem.closeAll();
   }
 
+  private Configuration setupConfiguration(int retainSeconds, int retainCheckIntervalSeconds) {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, retainSeconds);
+    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, retainCheckIntervalSeconds);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_ROOT_LOG_DIR);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, SUFFIX);
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
+            LogAggregationTFileController.class.getName());
+    return conf;
+  }
+
   @Test
   public void testDeletion() throws Exception {
     long now = System.currentTimeMillis();
     long toDeleteTime = now - (2000 * 1000);
     long toKeepTime = now - (1500 * 1000);
 
-    final Configuration conf = new Configuration();
-    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 1800);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_ROOT_LOG_DIR);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, SUFFIX);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
-    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
-         LogAggregationTFileController.class.getName());
+    Configuration conf = setupConfiguration(1800, -1);
 
     Path rootPath = new Path(ROOT);
     FileSystem rootFs = rootPath.getFileSystem(conf);
@@ -202,12 +209,13 @@ public class TestAggregatedLogDeletionService {
     deletionService.init(conf);
     deletionService.start();
 
-    verify(mockFs, timeout(2000)).delete(app1.path, true);
-    verify(mockFs, timeout(2000).times(0)).delete(app2.path, true);
-    verify(mockFs, timeout(2000)).delete(app3.path, true);
-    verify(mockFs, timeout(2000).times(0)).delete(app4.path, true);
-    verify(mockFs, timeout(2000)).delete(app4Log1.path, true);
-    verify(mockFs, timeout(2000).times(0)).delete(app4Log2.path, true);
+    int timeout = 2000;
+    verify(mockFs, timeout(timeout)).delete(app1.path, true);
+    verify(mockFs, timeout(timeout).times(0)).delete(app2.path, true);
+    verify(mockFs, timeout(timeout)).delete(app3.path, true);
+    verify(mockFs, timeout(timeout).times(0)).delete(app4.path, true);
+    verify(mockFs, timeout(timeout)).delete(app4Log1.path, true);
+    verify(mockFs, timeout(timeout).times(0)).delete(app4Log2.path, true);
 
     deletionService.stop();
   }
@@ -217,17 +225,10 @@ public class TestAggregatedLogDeletionService {
     long now = System.currentTimeMillis();
     long before2000Secs = now - (2000 * 1000);
     long before50Secs = now - (50 * 1000);
+    int checkIntervalSeconds = 2;
+    int checkIntervalMilliSeconds = checkIntervalSeconds * 1000;
 
-    final Configuration conf = new Configuration();
-    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 1800);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, 1);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_ROOT_LOG_DIR);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, SUFFIX);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
-    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
-         LogAggregationTFileController.class.getName());
+    Configuration conf = setupConfiguration(1800, 1);
 
     Path rootPath = new Path(ROOT);
     FileSystem rootFs = rootPath.getFileSystem(conf);
@@ -293,15 +294,15 @@ public class TestAggregatedLogDeletionService {
 
     //Now, let's change the confs
     conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 50);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, 2);
+    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, checkIntervalSeconds);
     //We have not called refreshLogSettings,hence don't expect to see the changed conf values
-    assertTrue(2000L != deletionSvc.getCheckIntervalMsecs());
+    assertTrue(checkIntervalMilliSeconds != deletionSvc.getCheckIntervalMsecs());
     
     //refresh the log settings
     deletionSvc.refreshLogRetentionSettings();
 
     //Check interval time should reflect the new value
-    Assert.assertEquals(2000L, deletionSvc.getCheckIntervalMsecs());
+    Assert.assertEquals(checkIntervalMilliSeconds, deletionSvc.getCheckIntervalMsecs());
     //app2Dir should be deleted since it falls above the threshold
     verify(mockFs, timeout(10000)).delete(app2.path, true);
     deletionSvc.stop();
@@ -309,21 +310,10 @@ public class TestAggregatedLogDeletionService {
   
   @Test
   public void testCheckInterval() throws Exception {
-    long RETENTION_SECS = 10 * 24 * 3600; //10 days
     long now = System.currentTimeMillis();
-    long toDeleteTime = now - RETENTION_SECS*1000;
+    long toDeleteTime = now - TEN_DAYS_IN_SECONDS * 1000;
 
-    Configuration conf = new Configuration();
-    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 864000);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, 1);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_ROOT_LOG_DIR);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, SUFFIX);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
-    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
-         LogAggregationTFileController.class.getName());
-
+    Configuration conf = setupConfiguration(TEN_DAYS_IN_SECONDS, 1);
 
     // prevent us from picking up the same mockfs instance from another test
     FileSystem.closeAll();
@@ -387,18 +377,7 @@ public class TestAggregatedLogDeletionService {
 
   @Test
   public void testRobustLogDeletion() throws Exception {
-    final long RETENTION_SECS = 10 * 24 * 3600;
-
-    Configuration conf = new Configuration();
-    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
-    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 864000);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, 1);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_ROOT_LOG_DIR);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, SUFFIX);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
-    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
-         LogAggregationTFileController.class.getName());
+    Configuration conf = setupConfiguration(TEN_DAYS_IN_SECONDS, 1);
 
     // prevent us from picking up the same mockfs instance from another test
     FileSystem.closeAll();
@@ -434,7 +413,7 @@ public class TestAggregatedLogDeletionService {
 
     ApplicationClientProtocol rmClient = createMockRMClient(finishedApplications, null);
     AggregatedLogDeletionService.LogDeletionTask deletionTask =
-        new AggregatedLogDeletionService.LogDeletionTask(conf, RETENTION_SECS, rmClient);
+        new AggregatedLogDeletionService.LogDeletionTask(conf, TEN_DAYS_IN_SECONDS, rmClient);
     deletionTask.run();
     verify(mockFs).delete(app3.path, true);
   }
