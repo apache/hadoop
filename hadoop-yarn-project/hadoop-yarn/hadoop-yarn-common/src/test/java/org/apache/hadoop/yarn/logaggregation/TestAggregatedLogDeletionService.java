@@ -191,21 +191,7 @@ public class TestAggregatedLogDeletionService {
             Arrays.asList(appId1, appId2, appId3));
     final List<ApplicationId> runningApplications = Collections.singletonList(appId4);
 
-    AggregatedLogDeletionService deletionService =
-        new AggregatedLogDeletionService() {
-          @Override
-          protected ApplicationClientProtocol createRMClient() throws IOException {
-            try {
-              return createMockRMClient(finishedApplications, runningApplications);
-            } catch (Exception e) {
-              throw new IOException(e);
-            }
-          }
-          @Override
-          protected void stopRMClient() {
-            // DO NOTHING
-          }
-        };
+    AggregatedLogDeletionService deletionService = new AggregatedLogDeletionServiceForTest(runningApplications, finishedApplications);
     deletionService.init(conf);
     deletionService.start();
 
@@ -264,25 +250,7 @@ public class TestAggregatedLogDeletionService {
     final List<ApplicationId> finishedApplications =
         Collections.unmodifiableList(Arrays.asList(appId1, appId2));
 
-    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionService() {
-      @Override
-      protected Configuration createConf() {
-        return conf;
-      }
-      @Override
-      protected ApplicationClientProtocol createRMClient()
-          throws IOException {
-        try {
-          return createMockRMClient(finishedApplications, null);
-        } catch (Exception e) {
-          throw new IOException(e);
-        }
-      }
-      @Override
-      protected void stopRMClient() {
-        // DO NOTHING
-      }
-    };
+    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionServiceForTest(null, finishedApplications, conf);
     
     deletionSvc.init(conf);
     deletionSvc.start();
@@ -341,20 +309,7 @@ public class TestAggregatedLogDeletionService {
 
     final List<ApplicationId> finishedApplications = Collections.singletonList(appId1);
 
-    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionService() {
-      @Override
-      protected ApplicationClientProtocol createRMClient() throws IOException {
-        try {
-          return createMockRMClient(finishedApplications, null);
-        } catch (Exception e) {
-          throw new IOException(e);
-        }
-      }
-      @Override
-      protected void stopRMClient() {
-        // DO NOTHING
-      }
-    };
+    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionServiceForTest(null, finishedApplications);
     deletionSvc.init(conf);
     deletionSvc.start();
  
@@ -465,4 +420,41 @@ public class TestAggregatedLogDeletionService {
     return response;
   }
 
+  private static class AggregatedLogDeletionServiceForTest extends AggregatedLogDeletionService {
+    private final List<ApplicationId> finishedApplications;
+    private final List<ApplicationId> runningApplications;
+    private final Configuration conf;
+
+    public AggregatedLogDeletionServiceForTest(List<ApplicationId> runningApplications,
+                                               List<ApplicationId> finishedApplications) {
+      this(runningApplications, finishedApplications, null);
+    }
+
+    public AggregatedLogDeletionServiceForTest(List<ApplicationId> runningApplications,
+                                               List<ApplicationId> finishedApplications, 
+                                               Configuration conf) {
+      this.runningApplications = runningApplications;
+      this.finishedApplications = finishedApplications;
+      this.conf = conf;
+    }
+
+    @Override
+    protected ApplicationClientProtocol createRMClient() throws IOException {
+      try {
+        return createMockRMClient(finishedApplications, runningApplications);
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }
+
+    @Override
+    protected Configuration createConf() {
+      return conf;
+    }
+
+    @Override
+    protected void stopRMClient() {
+      // DO NOTHING
+    }
+  }
 }
