@@ -48,8 +48,13 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class TestAggregatedLogDeletionService {
-  
-  @Before
+
+    private static final String T_FILE = "TFile";
+    private static final String USER_ME = "me";
+    private static final String DIR_HOST1 = "host1";
+    private static final String DIR_HOST2 = "host2";
+
+    @Before
   public void closeFilesystems() throws IOException {
     // prevent the same mockfs instance from being reused due to FS cache
     FileSystem.closeAll();
@@ -70,8 +75,8 @@ public class TestAggregatedLogDeletionService {
       conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 1800);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
-    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, "TFile"),
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
          LogAggregationTFileController.class.getName());
 
 
@@ -81,7 +86,7 @@ public class TestAggregatedLogDeletionService {
     
     Path remoteRootLogPath = new Path(remoteRootLogDir);
     
-    Path userDir = new Path(remoteRootLogPath, "me");
+    Path userDir = new Path(remoteRootLogPath, USER_ME);
     FileStatus userDirStatus = new FileStatus(0, true, 0, 0, toKeepTime, userDir); 
     
     when(mockFs.listStatus(remoteRootLogPath)).thenReturn(
@@ -93,32 +98,32 @@ public class TestAggregatedLogDeletionService {
     FileStatus suffixDirStatus = new FileStatus(0, true,
         0, 0, toDeleteTime, suffixDir);
     Path bucketDir = LogAggregationUtils.getRemoteBucketDir(
-        remoteRootLogPath, "me", suffix, appId1);
+        remoteRootLogPath, USER_ME, suffix, appId1);
     FileStatus bucketDirStatus = new FileStatus(0, true, 0,
         0, toDeleteTime, bucketDir);
     Path app1Dir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogPath, appId1, "me", suffix);
+        remoteRootLogPath, appId1, USER_ME, suffix);
     FileStatus app1DirStatus = new FileStatus(0, true, 0, 0,
         toDeleteTime, app1Dir);
     
     ApplicationId appId2 =
         ApplicationId.newInstance(now, 2);
     Path app2Dir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogPath, appId2, "me", suffix);
+        remoteRootLogPath, appId2, USER_ME, suffix);
     FileStatus app2DirStatus = new FileStatus(0, true, 0, 0,
         toDeleteTime, app2Dir);
     
     ApplicationId appId3 =
         ApplicationId.newInstance(now, 3);
     Path app3Dir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogPath, appId3, "me", suffix);
+        remoteRootLogPath, appId3, USER_ME, suffix);
     FileStatus app3DirStatus = new FileStatus(0, true, 0, 0,
         toDeleteTime, app3Dir);
     
     ApplicationId appId4 =
         ApplicationId.newInstance(now, 4);
     Path app4Dir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogPath, appId4, "me", suffix);
+        remoteRootLogPath, appId4, USER_ME, suffix);
     FileStatus app4DirStatus =
         new FileStatus(0, true, 0, 0, toDeleteTime, app4Dir);
 
@@ -134,19 +139,19 @@ public class TestAggregatedLogDeletionService {
         new FileStatus[]{});
 
 
-    Path app2Log1 = new Path(app2Dir, "host1");
+    Path app2Log1 = new Path(app2Dir, DIR_HOST1);
     FileStatus app2Log1Status = new FileStatus(10, false, 1, 1, toDeleteTime, app2Log1);
     
-    Path app2Log2 = new Path(app2Dir, "host2");
+    Path app2Log2 = new Path(app2Dir, DIR_HOST2);
     FileStatus app2Log2Status = new FileStatus(10, false, 1, 1, toKeepTime, app2Log2);
     
     when(mockFs.listStatus(app2Dir)).thenReturn(
         new FileStatus[]{app2Log1Status, app2Log2Status});
     
-    Path app3Log1 = new Path(app3Dir, "host1");
+    Path app3Log1 = new Path(app3Dir, DIR_HOST1);
     FileStatus app3Log1Status = new FileStatus(10, false, 1, 1, toDeleteTime, app3Log1);
     
-    Path app3Log2 = new Path(app3Dir, "host2");
+    Path app3Log2 = new Path(app3Dir, DIR_HOST2);
     FileStatus app3Log2Status = new FileStatus(10, false, 1, 1, toDeleteTime, app3Log2);
     
     when(mockFs.delete(app3Dir, true)).thenThrow(new AccessControlException("Injected Error\nStack Trace :("));
@@ -154,10 +159,10 @@ public class TestAggregatedLogDeletionService {
     when(mockFs.listStatus(app3Dir)).thenReturn(
         new FileStatus[]{app3Log1Status, app3Log2Status});
     
-    Path app4Log1 = new Path(app4Dir, "host1");
+    Path app4Log1 = new Path(app4Dir, DIR_HOST1);
     FileStatus app4Log1Status = new FileStatus(10, false, 1, 1, toDeleteTime, app4Log1);
     
-    Path app4Log2 = new Path(app4Dir, "host2");
+    Path app4Log2 = new Path(app4Dir, DIR_HOST2);
     FileStatus app4Log2Status = new FileStatus(10, false, 1, 1,
         toKeepTime, app4Log2);
 
@@ -218,8 +223,8 @@ public class TestAggregatedLogDeletionService {
         "1");
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
-    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, "TFile"),
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
          LogAggregationTFileController.class.getName());
 
 
@@ -229,7 +234,7 @@ public class TestAggregatedLogDeletionService {
 
     Path remoteRootLogPath = new Path(remoteRootLogDir);
 
-    Path userDir = new Path(remoteRootLogPath, "me");
+    Path userDir = new Path(remoteRootLogPath, USER_ME);
     FileStatus userDirStatus = new FileStatus(0, true, 0, 0, before50Secs,
         userDir);
 
@@ -244,9 +249,9 @@ public class TestAggregatedLogDeletionService {
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     //Set time last modified of app1Dir directory and its files to before2000Secs 
     Path app1Dir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogPath, appId1, "me", suffix);
+        remoteRootLogPath, appId1, USER_ME, suffix);
     Path bucketDir = LogAggregationUtils.getRemoteBucketDir(
-        remoteRootLogPath, "me", suffix, appId1);
+        remoteRootLogPath, USER_ME, suffix, appId1);
     FileStatus bucketDirStatus = new FileStatus(0, true, 0,
         0, before50Secs, bucketDir);
     FileStatus app1DirStatus = new FileStatus(0, true, 0, 0, before2000Secs,
@@ -256,7 +261,7 @@ public class TestAggregatedLogDeletionService {
         ApplicationId.newInstance(System.currentTimeMillis(), 2);
     //Set time last modified of app1Dir directory and its files to before50Secs 
     Path app2Dir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogPath, appId2, "me", suffix);
+        remoteRootLogPath, appId2, USER_ME, suffix);
     FileStatus app2DirStatus = new FileStatus(0, true, 0, 0, before50Secs,
         app2Dir);
 
@@ -267,14 +272,14 @@ public class TestAggregatedLogDeletionService {
     when(mockFs.listStatus(bucketDir)).thenReturn(
         new FileStatus[] {app1DirStatus, app2DirStatus });
 
-    Path app1Log1 = new Path(app1Dir, "host1");
+    Path app1Log1 = new Path(app1Dir, DIR_HOST1);
     FileStatus app1Log1Status = new FileStatus(10, false, 1, 1, before2000Secs,
         app1Log1);
 
     when(mockFs.listStatus(app1Dir)).thenReturn(
         new FileStatus[] { app1Log1Status });
 
-    Path app2Log1 = new Path(app2Dir, "host1");
+    Path app2Log1 = new Path(app2Dir, DIR_HOST1);
     FileStatus app2Log1Status = new FileStatus(10, false, 1, 1, before50Secs,
         app2Log1);
 
@@ -345,8 +350,8 @@ public class TestAggregatedLogDeletionService {
     conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, 1);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
-    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, "TFile"),
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
          LogAggregationTFileController.class.getName());
 
 
@@ -358,7 +363,7 @@ public class TestAggregatedLogDeletionService {
 
     Path remoteRootLogPath = new Path(remoteRootLogDir);
 
-    Path userDir = new Path(remoteRootLogPath, "me");
+    Path userDir = new Path(remoteRootLogPath, USER_ME);
     FileStatus userDirStatus = new FileStatus(0, true, 0, 0, now, userDir);
 
     when(mockFs.listStatus(remoteRootLogPath)).thenReturn(
@@ -370,9 +375,9 @@ public class TestAggregatedLogDeletionService {
     FileStatus suffixDirStatus = new FileStatus(0, true, 0, 0, now,
         suffixDir);
     Path bucketDir = LogAggregationUtils.getRemoteBucketDir(
-        remoteRootLogPath, "me", suffix, appId1);
+        remoteRootLogPath, USER_ME, suffix, appId1);
     Path app1Dir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogPath, appId1, "me", suffix);
+        remoteRootLogPath, appId1, USER_ME, suffix);
     FileStatus bucketDirStatus = new FileStatus(0, true, 0,
         0, now, bucketDir);
 
@@ -385,7 +390,7 @@ public class TestAggregatedLogDeletionService {
     when(mockFs.listStatus(bucketDir)).thenReturn(
         new FileStatus[] {app1DirStatus});
 
-    Path app1Log1 = new Path(app1Dir, "host1");
+    Path app1Log1 = new Path(app1Dir, DIR_HOST1);
     FileStatus app1Log1Status = new FileStatus(10, false, 1, 1, now, app1Log1);
 
     when(mockFs.listStatus(app1Dir)).thenReturn(
@@ -451,8 +456,8 @@ public class TestAggregatedLogDeletionService {
         "1");
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
-    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, "TFile"),
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, T_FILE),
          LogAggregationTFileController.class.getName());
 
     // prevent us from picking up the same mockfs instance from another test
@@ -463,7 +468,7 @@ public class TestAggregatedLogDeletionService {
 
     Path remoteRootLogPath = new Path(remoteRootLogDir);
 
-    Path userDir = new Path(remoteRootLogPath, "me");
+    Path userDir = new Path(remoteRootLogPath, USER_ME);
     Path suffixDir = new Path(userDir, newSuffix);
     FileStatus userDirStatus = new FileStatus(0, true, 0, 0, 0, userDir);
     FileStatus suffixStatus = new FileStatus(0, true, 0, 0, 0, suffixDir);
@@ -497,7 +502,7 @@ public class TestAggregatedLogDeletionService {
 
     when(mockFs.listStatus(app1Dir)).thenThrow(
         new RuntimeException("Should Be Caught and Logged"));
-    Path app3Log3 = new Path(app3Dir, "host1");
+    Path app3Log3 = new Path(app3Dir, DIR_HOST1);
     FileStatus app3Log3Status = new FileStatus(10, false, 1, 1, 0, app3Log3);
     when(mockFs.listStatus(app3Dir)).thenReturn(
         new FileStatus[]{app3Log3Status});
