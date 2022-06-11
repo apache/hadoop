@@ -60,21 +60,6 @@ public class TestAggregatedLogDeletionService {
   private static final String NEW_SUFFIX = LogAggregationUtils.getBucketSuffix() + SUFFIX;
   private static final int TEN_DAYS_IN_SECONDS = 10 * 24 * 3600;
 
-  private static class PathWithFileStatus {
-    private final Path path;
-    private FileStatus fileStatus;
-
-    public PathWithFileStatus(Path path, FileStatus fileStatus) {
-      this.path = path;
-      this.fileStatus = fileStatus;
-    }
-
-    public void changeModificationTime(long modTime) {
-      fileStatus = new FileStatus(fileStatus.getLen(), fileStatus.isDirectory(), fileStatus.getReplication(),
-              fileStatus.getBlockSize(), modTime, fileStatus.getPath());
-    }
-  }
-
   private static PathWithFileStatus createPathWithFileStatusForAppId(Path remoteRootLogDir,
                                                                      ApplicationId appId,
                                                                      String user, String suffix, long modificationTime) {
@@ -418,6 +403,21 @@ public class TestAggregatedLogDeletionService {
     GetApplicationReportResponse response = mock(GetApplicationReportResponse.class);
     when(response.getApplicationReport()).thenReturn(report);
     return response;
+  }
+
+  private static class PathWithFileStatus {
+    private final Path path;
+    private FileStatus fileStatus;
+
+    public PathWithFileStatus(Path path, FileStatus fileStatus) {
+      this.path = path;
+      this.fileStatus = fileStatus;
+    }
+
+    public void changeModificationTime(long modTime) {
+      fileStatus = new FileStatus(fileStatus.getLen(), fileStatus.isDirectory(), fileStatus.getReplication(),
+              fileStatus.getBlockSize(), modTime, fileStatus.getPath());
+    }
   }
 
   private static class AggregatedLogDeletionServiceForTest extends AggregatedLogDeletionService {
