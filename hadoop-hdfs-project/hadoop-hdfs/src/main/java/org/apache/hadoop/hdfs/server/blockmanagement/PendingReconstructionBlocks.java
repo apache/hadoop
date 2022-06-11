@@ -200,7 +200,8 @@ class PendingReconstructionBlocks {
 
   /**
    * Used for metrics.
-   * @return The number of replicated pending blocks
+   *
+   * @return The number of pending replicated blocks.
    */
   long getNumReplicatedPendingBlocks() {
     synchronized (pendingReconstructions) {
@@ -212,7 +213,8 @@ class PendingReconstructionBlocks {
 
   /**
    * Used for metrics.
-   * @return The number of EC pending blocks
+   *
+   * @return The number of pending EC blocks.
    */
   long getNumEcPendingBlocks() {
     synchronized (pendingReconstructions) {

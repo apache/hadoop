@@ -5365,16 +5365,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Get aggregated count of replicated blocks pending to be reconstructed.
+   *
+   * @return The number of pending replicated blocks.
    */
-  @Metric
   public long getPendingReplicatedBlocks() {
     return blockManager.getNumReplicatedPendingBlocks();
   }
 
   /**
    * Get aggregated count of EC blocks pending to be reconstructed.
+   *
+   * @return The number of pending EC blocks.
    */
-  @Metric
   public long getPendingEcBlocks() {
     return blockManager.getNumEcPendingBlocks();
   }

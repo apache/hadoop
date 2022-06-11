@@ -243,12 +243,18 @@ public class BlockManager implements BlockStatsMXBean {
     return pendingReconstruction.getNumTimedOuts();
   }
 
-  /** Used by metrics. */
+  /** Used by metrics.
+   *
+   * @return The number of pending replicated blocks.
+   */
   public long getNumReplicatedPendingBlocks() {
     return pendingReconstruction.getNumReplicatedPendingBlocks();
   }
 
-  /** Used by metrics. */
+  /** Used by metrics.
+   *
+   * @return The number of pending EC blocks.
+   */
   public long getNumEcPendingBlocks() {
     return pendingReconstruction.getNumEcPendingBlocks();
   }
