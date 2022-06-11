@@ -160,7 +160,7 @@ public class TestJHSSecurity {
         clientUsingDT.getJobReport(jobReportRequest);
         fail("Should not have succeeded with an expired token");
       } catch (IOException e) {
-        assertTrue(e.getCause().getMessage().contains("is expired"));
+        assertTrue(e.getCause().getMessage().contains("expired"));
       }
       
       // Test cancellation
