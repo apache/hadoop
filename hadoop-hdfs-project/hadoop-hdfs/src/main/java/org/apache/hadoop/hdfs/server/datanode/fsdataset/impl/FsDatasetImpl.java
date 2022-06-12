@@ -908,9 +908,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   String getStorageUuidForLock(ExtendedBlock b)
       throws ReplicaNotFoundException {
-    ReplicaInfo replicaInfo = getReplicaInfo(
-        b.getBlockPoolId(), b.getBlockId());
-    return replicaInfo.getStorageUuid();
+    return getReplicaInfo(b.getBlockPoolId(), b.getBlockId())
+        .getStorageUuid();
   }
 
   /**
