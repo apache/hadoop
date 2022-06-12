@@ -4104,6 +4104,10 @@ public abstract class Server {
     return serverName;
   }
 
+  /**
+   * Server metrics updater thread, used to update some metrics on a regular basis.
+   * For instance, requests per second.
+   */
   private class MetricsUpdateRunner implements Runnable {
 
     private long lastExecuted = 0;
