@@ -106,6 +106,9 @@ public class TestJournalNodeSync {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
         .getCurrentDir();
+    Assert.assertTrue(
+        jCluster.getJournalNode(0).getRpcServer().getRpcServer().getRpcMetrics().getTotalRequests()
+            > 20);
 
     // Generate some edit logs and delete one.
     long firstTxId = generateEditLog();

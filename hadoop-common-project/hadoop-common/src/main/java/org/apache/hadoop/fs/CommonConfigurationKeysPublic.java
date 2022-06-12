@@ -1054,5 +1054,9 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_HTTP_IDLE_TIMEOUT_MS_KEY =
       "hadoop.http.idle_timeout.ms";
   public static final int HADOOP_HTTP_IDLE_TIMEOUT_MS_DEFAULT = 60000;
+
+  public static final String IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL =
+      "ipc.server.metrics.update.runner.interval";
+  public static final int IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL_DEFAULT = 5000;
 }
 

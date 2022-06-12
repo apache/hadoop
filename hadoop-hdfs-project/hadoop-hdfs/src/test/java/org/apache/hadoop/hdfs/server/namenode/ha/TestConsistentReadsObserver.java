@@ -123,6 +123,7 @@ public class TestConsistentReadsObserver {
         + CommonConfigurationKeys.IPC_BACKOFF_ENABLE, true);
 
     NameNodeAdapter.getRpcServer(nn).refreshCallQueue(configuration);
+    assertEquals(1, NameNodeAdapter.getRpcServer(nn).getTotalRequests());
 
     dfs.create(testPath, (short)1).close();
     assertSentTo(0);
@@ -132,6 +133,7 @@ public class TestConsistentReadsObserver {
     // be triggered and client should retry active NN.
     dfs.getFileStatus(testPath);
     assertSentTo(0);
+    assertTrue(NameNodeAdapter.getRpcServer(nn).getTotalRequests() > 1);
     // reset the original call queue
     NameNodeAdapter.getRpcServer(nn).refreshCallQueue(originalConf);
   }
