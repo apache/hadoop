@@ -930,6 +930,7 @@ public class TestKMS {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testKMSProviderCaching() throws Exception {
     Configuration conf = new Configuration();
     File confDir = getTestDir();
@@ -949,10 +950,9 @@ public class TestKMS {
         // get the reference to the internal cache, to test invalidation.
         ValueQueue vq = (ValueQueue) new FieldReader(kmscp,
             FieldUtils.getField(KMSClientProvider.class, "encKeyVersionQueue", true)).read();
-        LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>> kq;
-        Object keyQueues =
-            new FieldReader(vq, FieldUtils.getField(ValueQueue.class, "keyQueues", true)).read();
-        kq = (LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>>) keyQueues;
+        LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>> kq =
+            (LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>>)
+                 new FieldReader(vq, FieldUtils.getField(ValueQueue.class, "keyQueues", true)).read();
         EncryptedKeyVersion mockEKV = Mockito.mock(EncryptedKeyVersion.class);
         when(mockEKV.getEncryptionKeyName()).thenReturn(keyName);
         when(mockEKV.getEncryptionKeyVersionName()).thenReturn(mockVersionName);
