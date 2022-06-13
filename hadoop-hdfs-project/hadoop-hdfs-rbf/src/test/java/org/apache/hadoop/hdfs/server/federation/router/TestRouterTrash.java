@@ -190,11 +190,11 @@ public class TestRouterTrash {
   }
 
   @Test
-  public void testMoveToTrashNoMountPointWithKerBoersUser() throws IOException,
+  public void testMoveToTrashWithKerberosUser() throws IOException,
       URISyntaxException, InterruptedException {
     //Constructs the structure of the KerBoers user name
-    String kerBoersUser = "randomUser/dev@HADOOP.COM";
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(kerBoersUser);
+    String kerberosUser = "randomUser/dev@HADOOP.COM";
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(kerberosUser);
     MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
         Collections.singletonMap(ns1, MOUNT_POINT));
     assertTrue(addMountTable(addEntry));
@@ -222,6 +222,9 @@ public class TestRouterTrash {
     FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, routerConf);
     Trash trash = new Trash(fs, routerConf);
     assertTrue(trash.moveToTrash(filePath));
+    fileStatuses = fs.listStatus(
+        new Path("/user/" + ugi.getShortUserName() + "/.Trash/Current" + MOUNT_POINT));
+    assertEquals(1, fileStatuses.length);
   }
 
   @Test
