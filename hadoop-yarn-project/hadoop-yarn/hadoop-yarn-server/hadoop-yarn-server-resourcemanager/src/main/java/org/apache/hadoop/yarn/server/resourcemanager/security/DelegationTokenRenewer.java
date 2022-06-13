@@ -996,6 +996,22 @@ public class DelegationTokenRenewer extends AbstractService {
     @Override
     public void run() {
       while (true) {
+        if (futures.isEmpty()) {
+          synchronized (this) {
+            try {
+              // waiting for tokenRenewerThreadTimeout milliseconds
+              long waitingTimeMs = Math.min(10000, Math.max(500, tokenRenewerThreadTimeout));
+              LOG.info("Delegation token renewer pool is empty, waiting for {} ms.", waitingTimeMs);
+              wait(waitingTimeMs);
+            } catch (InterruptedException e) {
+              LOG.warn("Delegation token renewer pool tracker waiting interrupt occurred.");
+              Thread.currentThread().interrupt();
+            }
+          }
+          if (futures.isEmpty()) {
+            continue;
+          }
+        }
         for (Map.Entry<DelegationTokenRenewerEvent, Future<?>> entry : futures
             .entrySet()) {
           DelegationTokenRenewerEvent evt = entry.getKey();
@@ -1022,6 +1038,14 @@ public class DelegationTokenRenewer extends AbstractService {
           } catch (Exception e) {
             LOG.info("Problem in submitting renew tasks in token renewer "
                 + "thread.", e);
+          }
+          if (future.isDone() || future.isCancelled()) {
+            try {
+              futures.remove(evt);
+              LOG.info("Removed done or cancelled renew tasks of {} in token renewer thread.", evt.getApplicationId());
+            } catch (Exception e) {
+              LOG.warn("Problem in removing done or cancelled renew tasks in token renewer thread.", e);
+            }
           }
         }
       }
