@@ -62,7 +62,8 @@ public class TestAggregatedLogDeletionService {
 
   private static PathWithFileStatus createPathWithFileStatusForAppId(Path remoteRootLogDir,
                                                                      ApplicationId appId,
-                                                                     String user, String suffix, long modificationTime) {
+                                                                     String user, String suffix,
+                                                                     long modificationTime) {
     Path path = LogAggregationUtils.getRemoteAppLogDir(
             remoteRootLogDir, appId, user, suffix);
     FileStatus fileStatus = createEmptyFileStatus(modificationTime, path);
@@ -81,25 +82,31 @@ public class TestAggregatedLogDeletionService {
   }
 
   private static PathWithFileStatus createDirLogPathWithFileStatus(Path baseDir, String childDir,
-                                                                    long modificationTime) {
+                                                                   long modificationTime) {
     Path logPath = new Path(baseDir, childDir);
     FileStatus fStatus = createFileStatusWithLengthForDir(10, modificationTime, logPath);
     return new PathWithFileStatus(logPath, fStatus);
   }
 
-  private static PathWithFileStatus createDirBucketDirLogPathWithFileStatus(Path remoteRootLogPath, String user,
-                                                                   String suffix, ApplicationId appId, 
-                                                                   long modificationTime) {
+  private static PathWithFileStatus createDirBucketDirLogPathWithFileStatus(Path remoteRootLogPath,
+                                                                            String user,
+                                                                            String suffix,
+                                                                            ApplicationId appId,
+                                                                            long modificationTime) {
     Path bucketDir = LogAggregationUtils.getRemoteBucketDir(remoteRootLogPath, user, suffix, appId);
     FileStatus fStatus = new FileStatus(0, true, 0, 0, modificationTime, bucketDir);
     return new PathWithFileStatus(bucketDir, fStatus);
   }
 
-  private static FileStatus createFileStatusWithLengthForFile(long length, long modificationTime, Path logPath) {
+  private static FileStatus createFileStatusWithLengthForFile(long length,
+                                                              long modificationTime,
+                                                              Path logPath) {
     return new FileStatus(length, false, 1, 1, modificationTime, logPath);
   }
 
-  private static FileStatus createFileStatusWithLengthForDir(long length, long modificationTime, Path logPath) {
+  private static FileStatus createFileStatusWithLengthForDir(long length,
+                                                             long modificationTime,
+                                                             Path logPath) {
     return new FileStatus(length, true, 1, 1, modificationTime, logPath);
   }
 
@@ -114,7 +121,8 @@ public class TestAggregatedLogDeletionService {
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, retainSeconds);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, retainCheckIntervalSeconds);
+    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
+            retainCheckIntervalSeconds);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_ROOT_LOG_DIR);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, SUFFIX);
     conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, T_FILE);
@@ -136,7 +144,8 @@ public class TestAggregatedLogDeletionService {
     FileSystem mockFs = ((FilterFileSystem)rootFs).getRawFileSystem();
     
     Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
-    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, toKeepTime);
+    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME,
+            toKeepTime);
 
     when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
 
@@ -144,14 +153,20 @@ public class TestAggregatedLogDeletionService {
     ApplicationId appId2 = ApplicationId.newInstance(now, 2);
     ApplicationId appId3 = ApplicationId.newInstance(now, 3);
     ApplicationId appId4 = ApplicationId.newInstance(now, 4);
-    
-    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX, toDeleteTime);
-    PathWithFileStatus bucketDir = createDirLogPathWithFileStatus(remoteRootLogPath, SUFFIX, toDeleteTime);
 
-    PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1, USER_ME, SUFFIX, toDeleteTime);
-    PathWithFileStatus app2 = createPathWithFileStatusForAppId(remoteRootLogPath, appId2, USER_ME, SUFFIX, toDeleteTime);
-    PathWithFileStatus app3 = createPathWithFileStatusForAppId(remoteRootLogPath, appId3, USER_ME, SUFFIX, toDeleteTime);
-    PathWithFileStatus app4 = createPathWithFileStatusForAppId(remoteRootLogPath, appId4, USER_ME, SUFFIX, toDeleteTime);
+    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX,
+            toDeleteTime);
+    PathWithFileStatus bucketDir = createDirLogPathWithFileStatus(remoteRootLogPath, SUFFIX,
+            toDeleteTime);
+
+    PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1,
+            USER_ME, SUFFIX, toDeleteTime);
+    PathWithFileStatus app2 = createPathWithFileStatusForAppId(remoteRootLogPath, appId2,
+            USER_ME, SUFFIX, toDeleteTime);
+    PathWithFileStatus app3 = createPathWithFileStatusForAppId(remoteRootLogPath, appId3,
+            USER_ME, SUFFIX, toDeleteTime);
+    PathWithFileStatus app4 = createPathWithFileStatusForAppId(remoteRootLogPath, appId4,
+            USER_ME, SUFFIX, toDeleteTime);
 
     when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
     when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus});
@@ -159,24 +174,34 @@ public class TestAggregatedLogDeletionService {
             app1.fileStatus, app2.fileStatus, 
             app3.fileStatus, app4.fileStatus});
     
-    PathWithFileStatus app2Log1 = createFileLogPathWithFileStatus(app2.path, DIR_HOST1, toDeleteTime);
-    PathWithFileStatus app2Log2 = createFileLogPathWithFileStatus(app2.path, DIR_HOST2, toKeepTime);
-    PathWithFileStatus app3Log1 = createFileLogPathWithFileStatus(app3.path, DIR_HOST1, toDeleteTime);
-    PathWithFileStatus app3Log2 = createFileLogPathWithFileStatus(app3.path, DIR_HOST2, toDeleteTime);
-    PathWithFileStatus app4Log1 = createFileLogPathWithFileStatus(app4.path, DIR_HOST1, toDeleteTime);
+    PathWithFileStatus app2Log1 = createFileLogPathWithFileStatus(app2.path, DIR_HOST1,
+            toDeleteTime);
+    PathWithFileStatus app2Log2 = createFileLogPathWithFileStatus(app2.path, DIR_HOST2,
+            toKeepTime);
+    PathWithFileStatus app3Log1 = createFileLogPathWithFileStatus(app3.path, DIR_HOST1,
+            toDeleteTime);
+    PathWithFileStatus app3Log2 = createFileLogPathWithFileStatus(app3.path, DIR_HOST2,
+            toDeleteTime);
+    PathWithFileStatus app4Log1 = createFileLogPathWithFileStatus(app4.path, DIR_HOST1,
+            toDeleteTime);
     PathWithFileStatus app4Log2 = createFileLogPathWithFileStatus(app4.path, DIR_HOST2, toKeepTime);
 
     when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[]{});
-    when(mockFs.listStatus(app2.path)).thenReturn(new FileStatus[]{app2Log1.fileStatus, app2Log2.fileStatus});
-    when(mockFs.listStatus(app3.path)).thenReturn(new FileStatus[]{app3Log1.fileStatus, app3Log2.fileStatus});
-    when(mockFs.listStatus(app4.path)).thenReturn(new FileStatus[]{app4Log1.fileStatus, app4Log2.fileStatus});
-    when(mockFs.delete(app3.path, true)).thenThrow(new AccessControlException("Injected Error\nStack Trace :("));
+    when(mockFs.listStatus(app2.path)).thenReturn(new FileStatus[]{app2Log1.fileStatus,
+            app2Log2.fileStatus});
+    when(mockFs.listStatus(app3.path)).thenReturn(new FileStatus[]{app3Log1.fileStatus,
+            app3Log2.fileStatus});
+    when(mockFs.listStatus(app4.path)).thenReturn(new FileStatus[]{app4Log1.fileStatus,
+            app4Log2.fileStatus});
+    when(mockFs.delete(app3.path, true)).thenThrow(
+            new AccessControlException("Injected Error\nStack Trace :("));
 
     final List<ApplicationId> finishedApplications = Collections.unmodifiableList(
             Arrays.asList(appId1, appId2, appId3));
     final List<ApplicationId> runningApplications = Collections.singletonList(appId4);
 
-    AggregatedLogDeletionService deletionService = new AggregatedLogDeletionServiceForTest(runningApplications, finishedApplications);
+    AggregatedLogDeletionService deletionService =
+            new AggregatedLogDeletionServiceForTest(runningApplications, finishedApplications);
     deletionService.init(conf);
     deletionService.start();
 
@@ -210,32 +235,41 @@ public class TestAggregatedLogDeletionService {
     
     Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
 
-    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, before50Secs);
-    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX, before50Secs);
-    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, SUFFIX, appId1, before50Secs);
+    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME,
+            before50Secs);
+    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX,
+            before50Secs);
+    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath,
+            USER_ME, SUFFIX, appId1, before50Secs);
 
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[] { userDir.fileStatus });
+    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[] {userDir.fileStatus});
 
     //Set time last modified of app1Dir directory and its files to before2000Secs 
-    PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1, USER_ME, SUFFIX, before2000Secs);
+    PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1,
+            USER_ME, SUFFIX, before2000Secs);
 
     //Set time last modified of app1Dir directory and its files to before50Secs 
-    PathWithFileStatus app2 = createPathWithFileStatusForAppId(remoteRootLogPath, appId2, USER_ME, SUFFIX, before50Secs);
+    PathWithFileStatus app2 = createPathWithFileStatusForAppId(remoteRootLogPath, appId2,
+            USER_ME, SUFFIX, before50Secs);
 
     when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[]{suffixDir.fileStatus});
     when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[]{bucketDir.fileStatus});
-    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[]{app1.fileStatus, app2.fileStatus});
+    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[]{app1.fileStatus,
+            app2.fileStatus});
 
-    PathWithFileStatus app1Log1 = createFileLogPathWithFileStatus(app1.path, DIR_HOST1, before2000Secs);
-    PathWithFileStatus app2Log1 = createFileLogPathWithFileStatus(app2.path, DIR_HOST1, before50Secs);
+    PathWithFileStatus app1Log1 = createFileLogPathWithFileStatus(app1.path, DIR_HOST1,
+            before2000Secs);
+    PathWithFileStatus app2Log1 = createFileLogPathWithFileStatus(app2.path, DIR_HOST1,
+            before50Secs);
 
-    when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[] { app1Log1.fileStatus });
-    when(mockFs.listStatus(app2.path)).thenReturn(new FileStatus[] { app2Log1.fileStatus });
+    when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[] {app1Log1.fileStatus});
+    when(mockFs.listStatus(app2.path)).thenReturn(new FileStatus[] {app2Log1.fileStatus});
 
     final List<ApplicationId> finishedApplications =
         Collections.unmodifiableList(Arrays.asList(appId1, appId2));
 
-    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionServiceForTest(null, finishedApplications, conf);
+    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionServiceForTest(null,
+            finishedApplications, conf);
     
     deletionSvc.init(conf);
     deletionSvc.start();
@@ -247,7 +281,8 @@ public class TestAggregatedLogDeletionService {
 
     //Now, let's change the confs
     conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 50);
-    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, checkIntervalSeconds);
+    conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
+            checkIntervalSeconds);
     //We have not called refreshLogSettings,hence don't expect to see the changed conf values
     assertTrue(checkIntervalMilliSeconds != deletionSvc.getCheckIntervalMsecs());
     
@@ -282,9 +317,11 @@ public class TestAggregatedLogDeletionService {
     when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
 
     ApplicationId appId1 = ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, SUFFIX, appId1, now);
+    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath,
+            USER_ME, SUFFIX, appId1, now);
 
-    PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1, USER_ME, SUFFIX, now);
+    PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1,
+            USER_ME, SUFFIX, now);
     PathWithFileStatus app1Log1 = createFileLogPathWithFileStatus(app1.path, DIR_HOST1, now);
 
     when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
@@ -294,7 +331,8 @@ public class TestAggregatedLogDeletionService {
 
     final List<ApplicationId> finishedApplications = Collections.singletonList(appId1);
 
-    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionServiceForTest(null, finishedApplications);
+    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionServiceForTest(null,
+            finishedApplications);
     deletionSvc.init(conf);
     deletionSvc.start();
  
@@ -344,12 +382,15 @@ public class TestAggregatedLogDeletionService {
     PathWithFileStatus app3 = createDirLogPathWithFileStatus(bucketDir.path, appId3.toString(), 0);
     PathWithFileStatus app3Log3 = createDirLogPathWithFileStatus(app3.path, DIR_HOST1, 0);
     
-    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[]{app1.fileStatus, app2.fileStatus, app3.fileStatus});
-    when(mockFs.listStatus(app1.path)).thenThrow(new RuntimeException("Should be caught and logged"));
+    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[]{
+            app1.fileStatus,app2.fileStatus, app3.fileStatus});
+    when(mockFs.listStatus(app1.path)).thenThrow(
+            new RuntimeException("Should be caught and logged"));
     when(mockFs.listStatus(app2.path)).thenReturn(new FileStatus[]{});
     when(mockFs.listStatus(app3.path)).thenReturn(new FileStatus[]{app3Log3.fileStatus});
 
-    final List<ApplicationId> finishedApplications = Collections.unmodifiableList(Arrays.asList(appId1, appId3));
+    final List<ApplicationId> finishedApplications = Collections.unmodifiableList(
+            Arrays.asList(appId1, appId3));
 
     ApplicationClientProtocol rmClient = createMockRMClient(finishedApplications, null);
     AggregatedLogDeletionService.LogDeletionTask deletionTask =
@@ -415,7 +456,8 @@ public class TestAggregatedLogDeletionService {
     }
 
     public void changeModificationTime(long modTime) {
-      fileStatus = new FileStatus(fileStatus.getLen(), fileStatus.isDirectory(), fileStatus.getReplication(),
+      fileStatus = new FileStatus(fileStatus.getLen(), fileStatus.isDirectory(),
+              fileStatus.getReplication(),
               fileStatus.getBlockSize(), modTime, fileStatus.getPath());
     }
   }
