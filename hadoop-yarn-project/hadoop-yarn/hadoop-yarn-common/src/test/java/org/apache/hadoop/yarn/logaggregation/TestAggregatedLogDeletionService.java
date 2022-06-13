@@ -43,7 +43,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
+import org.apache.log4j.Level;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Assert;
 import org.apache.commons.lang3.tuple.Pair;
@@ -122,6 +124,11 @@ public class TestAggregatedLogDeletionService {
                                                              long modificationTime,
                                                              Path logPath) {
     return new FileStatus(length, true, 1, 1, modificationTime, logPath);
+  }
+  
+  @BeforeClass
+  public static void beforeClass() {
+    org.apache.log4j.Logger.getRootLogger().setLevel(Level.DEBUG);
   }
 
   @Before
@@ -210,7 +217,7 @@ public class TestAggregatedLogDeletionService {
                     new AppDescriptor(T_FILE, toDeleteTime,
                             Pair.of(DIR_HOST1, toDeleteTime),
                             Pair.of(DIR_HOST2, toKeepTime)),
-                    //apps for IFile
+                    //Apps for IFile
                     new AppDescriptor(I_FILE, toDeleteTime, new Pair[]{}),
                     new AppDescriptor(I_FILE, toDeleteTime,
                             Pair.of(DIR_HOST1, toDeleteTime),
@@ -645,23 +652,22 @@ public class TestAggregatedLogDeletionService {
     private LogAggregationFilesBuilder setupMocks() throws IOException {
       if (fileControllers != null && !fileControllers.isEmpty()) {
         for (String fileController : fileControllers) {
-          Path fcPath = new Path(remoteRootLogPath, fileController);
-          when(mockFs.listStatus(fcPath)).thenReturn(new FileStatus[]{userDir.fileStatus});  
+          Path controllerPath = new Path(remoteRootLogPath, fileController);
+          setupListStatusForPath(controllerPath, userDir);
         }
       } else {
-        when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
+        setupListStatusForPath(remoteRootLogPath, userDir);
       }
-      when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
-      when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus});
-      when(mockFs.listStatus(bucketDir.path)).thenReturn(
-              appDirs.stream().map(
+      setupListStatusForPath(userDir, suffixDir);
+      setupListStatusForPath(suffixDir, bucketDir);
+      setupListStatusForPath(bucketDir, appDirs.stream().map(
                       app -> app.fileStatus)
-                      .toArray(FileStatus[]::new));
-
+              .toArray(FileStatus[]::new));
+      
       for (int i = 0; i < appDirs.size(); i++) {
         List<PathWithFileStatus> appChildren = appFiles.get(i);
         Path appPath = appDirs.get(i).path;
-        when(mockFs.listStatus(appPath)).thenReturn(
+        setupListStatusForPath(appPath, 
                 appChildren.stream()
                         .map(child -> child.fileStatus)
                         .toArray(FileStatus[]::new));
@@ -675,6 +681,24 @@ public class TestAggregatedLogDeletionService {
       }
       
       return this;
+    }
+
+    private void setupListStatusForPath(Path dir, PathWithFileStatus pathWithFileStatus) throws IOException {
+      setupListStatusForPath(dir, new FileStatus[]{pathWithFileStatus.fileStatus});
+    }
+
+    private void setupListStatusForPath(PathWithFileStatus dir, PathWithFileStatus pathWithFileStatus) throws IOException {
+      setupListStatusForPath(dir, new FileStatus[]{pathWithFileStatus.fileStatus});
+    }
+
+    private void setupListStatusForPath(Path dir, FileStatus[] fileStatuses) throws IOException {
+      LOG.debug("Setting up listStatus. Parent: {}, files: {}", dir, fileStatuses);
+      when(mockFs.listStatus(dir)).thenReturn(fileStatuses);
+    }
+
+    private void setupListStatusForPath(PathWithFileStatus dir, FileStatus[] fileStatuses) throws IOException {
+      LOG.debug("Setting up listStatus. Parent: {}, files: {}", dir.path, fileStatuses);
+      when(mockFs.listStatus(dir.path)).thenReturn(fileStatuses);
     }
 
     public LogAggregationFilesBuilder withFinishedApps(int... apps) {
