@@ -125,30 +125,36 @@ class LogAggregationFilesBuilder {
 
   LogAggregationFilesBuilder setupMocks() throws IOException {
     createApplicationsByDescriptors();
-    
-    //Example path: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/<application id>/<NodeManager id>
-    //remoteRootLogPath: <remote-app-log-dir>/ ::: mockfs://foo/tmp/logs/
-    //userDir: <remote-app-log-dir>/<user>/ ::: mockfs://foo/tmp/logs/me/
-    //suffixDir: <remote-app-log-dir>/<user>/bucket-<suffix>/ ::: mockfs://foo/tmp/logs/me/bucket-logs/
-    //bucketDir: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/ ::: mockfs://foo/tmp/logs/me/bucket-logs/0001/
-    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, userDirName, userDirModTime);
-    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, suffixDirName, suffixDirModTime);
-    ApplicationId arbitraryAppIdForBucketDir = this.applicationIds.get(0);
-    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath, userDirName, suffix, arbitraryAppIdForBucketDir, bucketDirModTime);
-    
+
+    List<Path> rootPaths = new ArrayList<>();
     if (fileControllers != null && !fileControllers.isEmpty()) {
       for (String fileController : fileControllers) {
-        Path controllerPath = new Path(remoteRootLogPath, fileController);
-        setupListStatusForPath(controllerPath, userDir);
+        //Example path: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/<application id>/<NodeManager id>
+        //remoteRootLogPath: <remote-app-log-dir>/ ::: mockfs://foo/tmp/logs/
+        //userDir: <remote-app-log-dir>/<user>/ ::: mockfs://foo/tmp/logs/me/
+        //suffixDir: <remote-app-log-dir>/<user>/bucket-<suffix>/ ::: mockfs://foo/tmp/logs/me/bucket-logs/
+        //bucketDir: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/ ::: mockfs://foo/tmp/logs/me/bucket-logs/0001/
+        //remoteRootLogPath with controller: <remote-app-log-dir>/<controllerName> ::: mockfs://foo/tmp/logs/IFile
+        rootPaths.add(new Path(remoteRootLogPath, fileController));
       }
     } else {
-      setupListStatusForPath(remoteRootLogPath, userDir);
+      rootPaths.add(remoteRootLogPath);
     }
-    setupListStatusForPath(userDir, suffixDir);
-    setupListStatusForPath(suffixDir, bucketDir);
     
-    setupListStatusForPath(bucketDir, appDirs.stream().map(app -> app.fileStatus)
-            .toArray(FileStatus[]::new));
+    for (Path rootPath : rootPaths) {
+      String controllerName = rootPath.getName();
+      ApplicationId arbitraryAppIdForBucketDir = this.applicationIds.get(0);
+      PathWithFileStatus userDir = createDirLogPathWithFileStatus(rootPath, userDirName, userDirModTime);
+      PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, suffixDirName, suffixDirModTime);
+      PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(rootPath, userDirName, suffix, arbitraryAppIdForBucketDir, bucketDirModTime);
+      setupListStatusForPath(rootPath, userDir);
+      setupListStatusForPath(userDir, suffixDir);
+      setupListStatusForPath(suffixDir, bucketDir);
+      setupListStatusForPath(bucketDir, appDirs.stream()
+              .filter(app -> app.path.toString().contains(controllerName))
+              .map(app -> app.fileStatus)
+              .toArray(FileStatus[]::new));
+    }
     return this;
   }
   

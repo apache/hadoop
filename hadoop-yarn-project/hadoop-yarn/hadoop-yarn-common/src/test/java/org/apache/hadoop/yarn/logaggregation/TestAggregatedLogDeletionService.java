@@ -486,6 +486,13 @@ public class TestAggregatedLogDeletionService {
               fileStatus.getReplication(),
               fileStatus.getBlockSize(), modTime, fileStatus.getPath());
     }
+
+    @Override
+    public String toString() {
+      return "PathWithFileStatus{" +
+              "path=" + path +
+              '}';
+    }
   }
 
   static class AggregatedLogDeletionServiceForTest extends AggregatedLogDeletionService {
