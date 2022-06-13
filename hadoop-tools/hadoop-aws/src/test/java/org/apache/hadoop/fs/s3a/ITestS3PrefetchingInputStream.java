@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.net.URI;
 
-import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
