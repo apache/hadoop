@@ -26,6 +26,8 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -61,7 +63,7 @@ public class TestJHSSecurity {
       LoggerFactory.getLogger(TestJHSSecurity.class);
   
   @Test
-  public void testDelegationToken() throws IOException, InterruptedException {
+  public void testDelegationToken() throws Exception {
 
     org.apache.log4j.Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
@@ -80,7 +82,7 @@ public class TestJHSSecurity {
     final long renewInterval = 10000l;
 
     JobHistoryServer jobHistoryServer = null;
-    MRClientProtocol clientUsingDT = null;
+    MRClientProtocol clientUsingDT;
     long tokenFetchTime;
     try {
       jobHistoryServer = new JobHistoryServer() {
@@ -155,14 +157,11 @@ public class TestJHSSecurity {
       }
       Thread.sleep(50l);
       LOG.info("At time: " + System.currentTimeMillis() + ", token should be invalid");
-      // Token should have expired.      
-      try {
-        clientUsingDT.getJobReport(jobReportRequest);
-        fail("Should not have succeeded with an expired token");
-      } catch (IOException e) {
-        assertTrue(e.getCause().getMessage().contains("expired"));
-      }
-      
+      // Token should have expired.
+      final MRClientProtocol finalClientUsingDT = clientUsingDT;
+      LambdaTestUtils.intercept(SecretManager.InvalidToken.class, "expired",
+          () -> finalClientUsingDT.getJobReport(jobReportRequest));
+
       // Test cancellation
       // Stop the existing proxy, start another.
       if (clientUsingDT != null) {
