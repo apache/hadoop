@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.impl;
+package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -31,13 +31,11 @@ import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.fs.ByteBufferPositionedReadable;
-import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.FileRangeImpl;
-import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.impl.FileRangeImpl;
+import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.apache.hadoop.fs.impl.VectoredReadUtils.sortRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionally;
 

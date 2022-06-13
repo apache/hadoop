@@ -20,7 +20,6 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.impl.VectoredReadUtils;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
@@ -68,7 +67,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
-import static org.apache.hadoop.fs.impl.VectoredReadUtils.sortRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_EXCEPTIONS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS;
@@ -274,6 +273,7 @@ public class RawLocalFileSystem extends FileSystem {
       // new capabilities.
       switch (capability.toLowerCase(Locale.ENGLISH)) {
       case StreamCapabilities.IOSTATISTICS:
+      case StreamCapabilities.VECTOREDIO:
         return true;
       default:
         return false;
