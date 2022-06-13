@@ -1213,14 +1213,92 @@ public class FederationClientInterceptor
   @Override
   public FailApplicationAttemptResponse failApplicationAttempt(
       FailApplicationAttemptRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getApplicationAttemptId() == null
+          || request.getApplicationAttemptId().getApplicationId() == null) {
+      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing failApplicationAttempt request or applicationId " +
+          "or applicationAttemptId information.", null);
+    }
+    long startTime = clock.getTime();
+    SubClusterId subClusterId = null;
+    ApplicationId applicationId = request.getApplicationAttemptId().getApplicationId();
+
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException e) {
+      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      RouterServerUtil.logAndThrowException("ApplicationAttempt " +
+          request.getApplicationAttemptId() + " belongs to Application " +
+          request.getApplicationAttemptId().getApplicationId() +
+          " does not exist in FederationStateStore.", e);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    FailApplicationAttemptResponse response = null;
+    try {
+      response = clientRMProxy.failApplicationAttempt(request);
+    } catch (Exception e) {
+      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get the applicationAttempt report for " +
+          request.getApplicationAttemptId() + " to SubCluster " + subClusterId.getId(), e);
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the report of " +
+          "the applicationAttempt {} to SubCluster {}.",
+          request.getApplicationAttemptId(), subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededFailAppAttemptRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override
   public UpdateApplicationPriorityResponse updateApplicationPriority(
       UpdateApplicationPriorityRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getApplicationId() == null
+            || request.getApplicationPriority() == null) {
+      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing updateApplicationPriority request or applicationId " +
+          "or applicationPriority information.", null);
+    }
+
+    long startTime = clock.getTime();
+    SubClusterId subClusterId = null;
+    ApplicationId applicationId = request.getApplicationId();
+
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException e) {
+      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " +
+              request.getApplicationId() +
+              " does not exist in FederationStateStore.", e);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    UpdateApplicationPriorityResponse response = null;
+    try {
+      response = clientRMProxy.updateApplicationPriority(request);
+    } catch (Exception e) {
+      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to update application priority for " +
+          request.getApplicationId() + " to SubCluster " + subClusterId.getId(), e);
+    }
+
+    if (response == null) {
+      LOG.error("No response when update application priority of " +
+           "the applicationId {} to SubCluster {}.",
+           applicationId, subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededUpdateAppPriorityRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override
@@ -1233,7 +1311,45 @@ public class FederationClientInterceptor
   public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
       UpdateApplicationTimeoutsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getApplicationId() == null
+            || request.getApplicationTimeouts() == null) {
+      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing updateApplicationTimeouts request or applicationId " +
+          "or applicationTimeouts information.", null);
+    }
+
+    long startTime = clock.getTime();
+    SubClusterId subClusterId = null;
+    ApplicationId applicationId = request.getApplicationId();
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException e) {
+      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " +
+          request.getApplicationId() +
+          " does not exist in FederationStateStore.", e);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    UpdateApplicationTimeoutsResponse response = null;
+    try {
+      response = clientRMProxy.updateApplicationTimeouts(request);
+    } catch (Exception e) {
+      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to update application timeout for " +
+          request.getApplicationId() + " to SubCluster " + subClusterId.getId(), e);
+    }
+
+    if (response == null) {
+      LOG.error("No response when update application timeout of " +
+          "the applicationId {} to SubCluster {}.",
+          applicationId, subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededUpdateAppTimeoutsRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override

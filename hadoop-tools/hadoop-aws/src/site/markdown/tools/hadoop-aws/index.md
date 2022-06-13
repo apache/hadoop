@@ -1079,6 +1079,17 @@ options are covered in [Testing](./testing.md).
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.create.storage.class</name>
+  <value></value>
+  <description>
+      Storage class: standard, reduced_redundancy, intelligent_tiering, etc.
+      Specify the storage class for S3A PUT object requests.
+      If not set the storage class will be null
+      and mapped to default standard class on S3.
+  </description>
+</property>
+
 ```
 
 ## <a name="retry_and_recovery"></a>Retry and Recovery
@@ -1649,6 +1660,26 @@ To enable this feature within S3A, configure the `fs.s3a.requester.pays.enabled`
     <value>true</value>
 </property>
 ```
+
+## <a name="storage_classes"></a>Storage Classes
+
+Amazon S3 offers a range of [Storage Classes](https://aws.amazon.com/s3/storage-classes/)
+that you can choose from based on behavior of your applications. By using the right
+storage class, you can reduce the cost of your bucket.
+
+S3A uses Standard storage class for PUT object requests by default, which is suitable for
+general use cases. To use a specific storage class, set the value in `fs.s3a.create.storage.class` property to
+the storage class you want.
+
+```xml
+<property>
+    <name>fs.s3a.create.storage.class</name>
+    <value>intelligent_tiering</value>
+</property>
+```
+
+Please note that S3A does not support reading from archive storage classes at the moment.
+`AccessDeniedException` with InvalidObjectState will be thrown if you're trying to do so.
 
 ## <a name="upload"></a>How S3A writes data to S3
 
