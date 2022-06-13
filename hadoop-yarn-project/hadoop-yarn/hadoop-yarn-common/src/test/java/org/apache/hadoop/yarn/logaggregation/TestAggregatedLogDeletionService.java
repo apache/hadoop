@@ -101,7 +101,7 @@ public class TestAggregatedLogDeletionService {
     return new PathWithFileStatus(logPath, fStatus);
   }
 
-  private static PathWithFileStatus createDirBucketDirLogPathWithFileStatus(Path remoteRootLogPath,
+  static PathWithFileStatus createDirBucketDirLogPathWithFileStatus(Path remoteRootLogPath,
                                                                             String user,
                                                                             String suffix,
                                                                             ApplicationId appId,
@@ -161,8 +161,8 @@ public class TestAggregatedLogDeletionService {
             .withRootPath(ROOT)
             .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
             .withUserDir(USER_ME, toKeepTime)
-            .withSuffixDir(NEW_SUFFIX, toDeleteTime)
-            .withBucketDir(SUFFIX, toDeleteTime)
+            .withSuffixDir(SUFFIX, toDeleteTime)
+            .withBucketDir(toDeleteTime)
             .withApps(new LogAggregationFilesBuilder.AppDescriptor(toDeleteTime, new Pair[] {}),
                     new LogAggregationFilesBuilder.AppDescriptor(toDeleteTime,
                             Pair.of(DIR_HOST1, toDeleteTime),
@@ -202,7 +202,7 @@ public class TestAggregatedLogDeletionService {
             .withBothFileControllers()
             .withUserDir(USER_ME, toKeepTime)
             .withSuffixDir(NEW_SUFFIX, toDeleteTime)
-            .withBucketDir(SUFFIX, toDeleteTime)
+            .withBucketDir(toDeleteTime)
             .withApps(//Apps for TFile
                     new LogAggregationFilesBuilder.AppDescriptor(T_FILE, toDeleteTime, new Pair[]{}),
                     new LogAggregationFilesBuilder.AppDescriptor(T_FILE, toDeleteTime,

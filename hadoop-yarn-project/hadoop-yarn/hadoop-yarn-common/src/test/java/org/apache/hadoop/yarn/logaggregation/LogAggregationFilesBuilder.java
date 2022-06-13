@@ -25,19 +25,21 @@ class LogAggregationFilesBuilder {
   private final Configuration conf;
   private FileSystem mockFs;
   private Path remoteRootLogPath;
-  private PathWithFileStatus userDir;
   private String suffix;
-  private PathWithFileStatus suffixDir;
-  private PathWithFileStatus bucketDir;
   private String userDirName;
+  private long userDirModTime;
   private List<ApplicationId> applicationIds;
   private List<PathWithFileStatus> appDirs;
   private List<List<PathWithFileStatus>> appFiles = new ArrayList<>();
-  private List<Exception> injectedAppDirDeletionExceptions;
-  private List<ApplicationId> finishedApps;
-  private List<ApplicationId> runningApps;
+  private Map<Integer, Exception> injectedAppDirDeletionExceptions = new HashMap<>();
   private AggregatedLogDeletionServiceForTest deletionService;
   private List<String> fileControllers;
+  private long suffixDirModTime;
+  private long bucketDirModTime;
+  private String suffixDirName;
+  private AppDescriptor[] apps;
+  private int[] finishedAppIds;
+  private int[] runningAppIds;
 
   public LogAggregationFilesBuilder(Configuration conf) {
     this.conf = conf;
@@ -62,29 +64,34 @@ class LogAggregationFilesBuilder {
 
   public LogAggregationFilesBuilder withUserDir(String userDirName, long modTime) throws IOException {
     this.userDirName = userDirName;
-    userDir = createDirLogPathWithFileStatus(remoteRootLogPath, userDirName, modTime);
+    this.userDirModTime = modTime;
     return this;
   }
 
   public LogAggregationFilesBuilder withSuffixDir(String suffix, long modTime) {
-    if (userDir == null) {
-      throw new IllegalStateException("Please invoke 'withUserDir' with a valid Path first!");
-    }
     this.suffix = suffix;
-    suffixDir = createDirLogPathWithFileStatus(userDir.path, this.suffix, modTime);
+    this.suffixDirName = LogAggregationUtils.getBucketSuffix() + suffix;
+    this.suffixDirModTime = modTime;
     return this;
   }
 
-  public LogAggregationFilesBuilder withBucketDir(String suffix, long modTime) {
-    //TODO
-//      if (suffix == null) {
-//        throw new IllegalStateException("Please invoke 'withSuffixDir' with a valid Path first!");
-//      }
-    bucketDir = createDirLogPathWithFileStatus(remoteRootLogPath, suffix, modTime);
+  /**
+   * Bucket dir paths will be generated later
+   * @param modTime
+   * @return
+   */
+  public LogAggregationFilesBuilder withBucketDir(long modTime) {
+    this.bucketDirModTime = modTime;
     return this;
   }
 
   public LogAggregationFilesBuilder withApps(AppDescriptor... apps) {
+    this.apps = apps;
+    validateAppControllers(apps);
+    return this;
+  }
+
+  private void validateAppControllers(AppDescriptor[] apps) {
     Set<String> controllers = Arrays.stream(apps)
             .map(a -> a.fileController)
             .filter(Objects::nonNull)
@@ -95,31 +102,6 @@ class LogAggregationFilesBuilder {
       throw new IllegalStateException(String.format("Invalid controller defined! Available: %s, Actual: %s",
               availableControllers, controllers));
     }
-
-    int len = apps.length;
-    appDirs = new ArrayList<>(len);
-    applicationIds = new ArrayList<>(len);
-
-    for (int i = 0; i < len; i++) {
-      AppDescriptor appDesc = apps[i];
-      ApplicationId applicationId = appDesc.createApplicationId(now, i + 1);
-      applicationIds.add(applicationId);
-      Path basePath = this.remoteRootLogPath;
-      if (appDesc.fileController != null) {
-        basePath = new Path(basePath, appDesc.fileController);
-      }
-
-      PathWithFileStatus appDir = createPathWithFileStatusForAppId(
-              basePath, applicationId, userDirName, suffix, appDesc.modTimeOfAppDir);
-      TestAggregatedLogDeletionService.LOG.debug("Created application with id '{}' to path '{}'", applicationId, appDir.path);
-      appDirs.add(appDir);
-      addAppChildrenFiles(appDesc, appDir);
-    }
-    this.injectedAppDirDeletionExceptions = new ArrayList<>(len);
-    for (int i = 0; i < len; i++) {
-      injectedAppDirDeletionExceptions.add(null);
-    }
-    return this;
   }
 
   private void addAppChildrenFiles(AppDescriptor appDesc, PathWithFileStatus appDir) {
@@ -136,12 +118,24 @@ class LogAggregationFilesBuilder {
   public LogAggregationFilesBuilder injectExceptionForAppDirDeletion(int... indices) {
     for (int i : indices) {
       AccessControlException e = new AccessControlException("Injected Error\nStack Trace :(");
-      this.injectedAppDirDeletionExceptions.add(i, e);
+      this.injectedAppDirDeletionExceptions.put(i, e);
     }
     return this;
   }
 
   LogAggregationFilesBuilder setupMocks() throws IOException {
+    createApplicationsByDescriptors();
+    
+    //Example path: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/<application id>/<NodeManager id>
+    //remoteRootLogPath: <remote-app-log-dir>/ ::: mockfs://foo/tmp/logs/
+    //userDir: <remote-app-log-dir>/<user>/ ::: mockfs://foo/tmp/logs/me/
+    //suffixDir: <remote-app-log-dir>/<user>/bucket-<suffix>/ ::: mockfs://foo/tmp/logs/me/bucket-logs/
+    //bucketDir: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/ ::: mockfs://foo/tmp/logs/me/bucket-logs/0001/
+    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, userDirName, userDirModTime);
+    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, suffixDirName, suffixDirModTime);
+    ApplicationId arbitraryAppIdForBucketDir = this.applicationIds.get(0);
+    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath, userDirName, suffix, arbitraryAppIdForBucketDir, bucketDirModTime);
+    
     if (fileControllers != null && !fileControllers.isEmpty()) {
       for (String fileController : fileControllers) {
         Path controllerPath = new Path(remoteRootLogPath, fileController);
@@ -152,9 +146,32 @@ class LogAggregationFilesBuilder {
     }
     setupListStatusForPath(userDir, suffixDir);
     setupListStatusForPath(suffixDir, bucketDir);
-    setupListStatusForPath(bucketDir, appDirs.stream().map(
-                    app -> app.fileStatus)
+    
+    setupListStatusForPath(bucketDir, appDirs.stream().map(app -> app.fileStatus)
             .toArray(FileStatus[]::new));
+    return this;
+  }
+  
+  private void createApplicationsByDescriptors() throws IOException {
+    int len = apps.length;
+    appDirs = new ArrayList<>(len);
+    applicationIds = new ArrayList<>(len);
+
+    for (int i = 0; i < len; i++) {
+      AppDescriptor appDesc = apps[i];
+      ApplicationId applicationId = appDesc.createApplicationId(now, i + 1);
+      applicationIds.add(applicationId);
+      Path basePath = this.remoteRootLogPath;
+      if (appDesc.fileController != null) {
+        basePath = new Path(basePath, appDesc.fileController);
+      }
+
+      PathWithFileStatus appDir = createPathWithFileStatusForAppId(
+              basePath, applicationId, userDirName, suffix, appDesc.modTimeOfAppDir);
+      LOG.debug("Created application with id '{}' to path '{}'", applicationId, appDir.path);
+      appDirs.add(appDir);
+      addAppChildrenFiles(appDesc, appDir);
+    }
 
     for (int i = 0; i < appDirs.size(); i++) {
       List<PathWithFileStatus> appChildren = appFiles.get(i);
@@ -165,14 +182,9 @@ class LogAggregationFilesBuilder {
                       .toArray(FileStatus[]::new));
     }
 
-    for (int i = 0; i < injectedAppDirDeletionExceptions.size(); i++) {
-      Exception e = injectedAppDirDeletionExceptions.get(i);
-      if (e != null) {
-        when(mockFs.delete(this.appDirs.get(i).path, true)).thenThrow(e);
-      }
+    for (Map.Entry<Integer, Exception> e : injectedAppDirDeletionExceptions.entrySet()) {
+      when(mockFs.delete(this.appDirs.get(e.getKey()).path, true)).thenThrow(e.getValue());
     }
-
-    return this;
   }
 
   private void setupListStatusForPath(Path dir, PathWithFileStatus pathWithFileStatus) throws IOException {
@@ -184,30 +196,22 @@ class LogAggregationFilesBuilder {
   }
 
   private void setupListStatusForPath(Path dir, FileStatus[] fileStatuses) throws IOException {
-    TestAggregatedLogDeletionService.LOG.debug("Setting up listStatus. Parent: {}, files: {}", dir, fileStatuses);
+    LOG.debug("Setting up listStatus. Parent: {}, files: {}", dir, fileStatuses);
     when(mockFs.listStatus(dir)).thenReturn(fileStatuses);
   }
 
   private void setupListStatusForPath(PathWithFileStatus dir, FileStatus[] fileStatuses) throws IOException {
-    TestAggregatedLogDeletionService.LOG.debug("Setting up listStatus. Parent: {}, files: {}", dir.path, fileStatuses);
+    LOG.debug("Setting up listStatus. Parent: {}, files: {}", dir.path, fileStatuses);
     when(mockFs.listStatus(dir.path)).thenReturn(fileStatuses);
   }
 
   public LogAggregationFilesBuilder withFinishedApps(int... apps) {
-    this.finishedApps = new ArrayList<>();
-    for (int i : apps) {
-      ApplicationId appId = this.applicationIds.get(i - 1);
-      this.finishedApps.add(appId);
-    }
+    this.finishedAppIds = apps;
     return this;
   }
 
   public LogAggregationFilesBuilder withRunningApps(int... apps) {
-    this.runningApps = new ArrayList<>();
-    for (int i : apps) {
-      ApplicationId appId = this.applicationIds.get(i - 1);
-      this.runningApps.add(appId);
-    }
+    this.runningAppIds = apps;
     return this;
   }
 
@@ -217,6 +221,17 @@ class LogAggregationFilesBuilder {
   }
 
   public LogAggregationFilesBuilder setupAndRunDeletionService() {
+    List<ApplicationId> finishedApps = new ArrayList<>();
+    for (int i : finishedAppIds) {
+      ApplicationId appId = this.applicationIds.get(i - 1);
+      finishedApps.add(appId);
+    }
+
+    List<ApplicationId> runningApps = new ArrayList<>();
+    for (int i : runningAppIds) {
+      ApplicationId appId = this.applicationIds.get(i - 1);
+      runningApps.add(appId);
+    }
     deletionService = new AggregatedLogDeletionServiceForTest(runningApps, finishedApps);
     deletionService.init(conf);
     deletionService.start();
