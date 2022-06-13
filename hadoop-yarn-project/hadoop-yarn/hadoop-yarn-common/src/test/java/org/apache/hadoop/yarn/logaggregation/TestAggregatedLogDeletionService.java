@@ -18,38 +18,39 @@
 
 package org.apache.hadoop.yarn.logaggregation;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.*;
-
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
+import org.apache.hadoop.yarn.logaggregation.testutils.AggregatedLogDeletionServiceForTest;
+import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationFilesBuilder;
+import org.apache.hadoop.yarn.logaggregation.testutils.PathWithFileStatus;
 import org.apache.log4j.Level;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Assert;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
 import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.enableFileControllers;
+import static org.apache.hadoop.yarn.logaggregation.testutils.FileStatusUtils.*;
+import static org.apache.hadoop.yarn.logaggregation.testutils.MockRMClientUtils.createMockRMClient;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -71,58 +72,8 @@ public class TestAggregatedLogDeletionService {
           ALL_FILE_CONTROLLERS = Arrays.asList(
           LogAggregationIndexedFileController.class,
           LogAggregationTFileController.class);
-  static final List<String> ALL_FILE_CONTROLLER_NAMES = Arrays.asList(I_FILE, T_FILE);
+  public static final List<String> ALL_FILE_CONTROLLER_NAMES = Arrays.asList(I_FILE, T_FILE);
 
-  static PathWithFileStatus createPathWithFileStatusForAppId(Path remoteRootLogDir,
-                                                             ApplicationId appId,
-                                                             String user, String suffix,
-                                                             long modificationTime) {
-    Path path = LogAggregationUtils.getRemoteAppLogDir(
-            remoteRootLogDir, appId, user, suffix);
-    FileStatus fileStatus = createEmptyFileStatus(modificationTime, path);
-    return new PathWithFileStatus(path, fileStatus);
-  }
-
-  private static FileStatus createEmptyFileStatus(long modificationTime, Path path) {
-    return new FileStatus(0, true, 0, 0, modificationTime, path);
-  }
-
-  static PathWithFileStatus createFileLogPathWithFileStatus(Path baseDir, String childDir,
-                                                            long modificationTime) {
-    Path logPath = new Path(baseDir, childDir);
-    FileStatus fStatus = createFileStatusWithLengthForFile(10, modificationTime, logPath);
-    return new PathWithFileStatus(logPath, fStatus);
-  }
-
-  static PathWithFileStatus createDirLogPathWithFileStatus(Path baseDir, String childDir,
-                                                           long modificationTime) {
-    Path logPath = new Path(baseDir, childDir);
-    FileStatus fStatus = createFileStatusWithLengthForDir(10, modificationTime, logPath);
-    return new PathWithFileStatus(logPath, fStatus);
-  }
-
-  static PathWithFileStatus createDirBucketDirLogPathWithFileStatus(Path remoteRootLogPath,
-                                                                            String user,
-                                                                            String suffix,
-                                                                            ApplicationId appId,
-                                                                            long modificationTime) {
-    Path bucketDir = LogAggregationUtils.getRemoteBucketDir(remoteRootLogPath, user, suffix, appId);
-    FileStatus fStatus = new FileStatus(0, true, 0, 0, modificationTime, bucketDir);
-    return new PathWithFileStatus(bucketDir, fStatus);
-  }
-
-  private static FileStatus createFileStatusWithLengthForFile(long length,
-                                                              long modificationTime,
-                                                              Path logPath) {
-    return new FileStatus(length, false, 1, 1, modificationTime, logPath);
-  }
-
-  private static FileStatus createFileStatusWithLengthForDir(long length,
-                                                             long modificationTime,
-                                                             Path logPath) {
-    return new FileStatus(length, true, 1, 1, modificationTime, logPath);
-  }
-  
   @BeforeClass
   public static void beforeClass() {
     org.apache.log4j.Logger.getRootLogger().setLevel(Level.DEBUG);
@@ -433,103 +384,4 @@ public class TestAggregatedLogDeletionService {
     }
   }
 
-  private static ApplicationClientProtocol createMockRMClient(
-      List<ApplicationId> finishedApplications,
-      List<ApplicationId> runningApplications) throws Exception {
-    final ApplicationClientProtocol mockProtocol = mock(ApplicationClientProtocol.class);
-    if (finishedApplications != null && !finishedApplications.isEmpty()) {
-      for (ApplicationId appId : finishedApplications) {
-        GetApplicationReportRequest request = GetApplicationReportRequest.newInstance(appId);
-        GetApplicationReportResponse response = createApplicationReportWithFinishedApplication();
-        when(mockProtocol.getApplicationReport(request)).thenReturn(response);
-      }
-    }
-    if (runningApplications != null && !runningApplications.isEmpty()) {
-      for (ApplicationId appId : runningApplications) {
-        GetApplicationReportRequest request = GetApplicationReportRequest.newInstance(appId);
-        GetApplicationReportResponse response = createApplicationReportWithRunningApplication();
-        when(mockProtocol.getApplicationReport(request)).thenReturn(response);
-      }
-    }
-    return mockProtocol;
-  }
-
-  private static GetApplicationReportResponse createApplicationReportWithRunningApplication() {
-    ApplicationReport report = mock(ApplicationReport.class);
-    when(report.getYarnApplicationState()).thenReturn(
-      YarnApplicationState.RUNNING);
-    GetApplicationReportResponse response =
-        mock(GetApplicationReportResponse.class);
-    when(response.getApplicationReport()).thenReturn(report);
-    return response;
-  }
-
-  private static GetApplicationReportResponse createApplicationReportWithFinishedApplication() {
-    ApplicationReport report = mock(ApplicationReport.class);
-    when(report.getYarnApplicationState()).thenReturn(YarnApplicationState.FINISHED);
-    GetApplicationReportResponse response = mock(GetApplicationReportResponse.class);
-    when(response.getApplicationReport()).thenReturn(report);
-    return response;
-  }
-
-  static class PathWithFileStatus {
-    public final Path path;
-    public FileStatus fileStatus;
-
-    PathWithFileStatus(Path path, FileStatus fileStatus) {
-      this.path = path;
-      this.fileStatus = fileStatus;
-    }
-
-    public void changeModificationTime(long modTime) {
-      fileStatus = new FileStatus(fileStatus.getLen(), fileStatus.isDirectory(),
-              fileStatus.getReplication(),
-              fileStatus.getBlockSize(), modTime, fileStatus.getPath());
-    }
-
-    @Override
-    public String toString() {
-      return "PathWithFileStatus{" +
-              "path=" + path +
-              '}';
-    }
-  }
-
-  static class AggregatedLogDeletionServiceForTest extends AggregatedLogDeletionService {
-    private final List<ApplicationId> finishedApplications;
-    private final List<ApplicationId> runningApplications;
-    private final Configuration conf;
-
-    AggregatedLogDeletionServiceForTest(List<ApplicationId> runningApplications,
-                                               List<ApplicationId> finishedApplications) {
-      this(runningApplications, finishedApplications, null);
-    }
-
-    AggregatedLogDeletionServiceForTest(List<ApplicationId> runningApplications,
-                                               List<ApplicationId> finishedApplications,
-                                               Configuration conf) {
-      this.runningApplications = runningApplications;
-      this.finishedApplications = finishedApplications;
-      this.conf = conf;
-    }
-
-    @Override
-    protected ApplicationClientProtocol createRMClient() throws IOException {
-      try {
-        return createMockRMClient(finishedApplications, runningApplications);
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
-
-    @Override
-    protected Configuration createConf() {
-      return conf;
-    }
-
-    @Override
-    protected void stopRMClient() {
-      // DO NOTHING
-    }
-  }
 }

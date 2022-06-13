@@ -1,4 +1,4 @@
-package org.apache.hadoop.yarn.logaggregation;
+package org.apache.hadoop.yarn.logaggregation.testutils;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -10,17 +10,21 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.logaggregation.TestAggregatedLogDeletionService.AggregatedLogDeletionServiceForTest;
-import org.apache.hadoop.yarn.logaggregation.TestAggregatedLogDeletionService.PathWithFileStatus;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.logaggregation.TestAggregatedLogDeletionService.*;
+import static org.apache.hadoop.yarn.logaggregation.testutils.FileStatusUtils.*;
 import static org.mockito.Mockito.*;
 
-class LogAggregationFilesBuilder {
+public class LogAggregationFilesBuilder {
+  private static final Logger LOG = LoggerFactory.getLogger(LogAggregationFilesBuilder.class);
+  
   private final long now;
   private final Configuration conf;
   private FileSystem mockFs;
@@ -123,7 +127,7 @@ class LogAggregationFilesBuilder {
     return this;
   }
 
-  LogAggregationFilesBuilder setupMocks() throws IOException {
+  public LogAggregationFilesBuilder setupMocks() throws IOException {
     createApplicationsByDescriptors();
 
     List<Path> rootPaths = new ArrayList<>();
