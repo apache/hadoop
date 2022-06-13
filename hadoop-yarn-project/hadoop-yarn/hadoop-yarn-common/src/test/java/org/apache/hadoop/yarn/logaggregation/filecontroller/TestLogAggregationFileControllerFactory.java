@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.logaggregation.filecontroller;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT;
+import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.REMOTE_LOG_ROOT;
+import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.enableFileControllers;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -63,7 +65,6 @@ public class TestLogAggregationFileControllerFactory extends Configured {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestLogAggregationFileControllerFactory.class);
 
-  private static final String REMOTE_LOG_ROOT = "target/app-logs/";
   private static final String REMOTE_DEFAULT_DIR = "default/";
   private static final String APP_OWNER = "test";
 
@@ -87,8 +88,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
   public void setup() throws IOException {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_LOG_ROOT +
-        REMOTE_DEFAULT_DIR);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_LOG_ROOT + REMOTE_DEFAULT_DIR);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, "log");
     setConf(conf);
   }
@@ -150,29 +150,9 @@ public class TestLogAggregationFileControllerFactory extends Configured {
         "but the factory creation did not fail.");
   }
 
-  private void enableFileControllers(
-      List<Class<? extends LogAggregationFileController>> fileControllers,
-      List<String> fileControllerNames) {
-    Configuration conf = getConf();
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS,
-        StringUtils.join(fileControllerNames, ","));
-    for (int i = 0; i < fileControllers.size(); i++) {
-      Class<? extends LogAggregationFileController> fileController =
-          fileControllers.get(i);
-      String controllerName = fileControllerNames.get(i);
-
-      conf.setClass(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT,
-          controllerName), fileController, LogAggregationFileController.class);
-      conf.set(String.format(LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
-          controllerName), REMOTE_LOG_ROOT + controllerName + "/");
-      conf.set(String.format(LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
-          controllerName), controllerName);
-    }
-  }
-
   @Test
   public void testLogAggregationFileControllerFactory() throws Exception {
-    enableFileControllers(ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
+    enableFileControllers(getConf(), ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(getConf());
     List<LogAggregationFileController> list =
@@ -199,8 +179,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
 
   @Test
   public void testClassConfUsed() {
-    enableFileControllers(Collections.singletonList(
-        LogAggregationTFileController.class),
+    enableFileControllers(getConf(), Collections.singletonList(LogAggregationTFileController.class),
         Collections.singletonList("TFile"));
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(getConf());
