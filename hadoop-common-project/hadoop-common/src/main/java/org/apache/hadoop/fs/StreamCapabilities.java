@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs;
 
+import java.util.List;
+import java.util.function.IntFunction;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -79,6 +82,12 @@ public interface StreamCapabilities {
    * IOStatisticsSource API.
    */
   String IOSTATISTICS = "iostatistics";
+
+  /**
+   * Support for vectored IO api.
+   * See {@link PositionedReadable#readVectored(List, IntFunction)}.
+   */
+  String VECTOREDIO = "readvectored";
 
   /**
    * Stream abort() capability implemented by {@link Abortable#abort()}.

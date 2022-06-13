@@ -15,10 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.impl;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
+
+import org.apache.hadoop.fs.FileRange;
 
 /**
  * A range of bytes from a file with an optional buffer to read those bytes

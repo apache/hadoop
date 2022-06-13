@@ -25,7 +25,6 @@ import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.impl.VectoredReadUtils;
 
 /**
  * Stream that permits positional reading.

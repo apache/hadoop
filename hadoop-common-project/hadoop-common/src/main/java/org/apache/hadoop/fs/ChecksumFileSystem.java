@@ -39,7 +39,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
-import org.apache.hadoop.fs.impl.VectoredReadUtils;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -55,7 +54,7 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
-import static org.apache.hadoop.fs.impl.VectoredReadUtils.sortRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
 
 /****************************************************************
  * Abstract Checksumed FileSystem.
@@ -167,7 +166,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * It verifies that data matches checksums.
    *******************************************************/
   private static class ChecksumFSInputChecker extends FSInputChecker implements
-      IOStatisticsSource {
+      IOStatisticsSource, StreamCapabilities {
     private ChecksumFileSystem fs;
     private FSDataInputStream datas;
     private FSDataInputStream sums;
@@ -435,6 +434,11 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
           }
         }
       }
+    }
+
+    @Override
+    public boolean hasCapability(String capability) {
+      return datas.hasCapability(capability);
     }
   }
 

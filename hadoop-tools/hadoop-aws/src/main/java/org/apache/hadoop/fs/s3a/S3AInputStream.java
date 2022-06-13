@@ -48,7 +48,7 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
-import org.apache.hadoop.fs.impl.VectoredReadUtils;
+import org.apache.hadoop.fs.VectoredReadUtils;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -60,9 +60,9 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.apache.hadoop.fs.impl.VectoredReadUtils.isOrderedDisjoint;
-import static org.apache.hadoop.fs.impl.VectoredReadUtils.mergeSortedRanges;
-import static org.apache.hadoop.fs.impl.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
+import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
 import static org.apache.hadoop.fs.s3a.Invoker.onceTrackingDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
@@ -110,8 +110,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * Atomic boolean variable to stop all ongoing vectored read operation
-   * for this input stream. This will be set to true stream is closed or
-   * unbuffer is called.
+   * for this input stream. This will be set to true when the stream is
+   * closed or unbuffer is called.
    */
   private final AtomicBoolean stopVectoredIOOperations = new AtomicBoolean(false);
 
@@ -1090,7 +1090,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
-   * Read data from S3 for this range and populate the buffer..
+   * Read data from S3 for this range and populate the buffer.
    * @param range range of data to read.
    * @param buffer buffer to fill.
    */
@@ -1320,6 +1320,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     case StreamCapabilities.IOSTATISTICS:
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.UNBUFFER:
+    case StreamCapabilities.VECTOREDIO:
       return true;
     default:
       return false;

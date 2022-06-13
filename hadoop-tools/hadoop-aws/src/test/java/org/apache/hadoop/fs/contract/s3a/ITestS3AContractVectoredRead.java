@@ -27,7 +27,7 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.FileRangeImpl;
+import org.apache.hadoop.fs.impl.FileRangeImpl;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -136,6 +136,9 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
 
   }
 
+  /**
+   * S3 vectored IO doesn't support overlapping ranges.
+   */
   @Override
   public void testOverlappingRanges() throws Exception {
     FileSystem fs = getFileSystem();
@@ -143,6 +146,9 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     validateUnsupportedOperation(fs, fileRanges);
   }
 
+  /**
+   * S3 vectored IO doesn't support overlapping ranges.
+   */
   @Override
   public void testSameRanges() throws Exception {
     // Same ranges are special case of overlapping only.
