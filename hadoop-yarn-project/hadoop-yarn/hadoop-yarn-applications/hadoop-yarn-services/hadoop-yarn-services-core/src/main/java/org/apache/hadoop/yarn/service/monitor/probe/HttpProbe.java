@@ -101,7 +101,8 @@ public class HttpProbe extends DefaultProbe {
         status.succeed(this);
       }
     } catch (Throwable e) {
-      String error = "Probe " + urlString + " failed for IP " + ip + ": " + e;
+      String error =
+          "Probe " + urlString.replace(HOST_TOKEN, ip) + " failed for IP " + ip + ": " + e;
       log.info(error, e);
       status.fail(this,
           new IOException(error, e));
