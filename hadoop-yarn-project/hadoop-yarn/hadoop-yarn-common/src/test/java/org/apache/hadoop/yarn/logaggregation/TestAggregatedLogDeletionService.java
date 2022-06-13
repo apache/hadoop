@@ -22,10 +22,8 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -34,6 +32,7 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -48,19 +47,23 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.Assert;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.enableFileControllers;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class TestAggregatedLogDeletionService {
-
+  private static final Logger LOG = LoggerFactory.getLogger(TestAggregatedLogDeletionService.class);
   private static final String T_FILE = "TFile";
+  private static final String I_FILE = "IFile";
   private static final String USER_ME = "me";
   private static final String DIR_HOST1 = "host1";
   private static final String DIR_HOST2 = "host2";
 
   private static final String ROOT = "mockfs://foo/";
-  private static final String REMOTE_ROOT_LOG_DIR = ROOT + "tmp/logs";
+  private static final String REMOTE_ROOT_LOG_DIR = ROOT + "tmp/logs/";
   private static final String SUFFIX = "logs";
   private static final String NEW_SUFFIX = LogAggregationUtils.getBucketSuffix() + SUFFIX;
   private static final int TEN_DAYS_IN_SECONDS = 10 * 24 * 3600;
@@ -69,7 +72,7 @@ public class TestAggregatedLogDeletionService {
           ALL_FILE_CONTROLLERS = Arrays.asList(
           LogAggregationIndexedFileController.class,
           LogAggregationTFileController.class);
-  private static final List<String> ALL_FILE_CONTROLLER_NAMES = Arrays.asList("IFile", "TFile");
+  private static final List<String> ALL_FILE_CONTROLLER_NAMES = Arrays.asList(I_FILE, T_FILE);
 
   private static PathWithFileStatus createPathWithFileStatusForAppId(Path remoteRootLogDir,
                                                                      ApplicationId appId,
@@ -187,24 +190,47 @@ public class TestAggregatedLogDeletionService {
     long toKeepTime = now - (1500 * 1000);
 
     Configuration conf = setupConfiguration(1800, -1);
-    Path rootPath = new Path(ROOT);
-    FileSystem rootFs = rootPath.getFileSystem(conf);
-    FileSystem mockFs = ((FilterFileSystem)rootFs).getRawFileSystem();
-
-    Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
-    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME,
-            toKeepTime);
-
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
-    
-    enableFileControllers(conf, remoteRootLogPath + "/", ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
-
-    AggregatedLogDeletionService deletionService =
-            new AggregatedLogDeletionServiceForTest(null, null);
-    deletionService.init(conf);
-    deletionService.start();
-
-    deletionService.stop();
+    enableFileControllers(conf, REMOTE_ROOT_LOG_DIR, ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
+    long timeout = 2000L;
+    LogAggregationFilesBuilder.create(conf)
+            .withRootPath(ROOT)
+            .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
+            .withBothFileControllers()
+            .withUserDir(USER_ME, toKeepTime)
+            .withSuffixDir(NEW_SUFFIX, toDeleteTime)
+            .withBucketDir(SUFFIX, toDeleteTime)
+            .withApps(//Apps for TFile
+                    new AppDescriptor(T_FILE, toDeleteTime, new Pair[]{}),
+                    new AppDescriptor(T_FILE, toDeleteTime,
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toKeepTime)),
+                    new AppDescriptor(T_FILE, toDeleteTime,
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toDeleteTime)),
+                    new AppDescriptor(T_FILE, toDeleteTime,
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toKeepTime)),
+                    //apps for IFile
+                    new AppDescriptor(I_FILE, toDeleteTime, new Pair[]{}),
+                    new AppDescriptor(I_FILE, toDeleteTime,
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toKeepTime)),
+                    new AppDescriptor(I_FILE, toDeleteTime,
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toDeleteTime)),
+                    new AppDescriptor(I_FILE, toDeleteTime,
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toKeepTime)))
+            .withFinishedApps(1, 2, 3, 5, 6, 7)
+            .withRunningApps(4, 8)
+            .injectExceptionForAppDirDeletion(3, 6)
+            .setupMocks()
+            .setupAndRunDeletionService()
+            .verifyAppDirsDeleted(timeout, 1, 3, 5, 7)
+            .verifyAppDirsNotDeleted(timeout, 2, 4, 6, 8)
+            .verifyAppFilesDeleted(timeout, new Pair[] {Pair.of(4, 1), Pair.of(8, 1)})
+            .verifyAppFilesNotDeleted(timeout, new Pair[] {Pair.of(4, 2), Pair.of(8, 2)})
+            .teardown();
   }
 
   @Test
@@ -396,6 +422,11 @@ public class TestAggregatedLogDeletionService {
     }
 
     public void initialize(URI name, Configuration conf) throws IOException {}
+
+    @Override
+    public boolean hasPathCapability(Path path, String capability) throws IOException {
+      return true;
+    }
   }
 
   private static ApplicationClientProtocol createMockRMClient(
@@ -508,6 +539,7 @@ public class TestAggregatedLogDeletionService {
     private List<ApplicationId> finishedApps;
     private List<ApplicationId> runningApps;
     private AggregatedLogDeletionServiceForTest deletionService;
+    private List<String> fileControllers;
 
     public LogAggregationFilesBuilder(Configuration conf) {
       this.conf = conf;
@@ -555,6 +587,16 @@ public class TestAggregatedLogDeletionService {
     }
 
     public LogAggregationFilesBuilder withApps(AppDescriptor... apps) {
+      Set<String> controllers = Arrays.stream(apps)
+              .map(a -> a.fileController)
+              .collect(Collectors.toSet());
+      Set<String> availableControllers = new HashSet<>(this.fileControllers);
+      Set<String> difference = Sets.difference(controllers, availableControllers);
+      if (!difference.isEmpty()) {
+        throw new IllegalStateException(String.format("Invalid controller defined! Available: %s, Actual: %s", 
+                availableControllers, controllers));
+      }
+
       int len = apps.length;
       appDirs = new ArrayList<>(len);
       applicationIds = new ArrayList<>(len);
@@ -563,8 +605,14 @@ public class TestAggregatedLogDeletionService {
         AppDescriptor appDesc = apps[i];
         ApplicationId applicationId = appDesc.createApplicationId(now, i + 1);
         applicationIds.add(applicationId);
+        Path basePath = this.remoteRootLogPath;
+        if (appDesc.fileController != null) {
+          basePath = new Path(basePath, appDesc.fileController);
+        }
+        
         PathWithFileStatus appDir = createPathWithFileStatusForAppId(
-                remoteRootLogPath, applicationId, userDirName, suffix, appDesc.modTimeOfAppDir);
+                basePath, applicationId, userDirName, suffix, appDesc.modTimeOfAppDir);
+        LOG.debug("Created application with id '{}' to path '{}'", applicationId, appDir.path);
         appDirs.add(appDir);
         addAppChildrenFiles(appDesc, appDir);
       }
@@ -586,14 +634,23 @@ public class TestAggregatedLogDeletionService {
       this.appFiles.add(appChildren);
     }
 
-    public LogAggregationFilesBuilder injectExceptionForAppDirDeletion(int i) {
-      AccessControlException e = new AccessControlException("Injected Error\nStack Trace :(");
-      this.injectedAppDirDeletionExceptions.add(i, e);
+    public LogAggregationFilesBuilder injectExceptionForAppDirDeletion(int... indices) {
+      for (int i : indices) {
+        AccessControlException e = new AccessControlException("Injected Error\nStack Trace :(");
+        this.injectedAppDirDeletionExceptions.add(i, e);
+      }
       return this;
     }
     
     private LogAggregationFilesBuilder setupMocks() throws IOException {
-      when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
+      if (fileControllers != null && !fileControllers.isEmpty()) {
+        for (String fileController : fileControllers) {
+          Path fcPath = new Path(remoteRootLogPath, fileController);
+          when(mockFs.listStatus(fcPath)).thenReturn(new FileStatus[]{userDir.fileStatus});  
+        }
+      } else {
+        when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
+      }
       when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
       when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus});
       when(mockFs.listStatus(bucketDir.path)).thenReturn(
@@ -638,6 +695,11 @@ public class TestAggregatedLogDeletionService {
       return this;
     }
 
+    public LogAggregationFilesBuilder withBothFileControllers() {
+      this.fileControllers = ALL_FILE_CONTROLLER_NAMES;
+      return this;
+    }
+
     public LogAggregationFilesBuilder setupAndRunDeletionService() {
       deletionService = new AggregatedLogDeletionServiceForTest(runningApps, finishedApps);
       deletionService.init(conf);
@@ -645,6 +707,20 @@ public class TestAggregatedLogDeletionService {
       return this;
     }
 
+    public LogAggregationFilesBuilder verifyAppDirsDeleted(long timeout, int... ids) throws IOException {
+      for (int id: ids) {
+        verifyAppDirDeleted(id, timeout);
+      }
+      return this;
+    }
+
+    public LogAggregationFilesBuilder verifyAppDirsNotDeleted(long timeout, int... ids) throws IOException {
+      for (int id: ids) {
+        verifyAppDirNotDeleted(id, timeout);
+      }
+      return this;
+    }
+    
     public LogAggregationFilesBuilder verifyAppDirDeleted(int id, long timeout) throws IOException {
       verifyAppDirDeletion(id, 1, timeout);
       return this;
@@ -654,7 +730,21 @@ public class TestAggregatedLogDeletionService {
       verifyAppDirDeletion(id, 0, timeout);
       return this;
     }
-    
+
+    public LogAggregationFilesBuilder verifyAppFilesDeleted(long timeout, Pair<Integer, Integer>... pairs) throws IOException {
+      for (Pair<Integer, Integer> pair: pairs) {
+        verifyAppFileDeleted(pair.getLeft(), pair.getRight(), timeout);
+      }
+      return this;
+    }
+
+    public LogAggregationFilesBuilder verifyAppFilesNotDeleted(long timeout, Pair<Integer, Integer>... pairs) throws IOException {
+      for (Pair<Integer, Integer> pair: pairs) {
+        verifyAppFileNotDeleted(pair.getLeft(), pair.getRight(), timeout);
+      }
+      return this;
+    }
+
     public LogAggregationFilesBuilder verifyAppFileDeleted(int id, int fileNo, long timeout) throws IOException {
       verifyAppFileDeletion(id, fileNo, 1, timeout);
       return this;
@@ -683,7 +773,13 @@ public class TestAggregatedLogDeletionService {
   private static class AppDescriptor {
     private final long modTimeOfAppDir;
     private final ArrayList<Pair<String, Long>> filesWithModDate;
+    private String fileController;
 
+    public AppDescriptor(String fileController, long modTimeOfAppDir, Pair<String, Long>... filesWithModDate) {
+      this(modTimeOfAppDir, filesWithModDate);
+      this.fileController = fileController;
+    }
+    
     public AppDescriptor(long modTimeOfAppDir, Pair<String, Long>... filesWithModDate) {
       this.modTimeOfAppDir = modTimeOfAppDir;
       this.filesWithModDate = Lists.newArrayList(filesWithModDate);

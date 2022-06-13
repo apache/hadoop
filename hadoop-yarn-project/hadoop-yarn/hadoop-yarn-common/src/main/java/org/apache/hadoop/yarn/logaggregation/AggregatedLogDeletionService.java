@@ -101,7 +101,7 @@ public class AggregatedLogDeletionService extends AbstractService {
           }
         }
       } catch (Throwable t) {
-        logException("Error reading root log dir this deletion " +
+        logException("Error reading root log dir, this deletion " +
             "attempt is being aborted", t);
       }
       LOG.info("aggregated log deletion finished.");
