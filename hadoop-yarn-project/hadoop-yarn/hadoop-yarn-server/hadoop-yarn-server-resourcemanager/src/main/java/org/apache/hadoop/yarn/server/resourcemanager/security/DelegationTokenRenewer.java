@@ -1042,9 +1042,11 @@ public class DelegationTokenRenewer extends AbstractService {
           if (future.isDone() || future.isCancelled()) {
             try {
               futures.remove(evt);
-              LOG.info("Removed done or cancelled renew tasks of {} in token renewer thread.", evt.getApplicationId());
+              LOG.info("Removed done or cancelled renewer tasks of {}" +
+                      " in token renewer thread.", evt.getApplicationId());
             } catch (Exception e) {
-              LOG.warn("Problem in removing done or cancelled renew tasks in token renewer thread.", e);
+              LOG.warn("Problem in removing done or cancelled renew" +
+                      " tasks in token renewer thread.", e);
             }
           }
         }
