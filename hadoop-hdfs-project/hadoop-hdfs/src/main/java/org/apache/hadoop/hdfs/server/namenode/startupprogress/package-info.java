@@ -17,8 +17,9 @@
  */
 
 /**
- * This package provides a mechanism for tracking {@link NameNode} startup
- * progress.  The package models NameNode startup as a series of {@link Phase}s,
+ * This package provides a mechanism for tracking
+ * {@link org.apache.hadoop.hdfs.server.namenode.NameNode} startup progress.
+ * The package models NameNode startup as a series of {@link Phase}s,
  * with each phase further sub-divided into multiple {@link Step}s.  All phases
  * are coarse-grained and typically known in advance, implied by the structure of
  * the NameNode codebase (example: loading fsimage).  Steps are more granular and
