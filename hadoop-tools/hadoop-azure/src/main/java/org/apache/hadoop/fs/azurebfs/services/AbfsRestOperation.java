@@ -75,7 +75,7 @@ public class AbfsRestOperation {
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
   private AbfsDriverMetrics abfsDriverMetrics;
-  private static final Map<String, AbfsDriverMetrics> metricsMap = AbfsDriverMetrics.getMetricsMap();
+  private Map<String, AbfsDriverMetrics> metricsMap;
   /**
    * Checks if there is non-null HTTP response.
    * @return true if there is a non-null HTTP response from the ABFS call.
@@ -124,6 +124,7 @@ public class AbfsRestOperation {
                     final List<AbfsHttpHeader> requestHeaders) {
     this(operationType, client, method, url, requestHeaders, null);
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
+    this.metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -152,6 +153,7 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
+    this.metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -183,6 +185,7 @@ public class AbfsRestOperation {
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
+    this.metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -237,10 +240,14 @@ public class AbfsRestOperation {
       }
     }
     abfsDriverMetrics.getTotalNumberOfRequests().getAndIncrement();
-    if(retryCount > 0) {
+    if(retryCount > 0 && retryCount <= 30) {
       maxRetryCount = Math.max(abfsDriverMetrics.getMaxRetryCount().get(), retryCount);
       abfsDriverMetrics.getMaxRetryCount().set(maxRetryCount);
       updateCount(retryCount);
+    } else if(retryCount > 30){
+      abfsDriverMetrics.getNumberOfRequestsFailed().getAndIncrement();
+    }else{
+      abfsDriverMetrics.getNumberOfRequestsSucceededWithoutRetrying().getAndIncrement();
     }
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),

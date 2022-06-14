@@ -113,7 +113,6 @@ public class TracingContext {
       this.listener = originalTracingContext.listener.getClone();
     }
   }
-
   public static String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {

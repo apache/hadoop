@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.Map;
-import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 public class AbfsDriverMetrics {
@@ -35,7 +35,9 @@ public class AbfsDriverMetrics {
   private AtomicLong numberOfOtherThrottledRequests;
   private AtomicLong maxRetryCount;
   private AtomicLong totalNumberOfRequests;
-  private static final Map<String, AbfsDriverMetrics> metricsMap = new LinkedHashMap<>();
+  private AtomicLong numberOfRequestsSucceededWithoutRetrying;
+  private AtomicLong numberOfRequestsFailed;
+  private final Map<String, AbfsDriverMetrics> metricsMap = new ConcurrentHashMap<>();
 
   public AbfsDriverMetrics() {
     initializeMap();
@@ -44,6 +46,8 @@ public class AbfsDriverMetrics {
     this.numberOfOtherThrottledRequests = new AtomicLong();
     this.totalNumberOfRequests = new AtomicLong();
     this.maxRetryCount = new AtomicLong();
+    this.numberOfRequestsSucceededWithoutRetrying = new AtomicLong();
+    this.numberOfRequestsFailed = new AtomicLong();
   }
   public AbfsDriverMetrics(String retryCount) {
     this.retryCount = retryCount;
@@ -105,8 +109,16 @@ public class AbfsDriverMetrics {
     return totalNumberOfRequests;
   }
 
-  public static Map<String, AbfsDriverMetrics> getMetricsMap() {
+  public Map<String, AbfsDriverMetrics> getMetricsMap() {
     return metricsMap;
+  }
+
+  public AtomicLong getNumberOfRequestsSucceededWithoutRetrying() {
+    return numberOfRequestsSucceededWithoutRetrying;
+  }
+
+  public AtomicLong getNumberOfRequestsFailed() {
+    return numberOfRequestsFailed;
   }
 
   @Override
@@ -135,11 +147,12 @@ public class AbfsDriverMetrics {
     }
     metricString.append(" BandwidthThrottled = ").append(numberOfBandwidthThrottledRequests)
         .append(" IOPSThrottled = ").append(numberOfIOPSThrottledRequests)
-        .append(" OtherThrottled = ").append(numberOfOtherThrottledRequests)
-        .append(" Total number of requests = ").append(totalNumberOfRequests);
-
-    metricString.append(" Max retry count is ").append(maxRetryCount);
-    metricString.append(" Percentage of throttled requests = ").append(percentageOfRequestsThrottled);
+        .append(" OtherThrottled = ").append(numberOfOtherThrottledRequests).append('\n');
+    metricString.append(" Percentage of throttled requests = ").append(percentageOfRequestsThrottled).append('\n');
+    metricString.append(" Total number of requests which succeeded without retrying = ").append(numberOfRequestsSucceededWithoutRetrying).append('\n');
+    metricString.append(" Total number of requests which failed = ").append(numberOfRequestsFailed).append('\n');
+    metricString.append(" Total number of requests = ").append(totalNumberOfRequests).append('\n');
+    metricString.append(" Max retry count = ").append(maxRetryCount).append('\n');
 
     return metricString + " ";
   }

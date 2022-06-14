@@ -760,7 +760,6 @@ public class AbfsClient implements Closeable {
     operation = SASTokenProvider.GET_STATUS_OPERATION;
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
     appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
-
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.GetPathStatus,
