@@ -20,18 +20,14 @@ package org.apache.hadoop.yarn.logaggregation;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationFilesBuilder;
-import org.apache.hadoop.yarn.logaggregation.testutils.PathWithFileStatus;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -42,14 +38,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
-import static javax.ws.rs.container.AsyncResponse.NO_TIMEOUT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
-import static org.apache.hadoop.yarn.logaggregation.testutils.FileStatusUtils.createDirLogPathWithFileStatus;
-import static org.apache.hadoop.yarn.logaggregation.testutils.MockRMClientUtils.createMockRMClient;
-import static org.mockito.Mockito.*;
+import static org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationFilesBuilder.NO_TIMEOUT;
+import static org.mockito.Mockito.mock;
 
 public class TestAggregatedLogDeletionService {
   static final Logger LOG = LoggerFactory.getLogger(TestAggregatedLogDeletionService.class);
@@ -217,10 +210,6 @@ public class TestAggregatedLogDeletionService {
             .reinitAllPaths()
             .verifyAppDirDeleted(1, 10000L)
             .teardown();
-//    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
-//    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus });
-//    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[] {app1.fileStatus });
-//    when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[]{app1Log1.fileStatus});
   }
 
   @Test
@@ -229,44 +218,25 @@ public class TestAggregatedLogDeletionService {
 
     // prevent us from picking up the same mockfs instance from another test
     FileSystem.closeAll();
-    Path rootPath = new Path(ROOT);
-    FileSystem rootFs = rootPath.getFileSystem(conf);
-    FileSystem mockFs = ((FilterFileSystem)rootFs).getRawFileSystem();
+    long modTime = 0L;
 
-    Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
-
-    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, 0);
-    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX, 0);
-    PathWithFileStatus bucketDir = createDirLogPathWithFileStatus(suffixDir.path, "0", 0);
-
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
-    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[]{suffixDir.fileStatus});
-    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[]{bucketDir.fileStatus});
-
-    ApplicationId appId1 = ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    ApplicationId appId2 = ApplicationId.newInstance(System.currentTimeMillis(), 2);
-    ApplicationId appId3 = ApplicationId.newInstance(System.currentTimeMillis(), 3);
-
-    PathWithFileStatus app1 = createDirLogPathWithFileStatus(bucketDir.path, appId1.toString(), 0);
-    PathWithFileStatus app2 = createDirLogPathWithFileStatus(bucketDir.path, "application_a", 0);
-    PathWithFileStatus app3 = createDirLogPathWithFileStatus(bucketDir.path, appId3.toString(), 0);
-    PathWithFileStatus app3Log3 = createDirLogPathWithFileStatus(app3.path, DIR_HOST1, 0);
-
-    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[]{
-        app1.fileStatus,app2.fileStatus, app3.fileStatus});
-    when(mockFs.listStatus(app1.path)).thenThrow(
-        new RuntimeException("Should be caught and logged"));
-    when(mockFs.listStatus(app2.path)).thenReturn(new FileStatus[]{});
-    when(mockFs.listStatus(app3.path)).thenReturn(new FileStatus[]{app3Log3.fileStatus});
-
-    final List<ApplicationId> finishedApplications = Collections.unmodifiableList(
-            Arrays.asList(appId1, appId3));
-
-    ApplicationClientProtocol rmClient = createMockRMClient(finishedApplications, null);
-    AggregatedLogDeletionService.LogDeletionTask deletionTask =
-        new AggregatedLogDeletionService.LogDeletionTask(conf, TEN_DAYS_IN_SECONDS, rmClient);
-    deletionTask.run();
-    verify(mockFs).delete(app3.path, true);
+    LogAggregationFilesBuilder.create(conf)
+            .withRootPath(ROOT)
+            .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
+            .withUserDir(USER_ME, modTime)
+            .withSuffixDir(SUFFIX, modTime)
+            .withBucketDir(modTime, "0")
+            .withApps(
+                    new LogAggregationFilesBuilder.AppDescriptor(modTime),
+                    new LogAggregationFilesBuilder.AppDescriptor(modTime),
+                    new LogAggregationFilesBuilder.AppDescriptor(modTime, Pair.of(DIR_HOST1, modTime)))
+            .withAdditionalAppDirs(Pair.of("application_a", modTime))
+            .withFinishedApps(1, 3)
+            .withRunningApps()
+            .injectExceptionForAppDirDeletion(1)
+            .setupMocks()
+            .runDeletionTask(TEN_DAYS_IN_SECONDS)
+            .verifyAppDirDeleted(3, NO_TIMEOUT);
   }
 
   static class MockFileSystem extends FilterFileSystem {

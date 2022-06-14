@@ -9,7 +9,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService.LogDeletionTask;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +20,9 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.apache.hadoop.yarn.logaggregation.TestAggregatedLogDeletionService.*;
+import static org.apache.hadoop.yarn.logaggregation.TestAggregatedLogDeletionService.ALL_FILE_CONTROLLER_NAMES;
 import static org.apache.hadoop.yarn.logaggregation.testutils.FileStatusUtils.*;
+import static org.apache.hadoop.yarn.logaggregation.testutils.MockRMClientUtils.createMockRMClient;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
@@ -50,6 +53,8 @@ public class LogAggregationFilesBuilder {
   private PathWithFileStatus userDir;
   private PathWithFileStatus suffixDir;
   private PathWithFileStatus bucketDir;
+  private String bucketId;
+  private Pair<String, Long>[] additionalAppDirs = new Pair[] {};
 
   public LogAggregationFilesBuilder(Configuration conf) {
     this.conf = conf;
@@ -92,6 +97,12 @@ public class LogAggregationFilesBuilder {
    */
   public LogAggregationFilesBuilder withBucketDir(long modTime) {
     this.bucketDirModTime = modTime;
+    return this;
+  }
+
+  public LogAggregationFilesBuilder withBucketDir(long modTime, String bucketId) {
+    this.bucketDirModTime = modTime;
+    this.bucketId = bucketId;
     return this;
   }
 
@@ -142,7 +153,11 @@ public class LogAggregationFilesBuilder {
       ApplicationId arbitraryAppIdForBucketDir = this.applicationIds.get(0);
       userDir = createDirLogPathWithFileStatus(rootPath, userDirName, userDirModTime);
       suffixDir = createDirLogPathWithFileStatus(userDir.path, suffixDirName, suffixDirModTime);
-      bucketDir = createDirBucketDirLogPathWithFileStatus(rootPath, userDirName, suffix, arbitraryAppIdForBucketDir, bucketDirModTime);
+      if (bucketId != null) {
+        bucketDir = createDirLogPathWithFileStatus(suffixDir.path, bucketId, bucketDirModTime);
+      } else {
+        bucketDir = createDirBucketDirLogPathWithFileStatus(rootPath, userDirName, suffix, arbitraryAppIdForBucketDir, bucketDirModTime);
+      }
       setupListStatusForPath(rootPath, userDir);
       initFileSystemListings(controllerName);
     }
@@ -174,6 +189,11 @@ public class LogAggregationFilesBuilder {
             .filter(app -> app.path.toString().contains(controllerName))
             .map(app -> app.fileStatus)
             .toArray(FileStatus[]::new));
+
+    for (Pair<String, Long> appDirPair : additionalAppDirs) {
+      PathWithFileStatus appDir = createDirLogPathWithFileStatus(bucketDir.path, appDirPair.getLeft(), appDirPair.getRight());
+      setupListStatusForPath(appDir, new FileStatus[] {});
+    }
   }
 
   private void createApplicationsByDescriptors() throws IOException {
@@ -248,21 +268,44 @@ public class LogAggregationFilesBuilder {
     return this;
   }
 
-  public LogAggregationFilesBuilder setupAndRunDeletionService() {
-    List<ApplicationId> finishedApps = new ArrayList<>();
-    for (int i : finishedAppIds) {
-      ApplicationId appId = this.applicationIds.get(i - 1);
-      finishedApps.add(appId);
-    }
+  public LogAggregationFilesBuilder withAdditionalAppDirs(Pair<String, Long>... appDirs) {
+    this.additionalAppDirs = appDirs;
+    return this;
+  }
 
+  public LogAggregationFilesBuilder setupAndRunDeletionService() {
+    List<ApplicationId> finishedApps = createFinishedAppsList();
+    List<ApplicationId> runningApps = createRunningAppsList();
+    deletionService = new AggregatedLogDeletionServiceForTest(runningApps, finishedApps, conf);
+    deletionService.init(conf);
+    deletionService.start();
+    return this;
+  }
+
+  private List<ApplicationId> createRunningAppsList() {
     List<ApplicationId> runningApps = new ArrayList<>();
     for (int i : runningAppIds) {
       ApplicationId appId = this.applicationIds.get(i - 1);
       runningApps.add(appId);
     }
-    deletionService = new AggregatedLogDeletionServiceForTest(runningApps, finishedApps, conf);
-    deletionService.init(conf);
-    deletionService.start();
+    return runningApps;
+  }
+
+  private List<ApplicationId> createFinishedAppsList() {
+    List<ApplicationId> finishedApps = new ArrayList<>();
+    for (int i : finishedAppIds) {
+      ApplicationId appId = this.applicationIds.get(i - 1);
+      finishedApps.add(appId);
+    }
+    return finishedApps;
+  }
+
+  public LogAggregationFilesBuilder runDeletionTask(long retentionSeconds) throws Exception {
+    List<ApplicationId> finishedApps = createFinishedAppsList();
+    List<ApplicationId> runningApps = createRunningAppsList();
+    ApplicationClientProtocol rmClient = createMockRMClient(finishedApps, runningApps);
+    LogDeletionTask deletionTask = new LogDeletionTask(conf, retentionSeconds, rmClient);
+    deletionTask.run();
     return this;
   }
 
