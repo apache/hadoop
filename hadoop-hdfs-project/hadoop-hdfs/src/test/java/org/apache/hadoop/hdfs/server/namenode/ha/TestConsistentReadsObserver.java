@@ -123,7 +123,7 @@ public class TestConsistentReadsObserver {
         + CommonConfigurationKeys.IPC_BACKOFF_ENABLE, true);
 
     NameNodeAdapter.getRpcServer(nn).refreshCallQueue(configuration);
-    assertEquals(1, NameNodeAdapter.getRpcServer(nn).getTotalRequests());
+    assertTrue(NameNodeAdapter.getRpcServer(nn).getTotalRequests() > 0);
 
     dfs.create(testPath, (short)1).close();
     assertSentTo(0);

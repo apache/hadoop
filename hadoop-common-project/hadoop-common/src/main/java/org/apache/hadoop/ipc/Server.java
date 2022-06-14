@@ -596,6 +596,7 @@ public abstract class Server {
   }
 
   void updateMetrics(Call call, long startTime, boolean connDropped) {
+    totalRequests.increment();
     // delta = handler + processing + response
     long deltaNanos = Time.monotonicNowNanos() - startTime;
     long timestampNanos = call.timestampNanos;
@@ -3093,7 +3094,6 @@ public abstract class Server {
 
         try {
           call = callQueue.take(); // pop the queue; maybe blocked here
-          totalRequests.increment();
           numInProcessHandler.incrementAndGet();
           startTimeNanos = Time.monotonicNowNanos();
           if (alignmentContext != null && call.isCallCoordinated() &&
