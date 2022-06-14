@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.store.audit;
+package org.apache.hadoop.fs.s3a.audit;
 
 import org.apache.log4j.Logger;
 
@@ -26,11 +26,12 @@ import java.util.Arrays;
 /**
  * Merger class will merge all the audit logs present in a directory of multiple audit log files into a single audit log file
  */
-public class S3ALogMerger {
+public class S3AAuditLogMerger {
 
-    private final Logger LOG = Logger.getLogger(S3ALogMerger.class);
+    private final Logger LOG = Logger.getLogger(S3AAuditLogMerger.class);
 
     public void mergeFiles(String auditLogsDirectoryPath) throws IOException {
+        //LOG.info("s3Path : " + auditLogsDirectoryPath);
         File auditLogFilesDirectory = new File(auditLogsDirectoryPath);
         String[] auditLogFileNames = auditLogFilesDirectory.list();
         LOG.info("Files to be merged : " + Arrays.toString(auditLogFileNames));
@@ -38,20 +39,22 @@ public class S3ALogMerger {
         //Read each audit log file present in directory and writes each and every audit log in it into a single audit log file
         if(auditLogFileNames != null && auditLogFileNames.length != 0) {
             File auditLogFile = new File("AuditLogFile");
-            PrintWriter printWriter = new PrintWriter(auditLogFile);
-            for (String singleFileName : auditLogFileNames) {
-                File file = new File(auditLogFilesDirectory, singleFileName);
-                FileReader fileReader = new FileReader(file);
-                BufferedReader bufferedReader = new BufferedReader(fileReader);
-                String singleLine = bufferedReader.readLine();
-                while (singleLine != null) {
-                    printWriter.println(singleLine);
-                    singleLine = bufferedReader.readLine();
+            //LOG.info("absolute merged file path: " + auditLogFile.getAbsolutePath());
+            try (PrintWriter printWriter = new PrintWriter(auditLogFile)) {
+                for (String singleFileName : auditLogFileNames) {
+                    File file = new File(auditLogFilesDirectory, singleFileName);
+                    try (FileReader fileReader = new FileReader(file);
+                         BufferedReader bufferedReader = new BufferedReader(fileReader)) {
+                        String singleLine = bufferedReader.readLine();
+                        while (singleLine != null) {
+                            printWriter.println(singleLine);
+                            singleLine = bufferedReader.readLine();
+                        }
+                        printWriter.flush();
+                    }
                 }
-                printWriter.flush();
             }
             LOG.info("Successfully merged all files from the directory '" + auditLogFilesDirectory.getName() + "'");
         }
-
     }
 }

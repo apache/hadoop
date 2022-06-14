@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import org.apache.hadoop.fs.store.audit.S3ALogMerger;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
@@ -36,11 +35,11 @@ import static org.junit.Assert.assertTrue;
 /**
  * MergerTest will implement different tests on Merger class methods
  */
-public class TestS3ALogMerger {
+public class TestS3AAuditLogMerger {
 
-    private final Logger LOG = Logger.getLogger(TestS3ALogMerger.class);
+    private final Logger LOG = Logger.getLogger(TestS3AAuditLogMerger.class);
 
-    private final S3ALogMerger merger = new S3ALogMerger();
+    private final S3AAuditLogMerger s3AAuditLogMerger = new S3AAuditLogMerger();
 
     /**
      * sample directories and files to test
@@ -77,7 +76,7 @@ public class TestS3ALogMerger {
      */
     @Test
     public void mergeFilesTest() throws IOException {
-        merger.mergeFiles(sampleDirectory.getPath());
+        s3AAuditLogMerger.mergeFiles(sampleDirectory.getPath());
         String str = new String(Files.readAllBytes(Paths.get(auditLogFile.getPath())));
         String fileText = str.replace("\n", "");
         assertTrue("the string 'abcd' should be in the merged file", fileText.contains("abcd"));
@@ -96,7 +95,7 @@ public class TestS3ALogMerger {
             LOG.info("AuditLogFile already exists and we are deleting it here");
             auditLogFile.delete();
         }
-        merger.mergeFiles(emptyDirectory.getPath());
+        s3AAuditLogMerger.mergeFiles(emptyDirectory.getPath());
         assertFalse("This AuditLogFile shouldn't exist if input directory is empty ", auditLogFile.exists());
     }
 
