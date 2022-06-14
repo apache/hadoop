@@ -37,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections.keyvalue.DefaultMapEntry;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppLogAggregationStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1703,7 +1704,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     for (LogAggregationReport report : logAggregationReportsForApps) {
       RMApp rmApp = this.context.getRMApps().get(report.getApplicationId());
       if (rmApp != null) {
-        ((RMAppImpl)rmApp).aggregateLogReport(this.nodeId, report);
+        this.context.getDispatcher().getEventHandler().handle(
+            new RMAppLogAggregationStatusEvent(rmApp.getApplicationId(),
+                this.nodeId, report));
       }
     }
   }

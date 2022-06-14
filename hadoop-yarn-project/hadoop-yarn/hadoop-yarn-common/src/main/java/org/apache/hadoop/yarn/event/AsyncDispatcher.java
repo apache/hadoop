@@ -413,4 +413,14 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   public int getEventQueueSize() {
     return eventQueue.size();
   }
+
+  @VisibleForTesting
+  public Event getHeadEvent() {
+    return eventQueue.peek();
+  }
+
+  @VisibleForTesting
+  public void forceEventHandlingThreadStop() {
+    eventHandlingThread.stop();
+  }
 }
