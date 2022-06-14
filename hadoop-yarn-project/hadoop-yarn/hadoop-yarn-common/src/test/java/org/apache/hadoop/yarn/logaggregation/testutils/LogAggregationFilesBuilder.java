@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.logaggregation.TestAggregatedLogDeletionService.*;
 import static org.apache.hadoop.yarn.logaggregation.testutils.FileStatusUtils.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class LogAggregationFilesBuilder {
@@ -34,8 +36,8 @@ public class LogAggregationFilesBuilder {
   private long userDirModTime;
   private List<ApplicationId> applicationIds;
   private List<PathWithFileStatus> appDirs;
-  private List<List<PathWithFileStatus>> appFiles = new ArrayList<>();
-  private Map<Integer, Exception> injectedAppDirDeletionExceptions = new HashMap<>();
+  private final List<List<PathWithFileStatus>> appFiles = new ArrayList<>();
+  private final Map<Integer, Exception> injectedAppDirDeletionExceptions = new HashMap<>();
   private AggregatedLogDeletionServiceForTest deletionService;
   private List<String> fileControllers;
   private long suffixDirModTime;
@@ -242,7 +244,7 @@ public class LogAggregationFilesBuilder {
       ApplicationId appId = this.applicationIds.get(i - 1);
       runningApps.add(appId);
     }
-    deletionService = new AggregatedLogDeletionServiceForTest(runningApps, finishedApps);
+    deletionService = new AggregatedLogDeletionServiceForTest(runningApps, finishedApps, conf);
     deletionService.init(conf);
     deletionService.start();
     return this;
@@ -308,6 +310,25 @@ public class LogAggregationFilesBuilder {
 
   public void teardown() {
     deletionService.stop();
+  }
+
+  public LogAggregationFilesBuilder refreshLogRetentionSettings() throws IOException {
+    deletionService.refreshLogRetentionSettings();
+    return this;
+  }
+
+  public AggregatedLogDeletionServiceForTest getDeletionService() {
+    return deletionService;
+  }
+
+  public LogAggregationFilesBuilder verifyCheckIntervalMilliSecondsEqualTo(int checkIntervalMilliSeconds) {
+    assertEquals(checkIntervalMilliSeconds, deletionService.getCheckIntervalMsecs());
+    return this;
+  }
+  
+  public LogAggregationFilesBuilder verifyCheckIntervalMilliSecondsNotEqualTo(int checkIntervalMilliSeconds) {
+    assertTrue(checkIntervalMilliSeconds != deletionService.getCheckIntervalMsecs());
+    return this;
   }
 
   public static class AppDescriptor {

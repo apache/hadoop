@@ -129,65 +129,13 @@ public class TestAggregatedLogDeletionService {
             .injectExceptionForAppDirDeletion(3)
             .setupMocks()
             .setupAndRunDeletionService()
-            .verifyAppDirDeleted(1, timeout)
-            .verifyAppDirDeleted(3, timeout)
-            .verifyAppDirNotDeleted(2, timeout)
-            .verifyAppDirNotDeleted(4, timeout)
+            .verifyAppDirsDeleted(timeout, 1, 3)
+            .verifyAppDirsNotDeleted(timeout, 2, 4)
             .verifyAppFileDeleted(4, 1, timeout)
             .verifyAppFileNotDeleted(4, 2, timeout)
             .teardown();
   }
   
-  @Test
-  public void testDeletionTwoControllers() throws IOException {
-    long now = System.currentTimeMillis();
-    long toDeleteTime = now - (2000 * 1000);
-    long toKeepTime = now - (1500 * 1000);
-
-    Configuration conf = setupConfiguration(1800, -1);
-    enableFileControllers(conf, REMOTE_ROOT_LOG_DIR, ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
-    long timeout = 2000L;
-    LogAggregationFilesBuilder.create(conf)
-            .withRootPath(ROOT)
-            .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
-            .withBothFileControllers()
-            .withUserDir(USER_ME, toKeepTime)
-            .withSuffixDir(NEW_SUFFIX, toDeleteTime)
-            .withBucketDir(toDeleteTime)
-            .withApps(//Apps for TFile
-                    new LogAggregationFilesBuilder.AppDescriptor(T_FILE, toDeleteTime, new Pair[]{}),
-                    new LogAggregationFilesBuilder.AppDescriptor(T_FILE, toDeleteTime,
-                            Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toKeepTime)),
-                    new LogAggregationFilesBuilder.AppDescriptor(T_FILE, toDeleteTime,
-                            Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toDeleteTime)),
-                    new LogAggregationFilesBuilder.AppDescriptor(T_FILE, toDeleteTime,
-                            Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toKeepTime)),
-                    //Apps for IFile
-                    new LogAggregationFilesBuilder.AppDescriptor(I_FILE, toDeleteTime, new Pair[]{}),
-                    new LogAggregationFilesBuilder.AppDescriptor(I_FILE, toDeleteTime,
-                            Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toKeepTime)),
-                    new LogAggregationFilesBuilder.AppDescriptor(I_FILE, toDeleteTime,
-                            Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toDeleteTime)),
-                    new LogAggregationFilesBuilder.AppDescriptor(I_FILE, toDeleteTime,
-                            Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toKeepTime)))
-            .withFinishedApps(1, 2, 3, 5, 6, 7)
-            .withRunningApps(4, 8)
-            .injectExceptionForAppDirDeletion(3, 6)
-            .setupMocks()
-            .setupAndRunDeletionService()
-            .verifyAppDirsDeleted(timeout, 1, 3, 5, 7)
-            .verifyAppDirsNotDeleted(timeout, 2, 4, 6, 8)
-            .verifyAppFilesDeleted(timeout, new Pair[] {Pair.of(4, 1), Pair.of(8, 1)})
-            .verifyAppFilesNotDeleted(timeout, new Pair[] {Pair.of(4, 2), Pair.of(8, 2)})
-            .teardown();
-  }
-
   @Test
   public void testRefreshLogRetentionSettings() throws Exception {
     long now = System.currentTimeMillis();
@@ -198,74 +146,44 @@ public class TestAggregatedLogDeletionService {
 
     Configuration conf = setupConfiguration(1800, 1);
 
-    Path rootPath = new Path(ROOT);
-    FileSystem rootFs = rootPath.getFileSystem(conf);
-    FileSystem mockFs = ((FilterFileSystem) rootFs).getRawFileSystem();
+    LogAggregationFilesBuilder builder = LogAggregationFilesBuilder.create(conf)
+            .withRootPath(ROOT)
+            .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
+            .withUserDir(USER_ME, before50Secs)
+            .withSuffixDir(SUFFIX, before50Secs)
+            .withBucketDir(before50Secs)
+            .withApps(
+                    //Set time last modified of app1Dir directory and its files to before2000Secs 
+                    new LogAggregationFilesBuilder.AppDescriptor(before2000Secs,
+                            Pair.of(DIR_HOST1, before2000Secs)),
+                    //Set time last modified of app1Dir directory and its files to before50Secs 
+                    new LogAggregationFilesBuilder.AppDescriptor(before50Secs,
+                            Pair.of(DIR_HOST1, before50Secs))
+            )
+            .withFinishedApps(1, 2)
+            .withRunningApps()
+            .setupMocks()
+            .setupAndRunDeletionService()
+            //app1Dir would be deleted since it is done above log retention period
+            .verifyAppDirDeleted(1, 10000L)
+            //app2Dir is not expected to be deleted since it is below the threshold
+            .verifyAppDirNotDeleted(2, 3000L);
 
-    ApplicationId appId1 = ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    ApplicationId appId2 = ApplicationId.newInstance(System.currentTimeMillis(), 2);
-
-    Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
-
-    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME,
-            before50Secs);
-    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX,
-            before50Secs);
-    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath,
-            USER_ME, SUFFIX, appId1, before50Secs);
-
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[] {userDir.fileStatus});
-
-    //Set time last modified of app1Dir directory and its files to before2000Secs 
-    PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1,
-            USER_ME, SUFFIX, before2000Secs);
-
-    //Set time last modified of app1Dir directory and its files to before50Secs
-    PathWithFileStatus app2 = createPathWithFileStatusForAppId(remoteRootLogPath, appId2,
-            USER_ME, SUFFIX, before50Secs);
-
-    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[]{suffixDir.fileStatus});
-    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[]{bucketDir.fileStatus});
-    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[]{app1.fileStatus,
-            app2.fileStatus});
-
-    PathWithFileStatus app1Log1 = createFileLogPathWithFileStatus(app1.path, DIR_HOST1,
-            before2000Secs);
-    PathWithFileStatus app2Log1 = createFileLogPathWithFileStatus(app2.path, DIR_HOST1,
-            before50Secs);
-
-    when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[] {app1Log1.fileStatus});
-    when(mockFs.listStatus(app2.path)).thenReturn(new FileStatus[] {app2Log1.fileStatus});
-
-    final List<ApplicationId> finishedApplications =
-        Collections.unmodifiableList(Arrays.asList(appId1, appId2));
-
-    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionServiceForTest(null,
-            finishedApplications, conf);
-    
-    deletionSvc.init(conf);
-    deletionSvc.start();
-    
-    //app1Dir would be deleted since its done above log retention period
-    verify(mockFs, timeout(10000)).delete(app1.path, true);
-    //app2Dir is not expected to be deleted since it is below the threshold
-    verify(mockFs, timeout(3000).times(0)).delete(app2.path, true);
-
-    //Now, let's change the confs
+    //Now, let's change the log aggregation retention configs
     conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 50);
     conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
             checkIntervalSeconds);
-    //We have not called refreshLogSettings,hence don't expect to see the changed conf values
-    assertTrue(checkIntervalMilliSeconds != deletionSvc.getCheckIntervalMsecs());
-    
-    //refresh the log settings
-    deletionSvc.refreshLogRetentionSettings();
 
-    //Check interval time should reflect the new value
-    Assert.assertEquals(checkIntervalMilliSeconds, deletionSvc.getCheckIntervalMsecs());
-    //app2Dir should be deleted since it falls above the threshold
-    verify(mockFs, timeout(10000)).delete(app2.path, true);
-    deletionSvc.stop();
+    builder
+            //We have not called refreshLogSettings,hence don't expect to see the changed conf values
+            .verifyCheckIntervalMilliSecondsNotEqualTo(checkIntervalMilliSeconds)
+            //refresh the log settings
+            .refreshLogRetentionSettings()
+            //Check interval time should reflect the new value
+            .verifyCheckIntervalMilliSecondsEqualTo(checkIntervalMilliSeconds)
+            //app2Dir should be deleted since it falls above the threshold
+            .verifyAppDirDeleted(2, 10000L)
+            .teardown();
   }
   
   @Test
