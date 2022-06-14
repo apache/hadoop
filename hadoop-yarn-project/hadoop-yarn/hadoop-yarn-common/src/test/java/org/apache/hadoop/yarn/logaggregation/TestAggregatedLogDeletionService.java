@@ -30,11 +30,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
-import org.apache.hadoop.yarn.logaggregation.testutils.AggregatedLogDeletionServiceForTest;
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationFilesBuilder;
 import org.apache.hadoop.yarn.logaggregation.testutils.PathWithFileStatus;
 import org.apache.log4j.Level;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -47,11 +45,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static javax.ws.rs.container.AsyncResponse.NO_TIMEOUT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
-import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.enableFileControllers;
-import static org.apache.hadoop.yarn.logaggregation.testutils.FileStatusUtils.*;
+import static org.apache.hadoop.yarn.logaggregation.testutils.FileStatusUtils.createDirLogPathWithFileStatus;
 import static org.apache.hadoop.yarn.logaggregation.testutils.MockRMClientUtils.createMockRMClient;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class TestAggregatedLogDeletionService {
@@ -175,7 +172,8 @@ public class TestAggregatedLogDeletionService {
             checkIntervalSeconds);
 
     builder
-            //We have not called refreshLogSettings,hence don't expect to see the changed conf values
+            //We have not called refreshLogSettings, hence don't expect to see
+            // the changed conf values
             .verifyCheckIntervalMilliSecondsNotEqualTo(checkIntervalMilliSeconds)
             //refresh the log settings
             .refreshLogRetentionSettings()
@@ -195,52 +193,34 @@ public class TestAggregatedLogDeletionService {
 
     // prevent us from picking up the same mockfs instance from another test
     FileSystem.closeAll();
-    Path rootPath = new Path(ROOT);
-    FileSystem rootFs = rootPath.getFileSystem(conf);
-    FileSystem mockFs = ((FilterFileSystem)rootFs).getRawFileSystem();
 
-    Path remoteRootLogPath = new Path(REMOTE_ROOT_LOG_DIR);
-
-    PathWithFileStatus userDir = createDirLogPathWithFileStatus(remoteRootLogPath, USER_ME, now);
-    PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, NEW_SUFFIX, now);
-
-    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(new FileStatus[]{userDir.fileStatus});
-
-    ApplicationId appId1 = ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(remoteRootLogPath,
-            USER_ME, SUFFIX, appId1, now);
-
-    PathWithFileStatus app1 = createPathWithFileStatusForAppId(remoteRootLogPath, appId1,
-            USER_ME, SUFFIX, now);
-    PathWithFileStatus app1Log1 = createFileLogPathWithFileStatus(app1.path, DIR_HOST1, now);
-
-    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
-    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus});
-    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[] {app1.fileStatus});
-    when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[]{app1Log1.fileStatus});
-
-    final List<ApplicationId> finishedApplications = Collections.singletonList(appId1);
-
-    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionServiceForTest(null,
-            finishedApplications);
-    deletionSvc.init(conf);
-    deletionSvc.start();
- 
-    verify(mockFs, timeout(10000).atLeast(4)).listStatus(any(Path.class));
-    verify(mockFs, never()).delete(app1.path, true);
-
-    // modify the timestamp of the logs and verify if it's picked up quickly
-    app1.changeModificationTime(toDeleteTime);
-    app1Log1.changeModificationTime(toDeleteTime);
-    bucketDir.changeModificationTime(toDeleteTime);
-    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
-    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus });
-    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[] {app1.fileStatus });
-    when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[]{app1Log1.fileStatus});
-
-    verify(mockFs, timeout(10000)).delete(app1.path, true);
-
-    deletionSvc.stop();
+    LogAggregationFilesBuilder.create(conf)
+            .withRootPath(ROOT)
+            .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
+            .withUserDir(USER_ME, now)
+            .withSuffixDir(SUFFIX, now)
+            .withBucketDir(now)
+            .withApps(
+                    new LogAggregationFilesBuilder.AppDescriptor(now,
+                            Pair.of(DIR_HOST1, now)),
+                    new LogAggregationFilesBuilder.AppDescriptor(now))
+            .withFinishedApps(1)
+            .withRunningApps()
+            .setupMocks()
+            .setupAndRunDeletionService()
+            .verifyAnyPathListedAtLeast(4, 10000L)
+            .verifyAppDirNotDeleted(1, NO_TIMEOUT)
+            // modify the timestamp of the logs and verify if it is picked up quickly
+            .changeModTimeOfApp(1, toDeleteTime)
+            .changeModTimeOfAppLogDir(1, 1, toDeleteTime)
+            .changeModTimeOfBucketDir(toDeleteTime)
+            .reinitAllPaths()
+            .verifyAppDirDeleted(1, 10000L)
+            .teardown();
+//    when(mockFs.listStatus(userDir.path)).thenReturn(new FileStatus[] {suffixDir.fileStatus});
+//    when(mockFs.listStatus(suffixDir.path)).thenReturn(new FileStatus[] {bucketDir.fileStatus });
+//    when(mockFs.listStatus(bucketDir.path)).thenReturn(new FileStatus[] {app1.fileStatus });
+//    when(mockFs.listStatus(app1.path)).thenReturn(new FileStatus[]{app1Log1.fileStatus});
   }
 
   @Test

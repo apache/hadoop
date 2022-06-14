@@ -26,7 +26,8 @@ import static org.mockito.Mockito.*;
 
 public class LogAggregationFilesBuilder {
   private static final Logger LOG = LoggerFactory.getLogger(LogAggregationFilesBuilder.class);
-  
+
+  public static final long NO_TIMEOUT = -1;
   private final long now;
   private final Configuration conf;
   private FileSystem mockFs;
@@ -46,6 +47,9 @@ public class LogAggregationFilesBuilder {
   private AppDescriptor[] apps;
   private int[] finishedAppIds;
   private int[] runningAppIds;
+  private PathWithFileStatus userDir;
+  private PathWithFileStatus suffixDir;
+  private PathWithFileStatus bucketDir;
 
   public LogAggregationFilesBuilder(Configuration conf) {
     this.conf = conf;
@@ -132,6 +136,20 @@ public class LogAggregationFilesBuilder {
   public LogAggregationFilesBuilder setupMocks() throws IOException {
     createApplicationsByDescriptors();
 
+    List<Path> rootPaths = determineRootPaths();
+    for (Path rootPath : rootPaths) {
+      String controllerName = rootPath.getName();
+      ApplicationId arbitraryAppIdForBucketDir = this.applicationIds.get(0);
+      userDir = createDirLogPathWithFileStatus(rootPath, userDirName, userDirModTime);
+      suffixDir = createDirLogPathWithFileStatus(userDir.path, suffixDirName, suffixDirModTime);
+      bucketDir = createDirBucketDirLogPathWithFileStatus(rootPath, userDirName, suffix, arbitraryAppIdForBucketDir, bucketDirModTime);
+      setupListStatusForPath(rootPath, userDir);
+      initFileSystemListings(controllerName);
+    }
+    return this;
+  }
+
+  private List<Path> determineRootPaths() {
     List<Path> rootPaths = new ArrayList<>();
     if (fileControllers != null && !fileControllers.isEmpty()) {
       for (String fileController : fileControllers) {
@@ -146,24 +164,18 @@ public class LogAggregationFilesBuilder {
     } else {
       rootPaths.add(remoteRootLogPath);
     }
-    
-    for (Path rootPath : rootPaths) {
-      String controllerName = rootPath.getName();
-      ApplicationId arbitraryAppIdForBucketDir = this.applicationIds.get(0);
-      PathWithFileStatus userDir = createDirLogPathWithFileStatus(rootPath, userDirName, userDirModTime);
-      PathWithFileStatus suffixDir = createDirLogPathWithFileStatus(userDir.path, suffixDirName, suffixDirModTime);
-      PathWithFileStatus bucketDir = createDirBucketDirLogPathWithFileStatus(rootPath, userDirName, suffix, arbitraryAppIdForBucketDir, bucketDirModTime);
-      setupListStatusForPath(rootPath, userDir);
-      setupListStatusForPath(userDir, suffixDir);
-      setupListStatusForPath(suffixDir, bucketDir);
-      setupListStatusForPath(bucketDir, appDirs.stream()
-              .filter(app -> app.path.toString().contains(controllerName))
-              .map(app -> app.fileStatus)
-              .toArray(FileStatus[]::new));
-    }
-    return this;
+    return rootPaths;
   }
-  
+
+  private void initFileSystemListings(String controllerName) throws IOException {
+    setupListStatusForPath(userDir, suffixDir);
+    setupListStatusForPath(suffixDir, bucketDir);
+    setupListStatusForPath(bucketDir, appDirs.stream()
+            .filter(app -> app.path.toString().contains(controllerName))
+            .map(app -> app.fileStatus)
+            .toArray(FileStatus[]::new));
+  }
+
   private void createApplicationsByDescriptors() throws IOException {
     int len = apps.length;
     appDirs = new ArrayList<>(len);
@@ -180,11 +192,19 @@ public class LogAggregationFilesBuilder {
 
       PathWithFileStatus appDir = createPathWithFileStatusForAppId(
               basePath, applicationId, userDirName, suffix, appDesc.modTimeOfAppDir);
-      LOG.debug("Created application with id '{}' to path '{}'", applicationId, appDir.path);
+      LOG.debug("Created application with ID '{}' to path '{}'", applicationId, appDir.path);
       appDirs.add(appDir);
       addAppChildrenFiles(appDesc, appDir);
     }
 
+    setupFsMocksForAppsAndChildrenFiles();
+
+    for (Map.Entry<Integer, Exception> e : injectedAppDirDeletionExceptions.entrySet()) {
+      when(mockFs.delete(this.appDirs.get(e.getKey()).path, true)).thenThrow(e.getValue());
+    }
+  }
+
+  private void setupFsMocksForAppsAndChildrenFiles() throws IOException {
     for (int i = 0; i < appDirs.size(); i++) {
       List<PathWithFileStatus> appChildren = appFiles.get(i);
       Path appPath = appDirs.get(i).path;
@@ -192,10 +212,6 @@ public class LogAggregationFilesBuilder {
               appChildren.stream()
                       .map(child -> child.fileStatus)
                       .toArray(FileStatus[]::new));
-    }
-
-    for (Map.Entry<Integer, Exception> e : injectedAppDirDeletionExceptions.entrySet()) {
-      when(mockFs.delete(this.appDirs.get(e.getKey()).path, true)).thenThrow(e.getValue());
     }
   }
 
@@ -299,7 +315,11 @@ public class LogAggregationFilesBuilder {
   }
 
   private void verifyAppDirDeletion(int id, int times, long timeout) throws IOException {
-    verify(mockFs, timeout(timeout).times(times)).delete(this.appDirs.get(id - 1).path, true);
+    if (timeout == NO_TIMEOUT) {
+      verify(mockFs, times(times)).delete(this.appDirs.get(id - 1).path, true);
+    } else {
+      verify(mockFs, timeout(timeout).times(times)).delete(this.appDirs.get(id - 1).path, true);  
+    }
   }
 
   private void verifyAppFileDeletion(int appId, int fileNo, int times, long timeout) throws IOException {
@@ -328,6 +348,39 @@ public class LogAggregationFilesBuilder {
   
   public LogAggregationFilesBuilder verifyCheckIntervalMilliSecondsNotEqualTo(int checkIntervalMilliSeconds) {
     assertTrue(checkIntervalMilliSeconds != deletionService.getCheckIntervalMsecs());
+    return this;
+  }
+
+  public LogAggregationFilesBuilder verifyAnyPathListedAtLeast(int atLeast, long timeout) throws IOException {
+    verify(mockFs, timeout(timeout).atLeast(atLeast)).listStatus(any(Path.class));
+    return this;
+  }
+
+  public LogAggregationFilesBuilder changeModTimeOfApp(int appId, long modTime) {
+    PathWithFileStatus appDir = appDirs.get(appId - 1);
+    appDir.changeModificationTime(modTime);
+    return this;
+  }
+  
+  public LogAggregationFilesBuilder changeModTimeOfAppLogDir(int appId, int fileNo, long modTime) {
+    List<PathWithFileStatus> childrenFiles = this.appFiles.get(appId - 1);
+    PathWithFileStatus file = childrenFiles.get(fileNo - 1);
+    file.changeModificationTime(modTime);
+    return this;
+  }
+
+  public LogAggregationFilesBuilder changeModTimeOfBucketDir(long modTime) {
+    bucketDir.changeModificationTime(modTime);
+    return this;
+  }
+
+  public LogAggregationFilesBuilder reinitAllPaths() throws IOException {
+    List<Path> rootPaths = determineRootPaths();
+    for (Path rootPath : rootPaths) {
+      String controllerName = rootPath.getName();
+      initFileSystemListings(controllerName);
+    }
+    setupFsMocksForAppsAndChildrenFiles();
     return this;
   }
 
