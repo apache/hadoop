@@ -71,26 +71,6 @@ public class CommitterTestHelper {
   }
 
   /**
-   * Verify that the path at the end of a commit exists.
-   * This does not validate the size.
-   * @param commit commit to verify
-   * @throws FileNotFoundException dest doesn't exist
-   * @throws ValidationFailure commit arg is invalid
-   * @throws IOException invalid commit, IO failure
-   */
-  public void verifyCommitExists(SinglePendingCommit commit)
-      throws FileNotFoundException, ValidationFailure, IOException {
-    commit.validate();
-    // this will force an existence check
-    Path path = getFileSystem().keyToQualifiedPath(commit.getDestinationKey());
-    FileStatus status = getFileSystem().getFileStatus(path);
-    LOG.debug("Destination entry: {}", status);
-    if (!status.isFile()) {
-      throw new PathCommitException(path, "Not a file: " + status);
-    }
-  }
-
-  /**
    * Assert a path refers to a marker file of an expected length;
    * the length is extracted from the custom header.
    * @param path magic file.

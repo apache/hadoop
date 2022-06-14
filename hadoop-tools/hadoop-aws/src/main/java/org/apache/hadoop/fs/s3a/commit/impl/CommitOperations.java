@@ -634,7 +634,7 @@ public class CommitOperations extends AbstractStoreOperation
   }
 
   /**
-   * Crate a commit context for a job or task.
+   * Create a commit context for a job or task.
    *
    * @param context job context
    * @param path path for all work.
