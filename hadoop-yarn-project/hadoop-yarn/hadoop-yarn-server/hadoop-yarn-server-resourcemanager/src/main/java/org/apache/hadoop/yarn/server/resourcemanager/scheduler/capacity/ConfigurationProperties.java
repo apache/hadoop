@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Queues;
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -63,6 +66,32 @@ public class ConfigurationProperties {
    */
   public Map<String, String> getPropertiesWithPrefix(String prefix) {
     return getPropertiesWithPrefix(prefix, false);
+  }
+
+  /**
+   * Allows setting a property under its prefix node after initialization.
+   * @param key the fully qualified key of the property
+   * @param value value of the property
+   */
+  public void setProperty(String key, String value) {
+    ArrayList<String> propertyPrefixParts = splitPropertyByDelimiter(key);
+    if (propertyPrefixParts.size() < 2) {
+      return;
+    }
+    // It is the last element of the list, hence it is O(1) operation
+    propertyPrefixParts.remove(propertyPrefixParts.size() - 1);
+
+    Iterator<String> prefixParts = propertyPrefixParts.iterator();
+    String start = prefixParts.next();
+    PrefixNode candidate = nodes.get(start);
+    if (candidate == null) {
+      return;
+    }
+
+    if (prefixParts.hasNext()) {
+      candidate = findOrCreatePrefixNode(candidate.children, prefixParts);
+    }
+    candidate.values.put(key, value);
   }
 
   /**
@@ -193,8 +222,8 @@ public class ConfigurationProperties {
         propertyKeyParts);
   }
 
-  private List<String> splitPropertyByDelimiter(String property) {
-    return Arrays.asList(property.split(DELIMITER));
+  private ArrayList<String> splitPropertyByDelimiter(String property) {
+    return Lists.newArrayList(property.split(DELIMITER));
   }
 
 

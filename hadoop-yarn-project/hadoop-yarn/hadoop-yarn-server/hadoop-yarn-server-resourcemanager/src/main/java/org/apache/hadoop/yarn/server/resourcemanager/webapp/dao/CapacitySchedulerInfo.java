@@ -106,7 +106,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
           .getConfigName();
       autoQueueTemplateProperties = CapacitySchedulerInfoHelper
           .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
-              .getTemplateProperties());
+              .getCommonProperties());
       autoQueueParentTemplateProperties = CapacitySchedulerInfoHelper
           .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
               .getParentOnlyProperties());

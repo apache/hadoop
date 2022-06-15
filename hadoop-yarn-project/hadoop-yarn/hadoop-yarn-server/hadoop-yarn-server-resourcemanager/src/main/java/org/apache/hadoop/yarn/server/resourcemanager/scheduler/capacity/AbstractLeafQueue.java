@@ -86,6 +86,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_AM_RESOURCE_SUFFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
 
 public class AbstractLeafQueue extends AbstractCSQueue {
@@ -1691,12 +1693,22 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   @Override
   protected void setDynamicQueueProperties() {
-    // set to -1, to disable it
-    queueContext.getConfiguration().setUserLimitFactor(getQueuePath(), -1);
-    // Set Max AM percentage to a higher value
-    queueContext.getConfiguration().setMaximumApplicationMasterResourcePerQueuePercent(
-        getQueuePath(), 1f);
     super.setDynamicQueueProperties();
+
+    Set<String> templatedProperties = ((ParentQueue)parent).getAutoCreatedQueueTemplate()
+        .getAllTemplateProperties();
+
+    // Do not overwrite properties if they had been defined by templates
+    if (!templatedProperties.contains(USER_LIMIT_FACTOR)) {
+      // set to -1, to disable it
+      queueContext.getConfiguration().setUserLimitFactor(getQueuePath(), -1);
+    }
+
+    if (!templatedProperties.contains(MAXIMUM_AM_RESOURCE_SUFFIX)) {
+      // Set Max AM percentage to a higher value
+      queueContext.getConfiguration().setMaximumApplicationMasterResourcePerQueuePercent(
+          getQueuePath(), 1f);
+    }
   }
 
   @Override

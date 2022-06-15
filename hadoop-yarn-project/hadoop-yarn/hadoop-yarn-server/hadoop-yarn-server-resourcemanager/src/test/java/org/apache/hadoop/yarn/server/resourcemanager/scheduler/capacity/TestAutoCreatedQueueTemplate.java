@@ -96,7 +96,7 @@ public class TestAutoCreatedQueueTemplate {
     template.setTemplateEntriesForChild(conf, "root.a");
 
     Assert.assertEquals("acl_submit_applications is set", "user",
-        template.getTemplateProperties().get("acl_submit_applications"));
+        template.getCommonProperties().get("acl_submit_applications"));
   }
 
   @Test

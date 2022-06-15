@@ -500,6 +500,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT);
   }
 
+  @Override
+  public void set(String name, String value) {
+    super.set(name, value);
+    getConfigurationProperties().setProperty(name, value);
+  }
 
   /**
    * Get the maximum applications per queue setting.
@@ -974,7 +979,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static Map<AccessType, AccessControlList> getACLsForFlexibleAutoCreatedParentQueue(
       AutoCreatedQueueTemplate aqc) {
     return getACLsFromProperties(aqc.getParentOnlyProperties(),
-        aqc.getTemplateProperties());
+        aqc.getCommonProperties());
   }
 
   /**
@@ -987,7 +992,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static Map<AccessType, AccessControlList> getACLsForFlexibleAutoCreatedLeafQueue(
       AutoCreatedQueueTemplate aqc) {
     return getACLsFromProperties(aqc.getLeafOnlyProperties(),
-        aqc.getTemplateProperties());
+        aqc.getCommonProperties());
   }
 
   /**

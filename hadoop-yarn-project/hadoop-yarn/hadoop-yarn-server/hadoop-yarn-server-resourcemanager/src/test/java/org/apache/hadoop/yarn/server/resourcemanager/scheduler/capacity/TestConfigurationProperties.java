@@ -27,6 +27,9 @@ import java.util.Map;
 
 public class TestConfigurationProperties {
   private static final Map<String, String> PROPERTIES = new HashMap<>();
+  public static final String ROOT_1_PROP = "root.1.prop";
+  public static final String ROOT_PROP_TEST = "root.prop_test";
+  public static final String ROOT_1_NEW_1_NEW_PROP = "root.1.new_1.new_prop";
 
   @BeforeClass
   public static void setUpClass() throws Exception {
@@ -121,5 +124,28 @@ public class TestConfigurationProperties {
     Assert.assertEquals(0, propsEmptyPrefix.size());
     Assert.assertEquals(0, propsLongPrefix.size());
     Assert.assertEquals(0, propsNonExistingRootPrefix.size());
+  }
+
+  @Test
+  public void testSetProperties() {
+    ConfigurationProperties configurationProperties =
+        new ConfigurationProperties(PROPERTIES);
+
+    configurationProperties.setProperty(ROOT_1_PROP, "set_1");
+    configurationProperties.setProperty(ROOT_PROP_TEST, "set_2");
+    configurationProperties.setProperty(ROOT_1_NEW_1_NEW_PROP, "set_3");
+
+    Map<String, String> propsRoot1 = configurationProperties.getPropertiesWithPrefix("root.1",
+        true);
+    Map<String, String> propsRoot = configurationProperties
+        .getPropertiesWithPrefix("root", true);
+    Map<String, String> propsNew1 = configurationProperties
+        .getPropertiesWithPrefix("root.1.new_1", true);
+
+    Assert.assertTrue(propsRoot1.containsKey(ROOT_1_PROP));
+    Assert.assertTrue(propsRoot.containsKey(ROOT_1_PROP));
+    Assert.assertTrue(propsRoot.containsKey(ROOT_PROP_TEST));
+    Assert.assertTrue(propsRoot.containsKey(ROOT_1_NEW_1_NEW_PROP));
+    Assert.assertTrue(propsNew1.containsKey(ROOT_1_NEW_1_NEW_PROP));
   }
 }

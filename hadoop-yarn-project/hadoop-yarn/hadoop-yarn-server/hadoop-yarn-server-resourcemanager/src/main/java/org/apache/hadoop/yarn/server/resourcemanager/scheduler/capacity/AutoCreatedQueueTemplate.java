@@ -25,7 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
+
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
@@ -59,11 +62,16 @@ public class AutoCreatedQueueTemplate {
         + AUTO_QUEUE_TEMPLATE_PREFIX;
   }
 
+  public Set<String> getAllTemplateProperties() {
+    return Sets.union(Sets.union(templateProperties.keySet(), leafOnlyProperties.keySet()),
+        parentOnlyProperties.keySet());
+  }
+
   /**
    * Get the common template properties specified for a parent queue.
    * @return template property names and values
    */
-  public Map<String, String> getTemplateProperties() {
+  public Map<String, String> getCommonProperties() {
     return templateProperties;
   }
 
