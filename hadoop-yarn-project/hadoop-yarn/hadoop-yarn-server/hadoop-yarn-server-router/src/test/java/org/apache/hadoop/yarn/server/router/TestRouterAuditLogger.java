@@ -215,28 +215,32 @@ public class TestRouterAuditLogger {
     // Create server side implementation
     MyTestRouterRPCServer serverImpl = new MyTestRouterRPCServer();
     BlockingService service = TestRpcServiceProtos.TestProtobufRpcProto
-            .newReflectiveBlockingService(serverImpl);
+        .newReflectiveBlockingService(serverImpl);
 
     // start the IPC server
     Server server = new RPC.Builder(conf)
-            .setProtocol(TestRpcBase.TestRpcService.class)
-            .setInstance(service).setBindAddress("0.0.0.0")
-            .setPort(0).setNumHandlers(5).setVerbose(true).build();
+        .setProtocol(TestRpcBase.TestRpcService.class)
+        .setInstance(service).setBindAddress("0.0.0.0")
+        .setPort(0).setNumHandlers(5).setVerbose(true).build();
 
     server.start();
 
-    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    InetSocketAddress address = NetUtils.getConnectAddress(server);
 
     // Make a client connection and test the audit log
-    TestRpcBase.TestRpcService proxy = RPC.getProxy(TestRpcBase.TestRpcService.class,
-            TestRPC.TestProtocol.versionID, addr, conf);
-
-    // Start the testcase
-    TestProtos.EmptyRequestProto pingRequest =
-            TestProtos.EmptyRequestProto.newBuilder().build();
-    proxy.ping(null, pingRequest);
-
-    server.stop();
-    RPC.stopProxy(proxy);
+    TestRpcBase.TestRpcService proxy = null;
+    try {
+      proxy = RPC.getProxy(TestRpcBase.TestRpcService.class,
+          TestRPC.TestProtocol.versionID, address, conf);
+      // Start the testcase
+      TestProtos.EmptyRequestProto pingRequest =
+          TestProtos.EmptyRequestProto.newBuilder().build();
+      proxy.ping(null, pingRequest);
+    } finally {
+      server.stop();
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+    }
   }
 }
