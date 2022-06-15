@@ -952,7 +952,8 @@ public class TestKMS {
             FieldUtils.getField(KMSClientProvider.class, "encKeyVersionQueue", true)).read();
         LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>> kq =
             (LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>>)
-                 new FieldReader(vq, FieldUtils.getField(ValueQueue.class, "keyQueues", true)).read();
+                 new FieldReader(vq, FieldUtils.getField(ValueQueue.class,
+                     "keyQueues", true)).read();
         EncryptedKeyVersion mockEKV = Mockito.mock(EncryptedKeyVersion.class);
         when(mockEKV.getEncryptionKeyName()).thenReturn(keyName);
         when(mockEKV.getEncryptionKeyVersionName()).thenReturn(mockVersionName);
