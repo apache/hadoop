@@ -55,6 +55,12 @@ public interface FileRange {
    */
   void setData(CompletableFuture<ByteBuffer> data);
 
+  /**
+   * Factory method to create a FileRange object.
+   * @param offset starting offset of the range.
+   * @param length length of the range.
+   * @return a new instance of FileRangeImpl.
+   */
   static FileRange createFileRange(long offset, int length) {
     return new FileRangeImpl(offset, length);
   }

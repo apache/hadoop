@@ -961,7 +961,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     if (isOrderedDisjoint(sortedRanges, 1, minSeekForVectorReads())) {
       LOG.debug("Not merging the ranges as they are disjoint");
-      for(FileRange range: sortedRanges) {
+      for (FileRange range: sortedRanges) {
         ByteBuffer buffer = allocate.apply(range.getLength());
         unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
       }
@@ -972,7 +972,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
               maxReadSizeForVectorReads());
       LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
               ranges.size(), combinedFileRanges.size());
-      for(CombinedFileRange combinedFileRange: combinedFileRanges) {
+      for (CombinedFileRange combinedFileRange: combinedFileRanges) {
         unboundedThreadPool.submit(
             () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate));
       }
@@ -990,6 +990,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
                                                   IntFunction<ByteBuffer> allocate) {
     LOG.debug("Start reading combined range {} from path {} ", combinedFileRange, pathStr);
+    // This reference is must be kept till all buffers are populated as this is a
+    // finalizable object which closes the internal stream when gc triggers.
     S3Object objectRange = null;
     S3ObjectInputStream objectContent = null;
     try {
@@ -1177,9 +1179,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * Read data from S3 using a http request with retries.
-   * This also handles if file has been changed while http
-   * call is getting executed. If file has been changed
-   * RemoteFileChangedException is thrown.
+   * This also handles if file has been changed while the
+   * http call is getting executed. If the file has been
+   * changed RemoteFileChangedException is thrown.
    * @param operationName name of the operation for which get object on S3 is called.
    * @param position position of the object to be read from S3.
    * @param length length from position of the object to be read from S3.
@@ -1196,10 +1198,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     Invoker invoker = context.getReadInvoker();
     try {
       objectRange = invoker.retry(operationName, pathStr, true,
-              () -> {
+        () -> {
           checkIfVectoredIOStopped();
           return client.getObject(request);
-      });
+        });
 
     } catch (IOException ex) {
       tracker.failed();
@@ -1212,6 +1214,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     return objectRange;
   }
 
+  /**
+   * Check if vectored io operation has been stooped. This happens
+   * when the stream is closed or unbuffer is called.
+   * @throws InterruptedIOException throw InterruptedIOException such
+   *                                that all running vectored io is
+   *                                terminated thus releasing resources.
+   */
   private void checkIfVectoredIOStopped() throws InterruptedIOException {
     if (stopVectoredIOOperations.get()) {
       throw new InterruptedIOException("Stream closed or unbuffer is called");
@@ -1303,6 +1312,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   /**
    * Closes the underlying S3 stream, and merges the {@link #streamStatistics}
    * instance associated with the stream.
+   * Also sets the {@code stopVectoredIOOperations} flag to true such that
+   * active vectored read operations are terminated. However termination of
+   * old vectored reads are not guaranteed if a new vectored read operation
+   * is initiated after unbuffer is called.
    */
   @Override
   public synchronized void unbuffer() {

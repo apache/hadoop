@@ -39,7 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1138,6 +1137,14 @@ public class ContractTestUtils extends Assert {
     }
   }
 
+  /**
+   * Utility to return buffers back to the pool once all
+   * data has been read for each file range.
+   * @param fileRanges list of file range.
+   * @param pool buffer pool.
+   * @throws IOException any IOE
+   * @throws TimeoutException ideally this should never occur.
+   */
   public static void returnBuffersToPoolPostRead(List<FileRange> fileRanges,
                                                  ByteBufferPool pool)
           throws IOException, TimeoutException {
