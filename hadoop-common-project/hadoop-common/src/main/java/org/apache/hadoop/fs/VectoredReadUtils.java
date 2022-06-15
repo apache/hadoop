@@ -28,9 +28,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
-import org.apache.hadoop.fs.ByteBufferPositionedReadable;
-import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.Preconditions;
 
@@ -80,7 +77,7 @@ public final class VectoredReadUtils {
   public static void readVectored(PositionedReadable stream,
                                   List<? extends FileRange> ranges,
                                   IntFunction<ByteBuffer> allocate) {
-    for(FileRange range: ranges) {
+    for (FileRange range: ranges) {
       range.setData(readRangeFrom(stream, range, allocate));
     }
   }
@@ -151,7 +148,7 @@ public final class VectoredReadUtils {
                                           int chunkSize,
                                           int minimumSeek) {
     long previous = -minimumSeek;
-    for(FileRange range: input) {
+    for (FileRange range: input) {
       long offset = range.getOffset();
       long end = range.getOffset() + range.getLength();
       if (offset % chunkSize != 0 ||
@@ -209,7 +206,7 @@ public final class VectoredReadUtils {
     }
     FileRange[] sortedRanges = sortRanges(input);
     FileRange prev = sortedRanges[0];
-    for(int i=1; i<sortedRanges.length; i++) {
+    for (int i=1; i<sortedRanges.length; i++) {
       if (sortedRanges[i].getOffset() < prev.getOffset() + prev.getLength()) {
         throw new UnsupportedOperationException("Overlapping ranges are not supported");
       }
@@ -217,8 +214,12 @@ public final class VectoredReadUtils {
     return Arrays.asList(sortedRanges);
   }
 
+  /**
+   * Sort the input ranges by offset.
+   * @param input input ranges.
+   * @return sorted ranges.
+   */
   public static FileRange[] sortRanges(List<? extends FileRange> input) {
-    // sort the ranges by offset
     FileRange[] sortedRanges = input.toArray(new FileRange[0]);
     Arrays.sort(sortedRanges, Comparator.comparingLong(FileRange::getOffset));
     return sortedRanges;
@@ -250,7 +251,7 @@ public final class VectoredReadUtils {
     List<CombinedFileRange> result = new ArrayList<>(sortedRanges.size());
 
     // now merge together the ones that merge
-    for(FileRange range: sortedRanges) {
+    for (FileRange range: sortedRanges) {
       long start = roundDown(range.getOffset(), chunkSize);
       long end = roundUp(range.getOffset() + range.getLength(), chunkSize);
       if (current == null || !current.merge(start, end, range, minimumSeek, maxSize)) {

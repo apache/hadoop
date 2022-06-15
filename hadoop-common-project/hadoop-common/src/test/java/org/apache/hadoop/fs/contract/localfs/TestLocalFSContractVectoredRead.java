@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.impl.FileRangeImpl;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
@@ -65,10 +64,10 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
             .isTrue();
     CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
     List<FileRange> someRandomRanges = new ArrayList<>();
-    someRandomRanges.add(new FileRangeImpl(10, 1024));
-    someRandomRanges.add(new FileRangeImpl(1025, 1024));
+    someRandomRanges.add(FileRange.createFileRange(10, 1024));
+    someRandomRanges.add(FileRange.createFileRange(1025, 1024));
     try (FSDataInputStream in = fis.get()){
-      in.readVectored(someRandomRanges, allocate);
+      in.readVectored(someRandomRanges, getAllocate());
       validateVectoredReadResult(someRandomRanges, DATASET_CORRECT);
     }
     byte[] DATASET_CORRUPTED = ContractTestUtils.dataset(DATASET_LEN, 'a', 64);
@@ -77,7 +76,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     }
     CompletableFuture<FSDataInputStream> fisN = localFs.openFile(testPath).build();
     try (FSDataInputStream in = fisN.get()){
-      in.readVectored(someRandomRanges, allocate);
+      in.readVectored(someRandomRanges, getAllocate());
       // Expect checksum exception when data is updated directly through
       // raw local fs instance.
       intercept(ChecksumException.class,

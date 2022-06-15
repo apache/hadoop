@@ -19,8 +19,9 @@
 package org.apache.hadoop.fs;
 
 import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import org.apache.hadoop.conf.Configuration;

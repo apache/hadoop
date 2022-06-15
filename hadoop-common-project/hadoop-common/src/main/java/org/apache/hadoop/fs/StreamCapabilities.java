@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.fs;
 
-import java.util.List;
-import java.util.function.IntFunction;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -85,7 +82,7 @@ public interface StreamCapabilities {
 
   /**
    * Support for vectored IO api.
-   * See {@link PositionedReadable#readVectored(List, IntFunction)}.
+   * See {@code PositionedReadable#readVectored(List, IntFunction)}.
    */
   String VECTOREDIO = "readvectored";
 

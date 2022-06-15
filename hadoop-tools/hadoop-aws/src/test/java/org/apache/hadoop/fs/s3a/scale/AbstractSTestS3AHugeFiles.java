@@ -459,13 +459,13 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_045_vectoredIOHugeFile() throws Throwable {
     assumeHugeFileExists();
     List<FileRange> rangeList = new ArrayList<>();
-    rangeList.add(new FileRangeImpl(5856368, 116770));
-    rangeList.add(new FileRangeImpl(3520861, 116770));
-    rangeList.add(new FileRangeImpl(8191913, 116770));
-    rangeList.add(new FileRangeImpl(1520861, 116770));
-    rangeList.add(new FileRangeImpl(2520861, 116770));
-    rangeList.add(new FileRangeImpl(9191913, 116770));
-    rangeList.add(new FileRangeImpl(2820861, 156770));
+    rangeList.add(FileRange.createFileRange(5856368, 116770));
+    rangeList.add(FileRange.createFileRange(3520861, 116770));
+    rangeList.add(FileRange.createFileRange(8191913, 116770));
+    rangeList.add(FileRange.createFileRange(1520861, 116770));
+    rangeList.add(FileRange.createFileRange(2520861, 116770));
+    rangeList.add(FileRange.createFileRange(9191913, 116770));
+    rangeList.add(FileRange.createFileRange(2820861, 156770));
     IntFunction<ByteBuffer> allocate = ByteBuffer::allocate;
     FileSystem fs = getFileSystem();
     CompletableFuture<FSDataInputStream> builder =

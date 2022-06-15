@@ -107,7 +107,7 @@ public class VectoredReadBenchmark {
     FSDataInputStream stream = fsChoice.fs.open(DATA_PATH);
     List<FileRange> ranges = new ArrayList<>();
     for(int m=0; m < 100; ++m) {
-      FileRangeImpl range = new FileRangeImpl(m * SEEK_SIZE, READ_SIZE);
+      FileRange range = FileRange.createFileRange(m * SEEK_SIZE, READ_SIZE);
       ranges.add(range);
     }
     stream.readVectored(ranges, bufferChoice.allocate);
