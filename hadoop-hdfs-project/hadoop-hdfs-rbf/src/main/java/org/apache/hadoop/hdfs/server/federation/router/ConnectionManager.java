@@ -73,6 +73,8 @@ public class ConnectionManager {
 
   /** Queue for creating new connections. */
   private final BlockingQueue<ConnectionPool> creatorQueue;
+  private final Map<String, RouterGSIContext> alignmentContexts;
+  private volatile boolean enableObserverRead;
   /** Max size of queue for creating new connections. */
   private final int creatorQueueMaxSize;
 
@@ -125,6 +127,12 @@ public class ConnectionManager {
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS_DEFAULT);
     LOG.info("Cleaning connections every {} seconds",
         TimeUnit.MILLISECONDS.toSeconds(this.connectionCleanupPeriodMs));
+
+    this.alignmentContexts = new HashMap<>();
+
+    this.enableObserverRead = this.conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_ENABLE_OBSERVER_READ_KEY,
+        RBFConfigKeys.DFS_ROUTER_ENABLE_OBSERVER_READ_DEFAULT);
   }
 
   /**
@@ -172,11 +180,13 @@ public class ConnectionManager {
    * @param ugi User group information.
    * @param nnAddress Namenode address for the connection.
    * @param protocol Protocol for the connection.
+   * @param nsId Nameservice Identify.
    * @return Proxy client to connect to nnId as UGI.
    * @throws IOException If the connection cannot be obtained.
    */
   public ConnectionContext getConnection(UserGroupInformation ugi,
-      String nnAddress, Class<?> protocol) throws IOException {
+      String nnAddress, Class<?> protocol, String nsId)
+      throws IOException {
 
     // Check if the manager is shutdown
     if (!this.running) {
@@ -203,9 +213,14 @@ public class ConnectionManager {
       try {
         pool = this.pools.get(connectionId);
         if (pool == null) {
+          RouterGSIContext gsiContext = this.alignmentContexts.get(nsId);
+          if (gsiContext == null) {
+            gsiContext = new RouterGSIContext(this.enableObserverRead);
+            this.alignmentContexts.put(nsId, gsiContext);
+          }
           pool = new ConnectionPool(
               this.conf, nnAddress, ugi, this.minSize, this.maxSize,
-              this.minActiveRatio, protocol);
+              this.minActiveRatio, protocol, gsiContext);
           this.pools.put(connectionId, pool);
         }
       } finally {
@@ -229,6 +244,18 @@ public class ConnectionManager {
     }
 
     return conn;
+  }
+
+  /**
+   * Dynamically reconfigure the enableObserverRead.
+   */
+  public void reconfEnableObserverRead(boolean enableObserverRead) {
+    readLock.lock();
+    this.enableObserverRead = enableObserverRead;
+    for (RouterGSIContext routerGSIContext : alignmentContexts.values()) {
+      routerGSIContext.setEnableObserverRead(enableObserverRead);
+    }
+    readLock.unlock();
   }
 
   /**

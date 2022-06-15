@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
+import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -105,6 +106,8 @@ public class ConnectionPool {
   /** The last time a connection was active. */
   private volatile long lastActiveTime = 0;
 
+  private final AlignmentContext alignmentContext;
+
   /** Map for the protocols and their protobuf implementations. */
   private final static Map<Class<?>, ProtoImpl> PROTO_MAP = new HashMap<>();
   static {
@@ -134,7 +137,8 @@ public class ConnectionPool {
 
   protected ConnectionPool(Configuration config, String address,
       UserGroupInformation user, int minPoolSize, int maxPoolSize,
-      float minActiveRatio, Class<?> proto) throws IOException {
+      float minActiveRatio, Class<?> proto,
+      AlignmentContext alignmentContext) throws IOException {
 
     this.conf = config;
 
@@ -149,6 +153,8 @@ public class ConnectionPool {
     this.minSize = minPoolSize;
     this.maxSize = maxPoolSize;
     this.minActiveRatio = minActiveRatio;
+
+    this.alignmentContext = alignmentContext;
 
     // Add minimum connections to the pool
     for (int i=0; i<this.minSize; i++) {
@@ -394,7 +400,8 @@ public class ConnectionPool {
    */
   public ConnectionContext newConnection() throws IOException {
     return newConnection(
-        this.conf, this.namenodeAddress, this.ugi, this.protocol);
+        this.conf, this.namenodeAddress, this.ugi, this.protocol,
+        this.alignmentContext);
   }
 
   /**
@@ -413,8 +420,8 @@ public class ConnectionPool {
    * @throws IOException If it cannot be created.
    */
   protected static <T> ConnectionContext newConnection(Configuration conf,
-      String nnAddress, UserGroupInformation ugi, Class<T> proto)
-      throws IOException {
+      String nnAddress, UserGroupInformation ugi, Class<T> proto,
+      AlignmentContext alignmentContext) throws IOException {
     if (!PROTO_MAP.containsKey(proto)) {
       String msg = "Unsupported protocol for connection to NameNode: "
           + ((proto != null) ? proto.getName() : "null");
@@ -438,14 +445,14 @@ public class ConnectionPool {
     InetSocketAddress socket = NetUtils.createSocketAddr(nnAddress);
     final long version = RPC.getProtocolVersion(classes.protoPb);
     Object proxy = RPC.getProtocolProxy(classes.protoPb, version, socket, ugi,
-        conf, factory, RPC.getRpcTimeout(conf), defaultPolicy, null).getProxy();
+        conf, factory, RPC.getRpcTimeout(conf), defaultPolicy, null,
+        alignmentContext).getProxy();
     T client = newProtoClient(proto, classes, proxy);
     Text dtService = SecurityUtil.buildTokenService(socket);
 
     ProxyAndInfo<T> clientProxy =
         new ProxyAndInfo<T>(client, dtService, socket);
-    ConnectionContext connection = new ConnectionContext(clientProxy);
-    return connection;
+    return new ConnectionContext(clientProxy);
   }
 
   private static <T> T newProtoClient(Class<T> proto, ProtoImpl classes,

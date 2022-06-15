@@ -81,14 +81,14 @@ public class TestConnectionManager {
     Map<ConnectionPoolId, ConnectionPool> poolMap = connManager.getPools();
 
     ConnectionPool pool1 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, ClientProtocol.class, null);
     addConnectionsToPool(pool1, 9, 4);
     poolMap.put(
         new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS, ClientProtocol.class),
         pool1);
 
     ConnectionPool pool2 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER2, 0, 10, 0.5f, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER2, 0, 10, 0.5f, ClientProtocol.class, null);
     addConnectionsToPool(pool2, 10, 10);
     poolMap.put(
         new ConnectionPoolId(TEST_USER2, TEST_NN_ADDRESS, ClientProtocol.class),
@@ -111,7 +111,7 @@ public class TestConnectionManager {
 
     // Make sure the number of connections doesn't go below minSize
     ConnectionPool pool3 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER3, 2, 10, 0.5f, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER3, 2, 10, 0.5f, ClientProtocol.class, null);
     addConnectionsToPool(pool3, 8, 0);
     poolMap.put(
         new ConnectionPoolId(TEST_USER3, TEST_NN_ADDRESS, ClientProtocol.class),
@@ -136,7 +136,7 @@ public class TestConnectionManager {
     // Create a bad connection pool pointing to unresolvable namenode address.
     ConnectionPool badPool = new ConnectionPool(
             conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f,
-            ClientProtocol.class);
+            ClientProtocol.class, null);
     BlockingQueue<ConnectionPool> queue = new ArrayBlockingQueue<>(1);
     queue.add(badPool);
     ConnectionManager.ConnectionCreator connectionCreator =
@@ -162,7 +162,7 @@ public class TestConnectionManager {
     // Create a bad connection pool pointing to unresolvable namenode address.
     ConnectionPool badPool = new ConnectionPool(
         conf, UNRESOLVED_TEST_NN_ADDRESS, TEST_USER1, 1, 10, 0.5f,
-        ClientProtocol.class);
+        ClientProtocol.class, null);
   }
 
   @Test
@@ -172,7 +172,7 @@ public class TestConnectionManager {
     int activeConns = 5;
 
     ConnectionPool pool = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, ClientProtocol.class, null);
     addConnectionsToPool(pool, totalConns, activeConns);
     poolMap.put(
         new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS, ClientProtocol.class),
@@ -197,7 +197,7 @@ public class TestConnectionManager {
   @Test
   public void testValidClientIndex() throws Exception {
     ConnectionPool pool = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 2, 2, 0.5f, ClientProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 2, 2, 0.5f, ClientProtocol.class, null);
     for(int i = -3; i <= 3; i++) {
       pool.getClientIndex().set(i);
       ConnectionContext conn = pool.getConnection();
@@ -213,7 +213,7 @@ public class TestConnectionManager {
     int activeConns = 5;
 
     ConnectionPool pool = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, NamenodeProtocol.class);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, 0.5f, NamenodeProtocol.class, null);
     addConnectionsToPool(pool, totalConns, activeConns);
     poolMap.put(
         new ConnectionPoolId(
@@ -286,7 +286,7 @@ public class TestConnectionManager {
 
     // Create one new connection pool
     tmpConnManager.getConnection(TEST_USER1, TEST_NN_ADDRESS,
-        NamenodeProtocol.class);
+        NamenodeProtocol.class, "mockNS");
 
     Map<ConnectionPoolId, ConnectionPool> poolMap = tmpConnManager.getPools();
     ConnectionPoolId connectionPoolId = new ConnectionPoolId(TEST_USER1,
@@ -317,6 +317,6 @@ public class TestConnectionManager {
         "Unsupported protocol for connection to NameNode: "
             + TestConnectionManager.class.getName(),
         () -> ConnectionPool.newConnection(conf, TEST_NN_ADDRESS, TEST_USER1,
-            TestConnectionManager.class));
+            TestConnectionManager.class, null));
   }
 }

@@ -151,6 +151,13 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.enable.observer.read</name>
+    <value>false</value>
+    <description>
+      Enable observer read for client with router.
+    </description>
+  </property>
 
   <property>
     <name>dfs.federation.router.dn-report.time-out</name>

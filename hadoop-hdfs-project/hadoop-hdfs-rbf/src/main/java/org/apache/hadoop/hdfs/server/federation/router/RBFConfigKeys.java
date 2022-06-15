@@ -136,6 +136,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final long DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
 
+  public static final String DFS_ROUTER_ENABLE_OBSERVER_READ_KEY =
+      FEDERATION_ROUTER_PREFIX + "enable.observer.read";
+  public static final boolean DFS_ROUTER_ENABLE_OBSERVER_READ_DEFAULT = false;
+
   // HDFS Router RPC client
   public static final String DFS_ROUTER_CLIENT_THREADS_SIZE =
       FEDERATION_ROUTER_PREFIX + "client.thread-size";

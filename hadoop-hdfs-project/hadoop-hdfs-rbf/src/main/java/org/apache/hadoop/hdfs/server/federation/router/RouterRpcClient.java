@@ -368,7 +368,7 @@ public class RouterRpcClient {
             ugi.getUserName(), routerUser);
       }
       connection = this.connectionManager.getConnection(
-          connUGI, rpcAddress, proto);
+          connUGI, rpcAddress, proto, nsId);
       LOG.debug("User {} NN {} is using connection {}",
           ugi.getUserName(), rpcAddress, connection);
     } catch (Exception ex) {
