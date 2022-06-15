@@ -31,6 +31,8 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Provides read access to the underlying file one block at a time.
  * Improve read performance by prefetching and locall caching blocks.
@@ -68,12 +70,15 @@ public abstract class CachingBlockManager extends BlockManager {
   // Once set to true, any further caching requests will be ignored.
   private final AtomicBoolean cachingDisabled;
 
+  private final PrefetchingStatistics prefetchingStatistics;
+
   /**
    * Constructs an instance of a {@code CachingBlockManager}.
    *
    * @param futurePool asynchronous tasks are performed in this pool.
    * @param blockData information about each block of the underlying file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
+   * @param prefetchingStatistics statistics for this stream.
    *
    * @throws IllegalArgumentException if futurePool is null.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
@@ -81,7 +86,8 @@ public abstract class CachingBlockManager extends BlockManager {
   public CachingBlockManager(
       ExecutorServiceFuturePool futurePool,
       BlockData blockData,
-      int bufferPoolSize) {
+      int bufferPoolSize,
+      PrefetchingStatistics prefetchingStatistics) {
     super(blockData);
 
     Validate.checkNotNull(futurePool, "futurePool");
@@ -92,6 +98,7 @@ public abstract class CachingBlockManager extends BlockManager {
     this.numCachingErrors = new AtomicInteger();
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
+    this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
 
     if (this.getBlockData().getFileSize() > 0) {
       this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize());
@@ -316,6 +323,7 @@ public abstract class CachingBlockManager extends BlockManager {
         }
 
         if (isPrefetch) {
+          this.prefetchingStatistics.prefetchingOperationExecuted();
           op = this.ops.prefetch(data.getBlockNumber());
         } else {
           op = this.ops.getRead(data.getBlockNumber());

@@ -190,6 +190,7 @@ public class S3CachingInputStream extends S3InputStream {
       S3Reader reader,
       BlockData blockData,
       int bufferPoolSize) {
-    return new S3CachingBlockManager(futurePool, reader, blockData, bufferPoolSize);
+    return new S3CachingBlockManager(futurePool, reader, blockData, bufferPoolSize,
+        this.getS3AStreamStatistics());
   }
 }

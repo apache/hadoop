@@ -387,6 +387,12 @@ public final class StreamStatisticNames {
   public static final String BLOCKS_RELEASED
       = "blocks_released";
 
+  /**
+   * Total number of prefetching operations executed
+   */
+  public static final String STREAM_READ_PREFETCH_OPERATIONS
+      = "stream_read_prefetch_operations";
+
   private StreamStatisticNames() {
   }
 

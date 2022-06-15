@@ -208,6 +208,12 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     }
 
+
+    @Override
+    public void prefetchingOperationExecuted() {
+
+    }
+
     /**
      * Return an IO statistics instance.
      * @return an empty IO statistics instance.
@@ -341,6 +347,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     public DurationTracker initiateInnerStreamClose(final boolean abort) {
       return stubDurationTracker();
     }
+
   }
 
   /**

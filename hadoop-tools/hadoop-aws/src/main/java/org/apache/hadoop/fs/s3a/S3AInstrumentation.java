@@ -803,6 +803,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong readOperations;
     private final AtomicLong readFullyOperations;
     private final AtomicLong seekOperations;
+    private final AtomicLong prefetchReadOperations;
 
     /** Bytes read by the application and any when draining streams . */
     private final AtomicLong totalBytesRead;
@@ -836,7 +837,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
               StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
               StreamStatisticNames.STREAM_READ_UNBUFFERED,
-              StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
+              StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
+              StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
           .withDurationTracking(ACTION_HTTP_GET_REQUEST,
               StoreStatisticNames.ACTION_FILE_OPENED,
@@ -878,6 +880,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
       totalBytesRead = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_TOTAL_BYTES);
+      prefetchReadOperations =
+          st.getCounterReference(StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS);
       setIOStatistics(st);
       // create initial snapshot of merged statistics
       mergedStats = snapshotIOStatistics(st);
@@ -1280,6 +1284,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return trackDuration(abort
           ? StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED
           : StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED);
+    }
+
+    @Override
+    public void prefetchingOperationExecuted() {
+      prefetchReadOperations.incrementAndGet();
     }
   }
 

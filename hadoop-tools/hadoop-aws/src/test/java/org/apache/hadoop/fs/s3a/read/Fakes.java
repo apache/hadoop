@@ -329,7 +329,8 @@ public final class Fakes {
         S3Reader reader,
         BlockData blockData,
         int bufferPoolSize) {
-      super(futurePool, reader, blockData, bufferPoolSize);
+      super(futurePool, reader, blockData, bufferPoolSize,
+          EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
     }
 
     @Override
