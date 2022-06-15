@@ -26,6 +26,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -53,18 +54,20 @@ public class TestS3AAuditLogMerger {
 
     /**
      * creates the sample directories and files before each test
-     * @throws Exception
+     * @throws IOException on failure
      */
     @Before
     public void setUp() throws IOException {
-        sampleDirectory.mkdir();
-        emptyDirectory.mkdir();
-        try (FileWriter fw = new FileWriter(firstSampleFile);
-             FileWriter fw1 = new FileWriter(secondSampleFile);
-             FileWriter fw2 = new FileWriter(thirdSampleFile)) {
-            fw.write("abcd");
-            fw1.write("efgh");
-            fw2.write("ijkl");
+        boolean sampleDirCreation = sampleDirectory.mkdir();
+        boolean emptyDirCreation = emptyDirectory.mkdir();
+        if(sampleDirCreation && emptyDirCreation) {
+            try (FileWriter fw = new FileWriter(firstSampleFile, StandardCharsets.UTF_8);
+                 FileWriter fw1 = new FileWriter(secondSampleFile, StandardCharsets.UTF_8);
+                 FileWriter fw2 = new FileWriter(thirdSampleFile, StandardCharsets.UTF_8)) {
+                fw.write("abcd");
+                fw1.write("efgh");
+                fw2.write("ijkl");
+            }
         }
     }
 
@@ -72,7 +75,7 @@ public class TestS3AAuditLogMerger {
      * mergeFilesTest() will test the mergeFiles() method in Merger class
      * by passing a sample directory which contains files with some content in it
      * and checks if files in a directory are merged into single file
-     * @throws IOException
+     * @throws IOException on any failure
      */
     @Test
     public void mergeFilesTest() throws IOException {
@@ -87,13 +90,15 @@ public class TestS3AAuditLogMerger {
     /**
      * mergeFilesTestEmpty() will test the mergeFiles()
      * by passing an empty directory and checks if merged file is created or not
-     * @throws IOException
+     * @throws IOException on any failure
      */
     @Test
     public void mergeFilesTestEmpty() throws IOException {
         if(auditLogFile.exists()) {
             LOG.info("AuditLogFile already exists and we are deleting it here");
-            auditLogFile.delete();
+            if(auditLogFile.delete()) {
+                LOG.debug("AuditLogFile deleted");
+            }
         }
         s3AAuditLogMerger.mergeFiles(emptyDirectory.getPath());
         assertFalse("This AuditLogFile shouldn't exist if input directory is empty ", auditLogFile.exists());
@@ -101,15 +106,13 @@ public class TestS3AAuditLogMerger {
 
     /**
      * delete all the sample directories and files after all tests
-     * @throws Exception
+     * @throws Exception on any failure
      */
     @After
     public void tearDown() throws Exception {
-        auditLogFile.delete();
-        firstSampleFile.delete();
-        secondSampleFile.delete();
-        thirdSampleFile.delete();
-        sampleDirectory.delete();
-        emptyDirectory.delete();
+        if(auditLogFile.delete() && firstSampleFile.delete() && secondSampleFile.delete() &&
+                thirdSampleFile.delete() && sampleDirectory.delete() && emptyDirectory.delete()) {
+            LOG.debug("sample files regarding testing deleted");
+        }
     }
 }

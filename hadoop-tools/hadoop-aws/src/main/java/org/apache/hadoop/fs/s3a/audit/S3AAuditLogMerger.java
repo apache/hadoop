@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.audit;
 import org.apache.log4j.Logger;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
@@ -31,7 +32,6 @@ public class S3AAuditLogMerger {
     private final Logger LOG = Logger.getLogger(S3AAuditLogMerger.class);
 
     public void mergeFiles(String auditLogsDirectoryPath) throws IOException {
-        //LOG.info("s3Path : " + auditLogsDirectoryPath);
         File auditLogFilesDirectory = new File(auditLogsDirectoryPath);
         String[] auditLogFileNames = auditLogFilesDirectory.list();
         LOG.info("Files to be merged : " + Arrays.toString(auditLogFileNames));
@@ -39,11 +39,10 @@ public class S3AAuditLogMerger {
         //Read each audit log file present in directory and writes each and every audit log in it into a single audit log file
         if(auditLogFileNames != null && auditLogFileNames.length != 0) {
             File auditLogFile = new File("AuditLogFile");
-            //LOG.info("absolute merged file path: " + auditLogFile.getAbsolutePath());
-            try (PrintWriter printWriter = new PrintWriter(auditLogFile)) {
+            try (PrintWriter printWriter = new PrintWriter(auditLogFile, StandardCharsets.UTF_8)) {
                 for (String singleFileName : auditLogFileNames) {
                     File file = new File(auditLogFilesDirectory, singleFileName);
-                    try (FileReader fileReader = new FileReader(file);
+                    try (FileReader fileReader = new FileReader(file, StandardCharsets.UTF_8);
                          BufferedReader bufferedReader = new BufferedReader(fileReader)) {
                         String singleLine = bufferedReader.readLine();
                         while (singleLine != null) {
@@ -55,6 +54,9 @@ public class S3AAuditLogMerger {
                 }
             }
             LOG.info("Successfully merged all files from the directory '" + auditLogFilesDirectory.getName() + "'");
+        }
+        else {
+            LOG.info("This is an empty directory, expecting a directory with audit log files");
         }
     }
 }

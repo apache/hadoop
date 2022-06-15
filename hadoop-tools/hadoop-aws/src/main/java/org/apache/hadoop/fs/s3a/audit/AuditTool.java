@@ -52,18 +52,12 @@ public class AuditTool extends Configured implements Tool, Closeable {
     private PrintWriter out;
 
     // Exit codes
-    static final int SUCCESS = EXIT_SUCCESS;
-    private static int INVALID_ARGUMENT = EXIT_COMMAND_ARGUMENT_ERROR;
+    private static final int SUCCESS = EXIT_SUCCESS;
+    private static final int INVALID_ARGUMENT = EXIT_COMMAND_ARGUMENT_ERROR;
 
     /** Error String when the wrong FS is used for binding: {@value}. **/
     @VisibleForTesting
     public static final String WRONG_FILESYSTEM = "Wrong filesystem for ";
-
-    /**
-     * The FS we close when we are closed.
-     */
-    private FileSystem baseFS;
-    private S3AFileSystem filesystem;
 
     private final String USAGE = ENTRY_POINT + "  s3a://BUCKET\n";
 
@@ -74,7 +68,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
 
     /**
      * tells us the usage of the AuditTool by commands
-     * @return
+     * @return the string USAGE
      */
     public String getUsage() {
         return USAGE;
@@ -86,32 +80,59 @@ public class AuditTool extends Configured implements Tool, Closeable {
      * and merge the audit log files present in that path into single file in local system
      * @param args command specific arguments.
      * @return SUCCESS i.e, '0', which is an exit code
-     * @throws Exception
+     * @throws Exception on any failure
      */
     @Override
     public int run(String[] args) throws Exception {
         List<String> argv = new ArrayList<>(Arrays.asList(args));
+        println("argv: " + argv);
         if (argv.isEmpty()) {
             errorln(getUsage());
             throw invalidArgs("No bucket specified");
         }
+        //path of audit log files in s3 bucket
         Path s3LogsPath = new Path(argv.get(0));
-        URI fsURI = toUri(String.valueOf(s3LogsPath));
 
+        //setting the file system
+        URI fsURI = toUri(String.valueOf(s3LogsPath));
         S3AFileSystem s3AFileSystem = bindFilesystem(FileSystem.newInstance(fsURI, getConf()));
         RemoteIterator<LocatedFileStatus> listOfS3LogFiles = s3AFileSystem.listFiles(s3LogsPath, true);
-        s3aLogsDirectory.mkdir();
-        while (listOfS3LogFiles.hasNext()) {
-            Path s3LogFilePath = listOfS3LogFiles.next().getPath();
-            File s3LogLocalFilePath = new File(s3aLogsDirectory, s3LogFilePath.getName());
-            s3LogLocalFilePath.createNewFile();
-            FileStatus fileStatus = s3AFileSystem.getFileStatus(s3LogFilePath);
-            long s3LogFileLength = fileStatus.getLen();
-            byte[] s3LogDataBuffer = readDataset(s3AFileSystem, s3LogFilePath, (int) s3LogFileLength);
-            FileUtils.writeByteArrayToFile(s3LogLocalFilePath, s3LogDataBuffer);
+
+        //creating local audit log files directory and copying audit log files into local files from s3 bucket
+        //so that it will be easy for us to implement merging and parsing classes
+        if (!s3aLogsDirectory.exists()) {
+            boolean s3aLogsDirectoryCreation = s3aLogsDirectory.mkdir();
         }
+        File s3aLogsSubDir = new File(s3aLogsDirectory, s3LogsPath.getName());
+        boolean s3aLogsSubDirCreation = false;
+        if (!s3aLogsSubDir.exists()) {
+            s3aLogsSubDirCreation = s3aLogsSubDir.mkdir();
+        }
+        if (s3aLogsSubDirCreation) {
+            while (listOfS3LogFiles.hasNext()) {
+                Path s3LogFilePath = listOfS3LogFiles.next().getPath();
+                File s3LogLocalFilePath = new File(s3aLogsSubDir, s3LogFilePath.getName());
+                boolean localFileCreation = s3LogLocalFilePath.createNewFile();
+                if (localFileCreation) {
+                    FileStatus fileStatus = s3AFileSystem.getFileStatus(s3LogFilePath);
+                    long s3LogFileLength = fileStatus.getLen();
+                    //reads s3 file data into byte buffer
+                    byte[] s3LogDataBuffer = readDataset(s3AFileSystem, s3LogFilePath, (int) s3LogFileLength);
+                    //writes byte array into local file
+                    FileUtils.writeByteArrayToFile(s3LogLocalFilePath, s3LogDataBuffer);
+                }
+            }
+        }
+
+        //calls S3AAuditLogMerger for implementing merging code
+        //by passing local audit log files directory which are copied from s3 bucket
         S3AAuditLogMerger s3AAuditLogMerger = new S3AAuditLogMerger();
-        s3AAuditLogMerger.mergeFiles(s3aLogsDirectory.getPath());
+        s3AAuditLogMerger.mergeFiles(s3aLogsSubDir.getPath());
+
+        //deleting the local log files
+        if(s3aLogsDirectory.exists()) {
+            FileUtils.forceDeleteOnExit(s3aLogsDirectory);
+        }
         return SUCCESS;
     }
 
@@ -125,7 +146,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
      * @return the bytes
      * @throws IOException IO problems
      */
-    public static byte[] readDataset(FileSystem s3AFileSystem, Path s3LogFilePath, int s3LogFileLength) throws IOException {
+    private byte[] readDataset(FileSystem s3AFileSystem, Path s3LogFilePath, int s3LogFileLength) throws IOException {
         byte[] s3LogDataBuffer = new byte[s3LogFileLength];
         int offset = 0;
         int nread = 0;
@@ -142,7 +163,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
     }
 
     /**
-     * Build a exception to throw with a formatted message.
+     * Build an exception to throw with a formatted message.
      * @param exitCode exit code to use
      * @param format string format
      * @param args optional arguments for the string
@@ -176,7 +197,6 @@ public class AuditTool extends Configured implements Tool, Closeable {
      */
     protected S3AFileSystem bindFilesystem(FileSystem bindingFS) {
         FileSystem fs = bindingFS;
-        baseFS = bindingFS;
         while (fs instanceof FilterFileSystem) {
             fs = ((FilterFileSystem) fs).getRawFileSystem();
         }
@@ -185,7 +205,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
                     WRONG_FILESYSTEM + "URI " + fs.getUri() + " : "
                             + fs.getClass().getName());
         }
-        filesystem = (S3AFileSystem) fs;
+        S3AFileSystem filesystem = (S3AFileSystem) fs;
         return filesystem;
     }
 
@@ -206,17 +226,13 @@ public class AuditTool extends Configured implements Tool, Closeable {
         return uri;
     }
 
-    protected static void errorln() {
-        System.err.println();
-    }
-
     protected static void errorln(String x) {
         System.err.println(x);
     }
 
     /**
      * Flush all active output channels, including {@Code System.err},
-     * so as to stay in sync with any JRE log messages.
+     * as to stay in sync with any JRE log messages.
      */
     private void flush() {
         if (out != null) {
@@ -244,13 +260,6 @@ public class AuditTool extends Configured implements Tool, Closeable {
             System.out.println(msg);
         }
         flush();
-    }
-
-    /**
-     * Print a new line
-     */
-    private void println() {
-        println("");
     }
 
     /**
