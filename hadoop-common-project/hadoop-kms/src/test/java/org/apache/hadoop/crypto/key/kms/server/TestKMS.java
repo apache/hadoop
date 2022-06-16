@@ -58,7 +58,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.FieldReader;
 import org.slf4j.event.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -948,12 +947,12 @@ public class TestKMS {
         KMSClientProvider kmscp = createKMSClientProvider(uri, conf);
 
         // get the reference to the internal cache, to test invalidation.
-        ValueQueue vq = (ValueQueue) new FieldReader(kmscp,
-            FieldUtils.getField(KMSClientProvider.class, "encKeyVersionQueue", true)).read();
+        ValueQueue vq = (ValueQueue) FieldUtils.getField(KMSClientProvider.class,
+            "encKeyVersionQueue", true).get(kmscp);
         LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>> kq =
             (LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>>)
-                 new FieldReader(vq, FieldUtils.getField(ValueQueue.class,
-                     "keyQueues", true)).read();
+                 FieldUtils.getField(ValueQueue.class, "keyQueues", true).get(vq);
+
         EncryptedKeyVersion mockEKV = Mockito.mock(EncryptedKeyVersion.class);
         when(mockEKV.getEncryptionKeyName()).thenReturn(keyName);
         when(mockEKV.getEncryptionKeyVersionName()).thenReturn(mockVersionName);

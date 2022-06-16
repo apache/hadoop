@@ -209,8 +209,8 @@ public class TestKMSAudit {
   @Test
   public void testInitAuditLoggers() throws Exception {
     // Default should be the simple logger
-    List<KMSAuditLogger> loggers = (List<KMSAuditLogger>) new FieldReader(kmsAudit,
-            FieldUtils.getField(KMSAudit.class, "auditLoggers", true)).read();
+    List<KMSAuditLogger> loggers = (List<KMSAuditLogger>) FieldUtils.
+        getField(KMSAudit.class, "auditLoggers", true).get(kmsAudit);
 
     Assert.assertEquals(1, loggers.size());
     Assert.assertEquals(SimpleKMSAuditLogger.class, loggers.get(0).getClass());
@@ -221,8 +221,8 @@ public class TestKMSAudit {
         SimpleKMSAuditLogger.class.getName() + ", "
             + SimpleKMSAuditLogger.class.getName());
     final KMSAudit audit = new KMSAudit(conf);
-    loggers = (List<KMSAuditLogger>) new FieldReader(audit,
-        FieldUtils.getField(KMSAudit.class, "auditLoggers", true)).read();
+    loggers = (List<KMSAuditLogger>) FieldUtils.
+        getField(KMSAudit.class, "auditLoggers", true).get(kmsAudit);
     Assert.assertEquals(1, loggers.size());
     Assert.assertEquals(SimpleKMSAuditLogger.class, loggers.get(0).getClass());
 
