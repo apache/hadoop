@@ -41,7 +41,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.mockito.internal.util.reflection.FieldReader;
 
 public class TestKMSAudit {
 
