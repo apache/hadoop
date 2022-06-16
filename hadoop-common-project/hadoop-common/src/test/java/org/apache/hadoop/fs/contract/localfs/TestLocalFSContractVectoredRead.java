@@ -54,7 +54,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
   public void testChecksumValidationDuringVectoredRead() throws Exception {
     Path testPath = path("big_range_checksum");
     LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
-    byte[] DATASET_CORRECT = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
+    final byte[] DATASET_CORRECT = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
     try (FSDataOutputStream out = localFs.create(testPath, true)){
       out.write(DATASET_CORRECT);
     }
@@ -70,7 +70,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       in.readVectored(someRandomRanges, getAllocate());
       validateVectoredReadResult(someRandomRanges, DATASET_CORRECT);
     }
-    byte[] DATASET_CORRUPTED = ContractTestUtils.dataset(DATASET_LEN, 'a', 64);
+    final byte[] DATASET_CORRUPTED = ContractTestUtils.dataset(DATASET_LEN, 'a', 64);
     try (FSDataOutputStream out = localFs.getRaw().create(testPath, true)){
       out.write(DATASET_CORRUPTED);
     }
@@ -80,7 +80,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       // Expect checksum exception when data is updated directly through
       // raw local fs instance.
       intercept(ChecksumException.class,
-         () -> validateVectoredReadResult(someRandomRanges, DATASET_CORRUPTED));
+          () -> validateVectoredReadResult(someRandomRanges, DATASET_CORRUPTED));
     }
   }
 }

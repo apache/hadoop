@@ -449,7 +449,14 @@ Read fully data for a list of ranges asynchronously. The default implementation
 iterates through the ranges, tries to coalesce the ranges based on values of
 `minSeekForVectorReads` and `maxReadSizeForVectorReads` and then read each merged
 ranges synchronously, but the intent is sub classes can implement efficient
-implementation.
+implementation. Reading in both direct and heap byte buffers are supported.
+Also, clients are encouraged to use `WeakReferencedElasticByteBufferPool` for 
+allocating buffers such that even direct buffers are garbage collected when
+they are no longer referenced.
+
+Note: Don't use direct buffers for reading from ChecksumFileSystem as that may
+lead to memory fragmentation explained in HADOOP-18296.
+
 
 #### Preconditions
 
@@ -467,7 +474,7 @@ For each requested range:
 
 ### `minSeekForVectorReads()`
 
-Smallest reasonable seek. Two ranges won't be merged together if the difference between
+The smallest reasonable seek. Two ranges won't be merged together if the difference between
 end of first and start of next range is more than this value.
 
 ### `maxReadSizeForVectorReads()`

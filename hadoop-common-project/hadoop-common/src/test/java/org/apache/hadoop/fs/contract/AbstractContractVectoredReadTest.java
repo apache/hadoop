@@ -62,7 +62,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   private final IntFunction<ByteBuffer> allocate;
 
-  private final WeakReferencedElasticByteBufferPool pool = new WeakReferencedElasticByteBufferPool();
+  private final WeakReferencedElasticByteBufferPool pool =
+          new WeakReferencedElasticByteBufferPool();
 
   private final String bufferType;
 
@@ -397,7 +398,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
                     .build();
     try (FSDataInputStream in = builder.get()) {
       LambdaTestUtils.intercept(clazz,
-        () -> in.readVectored(fileRanges, allocate));
+          () -> in.readVectored(fileRanges, allocate));
     }
   }
 }
