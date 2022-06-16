@@ -23,8 +23,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,35 +33,42 @@ import org.slf4j.LoggerFactory;
  */
 public class S3AAuditLogMerger {
 
-  private final Logger logger = LoggerFactory.getLogger(S3AAuditLogMerger.class);
+  private final Logger logger =
+      LoggerFactory.getLogger(S3AAuditLogMerger.class);
 
   public void mergeFiles(String auditLogsDirectoryPath) throws IOException {
     File auditLogFilesDirectory = new File(auditLogsDirectoryPath);
     String[] auditLogFileNames = auditLogFilesDirectory.list();
-    logger.info("Files to be merged : {}", Arrays.toString(auditLogFileNames));
 
     //Read each audit log file present in directory and writes each and every audit log in it
     //into a single audit log file
     if (auditLogFileNames != null && auditLogFileNames.length != 0) {
       File auditLogFile = new File("AuditLogFile");
-      try (PrintWriter printWriter = new PrintWriter(auditLogFile, "UTF_8")) {
-        for (String singleFileName : auditLogFileNames) {
-          File file = new File(auditLogFilesDirectory, singleFileName);
-          try (BufferedReader bufferedReader = new BufferedReader(
-              new FileReader(file, StandardCharsets.UTF_8))) {
+      try (PrintWriter printWriter = new PrintWriter(auditLogFile,
+          "UTF_8")) {
+        for (String singleAuditLogFileName : auditLogFileNames) {
+          File singleAuditLogFile =
+              new File(auditLogFilesDirectory, singleAuditLogFileName);
+          BufferedReader bufferedReader = null;
+          try {
+            bufferedReader =
+                new BufferedReader(new FileReader(singleAuditLogFile));
             String singleLine = bufferedReader.readLine();
             while (singleLine != null) {
               printWriter.println(singleLine);
               singleLine = bufferedReader.readLine();
             }
             printWriter.flush();
+          } finally {
+            bufferedReader.close();
           }
         }
       }
       logger.info("Successfully merged all audit log files from '{}' directory",
           auditLogFilesDirectory.getName());
     } else {
-      logger.info("This is an empty directory, expecting a directory with audit log files");
+      logger.info(
+          "This is an empty directory, expecting a directory with audit log files");
     }
   }
 }

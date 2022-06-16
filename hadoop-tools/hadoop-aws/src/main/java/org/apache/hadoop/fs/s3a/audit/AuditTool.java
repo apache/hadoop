@@ -103,7 +103,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
   @Override
   public int run(String[] args) throws Exception {
     List<String> argv = new ArrayList<>(Arrays.asList(args));
-    println("argv: {}" , argv);
+    println("argv: %s", argv);
     if (argv.isEmpty()) {
       errorln(getUsage());
       throw invalidArgs("No bucket specified");
@@ -119,7 +119,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
         s3AFileSystem.listFiles(s3LogsPath, true);
 
     //creating local audit log files directory and
-    // copying audit log files into local files from s3 bucket
+    //copying audit log files into local files from s3 bucket
     //so that it will be easy for us to implement merging and parsing classes
     if (!s3aLogsDirectory.exists()) {
       boolean s3aLogsDirectoryCreation = s3aLogsDirectory.mkdir();
