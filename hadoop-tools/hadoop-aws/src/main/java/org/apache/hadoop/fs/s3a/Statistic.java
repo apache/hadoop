@@ -357,6 +357,14 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
       "Total count of bytes read from an input stream",
       TYPE_COUNTER),
+  STREAM_READ_BLOCKS_IN_CACHE(
+      StreamStatisticNames.STREAM_READ_BLOCKS_IN_CACHE,
+      "Gauge of blocks in disk cache",
+      TYPE_GAUGE),
+  STREAM_READ_ACTIVE_PREFETCH_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_ACTIVE_PREFETCH_OPERATIONS,
+      "Gauge of blocks active prefetches",
+      TYPE_GAUGE),
 
   /* Stream Write statistics */
 

@@ -839,7 +839,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_UNBUFFERED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
               StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS)
-          .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
+          .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
+              STREAM_READ_BLOCKS_IN_CACHE.getSymbol(),
+              STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol())
           .withDurationTracking(ACTION_HTTP_GET_REQUEST,
               StoreStatisticNames.ACTION_FILE_OPENED,
               StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
@@ -904,6 +906,18 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private long increment(String name, long value) {
       return incCounter(name, value);
+    }
+
+    /**
+     * Increment the Statistic gauge and the local IOStatistics
+     * equivalent.
+     * @param statistic statistic
+     * @param v value.
+     * @return local IOStatistic value
+     */
+    private long incAllGauges(Statistic statistic, long v) {
+      incrementGauge(statistic, v);
+      return incGauge(statistic.getSymbol(), v);
     }
 
     /**
@@ -1288,7 +1302,18 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public void prefetchingOperationExecuted() {
+      incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, 1);
       prefetchReadOperations.incrementAndGet();
+    }
+
+    @Override
+    public void blockAddedToCache() {
+      incAllGauges(STREAM_READ_BLOCKS_IN_CACHE, 1);
+    }
+
+    @Override
+    public void prefetchOperationCompleted() {
+      incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, -1);
     }
   }
 

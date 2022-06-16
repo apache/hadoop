@@ -214,6 +214,16 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     }
 
+    @Override
+    public void blockAddedToCache() {
+
+    }
+
+    @Override
+    public void prefetchOperationCompleted() {
+
+    }
+
     /**
      * Return an IO statistics instance.
      * @return an empty IO statistics instance.

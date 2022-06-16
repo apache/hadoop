@@ -25,4 +25,7 @@ public interface PrefetchingStatistics extends IOStatisticsSource {
 
   void prefetchingOperationExecuted();
 
+  void blockAddedToCache();
+
+  void prefetchOperationCompleted();
 }

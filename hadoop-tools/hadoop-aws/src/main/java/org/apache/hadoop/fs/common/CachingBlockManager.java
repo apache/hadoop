@@ -336,6 +336,10 @@ public abstract class CachingBlockManager extends BlockManager {
         this.read(buffer, offset, size);
         buffer.flip();
         data.setReady(expectedState);
+
+        if(isPrefetch) {
+          this.prefetchingStatistics.prefetchOperationCompleted();
+        }
       } catch (Exception e) {
         String message = String.format("error during readBlock(%s)", data.getBlockNumber());
         LOG.error(message, e);
@@ -499,7 +503,7 @@ public abstract class CachingBlockManager extends BlockManager {
   }
 
   protected BlockCache createCache() {
-    return new SingleFilePerBlockCache();
+    return new SingleFilePerBlockCache(prefetchingStatistics);
   }
 
   protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {

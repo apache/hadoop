@@ -276,6 +276,7 @@ public final class Fakes {
     private final int writeDelay;
 
     public TestS3FilePerBlockCache(int readDelay, int writeDelay) {
+      super(EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
       this.writeDelay = writeDelay;

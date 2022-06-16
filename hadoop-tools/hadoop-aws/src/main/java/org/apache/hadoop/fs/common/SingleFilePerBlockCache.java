@@ -58,6 +58,8 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   private boolean closed;
 
+  private final PrefetchingStatistics prefetchingStatistics;
+
   // Cache entry.
   // Each block is stored as a separate file.
   private static class Entry {
@@ -81,7 +83,8 @@ public class SingleFilePerBlockCache implements BlockCache {
     }
   }
 
-  public SingleFilePerBlockCache() {
+  public SingleFilePerBlockCache(PrefetchingStatistics prefetchingStatistics) {
+    this.prefetchingStatistics = prefetchingStatistics;
   }
 
   /**
@@ -184,6 +187,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     }
 
     this.writeFile(blockFilePath, buffer);
+    prefetchingStatistics.blockAddedToCache();
     long checksum = BufferData.getChecksum(buffer);
     Entry entry = new Entry(blockNumber, blockFilePath, buffer.limit(), checksum);
     this.blocks.put(blockNumber, entry);
