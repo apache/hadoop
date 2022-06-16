@@ -27,7 +27,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
-import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationFilesBuilder;
+import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcase;
+import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -41,7 +42,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
-import static org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationFilesBuilder.NO_TIMEOUT;
+import static org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder.NO_TIMEOUT;
 import static org.mockito.Mockito.mock;
 
 public class TestAggregatedLogDeletionService {
@@ -98,26 +99,26 @@ public class TestAggregatedLogDeletionService {
 
     Configuration conf = setupConfiguration(1800, -1);
     long timeout = 2000L;
-    LogAggregationFilesBuilder.create(conf)
+    LogAggregationTestcaseBuilder.create(conf)
             .withRootPath(ROOT)
             .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
             .withUserDir(USER_ME, toKeepTime)
             .withSuffixDir(SUFFIX, toDeleteTime)
             .withBucketDir(toDeleteTime)
-            .withApps(new LogAggregationFilesBuilder.AppDescriptor(toDeleteTime, new Pair[] {}),
-                    new LogAggregationFilesBuilder.AppDescriptor(toDeleteTime,
+            .withApps(new LogAggregationTestcaseBuilder.AppDescriptor(toDeleteTime, new Pair[] {}),
+                    new LogAggregationTestcaseBuilder.AppDescriptor(toDeleteTime,
                             Pair.of(DIR_HOST1, toDeleteTime),
                             Pair.of(DIR_HOST2, toKeepTime)),
-                    new LogAggregationFilesBuilder.AppDescriptor(toDeleteTime,
+                    new LogAggregationTestcaseBuilder.AppDescriptor(toDeleteTime,
                             Pair.of(DIR_HOST1, toDeleteTime),
                             Pair.of(DIR_HOST2, toDeleteTime)),
-                    new LogAggregationFilesBuilder.AppDescriptor(toDeleteTime,
+                    new LogAggregationTestcaseBuilder.AppDescriptor(toDeleteTime,
                             Pair.of(DIR_HOST1, toDeleteTime),
                             Pair.of(DIR_HOST2, toKeepTime)))
             .withFinishedApps(1, 2, 3)
             .withRunningApps(4)
             .injectExceptionForAppDirDeletion(3)
-            .setupMocks()
+            .build()
             .setupAndRunDeletionService()
             .verifyAppDirsDeleted(timeout, 1, 3)
             .verifyAppDirsNotDeleted(timeout, 2, 4)
@@ -136,7 +137,7 @@ public class TestAggregatedLogDeletionService {
 
     Configuration conf = setupConfiguration(1800, 1);
 
-    LogAggregationFilesBuilder builder = LogAggregationFilesBuilder.create(conf)
+    LogAggregationTestcase testcase = LogAggregationTestcaseBuilder.create(conf)
             .withRootPath(ROOT)
             .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
             .withUserDir(USER_ME, before50Secs)
@@ -144,15 +145,17 @@ public class TestAggregatedLogDeletionService {
             .withBucketDir(before50Secs)
             .withApps(
                     //Set time last modified of app1Dir directory and its files to before2000Secs 
-                    new LogAggregationFilesBuilder.AppDescriptor(before2000Secs,
+                    new LogAggregationTestcaseBuilder.AppDescriptor(before2000Secs,
                             Pair.of(DIR_HOST1, before2000Secs)),
                     //Set time last modified of app1Dir directory and its files to before50Secs 
-                    new LogAggregationFilesBuilder.AppDescriptor(before50Secs,
+                    new LogAggregationTestcaseBuilder.AppDescriptor(before50Secs,
                             Pair.of(DIR_HOST1, before50Secs))
             )
             .withFinishedApps(1, 2)
             .withRunningApps()
-            .setupMocks()
+            .build();
+    
+    testcase
             .setupAndRunDeletionService()
             //app1Dir would be deleted since it is done above log retention period
             .verifyAppDirDeleted(1, 10000L)
@@ -164,7 +167,7 @@ public class TestAggregatedLogDeletionService {
     conf.setInt(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
             checkIntervalSeconds);
 
-    builder
+    testcase
             //We have not called refreshLogSettings, hence don't expect to see
             // the changed conf values
             .verifyCheckIntervalMilliSecondsNotEqualTo(checkIntervalMilliSeconds)
@@ -187,19 +190,19 @@ public class TestAggregatedLogDeletionService {
     // prevent us from picking up the same mockfs instance from another test
     FileSystem.closeAll();
 
-    LogAggregationFilesBuilder.create(conf)
+    LogAggregationTestcaseBuilder.create(conf)
             .withRootPath(ROOT)
             .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
             .withUserDir(USER_ME, now)
             .withSuffixDir(SUFFIX, now)
             .withBucketDir(now)
             .withApps(
-                    new LogAggregationFilesBuilder.AppDescriptor(now,
+                    new LogAggregationTestcaseBuilder.AppDescriptor(now,
                             Pair.of(DIR_HOST1, now)),
-                    new LogAggregationFilesBuilder.AppDescriptor(now))
+                    new LogAggregationTestcaseBuilder.AppDescriptor(now))
             .withFinishedApps(1)
             .withRunningApps()
-            .setupMocks()
+            .build()
             .setupAndRunDeletionService()
             .verifyAnyPathListedAtLeast(4, 10000L)
             .verifyAppDirNotDeleted(1, NO_TIMEOUT)
@@ -220,21 +223,21 @@ public class TestAggregatedLogDeletionService {
     FileSystem.closeAll();
     long modTime = 0L;
 
-    LogAggregationFilesBuilder.create(conf)
+    LogAggregationTestcaseBuilder.create(conf)
             .withRootPath(ROOT)
             .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
             .withUserDir(USER_ME, modTime)
             .withSuffixDir(SUFFIX, modTime)
             .withBucketDir(modTime, "0")
             .withApps(
-                    new LogAggregationFilesBuilder.AppDescriptor(modTime),
-                    new LogAggregationFilesBuilder.AppDescriptor(modTime),
-                    new LogAggregationFilesBuilder.AppDescriptor(modTime, Pair.of(DIR_HOST1, modTime)))
+                    new LogAggregationTestcaseBuilder.AppDescriptor(modTime),
+                    new LogAggregationTestcaseBuilder.AppDescriptor(modTime),
+                    new LogAggregationTestcaseBuilder.AppDescriptor(modTime, Pair.of(DIR_HOST1, modTime)))
             .withAdditionalAppDirs(Pair.of("application_a", modTime))
             .withFinishedApps(1, 3)
             .withRunningApps()
             .injectExceptionForAppDirDeletion(1)
-            .setupMocks()
+            .build()
             .runDeletionTask(TEN_DAYS_IN_SECONDS)
             .verifyAppDirDeleted(3, NO_TIMEOUT);
   }
