@@ -215,7 +215,12 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void blockAddedToCache() {
+    public void blockAddedToFileCache() {
+
+    }
+
+    @Override
+    public void blockRemovedFromFileCache() {
 
     }
 

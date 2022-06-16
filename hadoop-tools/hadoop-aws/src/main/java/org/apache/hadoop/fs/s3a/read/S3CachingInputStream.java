@@ -117,8 +117,8 @@ public class S3CachingInputStream extends S3InputStream {
 
   @Override
   public void close() throws IOException {
-    super.close();
     this.blockManager.close();
+    super.close();
     LOG.info("closed: {}", this.getName());
   }
 

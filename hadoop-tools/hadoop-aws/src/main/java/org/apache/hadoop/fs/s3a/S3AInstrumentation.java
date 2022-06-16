@@ -1307,8 +1307,13 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     @Override
-    public void blockAddedToCache() {
+    public void blockAddedToFileCache() {
       incAllGauges(STREAM_READ_BLOCKS_IN_CACHE, 1);
+    }
+
+    @Override
+    public void blockRemovedFromFileCache() {
+      incAllGauges(STREAM_READ_BLOCKS_IN_CACHE, -1);
     }
 
     @Override

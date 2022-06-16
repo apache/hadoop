@@ -396,7 +396,7 @@ public final class StreamStatisticNames {
   /**
    * Total number of block in disk cache
    */
-  public static final String STREAM_READ_BLOCKS_IN_CACHE
+  public static final String STREAM_READ_BLOCKS_IN_FILE_CACHE
       = "stream_read_blocks_in_cache";
 
   /**
