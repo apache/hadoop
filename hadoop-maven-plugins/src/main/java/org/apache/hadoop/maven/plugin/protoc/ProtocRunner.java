@@ -172,7 +172,10 @@ public class ProtocRunner {
 
     public void writeChecksums() throws IOException {
       ObjectMapper mapper = new ObjectMapper();
-      checksumFile.getParentFile().mkdirs();
+      boolean folderCreated = checksumFile.getParentFile().mkdirs();
+      if (!folderCreated) {
+        throw new IOException("Unable to create path");
+      }
       try (BufferedOutputStream out = new BufferedOutputStream(
           new FileOutputStream(checksumFile))) {
         mapper.writeValue(out, computedChecksums);
