@@ -172,6 +172,7 @@ public class ProtocRunner {
 
     public void writeChecksums() throws IOException {
       ObjectMapper mapper = new ObjectMapper();
+      checksumFile.getParentFile().mkdirs();
       try (BufferedOutputStream out = new BufferedOutputStream(
           new FileOutputStream(checksumFile))) {
         mapper.writeValue(out, computedChecksums);
