@@ -4122,10 +4122,10 @@ public abstract class Server {
       long totalRequestsDiff = currentTotalRequests - lastSeenTotalRequests;
       lastSeenTotalRequests = currentTotalRequests;
       if ((currentTime - lastExecuted) > 0) {
-        double totalRequestsPerMillis =
+        double totalRequestsPerSecInDouble =
             (double) totalRequestsDiff / TimeUnit.MILLISECONDS.toSeconds(
                 currentTime - lastExecuted);
-        totalRequestsPerSecond = ((long) totalRequestsPerMillis);
+        totalRequestsPerSecond = ((long) totalRequestsPerSecInDouble);
       }
       lastExecuted = currentTime;
     }

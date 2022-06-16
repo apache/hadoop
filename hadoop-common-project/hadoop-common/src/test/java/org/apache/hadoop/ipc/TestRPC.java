@@ -1711,7 +1711,7 @@ public class TestRPC extends TestRpcBase {
     try {
       RpcMetrics rpcMetrics = server.getRpcMetrics();
       assertEquals(0, rpcMetrics.getTotalRequests());
-      assertEquals(0.0, rpcMetrics.getTotalRequestsPerSecond(), 0.0);
+      assertEquals(0, rpcMetrics.getTotalRequestsPerSecond());
 
       List<ExternalCall<Void>> externalCallList = new ArrayList<>();
 
