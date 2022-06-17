@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
@@ -31,7 +30,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MultipartTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyPathExists;
