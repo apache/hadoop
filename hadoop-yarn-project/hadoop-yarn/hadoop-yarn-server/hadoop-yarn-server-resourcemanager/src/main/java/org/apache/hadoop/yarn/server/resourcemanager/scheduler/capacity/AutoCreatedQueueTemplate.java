@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 
