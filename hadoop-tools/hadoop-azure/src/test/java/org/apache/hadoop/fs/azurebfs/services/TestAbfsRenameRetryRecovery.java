@@ -16,33 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs;
-
-import java.lang.reflect.Field;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientResult;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Testing Abfs Rename recovery using Mockito.
+ */
 public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
   private static final Logger LOG =
@@ -59,26 +56,29 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   public void testRenameFailuresDueToIncompleteMetadata() throws Exception {
     String sourcePath = getMethodName() + "Source";
     String destNoParentPath = "/NoParent/Dest";
-    boolean doesDestParentDirExist = false;
     AzureBlobFileSystem fs = getFileSystem();
 
     AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
         fs.getAbfsStore().getAbfsConfiguration());
 
-    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
-    abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
-
+    AbfsCounters abfsCounters = mock(AbfsCounters.class);
+    when(mockClient.getAbfsCounters()).thenReturn(abfsCounters);
     // SuccessFul Result.
-    AbfsRestOperation successOp = mock(AbfsRestOperation.class);
+    AbfsRestOperation successOp =
+        new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
+            HTTP_METHOD_PUT, null, null);
     AbfsClientResult successResult = mock(AbfsClientResult.class);
-    when(successResult.getOp()).thenReturn(successOp);
+    doReturn(successOp).when(successResult).getOp();
     when(successResult.isIncompleteMetadataState()).thenReturn(false);
 
     // Failed Result.
-    AbfsRestOperation failedOp = mock(AbfsRestOperation.class);
-    AbfsClientResult recoveredMetaDataIncompleteResult = mock(AbfsClientResult.class);
-    when(recoveredMetaDataIncompleteResult.getOp()).thenReturn(failedOp);
+    AbfsRestOperation failedOp = new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
+        HTTP_METHOD_PUT, null, null);
+    AbfsClientResult recoveredMetaDataIncompleteResult =
+        mock(AbfsClientResult.class);
+
+    doReturn(failedOp).when(recoveredMetaDataIncompleteResult).getOp();
     when(recoveredMetaDataIncompleteResult.isIncompleteMetadataState()).thenReturn(true);
 
     // No destination Parent dir exception.
@@ -90,70 +90,48 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // We need to throw an exception once a rename is triggered with
     // destination having no parent, but after a retry it needs to succeed.
     when(mockClient.renamePath(sourcePath, destNoParentPath, null, null,
-        null)).thenAnswer(
-
-        new Answer<AbfsClientResult>() {
-          @Override
-          public AbfsClientResult answer(InvocationOnMock invocationOnMock)
-              throws Throwable {
-            IOStatistics ioStatistics = fs.getIOStatistics();
-            long renameCalls = ioStatistics.counters().get(OP_RENAME);
-            LOG.info("Rename Calls from IOstatistics: {}", renameCalls);
-            if (renameCalls == 0) {
-              throw destParentNotFound;
-            }
-            return recoveredMetaDataIncompleteResult;
-          }
-        }).thenReturn(recoveredMetaDataIncompleteResult);
+        null, false))
+        .thenThrow(destParentNotFound)
+        .thenReturn(recoveredMetaDataIncompleteResult);
 
     // Dest parent not found exc. to be raised.
     intercept(AzureBlobFileSystemException.class,
         () -> mockClient.renamePath(sourcePath,
         destNoParentPath, null, null,
-        null));
+        null, false));
 
     AbfsClientResult resultOfSecondRenameCall =
         mockClient.renamePath(sourcePath,
         destNoParentPath, null, null,
-        null);
+        null, false);
 
     // the second rename call should be the recoveredResult due to
     // metaDataIncomplete
     Assertions.assertThat(resultOfSecondRenameCall)
         .describedAs("This result should be recovered result due to MetaData "
             + "being in incomplete state")
-        .isEqualTo(recoveredMetaDataIncompleteResult);
+        .isSameAs(recoveredMetaDataIncompleteResult);
     // Verify Incomplete metadata state happened for our second rename call.
     assertTrue(resultOfSecondRenameCall.isIncompleteMetadataState());
 
 
     // Verify renamePath occurred two times implying a retry was attempted.
     verify(mockClient, times(2))
-        .renamePath(sourcePath, destNoParentPath, null, null, null);
+        .renamePath(sourcePath, destNoParentPath, null, null, null, false);
 
   }
 
+  /**
+   * Method to create an AbfsRestOperationException.
+   * @param statusCode status code to be used.
+   * @param errorCode error code to be used.
+   * @return the exception.
+   */
   private AbfsRestOperationException getMockAbfsRestOperationException(
       int statusCode, String errorCode) {
     return new AbfsRestOperationException(statusCode, errorCode,
         "No Parent found for the Destination file",
         new Exception());
-  }
-
-  private AzureBlobFileSystemStore setAzureBlobSystemStoreField(
-      final AzureBlobFileSystemStore abfsStore,
-      final String fieldName,
-      Object fieldObject) throws Exception {
-
-    Field abfsClientField = AzureBlobFileSystemStore.class.getDeclaredField(
-        fieldName);
-    abfsClientField.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(abfsClientField,
-        abfsClientField.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
-    abfsClientField.set(abfsStore, fieldObject);
-    return abfsStore;
   }
 
 }

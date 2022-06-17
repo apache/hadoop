@@ -31,8 +31,16 @@ public class AbfsClientResult {
   /** Abfs storage tracking metadata is in an incomplete state.*/
   private final boolean isIncompleteMetadataState;
 
+  /**
+   * Constructing an ABFS operation result.
+   * @param op The AbfsRestOperation.
+   * @param renameRecovered Did rename recovery took place?
+   * @param isIncompleteMetadataState Did the rename failed due to incomplete
+   *                                 metadata state and had to be retried?
+   */
   public AbfsClientResult(
-      AbfsRestOperation op, boolean renameRecovered,
+      AbfsRestOperation op,
+      boolean renameRecovered,
       boolean isIncompleteMetadataState) {
     this.op = op;
     this.renameRecovered = renameRecovered;

@@ -30,7 +30,11 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_FAILURES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
@@ -181,19 +185,17 @@ public class ITestAzureBlobFileSystemRename extends
     byte[] data = dataset(1024, 'a', 'z');
     writeDataset(fs, sourcePath, data, data.length, 1024, true);
 
-    // Check if we have seen an incomplete state.
-    boolean hasRenameRetriedOnce = fs.getAbfsClient().isMetadataIncompleteState();
-    assertFalse("No incomplete state should be seen before attempting to "
-            + "rename",
-        hasRenameRetriedOnce);
-
     // Verify that Renaming on a destination with no parent dir wasn't
     // successful.
     assertFalse(fs.rename(sourcePath, destPath));
 
-    // Verify that metadata was in an incomplete state after the rename failure.
-    hasRenameRetriedOnce = fs.getAbfsClient().isMetadataIncompleteState();
-    assertTrue("Rename should be retried once",
-        hasRenameRetriedOnce);
+    // Verify that metadata was in an incomplete state after the rename
+    // failure, and we retired the rename once more.
+    IOStatistics ioStatistics = fs.getIOStatistics();
+    IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
+        RENAME_PATH_ATTEMPTS.getStatName())
+        .describedAs("There should be 2 rename attempts if metadata "
+            + "incomplete state failure is hit")
+        .isEqualTo(2);
   }
 }

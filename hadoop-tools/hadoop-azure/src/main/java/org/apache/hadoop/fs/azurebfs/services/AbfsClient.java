@@ -69,6 +69,7 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
@@ -103,13 +104,7 @@ public class AbfsClient implements Closeable {
 
   private final ListeningScheduledExecutorService executorService;
 
-  /**
-   * Is Abfs metadata been in an incomplete State resulting in a rename
-   * failure?
-   */
-  private boolean isMetadataIncompleteState;
-
-  /** logging the rename failure if metadata is in an incomplete state*/
+  /** logging the rename failure if metadata is in an incomplete state. */
   private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE =
       new LogExactlyOnce(LOG);
 
@@ -515,7 +510,8 @@ public class AbfsClient implements Closeable {
       final String destination,
       final String continuation,
       final TracingContext tracingContext,
-      final String sourceEtag)
+      final String sourceEtag,
+      boolean isMetadataIncompleteState)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
@@ -542,6 +538,7 @@ public class AbfsClient implements Closeable {
             url,
             requestHeaders);
     try {
+      incrementAbfsRenamePath();
       op.execute(tracingContext);
       // AbfsClientResult contains the AbfsOperation, If recovery happened or
       // not, and the incompleteMetaDataState is true or false.
@@ -566,11 +563,11 @@ public class AbfsClient implements Closeable {
           getPathStatus(source, false, tracingContext);
           isMetadataIncompleteState = true;
           renamePath(source, destination, continuation, tracingContext,
-              sourceEtag);
+              sourceEtag, isMetadataIncompleteState);
         }
-        // TODO: The case when Parent dir really don't exist, even after
-        //  retrying once, we come at this line, should we return the result
-        //  with recovery = false, metadata = true or throw an exception?
+        // if we get out of the condition without a successful rename, then
+        // it isn't metadata incomplete state issue.
+        isMetadataIncompleteState = false;
 
         boolean etagCheckSucceeded = renameIdempotencyCheckOp(
             source,
@@ -582,6 +579,10 @@ public class AbfsClient implements Closeable {
         }
       return new AbfsClientResult(op, true, isMetadataIncompleteState);
     }
+  }
+
+  private void incrementAbfsRenamePath() {
+    abfsCounters.incrementCounter(RENAME_PATH_ATTEMPTS, 1);
   }
 
   /**
@@ -1276,10 +1277,5 @@ public class AbfsClient implements Closeable {
 
   public <V> void addCallback(ListenableFuture<V> future, FutureCallback<V> callback) {
     Futures.addCallback(future, callback, executorService);
-  }
-
-  @VisibleForTesting
-  public boolean isMetadataIncompleteState() {
-    return isMetadataIncompleteState;
   }
 }
