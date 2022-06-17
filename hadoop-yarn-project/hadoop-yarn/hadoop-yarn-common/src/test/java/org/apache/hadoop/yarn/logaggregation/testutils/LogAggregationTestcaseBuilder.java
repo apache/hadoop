@@ -146,7 +146,7 @@ public class LogAggregationTestcaseBuilder {
 
   public static final class AppDescriptor {
     final long modTimeOfAppDir;
-    List<Pair<String, Long>> filesWithModDate;
+    List<Pair<String, Long>> filesWithModDate = new ArrayList<>();
     String fileController;
 
     public AppDescriptor(long modTimeOfAppDir) {
