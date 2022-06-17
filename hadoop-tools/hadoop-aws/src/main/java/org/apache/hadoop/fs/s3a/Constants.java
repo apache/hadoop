@@ -674,6 +674,40 @@ public final class Constants {
   public static final String STREAM_READ_GAUGE_INPUT_POLICY =
       "stream_read_gauge_input_policy";
 
+  /**
+   * Total number of prefetching operations executed
+   */
+  public static final String STREAM_READ_PREFETCH_OPERATIONS
+      = "stream_read_prefetch_operations";
+
+  /**
+   * Total number of block in disk cache
+   */
+  public static final String STREAM_READ_BLOCKS_IN_FILE_CACHE
+      = "stream_read_blocks_in_cache";
+
+  /**
+   * Total number of active prefetch operations
+   */
+  public static final String STREAM_READ_ACTIVE_PREFETCH_OPERATIONS
+      = "stream_read_active_prefetch_operations";
+
+  /**
+   * count/duration of reading a remote block
+   * IO.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_REMOTE_BLOCK_READ
+      = "stream_read_block_read";
+
+  /**
+   * count/duration of reading a remote block
+   * IO.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BLOCK_ACQUIRE_AND_READ
+      = "stream_read_block_read";
+
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static final String S3_CLIENT_FACTORY_IMPL =

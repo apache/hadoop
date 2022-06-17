@@ -31,6 +31,11 @@ import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+
+import static org.apache.hadoop.fs.s3a.Constants.STREAM_READ_BLOCK_ACQUIRE_AND_READ;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
@@ -168,7 +173,10 @@ public class S3CachingInputStream extends S3InputStream {
       }
     }
 
-    BufferData data = this.blockManager.get(toBlockNumber);
+    BufferData data = invokeTrackingDuration(
+        this.getS3AStreamStatistics().trackDuration(STREAM_READ_BLOCK_ACQUIRE_AND_READ),
+        () -> this.blockManager.get(toBlockNumber));
+
     this.getFilePosition().setData(data, startOffset, readPos);
     return true;
   }

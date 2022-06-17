@@ -194,6 +194,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void executorAcquired(Duration timeInQueue) {
+
+    }
+
+    @Override
     public void close() {
 
     }

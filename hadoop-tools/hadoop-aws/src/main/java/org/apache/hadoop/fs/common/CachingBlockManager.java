@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.common;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -254,7 +256,7 @@ public abstract class CachingBlockManager extends BlockManager {
       }
 
       BlockOperations.Operation op = this.ops.requestPrefetch(blockNumber);
-      PrefetchTask prefetchTask = new PrefetchTask(data, this);
+      PrefetchTask prefetchTask = new PrefetchTask(data, this, Instant.now());
       Future<Void> prefetchFuture = this.futurePool.executeFunction(prefetchTask);
       data.setPrefetch(prefetchFuture);
       this.ops.end(op);
@@ -284,8 +286,10 @@ public abstract class CachingBlockManager extends BlockManager {
     }
   }
 
-  private void prefetch(BufferData data) throws IOException {
+  private void prefetch(BufferData data, Instant taskQueuedStartTime) throws IOException {
     synchronized (data) {
+      this.prefetchingStatistics.executorAcquired(
+          Duration.between(taskQueuedStartTime, Instant.now()));
       this.readBlock(
           data,
           true,
@@ -360,16 +364,18 @@ public abstract class CachingBlockManager extends BlockManager {
   private static class PrefetchTask implements Supplier<Void> {
     private final BufferData data;
     private final CachingBlockManager blockManager;
+    private final Instant taskQueuedStartTime;
 
-    PrefetchTask(BufferData data, CachingBlockManager blockManager) {
+    PrefetchTask(BufferData data, CachingBlockManager blockManager, Instant taskQueuedStartTime) {
       this.data = data;
       this.blockManager = blockManager;
+      this.taskQueuedStartTime = taskQueuedStartTime;
     }
 
     @Override
     public Void get() {
       try {
-        this.blockManager.prefetch(data);
+        this.blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
         LOG.error("error during prefetch", e);
       }
@@ -430,14 +436,16 @@ public abstract class CachingBlockManager extends BlockManager {
         blockFuture = cf;
       }
 
-      CachePutTask task = new CachePutTask(data, blockFuture, this);
+      CachePutTask task = new CachePutTask(data, blockFuture, this, Instant.now());
       Future<Void> actionFuture = this.futurePool.executeFunction(task);
       data.setCaching(actionFuture);
       this.ops.end(op);
     }
   }
 
-  private void addToCacheAndRelease(BufferData data, Future<Void> blockFuture) {
+  private void addToCacheAndRelease(BufferData data, Future<Void> blockFuture, Instant taskQueuedStartTime) {
+    this.prefetchingStatistics.executorAcquired(Duration.between(taskQueuedStartTime, Instant.now()));
+
     if (this.closed) {
       return;
     }
@@ -523,18 +531,22 @@ public abstract class CachingBlockManager extends BlockManager {
     // Block manager that manages this block.
     private final CachingBlockManager blockManager;
 
+    private final Instant taskQueuedStartTime;
+
     CachePutTask(
         BufferData data,
         Future<Void> blockFuture,
-        CachingBlockManager blockManager) {
+        CachingBlockManager blockManager,
+        Instant taskQueuedStartTime) {
       this.data = data;
       this.blockFuture = blockFuture;
       this.blockManager = blockManager;
+      this.taskQueuedStartTime = taskQueuedStartTime;
     }
 
     @Override
     public Void get() {
-      this.blockManager.addToCacheAndRelease(this.data, this.blockFuture);
+      this.blockManager.addToCacheAndRelease(this.data, this.blockFuture, taskQueuedStartTime);
       return null;
     }
   }
