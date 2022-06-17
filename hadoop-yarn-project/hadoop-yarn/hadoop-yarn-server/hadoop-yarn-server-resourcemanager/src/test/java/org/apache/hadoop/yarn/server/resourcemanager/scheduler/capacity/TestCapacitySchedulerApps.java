@@ -23,9 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -1060,7 +1058,7 @@ public class TestCapacitySchedulerApps {
     }
 
     // Finish the remaining apps
-    for (int i = MAX_PARALLEL_APPS / 2; i < 2 * MAX_PARALLEL_APPS; i++) {
+    for (int i = MAX_PARALLEL_APPS; i < 2 * MAX_PARALLEL_APPS; i++) {
       cs.handle(new AppAttemptRemovedSchedulerEvent(attemptIds.get(i),
           RMAppAttemptState.FINISHED, true));
     }
