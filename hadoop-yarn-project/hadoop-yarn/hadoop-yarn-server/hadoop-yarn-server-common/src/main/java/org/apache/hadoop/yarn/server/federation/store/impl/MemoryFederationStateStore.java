@@ -242,9 +242,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
     List<ApplicationHomeSubCluster> result =
         new ArrayList<ApplicationHomeSubCluster>();
+    SubClusterId subClusterId = request.getSubClusterId();
     for (Entry<ApplicationId, SubClusterId> e : applications.entrySet()) {
-      result
-          .add(ApplicationHomeSubCluster.newInstance(e.getKey(), e.getValue()));
+      if (subClusterId == null || subClusterId.equals(e.getValue())) {
+        result.add(
+            ApplicationHomeSubCluster.newInstance(e.getKey(), e.getValue()));
+      }
     }
 
     GetApplicationsHomeSubClusterResponse.newInstance(result);

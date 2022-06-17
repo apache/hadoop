@@ -22,17 +22,24 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
@@ -64,6 +71,10 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
+import org.apache.hadoop.yarn.state.SingleArcTransition;
+import org.apache.hadoop.yarn.state.StateMachine;
+import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,10 +99,46 @@ public class FederationStateStoreService extends AbstractService
   private long heartbeatInterval;
   private RMContext rmContext;
 
+  private AsyncDispatcher dispatcher;
+  private final ReadLock readLock;
+  private final WriteLock writeLock;
+
+  private enum FederationStateStoreState {
+    ACTIVE,
+  };
+
+  private static final StateMachineFactory<FederationStateStoreService,
+        FederationStateStoreState,
+        FederationStateStoreEventType,
+        FederationStateStoreEvent> stateMachineFactory =
+      new StateMachineFactory<FederationStateStoreService,
+          FederationStateStoreState,
+          FederationStateStoreEventType,
+          FederationStateStoreEvent>(FederationStateStoreState.ACTIVE)
+          .addTransition(FederationStateStoreState.ACTIVE,
+              FederationStateStoreState.ACTIVE,
+              FederationStateStoreEventType.REMOVE_APP_HOME_SUBCLUSTER,
+              new RemoveAppHomeSubClusterTransition())
+          .addTransition(FederationStateStoreState.ACTIVE,
+              FederationStateStoreState.ACTIVE,
+              FederationStateStoreEventType.CHECK_APPS_HOME_SUBCLUSTER,
+              new CheckAppsHomeSubClusterTransition());
+
+  private final StateMachine<FederationStateStoreState,
+        FederationStateStoreEventType,
+        FederationStateStoreEvent> stateMachine;
+
+  private EventHandler fedStateStoreEventHandler;
+
   public FederationStateStoreService(RMContext rmContext) {
     super(FederationStateStoreService.class.getName());
     LOG.info("FederationStateStoreService initialized");
     this.rmContext = rmContext;
+
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    this.readLock = lock.readLock();
+    this.writeLock = lock.writeLock();
+    stateMachine = stateMachineFactory.make(this);
   }
 
   @Override
@@ -120,6 +167,15 @@ public class FederationStateStoreService extends AbstractService
       heartbeatInterval =
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
     }
+
+    // Create async handler
+    dispatcher = new AsyncDispatcher("Federation StateStore dispatcher");
+    dispatcher.init(conf);
+    fedStateStoreEventHandler = new FederationStateStoreEventHandler();
+    dispatcher.register(FederationStateStoreEventType.class,
+        fedStateStoreEventHandler);
+    dispatcher.setDrainEventsOnStop();
+
     LOG.info("Initialized federation membership service.");
 
     super.serviceInit(conf);
@@ -127,9 +183,8 @@ public class FederationStateStoreService extends AbstractService
 
   @Override
   protected void serviceStart() throws Exception {
-
     registerAndInitializeHeartbeat();
-
+    dispatcher.start();
     super.serviceStart();
   }
 
@@ -300,5 +355,117 @@ public class FederationStateStoreService extends AbstractService
   public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
     return stateStoreClient.deleteApplicationHomeSubCluster(request);
+  }
+
+  private final class FederationStateStoreEventHandler
+      implements EventHandler<FederationStateStoreEvent> {
+
+    @Override
+    public void handle(FederationStateStoreEvent event) {
+      handleEvent(event);
+    }
+  }
+
+  private void handleEvent(FederationStateStoreEvent event) {
+    this.writeLock.lock();
+    try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Processing event of type {}", event.getType());
+      }
+      final FederationStateStoreState oldState = getFederationStateStoreState();
+      this.stateMachine.doTransition(event.getType(), event);
+      if (oldState != getFederationStateStoreState()) {
+        LOG.info("FederatioinStateStore state change from {} to {}", oldState,
+            getFederationStateStoreState());
+      }
+    } catch (InvalidStateTransitionException e) {
+      LOG.error("Can't handle this event at current state", e);
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  public FederationStateStoreState getFederationStateStoreState() {
+    this.readLock.lock();
+    try {
+      return this.stateMachine.getCurrentState();
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  private static class RemoveAppHomeSubClusterTransition implements
+      SingleArcTransition<FederationStateStoreService, FederationStateStoreEvent> {
+
+    @Override
+    public void transition(
+        FederationStateStoreService federationStateStoreService,
+        FederationStateStoreEvent event) {
+      if (!(event instanceof FederationStateStoreRemoveAppHomeSubClusterEvent)) {
+        // should never happen
+        LOG.error("Illegal event type: {}", event.getClass());
+        return;
+      }
+      ApplicationId id = ((FederationStateStoreRemoveAppHomeSubClusterEvent) event)
+          .getApplicationId();
+      try {
+        federationStateStoreService.deleteApplicationHomeSubCluster(
+            DeleteApplicationHomeSubClusterRequest.newInstance(id));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Application {} has removed from federation state store",
+              id);
+        }
+      } catch (Throwable t) {
+        // You should remove app manually when throw exception
+        LOG.error("Delete application {} home subcluster failed, caused by {}.",
+            id, t.getMessage());
+      }
+    }
+  }
+
+  private static class CheckAppsHomeSubClusterTransition implements
+      SingleArcTransition<FederationStateStoreService, FederationStateStoreEvent> {
+
+    @Override
+    public void transition(
+        FederationStateStoreService store,
+        FederationStateStoreEvent event) {
+      if (event.getType() != FederationStateStoreEventType.CHECK_APPS_HOME_SUBCLUSTER) {
+        // should never happen
+        LOG.error("Illegal event type: {} ", event.getClass());
+        return;
+      }
+      try {
+        GetApplicationsHomeSubClusterResponse response = store
+            .getApplicationsHomeSubCluster(GetApplicationsHomeSubClusterRequest
+                .newInstance(store.subClusterId));
+        for (ApplicationHomeSubCluster app : response
+            .getAppsHomeSubClusters()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Check application {}.", app.getApplicationId());
+          }
+          if (!store.rmContext.getRMApps()
+              .containsKey(app.getApplicationId())) {
+            store.getEventHandler().handle(
+                new FederationStateStoreRemoveAppHomeSubClusterEvent(
+                    app.getApplicationId()));
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Check application {} which will be removed.", app);
+            }
+          }
+        }
+      } catch (Throwable t) {
+        /// You should remove app manually when throw exception
+        LOG.error("Fetch applications home subcluster failed.", t);
+      }
+    }
+  }
+
+  public EventHandler getEventHandler() {
+    return dispatcher.getEventHandler();
+  }
+
+  public AsyncDispatcher getDispatcher() {
+    return dispatcher;
   }
 }

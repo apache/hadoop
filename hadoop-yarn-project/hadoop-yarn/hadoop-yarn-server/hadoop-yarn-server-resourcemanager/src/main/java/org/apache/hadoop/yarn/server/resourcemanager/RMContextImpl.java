@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreService;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
@@ -677,5 +678,10 @@ public class RMContextImpl implements RMContext {
   @Override
   public void incrTokenSequenceNo() {
     this.activeServiceContext.incrTokenSequenceNo();
+  }
+
+  @Override
+  public FederationStateStoreService getFederationStateStoreService() {
+    return activeServiceContext.getFederationStateStoreService();
   }
 }

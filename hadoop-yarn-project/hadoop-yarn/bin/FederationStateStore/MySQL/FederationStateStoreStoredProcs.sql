@@ -122,10 +122,11 @@ BEGIN
    WHERE applicationId = applicationID_IN;
 END //
 
-CREATE PROCEDURE sp_getApplicationsHomeSubCluster()
+CREATE PROCEDURE sp_getApplicationsHomeSubCluster(IN homeSubCluster_IN varchar(256))
 BEGIN
    SELECT applicationId, homeSubCluster
-   FROM applicationsHomeSubCluster;
+   FROM applicationsHomeSubCluster
+   WHERE homeSubCluster_IN='' or homeSubCluster=homeSubCluster_IN;
 END //
 
 CREATE PROCEDURE sp_deleteApplicationHomeSubCluster(

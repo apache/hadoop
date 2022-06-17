@@ -397,7 +397,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     return eventHandlingThread.getState() == Thread.State.WAITING;
   }
 
-  protected boolean isDrained() {
+  @VisibleForTesting
+  public boolean isDrained() {
     return drained;
   }
 

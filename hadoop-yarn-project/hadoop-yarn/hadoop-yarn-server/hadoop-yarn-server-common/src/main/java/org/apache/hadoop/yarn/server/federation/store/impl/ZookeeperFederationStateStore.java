@@ -220,14 +220,17 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
     List<ApplicationHomeSubCluster> result = new ArrayList<>();
+    SubClusterId subClusterId = request.getSubClusterId();
 
     try {
       for (String child : zkManager.getChildren(appsZNode)) {
         ApplicationId appId = ApplicationId.fromString(child);
         SubClusterId homeSubCluster = getApp(appId);
-        ApplicationHomeSubCluster app =
-            ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
-        result.add(app);
+        if (subClusterId == null || subClusterId.equals(homeSubCluster)) {
+          ApplicationHomeSubCluster app =
+              ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
+          result.add(app);
+        }
       }
     } catch (Exception e) {
       String errMsg = "Cannot get apps: " + e.getMessage();

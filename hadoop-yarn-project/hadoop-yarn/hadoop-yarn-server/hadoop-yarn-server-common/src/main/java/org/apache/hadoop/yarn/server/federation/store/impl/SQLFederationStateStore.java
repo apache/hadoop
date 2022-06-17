@@ -119,7 +119,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       "{call sp_getApplicationHomeSubCluster(?, ?)}";
 
   private static final String CALL_SP_GET_APPLICATIONS_HOME_SUBCLUSTER =
-      "{call sp_getApplicationsHomeSubCluster()}";
+      "{call sp_getApplicationsHomeSubCluster(?)}";
 
   private static final String CALL_SP_SET_POLICY_CONFIGURATION =
       "{call sp_setPolicyConfiguration(?, ?, ?, ?)}";
@@ -724,6 +724,10 @@ public class SQLFederationStateStore implements FederationStateStore {
 
     try {
       cstmt = getCallableStatement(CALL_SP_GET_APPLICATIONS_HOME_SUBCLUSTER);
+
+      // Set the parameters for the stored procedure
+      SubClusterId subClusterId = request.getSubClusterId();
+      cstmt.setString(1, subClusterId == null ? "" : subClusterId.getId());
 
       // Execute the query
       long startTime = clock.getTime();

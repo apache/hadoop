@@ -396,6 +396,18 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(2, result.getAppsHomeSubClusters().size());
     Assert.assertTrue(result.getAppsHomeSubClusters().contains(ahsc1));
     Assert.assertTrue(result.getAppsHomeSubClusters().contains(ahsc2));
+
+    getRequest = GetApplicationsHomeSubClusterRequest
+        .newInstance(subClusterId1);
+    result = stateStore.getApplicationsHomeSubCluster(getRequest);
+    Assert.assertEquals(1, result.getAppsHomeSubClusters().size());
+    Assert.assertTrue(result.getAppsHomeSubClusters().contains(ahsc1));
+
+    getRequest = GetApplicationsHomeSubClusterRequest
+        .newInstance(subClusterId2);
+    result = stateStore.getApplicationsHomeSubCluster(getRequest);
+    Assert.assertEquals(1, result.getAppsHomeSubClusters().size());
+    Assert.assertTrue(result.getAppsHomeSubClusters().contains(ahsc2));
   }
 
   @Test

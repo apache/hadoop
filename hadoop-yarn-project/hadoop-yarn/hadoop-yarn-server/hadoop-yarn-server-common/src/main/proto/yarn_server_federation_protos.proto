@@ -122,7 +122,7 @@ message GetApplicationHomeSubClusterResponseProto {
 }
 
 message GetApplicationsHomeSubClusterRequestProto {
-
+  optional SubClusterIdProto sub_cluster_id = 1;
 }
 
 message GetApplicationsHomeSubClusterResponseProto {

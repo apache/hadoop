@@ -17,17 +17,27 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.UnknownHostException;
 
+import java.util.List;
 import javax.xml.bind.JAXBException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
@@ -35,6 +45,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.junit.After;
 import org.junit.Assert;
@@ -53,15 +64,18 @@ public class TestFederationRMStateStoreService {
   private final HAServiceProtocol.StateChangeRequestInfo requestInfo =
       new HAServiceProtocol.StateChangeRequestInfo(
           HAServiceProtocol.RequestSource.REQUEST_BY_USER);
-  private final SubClusterId subClusterId = SubClusterId.newInstance("SC-1");
+  private final SubClusterId subClusterId1 = SubClusterId.newInstance("SC-1");
+  private final SubClusterId subClusterId2 = SubClusterId.newInstance("SC-2");
   private final GetSubClusterInfoRequest request =
-      GetSubClusterInfoRequest.newInstance(subClusterId);
+      GetSubClusterInfoRequest.newInstance(subClusterId1);
 
   private Configuration conf;
+  private FederationStateStoreService service;
   private FederationStateStore stateStore;
   private long lastHearbeatTS = 0;
   private JSONJAXBContext jc;
   private JSONUnmarshaller unmarshaller;
+  private MockRM rm;
 
   @Before
   public void setUp() throws IOException, YarnException, JAXBException {
@@ -70,20 +84,24 @@ public class TestFederationRMStateStoreService {
         JSONConfiguration.mapped().rootUnwrapping(false).build(),
         ClusterMetricsInfo.class);
     unmarshaller = jc.createJSONUnmarshaller();
+    conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+    conf.set(YarnConfiguration.RM_CLUSTER_ID, subClusterId1.getId());
+    //conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+    rm = new MockRM(conf);
   }
 
   @After
   public void tearDown() throws Exception {
     unmarshaller = null;
     jc = null;
+    if (rm != null) {
+      rm.stop();
+      rm = null;
+    }
   }
 
   @Test
   public void testFederationStateStoreService() throws Exception {
-    conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
-    conf.set(YarnConfiguration.RM_CLUSTER_ID, subClusterId.getId());
-    final MockRM rm = new MockRM(conf);
-
     // Initially there should be no entry for the sub-cluster
     rm.init(conf);
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
@@ -111,7 +129,7 @@ public class TestFederationRMStateStoreService {
     // Validate sub-cluster deregistration
     rm.getFederationStateStoreService()
         .deregisterSubCluster(SubClusterDeregisterRequest
-            .newInstance(subClusterId, SubClusterState.SC_UNREGISTERED));
+            .newInstance(subClusterId1, SubClusterState.SC_UNREGISTERED));
     checkSubClusterInfo(SubClusterState.SC_UNREGISTERED);
 
     // check after failover
@@ -132,8 +150,6 @@ public class TestFederationRMStateStoreService {
     storeHeartbeat.run();
     capability = checkSubClusterInfo(SubClusterState.SC_RUNNING);
     checkClusterMetricsInfo(capability, 1);
-
-    rm.stop();
   }
 
   private void explicitFailover(MockRM rm) throws IOException {
@@ -171,6 +187,58 @@ public class TestFederationRMStateStoreService {
         (response.getRMWebServiceAddress().split(":"))[0]);
     lastHearbeatTS = response.getLastHeartBeat();
     return response.getCapability();
+  }
+
+  @Test(timeout=30000)
+  public void testDeleteApplicationHomeSubCluster() throws Exception {
+    rm.init(conf);
+    service = rm.getFederationStateStoreService();
+    stateStore = service.getStateStoreClient();
+
+    ApplicationId appId1SubCluster1 = ApplicationId.newInstance(1l, 1);
+    ApplicationId appId2SubCluster1 = ApplicationId.newInstance(1l, 2);
+    ApplicationId appId1SubCluster2 = ApplicationId.newInstance(2l, 3);
+
+    ApplicationHomeSubCluster app1SubCluster1 = ApplicationHomeSubCluster
+        .newInstance(appId1SubCluster1, subClusterId1);
+    stateStore.addApplicationHomeSubCluster(AddApplicationHomeSubClusterRequest
+        .newInstance(app1SubCluster1));
+    ApplicationHomeSubCluster app2SubCluster1 = ApplicationHomeSubCluster
+        .newInstance(appId2SubCluster1, subClusterId1);
+    stateStore.addApplicationHomeSubCluster(AddApplicationHomeSubClusterRequest
+        .newInstance(app2SubCluster1));
+    ApplicationHomeSubCluster app1SubCluster2 = ApplicationHomeSubCluster
+        .newInstance(appId1SubCluster2, subClusterId2);
+    stateStore.addApplicationHomeSubCluster(AddApplicationHomeSubClusterRequest
+        .newInstance(app1SubCluster2));
+
+    RMAppImpl rmApp1SubCluster1 = mock(RMAppImpl.class);
+    when(rmApp1SubCluster1.getApplicationId()).thenReturn(appId1SubCluster1);
+    rm.getRMContext().getRMApps().putIfAbsent(appId1SubCluster1, rmApp1SubCluster1);
+
+    GetApplicationsHomeSubClusterResponse response = stateStore
+        .getApplicationsHomeSubCluster(
+            GetApplicationsHomeSubClusterRequest.newInstance());
+    List<ApplicationHomeSubCluster> appsHomeSubClusters = response
+        .getAppsHomeSubClusters();
+    Assert.assertEquals(3, appsHomeSubClusters.size());
+    Assert.assertTrue(appsHomeSubClusters.contains(app1SubCluster1));
+    Assert.assertTrue(appsHomeSubClusters.contains(app2SubCluster1));
+    Assert.assertTrue(appsHomeSubClusters.contains(app1SubCluster2));
+
+    rm.start();
+
+    // wait drain all event
+    GenericTestUtils.waitFor(
+        () -> rm.getFederationStateStoreService().getDispatcher().isDrained(),
+        1000, 20000);
+
+    response = stateStore.getApplicationsHomeSubCluster(
+        GetApplicationsHomeSubClusterRequest.newInstance());
+    appsHomeSubClusters = response.getAppsHomeSubClusters();
+    Assert.assertEquals(2, appsHomeSubClusters.size());
+    Assert.assertTrue(appsHomeSubClusters.contains(app1SubCluster1));
+    Assert.assertTrue(appsHomeSubClusters.contains(app1SubCluster2));
   }
 
 }

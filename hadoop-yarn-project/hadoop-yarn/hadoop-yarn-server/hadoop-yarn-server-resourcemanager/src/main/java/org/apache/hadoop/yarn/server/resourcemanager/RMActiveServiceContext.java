@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
+import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreService;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
@@ -90,6 +91,7 @@ public class RMActiveServiceContext {
   private AMLivelinessMonitor amLivelinessMonitor;
   private AMLivelinessMonitor amFinishingMonitor;
   private RMStateStore stateStore = null;
+  private FederationStateStoreService fedStateStoreService = null;
   private ContainerAllocationExpirer containerAllocationExpirer;
   private DelegationTokenRenewer delegationTokenRenewer;
   private AMRMTokenSecretManager amRMTokenSecretManager;
@@ -172,6 +174,13 @@ public class RMActiveServiceContext {
 
   @Private
   @Unstable
+  public void setFederationStateStoreService(
+      FederationStateStoreService federationStateStoreService) {
+    fedStateStoreService = federationStateStoreService;
+  }
+
+  @Private
+  @Unstable
   public ClientRMService getClientRMService() {
     return clientRMService;
   }
@@ -192,6 +201,12 @@ public class RMActiveServiceContext {
   @Unstable
   public RMStateStore getStateStore() {
     return stateStore;
+  }
+
+  @Private
+  @Unstable
+  public FederationStateStoreService getFederationStateStoreService() {
+    return fedStateStoreService;
   }
 
   @Private
