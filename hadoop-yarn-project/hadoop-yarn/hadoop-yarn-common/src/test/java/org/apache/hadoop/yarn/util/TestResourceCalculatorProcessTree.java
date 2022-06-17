@@ -19,8 +19,9 @@ package org.apache.hadoop.yarn.util;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
 import static org.hamcrest.core.IsInstanceOf.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsSame.*;
 
 /**

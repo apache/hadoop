@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.fail;
 
 public class TestLazyPersistFiles extends LazyPersistTestCase {

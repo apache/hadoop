@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -399,5 +401,32 @@ public abstract class AbstractFSContractTestBase extends Assert
       destDirLS = destDirLS + "\n" + ContractTestUtils.ls(fs, dst);
     }
     return destDirLS;
+  }
+
+  /**
+   * Override assertThat introduced by extending JUnit Assertions in base test class.
+   * If extending Assertions is removed, we can eliminate this method and import directly.
+   * @param actual the computed value being compared.
+   * @param matcher an expression, built of Matchers, specifying allowed values.
+   * @param <T> the static type accepted by the matcher
+   * (this can flag obvious compile-time problems such as assertThat(1, is("a"))
+   */
+  @SuppressWarnings("deprecation")
+  public static <T> void assertThat(T actual, Matcher<? super T> matcher) {
+    assertThat("", actual, matcher);
+  }
+
+  /**
+   * Override assertThat introduced by extending JUnit Assertions in base test class.
+   * If extending Assertions is removed, we can eliminate this method and import directly.
+   * @param reason additional information about the error.
+   * @param actual the computed value being compared.
+   * @param matcher an expression, built of Matchers, specifying allowed values.
+   * @param <T> the static type accepted by the matcher
+   * (this can flag obvious compile-time problems such as assertThat(1, is("a"))
+   */
+  @SuppressWarnings("deprecation")
+  public static <T> void assertThat(String reason, T actual, Matcher<? super T> matcher) {
+    MatcherAssert.assertThat(reason, actual, matcher);
   }
 }

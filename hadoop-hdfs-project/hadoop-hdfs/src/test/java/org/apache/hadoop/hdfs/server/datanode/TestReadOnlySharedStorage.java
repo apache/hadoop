@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State.*;
 
 import java.io.IOException;

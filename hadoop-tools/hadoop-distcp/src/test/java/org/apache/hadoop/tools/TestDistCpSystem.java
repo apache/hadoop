@@ -20,6 +20,7 @@ package org.apache.hadoop.tools;
 
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -544,7 +545,7 @@ public class TestDistCpSystem {
     Path tgtPath = new Path(testRoot + "/nodir");
     String tgtStr = fs.makeQualified(tgtPath).toString();
     String[] args = new String[]{rootStr, tgtStr};
-    Assert.assertThat(ToolRunner.run(conf, new DistCp(), args), is(0));
+    assertThat(ToolRunner.run(conf, new DistCp(), args), is(0));
 
     // Case 2. The target exists.
 
@@ -552,7 +553,7 @@ public class TestDistCpSystem {
     assertTrue(fs.mkdirs(tgtPath2));
     String tgtStr2 = fs.makeQualified(tgtPath2).toString();
     String[] args2 = new String[]{rootStr, tgtStr2};
-    Assert.assertThat(ToolRunner.run(conf, new DistCp(), args2), is(0));
+    assertThat(ToolRunner.run(conf, new DistCp(), args2), is(0));
   }
 
   @Test
