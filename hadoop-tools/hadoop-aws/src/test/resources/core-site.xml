@@ -18,7 +18,7 @@
   ~  limitations under the License.
   -->
 
-<!-- Values used when running unit tests.  Specify any values$ in here that
+<!-- Values used when running unit tests.  Specify any values in here that
      should override the default values. -->
 
 <configuration>
