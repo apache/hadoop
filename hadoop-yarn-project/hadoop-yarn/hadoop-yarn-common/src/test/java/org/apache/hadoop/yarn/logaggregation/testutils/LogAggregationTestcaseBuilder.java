@@ -1,30 +1,23 @@
 package org.apache.hadoop.yarn.logaggregation.testutils;
 
+import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.logaggregation.TestAggregatedLogDeletionService.ALL_FILE_CONTROLLER_NAMES;
-import static org.apache.hadoop.yarn.logaggregation.testutils.FileStatusUtils.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class LogAggregationTestcaseBuilder {
-  private static final Logger LOG = LoggerFactory.getLogger(LogAggregationTestcaseBuilder.class);
-
   public static final long NO_TIMEOUT = -1;
   final long now;
   final Configuration conf;
@@ -37,14 +30,14 @@ public class LogAggregationTestcaseBuilder {
   long suffixDirModTime;
   long bucketDirModTime;
   String suffixDirName;
-  AppDescriptor[] apps;
+  List<AppDescriptor> apps = Lists.newArrayList();
   int[] finishedAppIds;
   int[] runningAppIds;
   PathWithFileStatus userDir;
   PathWithFileStatus suffixDir;
   PathWithFileStatus bucketDir;
   String bucketId;
-  Pair<String, Long>[] additionalAppDirs = new Pair[] {};
+  List<Pair<String, Long>> additionalAppDirs = new ArrayList<>();
   FileSystem rootFs;
 
   public LogAggregationTestcaseBuilder(Configuration conf) {
@@ -67,7 +60,7 @@ public class LogAggregationTestcaseBuilder {
     return this;
   }
 
-  public LogAggregationTestcaseBuilder withUserDir(String userDirName, long modTime) throws IOException {
+  public LogAggregationTestcaseBuilder withUserDir(String userDirName, long modTime) {
     this.userDirName = userDirName;
     this.userDirModTime = modTime;
     return this;
@@ -82,8 +75,8 @@ public class LogAggregationTestcaseBuilder {
 
   /**
    * Bucket dir paths will be generated later
-   * @param modTime
-   * @return
+   * @param modTime The modification time
+   * @return The builder
    */
   public LogAggregationTestcaseBuilder withBucketDir(long modTime) {
     this.bucketDirModTime = modTime;
@@ -96,7 +89,7 @@ public class LogAggregationTestcaseBuilder {
     return this;
   }
 
-  public LogAggregationTestcaseBuilder withApps(AppDescriptor... apps) {
+  public final LogAggregationTestcaseBuilder withApps(List<AppDescriptor> apps) {
     this.apps = apps;
     return this;
   }
@@ -116,7 +109,7 @@ public class LogAggregationTestcaseBuilder {
     return this;
   }
 
-  public LogAggregationTestcaseBuilder withAdditionalAppDirs(Pair<String, Long>... appDirs) {
+  public LogAggregationTestcaseBuilder withAdditionalAppDirs(List<Pair<String, Long>> appDirs) {
     this.additionalAppDirs = appDirs;
     return this;
   }
@@ -133,20 +126,25 @@ public class LogAggregationTestcaseBuilder {
     return new LogAggregationTestcase(this);
   }
 
-  public static class AppDescriptor {
+  public static final class AppDescriptor {
     final long modTimeOfAppDir;
-    final ArrayList<Pair<String, Long>> filesWithModDate;
+    List<Pair<String, Long>> filesWithModDate;
     String fileController;
 
-    public AppDescriptor(String fileController, long modTimeOfAppDir, Pair<String, Long>... filesWithModDate) {
+    public AppDescriptor(long modTimeOfAppDir) {
+      this.modTimeOfAppDir = modTimeOfAppDir;
+    }
+
+    public AppDescriptor(long modTimeOfAppDir, List<Pair<String, Long>> filesWithModDate) {
+      this.modTimeOfAppDir = modTimeOfAppDir;
+      this.filesWithModDate = filesWithModDate;
+    }
+
+    public AppDescriptor(String fileController, long modTimeOfAppDir, List<Pair<String, Long>> filesWithModDate) {
       this(modTimeOfAppDir, filesWithModDate);
       this.fileController = fileController;
     }
 
-    public AppDescriptor(long modTimeOfAppDir, Pair<String, Long>... filesWithModDate) {
-      this.modTimeOfAppDir = modTimeOfAppDir;
-      this.filesWithModDate = Lists.newArrayList(filesWithModDate);
-    }
 
     public ApplicationId createApplicationId(long now, int id) {
       return ApplicationId.newInstance(now, id);

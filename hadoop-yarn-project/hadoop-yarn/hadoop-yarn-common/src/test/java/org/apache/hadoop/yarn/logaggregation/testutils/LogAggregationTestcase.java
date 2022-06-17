@@ -44,7 +44,7 @@ public class LogAggregationTestcase {
   private final Path remoteRootLogPath;
   private final Map<Integer, Exception> injectedAppDirDeletionExceptions;
   private final List<String> fileControllers;
-  private final Pair<String, Long>[] additionalAppDirs;
+  private final List<Pair<String, Long>> additionalAppDirs;
 
   private final List<ApplicationId> applicationIds = new ArrayList<>();
   private final int[] runningAppIds;
@@ -52,7 +52,7 @@ public class LogAggregationTestcase {
   final List<List<PathWithFileStatus>> appFiles = new ArrayList<>();
   private final FileSystem mockFs;
   private List<PathWithFileStatus> appDirs;
-  private final AppDescriptor[] appDescriptors;
+  private final List<AppDescriptor> appDescriptors;
   private AggregatedLogDeletionServiceForTest deletionService;
 
   public LogAggregationTestcase(LogAggregationTestcaseBuilder builder) throws IOException {
@@ -78,11 +78,11 @@ public class LogAggregationTestcase {
 
     mockFs = ((FilterFileSystem) builder.rootFs).getRawFileSystem();
     validateAppControllers();
-    setupMocksInternal();
+    setupMocks();
   }
  
   private void validateAppControllers() {
-    Set<String> controllers = Arrays.stream(appDescriptors)
+    Set<String> controllers = appDescriptors.stream()
             .map(a -> a.fileController)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
@@ -94,7 +94,7 @@ public class LogAggregationTestcase {
     }
   }
 
-  private LogAggregationTestcase setupMocksInternal() throws IOException {
+  private void setupMocks() throws IOException {
     createApplicationsByDescriptors();
 
     List<Path> rootPaths = determineRootPaths();
@@ -111,7 +111,6 @@ public class LogAggregationTestcase {
       setupListStatusForPath(rootPath, userDir);
       initFileSystemListings(controllerName);
     }
-    return this;
   }
 
   private List<Path> determineRootPaths() {
@@ -147,11 +146,11 @@ public class LogAggregationTestcase {
   }
 
   private void createApplicationsByDescriptors() throws IOException {
-    int len = appDescriptors.length;
+    int len = appDescriptors.size();
     appDirs = new ArrayList<>(len);
 
     for (int i = 0; i < len; i++) {
-      AppDescriptor appDesc = appDescriptors[i];
+      AppDescriptor appDesc = appDescriptors.get(i);
       ApplicationId applicationId = appDesc.createApplicationId(now, i + 1);
       applicationIds.add(applicationId);
       Path basePath = this.remoteRootLogPath;
@@ -273,14 +272,14 @@ public class LogAggregationTestcase {
     return this;
   }
 
-  public LogAggregationTestcase verifyAppFilesDeleted(long timeout, Pair<Integer, Integer>... pairs) throws IOException {
+  public LogAggregationTestcase verifyAppFilesDeleted(long timeout, List<Pair<Integer, Integer>> pairs) throws IOException {
     for (Pair<Integer, Integer> pair : pairs) {
       verifyAppFileDeleted(pair.getLeft(), pair.getRight(), timeout);
     }
     return this;
   }
 
-  public LogAggregationTestcase verifyAppFilesNotDeleted(long timeout, Pair<Integer, Integer>... pairs) throws IOException {
+  public LogAggregationTestcase verifyAppFilesNotDeleted(long timeout, List<Pair<Integer, Integer>> pairs) throws IOException {
     for (Pair<Integer, Integer> pair : pairs) {
       verifyAppFileNotDeleted(pair.getLeft(), pair.getRight(), timeout);
     }

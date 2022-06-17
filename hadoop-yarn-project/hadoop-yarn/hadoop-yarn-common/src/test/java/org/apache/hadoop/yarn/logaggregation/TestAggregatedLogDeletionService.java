@@ -23,18 +23,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcase;
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder;
+import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder.AppDescriptor;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -46,7 +46,6 @@ import static org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTest
 import static org.mockito.Mockito.mock;
 
 public class TestAggregatedLogDeletionService {
-  static final Logger LOG = LoggerFactory.getLogger(TestAggregatedLogDeletionService.class);
   private static final String T_FILE = "TFile";
   private static final String I_FILE = "IFile";
   private static final String USER_ME = "me";
@@ -56,7 +55,6 @@ public class TestAggregatedLogDeletionService {
   private static final String ROOT = "mockfs://foo/";
   private static final String REMOTE_ROOT_LOG_DIR = ROOT + "tmp/logs/";
   private static final String SUFFIX = "logs";
-  private static final String NEW_SUFFIX = LogAggregationUtils.getBucketSuffix() + SUFFIX;
   private static final int TEN_DAYS_IN_SECONDS = 10 * 24 * 3600;
 
   private static final List<Class<? extends LogAggregationFileController>>
@@ -105,16 +103,17 @@ public class TestAggregatedLogDeletionService {
             .withUserDir(USER_ME, toKeepTime)
             .withSuffixDir(SUFFIX, toDeleteTime)
             .withBucketDir(toDeleteTime)
-            .withApps(new LogAggregationTestcaseBuilder.AppDescriptor(toDeleteTime, new Pair[] {}),
-                    new LogAggregationTestcaseBuilder.AppDescriptor(toDeleteTime,
+            .withApps(Lists.newArrayList(
+                    new AppDescriptor(toDeleteTime, Lists.newArrayList()),
+                    new AppDescriptor(toDeleteTime, Lists.newArrayList(
                             Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toKeepTime)),
-                    new LogAggregationTestcaseBuilder.AppDescriptor(toDeleteTime,
+                            Pair.of(DIR_HOST2, toKeepTime))),
+                    new AppDescriptor(toDeleteTime, Lists.newArrayList(
                             Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toDeleteTime)),
-                    new LogAggregationTestcaseBuilder.AppDescriptor(toDeleteTime,
+                            Pair.of(DIR_HOST2, toDeleteTime))),
+                    new AppDescriptor(toDeleteTime, Lists.newArrayList(
                             Pair.of(DIR_HOST1, toDeleteTime),
-                            Pair.of(DIR_HOST2, toKeepTime)))
+                            Pair.of(DIR_HOST2, toKeepTime)))))
             .withFinishedApps(1, 2, 3)
             .withRunningApps(4)
             .injectExceptionForAppDirDeletion(3)
@@ -143,13 +142,13 @@ public class TestAggregatedLogDeletionService {
             .withUserDir(USER_ME, before50Secs)
             .withSuffixDir(SUFFIX, before50Secs)
             .withBucketDir(before50Secs)
-            .withApps(
+            .withApps(Lists.newArrayList(
                     //Set time last modified of app1Dir directory and its files to before2000Secs 
-                    new LogAggregationTestcaseBuilder.AppDescriptor(before2000Secs,
-                            Pair.of(DIR_HOST1, before2000Secs)),
+                    new AppDescriptor(before2000Secs, Lists.newArrayList(
+                            Pair.of(DIR_HOST1, before2000Secs))),
                     //Set time last modified of app1Dir directory and its files to before50Secs 
-                    new LogAggregationTestcaseBuilder.AppDescriptor(before50Secs,
-                            Pair.of(DIR_HOST1, before50Secs))
+                    new AppDescriptor(before50Secs, Lists.newArrayList(
+                            Pair.of(DIR_HOST1, before50Secs))))
             )
             .withFinishedApps(1, 2)
             .withRunningApps()
@@ -196,10 +195,10 @@ public class TestAggregatedLogDeletionService {
             .withUserDir(USER_ME, now)
             .withSuffixDir(SUFFIX, now)
             .withBucketDir(now)
-            .withApps(
-                    new LogAggregationTestcaseBuilder.AppDescriptor(now,
-                            Pair.of(DIR_HOST1, now)),
-                    new LogAggregationTestcaseBuilder.AppDescriptor(now))
+            .withApps(Lists.newArrayList(
+                    new AppDescriptor(now,
+                            Lists.newArrayList(Pair.of(DIR_HOST1, now))),
+                    new AppDescriptor(now)))
             .withFinishedApps(1)
             .withRunningApps()
             .build()
@@ -229,11 +228,11 @@ public class TestAggregatedLogDeletionService {
             .withUserDir(USER_ME, modTime)
             .withSuffixDir(SUFFIX, modTime)
             .withBucketDir(modTime, "0")
-            .withApps(
-                    new LogAggregationTestcaseBuilder.AppDescriptor(modTime),
-                    new LogAggregationTestcaseBuilder.AppDescriptor(modTime),
-                    new LogAggregationTestcaseBuilder.AppDescriptor(modTime, Pair.of(DIR_HOST1, modTime)))
-            .withAdditionalAppDirs(Pair.of("application_a", modTime))
+            .withApps(Lists.newArrayList(
+                    new AppDescriptor(modTime),
+                    new AppDescriptor(modTime),
+                    new AppDescriptor(modTime, Lists.newArrayList(Pair.of(DIR_HOST1, modTime)))))
+            .withAdditionalAppDirs(Lists.newArrayList(Pair.of("application_a", modTime)))
             .withFinishedApps(1, 3)
             .withRunningApps()
             .injectExceptionForAppDirDeletion(1)
@@ -250,9 +249,8 @@ public class TestAggregatedLogDeletionService {
     public void initialize(URI name, Configuration conf) throws IOException {}
 
     @Override
-    public boolean hasPathCapability(Path path, String capability) throws IOException {
+    public boolean hasPathCapability(Path path, String capability) {
       return true;
     }
   }
-
 }
