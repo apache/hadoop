@@ -45,22 +45,18 @@ public class S3AAuditLogMerger {
     if (auditLogFileNames != null && auditLogFileNames.length != 0) {
       File auditLogFile = new File("AuditLogFile");
       try (PrintWriter printWriter = new PrintWriter(auditLogFile,
-          "UTF_8")) {
+          "UTF-8")) {
         for (String singleAuditLogFileName : auditLogFileNames) {
           File singleAuditLogFile =
               new File(auditLogFilesDirectory, singleAuditLogFileName);
-          BufferedReader bufferedReader = null;
-          try {
-            bufferedReader =
-                new BufferedReader(new FileReader(singleAuditLogFile));
+          try (BufferedReader bufferedReader =
+              new BufferedReader(new FileReader(singleAuditLogFile))) {
             String singleLine = bufferedReader.readLine();
             while (singleLine != null) {
               printWriter.println(singleLine);
               singleLine = bufferedReader.readLine();
             }
             printWriter.flush();
-          } finally {
-            bufferedReader.close();
           }
         }
       }

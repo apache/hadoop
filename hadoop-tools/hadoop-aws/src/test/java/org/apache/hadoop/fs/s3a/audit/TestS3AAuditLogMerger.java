@@ -66,12 +66,9 @@ public class TestS3AAuditLogMerger {
     boolean sampleDirCreation = sampleDirectory.mkdir();
     boolean emptyDirCreation = emptyDirectory.mkdir();
     if (sampleDirCreation && emptyDirCreation) {
-      try (FileWriter fw = new FileWriter(firstSampleFile,
-          StandardCharsets.UTF_8);
-          FileWriter fw1 = new FileWriter(secondSampleFile,
-              StandardCharsets.UTF_8);
-          FileWriter fw2 = new FileWriter(thirdSampleFile,
-              StandardCharsets.UTF_8)) {
+      try (FileWriter fw = new FileWriter(firstSampleFile);
+          FileWriter fw1 = new FileWriter(secondSampleFile);
+          FileWriter fw2 = new FileWriter(thirdSampleFile)) {
         fw.write("abcd");
         fw1.write("efgh");
         fw2.write("ijkl");
@@ -126,10 +123,9 @@ public class TestS3AAuditLogMerger {
    */
   @After
   public void tearDown() throws Exception {
-    if (auditLogFile.delete() && firstSampleFile.delete()
-        && secondSampleFile.delete() &&
-        thirdSampleFile.delete() && sampleDirectory.delete()
-        && emptyDirectory.delete()) {
+    if (firstSampleFile.delete() && secondSampleFile.delete()
+        && thirdSampleFile.delete() && sampleDirectory.delete()
+        && emptyDirectory.delete() && auditLogFile.delete()) {
       logger.debug("sample files regarding testing deleted");
     }
   }
