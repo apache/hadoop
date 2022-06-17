@@ -387,7 +387,6 @@ public final class StreamStatisticNames {
   public static final String BLOCKS_RELEASED
       = "blocks_released";
 
-
   private StreamStatisticNames() {
   }
 

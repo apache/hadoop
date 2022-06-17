@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 public interface PrefetchingStatistics extends IOStatisticsSource {
 
-  void prefetchingOperationExecuted();
+  void prefetchOperationStarted();
 
   void blockAddedToFileCache();
 

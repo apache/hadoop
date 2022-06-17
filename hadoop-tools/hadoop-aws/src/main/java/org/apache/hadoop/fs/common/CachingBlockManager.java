@@ -327,7 +327,7 @@ public abstract class CachingBlockManager extends BlockManager {
         }
 
         if (isPrefetch) {
-          this.prefetchingStatistics.prefetchingOperationExecuted();
+          this.prefetchingStatistics.prefetchOperationStarted();
           op = this.ops.prefetch(data.getBlockNumber());
         } else {
           op = this.ops.getRead(data.getBlockNumber());
