@@ -59,6 +59,21 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "ipc.client.rpc-timeout.ms";
   /** Default value for IPC_CLIENT_RPC_TIMEOUT_KEY. */
   public static final int IPC_CLIENT_RPC_TIMEOUT_DEFAULT = 120000;
+  /** Enable the experimental use of netty instead of nio. */
+  public static final String IPC_SERVER_NETTY_ENABLE_KEY =
+      "ipc.server.netty.enable";
+  /** Default value for IPC_SERVER_NETTY_ENABLE_KEY. */
+  public static final boolean IPC_SERVER_NETTY_ENABLE_DEFAULT = false;
+  /** Enable the experimental use of netty instead of nio. */
+  public static final String IPC_CLIENT_NETTY_ENABLE_KEY =
+      "ipc.client.netty.enable";
+  /** Default value for IPC_CLIENT_NETTY_ENABLE_KEY. */
+  public static final boolean IPC_CLIENT_NETTY_ENABLE_DEFAULT = false;
+  /** Allow the use of self-signed certificates for testing. */
+  public static final String IPC_NETTY_TESTING = "ipc.netty.testing.enable";
+  /** Self signed certificates should be used only during testing. */
+  /** TODO: true for now, will be made false before final change */
+  public static final boolean IPC_NETTY_TESTING_DEFAULT = true;
   /** Responses larger than this will be logged */
   public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY =
     "ipc.server.max.response.size";

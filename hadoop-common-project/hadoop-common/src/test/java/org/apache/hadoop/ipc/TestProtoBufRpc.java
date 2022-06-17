@@ -77,9 +77,15 @@ public class TestProtoBufRpc extends TestRpcBase {
    */
   private boolean testWithLegacyFirst;
 
-  public TestProtoBufRpc(Boolean testWithLegacy, Boolean testWithLegacyFirst) {
+  /**
+   * Test with a Netty enabled server.
+   */
+  private boolean useNetty;
+
+  public TestProtoBufRpc(Boolean testWithLegacy, Boolean testWithLegacyFirst, Boolean useNetty) {
     this.testWithLegacy = testWithLegacy;
     this.testWithLegacyFirst = testWithLegacyFirst;
+    this.useNetty = useNetty;
   }
 
   @ProtocolInfo(protocolName = "testProto2", protocolVersion = 1)
@@ -154,9 +160,12 @@ public class TestProtoBufRpc extends TestRpcBase {
   @Parameters
   public static Collection<Object[]> params() {
     Collection<Object[]> params = new ArrayList<Object[]>();
-    params.add(new Object[] {Boolean.TRUE, Boolean.TRUE });
-    params.add(new Object[] {Boolean.TRUE, Boolean.FALSE });
-    params.add(new Object[] {Boolean.FALSE, Boolean.FALSE });
+    params.add(new Object[] {Boolean.TRUE, Boolean.TRUE, Boolean.TRUE });
+    params.add(new Object[] {Boolean.TRUE, Boolean.FALSE, Boolean.TRUE });
+    params.add(new Object[] {Boolean.FALSE, Boolean.FALSE, Boolean.TRUE });
+    // params.add(new Object[] {Boolean.TRUE, Boolean.TRUE, Boolean.FALSE });
+    // params.add(new Object[] {Boolean.TRUE, Boolean.FALSE, Boolean.FALSE });
+    // params.add(new Object[] {Boolean.FALSE, Boolean.FALSE, Boolean.FALSE });
     return params;
   }
 
@@ -166,6 +175,10 @@ public class TestProtoBufRpc extends TestRpcBase {
     conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH, 1024);
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_LOG_SLOW_RPC, true);
+    conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+        useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
     // Set RPC engine to protobuf RPC engine
     if (testWithLegacy) {
       RPC.setProtocolEngine(conf, TestRpcService2Legacy.class,

@@ -111,7 +111,7 @@ public class TestRPC extends TestRpcBase {
   public static final Logger LOG = LoggerFactory.getLogger(TestRPC.class);
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     setupConf();
   }
 
@@ -430,7 +430,7 @@ public class TestRPC extends TestRpcBase {
     testCallsInternal(conf);
   }
 
-  private void testCallsInternal(Configuration myConf) throws Exception {
+  void testCallsInternal(Configuration myConf) throws Exception {
     Server server;
     TestRpcService proxy = null;
 
@@ -1497,16 +1497,16 @@ public class TestRPC extends TestRpcBase {
 
     }
 
-    private Object classFactory() {
+    Object classFactory() {
       return new Embedded();
     }
 
-    private Object classFactoryAbstract() {
+    Object classFactoryAbstract() {
       return new AbstractEmbedded() {
       };
     }
 
-    private Object classFactoryObject() {
+    Object classFactoryObject() {
       return new Object() {
       };
     }

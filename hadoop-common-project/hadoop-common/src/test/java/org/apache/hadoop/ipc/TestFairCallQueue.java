@@ -44,6 +44,7 @@ import javax.management.ObjectName;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,6 +52,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
@@ -58,8 +61,22 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.Rpc
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@RunWith(Parameterized.class)
 public class TestFairCallQueue {
   private FairCallQueue<Schedulable> fcq;
+
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestFairCallQueue(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
 
   private Schedulable mockCall(String id, int priority) {
     Schedulable mockCall = mock(Schedulable.class);
@@ -82,6 +99,10 @@ public class TestFairCallQueue {
   public void setUp() {
     Configuration conf = new Configuration();
     conf.setInt("ns." + FairCallQueue.IPC_CALLQUEUE_PRIORITY_LEVELS_KEY, 2);
+    conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+        useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
 
     fcq = new FairCallQueue<Schedulable>(2, 10, "ns", conf);
   }

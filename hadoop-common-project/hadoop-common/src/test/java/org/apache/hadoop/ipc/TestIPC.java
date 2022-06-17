@@ -114,7 +114,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestIPC {
   public static final Logger LOG = LoggerFactory.getLogger(TestIPC.class);
   
-  private static Configuration conf;
+  static Configuration conf;
   final static int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
   /**

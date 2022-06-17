@@ -22,6 +22,8 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -42,7 +44,10 @@ import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +55,7 @@ import org.slf4j.LoggerFactory;
  * This test provokes partial writes in the server, which is 
  * serving multiple clients.
  */
+@RunWith(Parameterized.class)
 public class TestIPCServerResponder {
 
   public static final Logger LOG =
@@ -66,6 +72,28 @@ public class TestIPCServerResponder {
   static {
     for (int i = 0; i < BYTE_COUNT; i++)
       BYTES[i] = (byte) ('a' + (i % 26));
+  }
+
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestIPCServerResponder(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
+
+  @Before
+  public void setup() {
+    conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+        useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
   }
 
   static Writable call(Client client, Writable param,

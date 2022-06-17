@@ -25,25 +25,55 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server.Call;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 
 /**
  * This is intended to be a set of unit tests for the 
  * org.apache.hadoop.ipc.Server class.
  */
+@RunWith(Parameterized.class)
 public class TestServer {
+
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestServer(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
+
+  private Configuration conf;
+
+  @Before
+  public void setup() {
+    conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_NETTY_ENABLE_KEY,
+                    useNetty);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_NETTY_ENABLE_KEY,
+        useNetty);
+  }
 
   @Test
   public void testBind() throws Exception {
-    Configuration conf = new Configuration();
     ServerSocket socket = new ServerSocket();
     InetSocketAddress address = new InetSocketAddress("0.0.0.0",0);
     socket.bind(address);
@@ -82,7 +112,6 @@ public class TestServer {
 
   @Test
   public void testEmptyConfig() throws Exception {
-    Configuration conf = new Configuration();
     conf.set("TestRange", "");
 
 
@@ -99,7 +128,6 @@ public class TestServer {
   
   @Test
   public void testBindError() throws Exception {
-    Configuration conf = new Configuration();
     ServerSocket socket = new ServerSocket();
     InetSocketAddress address = new InetSocketAddress("0.0.0.0",0);
     socket.bind(address);
@@ -135,7 +163,6 @@ public class TestServer {
 
   @Test (timeout=300000)
   public void testLogExceptions() throws Exception {
-    final Configuration conf = new Configuration();
     final Call dummyCall = new Call(0, 0, null, null);
     Logger logger = mock(Logger.class);
     Server server = new Server("0.0.0.0", 0, LongWritable.class, 1, conf) {
@@ -189,11 +216,11 @@ public class TestServer {
 
   @Test (timeout=300000)
   public void testPurgeIntervalNanosConf() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setInt(CommonConfigurationKeysPublic.
+    Configuration confLocal = new Configuration();
+    confLocal.setInt(CommonConfigurationKeysPublic.
         IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY, 3);
     Server server = new Server("0.0.0.0", 0, LongWritable.class,
-            1, conf) {
+            1, confLocal) {
       @Override
       public Writable call(
               RPC.RpcKind rpcKind, String protocol, Writable param,
