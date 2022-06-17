@@ -368,6 +368,9 @@ class BlockReceiver implements Closeable {
     finally{
       streams.close();
     }
+    if (replicaInfo != null && replicaInfo instanceof ReplicaInPipeline) {
+      replicaInfo.releaseAllBytesReserved();
+    }
     if (replicaHandler != null) {
       IOUtils.cleanupWithLogger(null, replicaHandler);
       replicaHandler = null;
