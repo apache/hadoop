@@ -368,7 +368,8 @@ class BlockReceiver implements Closeable {
     finally{
       streams.close();
     }
-    if (replicaInfo != null && replicaInfo instanceof ReplicaInPipeline) {
+    if (replicaInfo != null && replicaInfo instanceof ReplicaInPipeline
+        && replicaInfo.getBytesReserved() > 0) {
       replicaInfo.releaseAllBytesReserved();
     }
     if (replicaHandler != null) {

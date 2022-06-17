@@ -138,6 +138,11 @@ public class ExternalReplicaInPipeline implements ReplicaInPipeline {
   }
 
   @Override
+  public long getBytesReserved() {
+    return 0;
+  }
+
+  @Override
   public FsVolumeSpi getVolume() {
     return null;
   }

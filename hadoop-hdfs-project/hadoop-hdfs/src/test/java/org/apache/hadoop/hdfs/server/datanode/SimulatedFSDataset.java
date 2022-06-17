@@ -420,6 +420,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public long getBytesReserved() {
+      return 0;
+    }
+
+    @Override
     public FsVolumeSpi getVolume() {
       return getStorage(theBlock).getVolume();
     }

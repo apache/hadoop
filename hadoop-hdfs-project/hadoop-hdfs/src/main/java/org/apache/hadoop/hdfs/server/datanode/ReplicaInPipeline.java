@@ -118,4 +118,10 @@ public interface ReplicaInPipeline extends Replica {
    */
   void waitForMinLength(long minLength, long time, TimeUnit unit)
       throws IOException;
+
+  /**
+   * Get the bytes reserved
+   * @return the bytes reserved
+   */
+  long getBytesReserved();
 }
