@@ -49,7 +49,7 @@ public class LogAggregationTestcase {
   private final List<ApplicationId> applicationIds = new ArrayList<>();
   private final int[] runningAppIds;
   private final int[] finishedAppIds;
-  final List<List<PathWithFileStatus>> appFiles = new ArrayList<>();
+  private final List<List<PathWithFileStatus>> appFiles = new ArrayList<>();
   private final FileSystem mockFs;
   private List<PathWithFileStatus> appDirs;
   private final List<AppDescriptor> appDescriptors;
