@@ -450,7 +450,7 @@ iterates through the ranges, tries to coalesce the ranges based on values of
 `minSeekForVectorReads` and `maxReadSizeForVectorReads` and then read each merged
 ranges synchronously, but the intent is sub classes can implement efficient
 implementation. Reading in both direct and heap byte buffers are supported.
-Also, clients are encouraged to use `WeakReferencedElasticByteBufferPool` for 
+Also, clients are encouraged to use `WeakReferencedElasticByteBufferPool` for
 allocating buffers such that even direct buffers are garbage collected when
 they are no longer referenced.
 
