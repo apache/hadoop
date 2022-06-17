@@ -140,7 +140,8 @@ public class LogAggregationTestcaseBuilder {
       this.filesWithModDate = filesWithModDate;
     }
 
-    public AppDescriptor(String fileController, long modTimeOfAppDir, List<Pair<String, Long>> filesWithModDate) {
+    public AppDescriptor(String fileController, long modTimeOfAppDir,
+                         List<Pair<String, Long>> filesWithModDate) {
       this(modTimeOfAppDir, filesWithModDate);
       this.fileController = fileController;
     }

@@ -11,24 +11,25 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
 
 public class LogAggregationTestUtils {
   public static final String REMOTE_LOG_ROOT = "target/app-logs/";
-  
+
   public static void enableFileControllers(Configuration conf,
           List<Class<? extends LogAggregationFileController>> fileControllers,
           List<String> fileControllerNames) {
-    enableFileControllersInternal(conf, REMOTE_LOG_ROOT, fileControllers, fileControllerNames);
+    enableFcs(conf, REMOTE_LOG_ROOT, fileControllers, fileControllerNames);
   }
 
   public static void enableFileControllers(Configuration conf,
                                            String remoteLogRoot,
                                            List<Class<? extends LogAggregationFileController>> fileControllers,
                                            List<String> fileControllerNames) {
-    enableFileControllersInternal(conf, remoteLogRoot, fileControllers, fileControllerNames);
+    enableFcs(conf, remoteLogRoot, fileControllers, fileControllerNames);
   }
 
 
-  private static void enableFileControllersInternal(Configuration conf,
-                                                    String remoteLogRoot,
-                                                    List<Class<? extends LogAggregationFileController>> fileControllers, List<String> fileControllerNames) {
+  private static void enableFcs(Configuration conf,
+                                String remoteLogRoot,
+                                List<Class<? extends LogAggregationFileController>> fileControllers,
+                                List<String> fileControllerNames) {
     conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS,
             StringUtils.join(fileControllerNames, ","));
     for (int i = 0; i < fileControllers.size(); i++) {

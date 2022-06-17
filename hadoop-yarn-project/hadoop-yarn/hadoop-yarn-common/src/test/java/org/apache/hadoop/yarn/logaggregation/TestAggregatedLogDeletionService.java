@@ -125,7 +125,7 @@ public class TestAggregatedLogDeletionService {
             .verifyAppFileNotDeleted(4, 2, timeout)
             .teardown();
   }
-  
+
   @Test
   public void testRefreshLogRetentionSettings() throws Exception {
     long now = System.currentTimeMillis();
@@ -143,10 +143,10 @@ public class TestAggregatedLogDeletionService {
             .withSuffixDir(SUFFIX, before50Secs)
             .withBucketDir(before50Secs)
             .withApps(Lists.newArrayList(
-                    //Set time last modified of app1Dir directory and its files to before2000Secs 
+                    //Set time last modified of app1Dir directory and its files to before2000Secs
                     new AppDescriptor(before2000Secs, Lists.newArrayList(
                             Pair.of(DIR_HOST1, before2000Secs))),
-                    //Set time last modified of app1Dir directory and its files to before50Secs 
+                    //Set time last modified of app1Dir directory and its files to before50Secs
                     new AppDescriptor(before50Secs, Lists.newArrayList(
                             Pair.of(DIR_HOST1, before50Secs))))
             )

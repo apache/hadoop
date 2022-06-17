@@ -28,7 +28,7 @@ import static org.mockito.Mockito.*;
 
 public class LogAggregationTestcase {
   private static final Logger LOG = LoggerFactory.getLogger(LogAggregationTestcase.class);
-  
+
   private final Configuration conf;
   private final long now;
   private PathWithFileStatus bucketDir;
@@ -80,17 +80,18 @@ public class LogAggregationTestcase {
     validateAppControllers();
     setupMocks();
   }
- 
+
   private void validateAppControllers() {
     Set<String> controllers = appDescriptors.stream()
             .map(a -> a.fileController)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
-    Set<String> availableControllers = fileControllers != null ? new HashSet<>(this.fileControllers) : Sets.newHashSet();
+    Set<String> availableControllers = fileControllers != null ?
+            new HashSet<>(this.fileControllers) : Sets.newHashSet();
     Set<String> difference = Sets.difference(controllers, availableControllers);
     if (!difference.isEmpty()) {
-      throw new IllegalStateException(String.format("Invalid controller defined! Available: %s, Actual: %s",
-              availableControllers, controllers));
+      throw new IllegalStateException(String.format("Invalid controller defined!" +
+                      " Available: %s, Actual: %s", availableControllers, controllers));
     }
   }
 
@@ -106,7 +107,8 @@ public class LogAggregationTestcase {
       if (bucketId != null) {
         bucketDir = createDirLogPathWithFileStatus(suffixDir.path, bucketId, bucketDirModTime);
       } else {
-        bucketDir = createDirBucketDirLogPathWithFileStatus(rootPath, userDirName, suffix, arbitraryAppIdForBucketDir, bucketDirModTime);
+        bucketDir = createDirBucketDirLogPathWithFileStatus(rootPath, userDirName, suffix,
+                arbitraryAppIdForBucketDir, bucketDirModTime);
       }
       setupListStatusForPath(rootPath, userDir);
       initFileSystemListings(controllerName);
@@ -117,12 +119,23 @@ public class LogAggregationTestcase {
     List<Path> rootPaths = new ArrayList<>();
     if (fileControllers != null && !fileControllers.isEmpty()) {
       for (String fileController : fileControllers) {
-        //Example path: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/<application id>/<NodeManager id>
-        //remoteRootLogPath: <remote-app-log-dir>/ ::: mockfs://foo/tmp/logs/
-        //userDir: <remote-app-log-dir>/<user>/ ::: mockfs://foo/tmp/logs/me/
-        //suffixDir: <remote-app-log-dir>/<user>/bucket-<suffix>/ ::: mockfs://foo/tmp/logs/me/bucket-logs/
-        //bucketDir: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/ ::: mockfs://foo/tmp/logs/me/bucket-logs/0001/
-        //remoteRootLogPath with controller: <remote-app-log-dir>/<controllerName> ::: mockfs://foo/tmp/logs/IFile
+        //Generic path: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/
+        // <application id>/<NodeManager id>
+
+        //remoteRootLogPath: <remote-app-log-dir>/
+        //example: mockfs://foo/tmp/logs/
+
+        //userDir: <remote-app-log-dir>/<user>/
+        //example: mockfs://foo/tmp/logs/me/
+
+        //suffixDir: <remote-app-log-dir>/<user>/bucket-<suffix>/
+        //example: mockfs://foo/tmp/logs/me/bucket-logs/
+
+        //bucketDir: <remote-app-log-dir>/<user>/bucket-<suffix>/<bucket id>/
+        //example: mockfs://foo/tmp/logs/me/bucket-logs/0001/
+
+        //remoteRootLogPath with controller: <remote-app-log-dir>/<controllerName>
+        //example: mockfs://foo/tmp/logs/IFile
         rootPaths.add(new Path(remoteRootLogPath, fileController));
       }
     } else {
@@ -140,7 +153,8 @@ public class LogAggregationTestcase {
             .toArray(FileStatus[]::new));
 
     for (Pair<String, Long> appDirPair : additionalAppDirs) {
-      PathWithFileStatus appDir = createDirLogPathWithFileStatus(bucketDir.path, appDirPair.getLeft(), appDirPair.getRight());
+      PathWithFileStatus appDir = createDirLogPathWithFileStatus(bucketDir.path,
+              appDirPair.getLeft(), appDirPair.getRight());
       setupListStatusForPath(appDir, new FileStatus[] {});
     }
   }
@@ -183,11 +197,13 @@ public class LogAggregationTestcase {
     }
   }
 
-  private void setupListStatusForPath(Path dir, PathWithFileStatus pathWithFileStatus) throws IOException {
+  private void setupListStatusForPath(Path dir, PathWithFileStatus pathWithFileStatus)
+          throws IOException {
     setupListStatusForPath(dir, new FileStatus[]{pathWithFileStatus.fileStatus});
   }
 
-  private void setupListStatusForPath(PathWithFileStatus dir, PathWithFileStatus pathWithFileStatus) throws IOException {
+  private void setupListStatusForPath(PathWithFileStatus dir, PathWithFileStatus pathWithFileStatus)
+          throws IOException {
     setupListStatusForPath(dir, new FileStatus[]{pathWithFileStatus.fileStatus});
   }
 
@@ -196,7 +212,8 @@ public class LogAggregationTestcase {
     when(mockFs.listStatus(dir)).thenReturn(fileStatuses);
   }
 
-  private void setupListStatusForPath(PathWithFileStatus dir, FileStatus[] fileStatuses) throws IOException {
+  private void setupListStatusForPath(PathWithFileStatus dir, FileStatus[] fileStatuses)
+          throws IOException {
     LOG.debug("Setting up listStatus. Parent: {}, files: {}", dir.path, fileStatuses);
     when(mockFs.listStatus(dir.path)).thenReturn(fileStatuses);
   }
@@ -232,7 +249,8 @@ public class LogAggregationTestcase {
     List<ApplicationId> finishedApps = createFinishedAppsList();
     List<ApplicationId> runningApps = createRunningAppsList();
     ApplicationClientProtocol rmClient = createMockRMClient(finishedApps, runningApps);
-    AggregatedLogDeletionService.LogDeletionTask deletionTask = new AggregatedLogDeletionService.LogDeletionTask(conf, retentionSeconds, rmClient);
+    AggregatedLogDeletionService.LogDeletionTask deletionTask =
+            new AggregatedLogDeletionService.LogDeletionTask(conf, retentionSeconds, rmClient);
     deletionTask.run();
     return this;
   }
@@ -247,7 +265,7 @@ public class LogAggregationTestcase {
     }
     this.appFiles.add(appChildren);
   }
-  
+
   public LogAggregationTestcase verifyAppDirsDeleted(long timeout, int... ids) throws IOException {
     for (int id : ids) {
       verifyAppDirDeleted(id, timeout);
@@ -255,7 +273,8 @@ public class LogAggregationTestcase {
     return this;
   }
 
-  public LogAggregationTestcase verifyAppDirsNotDeleted(long timeout, int... ids) throws IOException {
+  public LogAggregationTestcase verifyAppDirsNotDeleted(long timeout, int... ids)
+          throws IOException {
     for (int id : ids) {
       verifyAppDirNotDeleted(id, timeout);
     }
@@ -272,26 +291,32 @@ public class LogAggregationTestcase {
     return this;
   }
 
-  public LogAggregationTestcase verifyAppFilesDeleted(long timeout, List<Pair<Integer, Integer>> pairs) throws IOException {
+  public LogAggregationTestcase verifyAppFilesDeleted(long timeout,
+                                                      List<Pair<Integer, Integer>> pairs)
+          throws IOException {
     for (Pair<Integer, Integer> pair : pairs) {
       verifyAppFileDeleted(pair.getLeft(), pair.getRight(), timeout);
     }
     return this;
   }
 
-  public LogAggregationTestcase verifyAppFilesNotDeleted(long timeout, List<Pair<Integer, Integer>> pairs) throws IOException {
+  public LogAggregationTestcase verifyAppFilesNotDeleted(long timeout,
+                                                         List<Pair<Integer, Integer>> pairs)
+          throws IOException {
     for (Pair<Integer, Integer> pair : pairs) {
       verifyAppFileNotDeleted(pair.getLeft(), pair.getRight(), timeout);
     }
     return this;
   }
 
-  public LogAggregationTestcase verifyAppFileDeleted(int id, int fileNo, long timeout) throws IOException {
+  public LogAggregationTestcase verifyAppFileDeleted(int id, int fileNo, long timeout)
+          throws IOException {
     verifyAppFileDeletion(id, fileNo, 1, timeout);
     return this;
   }
 
-  public LogAggregationTestcase verifyAppFileNotDeleted(int id, int fileNo, long timeout) throws IOException {
+  public LogAggregationTestcase verifyAppFileNotDeleted(int id, int fileNo, long timeout)
+          throws IOException {
     verifyAppFileDeletion(id, fileNo, 0, timeout);
     return this;
   }
@@ -304,7 +329,8 @@ public class LogAggregationTestcase {
     }
   }
 
-  private void verifyAppFileDeletion(int appId, int fileNo, int times, long timeout) throws IOException {
+  private void verifyAppFileDeletion(int appId, int fileNo, int times, long timeout)
+          throws IOException {
     List<PathWithFileStatus> childrenFiles = this.appFiles.get(appId - 1);
     PathWithFileStatus file = childrenFiles.get(fileNo - 1);
     verify(mockFs, timeout(timeout).times(times)).delete(file.path, true);
@@ -323,17 +349,20 @@ public class LogAggregationTestcase {
     return deletionService;
   }
 
-  public LogAggregationTestcase verifyCheckIntervalMilliSecondsEqualTo(int checkIntervalMilliSeconds) {
+  public LogAggregationTestcase verifyCheckIntervalMilliSecondsEqualTo(
+          int checkIntervalMilliSeconds) {
     assertEquals(checkIntervalMilliSeconds, deletionService.getCheckIntervalMsecs());
     return this;
   }
 
-  public LogAggregationTestcase verifyCheckIntervalMilliSecondsNotEqualTo(int checkIntervalMilliSeconds) {
+  public LogAggregationTestcase verifyCheckIntervalMilliSecondsNotEqualTo(
+          int checkIntervalMilliSeconds) {
     assertTrue(checkIntervalMilliSeconds != deletionService.getCheckIntervalMsecs());
     return this;
   }
 
-  public LogAggregationTestcase verifyAnyPathListedAtLeast(int atLeast, long timeout) throws IOException {
+  public LogAggregationTestcase verifyAnyPathListedAtLeast(int atLeast, long timeout)
+          throws IOException {
     verify(mockFs, timeout(timeout).atLeast(atLeast)).listStatus(any(Path.class));
     return this;
   }
