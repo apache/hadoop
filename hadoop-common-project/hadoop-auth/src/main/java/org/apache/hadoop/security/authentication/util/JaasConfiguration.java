@@ -29,7 +29,7 @@ public class JaasConfiguration extends Configuration {
 
   private final javax.security.auth.login.Configuration baseConfig =
       javax.security.auth.login.Configuration.getConfiguration();
-  private static AppConfigurationEntry[] entry;
+  private final AppConfigurationEntry[] entry;
   private final String entryName;
 
   /**
