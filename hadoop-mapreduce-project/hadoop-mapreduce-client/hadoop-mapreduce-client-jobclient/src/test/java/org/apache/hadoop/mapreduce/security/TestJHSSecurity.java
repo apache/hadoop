@@ -159,7 +159,7 @@ public class TestJHSSecurity {
       LOG.info("At time: " + System.currentTimeMillis() + ", token should be invalid");
       // Token should have expired.
       final MRClientProtocol finalClientUsingDT = clientUsingDT;
-      LambdaTestUtils.intercept(SecretManager.InvalidToken.class, "expired",
+      LambdaTestUtils.intercept(SecretManager.InvalidToken.class, "has expired",
           () -> finalClientUsingDT.getJobReport(jobReportRequest));
 
       // Test cancellation
