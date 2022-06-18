@@ -32,6 +32,7 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,7 +45,6 @@ import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -217,8 +217,7 @@ public class TestMergeManager {
 
   @SuppressWarnings({ "unchecked", "deprecation" })
   @Test(timeout=10000)
-  public void testOnDiskMerger() throws IOException, URISyntaxException,
-    InterruptedException {
+  public void testOnDiskMerger() throws IOException, IllegalAccessException {
     JobConf jobConf = new JobConf();
     final int SORT_FACTOR = 5;
     jobConf.setInt(MRJobConfig.IO_SORT_FACTOR, SORT_FACTOR);
@@ -231,10 +230,10 @@ public class TestMergeManager {
 
     MergeThread<MapOutput<IntWritable, IntWritable>, IntWritable, IntWritable>
       onDiskMerger = (MergeThread<MapOutput<IntWritable, IntWritable>,
-        IntWritable, IntWritable>) Whitebox.getInternalState(manager,
-          "onDiskMerger");
-    int mergeFactor = (Integer) Whitebox.getInternalState(onDiskMerger,
-      "mergeFactor");
+        IntWritable, IntWritable>) FieldUtils.getField(MergeManagerImpl.class,
+         "onDiskMerger",true).get(manager);
+    int mergeFactor = (Integer) FieldUtils.
+         getField(MergeThread.class,"mergeFactor",true).get(onDiskMerger);
 
     // make sure the io.sort.factor is set properly
     assertEquals(mergeFactor, SORT_FACTOR);
@@ -253,8 +252,8 @@ public class TestMergeManager {
 
     //Check that the files pending to be merged are in sorted order.
     LinkedList<List<CompressAwarePath>> pendingToBeMerged =
-      (LinkedList<List<CompressAwarePath>>) Whitebox.getInternalState(
-        onDiskMerger, "pendingToBeMerged");
+      (LinkedList<List<CompressAwarePath>>) FieldUtils.getField(MergeThread.class,
+         "pendingToBeMerged",true).get(onDiskMerger);
     assertTrue("No inputs were added to list pending to merge",
       pendingToBeMerged.size() > 0);
     for(int i = 0; i < pendingToBeMerged.size(); ++i) {
