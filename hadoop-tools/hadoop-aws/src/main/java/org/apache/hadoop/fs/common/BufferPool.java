@@ -56,6 +56,8 @@ public class BufferPool implements Closeable {
   // Allows associating metadata to each buffer in the pool.
   private Map<BufferData, ByteBuffer> allocated;
 
+  private PrefetchingStatistics prefetchingStatistics;
+
   /**
    * Initializes a new instance of the {@code BufferPool} class.
    *
@@ -65,17 +67,20 @@ public class BufferPool implements Closeable {
    * @throws IllegalArgumentException if size is zero or negative.
    * @throws IllegalArgumentException if bufferSize is zero or negative.
    */
-  public BufferPool(int size, int bufferSize) {
+  public BufferPool(int size, int bufferSize, PrefetchingStatistics prefetchingStatistics) {
     Validate.checkPositiveInteger(size, "size");
     Validate.checkPositiveInteger(bufferSize, "bufferSize");
 
     this.size = size;
     this.bufferSize = bufferSize;
     this.allocated = new IdentityHashMap<BufferData, ByteBuffer>();
+    this.prefetchingStatistics = prefetchingStatistics;
     this.pool = new BoundedResourcePool<ByteBuffer>(size) {
         @Override
         public ByteBuffer createNew() {
-          return ByteBuffer.allocate(bufferSize);
+          ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+          prefetchingStatistics.bufferCreated(bufferSize);
+          return buffer;
         }
       };
   }

@@ -103,7 +103,8 @@ public abstract class CachingBlockManager extends BlockManager {
     this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
 
     if (this.getBlockData().getFileSize() > 0) {
-      this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize());
+      this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
+          this.prefetchingStatistics);
       this.cache = this.createCache();
     }
 

@@ -364,7 +364,11 @@ public enum Statistic {
       TYPE_GAUGE),
   STREAM_READ_ACTIVE_PREFETCH_OPERATIONS(
       Constants.STREAM_READ_ACTIVE_PREFETCH_OPERATIONS,
-      "Gauge of blocks active prefetches",
+      "Gauge of active prefetches",
+      TYPE_GAUGE),
+  STREAM_READ_ACTIVE_MEMORY_IN_USE(
+      Constants.STREAM_READ_ACTIVE_MEMORY_IN_USE,
+      "Gauge of active memory in use",
       TYPE_GAUGE),
 
   /* Stream Write statistics */

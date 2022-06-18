@@ -199,6 +199,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void bufferCreated(int bufferSize) {
+
+    }
+
+    @Override
     public void close() {
 
     }

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.common;
 
 import org.junit.Test;
 
+import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.junit.Assert.assertEquals;
@@ -37,28 +38,28 @@ public class TestBufferPool extends AbstractHadoopTestBase {
   @Test
   public void testArgChecks() throws Exception {
     // Should not throw.
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
 
     // Verify it throws correctly.
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'size' must be a positive integer",
-        () -> new BufferPool(0, 10));
+        () -> new BufferPool(0, 10, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'size' must be a positive integer",
-        () -> new BufferPool(-1, 10));
+        () -> new BufferPool(-1, 10, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'bufferSize' must be a positive integer",
-        () -> new BufferPool(10, 0));
+        () -> new BufferPool(10, 0, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'bufferSize' must be a positive integer",
-        () -> new BufferPool(1, -10));
+        () -> new BufferPool(1, -10, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
@@ -78,7 +79,7 @@ public class TestBufferPool extends AbstractHadoopTestBase {
 
   @Test
   public void testGetAndRelease() {
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
     assertInitialState(pool, POOL_SIZE);
 
     int count = 0;
@@ -125,7 +126,7 @@ public class TestBufferPool extends AbstractHadoopTestBase {
   private void testReleaseHelper(BufferData.State stateBeforeRelease, boolean expectThrow)
       throws Exception {
 
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
     assertInitialState(pool, POOL_SIZE);
 
     BufferData data = this.acquire(pool, 1);

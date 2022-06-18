@@ -845,7 +845,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_READ_PREFETCH_OPERATIONS)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
               STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
-              STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol())
+              STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
+              STREAM_READ_ACTIVE_MEMORY_IN_USE.getSymbol()
+              )
           .withDurationTracking(ACTION_HTTP_GET_REQUEST,
               ACTION_EXECUTOR_ACQUIRED,
               StoreStatisticNames.ACTION_FILE_OPENED,
@@ -1334,6 +1336,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void prefetchOperationCompleted() {
       incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, -1);
+    }
+
+
+    @Override
+    public void bufferCreated(int bufferSize) {
+      incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, bufferSize);
     }
   }
 

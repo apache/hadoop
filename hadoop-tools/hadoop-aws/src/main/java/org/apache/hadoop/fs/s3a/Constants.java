@@ -693,6 +693,12 @@ public final class Constants {
       = "stream_read_active_prefetch_operations";
 
   /**
+   * Total bytes of memory in use by this input stream
+   */
+  public static final String STREAM_READ_ACTIVE_MEMORY_IN_USE
+      = "stream_read_active_memory_in_use";
+
+  /**
    * count/duration of reading a remote block
    * IO.
    * Value: {@value}.
@@ -701,7 +707,7 @@ public final class Constants {
       = "stream_read_block_read";
 
   /**
-   * count/duration of reading a remote block
+   * count/duration of acquiring a buffer and reading to it
    * IO.
    * Value: {@value}.
    */
