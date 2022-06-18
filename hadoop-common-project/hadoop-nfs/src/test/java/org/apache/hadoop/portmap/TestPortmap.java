@@ -25,13 +25,14 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Map;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.junit.Assert;
 
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -76,7 +77,7 @@ public class TestPortmap {
   }
 
   @Test(timeout = 10000)
-  public void testRegistration() throws IOException, InterruptedException {
+  public void testRegistration() throws IOException, InterruptedException, IllegalAccessException {
     XDR req = new XDR();
     RpcCall.getInstance(++xid, RpcProgramPortmap.PROGRAM,
         RpcProgramPortmap.VERSION,
@@ -101,8 +102,9 @@ public class TestPortmap {
     Thread.sleep(100);
     boolean found = false;
     @SuppressWarnings("unchecked")
-    Map<String, PortmapMapping> map = (Map<String, PortmapMapping>) Whitebox
-        .getInternalState(pm.getHandler(), "map");
+    Map<String, PortmapMapping> map = (Map<String, PortmapMapping>)
+        FieldUtils.getField(RpcProgramPortmap.class,
+       "map", true).get(pm.getHandler());
 
     for (PortmapMapping m : map.values()) {
       if (m.getPort() == sent.getPort()
