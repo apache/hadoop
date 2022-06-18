@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -48,7 +49,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.MockitoUtil;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -296,7 +296,7 @@ public class TestRPC extends TestRpcBase {
         throws IOException {
       T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
           new Class[] { protocol }, new StoppedInvocationHandler());
-      return new ProtocolProxy<T>(protocol, proxy, false);
+      return new ProtocolProxy<>(protocol, proxy, false);
     }
 
     @Override
@@ -1160,9 +1160,9 @@ public class TestRPC extends TestRpcBase {
     server = setupTestServer(builder);
 
     @SuppressWarnings("unchecked")
-    CallQueueManager<Call> spy = spy((CallQueueManager<Call>) Whitebox
-        .getInternalState(server, "callQueue"));
-    Whitebox.setInternalState(server, "callQueue", spy);
+    CallQueueManager<Call> spy = spy((CallQueueManager<Call>)
+        FieldUtils.getField(Server.class, "callQueue", true).get(server));
+    FieldUtils.getField(Server.class, "callQueue", true).set(server, spy);
 
     Exception lastException = null;
     proxy = getClient(addr, conf);
@@ -1214,7 +1214,7 @@ public class TestRPC extends TestRpcBase {
     GenericTestUtils.setLogLevel(DecayRpcScheduler.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(RPC.LOG, Level.DEBUG);
 
-    final List<Future<Void>> res = new ArrayList<Future<Void>>();
+    final List<Future<Void>> res = new ArrayList<>();
     final ExecutorService executorService =
         Executors.newFixedThreadPool(numClients);
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
@@ -1223,9 +1223,9 @@ public class TestRPC extends TestRpcBase {
     Server server = setupDecayRpcSchedulerandTestServer(ns + ".");
 
     @SuppressWarnings("unchecked")
-    CallQueueManager<Call> spy = spy((CallQueueManager<Call>) Whitebox
-        .getInternalState(server, "callQueue"));
-    Whitebox.setInternalState(server, "callQueue", spy);
+    CallQueueManager<Call> spy = spy((CallQueueManager<Call>)
+        FieldUtils.getField(Server.class, "callQueue", true).get(server));
+    FieldUtils.getField(Server.class, "callQueue", true).set(server, spy);
 
     Exception lastException = null;
     proxy = getClient(addr, conf);
@@ -1564,11 +1564,11 @@ public class TestRPC extends TestRpcBase {
       RPC.Builder builder = newServerBuilder(conf)
           .setQueueSizePerHandler(1).setNumHandlers(1).setVerbose(true);
       server = setupTestServer(builder);
-      Whitebox.setInternalState(
-          server, "rpcRequestClass", FakeRequestClass.class);
+      FieldUtils.getField(Server.class, "rpcRequestClass", true).
+          set(server, FakeRequestClass.class);
       MutableCounterLong authMetric =
-          (MutableCounterLong)Whitebox.getInternalState(
-              server.getRpcMetrics(), "rpcAuthorizationSuccesses");
+          (MutableCounterLong) FieldUtils.getField(RpcMetrics.class,
+           "rpcAuthorizationSuccesses", true).get(server.getRpcMetrics());
 
       proxy = getClient(addr, conf);
       boolean isDisconnected = true;
