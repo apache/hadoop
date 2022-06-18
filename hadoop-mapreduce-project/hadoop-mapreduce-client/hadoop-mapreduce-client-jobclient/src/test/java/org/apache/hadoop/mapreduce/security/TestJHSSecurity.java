@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.security;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
