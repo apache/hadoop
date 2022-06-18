@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.metrics2.impl;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.sink.GraphiteSink;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -58,7 +58,7 @@ public class TestGraphiteMetrics {
     }
 
     @Test
-    public void testPutMetrics() {
+    public void testPutMetrics() throws IllegalAccessException {
         GraphiteSink sink = new GraphiteSink();
         List<MetricsTag> tags = new ArrayList<MetricsTag>();
         tags.add(new MetricsTag(MsInfo.Context, "all"));
@@ -70,7 +70,8 @@ public class TestGraphiteMetrics {
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        Whitebox.setInternalState(sink, "graphite", mockGraphite);
+        FieldUtils.getField(GraphiteSink.class, "graphite", true).
+            set(sink, mockGraphite);
         sink.putMetrics(record);
 
         try {
@@ -89,11 +90,11 @@ public class TestGraphiteMetrics {
     }
 
     @Test
-    public void testPutMetrics2() {
+    public void testPutMetrics2() throws IllegalAccessException {
         GraphiteSink sink = new GraphiteSink();
         List<MetricsTag> tags = new ArrayList<MetricsTag>();
         tags.add(new MetricsTag(MsInfo.Context, "all"));
-      tags.add(new MetricsTag(MsInfo.Hostname, null));
+        tags.add(new MetricsTag(MsInfo.Hostname, null));
         Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
         metrics.add(makeMetric("foo1", 1));
         metrics.add(makeMetric("foo2", 2));
@@ -102,7 +103,8 @@ public class TestGraphiteMetrics {
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        Whitebox.setInternalState(sink, "graphite", mockGraphite);
+        FieldUtils.getField(GraphiteSink.class,"graphite",true).
+             set(sink,mockGraphite);
         sink.putMetrics(record);
 
         try {
@@ -124,12 +126,13 @@ public class TestGraphiteMetrics {
      * Assert that timestamps are converted correctly, ticket HADOOP-11182
      */
     @Test
-    public void testPutMetrics3() {
+    public void testPutMetrics3() throws IllegalAccessException {
 
       // setup GraphiteSink
       GraphiteSink sink = new GraphiteSink();
       final GraphiteSink.Graphite mockGraphite = makeGraphite();
-      Whitebox.setInternalState(sink, "graphite", mockGraphite);
+        FieldUtils.getField(GraphiteSink.class,"graphite",true).
+             set(sink,mockGraphite);
 
       // given two metrics records with timestamps 1000 milliseconds apart.
       List<MetricsTag> tags = Collections.emptyList();
@@ -158,7 +161,7 @@ public class TestGraphiteMetrics {
     }
 
     @Test
-    public void testFailureAndPutMetrics() throws IOException {
+    public void testFailureAndPutMetrics() throws IOException, IllegalAccessException {
       GraphiteSink sink = new GraphiteSink();
       List<MetricsTag> tags = new ArrayList<MetricsTag>();
       tags.add(new MetricsTag(MsInfo.Context, "all"));
@@ -169,7 +172,8 @@ public class TestGraphiteMetrics {
       MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
       final GraphiteSink.Graphite mockGraphite = makeGraphite();
-      Whitebox.setInternalState(sink, "graphite", mockGraphite);
+      FieldUtils.getField(GraphiteSink.class, "graphite", true).
+           set(sink, mockGraphite);
 
       // throw exception when first try
       doThrow(new IOException("IO exception")).when(mockGraphite).write(anyString());
@@ -196,10 +200,11 @@ public class TestGraphiteMetrics {
     }
 
     @Test
-    public void testClose(){
+    public void testClose() throws IllegalAccessException {
         GraphiteSink sink = new GraphiteSink();
         final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        Whitebox.setInternalState(sink, "graphite", mockGraphite);
+        FieldUtils.getField(GraphiteSink.class,"graphite",true).
+            set(sink,mockGraphite);
         try {
             sink.close();
         } catch (IOException ioe) {

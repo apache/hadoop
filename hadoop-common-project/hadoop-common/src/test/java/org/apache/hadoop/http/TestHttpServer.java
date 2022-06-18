@@ -30,7 +30,6 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.test.Whitebox;
 
 import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.server.ServerConnector;
