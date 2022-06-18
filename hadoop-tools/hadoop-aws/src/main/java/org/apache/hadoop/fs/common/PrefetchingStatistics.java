@@ -35,5 +35,7 @@ public interface PrefetchingStatistics extends IOStatisticsSource {
 
   void executorAcquired(Duration timeInQueue);
 
-  void bufferCreated(int bufferSize);
+  void memoryAllocated(int size);
+
+  void memoryFreed(int size);
 }

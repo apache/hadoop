@@ -1340,8 +1340,13 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
 
     @Override
-    public void bufferCreated(int bufferSize) {
-      incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, bufferSize);
+    public void memoryAllocated(int size) {
+      incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, size);
+    }
+
+    @Override
+    public void memoryFreed(int size) {
+      incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, -size);
     }
   }
 

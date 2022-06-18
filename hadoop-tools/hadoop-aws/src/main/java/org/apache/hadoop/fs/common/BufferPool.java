@@ -79,7 +79,7 @@ public class BufferPool implements Closeable {
         @Override
         public ByteBuffer createNew() {
           ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-          prefetchingStatistics.bufferCreated(bufferSize);
+          prefetchingStatistics.memoryAllocated(bufferSize);
           return buffer;
         }
       };
@@ -241,11 +241,15 @@ public class BufferPool implements Closeable {
       }
     }
 
+    int currentPoolSize = this.pool.numCreated();
+
     this.pool.close();
     this.pool = null;
 
     this.allocated.clear();
     this.allocated = null;
+
+    this.prefetchingStatistics.memoryFreed(currentPoolSize * bufferSize);
   }
 
   // For debugging purposes.
