@@ -505,7 +505,7 @@ public class AbfsClient implements Closeable {
    * @return pair of (the rename operation, flag indicating recovery took place)
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    */
-  public AbfsClientResult renamePath(
+  public AbfsClientRenameResult renamePath(
       final String source,
       final String destination,
       final String continuation,
@@ -542,7 +542,10 @@ public class AbfsClient implements Closeable {
       op.execute(tracingContext);
       // AbfsClientResult contains the AbfsOperation, If recovery happened or
       // not, and the incompleteMetaDataState is true or false.
-      return new AbfsClientResult(op, isMetadataIncompleteState ? true : false, isMetadataIncompleteState);
+      // If we successfully rename a path and isMetadataIncompleteState was
+      // true, then rename was recovered, else it didn't, this is why
+      // isMetadataIncompleteState is used for renameRecovery(as the 2nd param).
+      return new AbfsClientRenameResult(op, isMetadataIncompleteState, isMetadataIncompleteState);
     } catch (AzureBlobFileSystemException e) {
         // If we have no HTTP response, throw the original exception.
         if (!op.hasResult()) {
@@ -577,7 +580,7 @@ public class AbfsClient implements Closeable {
           // throw back the exception
           throw e;
         }
-      return new AbfsClientResult(op, true, isMetadataIncompleteState);
+      return new AbfsClientRenameResult(op, true, isMetadataIncompleteState);
     }
   }
 

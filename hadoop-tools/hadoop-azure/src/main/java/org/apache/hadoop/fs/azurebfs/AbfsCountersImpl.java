@@ -89,7 +89,7 @@ public class AbfsCountersImpl implements AbfsCounters {
       WRITE_THROTTLES,
       SERVER_UNAVAILABLE,
       RENAME_RECOVERY,
-      METADATA_INCOMPLETE_FAILURES,
+      METADATA_INCOMPLETE_RENAME_FAILURES,
       RENAME_PATH_ATTEMPTS
 
   };

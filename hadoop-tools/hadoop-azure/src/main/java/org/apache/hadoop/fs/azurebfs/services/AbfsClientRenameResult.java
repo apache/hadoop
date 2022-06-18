@@ -19,26 +19,26 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 /**
- * A class to store the Result of an AbfsClient Operation, signifying the
- * AbfsRestOperation and the rename recovery.
+ * A class to store the Result of an AbfsClient rename operation, signifying the
+ * AbfsRestOperation result and the rename recovery.
  */
-public class AbfsClientResult {
+public class AbfsClientRenameResult {
 
   /** Abfs Rest Operation. */
   private final AbfsRestOperation op;
   /** Flag indicating recovery took place. */
   private final boolean renameRecovered;
-  /** Abfs storage tracking metadata is in an incomplete state.*/
+  /** Abfs storage tracking metadata is in an incomplete state. */
   private final boolean isIncompleteMetadataState;
 
   /**
-   * Constructing an ABFS operation result.
+   * Constructing an ABFS rename operation result.
    * @param op The AbfsRestOperation.
    * @param renameRecovered Did rename recovery took place?
    * @param isIncompleteMetadataState Did the rename failed due to incomplete
    *                                 metadata state and had to be retried?
    */
-  public AbfsClientResult(
+  public AbfsClientRenameResult(
       AbfsRestOperation op,
       boolean renameRecovered,
       boolean isIncompleteMetadataState) {

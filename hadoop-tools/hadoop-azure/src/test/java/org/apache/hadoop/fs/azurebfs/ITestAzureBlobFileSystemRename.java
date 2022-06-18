@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_FAILURES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
@@ -185,9 +184,10 @@ public class ITestAzureBlobFileSystemRename extends
     byte[] data = dataset(1024, 'a', 'z');
     writeDataset(fs, sourcePath, data, data.length, 1024, true);
 
-    // Verify that Renaming on a destination with no parent dir wasn't
+    // Verify that renaming on a destination with no parent dir wasn't
     // successful.
-    assertFalse(fs.rename(sourcePath, destPath));
+    assertFalse("Rename result expected to be false with no Parent dir",
+        fs.rename(sourcePath, destPath));
 
     // Verify that metadata was in an incomplete state after the rename
     // failure, and we retired the rename once more.

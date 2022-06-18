@@ -68,15 +68,15 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AbfsRestOperation successOp =
         new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
             HTTP_METHOD_PUT, null, null);
-    AbfsClientResult successResult = mock(AbfsClientResult.class);
+    AbfsClientRenameResult successResult = mock(AbfsClientRenameResult.class);
     doReturn(successOp).when(successResult).getOp();
     when(successResult.isIncompleteMetadataState()).thenReturn(false);
 
     // Failed Result.
     AbfsRestOperation failedOp = new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
         HTTP_METHOD_PUT, null, null);
-    AbfsClientResult recoveredMetaDataIncompleteResult =
-        mock(AbfsClientResult.class);
+    AbfsClientRenameResult recoveredMetaDataIncompleteResult =
+        mock(AbfsClientRenameResult.class);
 
     doReturn(failedOp).when(recoveredMetaDataIncompleteResult).getOp();
     when(recoveredMetaDataIncompleteResult.isIncompleteMetadataState()).thenReturn(true);
@@ -100,7 +100,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
         destNoParentPath, null, null,
         null, false));
 
-    AbfsClientResult resultOfSecondRenameCall =
+    AbfsClientRenameResult resultOfSecondRenameCall =
         mockClient.renamePath(sourcePath,
         destNoParentPath, null, null,
         null, false);
@@ -112,7 +112,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
             + "being in incomplete state")
         .isSameAs(recoveredMetaDataIncompleteResult);
     // Verify Incomplete metadata state happened for our second rename call.
-    assertTrue(resultOfSecondRenameCall.isIncompleteMetadataState());
+    assertTrue("Metadata incomplete state should be true if a rename is "
+            + "retried after no Parent directory is found",
+        resultOfSecondRenameCall.isIncompleteMetadataState());
 
 
     // Verify renamePath occurred two times implying a retry was attempted.
