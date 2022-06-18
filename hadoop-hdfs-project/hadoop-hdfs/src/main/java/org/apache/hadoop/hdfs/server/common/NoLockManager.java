@@ -45,21 +45,21 @@ public class NoLockManager implements DataNodeLockManager<AutoCloseDataSetLock> 
   }
 
   @Override
-  public AutoCloseDataSetLock readLock(LockLevel level, String... resources) {
+  public AutoCloseDataSetLock readLock(LockLevel level, String opName, String... resources) {
     return lock;
   }
 
   @Override
-  public AutoCloseDataSetLock writeLock(LockLevel level, String... resources) {
+  public AutoCloseDataSetLock writeLock(LockLevel level, String opName, String... resources) {
     return lock;
   }
 
   @Override
-  public void addLock(LockLevel level, String... resources) {
+  public void addLock(LockLevel level, String opName, String... resources) {
   }
 
   @Override
-  public void removeLock(LockLevel level, String... resources) {
+  public void removeLock(LockLevel level, String opName, String... resources) {
   }
 
   @Override

@@ -78,21 +78,22 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   /**
    * Generate lock order string concatenates with lock name.
    * @param level which level lock want to acquire.
+   * @param opName operate name
    * @param resources lock name by lock order.
    * @return lock order string concatenates with lock name.
    */
-  private String generateLockName(LockLevel level, String... resources) {
+  private String generateLockName(LockLevel level, String opName, String... resources) {
     if (resources.length == 1 && level == LockLevel.BLOCK_POOl) {
       if (resources[0] == null) {
         throw new IllegalArgumentException("acquire a null block pool lock");
       }
-      return resources[0];
+      return opName + ":" + resources[0];
     } else if (resources.length == 2 && level == LockLevel.VOLUME) {
       if (resources[0] == null || resources[1] == null) {
         throw new IllegalArgumentException("acquire a null bp lock : "
             + resources[0] + "volume lock :" + resources[1]);
       }
-      return resources[0] + resources[1];
+      return opName + ":" + resources[0] + resources[1];
     } else {
       throw new IllegalArgumentException("lock level do not match resource");
     }
@@ -149,12 +150,12 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   }
 
   @Override
-  public AutoCloseDataSetLock readLock(LockLevel level, String... resources) {
+  public AutoCloseDataSetLock readLock(LockLevel level, String opName, String... resources) {
     if (level == LockLevel.BLOCK_POOl) {
-      return getReadLock(level, resources[0]);
+      return getReadLock(level, opName, resources[0]);
     } else {
-      AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
-      AutoCloseDataSetLock volLock = getReadLock(level, resources);
+      AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, opName, resources[0]);
+      AutoCloseDataSetLock volLock = getReadLock(level, opName, resources);
       volLock.setParentLock(bpLock);
       if (openLockTrace) {
         LOG.info("Sub lock " + resources[0] + resources[1] + " parent lock " +
@@ -165,12 +166,12 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   }
 
   @Override
-  public AutoCloseDataSetLock writeLock(LockLevel level, String... resources) {
+  public AutoCloseDataSetLock writeLock(LockLevel level, String opName, String... resources) {
     if (level == LockLevel.BLOCK_POOl) {
-      return getWriteLock(level, resources[0]);
+      return getWriteLock(level, opName, resources[0]);
     } else {
-      AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
-      AutoCloseDataSetLock volLock = getWriteLock(level, resources);
+      AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, opName, resources[0]);
+      AutoCloseDataSetLock volLock = getWriteLock(level, opName, resources);
       volLock.setParentLock(bpLock);
       if (openLockTrace) {
         LOG.info("Sub lock " + resources[0] + resources[1] + " parent lock " +
@@ -183,8 +184,8 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   /**
    * Return a not null ReadLock.
    */
-  private AutoCloseDataSetLock getReadLock(LockLevel level, String... resources) {
-    String lockName = generateLockName(level, resources);
+  private AutoCloseDataSetLock getReadLock(LockLevel level, String opName, String... resources) {
+    String lockName = generateLockName(level, opName, resources);
     AutoCloseDataSetLock lock = lockMap.getReadLock(lockName);
     if (lock == null) {
       LOG.warn("Ignore this error during dn restart: Not existing readLock "
@@ -202,8 +203,8 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   /**
    * Return a not null WriteLock.
    */
-  private AutoCloseDataSetLock getWriteLock(LockLevel level, String... resources) {
-    String lockName = generateLockName(level, resources);
+  private AutoCloseDataSetLock getWriteLock(LockLevel level, String opName, String... resources) {
+    String lockName = generateLockName(level, opName, resources);
     AutoCloseDataSetLock lock = lockMap.getWriteLock(lockName);
     if (lock == null) {
       LOG.warn("Ignore this error during dn restart: Not existing writeLock"
@@ -219,8 +220,8 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   }
 
   @Override
-  public void addLock(LockLevel level, String... resources) {
-    String lockName = generateLockName(level, resources);
+  public void addLock(LockLevel level, String opName, String... resources) {
+    String lockName = generateLockName(level, opName, resources);
     if (level == LockLevel.BLOCK_POOl) {
       lockMap.addLock(lockName, new ReentrantReadWriteLock(isFair));
     } else {
@@ -230,9 +231,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   }
 
   @Override
-  public void removeLock(LockLevel level, String... resources) {
-    String lockName = generateLockName(level, resources);
-    try (AutoCloseDataSetLock lock = writeLock(level, resources)) {
+  public void removeLock(LockLevel level, String opName, String... resources) {
+    String lockName = generateLockName(level, opName, resources);
+    try (AutoCloseDataSetLock lock = writeLock(level, opName, resources)) {
       lock.lock();
       lockMap.removeLock(lockName);
     }

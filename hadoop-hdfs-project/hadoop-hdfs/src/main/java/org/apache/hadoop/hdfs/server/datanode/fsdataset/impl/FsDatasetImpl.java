@@ -188,7 +188,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public FsVolumeImpl getVolume(final ExtendedBlock b) {
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        b.getBlockPoolId())) {
+        "getVolume", b.getBlockPoolId())) {
       final ReplicaInfo r =
           volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
       return r != null ? (FsVolumeImpl) r.getVolume() : null;
@@ -199,7 +199,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public Block getStoredBlock(String bpid, long blkid)
       throws IOException {
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        bpid)) {
+        "getStoredBlock", bpid)) {
       ReplicaInfo r = volumeMap.get(bpid, blkid);
       if (r == null) {
         return null;
@@ -211,7 +211,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public Set<? extends Replica> deepCopyReplica(String bpid)
       throws IOException {
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+         "deepCopyReplica", bpid)) {
       Set<ReplicaInfo> replicas = new HashSet<>();
       volumeMap.replicas(bpid, (iterator) -> {
         while (iterator.hasNext()) {
@@ -433,7 +434,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       Storage.StorageDirectory sd, StorageType storageType,
       FsVolumeReference ref) throws IOException {
     for (String bp : volumeMap.getBlockPoolList()) {
-      lockManager.addLock(LockLevel.VOLUME, bp, ref.getVolume().getStorageID());
+      lockManager.addLock(LockLevel.VOLUME, "activateVolume",
+          bp, ref.getVolume().getStorageID());
     }
     DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
     if (dnStorage != null) {
@@ -527,7 +529,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     for (final NamespaceInfo nsInfo : nsInfos) {
       String bpid = nsInfo.getBlockPoolID();
-      try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+      try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl,
+           "addVolume", bpid)) {
         fsVolume.addBlockPool(bpid, this.conf, this.timer);
         fsVolume.getVolumeMap(bpid, tempVolumeMap, ramDiskReplicaTracker);
       } catch (IOException e) {
@@ -633,7 +636,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       for (String storageUuid : storageToRemove) {
         storageMap.remove(storageUuid);
         for (String bp : volumeMap.getBlockPoolList()) {
-          lockManager.removeLock(LockLevel.VOLUME, bp, storageUuid);
+          lockManager.removeLock(LockLevel.VOLUME, "removeVolumes", bp, storageUuid);
         }
       }
     }
@@ -824,7 +827,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     ReplicaInfo info;
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        b.getBlockPoolId())) {
+        "getBlockInputStream", b.getBlockPoolId())) {
       info = volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
     }
 
@@ -1096,7 +1099,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     boolean useVolumeOnSameMount = false;
 
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        block.getBlockPoolId())) {
+         "moveBlockAcrossStorage", block.getBlockPoolId())) {
       if (shouldConsiderSameMountVolume) {
         volumeRef = volumes.getVolumeByMount(targetStorageType,
             ((FsVolumeImpl) replicaInfo.getVolume()).getMount(),
@@ -1291,7 +1294,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     FsVolumeReference volumeRef = null;
 
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        block.getBlockPoolId())) {
+        "moveBlockAcrossVolumes", block.getBlockPoolId())) {
       volumeRef = destination.obtainReference();
     }
 
@@ -1535,7 +1538,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     while (true) {
       try {
         try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
-            b.getBlockPoolId())) {
+             "recoverAppend", b.getBlockPoolId())) {
           ReplicaInfo replicaInfo = recoverCheck(b, newGS, expectedBlockLen);
           FsVolumeReference ref = replicaInfo.getVolume().obtainReference();
           ReplicaInPipeline replica;
@@ -1592,7 +1595,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       boolean allowLazyPersist) throws IOException {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        b.getBlockPoolId())) {
+        "createRbw", b.getBlockPoolId())) {
       ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
           b.getBlockId());
       if (replicaInfo != null) {
@@ -1845,7 +1848,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     boolean isInPipeline = false;
     do {
       try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
-          b.getBlockPoolId())) {
+           "createTemporary", b.getBlockPoolId())) {
         ReplicaInfo currentReplicaInfo =
             volumeMap.get(b.getBlockPoolId(), b.getBlockId());
         if (currentReplicaInfo == lastFoundReplicaInfo) {
@@ -2105,7 +2108,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         new HashMap<String, BlockListAsLongs.Builder>();
 
     List<FsVolumeImpl> curVolumes = null;
-    try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl, "getBlockReports",
+         bpid)) {
       curVolumes = volumes.getVolumes();
       for (FsVolumeSpi v : curVolumes) {
         builders.put(v.getStorageID(), BlockListAsLongs.builder(maxDataLength));
@@ -2171,7 +2175,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override
   public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+         "getFinalizedBlocks", bpid)) {
       ArrayList<ReplicaInfo> finalized =
           new ArrayList<>(volumeMap.size(bpid));
       volumeMap.replicas(bpid, (iterator) -> {
@@ -2314,7 +2319,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     for (int i = 0; i < invalidBlks.length; i++) {
       final ReplicaInfo removing;
       final FsVolumeImpl v;
-      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
+           "invalidate", bpid)) {
         final ReplicaInfo info = volumeMap.get(bpid, invalidBlks[i]);
         if (info == null) {
           ReplicaInfo infoByBlockId =
@@ -2513,7 +2519,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public boolean contains(final ExtendedBlock block) {
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        block.getBlockPoolId())) {
+        "contains", block.getBlockPoolId())) {
       final long blockId = block.getLocalBlock().getBlockId();
       final String bpid = block.getBlockPoolId();
       final ReplicaInfo r = volumeMap.get(bpid, blockId);
@@ -2864,7 +2870,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override 
   public String getReplicaString(String bpid, long blockId) {
-    try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
+         "getReplicaString", bpid)) {
       final Replica r = volumeMap.get(bpid, blockId);
       return r == null ? "null" : r.toString();
     }
@@ -3118,7 +3125,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public long getReplicaVisibleLength(final ExtendedBlock block)
   throws IOException {
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        block.getBlockPoolId())) {
+         "getReplicaVisibleLength", block.getBlockPoolId())) {
       final Replica replica = getReplicaInfo(block.getBlockPoolId(),
           block.getBlockId());
       if (replica.getGenerationStamp() < block.getGenerationStamp()) {
@@ -3135,7 +3142,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throws IOException {
     LOG.info("Adding block pool " + bpid);
     AddBlockPoolException volumeExceptions = new AddBlockPoolException();
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
+         "addBlockPool", bpid)) {
       try {
         volumes.addBlockPool(bpid, conf);
       } catch (AddBlockPoolException e) {
@@ -3144,7 +3152,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       volumeMap.initBlockPool(bpid);
       Set<String> vols = storageMap.keySet();
       for (String v : vols) {
-        lockManager.addLock(LockLevel.VOLUME, bpid, v);
+        lockManager.addLock(LockLevel.VOLUME, "addBlockPool",
+            bpid, v);
       }
     }
     try {
@@ -3169,7 +3178,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override
   public void shutdownBlockPool(String bpid) {
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
+         "shutdownBlockPool", bpid)) {
       LOG.info("Removing block pool " + bpid);
       Map<DatanodeStorage, BlockListAsLongs> blocksPerVolume
           = getBlockReports(bpid);
@@ -3243,7 +3253,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override //FsDatasetSpi
   public void deleteBlockPool(String bpid, boolean force)
       throws IOException {
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
+         "deleteBlockPool", bpid)) {
       List<FsVolumeImpl> curVolumes = volumes.getVolumes();
       if (!force) {
         for (FsVolumeImpl volume : curVolumes) {
@@ -3273,7 +3284,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock block)
       throws IOException {
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        block.getBlockPoolId())) {
+         "getBlockLocalPathInfo", block.getBlockPoolId())) {
       final Replica replica = volumeMap.get(block.getBlockPoolId(),
           block.getBlockId());
       if (replica == null) {
@@ -3327,7 +3338,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public void onCompleteLazyPersist(String bpId, long blockId,
       long creationTime, File[] savedFiles, FsVolumeImpl targetVolume) {
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpId)) {
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
+         "onCompleteLazyPersist", bpId)) {
       ramDiskReplicaTracker.recordEndLazyPersist(bpId, blockId, savedFiles);
 
       targetVolume.incDfsUsedAndNumBlocks(bpId, savedFiles[0].length()
@@ -3530,7 +3542,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         final String bpid = replicaState.getBlockPoolId();
         final FsVolumeImpl lazyPersistVolume = replicaState.getLazyPersistVolume();
 
-        try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+        try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
+             "evictBlocks", bpid)) {
           replicaInfo = getReplicaInfo(replicaState.getBlockPoolId(),
                                        replicaState.getBlockId());
           Preconditions.checkState(replicaInfo.getVolume().isTransientStorage());
@@ -3713,7 +3726,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   void stopAllDataxceiverThreads(FsVolumeImpl volume) {
     for (String bpid : volumeMap.getBlockPoolList()) {
       try (AutoCloseDataSetLock lock = lockManager
-          .writeLock(LockLevel.BLOCK_POOl, bpid)) {
+          .writeLock(LockLevel.BLOCK_POOl,
+          "stopAllDataxceiverThreads", bpid)) {
         volumeMap.replicas(bpid, (iterator) -> {
           while (iterator.hasNext()) {
             ReplicaInfo replicaInfo = iterator.next();

@@ -35,27 +35,27 @@ public class TestDataSetLockManager {
 
   @Test(timeout = 5000)
   public void testBaseFunc() {
-    manager.addLock(LockLevel.BLOCK_POOl, "BPtest");
-    manager.addLock(LockLevel.VOLUME, "BPtest", "Volumetest");
+    manager.addLock(LockLevel.BLOCK_POOl, "testBaseFunc", "BPtest");
+    manager.addLock(LockLevel.VOLUME, "testBaseFunc", "BPtest", "Volumetest");
 
-    AutoCloseDataSetLock lock = manager.writeLock(LockLevel.BLOCK_POOl, "BPtest");
-    AutoCloseDataSetLock lock1 = manager.readLock(LockLevel.BLOCK_POOl, "BPtest");
+    AutoCloseDataSetLock lock = manager.writeLock(LockLevel.BLOCK_POOl, "testBaseFunc", "BPtest");
+    AutoCloseDataSetLock lock1 = manager.readLock(LockLevel.BLOCK_POOl, "testBaseFunc", "BPtest");
     lock1.close();
     lock.close();
 
     manager.lockLeakCheck();
     assertNull(manager.getLastException());
 
-    AutoCloseDataSetLock lock2 = manager.writeLock(LockLevel.VOLUME, "BPtest", "Volumetest");
-    AutoCloseDataSetLock lock3 = manager.readLock(LockLevel.VOLUME, "BPtest", "Volumetest");
+    AutoCloseDataSetLock lock2 = manager.writeLock(LockLevel.VOLUME, "testBaseFunc", "BPtest", "Volumetest");
+    AutoCloseDataSetLock lock3 = manager.readLock(LockLevel.VOLUME, "testBaseFunc", "BPtest", "Volumetest");
     lock3.close();
     lock2.close();
 
     manager.lockLeakCheck();
     assertNull(manager.getLastException());
 
-    AutoCloseDataSetLock lock4 = manager.writeLock(LockLevel.BLOCK_POOl, "BPtest");
-    AutoCloseDataSetLock lock5 = manager.readLock(LockLevel.VOLUME, "BPtest", "Volumetest");
+    AutoCloseDataSetLock lock4 = manager.writeLock(LockLevel.BLOCK_POOl, "testBaseFunc", "BPtest");
+    AutoCloseDataSetLock lock5 = manager.readLock(LockLevel.VOLUME, "testBaseFunc", "BPtest", "Volumetest");
     lock5.close();
     lock4.close();
 
@@ -72,8 +72,8 @@ public class TestDataSetLockManager {
   @Test(timeout = 5000)
   public void testAcquireWriteLockError() throws InterruptedException {
     Thread t = new Thread(() -> {
-      manager.readLock(LockLevel.BLOCK_POOl, "test");
-      manager.writeLock(LockLevel.BLOCK_POOl, "test");
+      manager.readLock(LockLevel.BLOCK_POOl,"testAcquireWriteLockError", "testAcquireWriteLockError", "test");
+      manager.writeLock(LockLevel.BLOCK_POOl,"testAcquireWriteLockError", "testAcquireWriteLockError", "test");
     });
     t.start();
     Thread.sleep(1000);

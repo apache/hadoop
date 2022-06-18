@@ -76,7 +76,7 @@ class ReplicaMap {
   }
   
   /**
-   * Get the meta information of the replica that matches both block id 
+   * Get the meta information of the replica that matches both block id.
    * and generation stamp
    * @param bpid block pool id
    * @param block block with its id as the key
@@ -96,21 +96,22 @@ class ReplicaMap {
   
   
   /**
-   * Get the meta information of the replica that matches the block id
+   * Get the meta information of the replica that matches the block id.
    * @param bpid block pool id
    * @param blockId a block's id
    * @return the replica's meta information
    */
   ReplicaInfo get(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+        "ReplicaMap.get", bpid)) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       return m != null ? m.get(new Block(blockId)) : null;
     }
   }
 
   /**
-   * Add a replica's meta information into the map 
+   * Add a replica's meta information into the map.
    * 
    * @param bpid block pool id
    * @param replicaInfo a replica's meta information
@@ -120,7 +121,8 @@ class ReplicaMap {
   ReplicaInfo add(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+        "ReplicaMap.add", bpid)) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m == null) {
         // Add an entry for block pool if it does not exist already
@@ -138,7 +140,8 @@ class ReplicaMap {
   ReplicaInfo addAndGet(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+        "ReplicaMap.addAndGet", bpid)) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m == null) {
         // Add an entry for block pool if it does not exist already
@@ -170,7 +173,8 @@ class ReplicaMap {
     Set<String> bplist = other.map.keySet();
     for (String bp : bplist) {
       checkBlockPool(bp);
-      try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bp)) {
+      try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl,
+           "ReplicaMap.mergeAll", bp)) {
         LightWeightResizableGSet<Block, ReplicaInfo> replicaInfos = other.map.get(bp);
         LightWeightResizableGSet<Block, ReplicaInfo> curSet = map.get(bp);
         HashSet<ReplicaInfo> replicaSet = new HashSet<>();
@@ -192,7 +196,7 @@ class ReplicaMap {
   }
   
   /**
-   * Remove the replica's meta information from the map that matches
+   * Remove the replica's meta information from the map that matches.
    * the input block's id and generation stamp
    * @param bpid block pool id
    * @param block block with its id as the key
@@ -202,7 +206,8 @@ class ReplicaMap {
   ReplicaInfo remove(String bpid, Block block) {
     checkBlockPool(bpid);
     checkBlock(block);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+         "ReplicaMap.remove", bpid)) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m != null) {
         ReplicaInfo replicaInfo = m.get(block);
@@ -217,14 +222,15 @@ class ReplicaMap {
   }
   
   /**
-   * Remove the replica's meta information from the map if present
+   * Remove the replica's meta information from the map if present.
    * @param bpid block pool id
    * @param blockId block id of the replica to be removed
    * @return the removed replica's meta information
    */
   ReplicaInfo remove(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+         "ReplicaMap.remove", bpid)) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m != null) {
         return m.remove(new Block(blockId));
@@ -234,12 +240,13 @@ class ReplicaMap {
   }
  
   /**
-   * Get the size of the map for given block pool
+   * Get the size of the map for given block pool.
    * @param bpid block pool id
    * @return the number of replicas in the map
    */
   int size(String bpid) {
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+         "ReplicaMap.size", bpid)) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       return m != null ? m.size() : 0;
     }
@@ -267,7 +274,8 @@ class ReplicaMap {
    */
   void replicas(String bpid, Consumer<Iterator<ReplicaInfo>> consumer) {
     LightWeightResizableGSet<Block, ReplicaInfo> m = null;
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl,
+         "ReplicaMap.replicas", bpid)) {
       m = map.get(bpid);
       if (m !=null) {
         m.getIterator(consumer);
@@ -277,7 +285,8 @@ class ReplicaMap {
 
   void initBlockPool(String bpid) {
     checkBlockPool(bpid);
-    try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl,
+         "ReplicaMap.initBlockPool", bpid)) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m == null) {
         // Add an entry for block pool if it does not exist already
@@ -289,7 +298,8 @@ class ReplicaMap {
   
   void cleanUpBlockPool(String bpid) {
     checkBlockPool(bpid);
-    try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+    try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl,
+         "ReplicaMap.cleanUpBlockPool", bpid)) {
       map.remove(bpid);
     }
   }

@@ -3460,7 +3460,8 @@ public class DataNode extends ReconfigurableBase
 
     //get replica information
     try (AutoCloseableLock lock = dataSetLockManager.readLock(
-        LockLevel.BLOCK_POOl, b.getBlockPoolId())) {
+        LockLevel.BLOCK_POOl,
+        "transferReplicaForPipelineRecovery", b.getBlockPoolId())) {
       Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
           b.getBlockId());
       if (null == storedBlock) {

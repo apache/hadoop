@@ -311,7 +311,7 @@ class BPServiceActor implements Runnable {
     NamespaceInfo nsInfo = retrieveNamespaceInfo();
 
     // init block pool lock when init.
-    dn.getDataSetLockManager().addLock(LockLevel.BLOCK_POOl,
+    dn.getDataSetLockManager().addLock(LockLevel.BLOCK_POOl, "connectToNNAndHandshake",
         nsInfo.getBlockPoolID());
 
     // Verify that this matches the other NN in this HA pair.
