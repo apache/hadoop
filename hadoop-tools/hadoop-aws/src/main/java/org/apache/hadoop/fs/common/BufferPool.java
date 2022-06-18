@@ -31,6 +31,8 @@ import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Manages a fixed pool of {@code ByteBuffer} instances.
  *
@@ -63,6 +65,7 @@ public class BufferPool implements Closeable {
    *
    * @param size number of buffer in this pool.
    * @param bufferSize size in bytes of each buffer.
+   * @param prefetchingStatistics statistics for this stream.
    *
    * @throws IllegalArgumentException if size is zero or negative.
    * @throws IllegalArgumentException if bufferSize is zero or negative.
@@ -74,7 +77,7 @@ public class BufferPool implements Closeable {
     this.size = size;
     this.bufferSize = bufferSize;
     this.allocated = new IdentityHashMap<BufferData, ByteBuffer>();
-    this.prefetchingStatistics = prefetchingStatistics;
+    this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
     this.pool = new BoundedResourcePool<ByteBuffer>(size) {
         @Override
         public ByteBuffer createNew() {

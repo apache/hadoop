@@ -194,21 +194,6 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void executorAcquired(Duration timeInQueue) {
-
-    }
-
-    @Override
-    public void memoryAllocated(int size) {
-
-    }
-
-    @Override
-    public void memoryFreed(int size) {
-
-    }
-
-    @Override
     public void close() {
 
     }
@@ -229,6 +214,12 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     }
 
+
+    @Override
+    public void prefetchOperationCompleted() {
+
+    }
+
     @Override
     public void blockAddedToFileCache() {
 
@@ -240,7 +231,17 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void prefetchOperationCompleted() {
+    public void executorAcquired(Duration timeInQueue) {
+
+    }
+
+    @Override
+    public void memoryAllocated(int size) {
+
+    }
+
+    @Override
+    public void memoryFreed(int size) {
 
     }
 

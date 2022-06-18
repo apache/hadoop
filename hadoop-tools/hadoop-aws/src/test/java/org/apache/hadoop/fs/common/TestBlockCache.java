@@ -49,6 +49,10 @@ public class TestBlockCache extends AbstractHadoopTestBase {
         IllegalArgumentException.class,
         "'buffer' must not be null",
         () -> cache.put(42, null));
+
+    ExceptionAsserts.assertThrows(
+        NullPointerException.class,
+        () -> new SingleFilePerBlockCache(null));
   }
 
 

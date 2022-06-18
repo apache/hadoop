@@ -83,8 +83,7 @@ public class TestS3CachingBlockManager extends AbstractHadoopTestBase {
         "'bufferPoolSize' must be a positive integer",
         () -> new S3CachingBlockManager(futurePool, reader, blockData, -1, streamStatistics));
 
-    ExceptionAsserts.assertThrows(IllegalArgumentException.class,
-        "'prefetchingStatistics' must not be null",
+    ExceptionAsserts.assertThrows(NullPointerException.class,
         () -> new S3CachingBlockManager(futurePool, reader, blockData, POOL_SIZE, null));
 
     ExceptionAsserts.assertThrows(

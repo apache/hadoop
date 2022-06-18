@@ -38,7 +38,8 @@ public class TestBufferPool extends AbstractHadoopTestBase {
   @Test
   public void testArgChecks() throws Exception {
     // Should not throw.
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE,
+        EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
 
     // Verify it throws correctly.
     ExceptionAsserts.assertThrows(
@@ -62,6 +63,10 @@ public class TestBufferPool extends AbstractHadoopTestBase {
         () -> new BufferPool(1, -10, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
 
     ExceptionAsserts.assertThrows(
+        NullPointerException.class,
+        () -> new BufferPool(1, 10, null));
+
+    ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'blockNumber' must not be negative",
         () -> pool.acquire(-1));
@@ -79,7 +84,8 @@ public class TestBufferPool extends AbstractHadoopTestBase {
 
   @Test
   public void testGetAndRelease() {
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE,
+        EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
     assertInitialState(pool, POOL_SIZE);
 
     int count = 0;
@@ -126,7 +132,8 @@ public class TestBufferPool extends AbstractHadoopTestBase {
   private void testReleaseHelper(BufferData.State stateBeforeRelease, boolean expectThrow)
       throws Exception {
 
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE,
+        EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
     assertInitialState(pool, POOL_SIZE);
 
     BufferData data = this.acquire(pool, 1);
