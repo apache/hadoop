@@ -25,25 +25,8 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
-import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
-import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeLabel;
-import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
-import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.api.protocolrecords.*;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -364,6 +347,42 @@ public final class RouterYarnClientUtils {
     resourceTypeInfoResponse.setResourceTypeInfo(
         new ArrayList<>(resourceTypeInfoSet));
     return resourceTypeInfoResponse;
+  }
+
+  public static GetQueueInfoResponse mergeQueues(
+          Collection<GetQueueInfoResponse> responses) {
+    GetQueueInfoResponse queueResponse = Records.newRecord(
+            GetQueueInfoResponse.class);
+
+    QueueInfo queueInfo = null;
+    for (GetQueueInfoResponse response : responses) {
+      if (response != null && response.getQueueInfo() != null) {
+        if (queueInfo == null) {
+          queueInfo = response.getQueueInfo();
+        } else {
+          // set Capacity\MaximumCapacity\CurrentCapacity
+          queueInfo.setCapacity(queueInfo.getCapacity() + response.getQueueInfo().getCapacity());
+          queueInfo.setMaximumCapacity(queueInfo.getMaximumCapacity() + response.getQueueInfo().getMaximumCapacity());
+          queueInfo.setCurrentCapacity(queueInfo.getCurrentCapacity() + response.getQueueInfo().getCurrentCapacity());
+
+          // set childQueues
+          List<QueueInfo> childQueues = new ArrayList<>(queueInfo.getChildQueues());
+          childQueues.addAll(response.getQueueInfo().getChildQueues());
+          queueInfo.setChildQueues(childQueues);
+
+          // set applications
+          List<ApplicationReport> applicationReports = new ArrayList<>(queueInfo.getApplications());
+          applicationReports.addAll(response.getQueueInfo().getApplications());
+          queueInfo.setApplications(applicationReports);
+
+          // set accessibleNodeLabels
+          Set<String> accessibleNodeLabels = queueInfo.getAccessibleNodeLabels();
+          accessibleNodeLabels.addAll(response.getQueueInfo().getAccessibleNodeLabels());
+          queueInfo.setAccessibleNodeLabels(accessibleNodeLabels);
+        }
+      }
+    }
+    return queueResponse;
   }
 }
 

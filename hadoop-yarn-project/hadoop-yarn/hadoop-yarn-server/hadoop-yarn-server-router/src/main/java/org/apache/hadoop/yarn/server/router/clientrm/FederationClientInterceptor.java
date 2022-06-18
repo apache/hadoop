@@ -822,7 +822,27 @@ public class FederationClientInterceptor
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getQueueName() == null) {
+      routerMetrics.incrGetQueueInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getQueueInfo request or queueName.", null);
+    }
+
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getQueueInfo",
+        new Class[]{GetQueueUserAclsInfoRequest.class}, new Object[]{request});
+    Collection<GetQueueInfoResponse> queues = null;
+    try {
+      queues = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetQueueInfoResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrGetQueueInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get queue [" +
+          request.getQueueName() + "] to exception.", ex);
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetQueueInfoRetrieved(stopTime - startTime);
+    // Merge the GetQueueInfoResponse
+    return RouterYarnClientUtils.mergeQueues(queues);
   }
 
   @Override
