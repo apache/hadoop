@@ -80,7 +80,7 @@ public class SlowPeerTracker {
    * Number of nodes to include in JSON report. We will return nodes with
    * the highest number of votes from peers.
    */
-  private int maxNodesToReport;
+  private volatile int maxNodesToReport;
 
   /**
    * Information about peers that have reported a node as being slow.
@@ -281,7 +281,7 @@ public class SlowPeerTracker {
     return reportValidityMs;
   }
 
-  public void setMaxSlowPeersToReport(int maxSlowPeersToReport) {
+  public synchronized void setMaxSlowPeersToReport(int maxSlowPeersToReport) {
     this.maxNodesToReport = maxSlowPeersToReport;
   }
 
