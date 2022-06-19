@@ -74,6 +74,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1100,5 +1102,44 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         interceptor.signalToContainer(signalContainerRequest);
 
     Assert.assertNotNull(signalContainerResponse);
+  }
+
+  @Test
+  public void testMoveApplicationAcrossQueues() throws Exception {
+    LOG.info("Test FederationClientInterceptor : MoveApplication AcrossQueues request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing moveApplicationAcrossQueues request " +
+        "or applicationId or target queue.", () -> interceptor.moveApplicationAcrossQueues(null));
+
+    // normal request
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+            RMAppAttemptState.SCHEDULED);
+    MockNM nm = interceptor.getMockNMs().get(subClusterId);
+    nm.nodeHeartbeat(true);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
+    mockRM.sendAMLaunched(rmApp.getCurrentAppAttempt().getAppAttemptId());
+
+    MoveApplicationAcrossQueuesRequest acrossQueuesRequest =
+        MoveApplicationAcrossQueuesRequest.newInstance(appId,"root.target");
+    MoveApplicationAcrossQueuesResponse acrossQueuesResponse =
+        interceptor.moveApplicationAcrossQueues(acrossQueuesRequest);
+
+    Assert.assertNotNull(acrossQueuesResponse);
   }
 }
