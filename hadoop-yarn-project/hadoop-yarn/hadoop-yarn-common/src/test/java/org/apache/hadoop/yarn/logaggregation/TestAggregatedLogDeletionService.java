@@ -119,7 +119,7 @@ public class TestAggregatedLogDeletionService {
             .withRunningApps(4)
             .injectExceptionForAppDirDeletion(3)
             .build()
-            .setupAndRunDeletionService()
+            .startDeletionService()
             .verifyAppDirsDeleted(timeout, 1, 3)
             .verifyAppDirsNotDeleted(timeout, 2, 4)
             .verifyAppFileDeleted(4, 1, timeout)
@@ -156,7 +156,7 @@ public class TestAggregatedLogDeletionService {
             .build();
     
     testcase
-            .setupAndRunDeletionService()
+            .startDeletionService()
             //app1Dir would be deleted since it is done above log retention period
             .verifyAppDirDeleted(1, 10000L)
             //app2Dir is not expected to be deleted since it is below the threshold
@@ -203,7 +203,7 @@ public class TestAggregatedLogDeletionService {
             .withFinishedApps(1)
             .withRunningApps()
             .build()
-            .setupAndRunDeletionService()
+            .startDeletionService()
             .verifyAnyPathListedAtLeast(4, 10000L)
             .verifyAppDirNotDeleted(1, NO_TIMEOUT)
             // modify the timestamp of the logs and verify if it is picked up quickly
@@ -286,7 +286,7 @@ public class TestAggregatedLogDeletionService {
             .withRunningApps(4, 8)
             .injectExceptionForAppDirDeletion(3, 6)
             .build()
-            .setupAndRunDeletionService()
+            .startDeletionService()
             .verifyAppDirsDeleted(timeout, 1, 3, 5, 7)
             .verifyAppDirsNotDeleted(timeout, 2, 4, 6, 8)
             .verifyAppFilesDeleted(timeout, Lists.newArrayList(Pair.of(4, 1), Pair.of(8, 1)))

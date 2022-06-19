@@ -28,6 +28,7 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService.LogDeletionTask;
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder.AppDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +103,8 @@ public class LogAggregationTestcase {
     mockFs = ((FilterFileSystem) builder.rootFs).getRawFileSystem();
     validateAppControllers();
     setupMocks();
+
+    setupDeletionService();
   }
 
   private void validateAppControllers() {
@@ -241,10 +244,13 @@ public class LogAggregationTestcase {
     when(mockFs.listStatus(dir.path)).thenReturn(fileStatuses);
   }
 
-  public LogAggregationTestcase setupAndRunDeletionService() {
+  private void setupDeletionService() {
     List<ApplicationId> finishedApps = createFinishedAppsList();
     List<ApplicationId> runningApps = createRunningAppsList();
     deletionService = new AggregatedLogDeletionServiceForTest(runningApps, finishedApps, conf);
+  }
+
+  public LogAggregationTestcase startDeletionService() {
     deletionService.init(conf);
     deletionService.start();
     return this;
@@ -272,9 +278,11 @@ public class LogAggregationTestcase {
     List<ApplicationId> finishedApps = createFinishedAppsList();
     List<ApplicationId> runningApps = createRunningAppsList();
     ApplicationClientProtocol rmClient = createMockRMClient(finishedApps, runningApps);
-    AggregatedLogDeletionService.LogDeletionTask deletionTask =
-            new AggregatedLogDeletionService.LogDeletionTask(conf, retentionSeconds, rmClient);
-    deletionTask.run();
+    List<LogDeletionTask> tasks = deletionService.createLogDeletionTasks(conf, retentionSeconds, rmClient);
+    for (LogDeletionTask deletionTask : tasks) {
+      deletionTask.run();  
+    }
+    
     return this;
   }
 
