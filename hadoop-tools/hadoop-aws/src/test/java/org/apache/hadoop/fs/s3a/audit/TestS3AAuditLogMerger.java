@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -117,7 +116,7 @@ public class TestS3AAuditLogMerger {
   }
 
   /**
-   * delete all the sample directories and files after all tests.
+   * delete all the sample directories and sample files after all tests.
    *
    * @throws Exception on any failure
    */

@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,14 +50,17 @@ public class S3AAuditLogMerger {
         for (String singleAuditLogFileName : auditLogFileNames) {
           File singleAuditLogFile =
               new File(auditLogFilesDirectory, singleAuditLogFileName);
-          try (BufferedReader bufferedReader =
-              new BufferedReader(new FileReader(singleAuditLogFile))) {
+          BufferedReader bufferedReader =
+              new BufferedReader(new FileReader(singleAuditLogFile));
+          try {
             String singleLine = bufferedReader.readLine();
             while (singleLine != null) {
               printWriter.println(singleLine);
               singleLine = bufferedReader.readLine();
             }
             printWriter.flush();
+          } finally {
+            bufferedReader.close();
           }
         }
       }
@@ -64,7 +68,8 @@ public class S3AAuditLogMerger {
           auditLogFilesDirectory.getName());
     } else {
       logger.info(
-          "This is an empty directory, expecting a directory with audit log files");
+          "'{}' is an empty directory, expecting a directory with audit log "
+              + "files", auditLogFilesDirectory.getName());
     }
   }
 }
