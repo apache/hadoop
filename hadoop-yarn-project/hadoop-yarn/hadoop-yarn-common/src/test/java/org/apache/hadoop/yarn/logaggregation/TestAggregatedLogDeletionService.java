@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
+import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.enableFileControllers;
 import static org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder.NO_TIMEOUT;
 import static org.mockito.Mockito.mock;
 
@@ -239,6 +240,58 @@ public class TestAggregatedLogDeletionService {
             .build()
             .runDeletionTask(TEN_DAYS_IN_SECONDS)
             .verifyAppDirDeleted(3, NO_TIMEOUT);
+  }
+
+  @Test
+  public void testDeletionTwoControllers() throws IOException {
+    long now = System.currentTimeMillis();
+    long toDeleteTime = now - (2000 * 1000);
+    long toKeepTime = now - (1500 * 1000);
+
+
+    Configuration conf = setupConfiguration(1800, -1);
+    enableFileControllers(conf, REMOTE_ROOT_LOG_DIR, ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
+    long timeout = 2000L;
+    LogAggregationTestcaseBuilder.create(conf)
+            .withRootPath(ROOT)
+            .withRemoteRootLogPath(REMOTE_ROOT_LOG_DIR)
+            .withBothFileControllers()
+            .withUserDir(USER_ME, toKeepTime)
+            .withSuffixDir(SUFFIX, toDeleteTime)
+            .withBucketDir(toDeleteTime)
+            .withApps(//Apps for TFile
+                    Lists.newArrayList(
+                            new AppDescriptor(T_FILE, toDeleteTime, Lists.newArrayList()),
+                    new AppDescriptor(T_FILE, toDeleteTime, Lists.newArrayList(
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toKeepTime))),
+                    new AppDescriptor(T_FILE, toDeleteTime, Lists.newArrayList(
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toDeleteTime))),
+                    new AppDescriptor(T_FILE, toDeleteTime, Lists.newArrayList(
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toKeepTime))),
+                    //Apps for IFile
+                    new AppDescriptor(I_FILE, toDeleteTime, Lists.newArrayList()),
+                    new AppDescriptor(I_FILE, toDeleteTime, Lists.newArrayList(
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toKeepTime))),
+                    new AppDescriptor(I_FILE, toDeleteTime, Lists.newArrayList(
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toDeleteTime))),
+                    new AppDescriptor(I_FILE, toDeleteTime, Lists.newArrayList(
+                            Pair.of(DIR_HOST1, toDeleteTime),
+                            Pair.of(DIR_HOST2, toKeepTime)))))
+            .withFinishedApps(1, 2, 3, 5, 6, 7)
+            .withRunningApps(4, 8)
+            .injectExceptionForAppDirDeletion(3, 6)
+            .build()
+            .setupAndRunDeletionService()
+            .verifyAppDirsDeleted(timeout, 1, 3, 5, 7)
+            .verifyAppDirsNotDeleted(timeout, 2, 4, 6, 8)
+            .verifyAppFilesDeleted(timeout, Lists.newArrayList(Pair.of(4, 1), Pair.of(8, 1)))
+            .verifyAppFilesNotDeleted(timeout, Lists.newArrayList(Pair.of(4, 2), Pair.of(8, 2)))
+            .teardown();
   }
 
   static class MockFileSystem extends FilterFileSystem {
