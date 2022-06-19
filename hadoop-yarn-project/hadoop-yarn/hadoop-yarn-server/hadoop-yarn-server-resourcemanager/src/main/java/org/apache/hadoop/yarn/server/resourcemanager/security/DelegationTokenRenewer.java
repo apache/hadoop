@@ -996,6 +996,7 @@ public class DelegationTokenRenewer extends AbstractService {
     @Override
     public void run() {
       while (true) {
+        waitOneMillisecond();
         for (Map.Entry<DelegationTokenRenewerEvent, Future<?>> entry : futures
             .entrySet()) {
           DelegationTokenRenewerEvent evt = entry.getKey();
@@ -1024,6 +1025,14 @@ public class DelegationTokenRenewer extends AbstractService {
                 + "thread.", e);
           }
         }
+      }
+    }
+
+    private void waitOneMillisecond() {
+      try {
+        Thread.sleep(1);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
       }
     }
   }
