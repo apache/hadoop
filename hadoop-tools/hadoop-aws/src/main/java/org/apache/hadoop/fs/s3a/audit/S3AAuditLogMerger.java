@@ -60,7 +60,9 @@ public class S3AAuditLogMerger {
             }
             printWriter.flush();
           } finally {
-            bufferedReader.close();
+            if(bufferedReader != null) {
+              bufferedReader.close();
+            }
           }
         }
       }
