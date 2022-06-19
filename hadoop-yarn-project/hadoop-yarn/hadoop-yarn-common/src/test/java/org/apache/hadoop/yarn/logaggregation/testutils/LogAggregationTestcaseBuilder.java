@@ -92,7 +92,7 @@ public class LogAggregationTestcaseBuilder {
   }
 
   /**
-   * Bucket dir paths will be generated later
+   * Bucket dir paths will be generated later.
    * @param modTime The modification time
    * @return The builder
    */

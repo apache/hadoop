@@ -25,7 +25,10 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileCo
 
 import java.util.List;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT;
+
 
 public class LogAggregationTestUtils {
   public static final String REMOTE_LOG_ROOT = "target/app-logs/";

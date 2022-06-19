@@ -38,12 +38,17 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS;
 import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.REMOTE_LOG_ROOT;
 import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.enableFileControllers;
 import static org.junit.Assert.*;
@@ -133,8 +138,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
   @Test(expected = Exception.class)
   public void testLogAggregationFileControllerFactoryClassNotSet() {
     Configuration conf = getConf();
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS,
-        "TestLogAggregationFileController");
+    conf.set(LOG_AGGREGATION_FILE_FORMATS, "TestLogAggregationFileController");
     new LogAggregationFileControllerFactory(conf);
     fail("TestLogAggregationFileController's class was not set, " +
         "but the factory creation did not fail.");
@@ -184,7 +188,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
   @Test
   public void testNodemanagerConfigurationIsUsed() {
     Configuration conf = getConf();
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
+    conf.set(LOG_AGGREGATION_FILE_FORMATS, "TFile");
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(conf);
     LogAggregationFileController fc = factory.getFileControllerForWrite();
@@ -200,7 +204,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
     Configuration conf = getConf();
     conf.unset(YarnConfiguration.NM_REMOTE_APP_LOG_DIR);
     conf.unset(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
+    conf.set(LOG_AGGREGATION_FILE_FORMATS, "TFile");
 
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(getConf());
@@ -237,20 +241,19 @@ public class TestLogAggregationFileControllerFactory extends Configured {
     }
 
     @Override
-    public void initializeWriter(LogAggregationFileControllerContext context)
-        throws IOException {
+    public void initializeWriter(LogAggregationFileControllerContext context) {
       // Do Nothing
     }
 
     @Override
     public boolean readAggregatedLogs(ContainerLogsRequest logRequest,
-        OutputStream os) throws IOException {
+        OutputStream os) {
       return false;
     }
 
     @Override
     public List<ContainerLogMeta> readAggregatedLogsMeta(
-        ContainerLogsRequest logRequest) throws IOException {
+        ContainerLogsRequest logRequest) {
       return null;
     }
 
