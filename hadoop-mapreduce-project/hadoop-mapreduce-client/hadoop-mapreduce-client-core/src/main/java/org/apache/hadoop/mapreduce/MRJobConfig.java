@@ -921,7 +921,7 @@ public interface MRJobConfig {
 
   /** Whether to consider ping from tasks in liveliness check. */
   String MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK =
-      "mapreduce.task.enable.ping-for-liveliness-check";
+      "mapreduce.task.ping-for-liveliness-check.enabled";
   boolean DEFAULT_MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK
       = false;
 
