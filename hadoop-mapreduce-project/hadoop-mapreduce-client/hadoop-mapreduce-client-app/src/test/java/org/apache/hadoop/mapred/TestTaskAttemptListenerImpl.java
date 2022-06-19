@@ -415,10 +415,10 @@ public class TestTaskAttemptListenerImpl {
     startListener(true);
     verify(hbHandler).register(attemptId);
 
-    // make sure a ping does report progress
+    // make sure a ping doesn't report progress
     AMFeedback feedback = listener.statusUpdate(attemptID, null);
     assertTrue(feedback.getTaskFound());
-    verify(hbHandler, times(1)).progressing(eq(attemptId));
+    verify(hbHandler, never()).progressing(eq(attemptId));
 
     // make sure a status update does report progress
     MapTaskStatus mockStatus = new MapTaskStatus(attemptID, 0.0f, 1,
@@ -426,7 +426,24 @@ public class TestTaskAttemptListenerImpl {
         new Counters());
     feedback = listener.statusUpdate(attemptID, mockStatus);
     assertTrue(feedback.getTaskFound());
-    verify(hbHandler, times(2)).progressing(eq(attemptId));
+    verify(hbHandler).progressing(eq(attemptId));
+  }
+
+  @Test
+  public void testPingUpdateProgress() throws IOException, InterruptedException {
+    configureMocks();
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK, true);
+    listener.init(conf);
+    listener.start();
+    listener.registerPendingTask(task, wid);
+    listener.registerLaunchedTask(attemptId, wid);
+    verify(hbHandler).register(attemptId);
+
+    // make sure a ping does report progress
+    AMFeedback feedback = listener.statusUpdate(attemptID, null);
+    assertTrue(feedback.getTaskFound());
+    verify(hbHandler, times(1)).progressing(eq(attemptId));
   }
 
   @Test
