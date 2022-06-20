@@ -229,9 +229,9 @@ public class TestMergeManager {
         , null, null, null, null, null, null, null, null, null, mapOutputFile);
 
     MergeThread<MapOutput<IntWritable, IntWritable>, IntWritable, IntWritable>
-      onDiskMerger = (MergeThread<MapOutput<IntWritable, IntWritable>,
+        onDiskMerger = (MergeThread<MapOutput<IntWritable, IntWritable>,
         IntWritable, IntWritable>) FieldUtils.getField(MergeManagerImpl.class,
-         "onDiskMerger",true).get(manager);
+       "onDiskMerger", true).get(manager);
     int mergeFactor = (Integer) FieldUtils.
          getField(MergeThread.class,"mergeFactor",true).get(onDiskMerger);
 
@@ -252,8 +252,8 @@ public class TestMergeManager {
 
     //Check that the files pending to be merged are in sorted order.
     LinkedList<List<CompressAwarePath>> pendingToBeMerged =
-      (LinkedList<List<CompressAwarePath>>) FieldUtils.getField(MergeThread.class,
-         "pendingToBeMerged",true).get(onDiskMerger);
+        (LinkedList<List<CompressAwarePath>>) FieldUtils.getField(MergeThread.class,
+        "pendingToBeMerged", true).get(onDiskMerger);
     assertTrue("No inputs were added to list pending to merge",
       pendingToBeMerged.size() > 0);
     for(int i = 0; i < pendingToBeMerged.size(); ++i) {
