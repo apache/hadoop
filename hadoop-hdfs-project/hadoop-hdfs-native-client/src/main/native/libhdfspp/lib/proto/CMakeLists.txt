@@ -67,10 +67,10 @@ function(GEN_HRPC SRCS)
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.hrpc.inl"
       COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
-      ARGS --plugin=protoc-gen-hrpc=${CMAKE_CURRENT_BINARY_DIR}/protoc-gen-hrpc --hrpc_out=${CMAKE_CURRENT_BINARY_DIR} ${_protobuf_include_path} ${ABS_FIL}
+      ARGS --plugin=protoc-gen-hrpc=$<TARGET_FILE:protoc-gen-hrpc> --hrpc_out=${CMAKE_CURRENT_BINARY_DIR} ${_protobuf_include_path} ${ABS_FIL}
       DEPENDS ${ABS_FIL} ${PROTOBUF_PROTOC_EXECUTABLE} protoc-gen-hrpc
       COMMENT "Running HRPC protocol buffer compiler on ${FIL}"
-      VERBATIM )
+      VERBATIM)
   endforeach()
 
   set_source_files_properties(${${SRCS}} PROPERTIES GENERATED TRUE)

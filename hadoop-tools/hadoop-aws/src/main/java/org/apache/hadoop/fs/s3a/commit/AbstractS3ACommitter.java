@@ -26,32 +26,30 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.s3.model.MultipartUpload;
-
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.audit.AuditConstants;
-import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
+import org.apache.hadoop.fs.s3a.commit.files.PersistentCommitData;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.commit.impl.AuditContextUpdater;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
@@ -62,24 +60,33 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperationsThroughFileSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DurationInfo;
-import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
+import org.apache.hadoop.util.functional.TaskPool;
 
-import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY_SECONDS;
+import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAXIMUM_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAX_TOTAL_TASKS;
+import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.MAX_TOTAL_TASKS;
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
-import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NO_SPARK_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
+import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createJobSummaryFilename;
+import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
  * Abstract base class for S3A committers; allows for any commonality
@@ -136,19 +143,12 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    */
   private final JobUUIDSource uuidSource;
 
-  private final CommonAuditContext commonAuditContext;
-
   /**
    * Has this instance been used for job setup?
    * If so then it is safe for a locally generated
    * UUID to be used for task setup.
    */
   private boolean jobSetup;
-
-  /**
-   * Thread pool for task execution.
-   */
-  private ExecutorService threadPool;
 
   /** Underlying commit operations. */
   private final CommitOperations commitOperations;
@@ -203,9 +203,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       Path outputPath,
       TaskAttemptContext context) throws IOException {
     super(outputPath, context);
-    Preconditions.checkArgument(outputPath != null, "null output path");
-    Preconditions.checkArgument(context != null, "null job context");
-    this.jobContext = context;
+    setOutputPath(outputPath);
+    this.jobContext = requireNonNull(context, "null job context");
     this.role = "Task committer " + context.getTaskAttemptID();
     setConf(context.getConfiguration());
     Pair<String, JobUUIDSource> id = buildJobUUID(
@@ -219,17 +218,20 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     S3AFileSystem fs = getDestS3AFS();
     // set this thread's context with the job ID.
     // audit spans created in this thread will pick
-    // up this value.
-    this.commonAuditContext = currentAuditContext();
-    updateCommonContext();
+    // up this value., including the commit operations instance
+    // soon to be created.
+    new AuditContextUpdater(jobContext)
+        .updateCurrentAuditContext();
+
     // the filesystem is the span source, always.
-    auditSpanSource = fs.getAuditSpanSource();
+    this.auditSpanSource = fs.getAuditSpanSource();
     this.createJobMarker = context.getConfiguration().getBoolean(
         CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
         DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
     // the statistics are shared between this committer and its operations.
     this.committerStatistics = fs.newCommitterStatistics();
-    this.commitOperations = new CommitOperations(fs, committerStatistics);
+    this.commitOperations = new CommitOperations(fs, committerStatistics,
+        outputPath.toString());
   }
 
   /**
@@ -267,8 +269,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * @param outputPath new value
    */
   protected final void setOutputPath(Path outputPath) {
-    Preconditions.checkNotNull(outputPath, "Null output path");
-    this.outputPath = outputPath;
+    this.outputPath = requireNonNull(outputPath, "Null output path");
   }
 
   /**
@@ -337,6 +338,12 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   public Path getJobAttemptPath(JobContext context) {
     return getJobAttemptPath(getAppAttemptId(context));
   }
+
+  /**
+   * Compute the path under which all job attempts will be placed.
+   * @return the path to store job attempt data.
+   */
+  protected abstract Path getJobPath();
 
   /**
    * Compute the path where the output of a given job attempt will be placed.
@@ -440,6 +447,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   protected boolean requiresDelayedCommitOutputInFileSystem() {
     return false;
   }
+
   /**
    * Task recovery considered Unsupported: Warn and fail.
    * @param taskContext Context of the task whose output is being recovered
@@ -450,7 +458,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     LOG.warn("Cannot recover task {}", taskContext.getTaskAttemptID());
     throw new PathCommitException(outputPath,
         String.format("Unable to recover task %s",
-        taskContext.getTaskAttemptID()));
+            taskContext.getTaskAttemptID()));
   }
 
   /**
@@ -459,11 +467,16 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    *
    * While the classic committers create a 0-byte file, the S3A committers
    * PUT up a the contents of a {@link SuccessData} file.
+   *
    * @param context job context
    * @param pending the pending commits
+   *
+   * @return the success data, even if the marker wasn't created
+   *
    * @throws IOException IO failure
    */
-  protected void maybeCreateSuccessMarkerFromCommits(JobContext context,
+  protected SuccessData maybeCreateSuccessMarkerFromCommits(
+      JobContext context,
       ActiveCommit pending) throws IOException {
     List<String> filenames = new ArrayList<>(pending.size());
     // The list of committed objects in pending is size limited in
@@ -472,41 +485,86 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     // load in all the pending statistics
     IOStatisticsSnapshot snapshot = new IOStatisticsSnapshot(
         pending.getIOStatistics());
+    // and the current statistics
     snapshot.aggregate(getIOStatistics());
 
-    maybeCreateSuccessMarker(context, filenames, snapshot);
+    return maybeCreateSuccessMarker(context, filenames, snapshot);
   }
 
   /**
    * if the job requires a success marker on a successful job,
-   * create the file {@link CommitConstants#_SUCCESS}.
+   * create the {@code _SUCCESS} file.
    *
    * While the classic committers create a 0-byte file, the S3A committers
    * PUT up a the contents of a {@link SuccessData} file.
+   * The file is returned, even if no marker is created.
+   * This is so it can be saved to a report directory.
    * @param context job context
    * @param filenames list of filenames.
    * @param ioStatistics any IO Statistics to include
    * @throws IOException IO failure
+   * @return the success data.
    */
-  protected void maybeCreateSuccessMarker(JobContext context,
-      List<String> filenames,
+  protected SuccessData maybeCreateSuccessMarker(
+      final JobContext context,
+      final List<String> filenames,
       final IOStatisticsSnapshot ioStatistics)
       throws IOException {
+
+    SuccessData successData =
+        createSuccessData(context, filenames, ioStatistics,
+            getDestFS().getConf());
     if (createJobMarker) {
-      // create a success data structure and then save it
-      SuccessData successData = new SuccessData();
-      successData.setCommitter(getName());
-      successData.setJobId(uuid);
-      successData.setJobIdSource(uuidSource.getText());
-      successData.setDescription(getRole());
-      successData.setHostname(NetUtils.getLocalHostname());
-      Date now = new Date();
-      successData.setTimestamp(now.getTime());
-      successData.setDate(now.toString());
-      successData.setFilenames(filenames);
-      successData.getIOStatistics().aggregate(ioStatistics);
+      // save it to the job dest dir
       commitOperations.createSuccessMarker(getOutputPath(), successData, true);
     }
+    return successData;
+  }
+
+  /**
+   * Create the success data structure from a job context.
+   * @param context job context.
+   * @param filenames short list of filenames; nullable
+   * @param ioStatistics IOStatistics snapshot
+   * @param destConf config of the dest fs, can be null
+   * @return the structure
+   *
+   */
+  private SuccessData createSuccessData(final JobContext context,
+      final List<String> filenames,
+      final IOStatisticsSnapshot ioStatistics,
+      final Configuration destConf) {
+    // create a success data structure
+    SuccessData successData = new SuccessData();
+    successData.setCommitter(getName());
+    successData.setJobId(uuid);
+    successData.setJobIdSource(uuidSource.getText());
+    successData.setDescription(getRole());
+    successData.setHostname(NetUtils.getLocalHostname());
+    Date now = new Date();
+    successData.setTimestamp(now.getTime());
+    successData.setDate(now.toString());
+    if (filenames != null) {
+      successData.setFilenames(filenames);
+    }
+    successData.getIOStatistics().aggregate(ioStatistics);
+    // attach some config options as diagnostics to assist
+    // in debugging performance issues.
+
+    // commit thread pool size
+    successData.addDiagnostic(FS_S3A_COMMITTER_THREADS,
+        Integer.toString(getJobCommitThreadCount(context)));
+
+    // and filesystem http connection and thread pool sizes
+    if (destConf != null) {
+      successData.addDiagnostic(MAXIMUM_CONNECTIONS,
+          destConf.get(MAXIMUM_CONNECTIONS,
+              Integer.toString(DEFAULT_MAXIMUM_CONNECTIONS)));
+      successData.addDiagnostic(MAX_TOTAL_TASKS,
+          destConf.get(MAX_TOTAL_TASKS,
+              Integer.toString(DEFAULT_MAX_TOTAL_TASKS)));
+    }
+    return successData;
   }
 
   /**
@@ -556,7 +614,11 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   @Override
   public void setupTask(TaskAttemptContext context) throws IOException {
     TaskAttemptID attemptID = context.getTaskAttemptID();
-    updateCommonContext();
+
+    // update the context so that task IO in the same thread has
+    // the relevant values.
+    new AuditContextUpdater(context)
+        .updateCurrentAuditContext();
 
     try (DurationInfo d = new DurationInfo(LOG, "Setup Task %s",
         attemptID)) {
@@ -572,6 +634,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       }
       Path taskAttemptPath = getTaskAttemptPath(context);
       FileSystem fs = taskAttemptPath.getFileSystem(getConf());
+      // delete that ta path if somehow it was there
+      fs.delete(taskAttemptPath, true);
+      // create an empty directory
       fs.mkdirs(taskAttemptPath);
     }
   }
@@ -596,25 +661,23 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * On a failure or abort of a single file's commit, all its uploads are
    * aborted.
    * The revert operation lists the files already committed and deletes them.
-   * @param context job context
+   * @param commitContext commit context
    * @param pending  pending uploads
    * @throws IOException on any failure
    */
   protected void commitPendingUploads(
-      final JobContext context,
+      final CommitContext commitContext,
       final ActiveCommit pending) throws IOException {
     if (pending.isEmpty()) {
       LOG.warn("{}: No pending uploads to commit", getRole());
     }
     try (DurationInfo ignored = new DurationInfo(LOG,
-        "committing the output of %s task(s)", pending.size());
-        CommitOperations.CommitContext commitContext
-            = initiateCommitOperation()) {
+        "committing the output of %s task(s)", pending.size())) {
 
-      Tasks.foreach(pending.getSourceFiles())
+      TaskPool.foreach(pending.getSourceFiles())
           .stopOnFailure()
           .suppressExceptions(false)
-          .executeWith(buildSubmitter(context))
+          .executeWith(commitContext.getOuterSubmitter())
           .abortWith(status ->
               loadAndAbort(commitContext, pending, status, true, false))
           .revertWith(status ->
@@ -629,35 +692,39 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * This check avoids the situation where the inability to read
    * a file only surfaces partway through the job commit, so
    * results in the destination being tainted.
-   * @param context job context
+   * @param commitContext commit context
    * @param pending the pending operations
    * @throws IOException any failure
    */
   protected void precommitCheckPendingFiles(
-      final JobContext context,
+      final CommitContext commitContext,
       final ActiveCommit pending) throws IOException {
 
     FileSystem sourceFS = pending.getSourceFS();
     try (DurationInfo ignored =
              new DurationInfo(LOG, "Preflight Load of pending files")) {
 
-      Tasks.foreach(pending.getSourceFiles())
+      TaskPool.foreach(pending.getSourceFiles())
           .stopOnFailure()
           .suppressExceptions(false)
-          .executeWith(buildSubmitter(context))
-          .run(status -> PendingSet.load(sourceFS, status));
+          .executeWith(commitContext.getOuterSubmitter())
+          .run(status -> PersistentCommitData.load(sourceFS, status,
+              commitContext.getPendingSetSerializer()));
     }
   }
 
   /**
    * Load a pendingset file and commit all of its contents.
+   * Invoked within a parallel run; the commitContext thread
+   * pool is already busy/possibly full, so do not
+   * execute work through the same submitter.
    * @param commitContext context to commit through
    * @param activeCommit commit state
    * @param status file to load
    * @throws IOException failure
    */
   private void loadAndCommit(
-      final CommitOperations.CommitContext commitContext,
+      final CommitContext commitContext,
       final ActiveCommit activeCommit,
       final FileStatus status) throws IOException {
 
@@ -665,18 +732,20 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     try (DurationInfo ignored =
              new DurationInfo(LOG,
                  "Loading and committing files in pendingset %s", path)) {
-      PendingSet pendingSet = PendingSet.load(activeCommit.getSourceFS(),
-          status);
+      PendingSet pendingSet = PersistentCommitData.load(
+          activeCommit.getSourceFS(),
+          status,
+          commitContext.getPendingSetSerializer());
       String jobId = pendingSet.getJobId();
       if (!StringUtils.isEmpty(jobId) && !getUUID().equals(jobId)) {
         throw new PathCommitException(path,
             String.format("Mismatch in Job ID (%s) and commit job ID (%s)",
                 getUUID(), jobId));
       }
-      Tasks.foreach(pendingSet.getCommits())
+      TaskPool.foreach(pendingSet.getCommits())
           .stopOnFailure()
           .suppressExceptions(false)
-          .executeWith(singleThreadSubmitter())
+          .executeWith(commitContext.getInnerSubmitter())
           .onFailure((commit, exception) ->
               commitContext.abortSingleCommit(commit))
           .abortWith(commitContext::abortSingleCommit)
@@ -692,22 +761,27 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
 
   /**
    * Load a pendingset file and revert all of its contents.
+   * Invoked within a parallel run; the commitContext thread
+   * pool is already busy/possibly full, so do not
+   * execute work through the same submitter.
    * @param commitContext context to commit through
    * @param activeCommit commit state
    * @param status status of file to load
    * @throws IOException failure
    */
   private void loadAndRevert(
-      final CommitOperations.CommitContext commitContext,
+      final CommitContext commitContext,
       final ActiveCommit activeCommit,
       final FileStatus status) throws IOException {
 
     final Path path = status.getPath();
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, "Committing %s", path)) {
-      PendingSet pendingSet = PendingSet.load(activeCommit.getSourceFS(),
-          status);
-      Tasks.foreach(pendingSet.getCommits())
+      PendingSet pendingSet = PersistentCommitData.load(
+          activeCommit.getSourceFS(),
+          status,
+          commitContext.getPendingSetSerializer());
+      TaskPool.foreach(pendingSet.getCommits())
           .suppressExceptions(true)
           .run(commitContext::revertCommit);
     }
@@ -715,6 +789,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
 
   /**
    * Load a pendingset file and abort all of its contents.
+   * Invoked within a parallel run; the commitContext thread
+   * pool is already busy/possibly full, so do not
+   * execute work through the same submitter.
    * @param commitContext context to commit through
    * @param activeCommit commit state
    * @param status status of file to load
@@ -722,7 +799,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * @throws IOException failure
    */
   private void loadAndAbort(
-      final CommitOperations.CommitContext commitContext,
+      final CommitContext commitContext,
       final ActiveCommit activeCommit,
       final FileStatus status,
       final boolean suppressExceptions,
@@ -731,11 +808,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     final Path path = status.getPath();
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, "Aborting %s", path)) {
-      PendingSet pendingSet = PendingSet.load(activeCommit.getSourceFS(),
-          status);
+      PendingSet pendingSet = PersistentCommitData.load(
+          activeCommit.getSourceFS(),
+          status,
+          commitContext.getPendingSetSerializer());
       FileSystem fs = getDestFS();
-      Tasks.foreach(pendingSet.getCommits())
-          .executeWith(singleThreadSubmitter())
+      TaskPool.foreach(pendingSet.getCommits())
+          .executeWith(commitContext.getInnerSubmitter())
           .suppressExceptions(suppressExceptions)
           .run(commit -> {
             try {
@@ -752,28 +831,51 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   }
 
   /**
-   * Start the final commit/abort commit operations.
+   * Start the final job commit/abort commit operations.
+   * @param context job context
    * @return a commit context through which the operations can be invoked.
    * @throws IOException failure.
    */
-  protected CommitOperations.CommitContext initiateCommitOperation()
+  protected CommitContext initiateJobOperation(
+      final JobContext context)
       throws IOException {
-    return getCommitOperations().initiateCommitOperation(getOutputPath());
+
+    return getCommitOperations().createCommitContext(
+        context,
+        getOutputPath(),
+        getJobCommitThreadCount(context));
+  }
+  /**
+   * Start a ask commit/abort commit operations.
+   * This may have a different thread count.
+   * @param context job or task context
+   * @return a commit context through which the operations can be invoked.
+   * @throws IOException failure.
+   */
+  protected CommitContext initiateTaskOperation(
+      final JobContext context)
+      throws IOException {
+
+    return getCommitOperations().createCommitContext(
+        context,
+        getOutputPath(),
+        getTaskCommitThreadCount(context));
   }
 
   /**
    * Internal Job commit operation: where the S3 requests are made
    * (potentially in parallel).
-   * @param context job context
+   * @param commitContext commit context
    * @param pending pending commits
    * @throws IOException any failure
    */
-  protected void commitJobInternal(JobContext context,
-      ActiveCommit pending)
+  protected void commitJobInternal(
+      final CommitContext commitContext,
+      final ActiveCommit pending)
       throws IOException {
     trackDurationOfInvocation(committerStatistics,
         COMMITTER_COMMIT_JOB.getSymbol(),
-        () -> commitPendingUploads(context, pending));
+        () -> commitPendingUploads(commitContext, pending));
   }
 
   @Override
@@ -782,7 +884,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     LOG.info("{}: aborting job {} in state {}",
         getRole(), jobIdString(context), state);
     // final cleanup operations
-    abortJobInternal(context, false);
+    try (CommitContext commitContext = initiateJobOperation(context)){
+      abortJobInternal(commitContext, false);
+    }
   }
 
 
@@ -790,30 +894,33 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * The internal job abort operation; can be overridden in tests.
    * This must clean up operations; it is called when a commit fails, as
    * well as in an {@link #abortJob(JobContext, JobStatus.State)} call.
-   * The base implementation calls {@link #cleanup(JobContext, boolean)}
+   * The base implementation calls {@link #cleanup(CommitContext, boolean)}
    * so cleans up the filesystems and destroys the thread pool.
    * Subclasses must always invoke this superclass method after their
    * own operations.
-   * @param context job context
+   * Creates and closes its own commit context.
+   *
+   * @param commitContext commit context
    * @param suppressExceptions should exceptions be suppressed?
    * @throws IOException any IO problem raised when suppressExceptions is false.
    */
-  protected void abortJobInternal(JobContext context,
+  protected void abortJobInternal(CommitContext commitContext,
       boolean suppressExceptions)
       throws IOException {
-    cleanup(context, suppressExceptions);
+    cleanup(commitContext, suppressExceptions);
   }
 
   /**
    * Abort all pending uploads to the destination directory during
    * job cleanup operations.
    * Note: this instantiates the thread pool if required -so
-   * {@link #destroyThreadPool()} must be called after this.
    * @param suppressExceptions should exceptions be suppressed
+   * @param commitContext commit context
    * @throws IOException IO problem
    */
   protected void abortPendingUploadsInCleanup(
-      boolean suppressExceptions) throws IOException {
+      boolean suppressExceptions,
+      CommitContext commitContext) throws IOException {
     // return early if aborting is disabled.
     if (!shouldAbortUploadsInCleanup()) {
       LOG.debug("Not cleanup up pending uploads to {} as {} is false ",
@@ -824,9 +931,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     Path dest = getOutputPath();
     try (DurationInfo ignored =
              new DurationInfo(LOG, "Aborting all pending commits under %s",
-                 dest);
-         CommitOperations.CommitContext commitContext
-             = initiateCommitOperation()) {
+                 dest)) {
       CommitOperations ops = getCommitOperations();
       List<MultipartUpload> pending;
       try {
@@ -840,8 +945,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
         LOG.warn("{} pending uploads were found -aborting", pending.size());
         LOG.warn("If other tasks/jobs are writing to {},"
             + "this action may cause them to fail", dest);
-        Tasks.foreach(pending)
-            .executeWith(buildSubmitter(getJobContext()))
+        TaskPool.foreach(pending)
+            .executeWith(commitContext.getOuterSubmitter())
             .suppressExceptions(suppressExceptions)
             .run(u -> commitContext.abortMultipartCommit(
                 u.getKey(), u.getUploadId()));
@@ -863,12 +968,12 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * they can be loaded.
    * The Magic committer does not, because of the overhead of reading files
    * from S3 makes it too expensive.
-   * @param context job context
+   * @param commitContext commit context
    * @param pending the pending operations
    * @throws IOException any failure
    */
   @VisibleForTesting
-  public void preCommitJob(JobContext context,
+  public void preCommitJob(CommitContext commitContext,
       ActiveCommit pending) throws IOException {
   }
 
@@ -890,23 +995,55 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   @Override
   public void commitJob(JobContext context) throws IOException {
     String id = jobIdString(context);
+    // the commit context is created outside a try-with-resources block
+    // so it can be used in exception handling.
+    CommitContext commitContext = null;
+
+    SuccessData successData = null;
+    IOException failure = null;
+    String stage = "preparing";
     try (DurationInfo d = new DurationInfo(LOG,
         "%s: commitJob(%s)", getRole(), id)) {
+      commitContext = initiateJobOperation(context);
       ActiveCommit pending
-          = listPendingUploadsToCommit(context);
-      preCommitJob(context, pending);
-      commitJobInternal(context, pending);
+          = listPendingUploadsToCommit(commitContext);
+      stage = "precommit";
+      preCommitJob(commitContext, pending);
+      stage = "commit";
+      commitJobInternal(commitContext, pending);
+      stage = "completed";
       jobCompleted(true);
-      maybeCreateSuccessMarkerFromCommits(context, pending);
-      cleanup(context, false);
+      stage = "marker";
+      successData = maybeCreateSuccessMarkerFromCommits(context, pending);
+      stage = "cleanup";
+      cleanup(commitContext, false);
     } catch (IOException e) {
+      // failure. record it for the summary
+      failure = e;
       LOG.warn("Commit failure for job {}", id, e);
       jobCompleted(false);
-      abortJobInternal(context, true);
+      abortJobInternal(commitContext, true);
       throw e;
     } finally {
-      resetCommonContext();
+      // save the report summary, even on failure
+      if (commitContext != null) {
+        if (successData == null) {
+          // if the commit did not get as far as creating success data, create one.
+          successData = createSuccessData(context, null, null,
+              getDestFS().getConf());
+        }
+        // save quietly, so no exceptions are raised
+        maybeSaveSummary(stage,
+            commitContext,
+            successData,
+            failure,
+            true,
+            true);
+        // and close that commit context
+        commitContext.close();
+      }
     }
+
   }
 
   /**
@@ -925,30 +1062,28 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
 
   /**
    * Get the list of pending uploads for this job attempt.
-   * @param context job context
+   * @param commitContext commit context
    * @return a list of pending uploads.
    * @throws IOException Any IO failure
    */
   protected abstract ActiveCommit listPendingUploadsToCommit(
-      JobContext context)
+      CommitContext commitContext)
       throws IOException;
 
   /**
    * Cleanup the job context, including aborting anything pending
    * and destroying the thread pool.
-   * @param context job context
+   * @param commitContext commit context
    * @param suppressExceptions should exceptions be suppressed?
    * @throws IOException any failure if exceptions were not suppressed.
    */
-  protected void cleanup(JobContext context,
+  protected void cleanup(CommitContext commitContext,
       boolean suppressExceptions) throws IOException {
     try (DurationInfo d = new DurationInfo(LOG,
-        "Cleanup job %s", jobIdString(context))) {
-      abortPendingUploadsInCleanup(suppressExceptions);
+        "Cleanup job %s", jobIdString(commitContext.getJobContext()))) {
+      abortPendingUploadsInCleanup(suppressExceptions, commitContext);
     } finally {
-      destroyThreadPool();
       cleanupStagingDirs();
-      resetCommonContext();
     }
   }
 
@@ -958,8 +1093,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     String r = getRole();
     String id = jobIdString(context);
     LOG.warn("{}: using deprecated cleanupJob call for {}", r, id);
-    try (DurationInfo d = new DurationInfo(LOG, "%s: cleanup Job %s", r, id)) {
-      cleanup(context, true);
+    try (DurationInfo d = new DurationInfo(LOG, "%s: cleanup Job %s", r, id);
+         CommitContext commitContext = initiateJobOperation(context)) {
+      cleanup(commitContext, true);
     }
   }
 
@@ -1017,136 +1153,25 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   }
 
   /**
-   * Returns an {@link Tasks.Submitter} for parallel tasks. The number of
-   * threads in the thread-pool is set by fs.s3a.committer.threads.
-   * If num-threads is 0, this will return null;
-   * this is used in Tasks as a cue
-   * to switch to single-threaded execution.
-   *
-   * @param context the JobContext for this commit
-   * @return a submitter or null
-   */
-  protected Tasks.Submitter buildSubmitter(
-      JobContext context) {
-    if (getThreadCount(context) > 0) {
-      return new PoolSubmitter(context);
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * Returns an {@link ExecutorService} for parallel tasks. The number of
-   * threads in the thread-pool is set by fs.s3a.committer.threads.
-   * If num-threads is 0, this will raise an exception.
-   *
-   * @param context the JobContext for this commit
-   * @param numThreads threads
-   * @return an {@link ExecutorService} for the number of threads
-   */
-  private synchronized ExecutorService buildThreadPool(
-      JobContext context, int numThreads) {
-    Preconditions.checkArgument(numThreads > 0,
-        "Cannot create a thread pool with no threads");
-    if (threadPool == null) {
-      LOG.debug("{}: creating thread pool of size {}", getRole(), numThreads);
-      threadPool = HadoopExecutors.newFixedThreadPool(numThreads,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat(THREAD_PREFIX + context.getJobID() + "-%d")
-              .build());
-    }
-    return threadPool;
-  }
-
-  /**
    * Get the thread count for this job's commit operations.
    * @param context the JobContext for this commit
    * @return a possibly zero thread count.
    */
-  private int getThreadCount(final JobContext context) {
+  private int getJobCommitThreadCount(final JobContext context) {
     return context.getConfiguration().getInt(
         FS_S3A_COMMITTER_THREADS,
         DEFAULT_COMMITTER_THREADS);
   }
 
   /**
-   * Submit a runnable.
-   * This will demand-create the thread pool if needed.
-   * <p></p>
-   * This is synchronized to ensure the thread pool is always valid when
-   * work is synchronized. See HADOOP-16798.
+   * Get the thread count for this task's commit operations.
    * @param context the JobContext for this commit
-   * @param task task to execute
-   * @return the future of the submitted task.
+   * @return a possibly zero thread count.
    */
-  private synchronized Future<?> submitRunnable(
-      final JobContext context,
-      final Runnable task) {
-    return buildThreadPool(context, getThreadCount(context)).submit(task);
-  }
-
-  /**
-   * The real task submitter, which hands off the work to
-   * the current thread pool.
-   */
-  private final class PoolSubmitter implements Tasks.Submitter {
-
-    private final JobContext context;
-
-    private final int numThreads;
-
-    private PoolSubmitter(final JobContext context) {
-      this.numThreads = getThreadCount(context);
-      Preconditions.checkArgument(numThreads > 0,
-          "Cannot create a thread pool with no threads");
-      this.context = context;
-    }
-
-    @Override
-    public Future<?> submit(final Runnable task) {
-      return submitRunnable(context, task);
-    }
-
-  }
-
-  /**
-   * Destroy any thread pools; wait for that to finish,
-   * but don't overreact if it doesn't finish in time.
-   */
-  protected void destroyThreadPool() {
-    ExecutorService pool;
-    // reset the thread pool in a sync block, then shut it down
-    // afterwards. This allows for other threads to create a
-    // new thread pool on demand.
-    synchronized(this) {
-      pool = this.threadPool;
-      threadPool = null;
-    }
-    if (pool != null) {
-      LOG.debug("Destroying thread pool");
-      HadoopExecutors.shutdown(pool, LOG,
-          THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-    }
-  }
-
-  /**
-   * Get the thread pool for executing the single file commit/revert
-   * within the commit of all uploads of a single task.
-   * This is currently null; it is here to allow the Tasks class to
-   * provide the logic for execute/revert.
-   * @return null. always.
-   */
-  protected final synchronized Tasks.Submitter singleThreadSubmitter() {
-    return null;
-  }
-
-  /**
-   * Does this committer have a thread pool?
-   * @return true if a thread pool exists.
-   */
-  public synchronized boolean hasThreadPool() {
-    return threadPool != null;
+  private int getTaskCommitThreadCount(final JobContext context) {
+    return context.getConfiguration().getInt(
+        FS_S3A_COMMITTER_THREADS,
+        DEFAULT_COMMITTER_THREADS);
   }
 
   /**
@@ -1164,24 +1189,23 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * Abort all pending uploads in the list.
    * This operation is used by the magic committer as part of its
    * rollback after a failure during task commit.
-   * @param context job context
+   * @param commitContext commit context
    * @param pending pending uploads
    * @param suppressExceptions should exceptions be suppressed
    * @throws IOException any exception raised
    */
-  protected void abortPendingUploads(JobContext context,
-      List<SinglePendingCommit> pending,
-      boolean suppressExceptions)
+  protected void abortPendingUploads(
+      final CommitContext commitContext,
+      final List<SinglePendingCommit> pending,
+      final boolean suppressExceptions)
       throws IOException {
     if (pending == null || pending.isEmpty()) {
       LOG.info("{}: no pending commits to abort", getRole());
     } else {
       try (DurationInfo d = new DurationInfo(LOG,
-          "Aborting %s uploads", pending.size());
-           CommitOperations.CommitContext commitContext
-               = initiateCommitOperation()) {
-        Tasks.foreach(pending)
-            .executeWith(buildSubmitter(context))
+          "Aborting %s uploads", pending.size())) {
+        TaskPool.foreach(pending)
+            .executeWith(commitContext.getOuterSubmitter())
             .suppressExceptions(suppressExceptions)
             .run(commitContext::abortSingleCommit);
       }
@@ -1190,27 +1214,24 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
 
   /**
    * Abort all pending uploads in the list.
-   * @param context job context
+   * @param commitContext commit context
    * @param pending pending uploads
    * @param suppressExceptions should exceptions be suppressed?
    * @param deleteRemoteFiles should remote files be deleted?
    * @throws IOException any exception raised
    */
   protected void abortPendingUploads(
-      final JobContext context,
+      final CommitContext commitContext,
       final ActiveCommit pending,
       final boolean suppressExceptions,
       final boolean deleteRemoteFiles) throws IOException {
-
     if (pending.isEmpty()) {
       LOG.info("{}: no pending commits to abort", getRole());
     } else {
       try (DurationInfo d = new DurationInfo(LOG,
-          "Aborting %s uploads", pending.size());
-           CommitOperations.CommitContext commitContext
-               = initiateCommitOperation()) {
-        Tasks.foreach(pending.getSourceFiles())
-            .executeWith(buildSubmitter(context))
+          "Aborting %s uploads", pending.size())) {
+        TaskPool.foreach(pending.getSourceFiles())
+            .executeWith(commitContext.getOuterSubmitter())
             .suppressExceptions(suppressExceptions)
             .run(path ->
                 loadAndAbort(commitContext,
@@ -1392,13 +1413,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    */
   protected final void updateCommonContext() {
     currentAuditContext().put(AuditConstants.PARAM_JOB_ID, uuid);
-  }
 
-  /**
-   * Remove JobID from the current thread's context.
-   */
-  protected final void resetCommonContext() {
-    currentAuditContext().remove(AuditConstants.PARAM_JOB_ID);
   }
 
   protected AuditSpanSource getAuditSpanSource() {
@@ -1424,6 +1439,77 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     return getAuditSpanSource().createSpan(name, path1, path2);
   }
 
+
+  /**
+   * Save a summary to the report dir if the config option
+   * is set.
+   * The report will be updated with the current active stage,
+   * and if {@code thrown} is non-null, it will be added to the
+   * diagnostics (and the job tagged as a failure).
+   * Static for testability.
+   * @param activeStage active stage
+   * @param context commit context.
+   * @param report summary file.
+   * @param thrown any exception indicting failure.
+   * @param quiet should exceptions be swallowed.
+   * @param overwrite should the existing file be overwritten
+   * @return the path of a file, if successfully saved
+   * @throws IOException if a failure occured and quiet==false
+   */
+  private static Path maybeSaveSummary(
+      String activeStage,
+      CommitContext context,
+      SuccessData report,
+      Throwable thrown,
+      boolean quiet,
+      boolean overwrite) throws IOException {
+    Configuration conf = context.getConf();
+    String reportDir = conf.getTrimmed(OPT_SUMMARY_REPORT_DIR, "");
+    if (reportDir.isEmpty()) {
+      LOG.debug("No summary directory set in " + OPT_SUMMARY_REPORT_DIR);
+      return null;
+    }
+    LOG.debug("Summary directory set to {}", reportDir);
+
+    Path reportDirPath = new Path(reportDir);
+    Path path = new Path(reportDirPath,
+        createJobSummaryFilename(context.getJobId()));
+
+    if (thrown != null) {
+      report.recordJobFailure(thrown);
+    }
+    report.putDiagnostic(STAGE, activeStage);
+    // the store operations here is explicitly created for the FS where
+    // the reports go, which may not be the target FS of the job.
+
+    final FileSystem fs = path.getFileSystem(conf);
+    try (ManifestStoreOperations operations = new ManifestStoreOperationsThroughFileSystem(
+        fs)) {
+      if (!overwrite) {
+        // check for file existence so there is no need to worry about
+        // precisely what exception is raised when overwrite=false and dest file
+        // exists
+        try {
+          FileStatus st = operations.getFileStatus(path);
+          // get here and the file exists
+          LOG.debug("Report already exists: {}", st);
+          return null;
+        } catch (FileNotFoundException ignored) {
+        }
+      }
+      report.save(fs, path, SuccessData.serializer());
+      LOG.info("Job summary saved to {}", path);
+      return path;
+    } catch (IOException e) {
+      LOG.debug("Failed to save summary to {}", path, e);
+      if (quiet) {
+        return null;
+      } else {
+        throw e;
+      }
+    }
+  }
+
   /**
    * State of the active commit operation.
    *
@@ -1445,7 +1531,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    *   </li>
    * </ol>
    */
-  public static class ActiveCommit {
+  public static final class ActiveCommit {
 
     private static final AbstractS3ACommitter.ActiveCommit EMPTY
         = new ActiveCommit(null, new ArrayList<>());
@@ -1486,6 +1572,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
      * @param sourceFS filesystem containing the list of pending files
      * @param sourceFiles .pendingset files to load and commit.
      */
+    @SuppressWarnings("unchecked")
     public ActiveCommit(
         final FileSystem sourceFS,
         final List<? extends FileStatus> sourceFiles) {
@@ -1496,13 +1583,14 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     /**
      * Create an active commit of the given pending files.
      * @param pendingFS source filesystem.
-     * @param statuses list of file status or subclass to use.
+     * @param statuses iterator of file status or subclass to use.
      * @return the commit
+     * @throws IOException if the iterator raises one.
      */
-    public static ActiveCommit fromStatusList(
+    public static ActiveCommit fromStatusIterator(
         final FileSystem pendingFS,
-        final List<? extends FileStatus> statuses) {
-      return new ActiveCommit(pendingFS, statuses);
+        final RemoteIterator<? extends FileStatus> statuses) throws IOException {
+      return new ActiveCommit(pendingFS, toList(statuses));
     }
 
     /**
