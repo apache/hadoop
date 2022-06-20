@@ -266,9 +266,10 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
     final int directories = directoriesInPath(srcDir);
     verifyMetrics(() -> {
-      file(new Path(srcDir, "source.txt"));
+      final Path srcPath = new Path(srcDir, "source.txt");
+      file(srcPath);
       LOG.info("Metrics: {}\n{}", getMetricSummary(), getFileSystem());
-      return "after touch(fs, srcFilePath) " + getMetricSummary();
+      return "after touch(fs, " + srcPath + ")" + getMetricSummary();
     },
         with(DIRECTORIES_CREATED, 0),
         with(DIRECTORIES_DELETED, 0),
@@ -276,10 +277,10 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         withWhenKeeping(getDeleteMarkerStatistic(), 0),
         withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
         // delete all possible fake dirs above the file
-        withWhenDeleting(getDeleteMarkerStatistic(),
-            isBulkDelete() ? 1: directories),
         withWhenDeleting(FAKE_DIRECTORIES_DELETED,
-            directories));
+            directories),
+        withWhenDeleting(getDeleteMarkerStatistic(),
+            isBulkDelete() ? 1: directories));
   }
 
 }

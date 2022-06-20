@@ -26,7 +26,7 @@ create a new file or open an existing file on `FileSystem` for write.
 ## Invariants
 
 The `FSDataOutputStreamBuilder` interface does not validate parameters
-and modify the state of `FileSystem` until [`build()`](#Builder.build) is
+and modify the state of `FileSystem` until `build()` is
 invoked.
 
 ## Implementation-agnostic parameters.
@@ -110,7 +110,7 @@ of `FileSystem`.
 #### Implementation Notes
 
 The concrete `FileSystem` and/or `FSDataOutputStreamBuilder` implementation
-MUST verify that implementation-agnostic parameters (i.e., "syncable") or
+MUST verify that implementation-agnostic parameters (i.e., "syncable`) or
 implementation-specific parameters (i.e., "foofs:cache")
 are supported. `FileSystem` will satisfy optional parameters (via `opt(key, ...)`)
 on best effort. If the mandatory parameters (via `must(key, ...)`) can not be satisfied
@@ -182,3 +182,58 @@ see `FileSystem#create(path, ...)` and `FileSystem#append()`.
     result = FSDataOutputStream
 
 The result is `FSDataOutputStream` to be used to write data to filesystem.
+
+
+## <a name="s3a"></a> S3A-specific options
+
+Here are the custom options which the S3A Connector supports.
+
+| Name                        | Type      | Meaning                                |
+|-----------------------------|-----------|----------------------------------------|
+| `fs.s3a.create.performance` | `boolean` | create a file with maximum performance |
+| `fs.s3a.create.header`      | `string`  | prefix for user supplied headers       |
+
+### `fs.s3a.create.performance`
+
+Prioritize file creation performance over safety checks for filesystem consistency.
+
+This:
+1. Skips the `LIST` call which makes sure a file is being created over a directory.
+   Risk: a file is created over a directory.
+1. Ignores the overwrite flag.
+1. Never issues a `DELETE` call to delete parent directory markers.
+
+It is possible to probe an S3A Filesystem instance for this capability through
+the `hasPathCapability(path, "fs.s3a.create.performance")` check.
+
+Creating files with this option over existing directories is likely
+to make S3A filesystem clients behave inconsistently.
+
+Operations optimized for directories (e.g. listing calls) are likely
+to see the directory tree not the file; operations optimized for
+files (`getFileStatus()`, `isFile()`) more likely to see the file.
+The exact form of the inconsistencies, and which operations/parameters
+trigger this are undefined and may change between even minor releases.
+
+Using this option is the equivalent of pressing and holding down the
+"Electronic Stability Control"
+button on a rear-wheel drive car for five seconds: the safety checks are off.
+Things wil be faster if the driver knew what they were doing.
+If they didn't, the fact they had held the button down will
+be used as evidence at the inquest as proof that they made a
+conscious decision to choose speed over safety and
+that the outcome was their own fault.
+
+Accordingly: *Use if and only if you are confident that the conditions are met.*
+
+### `fs.s3a.create.header` User-supplied header support
+
+Options with the prefix `fs.s3a.create.header.` will be added to to the
+S3 object metadata as "user defined metadata".
+This metadata is visible to all applications. It can also be retrieved through the
+FileSystem/FileContext `listXAttrs()` and `getXAttrs()` API calls with the prefix `header.`
+
+When an object is renamed, the metadata is propagated the copy created.
+
+It is possible to probe an S3A Filesystem instance for this capability through
+the `hasPathCapability(path, "fs.s3a.create.header")` check.

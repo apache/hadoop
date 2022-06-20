@@ -75,7 +75,9 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    auditor = (AccessCheckingAuditor) getFileSystem().getAuditor();
+    final S3AFileSystem fs = getFileSystem();
+    auditor = (AccessCheckingAuditor) fs.getAuditor();
+    setSpanSource(fs);
   }
 
   @Test
