@@ -278,11 +278,12 @@ public class LogAggregationTestcase {
     List<ApplicationId> finishedApps = createFinishedAppsList();
     List<ApplicationId> runningApps = createRunningAppsList();
     ApplicationClientProtocol rmClient = createMockRMClient(finishedApps, runningApps);
-    List<LogDeletionTask> tasks = deletionService.createLogDeletionTasks(conf, retentionSeconds, rmClient);
+    List<LogDeletionTask> tasks = deletionService.createLogDeletionTasks(conf, retentionSeconds,
+            rmClient);
     for (LogDeletionTask deletionTask : tasks) {
-      deletionTask.run();  
+      deletionTask.run();
     }
-    
+
     return this;
   }
 

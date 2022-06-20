@@ -69,7 +69,7 @@ public class AggregatedLogDeletionService extends AbstractService {
     private ApplicationClientProtocol rmClient = null;
     
     public LogDeletionTask(Configuration conf, long retentionSecs,
-                           ApplicationClientProtocol rmClient, 
+                           ApplicationClientProtocol rmClient,
                            LogAggregationFileController fileController) {
       this.conf = conf;
       this.retentionMillis = retentionSecs * 1000;
@@ -322,7 +322,7 @@ public class AggregatedLogDeletionService extends AbstractService {
     for (LogDeletionTask task : tasks) {
       if (task != null && task.getRMClient() != null) {
         RPC.stopProxy(task.getRMClient());
-      }   
+      }
     }
   }
 }

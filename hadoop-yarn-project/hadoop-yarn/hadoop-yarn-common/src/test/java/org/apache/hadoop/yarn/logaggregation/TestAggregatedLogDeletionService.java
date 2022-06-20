@@ -250,7 +250,8 @@ public class TestAggregatedLogDeletionService {
 
 
     Configuration conf = setupConfiguration(1800, -1);
-    enableFileControllers(conf, REMOTE_ROOT_LOG_DIR, ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
+    enableFileControllers(conf, REMOTE_ROOT_LOG_DIR, ALL_FILE_CONTROLLERS,
+            ALL_FILE_CONTROLLER_NAMES);
     long timeout = 2000L;
     LogAggregationTestcaseBuilder.create(conf)
             .withRootPath(ROOT)
