@@ -774,7 +774,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private void handleDeprecation() {
     LOG.debug("Handling deprecation for all properties in config...");
     DeprecationContext deprecations = deprecationContext.get();
-    Set<Object> keys = new HashSet<Object>();
+    Set<Object> keys = new HashSet<>();
     keys.addAll(getProps().keySet());
     for (Object item: keys) {
       LOG.debug("Handling deprecation for " + (String)item);

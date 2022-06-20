@@ -716,7 +716,7 @@ extends AbstractDelegationTokenIdentifier>
   /** Remove expired delegation tokens from cache */
   private void removeExpiredToken() throws IOException {
     long now = Time.now();
-    Set<TokenIdent> expiredTokens = new HashSet<TokenIdent>();
+    Set<TokenIdent> expiredTokens = new HashSet<>();
     synchronized (this) {
       Iterator<Map.Entry<TokenIdent, DelegationTokenInformation>> i =
           currentTokens.entrySet().iterator();
