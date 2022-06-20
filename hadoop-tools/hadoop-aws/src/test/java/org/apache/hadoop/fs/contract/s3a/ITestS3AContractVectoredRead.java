@@ -59,7 +59,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
-    testExceptionalVectoredRead(fs, fileRanges, EOFException.class);
+    verifyExceptionalVectoredRead(fs, fileRanges, EOFException.class);
   }
 
   @Test
@@ -143,7 +143,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   public void testOverlappingRanges() throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = getSampleOverlappingRanges();
-    testExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
+    verifyExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
   }
 
   /**
@@ -154,6 +154,6 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     // Same ranges are special case of overlapping only.
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = getSampleSameRanges();
-    testExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
+    verifyExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
   }
 }

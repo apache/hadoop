@@ -296,7 +296,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(0, -50));
-    testExceptionalVectoredRead(fs, fileRanges, IllegalArgumentException.class);
+    verifyExceptionalVectoredRead(fs, fileRanges, IllegalArgumentException.class);
   }
 
   @Test
@@ -304,7 +304,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(-1, 50));
-    testExceptionalVectoredRead(fs, fileRanges, EOFException.class);
+    verifyExceptionalVectoredRead(fs, fileRanges, EOFException.class);
   }
 
   @Test
@@ -390,9 +390,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * @param clazz type of exception expected.
    * @throws Exception any other IOE.
    */
-  protected <T extends Throwable> void testExceptionalVectoredRead(FileSystem fs,
-                                             List<FileRange> fileRanges,
-                                             Class<T> clazz) throws Exception {
+  protected <T extends Throwable> void verifyExceptionalVectoredRead(
+          FileSystem fs,
+          List<FileRange> fileRanges,
+          Class<T> clazz) throws Exception {
+
     CompletableFuture<FSDataInputStream> builder =
             fs.openFile(path(VECTORED_READ_FILE_NAME))
                     .build();
