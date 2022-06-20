@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -33,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.log4j.Level;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -855,6 +859,59 @@ public class TestCSMappingPlacementRule {
     //Create app, submit to placement engine, expecting queue=testGroup0 (the new primary group)
     engine = initPlacementEngine(cs);
     assertPlace(engine, app, user, "root.man.testGroup0");
+  }
+
+  @Test
+  public void testUserNameSetDefaultAndPlaceWith2Rules() throws IOException {
+    Log log = LogFactory.getLog("org.apache.hadoop.yarn.server.resourcemanager.placement");
+    if (log instanceof Log4JLogger) {
+      org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
+      logger.setLevel(Level.DEBUG);
+    }
+
+    List<MappingRule> rules = new ArrayList<>();
+    rules.add(
+            new MappingRule(
+                    MappingRuleMatchers.createUserMatcher("test.user"),
+                    (MappingRuleActions.createUpdateDefaultAction("root.user"))
+                            .setFallbackSkip()));
+    rules.add(new MappingRule(
+            MappingRuleMatchers.createUserMatcher("test.user"),
+            (MappingRuleActions.createPlaceToDefaultAction())
+                    .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(
+            "test.user should be placed to root.user",
+            engine, app, "test.user", "root.user");
+  }
+
+  @Test
+  public void testUserNameSetDefaultAndPlaceWith2RulesUsernameReplacedWithDot() throws IOException {
+    Log log = LogFactory.getLog("org.apache.hadoop.yarn.server.resourcemanager.placement");
+    if (log instanceof Log4JLogger) {
+      org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
+      logger.setLevel(Level.DEBUG);
+    }
+
+
+    ArrayList<MappingRule> rules = new ArrayList<>();
+    rules.add(
+            new MappingRule(
+                    MappingRuleMatchers.createUserMatcher("test_dot_user"),
+                    (MappingRuleActions.createUpdateDefaultAction("root.user.bob"))
+                            .setFallbackSkip()));
+    rules.add(new MappingRule(
+            MappingRuleMatchers.createUserMatcher("test_dot_user"),
+            (MappingRuleActions.createPlaceToDefaultAction())
+                    .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(
+            "test.user should be placed to root.user.bob",
+            engine, app, "test.user", "root.user.bob");
   }
 
   private CSMappingPlacementRule initPlacementEngine(CapacityScheduler cs) throws IOException {
