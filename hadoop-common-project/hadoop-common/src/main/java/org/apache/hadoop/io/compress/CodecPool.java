@@ -109,7 +109,7 @@ public class CodecPool {
       synchronized (pool) {
         codecSet = pool.get(codecClass);
         if (codecSet == null) {
-          codecSet = new HashSet<T>();
+          codecSet = new HashSet<>();
           pool.put(codecClass, codecSet);
         }
       }

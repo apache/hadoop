@@ -105,8 +105,8 @@ public class AccessControlList implements Writable {
    * @param userGroupStrings build ACL from array of Strings
    */
   private void buildACL(String[] userGroupStrings) {
-    users = new HashSet<String>();
-    groups = new HashSet<String>();
+    users = new HashSet<>();
+    groups = new HashSet<>();
     for (String aclPart : userGroupStrings) {
       if (aclPart != null && isWildCardACLValue(aclPart)) {
         allAllowed = true;
