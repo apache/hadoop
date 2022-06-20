@@ -20,6 +20,8 @@ package org.apache.hadoop.fs;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.hadoop.fs.impl.FileRangeImpl;
+
 /**
  * A byte range of a file.
  * This is used for the asynchronous gather read API of
@@ -52,4 +54,14 @@ public interface FileRange {
    * @param data the future of the ByteBuffer that will have the data
    */
   void setData(CompletableFuture<ByteBuffer> data);
+
+  /**
+   * Factory method to create a FileRange object.
+   * @param offset starting offset of the range.
+   * @param length length of the range.
+   * @return a new instance of FileRangeImpl.
+   */
+  static FileRange createFileRange(long offset, int length) {
+    return new FileRangeImpl(offset, length);
+  }
 }
