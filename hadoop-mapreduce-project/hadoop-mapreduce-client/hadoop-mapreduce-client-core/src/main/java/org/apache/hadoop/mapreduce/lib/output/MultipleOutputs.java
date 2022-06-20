@@ -570,8 +570,14 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    */
   @SuppressWarnings("unchecked")
   public void close() throws IOException, InterruptedException {
-    for (RecordWriter writer : recordWriters.values()) {
-      writer.close(context);
-    }
+    recordWriters.values().parallelStream().forEach(writer -> {
+      try {
+        writer.close(context);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 }
