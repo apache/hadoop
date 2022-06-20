@@ -2256,4 +2256,9 @@ public class DatanodeManager {
   public Map<String, DatanodeDescriptor> getDatanodeMap() {
     return datanodeMap;
   }
+
+  public void setMaxSlowPeersToReport(int maxSlowPeersToReport) {
+    Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
+    slowPeerTracker.setMaxSlowPeersToReport(maxSlowPeersToReport);
+  }
 }
