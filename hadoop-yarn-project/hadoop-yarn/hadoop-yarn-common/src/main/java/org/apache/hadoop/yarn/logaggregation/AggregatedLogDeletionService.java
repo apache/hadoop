@@ -59,7 +59,7 @@ public class AggregatedLogDeletionService extends AbstractService {
   private long checkIntervalMsecs;
   private LogDeletionTask task;
   
-  static class LogDeletionTask extends TimerTask {
+  public static class LogDeletionTask extends TimerTask {
     private Configuration conf;
     private long retentionMillis;
     private String suffix = null;
@@ -101,7 +101,7 @@ public class AggregatedLogDeletionService extends AbstractService {
           }
         }
       } catch (Throwable t) {
-        logException("Error reading root log dir this deletion " +
+        logException("Error reading root log dir, this deletion " +
             "attempt is being aborted", t);
       }
       LOG.info("aggregated log deletion finished.");
