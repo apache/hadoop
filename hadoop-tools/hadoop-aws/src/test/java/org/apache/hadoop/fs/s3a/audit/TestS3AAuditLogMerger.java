@@ -38,12 +38,13 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestS3AAuditLogMerger {
 
-  private final Logger logger = LoggerFactory.getLogger(TestS3AAuditLogMerger.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestS3AAuditLogMerger.class);
 
   private final S3AAuditLogMerger s3AAuditLogMerger = new S3AAuditLogMerger();
 
   /**
-   * sample directories and files to test.
+   * Sample directories and files to test.
    */
   private final File auditLogFile = new File("AuditLogFile");
   private final File sampleDirectory = new File("sampleFilesDirectory");
@@ -56,9 +57,7 @@ public class TestS3AAuditLogMerger {
       new File("sampleFilesDirectory", "sampleFile3.txt");
 
   /**
-   * creates the sample directories and files before each test.
-   *
-   * @throws IOException on failure
+   * Creates the sample directories and files before each test.
    */
   @Before
   public void setUp() throws IOException {
@@ -76,17 +75,18 @@ public class TestS3AAuditLogMerger {
   }
 
   /**
-   * mergeFilesTest() will test the mergeFiles() method in Merger class.
-   * by passing a sample directory which contains files with some content in it
-   * and checks if files in a directory are merged into single file
-   *
-   * @throws IOException on any failure
+   * Testing the mergeFiles method in Merger class.
+   * by passing a sample directory which contains files with some content in it.
+   * and checks if files in a directory are merged into single file.
    */
   @Test
-  public void mergeFilesTest() throws IOException {
+  public void testMergeFiles() throws IOException {
     s3AAuditLogMerger.mergeFiles(sampleDirectory.getPath());
     String str =
         new String(Files.readAllBytes(Paths.get(auditLogFile.getPath())));
+    //File content of each audit log file in merged audit log file are
+    // divided by '\n'.
+    // Performing assertions will be easy by replacing '\n' with ''
     String fileText = str.replace("\n", "");
     assertTrue("the string 'abcd' should be in the merged file",
         fileText.contains("abcd"));
@@ -97,17 +97,15 @@ public class TestS3AAuditLogMerger {
   }
 
   /**
-   * mergeFilesTestEmpty() will test the mergeFiles().
-   * by passing an empty directory and checks if merged file is created or not
-   *
-   * @throws IOException on any failure
+   * Testing the mergeFiles method in Merger class.
+   * by passing an empty directory and checks if merged file is created or not.
    */
   @Test
-  public void mergeFilesTestEmpty() throws IOException {
+  public void testMergeFilesEmptyDir() throws IOException {
     if (auditLogFile.exists()) {
-      logger.info("AuditLogFile already exists and we are deleting it here");
+      LOG.info("AuditLogFile already exists and we are deleting it here");
       if (auditLogFile.delete()) {
-        logger.debug("AuditLogFile deleted");
+        LOG.debug("AuditLogFile deleted");
       }
     }
     s3AAuditLogMerger.mergeFiles(emptyDirectory.getPath());
@@ -116,16 +114,14 @@ public class TestS3AAuditLogMerger {
   }
 
   /**
-   * delete all the sample directories and sample files after all tests.
-   *
-   * @throws Exception on any failure
+   * Delete all the sample directories and sample files after all tests.
    */
   @After
   public void tearDown() throws Exception {
     if (firstSampleFile.delete() && secondSampleFile.delete()
         && thirdSampleFile.delete() && sampleDirectory.delete()
         && emptyDirectory.delete() && auditLogFile.delete()) {
-      logger.debug("sample files regarding testing deleted");
+      LOG.debug("sample files regarding testing deleted");
     }
   }
 }

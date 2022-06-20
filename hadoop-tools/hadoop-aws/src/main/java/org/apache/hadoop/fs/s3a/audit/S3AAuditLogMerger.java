@@ -20,29 +20,33 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Merger class will merge all the audit logs present in a directory of
+ * Merge all the audit logs present in a directory of.
  * multiple audit log files into a single audit log file.
  */
 public class S3AAuditLogMerger {
 
-  private final Logger logger =
+  private static final Logger LOG =
       LoggerFactory.getLogger(S3AAuditLogMerger.class);
 
+  /**
+   * Merge all the audit log files from a directory into single audit log file.
+   * @param auditLogsDirectoryPath path where audit log files are present.
+   * @throws IOException on any failure.
+   */
   public void mergeFiles(String auditLogsDirectoryPath) throws IOException {
     File auditLogFilesDirectory = new File(auditLogsDirectoryPath);
     String[] auditLogFileNames = auditLogFilesDirectory.list();
 
-    //Read each audit log file present in directory and writes each and every audit log in it
-    //into a single audit log file
+    //Merging of audit log files present in a directory into a single audit log file
     if (auditLogFileNames != null && auditLogFileNames.length != 0) {
       File auditLogFile = new File("AuditLogFile");
       try (PrintWriter printWriter = new PrintWriter(auditLogFile,
@@ -50,8 +54,10 @@ public class S3AAuditLogMerger {
         for (String singleAuditLogFileName : auditLogFileNames) {
           File singleAuditLogFile =
               new File(auditLogFilesDirectory, singleAuditLogFileName);
-          try(BufferedReader bufferedReader =
-              new BufferedReader(new FileReader(singleAuditLogFile.getPath()))) {
+          try (BufferedReader bufferedReader =
+              new BufferedReader(
+                  new InputStreamReader(new FileInputStream(singleAuditLogFile),
+                      "UTF-8"))) {
             String singleLine = bufferedReader.readLine();
             while (singleLine != null) {
               printWriter.println(singleLine);
@@ -61,10 +67,10 @@ public class S3AAuditLogMerger {
           }
         }
       }
-      logger.info("Successfully merged all audit log files from '{}' directory",
+      LOG.info("Successfully merged all audit log files from '{}' directory",
           auditLogFilesDirectory.getName());
     } else {
-      logger.info(
+      LOG.info(
           "'{}' is an empty directory, expecting a directory with audit log "
               + "files", auditLogFilesDirectory.getName());
     }

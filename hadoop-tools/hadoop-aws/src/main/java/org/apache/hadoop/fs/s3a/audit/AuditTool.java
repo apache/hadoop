@@ -52,10 +52,10 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_COMMAND_
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SERVICE_UNAVAILABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
 
-/**.
- * AuditTool is a Command Line Interface to manage S3 Auditing.
- * i.e, it is a functionality which directly takes s3 path of audit log files
- * and merge all those into single audit log file
+/**
+ * AuditTool is a Command Line Interface.
+ * i.e, it's functionality is to parse the merged audit log file.
+ * and generate avro file.
  */
 public class AuditTool extends Configured implements Tool, Closeable {
 
@@ -77,13 +77,11 @@ public class AuditTool extends Configured implements Tool, Closeable {
 
   private final String usage = entryPoint + "  s3a://BUCKET\n";
 
-  private final File s3aLogsDirectory = new File("S3AAuditLogsDirectory");
-
   public AuditTool() {
   }
 
   /**
-   * tells us the usage of the AuditTool by commands.
+   * Tells us the usage of the AuditTool by commands.
    *
    * @return the string USAGE
    */
@@ -92,67 +90,62 @@ public class AuditTool extends Configured implements Tool, Closeable {
   }
 
   /**
-   * this run method in AuditTool takes S3 bucket path.
-   * which contains audit log files from command line arguments
-   * and merge the audit log files present in that path into single file in local system
+   * This run method in AuditTool takes S3 bucket path.
+   * which contains audit log files from command line arguments.
+   * and merge the audit log files present in that path into single file in.
+   * local system.
    *
    * @param args command specific arguments.
-   * @return SUCCESS i.e, '0', which is an exit code
-   * @throws Exception on any failure
+   * @return SUCCESS i.e, '0', which is an exit code.
+   * @throws Exception on any failure.
    */
   @Override
   public int run(String[] args) throws Exception {
     List<String> argv = new ArrayList<>(Arrays.asList(args));
-    println("argv: %s", argv);
     if (argv.isEmpty()) {
       errorln(getUsage());
       throw invalidArgs("No bucket specified");
     }
-    //path of audit log files in s3 bucket
+    //Path of audit log files in s3 bucket
     Path s3LogsPath = new Path(argv.get(0));
 
-    //setting the file system
+    //Setting the file system
     URI fsURI = toUri(String.valueOf(s3LogsPath));
     S3AFileSystem s3AFileSystem =
         bindFilesystem(FileSystem.newInstance(fsURI, getConf()));
     RemoteIterator<LocatedFileStatus> listOfS3LogFiles =
         s3AFileSystem.listFiles(s3LogsPath, true);
 
-    //creating local audit log files directory and
-    //copying audit log files into local files from s3 bucket
-    //so that it will be easy for us to implement merging and parsing classes
+    //Merging local audit files into a single file
+    File s3aLogsDirectory = new File(s3LogsPath.getName());
+    boolean s3aLogsDirectoryCreation = false;
     if (!s3aLogsDirectory.exists()) {
-      boolean s3aLogsDirectoryCreation = s3aLogsDirectory.mkdir();
+      s3aLogsDirectoryCreation = s3aLogsDirectory.mkdir();
     }
-    File s3aLogsSubDir = new File(s3aLogsDirectory, s3LogsPath.getName());
-    boolean s3aLogsSubDirCreation = false;
-    if (!s3aLogsSubDir.exists()) {
-      s3aLogsSubDirCreation = s3aLogsSubDir.mkdir();
-    }
-    if (s3aLogsSubDirCreation) {
+    if(s3aLogsDirectoryCreation) {
       while (listOfS3LogFiles.hasNext()) {
         Path s3LogFilePath = listOfS3LogFiles.next().getPath();
         File s3LogLocalFilePath =
-            new File(s3aLogsSubDir, s3LogFilePath.getName());
+            new File(s3aLogsDirectory, s3LogFilePath.getName());
         boolean localFileCreation = s3LogLocalFilePath.createNewFile();
         if (localFileCreation) {
           FileStatus fileStatus = s3AFileSystem.getFileStatus(s3LogFilePath);
           long s3LogFileLength = fileStatus.getLen();
-          //reads s3 file data into byte buffer
+          //Reads s3 file data into byte buffer
           byte[] s3LogDataBuffer =
               readDataset(s3AFileSystem, s3LogFilePath, (int) s3LogFileLength);
-          //writes byte array into local file
+          //Writes byte array into local file
           FileUtils.writeByteArrayToFile(s3LogLocalFilePath, s3LogDataBuffer);
         }
       }
     }
 
-    //calls S3AAuditLogMerger for implementing merging code
+    //Calls S3AAuditLogMerger for implementing merging code
     //by passing local audit log files directory which are copied from s3 bucket
     S3AAuditLogMerger s3AAuditLogMerger = new S3AAuditLogMerger();
-    s3AAuditLogMerger.mergeFiles(s3aLogsSubDir.getPath());
+    s3AAuditLogMerger.mergeFiles(s3aLogsDirectory.getPath());
 
-    //deleting the local log files
+    //Deleting the local log files
     if (s3aLogsDirectory.exists()) {
       FileUtils.forceDeleteOnExit(s3aLogsDirectory);
     }
@@ -161,14 +154,14 @@ public class AuditTool extends Configured implements Tool, Closeable {
 
   /**
    * Read the file and convert to a byte dataset.
-   * This implements readfully internally, so that it will read
-   * in the file without ever having to seek()
+   * This implements readfully internally, so that it will read.
+   * in the file without ever having to seek().
    *
-   * @param s3AFileSystem   filesystem
-   * @param s3LogFilePath   path to read from
-   * @param s3LogFileLength length of data to read
-   * @return the bytes
-   * @throws IOException IO problems
+   * @param s3AFileSystem   filesystem.
+   * @param s3LogFilePath   path to read from.
+   * @param s3LogFileLength length of data to read.
+   * @return the bytes.
+   * @throws IOException IO problems.
    */
   private byte[] readDataset(FileSystem s3AFileSystem, Path s3LogFilePath,
       int s3LogFileLength) throws IOException {
@@ -192,10 +185,10 @@ public class AuditTool extends Configured implements Tool, Closeable {
   /**
    * Build an exception to throw with a formatted message.
    *
-   * @param exitCode exit code to use
-   * @param format   string format
-   * @param args     optional arguments for the string
-   * @return a new exception to throw
+   * @param exitCode exit code to use.
+   * @param format   string format.
+   * @param args     optional arguments for the string.
+   * @return a new exception to throw.
    */
   protected static ExitUtil.ExitException exitException(
       final int exitCode,
@@ -208,9 +201,9 @@ public class AuditTool extends Configured implements Tool, Closeable {
   /**
    * Build the exception to raise on invalid arguments.
    *
-   * @param format string format
-   * @param args   optional arguments for the string
-   * @return a new exception to throw
+   * @param format string format.
+   * @param args   optional arguments for the string.
+   * @return a new exception to throw.
    */
   protected static ExitUtil.ExitException invalidArgs(
       String format, Object... args) {
@@ -218,12 +211,12 @@ public class AuditTool extends Configured implements Tool, Closeable {
   }
 
   /**
-   * Sets the filesystem; it must be an S3A FS instance, or a FilterFS
+   * Sets the filesystem; it must be an S3A FS instance, or a FilterFS.
    * around an S3A Filesystem.
    *
-   * @param bindingFS filesystem to bind to
+   * @param bindingFS filesystem to bind to.
    * @return the bound FS.
-   * @throws ExitUtil.ExitException if the FS is not an S3 FS
+   * @throws ExitUtil.ExitException if the FS is not an S3 FS.
    */
   protected S3AFileSystem bindFilesystem(FileSystem bindingFS) {
     FileSystem fs = bindingFS;
@@ -240,12 +233,12 @@ public class AuditTool extends Configured implements Tool, Closeable {
   }
 
   /**
-   * Convert a path to a URI, catching any {@code URISyntaxException}
+   * Convert a path to a URI, catching any {@code URISyntaxException}.
    * and converting to an invalid args exception.
    *
-   * @param s3Path path to convert to a URI
-   * @return a URI of the path
-   * @throws ExitUtil.ExitException INVALID_ARGUMENT if the URI is invalid
+   * @param s3Path path to convert to a URI.
+   * @return a URI of the path.
+   * @throws ExitUtil.ExitException INVALID_ARGUMENT if the URI is invalid.
    */
   protected static URI toUri(String s3Path) {
     URI uri;
@@ -275,12 +268,12 @@ public class AuditTool extends Configured implements Tool, Closeable {
   }
 
   /**
-   * Print a line of output. This goes to any output file, or
-   * is logged at info. The output is flushed before and after, to
+   * Print a line of output. This goes to any output file, or.
+   * is logged at info. The output is flushed before and after, too.
    * try and stay in sync with JRE logging.
    *
-   * @param format format string
-   * @param args   any arguments
+   * @param format format string.
+   * @param args   any arguments.
    */
   private void println(String format, Object... args) {
     flush();
@@ -296,9 +289,9 @@ public class AuditTool extends Configured implements Tool, Closeable {
   /**
    * Inner entry point, with no logging or system exits.
    *
-   * @param conf configuration
-   * @param argv argument list
-   * @return an exception
+   * @param conf configuration.
+   * @param argv argument list.
+   * @return an exception.
    * @throws Exception Exception.
    */
   public static int exec(Configuration conf, String... argv) throws Exception {
@@ -310,7 +303,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
   /**
    * Main entry point.
    *
-   * @param argv args list
+   * @param argv args list.
    */
   public static void main(String[] argv) {
     try {
