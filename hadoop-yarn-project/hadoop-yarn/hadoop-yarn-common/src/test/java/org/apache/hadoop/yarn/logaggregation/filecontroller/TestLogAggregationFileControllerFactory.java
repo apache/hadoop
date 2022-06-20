@@ -18,24 +18,6 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,6 +38,21 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS;
+import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.REMOTE_LOG_ROOT;
+import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.enableFileControllers;
+import static org.junit.Assert.*;
+
 /**
  * Test LogAggregationFileControllerFactory.
  */
@@ -63,7 +60,6 @@ public class TestLogAggregationFileControllerFactory extends Configured {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestLogAggregationFileControllerFactory.class);
 
-  private static final String REMOTE_LOG_ROOT = "target/app-logs/";
   private static final String REMOTE_DEFAULT_DIR = "default/";
   private static final String APP_OWNER = "test";
 
@@ -87,8 +83,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
   public void setup() throws IOException {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_LOG_ROOT +
-        REMOTE_DEFAULT_DIR);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_LOG_ROOT + REMOTE_DEFAULT_DIR);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, "log");
     setConf(conf);
   }
@@ -143,36 +138,15 @@ public class TestLogAggregationFileControllerFactory extends Configured {
   @Test(expected = Exception.class)
   public void testLogAggregationFileControllerFactoryClassNotSet() {
     Configuration conf = getConf();
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS,
-        "TestLogAggregationFileController");
+    conf.set(LOG_AGGREGATION_FILE_FORMATS, "TestLogAggregationFileController");
     new LogAggregationFileControllerFactory(conf);
     fail("TestLogAggregationFileController's class was not set, " +
         "but the factory creation did not fail.");
   }
 
-  private void enableFileControllers(
-      List<Class<? extends LogAggregationFileController>> fileControllers,
-      List<String> fileControllerNames) {
-    Configuration conf = getConf();
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS,
-        StringUtils.join(fileControllerNames, ","));
-    for (int i = 0; i < fileControllers.size(); i++) {
-      Class<? extends LogAggregationFileController> fileController =
-          fileControllers.get(i);
-      String controllerName = fileControllerNames.get(i);
-
-      conf.setClass(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT,
-          controllerName), fileController, LogAggregationFileController.class);
-      conf.set(String.format(LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
-          controllerName), REMOTE_LOG_ROOT + controllerName + "/");
-      conf.set(String.format(LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
-          controllerName), controllerName);
-    }
-  }
-
   @Test
   public void testLogAggregationFileControllerFactory() throws Exception {
-    enableFileControllers(ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
+    enableFileControllers(getConf(), ALL_FILE_CONTROLLERS, ALL_FILE_CONTROLLER_NAMES);
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(getConf());
     List<LogAggregationFileController> list =
@@ -199,8 +173,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
 
   @Test
   public void testClassConfUsed() {
-    enableFileControllers(Collections.singletonList(
-        LogAggregationTFileController.class),
+    enableFileControllers(getConf(), Collections.singletonList(LogAggregationTFileController.class),
         Collections.singletonList("TFile"));
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(getConf());
@@ -215,7 +188,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
   @Test
   public void testNodemanagerConfigurationIsUsed() {
     Configuration conf = getConf();
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
+    conf.set(LOG_AGGREGATION_FILE_FORMATS, "TFile");
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(conf);
     LogAggregationFileController fc = factory.getFileControllerForWrite();
@@ -231,7 +204,7 @@ public class TestLogAggregationFileControllerFactory extends Configured {
     Configuration conf = getConf();
     conf.unset(YarnConfiguration.NM_REMOTE_APP_LOG_DIR);
     conf.unset(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX);
-    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
+    conf.set(LOG_AGGREGATION_FILE_FORMATS, "TFile");
 
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(getConf());
@@ -268,20 +241,19 @@ public class TestLogAggregationFileControllerFactory extends Configured {
     }
 
     @Override
-    public void initializeWriter(LogAggregationFileControllerContext context)
-        throws IOException {
+    public void initializeWriter(LogAggregationFileControllerContext context) {
       // Do Nothing
     }
 
     @Override
     public boolean readAggregatedLogs(ContainerLogsRequest logRequest,
-        OutputStream os) throws IOException {
+        OutputStream os) {
       return false;
     }
 
     @Override
     public List<ContainerLogMeta> readAggregatedLogsMeta(
-        ContainerLogsRequest logRequest) throws IOException {
+        ContainerLogsRequest logRequest) {
       return null;
     }
 
