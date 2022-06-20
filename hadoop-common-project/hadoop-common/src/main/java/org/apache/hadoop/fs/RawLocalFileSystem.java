@@ -20,7 +20,6 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.fs.impl.VectoredReadUtils;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
@@ -68,6 +67,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_EXCEPTIONS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS;
@@ -278,6 +278,7 @@ public class RawLocalFileSystem extends FileSystem {
       // new capabilities.
       switch (capability.toLowerCase(Locale.ENGLISH)) {
       case StreamCapabilities.IOSTATISTICS:
+      case StreamCapabilities.VECTOREDIO:
         return true;
       default:
         return false;
@@ -303,23 +304,24 @@ public class RawLocalFileSystem extends FileSystem {
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
 
+      List<? extends FileRange> sortedRanges = Arrays.asList(sortRanges(ranges));
       // Set up all of the futures, so that we can use them if things fail
-      for(FileRange range: ranges) {
+      for(FileRange range: sortedRanges) {
         VectoredReadUtils.validateRangeRequest(range);
         range.setData(new CompletableFuture<>());
       }
       try {
         AsynchronousFileChannel channel = getAsyncChannel();
-        ByteBuffer[] buffers = new ByteBuffer[ranges.size()];
-        AsyncHandler asyncHandler = new AsyncHandler(channel, ranges, buffers);
-        for(int i = 0; i < ranges.size(); ++i) {
-          FileRange range = ranges.get(i);
+        ByteBuffer[] buffers = new ByteBuffer[sortedRanges.size()];
+        AsyncHandler asyncHandler = new AsyncHandler(channel, sortedRanges, buffers);
+        for(int i = 0; i < sortedRanges.size(); ++i) {
+          FileRange range = sortedRanges.get(i);
           buffers[i] = allocate.apply(range.getLength());
           channel.read(buffers[i], range.getOffset(), i, asyncHandler);
         }
       } catch (IOException ioe) {
         LOG.debug("Exception occurred during vectored read ", ioe);
-        for(FileRange range: ranges) {
+        for(FileRange range: sortedRanges) {
           range.getData().completeExceptionally(ioe);
         }
       }

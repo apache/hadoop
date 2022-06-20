@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.impl;
 
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.FileRangeImpl;
 
 import java.util.ArrayList;
 import java.util.List;

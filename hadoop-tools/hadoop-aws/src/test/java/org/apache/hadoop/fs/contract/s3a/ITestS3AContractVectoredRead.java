@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.EOFException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,14 +28,15 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.FileRangeImpl;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
 public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTest {
@@ -55,8 +58,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   public void testEOFRanges() throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(new FileRangeImpl(DATASET_LEN, 100));
-    testExceptionalVectoredRead(fs, fileRanges, "EOFException is expected");
+    fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
+    verifyExceptionalVectoredRead(fs, fileRanges, EOFException.class);
   }
 
   @Test
@@ -98,5 +101,59 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
                 "default s3a max read size for vectored reads");
       }
     }
+  }
+
+  @Test
+  public void testStopVectoredIoOperationsCloseStream() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = createSampleNonOverlappingRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+      in.readVectored(fileRanges, getAllocate());
+      in.close();
+      LambdaTestUtils.intercept(InterruptedIOException.class,
+          () -> validateVectoredReadResult(fileRanges, DATASET));
+    }
+    // reopening the stream should succeed.
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+      in.readVectored(fileRanges, getAllocate());
+      validateVectoredReadResult(fileRanges, DATASET);
+    }
+  }
+
+  @Test
+  public void testStopVectoredIoOperationsUnbuffer() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = createSampleNonOverlappingRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+      in.readVectored(fileRanges, getAllocate());
+      in.unbuffer();
+      LambdaTestUtils.intercept(InterruptedIOException.class,
+          () -> validateVectoredReadResult(fileRanges, DATASET));
+      // re-initiating the vectored reads after unbuffer should succeed.
+      in.readVectored(fileRanges, getAllocate());
+      validateVectoredReadResult(fileRanges, DATASET);
+    }
+
+  }
+
+  /**
+   * S3 vectored IO doesn't support overlapping ranges.
+   */
+  @Override
+  public void testOverlappingRanges() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = getSampleOverlappingRanges();
+    verifyExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
+  }
+
+  /**
+   * S3 vectored IO doesn't support overlapping ranges.
+   */
+  @Override
+  public void testSameRanges() throws Exception {
+    // Same ranges are special case of overlapping only.
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = getSampleSameRanges();
+    verifyExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
   }
 }

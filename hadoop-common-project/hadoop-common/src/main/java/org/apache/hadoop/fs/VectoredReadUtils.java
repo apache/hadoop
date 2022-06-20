@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.impl;
+package org.apache.hadoop.fs;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -28,9 +28,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
-import org.apache.hadoop.fs.ByteBufferPositionedReadable;
-import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.Preconditions;
 
 /**
@@ -68,35 +66,19 @@ public final class VectoredReadUtils {
 
 
   /**
-   * Read fully a list of file ranges asynchronously from this file.
-   * The default iterates through the ranges to read each synchronously, but
-   * the intent is that subclasses can make more efficient readers.
+   * This is the default implementation which iterates through the ranges
+   * to read each synchronously, but the intent is that subclasses
+   * can make more efficient readers.
    * The data or exceptions are pushed into {@link FileRange#getData()}.
    * @param stream the stream to read the data from
    * @param ranges the byte ranges to read
    * @param allocate the byte buffer allocation
-   * @param minimumSeek the minimum number of bytes to seek over
-   * @param maximumRead the largest number of bytes to combine into a single read
    */
   public static void readVectored(PositionedReadable stream,
                                   List<? extends FileRange> ranges,
-                                  IntFunction<ByteBuffer> allocate,
-                                  int minimumSeek,
-                                  int maximumRead) {
-    if (isOrderedDisjoint(ranges, 1, minimumSeek)) {
-      for(FileRange range: ranges) {
-        range.setData(readRangeFrom(stream, range, allocate));
-      }
-    } else {
-      for(CombinedFileRange range: sortAndMergeRanges(ranges, 1, minimumSeek,
-          maximumRead)) {
-        CompletableFuture<ByteBuffer> read =
-            readRangeFrom(stream, range, allocate);
-        for(FileRange child: range.getUnderlying()) {
-          child.setData(read.thenApply(
-              (b) -> sliceTo(b, range.getOffset(), child)));
-        }
-      }
+                                  IntFunction<ByteBuffer> allocate) {
+    for (FileRange range: ranges) {
+      range.setData(readRangeFrom(stream, range, allocate));
     }
   }
 
@@ -166,7 +148,7 @@ public final class VectoredReadUtils {
                                           int chunkSize,
                                           int minimumSeek) {
     long previous = -minimumSeek;
-    for(FileRange range: input) {
+    for (FileRange range: input) {
       long offset = range.getOffset();
       long end = range.getOffset() + range.getLength();
       if (offset % chunkSize != 0 ||
@@ -209,7 +191,42 @@ public final class VectoredReadUtils {
   }
 
   /**
-   * Sort and merge ranges to optimize the access from the underlying file
+   * Check if the input ranges are overlapping in nature.
+   * We call two ranges to be overlapping when start offset
+   * of second is less than the end offset of first.
+   * End offset is calculated as start offset + length.
+   * @param input list if input ranges.
+   * @return true/false based on logic explained above.
+   */
+  public static List<? extends FileRange> validateNonOverlappingAndReturnSortedRanges(
+          List<? extends FileRange> input) {
+
+    if (input.size() <= 1) {
+      return input;
+    }
+    FileRange[] sortedRanges = sortRanges(input);
+    FileRange prev = sortedRanges[0];
+    for (int i=1; i<sortedRanges.length; i++) {
+      if (sortedRanges[i].getOffset() < prev.getOffset() + prev.getLength()) {
+        throw new UnsupportedOperationException("Overlapping ranges are not supported");
+      }
+    }
+    return Arrays.asList(sortedRanges);
+  }
+
+  /**
+   * Sort the input ranges by offset.
+   * @param input input ranges.
+   * @return sorted ranges.
+   */
+  public static FileRange[] sortRanges(List<? extends FileRange> input) {
+    FileRange[] sortedRanges = input.toArray(new FileRange[0]);
+    Arrays.sort(sortedRanges, Comparator.comparingLong(FileRange::getOffset));
+    return sortedRanges;
+  }
+
+  /**
+   * Merge sorted ranges to optimize the access from the underlying file
    * system.
    * The motivations are that:
    * <ul>
@@ -219,24 +236,22 @@ public final class VectoredReadUtils {
    *   <li>Some file systems want to round ranges to be at checksum boundaries.</li>
    * </ul>
    *
-   * @param input the list of input ranges
+   * @param sortedRanges already sorted list of ranges based on offset.
    * @param chunkSize round the start and end points to multiples of chunkSize
    * @param minimumSeek the smallest gap that we should seek over in bytes
    * @param maxSize the largest combined file range in bytes
    * @return the list of sorted CombinedFileRanges that cover the input
    */
-  public static List<CombinedFileRange> sortAndMergeRanges(List<? extends FileRange> input,
-                                                           int chunkSize,
-                                                           int minimumSeek,
-                                                           int maxSize) {
-    // sort the ranges by offset
-    FileRange[] ranges = input.toArray(new FileRange[0]);
-    Arrays.sort(ranges, Comparator.comparingLong(FileRange::getOffset));
+  public static List<CombinedFileRange> mergeSortedRanges(List<? extends FileRange> sortedRanges,
+                                                          int chunkSize,
+                                                          int minimumSeek,
+                                                          int maxSize) {
+
     CombinedFileRange current = null;
-    List<CombinedFileRange> result = new ArrayList<>(ranges.length);
+    List<CombinedFileRange> result = new ArrayList<>(sortedRanges.size());
 
     // now merge together the ones that merge
-    for(FileRange range: ranges) {
+    for (FileRange range: sortedRanges) {
       long start = roundDown(range.getOffset(), chunkSize);
       long end = roundUp(range.getOffset() + range.getLength(), chunkSize);
       if (current == null || !current.merge(start, end, range, minimumSeek, maxSize)) {

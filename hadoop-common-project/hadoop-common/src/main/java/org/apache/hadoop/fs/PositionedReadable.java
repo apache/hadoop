@@ -25,7 +25,6 @@ import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.impl.VectoredReadUtils;
 
 /**
  * Stream that permits positional reading.
@@ -121,7 +120,6 @@ public interface PositionedReadable {
    */
   default void readVectored(List<? extends FileRange> ranges,
                             IntFunction<ByteBuffer> allocate) throws IOException {
-    VectoredReadUtils.readVectored(this, ranges, allocate,  minSeekForVectorReads(),
-        maxReadSizeForVectorReads());
+    VectoredReadUtils.readVectored(this, ranges, allocate);
   }
 }
