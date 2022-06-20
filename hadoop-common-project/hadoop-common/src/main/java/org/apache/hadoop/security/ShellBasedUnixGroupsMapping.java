@@ -215,7 +215,13 @@ public class ShellBasedUnixGroupsMapping extends Configured
           groups = resolvePartialGroupNames(user, e.getMessage(),
               executor.getOutput());
         } catch (PartialGroupNameException pge) {
-          LOG.warn("unable to return groups for user {}", user, pge);
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("unable to return groups for user {}", user, pge);
+          } else {
+            LOG.warn("unable to return groups for user {}. " +
+                            "Exception Class: {}, Exception Message: {}",
+                    user, pge.getClass().getName(), pge.getMessage());
+          }
           return EMPTY_GROUPS_SET;
         }
       }
