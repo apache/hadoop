@@ -105,22 +105,19 @@ public class S3Reader implements Closeable {
     this.streamStatistics.readOperationStarted(offset, size);
     Invoker invoker = this.s3File.getReadInvoker();
 
-    invoker.retry(
-        "read", this.s3File.getPath(), true,
-        trackDurationOfOperation(
-            streamStatistics,
-            STREAM_READ_REMOTE_BLOCK_READ, () -> {
-              try {
-                this.readOneBlock(buffer, offset, size);
-              } catch (EOFException e) {
-                // the base implementation swallows EOFs.
-                return -1;
-              } catch (SocketTimeoutException e) {
-                throw e;
-              } catch (IOException e) {
-                this.s3File.getStatistics().readException();
-                throw e;
-              }
+    invoker.retry("read", this.s3File.getPath(), true,
+        trackDurationOfOperation(streamStatistics, STREAM_READ_REMOTE_BLOCK_READ, () -> {
+          try {
+            this.readOneBlock(buffer, offset, size);
+          } catch (EOFException e) {
+            // the base implementation swallows EOFs.
+            return -1;
+          } catch (SocketTimeoutException e) {
+            throw e;
+          } catch (IOException e) {
+            this.s3File.getStatistics().readException();
+            throw e;
+          }
           return 0;
         }));
 

@@ -675,31 +675,31 @@ public final class Constants {
       "stream_read_gauge_input_policy";
 
   /**
-   * Total number of prefetching operations executed
+   * Total number of prefetching operations executed.
    */
   public static final String STREAM_READ_PREFETCH_OPERATIONS
       = "stream_read_prefetch_operations";
 
   /**
-   * Total number of block in disk cache
+   * Total number of block in disk cache.
    */
   public static final String STREAM_READ_BLOCKS_IN_FILE_CACHE
       = "stream_read_blocks_in_cache";
 
   /**
-   * Total number of active prefetch operations
+   * Total number of active prefetch operations.
    */
   public static final String STREAM_READ_ACTIVE_PREFETCH_OPERATIONS
       = "stream_read_active_prefetch_operations";
 
   /**
-   * Total bytes of memory in use by this input stream
+   * Total bytes of memory in use by this input stream.
    */
   public static final String STREAM_READ_ACTIVE_MEMORY_IN_USE
       = "stream_read_active_memory_in_use";
 
   /**
-   * count/duration of reading a remote block
+   * count/duration of reading a remote block.
    * IO.
    * Value: {@value}.
    */

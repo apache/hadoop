@@ -1046,9 +1046,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void executorAcquired(Duration timeInQueue) {
       // update the duration fields in the IOStatistics.
-        localIOStatistics().addTimedOperation(
-            ACTION_EXECUTOR_ACQUIRED,
-            timeInQueue);
+      localIOStatistics().addTimedOperation(ACTION_EXECUTOR_ACQUIRED, timeInQueue);
     }
 
     /**

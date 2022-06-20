@@ -444,8 +444,10 @@ public abstract class CachingBlockManager extends BlockManager {
     }
   }
 
-  private void addToCacheAndRelease(BufferData data, Future<Void> blockFuture, Instant taskQueuedStartTime) {
-    this.prefetchingStatistics.executorAcquired(Duration.between(taskQueuedStartTime, Instant.now()));
+  private void addToCacheAndRelease(BufferData data, Future<Void> blockFuture,
+      Instant taskQueuedStartTime) {
+    this.prefetchingStatistics.executorAcquired(
+        Duration.between(taskQueuedStartTime, Instant.now()));
 
     if (this.closed) {
       return;
