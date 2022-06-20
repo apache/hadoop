@@ -136,7 +136,7 @@
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp.version>2.7.5</okhttp.version>
     <okhttp3.version>4.9.3</okhttp3.version>
-    <kotlin-stdlib.verion>1.4.10</kotlin-stdlib.verion>
+    <kotlin-stdlib.verion>1.6.0</kotlin-stdlib.verion>
     <kotlin-stdlib-common.version>1.4.10</kotlin-stdlib-common.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     <jna.version>5.2.0</jna.version>
