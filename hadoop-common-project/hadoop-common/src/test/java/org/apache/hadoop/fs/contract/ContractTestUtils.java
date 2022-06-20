@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.FutureIO;
@@ -1134,6 +1135,25 @@ public class ContractTestUtils extends Assert {
               TimeUnit.SECONDS);
       assertDatasetEquals((int) res.getOffset(), "vecRead",
               buffer, res.getLength(), originalData);
+    }
+  }
+
+  /**
+   * Utility to return buffers back to the pool once all
+   * data has been read for each file range.
+   * @param fileRanges list of file range.
+   * @param pool buffer pool.
+   * @throws IOException any IOE
+   * @throws TimeoutException ideally this should never occur.
+   */
+  public static void returnBuffersToPoolPostRead(List<FileRange> fileRanges,
+                                                 ByteBufferPool pool)
+          throws IOException, TimeoutException {
+    for (FileRange range : fileRanges) {
+      ByteBuffer buffer = FutureIO.awaitFuture(range.getData(),
+              VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+              TimeUnit.SECONDS);
+      pool.putBuffer(buffer);
     }
   }
 
