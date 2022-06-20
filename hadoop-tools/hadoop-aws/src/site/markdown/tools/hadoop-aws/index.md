@@ -1084,7 +1084,7 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.prefetch.enabled</name>
   <value>false</value>
   <description>
-    Enables prefetching and caching when reading from input stream. 
+    Enables prefetching and caching when reading from input stream.
   </description>
 </property>
 
@@ -1092,7 +1092,7 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.prefetch.block.size</name>
   <value>8MB</value>
   <description>
-      The size of a single prefetched block of data. 
+      The size of a single prefetched block of data.
   </description>
 </property>
 
