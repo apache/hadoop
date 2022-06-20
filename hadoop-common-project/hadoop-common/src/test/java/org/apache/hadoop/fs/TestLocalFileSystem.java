@@ -652,7 +652,7 @@ public class TestLocalFileSystem {
     fs.setConf(conf);
 
     FieldUtils.getField(RawLocalFileSystem.class,
-            "useDeprecatedFileStatus", true).set(fs,false);
+        "useDeprecatedFileStatus", true).set(fs, false);
     Path path = new Path("/foo");
     File pipe = mock(File.class);
     when(pipe.isFile()).thenReturn(false);

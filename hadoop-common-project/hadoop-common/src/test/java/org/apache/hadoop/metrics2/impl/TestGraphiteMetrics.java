@@ -70,8 +70,7 @@ public class TestGraphiteMetrics {
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        FieldUtils.getField(GraphiteSink.class, "graphite", true).
-            set(sink, mockGraphite);
+        FieldUtils.getField(GraphiteSink.class, "graphite", true).set(sink, mockGraphite);
         sink.putMetrics(record);
 
         try {
@@ -85,7 +84,7 @@ public class TestGraphiteMetrics {
         assertEquals(true,
             result.equals("null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n" +
             "null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n") ||
-            result.equals("null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n" + 
+            result.equals("null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n" +
             "null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n"));
     }
 
@@ -103,8 +102,7 @@ public class TestGraphiteMetrics {
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        FieldUtils.getField(GraphiteSink.class,"graphite",true).
-             set(sink,mockGraphite);
+        FieldUtils.getField(GraphiteSink.class, "graphite", true).set(sink, mockGraphite);
         sink.putMetrics(record);
 
         try {
@@ -131,8 +129,7 @@ public class TestGraphiteMetrics {
       // setup GraphiteSink
       GraphiteSink sink = new GraphiteSink();
       final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        FieldUtils.getField(GraphiteSink.class,"graphite",true).
-             set(sink,mockGraphite);
+      FieldUtils.getField(GraphiteSink.class,"graphite",true).set(sink,mockGraphite);
 
       // given two metrics records with timestamps 1000 milliseconds apart.
       List<MetricsTag> tags = Collections.emptyList();
@@ -172,8 +169,7 @@ public class TestGraphiteMetrics {
       MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
       final GraphiteSink.Graphite mockGraphite = makeGraphite();
-      FieldUtils.getField(GraphiteSink.class, "graphite", true).
-           set(sink, mockGraphite);
+      FieldUtils.getField(GraphiteSink.class, "graphite", true).set(sink, mockGraphite);
 
       // throw exception when first try
       doThrow(new IOException("IO exception")).when(mockGraphite).write(anyString());
@@ -201,20 +197,19 @@ public class TestGraphiteMetrics {
 
     @Test
     public void testClose() throws IllegalAccessException {
-        GraphiteSink sink = new GraphiteSink();
-        final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        FieldUtils.getField(GraphiteSink.class,"graphite",true).
-            set(sink,mockGraphite);
-        try {
-            sink.close();
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
+      GraphiteSink sink = new GraphiteSink();
+      final GraphiteSink.Graphite mockGraphite = makeGraphite();
+      FieldUtils.getField(GraphiteSink.class,"graphite",true).set(sink,mockGraphite);
+      try {
+         sink.close();
+      } catch (IOException ioe) {
+         ioe.printStackTrace();
+      }
 
-        try {
-            verify(mockGraphite).close();
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
+      try {
+         verify(mockGraphite).close();
+      } catch (IOException ioe) {
+         ioe.printStackTrace();
+      }
     }
 }
