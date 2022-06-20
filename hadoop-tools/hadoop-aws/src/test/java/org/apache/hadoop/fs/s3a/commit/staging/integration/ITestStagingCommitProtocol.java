@@ -52,7 +52,7 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.setInt(FS_S3A_COMMITTER_THREADS, 1);
+    conf.setInt(FS_S3A_COMMITTER_THREADS, 4);
 
     // disable unique filenames so that the protocol tests of FileOutputFormat
     // and this test generate consistent names.

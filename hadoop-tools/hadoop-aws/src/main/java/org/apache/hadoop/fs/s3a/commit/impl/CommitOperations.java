@@ -16,24 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit;
+package org.apache.hadoop.fs.s3a.commit.impl;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import javax.annotation.Nullable;
 
 import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,25 +49,33 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.WriteOperations;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.PathCommitException;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MATERIALIZE_FILE;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_LOAD_SINGLE_PENDING_FILE;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.XA_MAGIC_MARKER;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
 
@@ -115,7 +125,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @throws IOException failure to bind.
    */
   public CommitOperations(S3AFileSystem fs) throws IOException {
-    this(requireNonNull(fs), fs.newCommitterStatistics());
+    this(requireNonNull(fs), fs.newCommitterStatistics(), "/");
   }
 
   /**
@@ -123,10 +133,12 @@ public class CommitOperations extends AbstractStoreOperation
    * the commit operations.
    * @param fs FS to bind to
    * @param committerStatistics committer statistics
+   * @param outputPath destination of work.
    * @throws IOException failure to bind.
    */
   public CommitOperations(S3AFileSystem fs,
-      CommitterStatistics committerStatistics) throws IOException {
+      CommitterStatistics committerStatistics,
+      String outputPath) throws IOException {
     super(requireNonNull(fs).createStoreContext());
     this.fs = fs;
     statistics = requireNonNull(committerStatistics);
@@ -134,7 +146,7 @@ public class CommitOperations extends AbstractStoreOperation
     writeOperations = fs.createWriteOperationHelper(
         fs.getAuditSpanSource().createSpan(
             COMMITTER_COMMIT_JOB.getSymbol(),
-            "/", null));
+            outputPath, null));
   }
 
   /**
@@ -168,7 +180,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @param commit commit to execute
    * @throws IOException on a failure
    */
-  private void commitOrFail(
+  public void commitOrFail(
       final SinglePendingCommit commit) throws IOException {
     commit(commit, commit.getFilename()).maybeRethrow();
   }
@@ -180,7 +192,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @param origin origin path/string for outcome text
    * @return the outcome
    */
-  private MaybeIOE commit(
+  public MaybeIOE commit(
       final SinglePendingCommit commit,
       final String origin) {
     LOG.debug("Committing single commit {}", commit);
@@ -225,10 +237,9 @@ public class CommitOperations extends AbstractStoreOperation
     // finalize the commit
     writeOperations.commitUpload(
         commit.getDestinationKey(),
-              commit.getUploadId(),
-              toPartEtags(commit.getEtags()),
-              commit.getLength()
-    );
+        commit.getUploadId(),
+        toPartEtags(commit.getEtags()),
+        commit.getLength());
     return commit.getLength();
   }
 
@@ -236,43 +247,69 @@ public class CommitOperations extends AbstractStoreOperation
    * Locate all files with the pending suffix under a directory.
    * @param pendingDir directory
    * @param recursive recursive listing?
-   * @return the list of all located entries
+   * @return iterator of all located entries
    * @throws IOException if there is a problem listing the path.
    */
-  public List<LocatedFileStatus> locateAllSinglePendingCommits(
+  public RemoteIterator<LocatedFileStatus> locateAllSinglePendingCommits(
       Path pendingDir,
       boolean recursive) throws IOException {
     return listAndFilter(fs, pendingDir, recursive, PENDING_FILTER);
   }
 
   /**
-   * Load all single pending commits in the directory.
+   * Load all single pending commits in the directory, using the
+   * outer submitter.
    * All load failures are logged and then added to list of files which would
    * not load.
+   *
    * @param pendingDir directory containing commits
    * @param recursive do a recursive scan?
+   * @param commitContext commit context
+   *
    * @return tuple of loaded entries and those pending files which would
    * not load/validate.
+   *
    * @throws IOException on a failure to list the files.
    */
   public Pair<PendingSet,
       List<Pair<LocatedFileStatus, IOException>>>
-      loadSinglePendingCommits(Path pendingDir, boolean recursive)
+      loadSinglePendingCommits(Path pendingDir,
+      boolean recursive,
+      CommitContext commitContext)
       throws IOException {
 
-    List<LocatedFileStatus> statusList = locateAllSinglePendingCommits(
-        pendingDir, recursive);
-    PendingSet commits = new PendingSet(
-        statusList.size());
-    List<Pair<LocatedFileStatus, IOException>> failures = new ArrayList<>(1);
-    for (LocatedFileStatus status : statusList) {
-      try {
-        commits.add(SinglePendingCommit.load(fs, status.getPath(), status));
-      } catch (IOException e) {
-        LOG.warn("Failed to load commit file {}", status.getPath(), e);
-        failures.add(Pair.of(status, e));
-      }
-    }
+    PendingSet commits = new PendingSet();
+    List<SinglePendingCommit> pendingFiles = Collections.synchronizedList(
+        new ArrayList<>(1));
+    List<Pair<LocatedFileStatus, IOException>> failures = Collections.synchronizedList(
+        new ArrayList<>(1));
+
+    TaskPool.foreach(locateAllSinglePendingCommits(pendingDir, recursive))
+        //. stopOnFailure()
+        .suppressExceptions(false)
+        .executeWith(commitContext.getOuterSubmitter())
+        .run(status -> {
+          Path path = status.getPath();
+          try {
+            // load the file
+            SinglePendingCommit singleCommit = trackDuration(statistics,
+                COMMITTER_LOAD_SINGLE_PENDING_FILE.getSymbol(), () ->
+                    SinglePendingCommit.load(fs,
+                        path,
+                        status,
+                        commitContext.getSinglePendingFileSerializer()));
+            // aggregate stats
+            commits.getIOStatistics()
+                .aggregate(singleCommit.getIOStatistics());
+            // then clear so they aren't marshalled again.
+            singleCommit.getIOStatistics().clear();
+            pendingFiles.add(singleCommit);
+          } catch (IOException e) {
+            LOG.warn("Failed to load commit file {}", path, e);
+            failures.add(Pair.of(status, e));
+          }
+        });
+    commits.setCommits(pendingFiles);
     return Pair.of(commits, failures);
   }
 
@@ -296,7 +333,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @throws FileNotFoundException if the abort ID is unknown
    * @throws IOException on any failure
    */
-  private void abortSingleCommit(SinglePendingCommit commit)
+  public void abortSingleCommit(SinglePendingCommit commit)
       throws IOException {
     String destKey = commit.getDestinationKey();
     String origin = commit.getFilename() != null
@@ -315,7 +352,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @throws FileNotFoundException if the abort ID is unknown
    * @throws IOException on any failure
    */
-  private void abortMultipartCommit(String destKey, String uploadId)
+  public void abortMultipartCommit(String destKey, String uploadId)
       throws IOException {
     try (DurationInfo d = new DurationInfo(LOG,
         "Aborting commit ID %s to path %s", uploadId, destKey)) {
@@ -328,11 +365,13 @@ public class CommitOperations extends AbstractStoreOperation
   /**
    * Enumerate all pending files in a dir/tree, abort.
    * @param pendingDir directory of pending operations
+   * @param commitContext commit context
    * @param recursive recurse?
    * @return the outcome of all the abort operations
    * @throws IOException if there is a problem listing the path.
    */
   public MaybeIOE abortAllSinglePendingCommits(Path pendingDir,
+      CommitContext commitContext,
       boolean recursive)
       throws IOException {
     Preconditions.checkArgument(pendingDir != null, "null pendingDir");
@@ -350,12 +389,14 @@ public class CommitOperations extends AbstractStoreOperation
       LOG.debug("No files to abort under {}", pendingDir);
     }
     while (pendingFiles.hasNext()) {
-      LocatedFileStatus status = pendingFiles.next();
+      final LocatedFileStatus status = pendingFiles.next();
       Path pendingFile = status.getPath();
       if (pendingFile.getName().endsWith(CommitConstants.PENDING_SUFFIX)) {
         try {
-          abortSingleCommit(SinglePendingCommit.load(fs, pendingFile,
-              status));
+          abortSingleCommit(SinglePendingCommit.load(fs,
+              pendingFile,
+              status,
+              commitContext.getSinglePendingFileSerializer()));
         } catch (FileNotFoundException e) {
           LOG.debug("listed file already deleted: {}", pendingFile);
         } catch (IOException | IllegalArgumentException e) {
@@ -437,7 +478,7 @@ public class CommitOperations extends AbstractStoreOperation
         successData);
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Writing success file %s", markerPath)) {
-      successData.save(fs, markerPath, true);
+      successData.save(fs, markerPath, SuccessData.serializer());
     }
   }
 
@@ -466,7 +507,7 @@ public class CommitOperations extends AbstractStoreOperation
    * @return a pending upload entry
    * @throws IOException failure
    */
-  public SinglePendingCommit  uploadFileToPendingCommit(File localFile,
+  public SinglePendingCommit uploadFileToPendingCommit(File localFile,
       Path destPath,
       String partition,
       long uploadPartSize,
@@ -494,7 +535,8 @@ public class CommitOperations extends AbstractStoreOperation
         destPath)) {
 
       statistics.commitCreated();
-      uploadId = writeOperations.initiateMultiPartUpload(destKey);
+      uploadId = writeOperations.initiateMultiPartUpload(destKey,
+          PutObjectOptions.keepingDirs());
       long length = localFile.length();
 
       SinglePendingCommit commitData = new SinglePendingCommit();
@@ -592,13 +634,41 @@ public class CommitOperations extends AbstractStoreOperation
   }
 
   /**
-   * Begin the final commit.
+   * Create a commit context for a job or task.
+   *
+   * @param context job context
    * @param path path for all work.
+   * @param committerThreads thread pool size
    * @return the commit context to pass in.
    * @throws IOException failure.
    */
-  public CommitContext initiateCommitOperation(Path path) throws IOException {
-    return new CommitContext();
+  public CommitContext createCommitContext(
+      JobContext context,
+      Path path,
+      int committerThreads) throws IOException {
+    return new CommitContext(this, context,
+        committerThreads);
+  }
+
+  /**
+   * Create a stub commit context for tests.
+   * There's no job context.
+   * @param path path for all work.
+   * @param jobId job ID; if null a random UUID is generated.
+   * @param committerThreads number of committer threads.
+   * @return the commit context to pass in.
+   * @throws IOException failure.
+   */
+  public CommitContext createCommitContextForTesting(
+      Path path, @Nullable String jobId, int committerThreads) throws IOException {
+    final String id = jobId != null
+        ? jobId
+        : UUID.randomUUID().toString();
+
+    return new CommitContext(this,
+        getStoreContext().getConfiguration(),
+        id,
+        committerThreads);
   }
 
   /**
@@ -622,98 +692,6 @@ public class CommitOperations extends AbstractStoreOperation
       return Optional.empty();
     }
     return HeaderProcessing.extractXAttrLongValue(bytes);
-  }
-
-  /**
-   * Commit context.
-   *
-   * It is used to manage the final commit sequence where files become
-   * visible.
-   *
-   * This can only be created through {@link #initiateCommitOperation(Path)}.
-   *
-   * Once the commit operation has completed, it must be closed.
-   * It must not be reused.
-   */
-  public final class CommitContext implements Closeable {
-
-
-    /**
-     * Create.
-     */
-    private CommitContext() {
-    }
-
-    /**
-     * Commit the operation, throwing an exception on any failure.
-     * See {@link CommitOperations#commitOrFail(SinglePendingCommit)}.
-     * @param commit commit to execute
-     * @throws IOException on a failure
-     */
-    public void commitOrFail(SinglePendingCommit commit) throws IOException {
-      CommitOperations.this.commitOrFail(commit);
-    }
-
-    /**
-     * Commit a single pending commit; exceptions are caught
-     * and converted to an outcome.
-     * See {@link CommitOperations#commit(SinglePendingCommit, String)}.
-     * @param commit entry to commit
-     * @param origin origin path/string for outcome text
-     * @return the outcome
-     */
-    public MaybeIOE commit(SinglePendingCommit commit,
-        String origin) {
-      return CommitOperations.this.commit(commit, origin);
-    }
-
-    /**
-     * See {@link CommitOperations#abortSingleCommit(SinglePendingCommit)}.
-     * @param commit pending commit to abort
-     * @throws FileNotFoundException if the abort ID is unknown
-     * @throws IOException on any failure
-     */
-    public void abortSingleCommit(final SinglePendingCommit commit)
-        throws IOException {
-      CommitOperations.this.abortSingleCommit(commit);
-    }
-
-    /**
-     * See {@link CommitOperations#revertCommit(SinglePendingCommit)}.
-     * @param commit pending commit
-     * @throws IOException failure
-     */
-    public void revertCommit(final SinglePendingCommit commit)
-        throws IOException {
-      CommitOperations.this.revertCommit(commit);
-    }
-
-    /**
-     * See {@link CommitOperations#abortMultipartCommit(String, String)}..
-     * @param destKey destination key
-     * @param uploadId upload to cancel
-     * @throws FileNotFoundException if the abort ID is unknown
-     * @throws IOException on any failure
-     */
-    public void abortMultipartCommit(
-        final String destKey,
-        final String uploadId)
-        throws IOException {
-      CommitOperations.this.abortMultipartCommit(destKey, uploadId);
-    }
-
-    @Override
-    public void close() throws IOException {
-    }
-
-    @Override
-    public String toString() {
-      final StringBuilder sb = new StringBuilder(
-          "CommitContext{");
-      sb.append('}');
-      return sb.toString();
-    }
-
   }
 
   /**
@@ -787,6 +765,5 @@ public class CommitOperations extends AbstractStoreOperation
       return ex != null ? new MaybeIOE(ex) : NONE;
     }
   }
-
 
 }

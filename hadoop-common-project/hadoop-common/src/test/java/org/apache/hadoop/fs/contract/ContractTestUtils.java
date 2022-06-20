@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.functional.RemoteIterators;
+
 import org.junit.Assert;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -1446,11 +1448,7 @@ public class ContractTestUtils extends Assert {
    */
   public static List<LocatedFileStatus> toList(
       RemoteIterator<LocatedFileStatus> iterator) throws IOException {
-    ArrayList<LocatedFileStatus> list = new ArrayList<>();
-    while (iterator.hasNext()) {
-      list.add(iterator.next());
-    }
-    return list;
+    return RemoteIterators.toList(iterator);
   }
 
   /**
@@ -1464,11 +1462,7 @@ public class ContractTestUtils extends Assert {
    */
   public static <T extends FileStatus> List<T> iteratorToList(
           RemoteIterator<T> iterator) throws IOException {
-    List<T> list = new ArrayList<>();
-    while (iterator.hasNext()) {
-      list.add(iterator.next());
-    }
-    return list;
+    return RemoteIterators.toList(iterator);
   }
 
 

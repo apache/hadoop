@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
@@ -137,6 +138,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     public DurationTracker trackDuration(String key, long count) {
       return stubDurationTracker();
     }
+
   }
 
   /**
@@ -380,6 +382,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public void jobCompleted(final boolean success) {
+    }
+
+    @Override
+    public IOStatisticsStore getIOStatistics() {
+      return null;
     }
   }
 

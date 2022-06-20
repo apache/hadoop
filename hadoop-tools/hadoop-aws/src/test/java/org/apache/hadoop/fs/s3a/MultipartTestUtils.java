@@ -22,6 +22,7 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.io.IOUtils;
 
@@ -78,7 +79,7 @@ public final class MultipartTestUtils {
       WriteOperationHelper writeHelper = fs.getWriteOperationHelper();
       byte[] data = dataset(len, 'a', 'z');
       InputStream in = new ByteArrayInputStream(data);
-      String uploadId = writeHelper.initiateMultiPartUpload(key);
+      String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.keepingDirs());
       UploadPartRequest req = writeHelper.newUploadPartRequest(key, uploadId,
           partNo, len, in, null, 0L);
       PartETag partEtag = writeHelper.uploadPart(req).getPartETag();
