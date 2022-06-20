@@ -1041,8 +1041,9 @@ public class PBHelper {
     byte[] liveBlkIndices = blockEcReconstructionInfoProto.getLiveBlockIndices()
         .toByteArray();
     byte[] excludeReconstructedIndices =
+        blockEcReconstructionInfoProto.hasExcludeReconstructedIndices() ?
             blockEcReconstructionInfoProto.getExcludeReconstructedIndices()
-            .toByteArray();
+                .toByteArray() : new byte[0];
     ErasureCodingPolicy ecPolicy =
         PBHelperClient.convertErasureCodingPolicy(
             blockEcReconstructionInfoProto.getEcPolicy());
