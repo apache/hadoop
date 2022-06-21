@@ -1668,6 +1668,11 @@
             <artifactId>jdk.tools</artifactId>
             <groupId>jdk.tools</groupId>
           </exclusion>
+          <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+          <exclusion>
+            <groupId>org.apache.htrace</groupId>
+            <artifactId>htrace-core</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1676,6 +1681,13 @@
         <version>${hbase.version}</version>
         <scope>test</scope>
         <classifier>tests</classifier>
+        <exclusions>
+          <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+          <exclusion>
+            <groupId>org.apache.htrace</groupId>
+            <artifactId>htrace-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -1687,7 +1699,18 @@
             <groupId>jdk.tools</groupId>
             <artifactId>jdk.tools</artifactId>
           </exclusion>
+          <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+          <exclusion>
+            <groupId>org.apache.htrace</groupId>
+            <artifactId>htrace-core</artifactId>
+          </exclusion>
         </exclusions>
+      </dependency>
+      <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-noop-htrace</artifactId>
+        <version>4.1.1</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
