@@ -75,9 +75,6 @@ import org.slf4j.LoggerFactory;
 
 public class TestRMDeadLockTriggerByApp {
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestRMDeadLockTriggerByApp.class);
-
   private static final int INTERVAL = 1;
   private static final int LOOP = 5000;
   private static final float CHECK_DEAD_LOCK_RATIO = 2.0f;
@@ -240,12 +237,6 @@ public class TestRMDeadLockTriggerByApp {
     }
     this.amClient = null;
 
-    // Avoid the EventHandlingThread stuck forever
-    if (deadLock) {
-      LOG.info("Found dead lock, stop EventHandlingThread manually!");
-      ((AsyncDispatcher) rm.getRMContext().getDispatcher())
-          .forceEventHandlingThreadStop();
-    }
     if (yarnCluster != null && yarnCluster.getServiceState() == STATE.STARTED) {
       yarnCluster.stop();
     }
@@ -253,7 +244,7 @@ public class TestRMDeadLockTriggerByApp {
   }
 
   @Test(timeout = 60000)
-  public void TestRMDeadLockTriggerByApp() throws InterruptedException {
+  public void testRMDeadLockTriggerByApp() throws InterruptedException {
     // start all thread
     allocateThread.start();
     addLogAggReportThread.start();
