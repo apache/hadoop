@@ -135,7 +135,7 @@ public class HostsFileReader {
     if (xmlInput) {
       readXmlFileToMapWithFileInputStream(type, filename, inputStream, map);
     } else {
-      HashSet<String> nodes = new HashSet<String>();
+      HashSet<String> nodes = new HashSet<>();
       readFileToSetWithFileInputStream(type, filename, inputStream, nodes);
       for (String node : nodes) {
         map.put(node, null);

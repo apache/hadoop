@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
+import org.apache.hadoop.fs.s3a.statistics.PutTrackerStatistics;
 
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 
@@ -38,8 +39,9 @@ import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
  * in this case:
  * <ol>
  *   <li>{@link #isMagicCommitPath(Path)} will always return false.</li>
- *   <li>{@link #createTracker(Path, String)} will always return an instance
- *   of {@link PutTracker}.</li>
+ *   <li>{@link #isUnderMagicPath(Path)} will always return false.</li>
+ *   <li>{@link #createTracker(Path, String, PutTrackerStatistics)} will always
+ *   return an instance of {@link PutTracker}.</li>
  * </ol>
  *
  * <p>Important</p>: must not directly or indirectly import a class which
@@ -88,9 +90,11 @@ public class MagicCommitIntegration extends AbstractStoreOperation {
    * for the commit tracker.
    * @param path path of nominal write
    * @param key key of path of nominal write
+   * @param trackerStatistics tracker statistics
    * @return the tracker for this operation.
    */
-  public PutTracker createTracker(Path path, String key) {
+  public PutTracker createTracker(Path path, String key,
+      PutTrackerStatistics trackerStatistics) {
     final List<String> elements = splitPathToElements(path);
     PutTracker tracker;
 
@@ -106,7 +110,8 @@ public class MagicCommitIntegration extends AbstractStoreOperation {
             key,
             destKey,
             pendingsetPath,
-            owner.getWriteOperationHelper());
+            owner.getWriteOperationHelper(),
+            trackerStatistics);
         LOG.debug("Created {}", tracker);
       } else {
         LOG.warn("File being created has a \"magic\" path, but the filesystem"
@@ -184,4 +189,13 @@ public class MagicCommitIntegration extends AbstractStoreOperation {
         || last.endsWith(CommitConstants.PENDINGSET_SUFFIX);
   }
 
+  /**
+   * Is this path in/under a magic path...regardless of file type.
+   * This is used to optimize create() operations.
+   * @param path path to check
+   * @return true if the path is one a magic file write expects.
+   */
+  public boolean isUnderMagicPath(Path path) {
+    return magicCommitEnabled && isMagicPath(splitPathToElements(path));
+  }
 }

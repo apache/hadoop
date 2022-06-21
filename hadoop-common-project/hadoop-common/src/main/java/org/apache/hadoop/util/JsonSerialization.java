@@ -297,11 +297,12 @@ public class JsonSerialization<T> {
   }
 
   /**
-   * Write the JSON as bytes, then close the file.
+   * Write the JSON as bytes, then close the stream.
+   * @param instance instance to write
    * @param dataOutputStream an output stream that will always be closed
    * @throws IOException on any failure
    */
-  private void writeJsonAsBytes(T instance,
+  public void writeJsonAsBytes(T instance,
       OutputStream dataOutputStream) throws IOException {
     try {
       dataOutputStream.write(toBytes(instance));

@@ -3528,28 +3528,32 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
         ReplicaInfo replicaInfo, newReplicaInfo;
         final String bpid = replicaState.getBlockPoolId();
+        final FsVolumeImpl lazyPersistVolume = replicaState.getLazyPersistVolume();
 
-        try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+        try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
           replicaInfo = getReplicaInfo(replicaState.getBlockPoolId(),
                                        replicaState.getBlockId());
           Preconditions.checkState(replicaInfo.getVolume().isTransientStorage());
           ramDiskReplicaTracker.discardReplica(replicaState.getBlockPoolId(),
               replicaState.getBlockId(), false);
 
-          // Move the replica from lazyPersist/ to finalized/ on
-          // the target volume
-          newReplicaInfo =
-              replicaState.getLazyPersistVolume().activateSavedReplica(bpid,
-                  replicaInfo, replicaState);
-          // Update the volumeMap entry.
-          volumeMap.add(bpid, newReplicaInfo);
+          try (AutoCloseableLock lock1 = lockManager.writeLock(LockLevel.VOLUME,
+              bpid, lazyPersistVolume.getStorageID())) {
+            // Move the replica from lazyPersist/ to finalized/ on
+            // the target volume
+            newReplicaInfo =
+                replicaState.getLazyPersistVolume().activateSavedReplica(bpid,
+                    replicaInfo, replicaState);
+            // Update the volumeMap entry.
+            volumeMap.add(bpid, newReplicaInfo);
 
-          // Update metrics
-          datanode.getMetrics().incrRamDiskBlocksEvicted();
-          datanode.getMetrics().addRamDiskBlocksEvictionWindowMs(
-              Time.monotonicNow() - replicaState.getCreationTime());
-          if (replicaState.getNumReads() == 0) {
-            datanode.getMetrics().incrRamDiskBlocksEvictedWithoutRead();
+            // Update metrics
+            datanode.getMetrics().incrRamDiskBlocksEvicted();
+            datanode.getMetrics().addRamDiskBlocksEvictionWindowMs(
+                Time.monotonicNow() - replicaState.getCreationTime());
+            if (replicaState.getNumReads() == 0) {
+              datanode.getMetrics().incrRamDiskBlocksEvictedWithoutRead();
+            }
           }
 
           // Delete the block+meta files from RAM disk and release locked

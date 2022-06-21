@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit;
+package org.apache.hadoop.fs.s3a.commit.impl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -68,31 +68,67 @@ public final class CommitUtilsWithMR {
   /**
    * Compute the "magic" path for a job attempt.
    * @param jobUUID unique Job ID.
+   * @param appAttemptId the ID of the application attempt for this job.
    * @param dest the final output directory
    * @return the path to store job attempt data.
    */
-  public static Path getMagicJobAttemptPath(String jobUUID, Path dest) {
-    return new Path(getMagicJobAttemptsPath(dest),
-        formatAppAttemptDir(jobUUID));
+  public static Path getMagicJobAttemptPath(String jobUUID,
+      int appAttemptId,
+      Path dest) {
+    return new Path(
+        getMagicJobAttemptsPath(dest),
+        formatAppAttemptDir(jobUUID, appAttemptId));
   }
 
   /**
-   * Format the application attempt directory.
+   * Compute the "magic" path for a job.
    * @param jobUUID unique Job ID.
-   * @return the directory name for the application attempt
+   * @param dest the final output directory
+   * @return the path to store job attempt data.
    */
-  public static String formatAppAttemptDir(String jobUUID) {
+  public static Path getMagicJobPath(String jobUUID,
+      Path dest) {
+    return new Path(
+        getMagicJobAttemptsPath(dest),
+        formatJobDir(jobUUID));
+  }
+
+  /**
+   * Build the name of the job directory, without
+   * app attempt.
+   * This is the path to use for cleanup.
+   * @param jobUUID unique Job ID.
+   * @return the directory name for the job
+   */
+  public static String formatJobDir(
+      String jobUUID) {
     return String.format("job-%s", jobUUID);
+  }
+
+  /**
+   * Build the name of the job attempt directory.
+   * @param jobUUID unique Job ID.
+   * @param appAttemptId the ID of the application attempt for this job.
+   * @return the directory tree for the application attempt
+   */
+  public static String formatAppAttemptDir(
+      String jobUUID,
+      int appAttemptId) {
+    return formatJobDir(jobUUID) + String.format("/%02d", appAttemptId);
   }
 
   /**
    * Compute the path where the output of magic task attempts are stored.
    * @param jobUUID unique Job ID.
    * @param dest destination of work
+   * @param appAttemptId the ID of the application attempt for this job.
    * @return the path where the output of magic task attempts are stored.
    */
-  public static Path getMagicTaskAttemptsPath(String jobUUID, Path dest) {
-    return new Path(getMagicJobAttemptPath(jobUUID, dest), "tasks");
+  public static Path getMagicTaskAttemptsPath(
+      String jobUUID,
+      Path dest,
+      int appAttemptId) {
+    return new Path(getMagicJobAttemptPath(jobUUID, appAttemptId, dest), "tasks");
   }
 
   /**
@@ -115,6 +151,8 @@ public final class CommitUtilsWithMR {
   /**
    * Get the base Magic attempt path, without any annotations to mark relative
    * references.
+   * If there is an app attempt property in the context configuration, that
+   * is included.
    * @param context task context.
    * @param jobUUID unique Job ID.
    * @param dest The output path to commit work into
@@ -123,8 +161,9 @@ public final class CommitUtilsWithMR {
   public static Path getBaseMagicTaskAttemptPath(TaskAttemptContext context,
       String jobUUID,
       Path dest) {
-    return new Path(getMagicTaskAttemptsPath(jobUUID, dest),
-          String.valueOf(context.getTaskAttemptID()));
+    return new Path(
+        getMagicTaskAttemptsPath(jobUUID, dest, getAppAttemptId(context)),
+        String.valueOf(context.getTaskAttemptID()));
   }
 
   /**
@@ -132,12 +171,13 @@ public final class CommitUtilsWithMR {
    * This data is <i>not magic</i>
    * @param jobUUID unique Job ID.
    * @param out output directory of job
+   * @param appAttemptId the ID of the application attempt for this job.
    * @return the path to store temporary job attempt data.
    */
   public static Path getTempJobAttemptPath(String jobUUID,
-      Path out) {
+      Path out, final int appAttemptId) {
     return new Path(new Path(out, TEMP_DATA),
-        formatAppAttemptDir(jobUUID));
+        formatAppAttemptDir(jobUUID, appAttemptId));
   }
 
   /**
@@ -150,7 +190,7 @@ public final class CommitUtilsWithMR {
   public static Path getTempTaskAttemptPath(TaskAttemptContext context,
       final String jobUUID, Path out) {
     return new Path(
-        getTempJobAttemptPath(jobUUID, out),
+        getTempJobAttemptPath(jobUUID, out, getAppAttemptId(context)),
         String.valueOf(context.getTaskAttemptID()));
   }
 
