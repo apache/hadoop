@@ -124,15 +124,15 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextImpl;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
@@ -237,6 +237,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemoteIterator;
@@ -388,11 +389,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ArnResource accessPoint;
 
   /**
-   * Does the fs have thread-level IOStats support enabled?
-   */
-  private boolean isThreadLevelIOStatsEnabled;
-
-  /**
    * Thread-level IOStats context.
    */
   private IOStatisticsContext ioStatisticsContext;
@@ -478,9 +474,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);
-      isThreadLevelIOStatsEnabled =
-          conf.getBoolean(THREAD_LEVEL_IOSTATS_ENABLED,
-              THREAD_LEVEL_IOSTATS_ENABLED_DEFAULT);
       initializeStatisticsBinding();
       // If CSE-KMS method is set then CSE is enabled.
       isCSEEnabled = S3AEncryptionMethods.CSE_KMS.getMethod()
@@ -714,19 +707,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             return S3AFileSystem.this.statistics;
           }
         });
-    // If Thread-level IOStats support is enabled, initialize the context.
-    // This would initialize a ThreadLocal Instance.
-    if(isIOStatsContextEnabled()) {
-      this.ioStatisticsContext = new IOStatisticsContextImpl();
-    }
-  }
+    // Get the current active IOStatisticsContext.
+    ioStatisticsContext = currentIOStatisticsContext();
 
-  /**
-   *
-   * @return
-   */
-  private boolean isIOStatsContextEnabled() {
-    return this.isThreadLevelIOStatsEnabled;
   }
 
   /**
@@ -1510,7 +1493,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
         auditSpan,
-        ioStatisticsContext);
+        ioStatisticsContext.getThreadIOStatistics());
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
     return new FSDataInputStream(
@@ -1598,7 +1581,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   protected S3AReadOpContext createReadContext(
       final FileStatus fileStatus,
       final AuditSpan auditSpan,
-      final IOStatisticsContext ioStatsContext) {
+      final IOStatisticsAggregator ioStatisticsAggregator) {
     final S3AReadOpContext roc = new S3AReadOpContext(
         fileStatus.getPath(),
         invoker,
@@ -1606,7 +1589,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         statisticsContext,
         fileStatus,
         vectoredIOContext,
-        ioStatsContext)
+        ioStatisticsAggregator)
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
     return roc.build();
@@ -1774,7 +1757,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
         .withCSEEnabled(isCSEEnabled)
         .withPutOptions(putOptions)
-        .withThreadLevelIOStatistics(ioStatisticsContext);
+        .withThreadLevelIOStatistics(ioStatisticsContext.getThreadIOStatistics());
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
@@ -2135,7 +2118,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public S3AReadOpContext createReadContext(final FileStatus fileStatus) {
       return S3AFileSystem.this.createReadContext(fileStatus,
           auditSpan,
-          ioStatisticsContext);
+          ioStatisticsContext.getThreadIOStatistics());
     }
 
     @Override
@@ -5008,7 +4991,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
         auditSpan,
-        ioStatisticsContext);
+        ioStatisticsContext.getThreadIOStatistics());
     fileInformation.applyOptions(readContext);
 
     if (changePolicy.getSource() != ChangeDetectionPolicy.Source.None

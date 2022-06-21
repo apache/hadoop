@@ -42,7 +42,7 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.statistics.IOStatisticsContext;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -73,6 +73,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -167,8 +168,8 @@ class S3ABlockOutputStream extends OutputStream implements
   /** is client side encryption enabled? */
   private final boolean isCSEEnabled;
 
-  /** Context for Thread level IOStatistics. */
-  private final IOStatisticsContext ioStatisticsContext;
+  /** Thread level IOStatistics. */
+  private final IOStatisticsAggregator threadIOStatistics;
 
   /**
    * An S3A output stream which uploads partitions in a separate pool of
@@ -206,7 +207,7 @@ class S3ABlockOutputStream extends OutputStream implements
       initMultipartUpload();
     }
     this.isCSEEnabled = builder.isCSEEnabled;
-    this.ioStatisticsContext = builder.ioStatisticsContext;
+    this.threadIOStatistics = builder.threadIOStatistics;
   }
 
   /**
@@ -460,12 +461,22 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   private synchronized void cleanupOnClose() {
     cleanupWithLogger(LOG, getActiveBlock(), blockFactory);
-    if(ioStatisticsContext != null) {
-      ioStatisticsContext.getThreadIOStatistics().aggregate(statistics.getIOStatistics());
-    }
+    mergeThreadIOStatistics(threadIOStatistics);
     LOG.debug("Statistics: {}", statistics);
     cleanupWithLogger(LOG, statistics);
     clearActiveBlock();
+  }
+
+  /**
+   * Merging the current thread's IOStatistics with the current IOStatistics
+   * context.
+   *
+   * @param threadIOStatistics thread IOStatistics to be merged.
+   */
+  private void mergeThreadIOStatistics(
+      IOStatisticsAggregator threadIOStatistics) {
+    threadIOStatistics.aggregate(statistics.getIOStatistics());
+    currentIOStatisticsContext().setThreadIOStatistics(threadIOStatistics);
   }
 
   /**
@@ -711,8 +722,8 @@ class S3ABlockOutputStream extends OutputStream implements
   }
 
   @VisibleForTesting
-  public IOStatisticsContext getIoStatisticsContext() {
-    return ioStatisticsContext;
+  public IOStatisticsAggregator getThreadIOStatistics() {
+    return threadIOStatistics;
   }
 
   /**
@@ -1107,7 +1118,7 @@ class S3ABlockOutputStream extends OutputStream implements
     private PutObjectOptions putOptions;
 
     /** IOStatistics Context for per thread iostats aggregation. */
-    private IOStatisticsContext ioStatisticsContext;
+    private IOStatisticsAggregator threadIOStatistics;
 
     private BlockOutputStreamBuilder() {
     }
@@ -1123,6 +1134,7 @@ class S3ABlockOutputStream extends OutputStream implements
       requireNonNull(writeOperations, "null writeOperationHelper");
       requireNonNull(putTracker, "null putTracker");
       requireNonNull(putOptions, "null putOptions");
+      requireNonNull(threadIOStatistics, "null threadIOStatistics");
       Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
           "Block size is too small: %s", blockSize);
     }
@@ -1252,8 +1264,9 @@ class S3ABlockOutputStream extends OutputStream implements
      * @param value new value
      * @return the builder
      */
-    public BlockOutputStreamBuilder withThreadLevelIOStatistics(IOStatisticsContext value) {
-      ioStatisticsContext = value;
+    public BlockOutputStreamBuilder withThreadLevelIOStatistics(
+        IOStatisticsAggregator value) {
+      threadIOStatistics = value;
       return this;
     }
   }

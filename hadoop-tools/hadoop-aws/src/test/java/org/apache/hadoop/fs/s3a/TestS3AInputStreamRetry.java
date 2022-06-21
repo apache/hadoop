@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.lang.Math.min;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 import static org.apache.hadoop.util.functional.FutureIO.eval;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -106,7 +107,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     S3AReadOpContext s3AReadOpContext = fs.createReadContext(
         s3AFileStatus,
         NoopSpan.INSTANCE,
-    null);
+        currentIOStatisticsContext().getThreadIOStatistics());
 
     return new S3AInputStream(
         s3AReadOpContext,

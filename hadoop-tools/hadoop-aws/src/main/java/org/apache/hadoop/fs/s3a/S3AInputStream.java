@@ -38,7 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.statistics.IOStatisticsContext;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -68,6 +68,7 @@ import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
 import static org.apache.hadoop.fs.s3a.Invoker.onceTrackingDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -190,8 +191,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private long asyncDrainThreshold;
 
-  /** Context used to capture per thread IOstats. */
-  private final IOStatisticsContext ioStatisticsContext;
+  /** Aggregator used to aggregate per thread IOStatistics. */
+  private final IOStatisticsAggregator threadIOStatistics;
 
   /**
    * Create the stream.
@@ -231,7 +232,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.asyncDrainThreshold = ctx.getAsyncDrainThreshold();
     this.unboundedThreadPool = unboundedThreadPool;
     this.vectoredIOContext = context.getVectoredIOContext();
-    this.ioStatisticsContext = ctx.getIoStatisticsContext();
+    this.threadIOStatistics = ctx.getIoStatisticsAggregator();
   }
 
   /**
@@ -608,11 +609,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         // close or abort the stream; blocking
         awaitFuture(closeStream("close() operation", false, true));
         // Collect ThreadLevel IOStats
-        if (ioStatisticsContext != null) {
-          ioStatisticsContext.getThreadIOStatistics().aggregate(streamStatistics.getIOStatistics());
-          LOG.debug("IOStatistics of thread: {}\n{}",
-              Thread.currentThread().getId(), ioStatisticsContext.toString());
-        }
+        mergeThreadIOStatistics(threadIOStatistics);
         LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
         // end the client+audit span.
         client.close();
@@ -623,6 +620,17 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         streamStatistics.close();
       }
     }
+  }
+
+  /**
+   * Merging the current thread's IOStatistics with the current IOStatistics
+   * context.
+   *
+   * @param threadIOStatistics thread IOStatistics to be merged.
+   */
+  private void mergeThreadIOStatistics(IOStatisticsAggregator threadIOStatistics) {
+    threadIOStatistics.aggregate(streamStatistics.getIOStatistics());
+    currentIOStatisticsContext().setThreadIOStatistics(threadIOStatistics);
   }
 
   /**
@@ -1363,8 +1371,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     return ioStatistics;
   }
 
-  public IOStatisticsContext getIoStatisticsContext() {
-    return ioStatisticsContext;
+  public IOStatistics getThreadIOStatistics() {
+    return (IOStatistics) threadIOStatistics;
   }
 
   /**
