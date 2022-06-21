@@ -215,9 +215,8 @@ public class S3ARetryPolicy implements RetryPolicy {
     // policy on a 400/bad request still ambiguous.
     // Treated as an immediate failure
     RetryPolicy awsBadRequestExceptionRetryPolicy =
-      configuration.getBoolean(FAIL_ON_AWS_BAD_REQUEST, DEFAULT_FAIL_ON_AWS_BAD_REQUEST) ?
-        fail :
-        retryIdempotentCalls;
+        configuration.getBoolean(FAIL_ON_AWS_BAD_REQUEST, DEFAULT_FAIL_ON_AWS_BAD_REQUEST) ?
+            fail : retryIdempotentCalls;
     policyMap.put(AWSBadRequestException.class, awsBadRequestExceptionRetryPolicy);
 
     // Status 500 error code is also treated as a connectivity problem

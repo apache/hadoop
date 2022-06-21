@@ -326,8 +326,8 @@ public class TestInvoker extends Assert {
 
     IOException ex = translateException("GET", "/", BAD_REQUEST);
     assertRetryAction("Expected retry on aws bad request",
-      retryPolicy, RetryPolicy.RetryAction.RETRY,
-      ex, 1, true);
+        retryPolicy, RetryPolicy.RetryAction.RETRY,
+        ex, 1, true);
   }
 
   @Test
