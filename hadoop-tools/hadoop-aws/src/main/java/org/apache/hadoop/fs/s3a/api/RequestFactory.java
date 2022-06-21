@@ -50,6 +50,7 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 
 /**
  * Factory for S3 objects.
@@ -141,11 +142,12 @@ public interface RequestFactory {
    * Adds the ACL and metadata
    * @param key key of object
    * @param metadata metadata header
+   * @param options options for the request
    * @param srcfile source file
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, File srcfile);
+      ObjectMetadata metadata, PutObjectOptions options, File srcfile);
 
   /**
    * Create a {@link PutObjectRequest} request.
@@ -153,11 +155,13 @@ public interface RequestFactory {
    * operation.
    * @param key key of object
    * @param metadata metadata header
+   * @param options options for the request
    * @param inputStream source data.
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata,
+      PutObjectOptions options,
       InputStream inputStream);
 
   /**
@@ -190,10 +194,12 @@ public interface RequestFactory {
   /**
    * Start a multipart upload.
    * @param destKey destination object key
+   * @param options options for the request
    * @return the request.
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(
-      String destKey);
+      String destKey,
+      @Nullable PutObjectOptions options);
 
   /**
    * Complete a multipart upload.

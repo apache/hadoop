@@ -245,4 +245,10 @@ public interface S3ATestConstants {
    * used.
    */
   int KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN = 94;
+
+  /**
+   * Build directory property.
+   * Value: {@value}.
+   */
+  String PROJECT_BUILD_DIRECTORY_PROPERTY = "project.build.directory";
 }

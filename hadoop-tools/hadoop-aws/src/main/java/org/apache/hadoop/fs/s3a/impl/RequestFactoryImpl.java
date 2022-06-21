@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -362,15 +364,19 @@ public class RequestFactoryImpl implements RequestFactory {
    * Adds the ACL, storage class and metadata
    * @param key key of object
    * @param metadata metadata header
+   * @param options options for the request, including headers
    * @param srcfile source file
    * @return the request
    */
   @Override
   public PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, File srcfile) {
+      ObjectMetadata metadata,
+      final PutObjectOptions options,
+      File srcfile) {
     Preconditions.checkNotNull(srcfile);
     PutObjectRequest putObjectRequest = new PutObjectRequest(getBucket(), key,
         srcfile);
+    maybeSetMetadata(options, metadata);
     setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
     if (storageClass != null) {
@@ -386,15 +392,18 @@ public class RequestFactoryImpl implements RequestFactory {
    * operation.
    * @param key key of object
    * @param metadata metadata header
+   * @param options options for the request
    * @param inputStream source data.
    * @return the request
    */
   @Override
   public PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata,
+      @Nullable final PutObjectOptions options,
       InputStream inputStream) {
     Preconditions.checkNotNull(inputStream);
     Preconditions.checkArgument(isNotEmpty(key), "Null/empty key");
+    maybeSetMetadata(options, metadata);
     PutObjectRequest putObjectRequest = new PutObjectRequest(getBucket(), key,
         inputStream, metadata);
     setOptionalPutRequestParameters(putObjectRequest);
@@ -418,7 +427,7 @@ public class RequestFactoryImpl implements RequestFactory {
     final ObjectMetadata md = createObjectMetadata(0L, true);
     md.setContentType(HeaderProcessing.CONTENT_TYPE_X_DIRECTORY);
     PutObjectRequest putObjectRequest =
-        newPutObjectRequest(key, md, im);
+        newPutObjectRequest(key, md, null, im);
     return putObjectRequest;
   }
 
@@ -444,11 +453,14 @@ public class RequestFactoryImpl implements RequestFactory {
 
   @Override
   public InitiateMultipartUploadRequest newMultipartUploadRequest(
-      String destKey) {
+      final String destKey,
+      @Nullable final PutObjectOptions options) {
+    final ObjectMetadata objectMetadata = newObjectMetadata(-1);
+    maybeSetMetadata(options, objectMetadata);
     final InitiateMultipartUploadRequest initiateMPURequest =
         new InitiateMultipartUploadRequest(getBucket(),
             destKey,
-            newObjectMetadata(-1));
+            objectMetadata);
     initiateMPURequest.setCannedACL(getCannedACL());
     if (getStorageClass() != null) {
       initiateMPURequest.withStorageClass(getStorageClass());
@@ -599,6 +611,23 @@ public class RequestFactoryImpl implements RequestFactory {
   @Override
   public void setEncryptionSecrets(final EncryptionSecrets secrets) {
     encryptionSecrets = secrets;
+  }
+
+  /**
+   * Set the metadata from the options if the options are not
+   * null and the metadata contains headers.
+   * @param options options for the request
+   * @param objectMetadata metadata to patch
+   */
+  private void maybeSetMetadata(
+      @Nullable PutObjectOptions options,
+      final ObjectMetadata objectMetadata) {
+    if (options != null) {
+      Map<String, String> headers = options.getHeaders();
+      if (headers != null) {
+        objectMetadata.setUserMetadata(headers);
+      }
+    }
   }
 
   /**
