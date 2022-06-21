@@ -226,6 +226,7 @@ public class AbfsRestOperation {
     retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
     long sleepDuration = 0L;
+    abfsDriverMetrics.getTotalNumberOfRequests().getAndIncrement();
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
@@ -239,22 +240,29 @@ public class AbfsRestOperation {
         Thread.currentThread().interrupt();
       }
     }
-    abfsDriverMetrics.getTotalNumberOfRequests().getAndIncrement();
-    if(retryCount > 0 && retryCount <= 30) {
-      maxRetryCount = Math.max(abfsDriverMetrics.getMaxRetryCount().get(), retryCount);
-      abfsDriverMetrics.getMaxRetryCount().set(maxRetryCount);
-      updateCount(retryCount);
-    } else if(retryCount > 30){
-      abfsDriverMetrics.getNumberOfRequestsFailed().getAndIncrement();
-    }else{
-      abfsDriverMetrics.getNumberOfRequestsSucceededWithoutRetrying().getAndIncrement();
-    }
+    updateDriverMetrics(retryCount, result.getStatusCode());
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
     }
 
     LOG.trace("{} REST operation complete", operationType);
+  }
+
+  private void updateDriverMetrics(int retryCount, int statusCode){
+    if (statusCode == HttpURLConnection.HTTP_UNAVAILABLE) {
+      if (retryCount == 30) {
+        abfsDriverMetrics.getNumberOfRequestsFailed().getAndIncrement();
+      }
+    } else {
+      if (retryCount > 0 && retryCount <= 30) {
+        maxRetryCount = Math.max(abfsDriverMetrics.getMaxRetryCount().get(), retryCount);
+        abfsDriverMetrics.getMaxRetryCount().set(maxRetryCount);
+        updateCount(retryCount);
+      } else {
+        abfsDriverMetrics.getNumberOfRequestsSucceededWithoutRetrying().getAndIncrement();
+      }
+    }
   }
 
   /**
@@ -341,6 +349,7 @@ public class AbfsRestOperation {
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
+        updateDriverMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex);
       }
       return false;
@@ -350,6 +359,7 @@ public class AbfsRestOperation {
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
+        updateDriverMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex);
       }
 

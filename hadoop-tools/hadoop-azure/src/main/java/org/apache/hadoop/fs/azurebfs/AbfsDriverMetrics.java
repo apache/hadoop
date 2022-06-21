@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 public class AbfsDriverMetrics {
