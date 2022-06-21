@@ -1674,6 +1674,11 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
           </exclusion>
+          <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+          <exclusion>
+            <groupId>org.apache.htrace</groupId>
+            <artifactId>htrace-core</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1691,6 +1696,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
+          <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+          <exclusion>
+            <groupId>org.apache.htrace</groupId>
+            <artifactId>htrace-core</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1703,7 +1713,18 @@
             <groupId>jdk.tools</groupId>
             <artifactId>jdk.tools</artifactId>
           </exclusion>
+          <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+          <exclusion>
+            <groupId>org.apache.htrace</groupId>
+            <artifactId>htrace-core</artifactId>
+          </exclusion>
         </exclusions>
+      </dependency>
+      <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-noop-htrace</artifactId>
+        <version>4.1.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>

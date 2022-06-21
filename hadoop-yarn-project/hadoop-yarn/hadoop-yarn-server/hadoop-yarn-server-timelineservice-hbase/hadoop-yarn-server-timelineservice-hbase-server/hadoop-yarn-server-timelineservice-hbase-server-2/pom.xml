@@ -102,6 +102,11 @@
             </exclusion>
           </exclusions>
         </dependency>
+        <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+        <dependency>
+          <groupId>org.apache.hbase.thirdparty</groupId>
+          <artifactId>hbase-noop-htrace</artifactId>
+        </dependency>
 
         <!-- This is to work around the version divergence of
             org.jruby.jcodings:jcodings pulled in by hbase-client -->
