@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -233,7 +232,7 @@ public class TestMergeManager {
         IntWritable, IntWritable>) FieldUtils.getField(MergeManagerImpl.class,
        "onDiskMerger", true).get(manager);
     int mergeFactor = (Integer) FieldUtils.
-         getField(MergeThread.class,"mergeFactor",true).get(onDiskMerger);
+        getField(MergeThread.class, "mergeFactor", true).get(onDiskMerger);
 
     // make sure the io.sort.factor is set properly
     assertEquals(mergeFactor, SORT_FACTOR);
