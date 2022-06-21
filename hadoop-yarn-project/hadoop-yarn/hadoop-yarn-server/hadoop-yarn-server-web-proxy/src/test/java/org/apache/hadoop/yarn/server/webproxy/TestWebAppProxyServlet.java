@@ -600,7 +600,7 @@ public class TestWebAppProxyServlet {
 
   }
 
-  private class AppReportFetcherForTest extends AppReportFetcher {
+  private class AppReportFetcherForTest extends DefaultAppReportFetcher {
     int answer = 0;
 
     public AppReportFetcherForTest(Configuration conf) {

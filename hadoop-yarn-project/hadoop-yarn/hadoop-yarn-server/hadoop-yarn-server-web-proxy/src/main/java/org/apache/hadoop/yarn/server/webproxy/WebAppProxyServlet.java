@@ -95,8 +95,6 @@ public class WebAppProxyServlet extends HttpServlet {
   public static final String PROXY_USER_COOKIE_NAME = "proxy-user";
 
   private transient List<TrackingUriPlugin> trackingUriPlugins;
-  private final String rmAppPageUrlBase;
-  private final String ahsAppPageUrlBase;
   private final String failurePageUrlBase;
   private transient YarnConfiguration conf;
 
@@ -134,16 +132,20 @@ public class WebAppProxyServlet extends HttpServlet {
     this.trackingUriPlugins =
         conf.getInstances(YarnConfiguration.YARN_TRACKING_URL_GENERATOR,
             TrackingUriPlugin.class);
-    this.rmAppPageUrlBase =
-        StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
-          "cluster", "app");
     this.failurePageUrlBase =
         StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
           "cluster", "failure");
-    this.ahsAppPageUrlBase =
-        StringHelper.pjoin(WebAppUtils.getHttpSchemePrefix(conf)
-          + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
-          "applicationhistory", "app");
+  }
+
+  private String getRmAppPageUrlBase(ApplicationId id)
+      throws YarnException, IOException {
+    return ((AppReportFetcher) getServletContext()
+        .getAttribute(WebAppProxy.FETCHER_ATTRIBUTE)).getRmAppPageUrlBase(id);
+  }
+
+  private String getAhsAppPageUrlBase() {
+    return ((AppReportFetcher) getServletContext()
+        .getAttribute(WebAppProxy.FETCHER_ATTRIBUTE)).getAhsAppPageUrlBase();
   }
 
   /**
@@ -578,7 +580,7 @@ public class WebAppProxyServlet extends HttpServlet {
    */
   private URI getTrackingUri(HttpServletRequest req, HttpServletResponse resp,
       ApplicationId id, String originalUri, AppReportSource appReportSource)
-      throws IOException, URISyntaxException {
+      throws IOException, URISyntaxException, YarnException {
     URI trackingUri = null;
 
     if ((originalUri == null) ||
@@ -590,14 +592,14 @@ public class WebAppProxyServlet extends HttpServlet {
         LOG.debug("Original tracking url is '{}'. Redirecting to RM app page",
             originalUri == null ? "NULL" : originalUri);
         ProxyUtils.sendRedirect(req, resp,
-            StringHelper.pjoin(rmAppPageUrlBase, id.toString()));
+            StringHelper.pjoin(getRmAppPageUrlBase(id), id.toString()));
       } else if (appReportSource == AppReportSource.AHS) {
         // fallback to Application History Server app page if the application
         // report was fetched from AHS
         LOG.debug("Original tracking url is '{}'. Redirecting to AHS app page",
             originalUri == null ? "NULL" : originalUri);
         ProxyUtils.sendRedirect(req, resp,
-            StringHelper.pjoin(ahsAppPageUrlBase, id.toString()));
+            StringHelper.pjoin(getAhsAppPageUrlBase(), id.toString()));
       }
     } else if (ProxyUriUtils.getSchemeFromUrl(originalUri).isEmpty()) {
       trackingUri =

@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
+import org.apache.hadoop.yarn.server.webproxy.DefaultAppReportFetcher;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1391,9 +1392,9 @@ public class ResourceManager extends CompositeService
     if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf).
         equals(proxyHostAndPort)) {
       if (HAUtil.isHAEnabled(conf)) {
-        fetcher = new AppReportFetcher(conf);
+        fetcher = new DefaultAppReportFetcher(conf);
       } else {
-        fetcher = new AppReportFetcher(conf, getClientRMService());
+        fetcher = new DefaultAppReportFetcher(conf, getClientRMService());
       }
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
