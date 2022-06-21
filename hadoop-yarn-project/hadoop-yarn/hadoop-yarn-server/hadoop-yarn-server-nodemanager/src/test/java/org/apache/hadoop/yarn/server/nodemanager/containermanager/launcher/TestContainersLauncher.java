@@ -127,7 +127,7 @@ public class TestContainersLauncher {
       throws IllegalArgumentException, IllegalAccessException {
     Map<ContainerId, ContainerLaunch> dummyMap =
         (Map<ContainerId, ContainerLaunch>) FieldUtils.
-        getField(ContainersLauncher.class,"running").get(spy);
+        getField(ContainersLauncher.class, "running").get(spy);
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.LAUNCH_CONTAINER);
     assertEquals(0, dummyMap.size());
