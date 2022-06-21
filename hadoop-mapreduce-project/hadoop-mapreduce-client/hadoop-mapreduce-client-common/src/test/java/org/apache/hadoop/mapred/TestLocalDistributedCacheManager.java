@@ -80,6 +80,14 @@ public class TestLocalDistributedCacheManager {
 
   private File localDir;
 
+  /**
+   * Recursive delete of a path.
+   * For safety, paths of length under 5 are rejected.
+   * @param file path to delete.
+   * @throws IOException IO failure
+   * @throws IllegalArgumentException path too short
+   * @throws RuntimeException File.delete() failed.
+   */
   private static void delete(File file) throws IOException {
     if (file.getAbsolutePath().length() < 5) {
       throw new IllegalArgumentException(
@@ -157,10 +165,9 @@ public class TestLocalDistributedCacheManager {
       public FileStatus answer(InvocationOnMock args) throws Throwable {
         Path p = (Path)args.getArguments()[0];
         if("file.txt".equals(p.getName())) {
-          return new FileStatus(TEST_DATA.length, false, 1, 500, 101, 101,
-              FsPermission.getDefault(), "me", "me", filePath);
+          return createMockTestFileStatus(filePath);
         }  else {
-          throw new FileNotFoundException(p+" not supported by mocking");
+          throw notMocked(p);
         }
       }
     });
@@ -178,12 +185,12 @@ public class TestLocalDistributedCacheManager {
             return new MockOpenFileBuilder(mockfs, src,
                 () -> CompletableFuture.completedFuture(in));
           } else {
-            throw new FileNotFoundException( src + " not supported by mocking");
+            throw notMocked(src);
           }
         });
 
     Job.addCacheFile(file, conf);
-    Map<String, Boolean> policies = new HashMap<String, Boolean>();
+    Map<String, Boolean> policies = new HashMap<>();
     policies.put(file.toString(), true);
     Job.setFileSharedCacheUploadPolicies(conf, policies);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "101");
@@ -222,14 +229,14 @@ public class TestLocalDistributedCacheManager {
     when(mockfs.getFileStatus(any(Path.class))).thenAnswer(
         (Answer<FileStatus>) args -> {
           Path p = (Path)args.getArguments()[0];
-          throw new FileNotFoundException(p + " not supported by mocking");
+          throw notMocked(p);
         });
 
     when(mockfs.getConf()).thenReturn(conf);
     when(mockfs.openFile(any(Path.class))).thenAnswer(
         (Answer<FutureDataInputStreamBuilder>) args -> {
           Path src = (Path)args.getArguments()[0];
-            throw new FileNotFoundException( src + " not supported by mocking");
+            throw notMocked(src);
         });
     conf.set(MRJobConfig.CACHE_FILES, "");
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
@@ -267,10 +274,9 @@ public class TestLocalDistributedCacheManager {
       public FileStatus answer(InvocationOnMock args) throws Throwable {
         Path p = (Path)args.getArguments()[0];
         if("file.txt".equals(p.getName())) {
-          return new FileStatus(TEST_DATA.length, false, 1, 500, 101, 101,
-              FsPermission.getDefault(), "me", "me", filePath);
+          return createMockTestFileStatus(filePath);
         }  else {
-          throw new FileNotFoundException(p+" not supported by mocking");
+          throw notMocked(p);
         }
       }
     });
@@ -285,13 +291,13 @@ public class TestLocalDistributedCacheManager {
             return new MockOpenFileBuilder(mockfs, src,
                 () -> CompletableFuture.completedFuture(in));
           } else {
-            throw new FileNotFoundException( src + " not supported by mocking");
+            throw notMocked(src);
           }
         });
 
     Job.addCacheFile(file, conf);
     Job.addCacheFile(file, conf);
-    Map<String, Boolean> policies = new HashMap<String, Boolean>();
+    Map<String, Boolean> policies = new HashMap<>();
     policies.put(file.toString(), true);
     Job.setFileSharedCacheUploadPolicies(conf, policies);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "101,101");
@@ -343,6 +349,24 @@ public class TestLocalDistributedCacheManager {
       ePool.shutdown();
       manager.close();
     }
+  }
+
+  /**
+   * Create test file status using test data as the length.
+   * @param filePath path to the file
+   * @return a file status.
+   */
+  private FileStatus createMockTestFileStatus(final Path filePath) {
+    return new FileStatus(TEST_DATA.length, false, 1, 500, 101, 101,
+        FsPermission.getDefault(), "me", "me", filePath);
+  }
+
+  /**
+   * Exception to throw on a not mocked path.
+   * @return a FileNotFoundException
+   */
+  private FileNotFoundException notMocked(final Path p) {
+    return new FileNotFoundException(p + " not supported by mocking");
   }
 
   /**
