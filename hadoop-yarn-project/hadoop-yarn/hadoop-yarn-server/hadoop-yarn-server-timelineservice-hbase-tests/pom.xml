@@ -214,6 +214,12 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- replace htrace-core with hbase-noop-htrace for CVE-2018-7489 -->
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-noop-htrace</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.hbase</groupId>
