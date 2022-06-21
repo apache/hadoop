@@ -322,6 +322,9 @@ public class AggregatedLogDeletionService extends AbstractService {
     for (LogDeletionTask task : tasks) {
       if (task != null && task.getRMClient() != null) {
         RPC.stopProxy(task.getRMClient());
+        //The RMClient instance is the same for all deletion tasks.
+        //It is enough to close the RM client once
+        break;
       }
     }
   }

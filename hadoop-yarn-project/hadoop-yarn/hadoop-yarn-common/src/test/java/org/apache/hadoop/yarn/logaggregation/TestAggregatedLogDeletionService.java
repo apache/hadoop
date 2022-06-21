@@ -124,7 +124,7 @@ public class TestAggregatedLogDeletionService {
             .verifyAppDirsNotDeleted(timeout, 2, 4)
             .verifyAppFileDeleted(4, 1, timeout)
             .verifyAppFileNotDeleted(4, 2, timeout)
-            .teardown();
+            .teardown(1);
   }
 
   @Test
@@ -177,7 +177,8 @@ public class TestAggregatedLogDeletionService {
             .verifyCheckIntervalMilliSecondsEqualTo(checkIntervalMilliSeconds)
             //app2Dir should be deleted since it falls above the threshold
             .verifyAppDirDeleted(2, 10000L)
-            .teardown();
+            //Close expected 2 times: once for refresh and once for stopping
+            .teardown(2);
   }
   
   @Test
@@ -212,7 +213,7 @@ public class TestAggregatedLogDeletionService {
             .changeModTimeOfBucketDir(toDeleteTime)
             .reinitAllPaths()
             .verifyAppDirDeleted(1, 10000L)
-            .teardown();
+            .teardown(1);
   }
 
   @Test
@@ -292,7 +293,7 @@ public class TestAggregatedLogDeletionService {
             .verifyAppDirsNotDeleted(timeout, 2, 4, 6, 8)
             .verifyAppFilesDeleted(timeout, Lists.newArrayList(Pair.of(4, 1), Pair.of(8, 1)))
             .verifyAppFilesNotDeleted(timeout, Lists.newArrayList(Pair.of(4, 2), Pair.of(8, 2)))
-            .teardown();
+            .teardown(1);
   }
 
   static class MockFileSystem extends FilterFileSystem {

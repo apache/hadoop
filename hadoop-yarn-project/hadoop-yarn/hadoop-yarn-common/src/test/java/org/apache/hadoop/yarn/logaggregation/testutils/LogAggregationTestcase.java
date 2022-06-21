@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBui
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -78,6 +79,7 @@ public class LogAggregationTestcase {
   private List<PathWithFileStatus> appDirs;
   private final List<AppDescriptor> appDescriptors;
   private AggregatedLogDeletionServiceForTest deletionService;
+  private ApplicationClientProtocol rmClient;
 
   public LogAggregationTestcase(LogAggregationTestcaseBuilder builder) throws IOException {
     conf = builder.conf;
@@ -277,7 +279,7 @@ public class LogAggregationTestcase {
   public LogAggregationTestcase runDeletionTask(long retentionSeconds) throws Exception {
     List<ApplicationId> finishedApps = createFinishedAppsList();
     List<ApplicationId> runningApps = createRunningAppsList();
-    ApplicationClientProtocol rmClient = createMockRMClient(finishedApps, runningApps);
+    rmClient = createMockRMClient(finishedApps, runningApps);
     List<LogDeletionTask> tasks = deletionService.createLogDeletionTasks(conf, retentionSeconds,
             rmClient);
     for (LogDeletionTask deletionTask : tasks) {
@@ -367,9 +369,21 @@ public class LogAggregationTestcase {
     PathWithFileStatus file = childrenFiles.get(fileNo - 1);
     verify(mockFs, timeout(timeout).times(times)).delete(file.path, true);
   }
+  
+  private void verifyMockRmClientWasClosedNTimes(int expectedRmClientCloses)
+      throws IOException {
+    ApplicationClientProtocol mockRMClient;
+    if (deletionService != null) {
+      mockRMClient = deletionService.getMockRMClient();
+    } else {
+      mockRMClient = rmClient;
+    }
+    verify((Closeable)mockRMClient, times(expectedRmClientCloses)).close();
+  }
 
-  public void teardown() {
+  public void teardown(int expectedRmClientCloses) throws IOException {
     deletionService.stop();
+    verifyMockRmClientWasClosedNTimes(expectedRmClientCloses);
   }
 
   public LogAggregationTestcase refreshLogRetentionSettings() throws IOException {
