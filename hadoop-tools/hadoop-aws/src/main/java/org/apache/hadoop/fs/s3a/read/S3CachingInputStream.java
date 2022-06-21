@@ -120,6 +120,8 @@ public class S3CachingInputStream extends S3InputStream {
 
   @Override
   public void close() throws IOException {
+    // Close the BlockManager first, cancelling active prefetches,
+    // deleting cached files and freeing memory used by buffer pool.
     this.blockManager.close();
     super.close();
     LOG.info("closed: {}", this.getName());

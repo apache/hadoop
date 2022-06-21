@@ -59,8 +59,7 @@ public class TestS3CachingBlockManager extends AbstractHadoopTestBase {
 
     // Verify it throws correctly.
     ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'futurePool' must not be null",
+        NullPointerException.class,
         () -> new S3CachingBlockManager(null, reader, blockData, POOL_SIZE, streamStatistics));
 
     ExceptionAsserts.assertThrows(

@@ -1335,7 +1335,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, -1);
     }
 
-
     @Override
     public void memoryAllocated(int size) {
       incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, size);

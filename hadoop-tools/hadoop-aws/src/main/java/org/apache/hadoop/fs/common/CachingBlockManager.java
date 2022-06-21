@@ -82,7 +82,6 @@ public abstract class CachingBlockManager extends BlockManager {
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
    * @param prefetchingStatistics statistics for this stream.
    *
-   * @throws IllegalArgumentException if futurePool is null.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
@@ -92,10 +91,9 @@ public abstract class CachingBlockManager extends BlockManager {
       PrefetchingStatistics prefetchingStatistics) {
     super(blockData);
 
-    Validate.checkNotNull(futurePool, "futurePool");
     Validate.checkPositiveInteger(bufferPoolSize, "bufferPoolSize");
 
-    this.futurePool = futurePool;
+    this.futurePool = requireNonNull(futurePool);
     this.bufferPoolSize = bufferPoolSize;
     this.numCachingErrors = new AtomicInteger();
     this.numReadErrors = new AtomicInteger();

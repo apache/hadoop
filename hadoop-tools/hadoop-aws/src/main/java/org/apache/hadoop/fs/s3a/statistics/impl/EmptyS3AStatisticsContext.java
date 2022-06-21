@@ -208,12 +208,10 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     }
 
-
     @Override
     public void prefetchOperationStarted() {
 
     }
-
 
     @Override
     public void prefetchOperationCompleted() {
