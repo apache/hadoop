@@ -369,7 +369,7 @@ public class LogAggregationTestcase {
     PathWithFileStatus file = childrenFiles.get(fileNo - 1);
     verify(mockFs, timeout(timeout).times(times)).delete(file.path, true);
   }
-  
+
   private void verifyMockRmClientWasClosedNTimes(int expectedRmClientCloses)
       throws IOException {
     ApplicationClientProtocol mockRMClient;
