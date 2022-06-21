@@ -118,7 +118,7 @@ public class TestWebAppProxyServletFed {
   }
 
   @Test
-  public void TestWebServlet() throws IOException {
+  public void testWebServlet() throws IOException {
     HttpURLConnection conn;
     // 1. Mocked AppMaster web Test
     URL url = new URL("http://localhost:" + mockServerPort + "/amweb/apptest");
@@ -148,7 +148,7 @@ public class TestWebAppProxyServletFed {
   }
 
   @Test(timeout=5000)
-  public void TestWebAppProxyServletFed() throws Exception {
+  public void testWebAppProxyServletFed() throws Exception {
 
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9090");
@@ -163,10 +163,10 @@ public class TestWebAppProxyServletFed {
     SubClusterId subClusterId1 = SubClusterId.newInstance("scid1");
     SubClusterId subClusterId2 = SubClusterId.newInstance("scid2");
     SubClusterInfo subClusterInfo1 = SubClusterInfo.newInstance(subClusterId1,
-        "10.0.0.1:1","10.0.0.1:1","10.0.0.1:1",
+        "10.0.0.1:1", "10.0.0.1:1", "10.0.0.1:1",
         "localhost:" + mockServerPort, SubClusterState.SC_RUNNING, 0, "");
     SubClusterInfo subClusterInfo2 = SubClusterInfo.newInstance(subClusterId2,
-        "10.0.0.2:1","10.0.0.2:1","10.0.0.2:1",
+        "10.0.0.2:1", "10.0.0.2:1", "10.0.0.2:1",
         "10.0.0.2:1", SubClusterState.SC_RUNNING, 0, "");
 
     // App1 and App2 is running applications.
@@ -302,12 +302,12 @@ public class TestWebAppProxyServletFed {
 
     private WebAppProxyForTest proxy = null;
 
-    public WebAppProxyServerForTest() {
+    WebAppProxyServerForTest() {
       super(WebAppProxyServer.class.getName());
     }
 
     @Override
-    public synchronized void serviceInit(Configuration conf) throws Exception {
+    protected synchronized void serviceInit(Configuration conf) throws Exception {
       proxy = new WebAppProxyForTest();
       addService(proxy);
       super.serviceInit(conf);
@@ -353,8 +353,8 @@ public class TestWebAppProxyServletFed {
 
   private class WebAppProxyForTest extends WebAppProxy {
 
-    HttpServer2 proxyServer;
-    FedAppReportFetcher appReportFetcher;
+    private HttpServer2 proxyServer;
+    private FedAppReportFetcher appReportFetcher;
 
     @Override
     protected void serviceStart() throws Exception {
