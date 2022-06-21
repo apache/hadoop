@@ -829,7 +829,7 @@ public class FederationClientInterceptor
 
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getQueueInfo",
-        new Class[]{GetQueueUserAclsInfoRequest.class}, new Object[]{request});
+        new Class[]{GetQueueInfoRequest.class}, new Object[]{request});
     Collection<GetQueueInfoResponse> queues = null;
     try {
       queues = invokeAppClientProtocolMethod(true, remoteMethod,

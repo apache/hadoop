@@ -403,12 +403,18 @@ public final class RouterYarnClientUtils {
           queueInfo.setApplications(applicationReports);
 
           // set accessibleNodeLabels
-          Set<String> accessibleNodeLabels = queueInfo.getAccessibleNodeLabels();
-          accessibleNodeLabels.addAll(response.getQueueInfo().getAccessibleNodeLabels());
+          Set<String> accessibleNodeLabels = new HashSet<>();
+          if (queueInfo.getAccessibleNodeLabels() != null) {
+            accessibleNodeLabels.addAll(queueInfo.getAccessibleNodeLabels());
+          }
+          if (response.getQueueInfo() != null) {
+            accessibleNodeLabels.addAll(response.getQueueInfo().getAccessibleNodeLabels());
+          }
           queueInfo.setAccessibleNodeLabels(accessibleNodeLabels);
         }
       }
     }
+    queueResponse.setQueueInfo(queueInfo);
     return queueResponse;
   }
 }
