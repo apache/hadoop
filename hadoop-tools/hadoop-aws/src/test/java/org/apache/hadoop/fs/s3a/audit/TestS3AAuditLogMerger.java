@@ -25,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,32 +46,11 @@ public class TestS3AAuditLogMerger {
    * Sample directories and files to test.
    */
   private final File auditLogFile = new File("AuditLogFile");
-  private final File sampleDirectory = new File("sampleFilesDirectory");
-  private final File emptyDirectory = new File("emptyFilesDirectory");
-  private final File firstSampleFile =
-      new File("sampleFilesDirectory", "sampleFile1.txt");
-  private final File secondSampleFile =
-      new File("sampleFilesDirectory", "sampleFile2.txt");
-  private final File thirdSampleFile =
-      new File("sampleFilesDirectory", "sampleFile3.txt");
-
-  /**
-   * Creates the sample directories and files before each test.
-   */
-  @Before
-  public void setUp() throws IOException {
-    boolean sampleDirCreation = sampleDirectory.mkdir();
-    boolean emptyDirCreation = emptyDirectory.mkdir();
-    if (sampleDirCreation && emptyDirCreation) {
-      try (FileWriter fw = new FileWriter(firstSampleFile);
-          FileWriter fw1 = new FileWriter(secondSampleFile);
-          FileWriter fw2 = new FileWriter(thirdSampleFile)) {
-        fw.write("abcd");
-        fw1.write("efgh");
-        fw2.write("ijkl");
-      }
-    }
-  }
+  private File file1;
+  private File file2;
+  private File file3;
+  private File dir1;
+  private File dir2;
 
   /**
    * Testing the mergeFiles method in Merger class.
@@ -81,7 +59,18 @@ public class TestS3AAuditLogMerger {
    */
   @Test
   public void testMergeFiles() throws IOException {
-    s3AAuditLogMerger.mergeFiles(sampleDirectory.getPath());
+    dir1 = Files.createTempDirectory("sampleFilesDirectory").toFile();
+    file1 = File.createTempFile("sampleFile1", ".txt", dir1);
+    file2 = File.createTempFile("sampleFile2", ".txt", dir1);
+    file3 = File.createTempFile("sampleFile3", ".txt", dir1);
+    try (FileWriter fw = new FileWriter(file1);
+        FileWriter fw1 = new FileWriter(file2);
+        FileWriter fw2 = new FileWriter(file3)) {
+      fw.write("abcd");
+      fw1.write("efgh");
+      fw2.write("ijkl");
+    }
+    s3AAuditLogMerger.mergeFiles(dir1.getPath());
     String str =
         new String(Files.readAllBytes(Paths.get(auditLogFile.getPath())));
     //File content of each audit log file in merged audit log file are
@@ -97,19 +86,72 @@ public class TestS3AAuditLogMerger {
   }
 
   /**
+   * Testing the merged file.
+   * by passing different directories which contains files with some content.
+   * in it and checks if the file is overwritten by new file contents.
+   */
+  @Test
+  public void testMergedFile() throws IOException {
+    //Testing the merged file with contents of first directory
+    dir1 = Files.createTempDirectory("sampleFilesDirectory").toFile();
+    file1 = File.createTempFile("sampleFile1", ".txt", dir1);
+    file2 = File.createTempFile("sampleFile2", ".txt", dir1);
+    try (FileWriter fw = new FileWriter(file1);
+        FileWriter fw1 = new FileWriter(file2)) {
+      fw.write("abcd");
+      fw1.write("efgh");
+    }
+    s3AAuditLogMerger.mergeFiles(dir1.getPath());
+    String str =
+        new String(Files.readAllBytes(Paths.get(auditLogFile.getPath())));
+    //File content of each audit log file in merged audit log file are
+    // divided by '\n'.
+    // Performing assertions will be easy by replacing '\n' with ''
+    String fileText = str.replace("\n", "");
+    assertTrue("the string 'abcd' should be in the merged file",
+        fileText.contains("abcd"));
+    assertTrue("the string 'efgh' should be in the merged file",
+        fileText.contains("efgh"));
+    assertFalse("the string 'ijkl' should not be in the merged file",
+        fileText.contains("ijkl"));
+
+    //Testing the merged file with contents of second directory
+    dir2 = Files.createTempDirectory("sampleFilesDirectory1").toFile();
+    file3 = File.createTempFile("sampleFile3", ".txt", dir2);
+    try (FileWriter fw2 = new FileWriter(file3)) {
+      fw2.write("ijkl");
+    }
+    s3AAuditLogMerger.mergeFiles(dir2.getPath());
+    String str1 =
+        new String(Files.readAllBytes(Paths.get(auditLogFile.getPath())));
+    //File content of each audit log file in merged audit log file are
+    // divided by '\n'.
+    // Performing assertions will be easy by replacing '\n' with ''
+    String fileText1 = str1.replace("\n", "");
+    assertFalse("the string 'abcd' should not be in the merged file",
+        fileText1.contains("abcd"));
+    assertFalse("the string 'efgh' should not be in the merged file",
+        fileText1.contains("efgh"));
+    assertTrue("the string 'ijkl' should be in the merged file",
+        fileText1.contains("ijkl"));
+  }
+
+  /**
    * Testing the mergeFiles method in Merger class.
    * by passing an empty directory and checks if merged file is created or not.
    */
   @Test
   public void testMergeFilesEmptyDir() throws IOException {
+    dir1 = Files.createTempDirectory("emptyFilesDirectory").toFile();
     if (auditLogFile.exists()) {
       LOG.info("AuditLogFile already exists and we are deleting it here");
       if (auditLogFile.delete()) {
         LOG.debug("AuditLogFile deleted");
       }
     }
-    s3AAuditLogMerger.mergeFiles(emptyDirectory.getPath());
-    assertFalse("This AuditLogFile shouldn't exist if input directory is empty ",
+    s3AAuditLogMerger.mergeFiles(dir1.getPath());
+    assertFalse(
+        "This AuditLogFile shouldn't exist if input directory is empty ",
         auditLogFile.exists());
   }
 
@@ -118,10 +160,23 @@ public class TestS3AAuditLogMerger {
    */
   @After
   public void tearDown() throws Exception {
-    if (firstSampleFile.delete() && secondSampleFile.delete()
-        && thirdSampleFile.delete() && sampleDirectory.delete()
-        && emptyDirectory.delete() && auditLogFile.delete()) {
-      LOG.debug("sample files regarding testing deleted");
+    if (auditLogFile.exists()) {
+      auditLogFile.delete();
+    }
+    if (file1 != null) {
+      file1.delete();
+    }
+    if (file2 != null) {
+      file2.delete();
+    }
+    if (file3 != null) {
+      file3.delete();
+    }
+    if (dir1 != null) {
+      dir1.delete();
+    }
+    if (dir2 != null) {
+      dir2.delete();
     }
   }
 }

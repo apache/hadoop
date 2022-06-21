@@ -268,25 +268,6 @@ public class AuditTool extends Configured implements Tool, Closeable {
   }
 
   /**
-   * Print a line of output. This goes to any output file, or.
-   * is logged at info. The output is flushed before and after, too.
-   * try and stay in sync with JRE logging.
-   *
-   * @param format format string.
-   * @param args   any arguments.
-   */
-  private void println(String format, Object... args) {
-    flush();
-    String msg = String.format(format, args);
-    if (out != null) {
-      out.println(msg);
-    } else {
-      System.out.println(msg);
-    }
-    flush();
-  }
-
-  /**
    * Inner entry point, with no logging or system exits.
    *
    * @param conf configuration.
