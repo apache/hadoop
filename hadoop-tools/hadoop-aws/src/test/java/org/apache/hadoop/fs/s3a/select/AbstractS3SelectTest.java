@@ -61,7 +61,6 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.select.CsvFile.ALL_QUOTES;
@@ -286,7 +285,6 @@ public abstract class AbstractS3SelectTest extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    disableFilesystemCaching(conf);
     removeBaseAndBucketOverrides(conf, STORAGE_CLASS);
 
     return conf;
