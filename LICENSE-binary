@@ -232,7 +232,7 @@ com.google:guice-servlet:4.0
 com.google.android:annotations:jar:4.1.1.4
 com.google.api.grpc:proto-google-common-protos:1.12.0
 com.google.code.findbugs:jsr305:3.0.2
-com.google.code.gson:gson:2.2.4
+com.google.code.gson:gson:2.9.0
 com.google.errorprone:error_prone_annotations:2.3.3
 com.google.j2objc:j2objc-annotations:1.1
 com.google.json-simple:json-simple:1.1.1
