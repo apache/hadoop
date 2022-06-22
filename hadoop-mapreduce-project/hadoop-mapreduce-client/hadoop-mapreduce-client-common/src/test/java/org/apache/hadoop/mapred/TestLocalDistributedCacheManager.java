@@ -68,7 +68,7 @@ import org.mockito.stubbing.Answer;
 @SuppressWarnings("deprecation")
 public class TestLocalDistributedCacheManager {
 
-  public static final byte[] TEST_DATA = "This is a test file\n".getBytes();
+  private static final byte[] TEST_DATA = "This is a test file\n".getBytes();
 
   private static FileSystem mockfs;
 
@@ -84,7 +84,7 @@ public class TestLocalDistributedCacheManager {
    * Recursive delete of a path.
    * For safety, paths of length under 5 are rejected.
    * @param file path to delete.
-   * @throws IOException IO failure
+   * @throws IOException never, it is just "a dummy in the method signature"
    * @throws IllegalArgumentException path too short
    * @throws RuntimeException File.delete() failed.
    */
