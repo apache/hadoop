@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.logaggregation.testutils;
 
+import org.apache.hadoop.test.MockitoUtil;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -34,7 +35,8 @@ public class MockRMClientUtils {
   public static ApplicationClientProtocol createMockRMClient(
           List<ApplicationId> finishedApplications,
           List<ApplicationId> runningApplications) throws Exception {
-    final ApplicationClientProtocol mockProtocol = mock(ApplicationClientProtocol.class);
+    final ApplicationClientProtocol mockProtocol =
+        MockitoUtil.mockProtocol(ApplicationClientProtocol.class);
     if (finishedApplications != null && !finishedApplications.isEmpty()) {
       for (ApplicationId appId : finishedApplications) {
         GetApplicationReportRequest request = GetApplicationReportRequest.newInstance(appId);
