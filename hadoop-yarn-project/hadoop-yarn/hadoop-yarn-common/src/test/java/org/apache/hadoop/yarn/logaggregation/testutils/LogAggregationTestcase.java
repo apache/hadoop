@@ -28,10 +28,12 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService.LogDeletionTask;
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder.AppDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -77,6 +79,7 @@ public class LogAggregationTestcase {
   private List<PathWithFileStatus> appDirs;
   private final List<AppDescriptor> appDescriptors;
   private AggregatedLogDeletionServiceForTest deletionService;
+  private ApplicationClientProtocol rmClient;
 
   public LogAggregationTestcase(LogAggregationTestcaseBuilder builder) throws IOException {
     conf = builder.conf;
@@ -102,6 +105,8 @@ public class LogAggregationTestcase {
     mockFs = ((FilterFileSystem) builder.rootFs).getRawFileSystem();
     validateAppControllers();
     setupMocks();
+
+    setupDeletionService();
   }
 
   private void validateAppControllers() {
@@ -241,10 +246,13 @@ public class LogAggregationTestcase {
     when(mockFs.listStatus(dir.path)).thenReturn(fileStatuses);
   }
 
-  public LogAggregationTestcase setupAndRunDeletionService() {
+  private void setupDeletionService() {
     List<ApplicationId> finishedApps = createFinishedAppsList();
     List<ApplicationId> runningApps = createRunningAppsList();
     deletionService = new AggregatedLogDeletionServiceForTest(runningApps, finishedApps, conf);
+  }
+
+  public LogAggregationTestcase startDeletionService() {
     deletionService.init(conf);
     deletionService.start();
     return this;
@@ -271,10 +279,13 @@ public class LogAggregationTestcase {
   public LogAggregationTestcase runDeletionTask(long retentionSeconds) throws Exception {
     List<ApplicationId> finishedApps = createFinishedAppsList();
     List<ApplicationId> runningApps = createRunningAppsList();
-    ApplicationClientProtocol rmClient = createMockRMClient(finishedApps, runningApps);
-    AggregatedLogDeletionService.LogDeletionTask deletionTask =
-            new AggregatedLogDeletionService.LogDeletionTask(conf, retentionSeconds, rmClient);
-    deletionTask.run();
+    rmClient = createMockRMClient(finishedApps, runningApps);
+    List<LogDeletionTask> tasks = deletionService.createLogDeletionTasks(conf, retentionSeconds,
+            rmClient);
+    for (LogDeletionTask deletionTask : tasks) {
+      deletionTask.run();
+    }
+
     return this;
   }
 
@@ -359,8 +370,20 @@ public class LogAggregationTestcase {
     verify(mockFs, timeout(timeout).times(times)).delete(file.path, true);
   }
 
-  public void teardown() {
+  private void verifyMockRmClientWasClosedNTimes(int expectedRmClientCloses)
+      throws IOException {
+    ApplicationClientProtocol mockRMClient;
+    if (deletionService != null) {
+      mockRMClient = deletionService.getMockRMClient();
+    } else {
+      mockRMClient = rmClient;
+    }
+    verify((Closeable)mockRMClient, times(expectedRmClientCloses)).close();
+  }
+
+  public void teardown(int expectedRmClientCloses) throws IOException {
     deletionService.stop();
+    verifyMockRmClientWasClosedNTimes(expectedRmClientCloses);
   }
 
   public LogAggregationTestcase refreshLogRetentionSettings() throws IOException {
