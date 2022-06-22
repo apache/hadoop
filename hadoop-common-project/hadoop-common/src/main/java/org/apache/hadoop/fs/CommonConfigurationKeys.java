@@ -477,7 +477,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
    * {@value}
    */
   public static final String THREAD_LEVEL_IOSTATISTICS_ENABLED =
-      "fs.s3a.thread.level.iostatistics.enabled";
+      "fs.thread.level.iostatistics.enabled";
 
   /**
    * Default value for Thread-level IOStats Support is true.
