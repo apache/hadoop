@@ -143,6 +143,14 @@ Here are the full set of configuration options.
 </property>
 
 <property>
+  <name>fs.s3a.assumed.role.externalid</name>
+  <value />
+  <description>
+    Optional externalId to specify when assuming a role
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.assumed.role.session.name</name>
   <value />
   <description>

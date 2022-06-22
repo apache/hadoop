@@ -153,6 +153,20 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testCreateCredentialProviderWithExternalId() throws IOException {
+    describe("Create the credential provider");
+
+    Configuration conf = createValidRoleConfWithExternalId();
+    conf.set(ASSUMED_ROLE_EXTERNAL_ID, "anExternalId");
+    try (AssumedRoleCredentialProvider provider
+                 = new AssumedRoleCredentialProvider(uri, conf)) {
+      LOG.info("Provider is {}", provider);
+      AWSCredentials credentials = provider.getCredentials();
+      assertNotNull("Null credentials from " + provider, credentials);
+    }
+  }
+
+  @Test
   public void testCreateCredentialProviderNoURI() throws IOException {
     describe("Create the credential provider");
 
@@ -179,6 +193,12 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
     bindRolePolicy(conf, RESTRICTED_POLICY);
+    return conf;
+  }
+
+  protected Configuration createValidRoleConfWithExternalId() throws JsonProcessingException {
+    Configuration conf = createValidRoleConf();
+    conf.set(ASSUMED_ROLE_EXTERNAL_ID, "someId");
     return conf;
   }
 

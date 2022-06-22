@@ -79,6 +79,14 @@ public final class Constants {
   public static final String ASSUMED_ROLE_ARN =
       "fs.s3a.assumed.role.arn";
 
+
+  /**
+   * External ID for the assumed role request, must be valid characters according
+   * to the AWS APIs: {@value}.
+   */
+  public static final String ASSUMED_ROLE_EXTERNAL_ID =
+      "fs.s3a.assumed.role.externalid";
+
   /**
    * Session name for the assumed role, must be valid characters according
    * to the AWS APIs: {@value}.
