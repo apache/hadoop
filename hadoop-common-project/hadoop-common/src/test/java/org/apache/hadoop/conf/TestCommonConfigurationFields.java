@@ -80,9 +80,9 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
         };
 
     // Initialize used variables
-    xmlPropsToSkipCompare = new HashSet<String>();
-    xmlPrefixToSkipCompare = new HashSet<String>();
-    configurationPropsToSkipCompare = new HashSet<String>();
+    xmlPropsToSkipCompare = new HashSet<>();
+    xmlPrefixToSkipCompare = new HashSet<>();
+    configurationPropsToSkipCompare = new HashSet<>();
 
     // Set error modes
     errorIfMissingConfigProps = true;

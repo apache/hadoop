@@ -413,6 +413,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed updateApplicationTimeouts call");
       metrics.incrUpdateApplicationTimeoutsRetrieved();
     }
+
+    public void getSignalContainer() {
+      LOG.info("Mocked: failed signalContainer call");
+      metrics.incrSignalToContainerFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -522,6 +527,11 @@ public class TestRouterMetrics {
     public void getUpdateApplicationTimeouts(long duration) {
       LOG.info("Mocked: successful updateApplicationTimeouts call with duration {}", duration);
       metrics.succeededUpdateAppTimeoutsRetrieved(duration);
+    }
+
+    public void getSignalToContainerTimeouts(long duration) {
+      LOG.info("Mocked: successful signalToContainer call with duration {}", duration);
+      metrics.succeededSignalToContainerRetrieved(duration);
     }
   }
 
@@ -804,6 +814,29 @@ public class TestRouterMetrics {
     badSubCluster.getUpdateApplicationTimeouts();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getUpdateApplicationTimeoutsFailedRetrieved());
+  }
+
+  @Test
+  public void testSucceededSignalToContainerRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededSignalToContainerRetrieved();
+    goodSubCluster.getSignalToContainerTimeouts(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededSignalToContainerRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededSignalToContainerRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getSignalToContainerTimeouts(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededSignalToContainerRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededSignalToContainerRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testSignalToContainerFailed() {
+    long totalBadBefore = metrics.getSignalToContainerFailedRetrieved();
+    badSubCluster.getSignalContainer();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getSignalToContainerFailedRetrieved());
   }
 
 }

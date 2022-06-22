@@ -1304,7 +1304,43 @@ public class FederationClientInterceptor
   @Override
   public SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getContainerId() == null
+            || request.getCommand() == null) {
+      routerMetrics.incrSignalToContainerFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing signalToContainer request or containerId " +
+          "or command information.", null);
+    }
+
+    long startTime = clock.getTime();
+    SubClusterId subClusterId = null;
+    ApplicationId applicationId =
+        request.getContainerId().getApplicationAttemptId().getApplicationId();
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException ex) {
+      routerMetrics.incrSignalToContainerFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " + applicationId +
+          " does not exist in FederationStateStore.", ex);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    SignalContainerResponse response = null;
+    try {
+      response = clientRMProxy.signalToContainer(request);
+    } catch (Exception ex) {
+      RouterServerUtil.logAndThrowException("Unable to signal to container for " +
+          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+    }
+
+    if (response == null) {
+      LOG.error("No response when signal to container of " +
+          "the applicationId {} to SubCluster {}.", applicationId, subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededSignalToContainerRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override
