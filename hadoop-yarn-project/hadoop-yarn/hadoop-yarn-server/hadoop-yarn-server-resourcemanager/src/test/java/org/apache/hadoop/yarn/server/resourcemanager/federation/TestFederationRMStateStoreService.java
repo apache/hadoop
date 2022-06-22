@@ -195,9 +195,9 @@ public class TestFederationRMStateStoreService {
     service = rm.getFederationStateStoreService();
     stateStore = service.getStateStoreClient();
 
-    ApplicationId appId1SubCluster1 = ApplicationId.newInstance(1l, 1);
-    ApplicationId appId2SubCluster1 = ApplicationId.newInstance(1l, 2);
-    ApplicationId appId1SubCluster2 = ApplicationId.newInstance(2l, 3);
+    ApplicationId appId1SubCluster1 = ApplicationId.newInstance(1L, 1);
+    ApplicationId appId2SubCluster1 = ApplicationId.newInstance(1L, 2);
+    ApplicationId appId1SubCluster2 = ApplicationId.newInstance(2L, 3);
 
     ApplicationHomeSubCluster app1SubCluster1 = ApplicationHomeSubCluster
         .newInstance(appId1SubCluster1, subClusterId1);

@@ -33,6 +33,7 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -107,7 +108,7 @@ public class FederationStateStoreService extends AbstractService
     ACTIVE,
   };
 
-  private static final StateMachineFactory<FederationStateStoreService,
+  private final StateMachineFactory<FederationStateStoreService,
         FederationStateStoreState,
         FederationStateStoreEventType,
         FederationStateStoreEvent> stateMachineFactory =
@@ -461,7 +462,7 @@ public class FederationStateStoreService extends AbstractService
     }
   }
 
-  public EventHandler getEventHandler() {
+  public EventHandler<Event> getEventHandler() {
     return dispatcher.getEventHandler();
   }
 
