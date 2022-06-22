@@ -142,6 +142,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
+    conf.set(ASSUMED_ROLE_EXTERNAL_ID, "anExternalId");
     bindRolePolicy(conf, RESTRICTED_POLICY);
     try (AssumedRoleCredentialProvider provider
              = new AssumedRoleCredentialProvider(uri, conf)) {

@@ -123,7 +123,7 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
     duration = conf.getTimeDuration(ASSUMED_ROLE_SESSION_DURATION,
         ASSUMED_ROLE_SESSION_DURATION_DEFAULT, TimeUnit.SECONDS);
     String policy = conf.getTrimmed(ASSUMED_ROLE_POLICY, "");
-
+    String externalId = conf.getTrimmed(ASSUMED_ROLE_EXTERNAL_ID);
     LOG.debug("{}", this);
     STSAssumeRoleSessionCredentialsProvider.Builder builder
         = new STSAssumeRoleSessionCredentialsProvider.Builder(arn, sessionName);
@@ -134,7 +134,12 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
     }
     String endpoint = conf.get(ASSUMED_ROLE_STS_ENDPOINT, "");
     String region = conf.get(ASSUMED_ROLE_STS_ENDPOINT_REGION,
-        ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT);
+            ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT);
+
+    if (StringUtils.isNotEmpty(externalId)) {
+      builder.withExternalId(externalId);
+    }
+
     AWSSecurityTokenServiceClientBuilder stsbuilder =
         STSClientFactory.builder(
           conf,
