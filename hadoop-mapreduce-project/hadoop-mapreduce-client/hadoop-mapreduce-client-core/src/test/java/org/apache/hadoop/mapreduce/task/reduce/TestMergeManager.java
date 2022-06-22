@@ -229,8 +229,8 @@ public class TestMergeManager {
 
     MergeThread<MapOutput<IntWritable, IntWritable>, IntWritable, IntWritable>
         onDiskMerger = (MergeThread<MapOutput<IntWritable, IntWritable>,
-        IntWritable, IntWritable>) FieldUtils.getField(MergeManagerImpl.class,
-       "onDiskMerger", true).get(manager);
+        IntWritable, IntWritable>) FieldUtils.getField(MergeManagerImpl.class, "onDiskMerger", true)
+        .get(manager);
     int mergeFactor = (Integer) FieldUtils.
         getField(MergeThread.class, "mergeFactor", true).get(onDiskMerger);
 
