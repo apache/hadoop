@@ -311,10 +311,23 @@ public class TestInvoker extends Assert {
    */
   @Test(expected = AWSBadRequestException.class)
   public void testRetryBadRequestNotIdempotent() throws Throwable {
-    invoker.retry("test", null, false,
+
+    invoker.retry("test", null, true,
         () -> {
           throw BAD_REQUEST;
         });
+  }
+
+  @Test
+  public void testRetryBadRequestIdempotent() throws Throwable {
+    Configuration conf = new Configuration(FAST_RETRY_CONF);
+    conf.setBoolean(FAIL_ON_AWS_BAD_REQUEST, false);
+    S3ARetryPolicy retryPolicy = new S3ARetryPolicy(conf);
+
+    IOException ex = translateException("GET", "/", BAD_REQUEST);
+    assertRetryAction("Expected retry on aws bad request",
+      retryPolicy, RetryPolicy.RetryAction.RETRY,
+      ex, 1, true);
   }
 
   @Test

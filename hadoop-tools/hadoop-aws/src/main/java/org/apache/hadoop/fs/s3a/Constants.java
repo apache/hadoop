@@ -1203,4 +1203,9 @@ public final class Constants {
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
   public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+
+  public static final String FAIL_ON_AWS_BAD_REQUEST = "fs.s3a.retry.failOnAwsBadRequest";
+
+  public static final boolean DEFAULT_FAIL_ON_AWS_BAD_REQUEST = true;
+
 }
