@@ -494,7 +494,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, true);
       this.prefetchBlockSize = intOption(
-          conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, PREFETCH_BLOCK_DEFAULT_SIZE);
+          conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, 1);
       this.prefetchBlockCount =
           intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
 
