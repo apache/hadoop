@@ -502,7 +502,10 @@ public class AbfsClient implements Closeable {
    * @param continuation continuation.
    * @param tracingContext trace context
    * @param sourceEtag etag of source file. may be null or empty
-   * @return pair of (the rename operation, flag indicating recovery took place)
+   * @param isMetadataIncompleteState was there a rename failure due to
+   *                                  incomplete metadata state?
+   * @return AbfsClientRenameResult result of rename operation indicating the
+   * AbfsRest operation, rename recovery and incomplete metadata state failure.
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    */
   public AbfsClientRenameResult renamePath(
