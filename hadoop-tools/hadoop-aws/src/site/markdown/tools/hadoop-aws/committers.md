@@ -81,8 +81,8 @@ As a result,
 * If more than one process attempts to commit work simultaneously, the output
 directory may contain the results of both processes: it is no longer an exclusive
 operation.
-*. Commit time is still
-proportional to the amount of data created. It still can't handle task failure.
+* Commit time is still proportional to the amount of data created.
+It still can't handle task failure.
 
 **Using the "classic" `FileOutputCommmitter` to commit work to Amazon S3 risks
 loss or corruption of generated data**
@@ -106,10 +106,10 @@ a "commit protocol" between the workers and the job manager.
 This protocol is implemented in Hadoop MapReduce, with a similar but extended
 version in Apache Spark:
 
-1. A "Job" is the entire query, with inputs to outputs
+1. The "Job" is the entire query. It takes a given set of input and produces some output.
 1. The "Job Manager" is the process in charge of choreographing the execution
 of the job. It may perform some of the actual computation too.
-1. The job has "workers", which are processes which work the actual data
+1. The job has "workers", which are processes which work with the actual data
 and write the results.
 1. Workers execute "Tasks", which are fractions of the job, a job whose
 input has been *partitioned* into units of work which can be executed independently.
@@ -126,7 +126,7 @@ this "speculation" delivers speedup as it can address the "straggler problem".
 When multiple workers are working on the same data, only one worker is allowed
 to write the final output.
 1. The entire job may fail (often from the failure of the Job Manager (MR Master, Spark Driver, ...)).
-1, The network may partition, with workers isolated from each other or
+1. The network may partition, with workers isolated from each other or
 the process managing the entire commit.
 1. Restarted jobs may recover from a failure by reusing the output of all
 completed tasks (MapReduce with the "v1" algorithm), or just by rerunning everything
@@ -137,28 +137,27 @@ What is "the commit protocol" then? It is the requirements on workers as to
 when their data is made visible, where, for a filesystem, "visible" means "can
 be seen in the destination directory of the query."
 
-* There is a destination directory of work, "the output directory."
-* The final output of tasks must be in this directory *or paths underneath it*.
+* There is a destination directory of work: "the output directory".
+The final output of tasks must be in this directory *or paths underneath it*.
 * The intermediate output of a task must not be visible in the destination directory.
 That is: they must not write directly to the destination.
 * The final output of a task *may* be visible under the destination.
-* The Job Manager makes the decision as to whether a task's data is to be "committed",
-be it directly to the final directory or to some intermediate store..
-* Individual workers communicate with the Job manager to manage the commit process:
-whether the output is to be *committed* or *aborted*
+* Individual workers communicate with the Job manager to manage the commit process.
+* The Job Manager makes the decision on if a task's output data is to be "committed",
+be it directly to the final directory or to some intermediate store.
 * When a worker commits the output of a task, it somehow promotes its intermediate work to becoming
 final.
 * When a worker aborts a task's output, that output must not become visible
 (i.e. it is not committed).
 * Jobs themselves may be committed/aborted (the nature of "when" is not covered here).
 * After a Job is committed, all its work must be visible.
-* And a file `_SUCCESS` may be written to the output directory.
+A file named `_SUCCESS` may be written to the output directory.
 * After a Job is aborted, all its intermediate data is lost.
 * Jobs may also fail. When restarted, the successor job must be able to clean up
 all the intermediate and committed work of its predecessor(s).
 * Task and Job processes measure the intervals between communications with their
 Application Master and YARN respectively.
-When the interval has grown too large they must conclude
+When the interval has grown too large, they must conclude
 that the network has partitioned and that they must abort their work.
 
 
@@ -269,6 +268,9 @@ The Staging committers offer the ability to replace the conflict policy
 of the execution engine with policy designed to work with the tree of data.
 This is based on the experience and needs of Netflix, where efficiently adding
 new data to an existing partitioned directory tree is a common operation.
+
+An XML configuration is shown below.
+The default conflict mode if unset would be `append`.
 
 ```xml
 <property>
@@ -463,8 +465,8 @@ logs/YEAR=2017/MONTH=04/
 A partitioned structure like this allows for queries using Hive or Spark to filter out
 files which do not contain relevant data.
 
-What the partitioned committer does is, where the tooling permits, allows callers
-to add data to an existing partitioned layout*.
+The partitioned committer allows callers to add new data to an existing partitioned layout,
+where the application supports it.
 
 More specifically, it does this by reducing the scope of conflict resolution to
 only act on individual partitions, rather than across the entire output tree.
@@ -495,8 +497,7 @@ to the same destination with any policy other than "append" is undefined.
 
 1. In the `append` operation, there is no check for conflict with file names.
 If the file `log-20170228.avro` in the example above already existed, it would be overwritten.
-
-   Set `fs.s3a.committer.staging.unique-filenames` to `true`
+Set `fs.s3a.committer.staging.unique-filenames` to `true`
 to ensure that a UUID is included in every filename to avoid this.
 
 
@@ -617,8 +618,8 @@ The examples below shows how these options can be configured in XML.
   <name>fs.s3a.committer.require.uuid</name>
   <value>false</value>
   <description>
-    Should the committer fail to initialize if a unique ID isn't set in
-    "spark.sql.sources.writeJobUUID" or fs.s3a.committer.staging.uuid
+    Require the committer fail to initialize if a unique ID is not set in
+    "spark.sql.sources.writeJobUUID" or "fs.s3a.committer.uuid".
     This helps guarantee that unique IDs for jobs are being
     passed down in spark applications.
   
@@ -668,7 +669,7 @@ The examples below shows how these options can be configured in XML.
   <value>true</value>
   <description>
     Option for final files to have a unique name through job attempt info,
-    or the value of fs.s3a.committer.staging.uuid
+    or the value of fs.s3a.committer.uuid.
     When writing data with the "append" conflict option, this guarantees
     that new data will not overwrite any existing data.
   </description>
