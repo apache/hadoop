@@ -1125,8 +1125,8 @@ is unrecoverable; it's the generic "No" response. Very rarely it
 does recover, which is why it is in this category, rather than that
 of unrecoverable failures. The default behavior fails immediately
 without retry. If your system is failure sensitive, you can
-configure `fs.s3a.fail.on.aws.bad.request` to `false` and allow 
-to retry when observing a Bad Request with status code 400. 
+configure `fs.s3a.fail.on.aws.bad.request` to `false` and allow
+to retry when observing a Bad Request with status code 400.
 
 These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
