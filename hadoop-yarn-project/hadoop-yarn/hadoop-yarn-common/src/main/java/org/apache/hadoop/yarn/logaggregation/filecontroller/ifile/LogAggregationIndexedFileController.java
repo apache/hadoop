@@ -801,7 +801,8 @@ public class LogAggregationIndexedFileController
       checksumFileInputStream = fileContext.open(file.getPath());
       int nameLength = checksumFileInputStream.readInt();
       byte[] b = new byte[nameLength];
-      int actualLength = checksumFileInputStream.read(b);
+      checksumFileInputStream.readFully(b);
+      int actualLength = b.length;
       if (actualLength == nameLength) {
         nodeName = new String(b, StandardCharsets.UTF_8);
         index = checksumFileInputStream.readLong();
