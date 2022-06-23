@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
