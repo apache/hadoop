@@ -51,7 +51,7 @@ obsolete.
 ## Introduction: The Commit Problem
 
 Apache Hadoop MapReduce (and behind the scenes, Apache Spark) often write
-the output of their work to filesystems
+the output of their work to filesystems.
 
 Normally, Hadoop uses the `FileOutputFormatCommitter` to manage the
 promotion of files created in a single task attempt to the final output of
@@ -77,7 +77,7 @@ in the cluster attempting a rename at the same time.
 
 As a result,
 
-* If a rename fails, the data is left in an unknown state.
+* If a 'rename' fails, the data is left in an unknown state.
 * If more than one process attempts to commit work simultaneously, the output
 directory may contain the results of both processes: it is no longer an exclusive
 operation.
@@ -85,7 +85,7 @@ operation.
 It still can't handle task failure.
 
 **Using the "classic" `FileOutputCommmitter` to commit work to Amazon S3 risks
-loss or corruption of generated data**
+loss or corruption of generated data**.
 
 
 To address these problems there is now explicit support in the `hadoop-aws`
@@ -185,7 +185,7 @@ renames go from being fast, atomic operations to slow operations which can fail 
 
 This then is the problem which the S3A committers address:
 
-*How to safely and reliably commit work to Amazon S3 or compatible object store*
+>*How to safely and reliably commit work to Amazon S3 or compatible object store.*
 
 
 ## Meet the S3A Committers
@@ -193,7 +193,7 @@ This then is the problem which the S3A committers address:
 Since Hadoop 3.1, the S3A FileSystem has been accompanied by classes
 designed to integrate with the Hadoop and Spark job commit protocols,
 classes which interact with the S3A filesystem to reliably commit work to S3:
-*The S3A Committers*
+*The S3A Committers*.
 
 The underlying architecture of this process is very complex, and
 covered in [the committer architecture documentation](./committer_architecture.html).
