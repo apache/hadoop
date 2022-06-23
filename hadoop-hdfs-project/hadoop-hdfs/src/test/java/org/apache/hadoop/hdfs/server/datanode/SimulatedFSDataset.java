@@ -357,6 +357,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public void releaseReplicaInfoBytesReserved() {
+    }
+
+    @Override
     synchronized public long getBytesOnDisk() {
       if (finalized) {
         return theBlock.getNumBytes();
@@ -418,12 +422,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       } while (deadLine > System.currentTimeMillis());
       throw new IOException("Minimum length was not achieved within timeout");
     }
-
-    @Override
-    public long getBytesReserved() {
-      return 0;
-    }
-
     @Override
     public FsVolumeSpi getVolume() {
       return getStorage(theBlock).getVolume();

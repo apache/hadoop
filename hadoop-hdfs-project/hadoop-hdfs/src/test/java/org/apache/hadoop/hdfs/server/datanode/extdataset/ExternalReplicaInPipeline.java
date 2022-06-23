@@ -46,6 +46,10 @@ public class ExternalReplicaInPipeline implements ReplicaInPipeline {
   }
 
   @Override
+  public void releaseReplicaInfoBytesReserved() {
+  }
+
+  @Override
   public void releaseAllBytesReserved() {
   }
 
@@ -135,11 +139,6 @@ public class ExternalReplicaInPipeline implements ReplicaInPipeline {
   @Override
   public void waitForMinLength(long minLength, long time, TimeUnit unit)
       throws IOException {
-  }
-
-  @Override
-  public long getBytesReserved() {
-    return 0;
   }
 
   @Override
