@@ -111,6 +111,7 @@ public class ProportionalCapacityPreemptionPolicy
 
   private float maxAllowableLimitForIntraQueuePreemption;
   private float minimumThresholdForIntraQueuePreemption;
+  private boolean isMinFairDemandForIntraQueuePreemptionEnabled;
   private IntraQueuePreemptionOrderPolicy intraQueuePreemptionOrderPolicy;
 
   private boolean crossQueuePreemptionConservativeDRF;
@@ -220,6 +221,10 @@ public class ProportionalCapacityPreemptionPolicy
         INTRAQUEUE_PREEMPTION_MINIMUM_THRESHOLD,
         CapacitySchedulerConfiguration.
         DEFAULT_INTRAQUEUE_PREEMPTION_MINIMUM_THRESHOLD);
+
+    isMinFairDemandForIntraQueuePreemptionEnabled = config.getBoolean(
+        CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_MIN_FAIR_DEMAND_ENABLED,
+        CapacitySchedulerConfiguration.DEFAULT_INTRAQUEUE_PREEMPTION_MIN_FAIR_DEMAND_ENABLED);
 
     intraQueuePreemptionOrderPolicy = IntraQueuePreemptionOrderPolicy
         .valueOf(config
@@ -775,6 +780,11 @@ public class ProportionalCapacityPreemptionPolicy
   @Override
   public float getMinimumThresholdForIntraQueuePreemption() {
     return minimumThresholdForIntraQueuePreemption;
+  }
+
+  @Override
+  public boolean isMinFairDemandForIntraQueuePreemptionEnabled() {
+    return isMinFairDemandForIntraQueuePreemptionEnabled;
   }
 
   @Override

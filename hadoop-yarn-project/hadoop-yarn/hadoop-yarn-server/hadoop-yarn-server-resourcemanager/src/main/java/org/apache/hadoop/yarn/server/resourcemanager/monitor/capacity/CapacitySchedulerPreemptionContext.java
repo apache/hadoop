@@ -70,6 +70,8 @@ public interface CapacitySchedulerPreemptionContext {
 
   float getMaxAllowableLimitForIntraQueuePreemption();
 
+  boolean isMinFairDemandForIntraQueuePreemptionEnabled();
+
   long getDefaultMaximumKillWaitTimeout();
 
   @Unstable

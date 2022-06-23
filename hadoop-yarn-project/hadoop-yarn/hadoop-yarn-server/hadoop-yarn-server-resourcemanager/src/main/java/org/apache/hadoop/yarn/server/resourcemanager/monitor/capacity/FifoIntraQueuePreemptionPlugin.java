@@ -281,6 +281,13 @@ public class FifoIntraQueuePreemptionPlugin
           tmpApp.getFiCaSchedulerApp().getCSLeafQueue().getMinimumAllocation());
       }
 
+      if(orderingPolicy instanceof FairOrderingPolicy) {
+        preemtableFromApp = Resources.normalizeNegativeResourcesWithRhs(preemtableFromApp,
+            tmpApp.getFiCaSchedulerApp().getCSLeafQueue().getMinimumAllocation());
+        LOG.info("After normalizing preemptable resources for app: " + tmpApp.getApplicationId() + "tmpApp.idealAssigned" + tmpApp.idealAssigned +
+            "tmpApp.getUsed()" + tmpApp.getUsed() + ". preemtableFromApp: " + preemtableFromApp);
+      }
+
       // Calculate toBePreempted from apps as follows:
       // app.preemptable = min(max(app.used - app.selected - app.ideal, 0),
       // intra_q_preemptable)
@@ -826,11 +833,15 @@ public class FifoIntraQueuePreemptionPlugin
     TempAppPerPartition tmpApp = tmpUser.getApp(app.getApplicationId());
 
     if(tq.leafQueue.getOrderingPolicy() instanceof FairOrderingPolicy) {
+      // preempt container if there is any fairness based demand.
+      if(context.isMinFairDemandForIntraQueuePreemptionEnabled()) {
+        return false;
+      }
       // Check we don't preempt more resources than
       // ActuallyToBePreempted from the app
       if(tmpApp != null
-          && Resources.fitsIn(rc,
-          c.getAllocatedResource(), tmpApp.getActuallyToBePreempted())) {
+          && Resources.greaterThan(rc, clusterResource,
+          tmpApp.getActuallyToBePreempted(), Resources.none())) {
         return false;
       }
       return true;

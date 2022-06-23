@@ -557,4 +557,23 @@ public class Resources {
       Resource resource, Resource factor) {
     return calculator.normalizeDown(resource, factor);
   }
+
+  /**
+   * Normalize {@code lhs} with {@code rhs} for negative resources
+   *
+   * @param lhs {@link Resource} to normalize from
+   * @param rhs {@link Resource} to minimum tolerance resource
+   * @return the value of lhs after normalization
+   */
+  public static Resource normalizeNegativeResourcesWithRhs(Resource lhs, Resource rhs) {
+    Resource newlhs = clone(lhs);
+    if (lhs.getMemorySize() <= 0 && lhs.getVirtualCores() > 0)  {
+      newlhs.setMemorySize(rhs.getMemorySize());
+    }
+
+    if (lhs.getVirtualCores() <= 0 && lhs.getMemorySize() > 0) {
+      newlhs.setVirtualCores(rhs.getVirtualCores());
+    }
+    return newlhs;
+  }
 }
