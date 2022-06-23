@@ -132,7 +132,7 @@ public class AbfsDriverMetrics {
           .append(entry.getValue().getNumberOfRequestsSucceeded()).append(" ");
       long totalRequests = entry.getValue().getTotalRequests().get();
       if(totalRequests > 0) {
-        metricString.append(" MinMaxAvg#_").append(entry.getKey())
+        metricString.append(" #MinMaxAvg#_").append(entry.getKey())
             .append("R_").append("=")
             .append(String.format("%.5f", (double) entry.getValue().getMinBackoff().get() / 1000L))
             .append(" seconds ")
@@ -141,18 +141,18 @@ public class AbfsDriverMetrics {
             .append(String.format("%.5f", (double) ((entry.getValue().getTotalBackoff().get() / totalRequests) / 1000L)))
             .append(" seconds ");
       }else {
-        metricString.append("MinMaxAvg#_").append(entry.getKey())
+        metricString.append(" #MinMaxAvg#_").append(entry.getKey())
             .append("R_").append("= 0 seconds ");
       }
     }
-    metricString.append(" BandwidthThrottled = ").append(numberOfBandwidthThrottledRequests)
-        .append(" IOPSThrottled = ").append(numberOfIOPSThrottledRequests)
-        .append(" OtherThrottled = ").append(numberOfOtherThrottledRequests).append('\n');
-    metricString.append(" Percentage of throttled requests = ").append(percentageOfRequestsThrottled).append('\n');
-    metricString.append(" Total number of requests which succeeded without retrying = ").append(numberOfRequestsSucceededWithoutRetrying).append('\n');
-    metricString.append(" Total number of requests which failed = ").append(numberOfRequestsFailed).append('\n');
-    metricString.append(" Total number of requests = ").append(totalNumberOfRequests).append('\n');
-    metricString.append(" Max retry count = ").append(maxRetryCount).append('\n');
+    metricString.append(" #BandwidthThrottled = ").append(numberOfBandwidthThrottledRequests)
+        .append(" #IOPSThrottled = ").append(numberOfIOPSThrottledRequests)
+        .append(" #OtherThrottled = ").append(numberOfOtherThrottledRequests).append('\n');
+    metricString.append(" #Percentage of throttled requests = ").append(percentageOfRequestsThrottled).append('\n');
+    metricString.append(" #Total number of requests which succeeded without retrying = ").append(numberOfRequestsSucceededWithoutRetrying).append('\n');
+    metricString.append(" #Total number of requests which failed = ").append(numberOfRequestsFailed).append('\n');
+    metricString.append(" #Total number of requests = ").append(totalNumberOfRequests).append('\n');
+    metricString.append(" #Max retry count = ").append(maxRetryCount).append('\n');
 
     return metricString + " ";
   }

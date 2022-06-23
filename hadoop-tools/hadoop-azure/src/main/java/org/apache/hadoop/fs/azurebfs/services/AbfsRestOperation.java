@@ -249,7 +249,7 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
-  private void updateDriverMetrics(int retryCount, int statusCode){
+  private synchronized void updateDriverMetrics(int retryCount, int statusCode){
     if (statusCode == HttpURLConnection.HTTP_UNAVAILABLE) {
       if (retryCount == 30) {
         abfsDriverMetrics.getNumberOfRequestsFailed().getAndIncrement();
