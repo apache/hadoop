@@ -1204,8 +1204,17 @@ public final class Constants {
    */
   public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
 
-  public static final String FAIL_ON_AWS_BAD_REQUEST = "fs.s3a.retry.failOnAwsBadRequest";
+  /**
+   * Flag for immediate failure when observing a {@link AWSBadRequestException}.
+   * If it's disabled and set to false, the failure is treated as retryable.
+   * Value {@value}.
+   */
+  public static final String FAIL_ON_AWS_BAD_REQUEST = "fs.s3a.fail.on.aws.bad.request";
 
+  /**
+   * Default value for immediate failure when observing a
+   * {@link AWSBadRequestException}: {@value}.
+   */
   public static final boolean DEFAULT_FAIL_ON_AWS_BAD_REQUEST = true;
 
 }

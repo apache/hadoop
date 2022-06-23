@@ -1118,12 +1118,15 @@ from them.
 
 * Connection timeout: `ConnectTimeoutException`. Timeout before
 setting up a connection to the S3 endpoint (or proxy).
-* HTTP response status code 400, "Bad Request"
+* HTTP response status code 400, "Bad Request" aka `AWSBadRequestException`
 
 The status code 400, Bad Request usually means that the request
 is unrecoverable; it's the generic "No" response. Very rarely it
 does recover, which is why it is in this category, rather than that
-of unrecoverable failures.
+of unrecoverable failures. The default behavior fails immediately
+without retry. If your system is failure sensitive, you can
+configure `fs.s3a.fail.on.aws.bad.request` to `false` and allow 
+to retry when observing a Bad Request with status code 400. 
 
 These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
