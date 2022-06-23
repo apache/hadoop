@@ -941,8 +941,8 @@ S3 Select doesn't work with some storage classes like Glacier or Reduced Redunda
 Make sure you've set `fs.s3a.create.storage.class` to a supported storage class for S3 Select.
 
 ```
-org.apache.hadoop.fs.s3a.AWSBadRequestException: 
-    Select on s3a://example/dataset.csv.gz: 
+org.apache.hadoop.fs.s3a.AWSBadRequestException:
+    Select on s3a://example/dataset.csv.gz:
     com.amazonaws.services.s3.model.AmazonS3Exception:
      We do not support REDUCED_REDUNDANCY storage class.
      Please check the service documentation and try again.
