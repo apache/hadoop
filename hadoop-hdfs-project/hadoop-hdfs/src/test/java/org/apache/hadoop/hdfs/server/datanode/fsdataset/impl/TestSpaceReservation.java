@@ -784,15 +784,15 @@ public class TestSpaceReservation {
     ReplicaInfo r = replicas.iterator().next();
 
     // Verify Initial Bytes Reserved for Replica and Volume are correct
-    assertThat(fsDataSetImpl.getVolumeList().get(0).getReservedForReplicas(),
-        is(expectedReservedSpace));
-    assertThat(r.getBytesReserved(), is(expectedReservedSpace));
+    assertEquals(fsDataSetImpl.getVolumeList().get(0).getReservedForReplicas(),
+        expectedReservedSpace);
+    assertEquals(r.getBytesReserved(), expectedReservedSpace);
 
     // Verify Bytes Reserved for Replica and Volume are correct after finalize
     fsDataSetImpl.finalizeNewReplica(r, new ExtendedBlock(bpid, r));
 
-    assertThat(fsDataSetImpl.getVolumeList().get(0).getReservedForReplicas(), is(0L));
-    assertThat(r.getBytesReserved(), is(0L));
+    assertEquals(fsDataSetImpl.getVolumeList().get(0).getReservedForReplicas(), 0L);
+    assertEquals(r.getBytesReserved(), 0L);
 
     fos.close();
   }
