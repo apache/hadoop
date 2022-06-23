@@ -37,7 +37,6 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,7 +57,6 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
@@ -609,7 +607,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         // close or abort the stream; blocking
         awaitFuture(closeStream("close() operation", false, true));
         // Collect ThreadLevel IOStats
-        mergeThreadIOStatistics(threadIOStatistics);
+        mergeThreadIOStatistics(streamStatistics.getIOStatistics());
         LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
         // end the client+audit span.
         client.close();
@@ -626,10 +624,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * Merging the current thread's IOStatistics with the current IOStatistics
    * context.
    *
-   * @param threadIOStatistics thread IOStatistics to be merged.
+   * @param streamIOStats Stream statistics to be merged into thread
+   *                      statistics aggregator.
    */
-  private void mergeThreadIOStatistics(IOStatisticsAggregator threadIOStatistics) {
-    threadIOStatistics.aggregate(streamStatistics.getIOStatistics());
+  private void mergeThreadIOStatistics(IOStatistics streamIOStats) {
+    threadIOStatistics.aggregate(streamIOStats);
     currentIOStatisticsContext().setThreadIOStatistics(threadIOStatistics);
   }
 

@@ -461,7 +461,7 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   private synchronized void cleanupOnClose() {
     cleanupWithLogger(LOG, getActiveBlock(), blockFactory);
-    mergeThreadIOStatistics(threadIOStatistics);
+    mergeThreadIOStatistics(statistics.getIOStatistics());
     LOG.debug("Statistics: {}", statistics);
     cleanupWithLogger(LOG, statistics);
     clearActiveBlock();
@@ -471,11 +471,11 @@ class S3ABlockOutputStream extends OutputStream implements
    * Merging the current thread's IOStatistics with the current IOStatistics
    * context.
    *
-   * @param threadIOStatistics thread IOStatistics to be merged.
+   * @param streamStatistics Stream statistics to be merged into thread
+   *                         statistics aggregator.
    */
-  private void mergeThreadIOStatistics(
-      IOStatisticsAggregator threadIOStatistics) {
-    threadIOStatistics.aggregate(statistics.getIOStatistics());
+  private void mergeThreadIOStatistics(IOStatistics streamStatistics) {
+    threadIOStatistics.aggregate(streamStatistics);
     currentIOStatisticsContext().setThreadIOStatistics(threadIOStatistics);
   }
 

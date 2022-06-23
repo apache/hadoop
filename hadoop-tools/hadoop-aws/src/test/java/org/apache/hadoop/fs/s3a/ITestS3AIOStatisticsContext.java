@@ -225,7 +225,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     }
 
     // Worker thread work and wait for it to finish.
-    testWorkerThread workerThread = new testWorkerThread();
+    TestWorkerThread workerThread = new TestWorkerThread();
     long workerThreadID = workerThread.getId();
     workerThread.start();
     workerThread.join();
@@ -307,7 +307,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   /**
    * Simulating doing some work in a separate thread.
    */
-  private class testWorkerThread extends Thread implements Runnable {
+  private class TestWorkerThread extends Thread implements Runnable {
     @Override
     public void run() {
       S3AFileSystem fs = getFileSystem();
