@@ -143,7 +143,7 @@ for specifics details on the (current) token lifespan.
 
 A Role Delegation Token is created by asking the AWS
 [Security Token Service](http://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html)
-for set of "Assumed Role" credentials, with an AWS account specific role for a limited duration..
+for set of "Assumed Role" credentials, with an AWS account specific role for a limited duration.
 This role is restricted to only grant access the S3 bucket and all KMS keys.
 They are marshalled into the S3A Delegation Token.
 
