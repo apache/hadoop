@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,7 +38,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -61,9 +66,11 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.After;
@@ -122,6 +129,44 @@ public class TestObserverNode {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
     }
+  }
+
+  @Test
+  public void testObserverRequeue() throws Exception {
+    ScheduledExecutorService interruptor =
+        Executors.newScheduledThreadPool(1);
+
+    EditLogTailer observerEditlogTailer = dfsCluster.getNameNode(2)
+        .getNamesystem().getEditLogTailer();
+    RpcMetrics obRpcMetrics = ((NameNodeRpcServer)dfsCluster
+        .getNameNodeRpc(2)).getClientRpcServer().getRpcMetrics();
+
+    // Stop EditlogTailer of Observer NameNode.
+    observerEditlogTailer.stop();
+
+    long oldRequeueNum = obRpcMetrics.getRpcRequeueCalls();
+
+    ScheduledFuture<FileStatus> scheduledFuture = interruptor.schedule(
+        () -> {
+          Path tmpTestPath = new Path("/TestObserverRequeue");
+          dfs.create(tmpTestPath, (short)1).close();
+          assertSentTo(0);
+          // This operation will be blocked in ObserverNameNode
+          // until EditlogTailer tailed edits from journalNode.
+          FileStatus fileStatus = dfs.getFileStatus(tmpTestPath);
+          assertSentTo(2);
+          return fileStatus;
+        }, 0, TimeUnit.SECONDS);
+
+   Thread.sleep(1000);
+
+   observerEditlogTailer.doTailEdits();
+    FileStatus fileStatus = scheduledFuture.get(1000, TimeUnit.MILLISECONDS);
+    assertNotNull(fileStatus);
+
+    assertTrue(obRpcMetrics.getRpcRequeueCalls() > oldRequeueNum);
+    dfsCluster.getNameNode(2).getNamesystem()
+        .startNewEditLogTailer(dfsCluster.getConfiguration(2));
   }
 
   @Test
