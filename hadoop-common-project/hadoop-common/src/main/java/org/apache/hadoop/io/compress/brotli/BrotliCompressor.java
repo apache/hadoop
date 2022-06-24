@@ -20,7 +20,7 @@ package org.apache.hadoop.io.compress.brotli;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 import org.slf4j.Logger;
