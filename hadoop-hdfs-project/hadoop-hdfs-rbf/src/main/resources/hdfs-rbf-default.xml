@@ -724,6 +724,27 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.fairness.elastic.permits.percent.EXAMPLENAMESERVICE</name>
+    <value></value>
+    <description>
+      The maximum percentage of total elastic handler counts that the
+      nameservice EXAMPLENAMESERVICE can use. When the dedicated handlers
+      are used up, this nameservice EXAMPLENAMESERVICE can preempt the total
+      elastic handlers. And this conf is used to limit the maximum of total
+      elastic handlers than this ns can preempt.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.fairness.elastic.permits.percent.default</name>
+    <value>20</value>
+    <description>
+      The default maximum percentage of total elastic handler counts
+      that no specially configured nameservice can use.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.federation.rename.bandwidth</name>
     <value>10</value>
     <description>

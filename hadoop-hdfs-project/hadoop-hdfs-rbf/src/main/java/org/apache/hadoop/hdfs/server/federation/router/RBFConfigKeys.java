@@ -354,6 +354,11 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       NoRouterRpcFairnessPolicyController.class;
   public static final String DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX =
       FEDERATION_ROUTER_FAIRNESS_PREFIX + "handler.count.";
+  public static final String DFS_ROUTER_ELASTIC_PERMITS_PERCENT_KEY_PREFIX =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "elastic.permits.percent.";
+  public static final String DFS_ROUTER_ELASTIC_PERMITS_PERCENT_DEFAULT_KEY =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "elastic.permits.percent.default";
+  public static final int DFS_ROUTER_ELASTIC_PERMITS_PERCENT_DEFAULT = 20;
 
   // HDFS Router Federation Rename.
   public static final String DFS_ROUTER_FEDERATION_RENAME_PREFIX =
