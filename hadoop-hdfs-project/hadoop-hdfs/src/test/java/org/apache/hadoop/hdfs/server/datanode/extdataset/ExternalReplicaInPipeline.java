@@ -45,6 +45,10 @@ public class ExternalReplicaInPipeline implements ReplicaInPipeline {
   }
 
   @Override
+  public void releaseReplicaInfoBytesReserved() {
+  }
+
+  @Override
   public void releaseAllBytesReserved() {
   }
 
