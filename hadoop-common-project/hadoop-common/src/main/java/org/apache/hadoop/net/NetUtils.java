@@ -1218,4 +1218,29 @@ public class NetUtils {
     }
     return null;
   }
+
+  /**
+   * Check the given address is IPv6 or not.
+   * @param address A String address to be verified.
+   * @return true if the given address is a valid IPv6 format, false otherwise.
+   */
+  public static boolean isIPv6Address(String address) {
+    return StringUtils.countMatches(address, ":") > 2;
+  }
+
+  /**
+   * Parse the given IPv6address into IP and port.
+   * @param bindAddress address to parse into IP/Port
+   * @return A String array contains Host and Port number.
+   */
+  public static String[] parseIPv6Address(String bindAddress) {
+    String target = bindAddress;
+    int i = target.lastIndexOf(':');
+    String port = target.substring(target.lastIndexOf(":") + 1);
+    String host = target.substring(0, i);
+    if (!host.startsWith("[")){
+      host = "[" + host + "]";
+    }
+    return new String[] {host, port};
+  }
 }

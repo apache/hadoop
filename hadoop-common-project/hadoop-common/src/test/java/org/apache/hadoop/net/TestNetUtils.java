@@ -854,4 +854,59 @@ public class TestNetUtils {
     assertEquals(ipv6Address, addr.getHostName());
     assertEquals(12345, addr.getPort());
   }
+
+  @Test public void testParseIPv6Address() throws Throwable {
+    String ipv6Address = "2a03:2880:2130:cf05:face:b00c:0:1";
+    String port = "12345";
+    String ipv6WithPort = ipv6Address + ':' + port;
+    String[] expectedIpPort = new String[] {'[' + ipv6Address + ']', port };
+
+    String[] ipPort = NetUtils.parseIPv6Address(ipv6WithPort);
+    assertTrue("Parse failed for IPv6 address ",
+        Arrays.equals(ipPort, expectedIpPort));
+
+    ipv6Address = "[2a03:2880:2130:cf05:face:b00c:0:1]";
+    ipv6WithPort = ipv6Address + ":12345";
+    ipPort = NetUtils.parseIPv6Address(ipv6WithPort);
+    assertTrue("Parse failed for IPv6 address ",
+        Arrays.equals(ipPort, expectedIpPort));
+
+    ipv6Address = "https://2a03:2880:2130:cf05:face:b00c:0:1:12345";
+    ipPort = NetUtils.parseIPv6Address(ipv6WithPort);
+    assertTrue("Parse failed for IPv6 address ",
+        Arrays.equals(ipPort, expectedIpPort));
+
+    ipv6Address = "https://[2a03:2880:2130:cf05:face:b00c:0:1]:12345";
+    ipPort = NetUtils.parseIPv6Address(ipv6WithPort);
+    assertTrue("Parse failed for IPv6 address ",
+        Arrays.equals(ipPort, expectedIpPort));
+  }
+
+  @Test public void testIsIPv6Address() throws Throwable {
+    String ipv6Address = "2a03:2880:2130:cf05:face:b00c:0:1:50000";
+    assertTrue("IPv6 address validation fails",
+        NetUtils.isIPv6Address(ipv6Address));
+
+    ipv6Address = "[2a03:2880:2130:cf05:face:b00c:0:1]:50000";
+    assertTrue("IPv6 address validation fails",
+        NetUtils.isIPv6Address(ipv6Address));
+
+    ipv6Address = "https://2a03:2880:2130:cf05:face:b00c:0:1:12345";
+    assertTrue("IPv6 address validation fails",
+        NetUtils.isIPv6Address(ipv6Address));
+
+    ipv6Address = "https://[2a03:2880:2130:cf05:face:b00c:0:1]:12345";
+    assertTrue("IPv6 address validation fails",
+        NetUtils.isIPv6Address(ipv6Address));
+
+    //IPv4 Address
+    ipv6Address = "0.0.0.0:50000";
+    assertFalse("IPv6 address validation fails",
+        NetUtils.isIPv6Address(ipv6Address));
+
+    //IPv4 without Port
+    ipv6Address = "0.0.0.0";
+    assertFalse("IPv6 address validation fails",
+        NetUtils.isIPv6Address(ipv6Address));
+  }
 }
