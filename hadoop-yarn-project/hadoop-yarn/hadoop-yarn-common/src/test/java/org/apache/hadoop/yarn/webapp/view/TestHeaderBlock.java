@@ -37,7 +37,7 @@ public class TestHeaderBlock {
       Class<?> processEnvironmentClass = Class.forName("java.lang.ProcessEnvironment");
       String fieldname = "theEnvironment";
       Field theEnvironmentField = processEnvironmentClass.getDeclaredField(fieldname);
-      // reset environment accessibility
+
       theEnvironmentField.setAccessible(true);
       if(theEnvironmentField.getType().equals(Map.class)) {
         Map<String, String> env = (Map<String, String>) theEnvironmentField.get(null);
@@ -45,7 +45,7 @@ public class TestHeaderBlock {
       }
       fieldname = "theCaseInsensitiveEnvironment";
       Field theCaseInsensitiveEnvField = processEnvironmentClass.getDeclaredField(fieldname);
-      // reset environment accessibility
+
       theCaseInsensitiveEnvField.setAccessible(true);
       if(theCaseInsensitiveEnvField.getType().equals(Map.class)) {
         Map<String, String> cienv = (Map<String, String>) theCaseInsensitiveEnvField.get(null);
