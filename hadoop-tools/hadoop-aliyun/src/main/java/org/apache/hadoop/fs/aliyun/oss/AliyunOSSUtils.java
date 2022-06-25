@@ -40,7 +40,7 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 final public class AliyunOSSUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(AliyunOSSUtils.class);
-  private static LocalDirAllocator directoryAllocator;
+  private static volatile LocalDirAllocator directoryAllocator;
 
   private AliyunOSSUtils() {
   }
@@ -188,7 +188,9 @@ final public class AliyunOSSUtils {
     }
     if (directoryAllocator == null) {
       synchronized (AliyunOSSUtils.class) {
-        directoryAllocator = new LocalDirAllocator(BUFFER_DIR_KEY);
+        if (directoryAllocator == null) {
+          directoryAllocator = new LocalDirAllocator(BUFFER_DIR_KEY);
+        }
       }
     }
     Path path = directoryAllocator.getLocalPathForWrite(pathStr,
