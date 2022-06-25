@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
@@ -118,6 +119,11 @@ public class WebApps {
     }
 
     public Builder<T> at(String bindAddress) {
+      if(NetUtils.isIPv6Address(bindAddress)) {
+        String address[] = NetUtils.parseIPv6Address(bindAddress);
+        return at(address[0], Integer.parseInt(address[1]),
+            Integer.parseInt(address[1]) == 0);
+      }
       String[] parts = StringUtils.split(bindAddress, ':');
       if (parts.length == 2) {
         int port = Integer.parseInt(parts[1]);
