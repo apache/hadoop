@@ -108,8 +108,8 @@ public class TestLdapGroupsMappingWithOneQuery
     doReturn(groupNames).when(groupDN).getAll();
     String groupName1 = "CN=abc,DC=foo,DC=bar,DC=com";
     String groupName2 = "CN=xyz,DC=foo,DC=bar,DC=com";
-    String groupName3 = "ipaUniqueID=e4a9a634-bb24-11ec-aec1-06ede52b5fe1,cn=sudorules,cn=sudo,dc=d\n" +
-            " ex-priv,dc=xcu2-8y8x,dc=dev,dc=cldr,dc=work";
+    String groupName3 = "ipaUniqueID=e4a9a634-bb24-11ec-aec1-06ede52b5fe1," +
+            "CN=sudo,DC=foo,DC=bar,DC=com";
     doReturn(groupName1).doReturn(groupName2).doReturn(groupName3).
             when(groupNames).next();
     when(groupNames.hasMore()).thenReturn(true).thenReturn(true).
@@ -142,8 +142,9 @@ public class TestLdapGroupsMappingWithOneQuery
     verify(getContext(), times(3)).search(anyString(), anyString(),
             any(Object[].class), any(SearchControls.class));
   }
+
   class TestLdapGroupsMapping extends LdapGroupsMapping {
-    boolean secondaryQueryCalled = false;
+    private boolean secondaryQueryCalled = false;
     public boolean isSecondaryQueryCalled() {
       return secondaryQueryCalled;
     }
