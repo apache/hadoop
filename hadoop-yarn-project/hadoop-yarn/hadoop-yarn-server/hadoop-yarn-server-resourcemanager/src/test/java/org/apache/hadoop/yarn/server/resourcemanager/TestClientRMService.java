@@ -18,18 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -50,6 +38,13 @@ import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
+
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Test;
+import org.mockito.Matchers;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -153,22 +148,26 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
-
-import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import org.mockito.Matchers;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyListOf;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestClientRMService {
 
@@ -182,6 +181,50 @@ public class TestClientRMService {
   private final static String QUEUE_1 = "Q-1";
   private final static String QUEUE_2 = "Q-2";
   private final static String APPLICATION_TAG_SC_PREPROCESSOR ="mytag:foo";
+
+  @Test
+  public void testGetDecommissioningClusterNodes() throws Exception {
+    MockRM rm = new MockRM() {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler,
+            this.rmAppManager, this.applicationACLsManager,
+            this.queueACLsManager,
+            this.getRMContext().getRMDelegationTokenSecretManager());
+      };
+    };
+    rm.start();
+
+    int nodeMemory = 1024;
+    MockNM nm1 = rm.registerNode("host1:1234", nodeMemory);
+    rm.sendNodeStarted(nm1);
+    nm1.nodeHeartbeat(true);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    Integer decommissioningTimeout = 600;
+    rm.sendNodeGracefulDecommission(nm1, decommissioningTimeout);
+    rm.waitForState(nm1.getNodeId(), NodeState.DECOMMISSIONING);
+
+    // Create a client.
+    Configuration conf = new Configuration();
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    ApplicationClientProtocol client =
+        (ApplicationClientProtocol) rpc
+            .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
+
+    // Make call
+    List<NodeReport> nodeReports = client.getClusterNodes(
+        GetClusterNodesRequest.newInstance(
+            EnumSet.of(NodeState.DECOMMISSIONING)))
+        .getNodeReports();
+    Assert.assertEquals(1, nodeReports.size());
+    NodeReport nr = nodeReports.iterator().next();
+    Assert.assertEquals(decommissioningTimeout, nr.getDecommissioningTimeout());
+    Assert.assertNull(nr.getNodeUpdateType());
+
+    rpc.stopProxy(client, conf);
+    rm.close();
+  }
 
   @Test
   public void testGetClusterNodes() throws Exception {
@@ -231,6 +274,8 @@ public class TestClientRMService {
     
     // Check node's label = x
     Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("x"));
+    Assert.assertNull(nodeReports.get(0).getDecommissioningTimeout());
+    Assert.assertNull(nodeReports.get(0).getNodeUpdateType());
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
@@ -254,6 +299,8 @@ public class TestClientRMService {
         nodeReports.get(0).getNodeState());
     
     Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("y"));
+    Assert.assertNull(nodeReports.get(0).getDecommissioningTimeout());
+    Assert.assertNull(nodeReports.get(0).getNodeUpdateType());
     
     // Remove labels of host1
     map = new HashMap<NodeId, Set<String>>();
@@ -270,6 +317,8 @@ public class TestClientRMService {
     for (NodeReport report : nodeReports) {
       Assert.assertTrue(report.getNodeLabels() != null
           && report.getNodeLabels().isEmpty());
+      Assert.assertNull(report.getDecommissioningTimeout());
+      Assert.assertNull(report.getNodeUpdateType());
     }
 
     rpc.stopProxy(client, conf);

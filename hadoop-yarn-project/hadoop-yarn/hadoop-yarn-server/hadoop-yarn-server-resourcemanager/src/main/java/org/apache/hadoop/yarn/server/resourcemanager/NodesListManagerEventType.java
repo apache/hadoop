@@ -20,5 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 public enum NodesListManagerEventType {
   NODE_USABLE,
-  NODE_UNUSABLE
+  NODE_UNUSABLE,
+  NODE_DECOMMISSIONING
 }
