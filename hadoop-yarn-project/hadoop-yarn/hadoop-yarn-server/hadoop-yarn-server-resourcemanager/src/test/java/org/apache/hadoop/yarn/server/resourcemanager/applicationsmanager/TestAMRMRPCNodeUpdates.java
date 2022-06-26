@@ -136,7 +136,7 @@ public class TestAMRMRPCNodeUpdates {
     AllocateResponse response1 =
             allocate(attempt1.getAppAttemptId(), allocateRequest1);
     List<NodeReport> updatedNodes = response1.getUpdatedNodes();
-    Assert.assertEquals(0, updatedNodes.size());
+    Assert.assertEquals(1, updatedNodes.size());
 
     // Wait for nm2 to RECOMMISSION
     syncNodeRecommissioning(nm2);
