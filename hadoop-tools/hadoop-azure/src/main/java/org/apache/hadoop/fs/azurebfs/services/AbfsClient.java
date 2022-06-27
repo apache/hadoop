@@ -566,10 +566,15 @@ public class AbfsClient implements Closeable {
 
           // Doing a HEAD call resolves the incomplete metadata state and
           // then we can retry the rename operation.
-          getPathStatus(source, false, tracingContext);
+          AbfsRestOperation sourceStatusOp = getPathStatus(source, false,
+              tracingContext);
           isMetadataIncompleteState = true;
+          // Extract the sourceEtag, using the status Op, and set it
+          // for future rename recovery.
+          AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
+          String sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
           renamePath(source, destination, continuation, tracingContext,
-              sourceEtag, isMetadataIncompleteState);
+              sourceEtagAfterFailure, isMetadataIncompleteState);
         }
         // if we get out of the condition without a successful rename, then
         // it isn't metadata incomplete state issue.
