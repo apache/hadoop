@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -116,6 +117,10 @@ import org.slf4j.LoggerFactory;
 public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationClientInterceptor.class);
+
+  static {
+    DefaultMetricsSystem.setMiniClusterMode(true);
+  }
 
   private TestableFederationClientInterceptor interceptor;
   private MemoryFederationStateStore stateStore;
