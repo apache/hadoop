@@ -757,6 +757,12 @@
                         <exclude>META-INF/versions/11/module-info.class</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>com.google.code.gson:gson</artifact>
+                      <excludes>
+                        <exclude>META-INF/versions/9/module-info.class</exclude>
+                      </excludes>
+                    </filter>
 
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>

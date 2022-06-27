@@ -151,6 +151,16 @@ public class RpcMetrics {
     return server.getNumDroppedConnections();
   }
 
+  @Metric("Number of total requests")
+  public long getTotalRequests() {
+    return server.getTotalRequests();
+  }
+
+  @Metric("Number of total requests per second")
+  public long getTotalRequestsPerSecond() {
+    return server.getTotalRequestsPerSecond();
+  }
+
   public TimeUnit getMetricsTimeUnit() {
     return metricsTimeUnit;
   }

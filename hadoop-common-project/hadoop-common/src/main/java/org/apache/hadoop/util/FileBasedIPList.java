@@ -58,7 +58,7 @@ public class FileBasedIPList implements IPList {
       lines = null;
     }
     if (lines != null) {
-      addressList = new MachineList(new HashSet<String>(Arrays.asList(lines)));
+      addressList = new MachineList(new HashSet<>(Arrays.asList(lines)));
     } else {
       addressList = null;
     }

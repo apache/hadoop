@@ -231,7 +231,7 @@ com.github.stephenc.jcip:jcip-annotations:1.0-1
 com.google:guice:4.0
 com.google:guice-servlet:4.0
 com.google.api.grpc:proto-google-common-protos:1.0.0
-com.google.code.gson:2.2.4
+com.google.code.gson:2.9.0
 com.google.errorprone:error_prone_annotations:2.2.0
 com.google.j2objc:j2objc-annotations:1.1
 com.google.json-simple:json-simple:1.1.1

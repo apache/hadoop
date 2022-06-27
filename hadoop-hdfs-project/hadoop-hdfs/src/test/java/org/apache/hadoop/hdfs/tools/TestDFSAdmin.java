@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
@@ -70,6 +71,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -435,18 +438,19 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(18, outs.size());
+    assertEquals(19, outs.size());
     assertTrue(outs.get(0).contains("Reconfigurable properties:"));
     assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY, outs.get(1));
     assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(2));
     assertEquals(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, outs.get(3));
-    assertEquals(DFS_DATANODE_PEER_STATS_ENABLED_KEY, outs.get(4));
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(5));
-    assertEquals(DFS_IMAGE_PARALLEL_LOAD_KEY, outs.get(6));
-    assertEquals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, outs.get(7));
-    assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY, outs.get(8));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(9));
-    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(10));
+    assertEquals(DFS_DATANODE_MAX_NODES_TO_REPORT_KEY, outs.get(4));
+    assertEquals(DFS_DATANODE_PEER_STATS_ENABLED_KEY, outs.get(5));
+    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(6));
+    assertEquals(DFS_IMAGE_PARALLEL_LOAD_KEY, outs.get(7));
+    assertEquals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, outs.get(8));
+    assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY, outs.get(9));
+    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(10));
+    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(11));
     assertEquals(errs.size(), 0);
   }
 
@@ -517,6 +521,52 @@ public class TestDFSAdmin {
           is(allOf(containsString("Rack:"), containsString("/d2/r1"))));
       assertThat(outs.get(9),
           is(allOf(containsString("Rack:"), containsString("/d2/r2"))));
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testPrintTopologyWithStatus() throws Exception {
+    redirectStream();
+    final Configuration dfsConf = new HdfsConfiguration();
+    final File baseDir = new File(
+            PathUtils.getTestDir(getClass()),
+            GenericTestUtils.getMethodName());
+    dfsConf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, baseDir.getAbsolutePath());
+
+    final int numDn = 4;
+    final String[] racks = {
+        "/d1/r1", "/d1/r2",
+        "/d2/r1", "/d2/r2"};
+
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(dfsConf)
+            .numDataNodes(numDn).racks(racks).build()) {
+      miniCluster.waitActive();
+      assertEquals(numDn, miniCluster.getDataNodes().size());
+
+      DatanodeManager dm = miniCluster.getNameNode().getNamesystem().
+          getBlockManager().getDatanodeManager();
+      DatanodeDescriptor maintenanceNode = dm.getDatanode(
+          miniCluster.getDataNodes().get(1).getDatanodeId());
+      maintenanceNode.setInMaintenance();
+      DatanodeDescriptor demissionNode = dm.getDatanode(
+          miniCluster.getDataNodes().get(2).getDatanodeId());
+      demissionNode.setDecommissioned();
+
+      final DFSAdmin dfsAdmin = new DFSAdmin(dfsConf);
+
+      resetStream();
+      final int ret = ToolRunner.run(dfsAdmin, new String[] {"-printTopology"});
+
+      /* collect outputs */
+      final List<String> outs = Lists.newArrayList();
+      scanIntoList(out, outs);
+
+      /* verify results */
+      assertEquals(0, ret);
+      assertTrue(outs.get(1).contains(DatanodeInfo.AdminStates.NORMAL.toString()));
+      assertTrue(outs.get(4).contains(DatanodeInfo.AdminStates.IN_MAINTENANCE.toString()));
+      assertTrue(outs.get(7).contains(DatanodeInfo.AdminStates.DECOMMISSIONED.toString()));
+      assertTrue(outs.get(10).contains(DatanodeInfo.AdminStates.NORMAL.toString()));
     }
   }
 
