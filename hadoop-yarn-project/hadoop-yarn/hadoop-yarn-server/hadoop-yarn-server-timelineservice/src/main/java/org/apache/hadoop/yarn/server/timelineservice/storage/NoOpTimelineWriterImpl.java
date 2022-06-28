@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -76,5 +77,11 @@ public class NoOpTimelineWriterImpl extends AbstractService implements
   @Override
   public void flush() throws IOException {
     LOG.debug("NoOpTimelineWriter is configured. Ignoring flush call");
+  }
+
+  @Override
+  public TimelineHealth getHealthStatus() {
+    return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
+        "NoOpTimelineWriter is configured. ");
   }
 }

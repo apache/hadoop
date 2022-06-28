@@ -36,8 +36,8 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public final class ElasticByteBufferPool implements ByteBufferPool {
-  private static final class Key implements Comparable<Key> {
+public class ElasticByteBufferPool implements ByteBufferPool {
+  protected static final class Key implements Comparable<Key> {
     private final int capacity;
     private final long insertionTime;
 
