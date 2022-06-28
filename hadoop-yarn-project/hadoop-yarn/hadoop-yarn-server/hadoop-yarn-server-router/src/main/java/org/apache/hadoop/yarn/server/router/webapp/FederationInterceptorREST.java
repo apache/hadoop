@@ -109,7 +109,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
  * Extends the {@code AbstractRESTRequestInterceptor} class and provides an
  * implementation for federation of YARN RM and scaling an application across
  * multiple YARN SubClusters. All the federation specific implementation is
- * encapsulated in this class. This is always the last intercepter in the chain.
+ * encapsulated in this class. This is always the last interceptor in the chain.
  */
 public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
