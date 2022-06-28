@@ -1139,7 +1139,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     mockRM.sendAMLaunched(rmApp.getCurrentAppAttempt().getAppAttemptId());
 
     MoveApplicationAcrossQueuesRequest acrossQueuesRequest =
-        MoveApplicationAcrossQueuesRequest.newInstance(appId,"root.target");
+        MoveApplicationAcrossQueuesRequest.newInstance(appId, "root.target");
     MoveApplicationAcrossQueuesResponse acrossQueuesResponse =
         interceptor.moveApplicationAcrossQueues(acrossQueuesRequest);
 
@@ -1163,10 +1163,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     QueueInfo queueInfo = response.getQueueInfo();
     Assert.assertNotNull(queueInfo);
-    Assert.assertEquals(queueInfo.getQueueName(), "root");
+    Assert.assertEquals(queueInfo.getQueueName(),  "root");
     Assert.assertEquals(queueInfo.getCapacity(), 4.0, 0);
-    Assert.assertEquals(queueInfo.getCurrentCapacity(), 0.0,0);
-    Assert.assertEquals(queueInfo.getChildQueues().size(), 12,0);
+    Assert.assertEquals(queueInfo.getCurrentCapacity(), 0.0, 0);
+    Assert.assertEquals(queueInfo.getChildQueues().size(), 12, 0);
     Assert.assertEquals(queueInfo.getAccessibleNodeLabels().size(), 1);
   }
 }
