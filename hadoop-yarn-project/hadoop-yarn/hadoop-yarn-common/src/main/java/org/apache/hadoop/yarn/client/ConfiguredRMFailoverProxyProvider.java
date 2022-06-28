@@ -59,7 +59,10 @@ public class ConfiguredRMFailoverProxyProvider<T>
     this.rmProxy.checkAllowedProtocols(this.protocol);
     this.conf = new YarnConfiguration(configuration);
     ArrayList<String> rmIds = new ArrayList(HAUtil.getRMHAIds(conf));
-    Collections.shuffle(rmIds);
+    if (this.conf.getBoolean(YarnConfiguration.CLIENT_FAILOVER_SHUFFLE_RM_KEY,
+        YarnConfiguration.CLIENT_FAILOVER_SHUFFLE_RM_DEFAULT)) {
+      Collections.shuffle(rmIds);
+    }
     this.rmServiceIds = rmIds.toArray(new String[rmIds.size()]);
     conf.set(YarnConfiguration.RM_HA_ID, rmServiceIds[currentProxyIndex]);
 

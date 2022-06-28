@@ -23,6 +23,7 @@ import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,8 +32,11 @@ import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
+import org.mockito.ArgumentMatcher;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_ADDRESS;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
@@ -302,6 +306,108 @@ public class TestRMFailoverProxyProvider {
     verify(mockRMProxy, times(1))
         .getProxy(any(YarnConfiguration.class), any(Class.class),
         eq(mockAdd3));
+  }
+
+  private class HAIdMatcher implements ArgumentMatcher<YarnConfiguration> {
+
+    private final String rmId;
+
+    HAIdMatcher(String id) {
+      this.rmId = id;
+    }
+
+    @Override
+    public boolean matches(YarnConfiguration conf) {
+      if (conf == null || conf.get(YarnConfiguration.RM_HA_ID) == null ||
+          !conf.get(YarnConfiguration.RM_HA_ID).equals(this.rmId)) {
+        return false;
+      }
+      return true;
+    }
+  }
+
+  @Test
+  public void testInitialRMSequenceShuffleRMEnable() throws Exception {
+    testInitialRMSequence(true);
+  }
+
+  @Test
+  public void testInitialRMSequenceShuffleRMDisable() throws Exception {
+    testInitialRMSequence(false);
+  }
+
+  public void testInitialRMSequence(boolean shuffled) throws Exception {
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2,rm3");
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.CLIENT_FAILOVER_SHUFFLE_RM_KEY, shuffled);
+    conf.setClass(YarnConfiguration.CLIENT_FAILOVER_PROXY_PROVIDER,
+        ConfiguredRMFailoverProxyProvider.class, FailoverProxyProvider.class);
+
+    // Set RM address for HA
+    HATestUtil.setConfForRM("rm1", RM_ADDRESS, "localhost:" + RM1_PORT, conf);
+    HATestUtil.setConfForRM("rm2", RM_ADDRESS, "localhost:" + RM2_PORT, conf);
+    HATestUtil.setConfForRM("rm3", RM_ADDRESS, "localhost:" + RM3_PORT, conf);
+
+    // Create two proxies and mock a RMProxy
+    Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
+    Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
+    Proxy mockProxy3 = new TestProxy((proxy, method, args) -> null);
+
+    // Create mock address
+    InetSocketAddress mockAdd1 = new InetSocketAddress("localhost", RM1_PORT);
+    InetSocketAddress mockAdd2 = new InetSocketAddress("localhost", RM2_PORT);
+    InetSocketAddress mockAdd3 = new InetSocketAddress("localhost", RM3_PORT);
+
+    // Mock RMProxy methods
+    RMProxy<Proxy> mockRMProxy = mock(RMProxy.class);
+    when(mockRMProxy.getRMAddress(argThat(new HAIdMatcher("rm1")),
+        any(Class.class))).thenReturn(mockAdd1);
+    when(mockRMProxy.getRMAddress(argThat(new HAIdMatcher("rm2")),
+        any(Class.class))).thenReturn(mockAdd2);
+    when(mockRMProxy.getRMAddress(argThat(new HAIdMatcher("rm3")),
+        any(Class.class))).thenReturn(mockAdd3);
+
+    when(mockRMProxy.getProxy(any(YarnConfiguration.class),
+        any(Class.class), eq(mockAdd1))).thenReturn(mockProxy1);
+    when(mockRMProxy.getProxy(any(YarnConfiguration.class),
+        any(Class.class), eq(mockAdd2))).thenReturn(mockProxy2);
+    when(mockRMProxy.getProxy(any(YarnConfiguration.class),
+        any(Class.class), eq(mockAdd3))).thenReturn(mockProxy3);
+
+    int matchAdd1 = 0;
+    int matchAdd2 = 0;
+    int matchAdd3 = 0;
+    int unMatched = 0;
+
+    Class protocol = ApplicationClientProtocol.class;
+    ConfiguredRMFailoverProxyProvider<Proxy> fpp =
+        new ConfiguredRMFailoverProxyProvider<>();
+
+    for (int i = 0; i < 20; i++) {
+      // Initialize failover proxy provider and get proxy from it.
+      fpp.init(conf, mockRMProxy, protocol);
+      FailoverProxyProvider.ProxyInfo<Proxy> actualProxy = fpp.getProxy();
+      if (actualProxy.proxy.equals(mockProxy1)) {
+        matchAdd1++;
+      } else if (actualProxy.proxy.equals(mockProxy2)) {
+        matchAdd2++;
+      } else if (actualProxy.proxy.equals(mockProxy3)) {
+        matchAdd3++;
+      } else {
+        unMatched++;
+      }
+    }
+    if (shuffled) {
+      assertTrue(matchAdd1 > 0);
+      assertTrue(matchAdd2 > 0);
+      assertTrue(matchAdd3 > 0);
+      assertEquals(0, unMatched);
+    } else {
+      assertEquals(20, matchAdd1);
+      assertEquals(0, matchAdd2);
+      assertEquals(0, matchAdd3);
+      assertEquals(0, unMatched);
+    }
   }
 }
 
