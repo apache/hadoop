@@ -899,7 +899,8 @@ public class ClientRMService extends AbstractService implements
     String name = request.getName();
 
     final Map<ApplicationId, RMApp> apps = rmContext.getRMApps();
-    final Set<ApplicationId> runningAppsFilteredByQueues = getRunningAppsFilteredByQueues(apps, queues);
+    final Set<ApplicationId> runningAppsFilteredByQueues =
+        getRunningAppsFilteredByQueues(apps, queues);
 
     Iterator<RMApp> appsIter = apps.values().iterator();
     
