@@ -301,7 +301,7 @@ public class ShuffleHandler extends AuxiliaryService {
       shuffleConnections.decr();
     }
   }
-  
+
   static class NettyChannelHelper {
     static ChannelFuture writeToChannel(Channel ch, Object obj) {
       LOG.debug("Writing {} to channel: {}", obj.getClass().getSimpleName(), ch.id());
@@ -996,7 +996,7 @@ public class ShuffleHandler extends AuxiliaryService {
       int numConnections = activeConnections.incrementAndGet();
       if ((maxShuffleConnections > 0) && (numConnections > maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
-            "greater than the max allowed shuffle connections (%d)", 
+            "greater than the max allowed shuffle connections (%d)",
             accepted.size(), maxShuffleConnections));
 
         Map<String, String> headers = new HashMap<>(1);

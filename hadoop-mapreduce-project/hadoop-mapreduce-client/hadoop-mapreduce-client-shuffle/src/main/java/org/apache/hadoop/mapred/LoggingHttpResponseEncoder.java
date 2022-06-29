@@ -87,7 +87,7 @@ class LoggingHttpResponseEncoder extends HttpResponseEncoder {
   private String getExecutingMethodName() {
     return getExecutingMethodName(0);
   }
-  
+
   private String getExecutingMethodName(int additionalSkipFrames) {
     try {
       StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();

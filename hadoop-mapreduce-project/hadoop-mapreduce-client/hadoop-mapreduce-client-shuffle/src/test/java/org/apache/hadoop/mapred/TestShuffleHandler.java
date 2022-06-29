@@ -132,7 +132,7 @@ public class TestShuffleHandler {
   private static final long ATTEMPT_ID = 12345L;
   private static final long ATTEMPT_ID_2 = 12346L;
   private static final HttpResponseStatus OK_STATUS = new HttpResponseStatus(200, "OK");
-  
+
 
   //Control test execution properties with these flags
   private static final boolean DEBUG_MODE = false;
@@ -164,7 +164,7 @@ public class TestShuffleHandler {
       }
       return DEFAULT_KEEP_ALIVE_TIMEOUT_SECONDS;
     }
-    
+
     HttpURLConnection openConnection(URL url) throws IOException {
       HttpURLConnection conn;
       if (useProxy) {
@@ -176,7 +176,7 @@ public class TestShuffleHandler {
       }
       return conn;
     }
-    
+
     int shuffleHandlerPort() {
       if (debugMode) {
         return FIXED_PORT;
@@ -184,7 +184,7 @@ public class TestShuffleHandler {
         return DEFAULT_PORT;
       }
     }
-    
+
     void parameterizeConnection(URLConnection conn) {
       if (DEBUG_MODE) {
         conn.setReadTimeout(CONNECTION_DEBUG_TIMEOUT);
@@ -192,7 +192,7 @@ public class TestShuffleHandler {
       }
     }
   }
-  
+
   private static class ResponseConfig {
     private final int headerWriteCount;
     private final int mapOutputCount;
@@ -226,7 +226,7 @@ public class TestShuffleHandler {
       return (contentLengthOfAllHeaders + contentLengthOfOneMapOutput) * mapOutputCountMultiplier;
     }
   }
-  
+
   private enum ShuffleUrlType {
     SIMPLE, WITH_KEEPALIVE, WITH_KEEPALIVE_MULTIPLE_MAP_IDS, WITH_KEEPALIVE_NO_MAP_IDS
   }
@@ -612,7 +612,7 @@ public class TestShuffleHandler {
         result.totalBytesRead += responseConfig.headerSize;
         int expectedContentLength =
             Integer.parseInt(conn.getHeaderField(HttpHeader.CONTENT_LENGTH.asString()));
-        
+
         if (result.totalBytesRead != expectedContentLength) {
           throw new IOException(String.format("Premature EOF InputStream. " +
               "Expected content-length: %s, " +
@@ -694,7 +694,7 @@ public class TestShuffleHandler {
       super(ms);
       setUseOutboundExceptionHandler(true);
     }
-    
+
     @Override
     protected Shuffle getShuffle(final Configuration conf) {
       return new Shuffle(conf) {
@@ -815,12 +815,12 @@ public class TestShuffleHandler {
 
   @Rule
   public TestName name = new TestName();
-  
+
   @Before
   public void setup() {
     TEST_EXECUTION = new TestExecution(DEBUG_MODE, USE_PROXY);
   }
-  
+
   @After
   public void tearDown() {
     int port = TEST_EXECUTION.shuffleHandlerPort();
@@ -1044,7 +1044,7 @@ public class TestShuffleHandler {
   public void testKeepAliveMultipleMapAttemptIds() throws Exception {
     final int mapOutputContentLength = 11;
     final int mapOutputCount = 2;
-    
+
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
@@ -1066,8 +1066,8 @@ public class TestShuffleHandler {
                     "{}", partition, ch.id()));
       }
     };
-    testKeepAliveWithHttpOk(conf, shuffleHandler, 
-        ShuffleUrlType.WITH_KEEPALIVE_MULTIPLE_MAP_IDS, 
+    testKeepAliveWithHttpOk(conf, shuffleHandler,
+        ShuffleUrlType.WITH_KEEPALIVE_MULTIPLE_MAP_IDS,
         ShuffleUrlType.WITH_KEEPALIVE_MULTIPLE_MAP_IDS);
   }
 
@@ -1080,14 +1080,14 @@ public class TestShuffleHandler {
     ResponseConfig responseConfig = new ResponseConfig(HEADER_WRITE_COUNT, 0, 0);
     ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(ATTEMPT_ID, responseConfig);
     shuffleHandler.setFailImmediatelyOnErrors(true);
-    //Closing channels caused Netty to open another channel 
-    // so 1 request was handled with 2 separate channels, 
+    //Closing channels caused Netty to open another channel
+    // so 1 request was handled with 2 separate channels,
     // ultimately generating 2 * HTTP 400 errors.
-    // We'd like to avoid this so disable closing the channel here.
+    // We'd like to avoid this so disabling closing the channel here.
     shuffleHandler.setCloseChannelOnError(false);
     testKeepAliveWithHttpBadRequest(conf, shuffleHandler, ShuffleUrlType.WITH_KEEPALIVE_NO_MAP_IDS);
   }
-  
+
   private void testKeepAliveWithHttpOk(
       Configuration conf,
       ShuffleHandlerForKeepAliveTests shuffleHandler,
@@ -1104,7 +1104,7 @@ public class TestShuffleHandler {
 
   private void testKeepAliveWithHttpStatus(Configuration conf,
       ShuffleHandlerForKeepAliveTests shuffleHandler,
-      ShuffleUrlType[] shuffleUrlTypes, 
+      ShuffleUrlType[] shuffleUrlTypes,
       int expectedHttpStatus
       ) throws IOException {
     if (expectedHttpStatus != HttpURLConnection.HTTP_BAD_REQUEST) {
@@ -1432,7 +1432,7 @@ public class TestShuffleHandler {
 
           @Override
           public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ctx.pipeline().replace(HttpResponseEncoder.class, 
+            ctx.pipeline().replace(HttpResponseEncoder.class,
                 "loggingResponseEncoder",
                 new LoggingHttpResponseEncoder(false));
             LOG.debug("Modified pipeline: {}", ctx.pipeline());
@@ -1473,12 +1473,12 @@ public class TestShuffleHandler {
       DataInputStream is = new DataInputStream(conn.getInputStream());
       InputStreamReadResult result = HttpConnectionHelper.readDataFromInputStream(is);
       String receivedString = result.asString;
-      
+
       //Retrieve file owner name
       FileInputStream fis = new FileInputStream(fileMap.get(0));
       String owner = NativeIO.POSIX.getFstat(fis.getFD()).getOwner();
       fis.close();
-      
+
       String message =
           "Owner '" + owner + "' for path " + fileMap.get(0).getAbsolutePath()
               + " did not match expected owner '" + user + "'";
@@ -1918,7 +1918,7 @@ public class TestShuffleHandler {
       }
       mapAttemptIds.append(String.format("attempt_%s_1_m_1_0", attemptIds[i]));
     }
-    
+
     String location = String.format("/mapOutput" +
         "?job=job_%s_1" +
         "&reduce=1" +
@@ -1952,7 +1952,6 @@ public class TestShuffleHandler {
     assertTrue(String.format("Expected at least %s seconds of timeout. " +
             "Actual timeout seconds: %s", expectedTimeoutSeconds, secondsPassed),
         secondsPassed >= expectedTimeoutSeconds);
-    
     shuffleHandler.stop();
   }
 
