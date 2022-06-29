@@ -1037,7 +1037,7 @@ public class ViewFileSystem extends FileSystem {
     List<InodeTree.MountPoint<FileSystem>> mountPoints =
         fsState.getMountPoints();
     Map<String, FileSystem> fsMap = initializeMountedFileSystems(mountPoints);
-    Set<FileSystem> children = new HashSet<FileSystem>();
+    Set<FileSystem> children = new HashSet<>();
     for (InodeTree.MountPoint<FileSystem> mountPoint : mountPoints) {
       FileSystem targetFs = fsMap.get(mountPoint.src);
       children.addAll(Arrays.asList(targetFs.getChildFileSystems()));

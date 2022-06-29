@@ -216,16 +216,20 @@ class FsDatasetAsyncDiskService {
     }
   }
 
-  public void submitSyncFileRangeRequest(FsVolumeImpl volume,
-      final ReplicaOutputStreams streams, final long offset, final long nbytes,
-      final int flags) {
-    execute(volume, new Runnable() {
-      @Override
-      public void run() {
+  public void submitSyncFileRangeRequest(FsVolumeImpl volume, final ReplicaOutputStreams streams,
+      final long offset, final long nbytes, final int flags) {
+    execute(volume, () -> {
+      try {
+        streams.syncFileRangeIfPossible(offset, nbytes, flags);
+      } catch (NativeIOException e) {
         try {
-          streams.syncFileRangeIfPossible(offset, nbytes, flags);
-        } catch (NativeIOException e) {
-          LOG.warn("sync_file_range error", e);
+          LOG.warn("sync_file_range error. Volume: {}, Capacity: {}, Available space: {}, "
+                  + "File range offset: {}, length: {}, flags: {}", volume, volume.getCapacity(),
+              volume.getAvailable(), offset, nbytes, flags, e);
+        } catch (IOException ioe) {
+          LOG.warn("sync_file_range error. Volume: {}, Capacity: {}, "
+                  + "File range offset: {}, length: {}, flags: {}", volume, volume.getCapacity(),
+              offset, nbytes, flags, e);
         }
       }
     });

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.timelineservice.collector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -155,7 +156,17 @@ public class TestTimelineCollector {
   @Test
   public void testPutEntity() throws IOException {
     TimelineWriter writer = mock(TimelineWriter.class);
+    TimelineHealth timelineHealth = new TimelineHealth(TimelineHealth.
+        TimelineHealthStatus.RUNNING, "");
+    when(writer.getHealthStatus()).thenReturn(timelineHealth);
+
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 5);
+    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+         500L);
+
     TimelineCollector collector = new TimelineCollectorForTest(writer);
+    collector.init(conf);
 
     TimelineEntities entities = generateTestEntities(1, 1);
     collector.putEntities(
@@ -164,6 +175,36 @@ public class TestTimelineCollector {
     verify(writer, times(1)).write(any(TimelineCollectorContext.class),
         any(TimelineEntities.class), any(UserGroupInformation.class));
     verify(writer, times(1)).flush();
+  }
+
+
+  @Test
+  public void testPutEntityWithStorageDown() throws IOException {
+    TimelineWriter writer = mock(TimelineWriter.class);
+    TimelineHealth timelineHealth = new TimelineHealth(TimelineHealth.
+        TimelineHealthStatus.CONNECTION_FAILURE, "");
+    when(writer.getHealthStatus()).thenReturn(timelineHealth);
+
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 5);
+    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+         500L);
+
+    TimelineCollector collector = new TimelineCollectorForTest(writer);
+    collector.init(conf);
+
+    TimelineEntities entities = generateTestEntities(1, 1);
+    boolean exceptionCaught = false;
+    try {
+      collector.putEntities(entities, UserGroupInformation.
+          createRemoteUser("test-user"));
+    } catch (Exception e) {
+      if (e.getMessage().contains("Failed to putEntities")) {
+        exceptionCaught = true;
+      }
+    }
+    assertTrue("TimelineCollector putEntity failed to " +
+        "handle storage down", exceptionCaught);
   }
 
   /**
@@ -222,7 +263,17 @@ public class TestTimelineCollector {
    */
   @Test public void testPutDomain() throws IOException {
     TimelineWriter writer = mock(TimelineWriter.class);
+    TimelineHealth timelineHealth = new TimelineHealth(TimelineHealth.
+        TimelineHealthStatus.RUNNING, "");
+    when(writer.getHealthStatus()).thenReturn(timelineHealth);
+
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 5);
+    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+        500L);
+
     TimelineCollector collector = new TimelineCollectorForTest(writer);
+    collector.init(conf);
 
     TimelineDomain domain =
         generateDomain("id", "desc", "owner", "reader1,reader2", "writer", 0L,
@@ -287,8 +338,19 @@ public class TestTimelineCollector {
               1L, ApplicationId.newInstance(ts, 1).toString());
         }
     };
-    collector.init(new Configuration());
-    collector.setWriter(mock(TimelineWriter.class));
+
+    TimelineWriter writer = mock(TimelineWriter.class);
+    TimelineHealth timelineHealth = new TimelineHealth(TimelineHealth.
+         TimelineHealthStatus.RUNNING, "");
+    when(writer.getHealthStatus()).thenReturn(timelineHealth);
+
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 5);
+    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+         500L);
+
+    collector.init(conf);
+    collector.setWriter(writer);
 
     // Put 5 entities with different metric values.
     TimelineEntities entities = new TimelineEntities();

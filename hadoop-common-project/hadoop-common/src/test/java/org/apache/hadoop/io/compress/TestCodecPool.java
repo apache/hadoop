@@ -69,7 +69,7 @@ public class TestCodecPool {
     Compressor comp = CodecPool.getCompressor(codec);
     CodecPool.returnCompressor(comp);
     CodecPool.returnCompressor(comp);
-    Set<Compressor> compressors = new HashSet<Compressor>();
+    Set<Compressor> compressors = new HashSet<>();
     for (int i = 0; i < 10; ++i) {
       compressors.add(CodecPool.getCompressor(codec));
     }
@@ -180,7 +180,7 @@ public class TestCodecPool {
     Decompressor decomp = CodecPool.getDecompressor(codec);
     CodecPool.returnDecompressor(decomp);
     CodecPool.returnDecompressor(decomp);
-    Set<Decompressor> decompressors = new HashSet<Decompressor>();
+    Set<Decompressor> decompressors = new HashSet<>();
     for (int i = 0; i < 10; ++i) {
       decompressors.add(CodecPool.getDecompressor(codec));
     }

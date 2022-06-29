@@ -20,7 +20,7 @@ package org.apache.hadoop.util;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
+
 import org.junit.Assert;
 
 import java.io.BufferedReader;
