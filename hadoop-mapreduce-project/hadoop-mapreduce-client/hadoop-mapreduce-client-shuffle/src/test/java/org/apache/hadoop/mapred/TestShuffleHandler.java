@@ -39,8 +39,11 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -115,8 +118,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.mockito.Mockito;
 import org.eclipse.jetty.http.HttpHeader;
 import org.slf4j.Logger;
@@ -499,7 +500,7 @@ public class TestShuffleHandler {
       try {
         this.responseCode = conn.getResponseCode();
       } catch (IOException e) {
-        Assert.fail("Failed to read response code from connection: " + conn);
+        fail("Failed to read response code from connection: " + conn);
       }
     }
 
@@ -520,7 +521,7 @@ public class TestShuffleHandler {
     }
 
     public static void assertKeepAliveConnectionsAreSame(HttpConnectionHelper httpConnectionHelper) {
-      Assert.assertTrue("At least two connection data " +
+      assertTrue("At least two connection data " +
           "is required to perform this assertion",
           httpConnectionHelper.connectionData.size() >= 2);
       SocketAddress firstAddress = httpConnectionHelper.getConnectionData(0).socket;
@@ -529,26 +530,26 @@ public class TestShuffleHandler {
           firstAddress);
       Assert.assertNotNull("Keep-Alive shuffle address should not be null",
           secondAddress);
-      Assert.assertEquals("Initial shuffle address and keep-alive shuffle "
+      assertEquals("Initial shuffle address and keep-alive shuffle "
           + "address should be the same", firstAddress, secondAddress);
     }
 
     public HttpConnectionAssert expectKeepAliveWithTimeout(long timeout) {
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, connData.responseCode);
+      assertEquals(HttpURLConnection.HTTP_OK, connData.responseCode);
       assertHeaderValue(HttpHeader.CONNECTION, HttpHeader.KEEP_ALIVE.asString());
       assertHeaderValue(HttpHeader.KEEP_ALIVE, "timeout=" + timeout);
       return this;
     }
 
     public HttpConnectionAssert expectBadRequest(long timeout) {
-      Assert.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, connData.responseCode);
+      assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, connData.responseCode);
       assertHeaderValue(HttpHeader.CONNECTION, HttpHeader.KEEP_ALIVE.asString());
       assertHeaderValue(HttpHeader.KEEP_ALIVE, "timeout=" + timeout);
       return this;
     }
 
     public HttpConnectionAssert expectResponseContentLength(long size) {
-      Assert.assertEquals(size, connData.payloadLength);
+      assertEquals(size, connData.payloadLength);
       return this;
     }
 
@@ -558,7 +559,7 @@ public class TestShuffleHandler {
       Assert.assertFalse("Got empty header value for header: " + header, headerList.isEmpty());
       assertEquals("Unexpected size of header list for header: " + header, 1,
           headerList.size());
-      Assert.assertEquals(expectedValue, headerList.get(0));
+      assertEquals(expectedValue, headerList.get(0));
     }
   }
 
@@ -622,7 +623,7 @@ public class TestShuffleHandler {
         input.close();
         LOG.debug("Finished all interactions with URL: {}. Progress: {}/{}", url, (reqIdx + 1), requests);
       }
-      Assert.assertEquals(expectedConnections, connectionData.size());
+      assertEquals(expectedConnections, connectionData.size());
     }
 
     void validate(Consumer<HttpConnectionData> connDataValidator) {
@@ -980,8 +981,8 @@ public class TestShuffleHandler {
         ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     conn.connect();
     DataInputStream input = new DataInputStream(conn.getInputStream());
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    Assert.assertEquals("close",
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals("close",
         conn.getHeaderField(HttpHeader.CONNECTION.asString()));
     ShuffleHeader header = new ShuffleHeader();
     header.readFields(input);
@@ -989,7 +990,7 @@ public class TestShuffleHandler {
 
     assertEquals("sendError called when client closed connection", 0,
         shuffleHandler.failures.size());
-    Assert.assertEquals("Should have no caught exceptions", Collections.emptyList(),
+    assertEquals("Should have no caught exceptions", Collections.emptyList(),
         shuffleHandler.failures);
 
     shuffleHandler.stop();
@@ -1107,7 +1108,7 @@ public class TestShuffleHandler {
       int expectedHttpStatus
       ) throws IOException {
     if (expectedHttpStatus != HttpURLConnection.HTTP_BAD_REQUEST) {
-      Assert.assertTrue("Expected at least two shuffle URL types ",
+      assertTrue("Expected at least two shuffle URL types ",
           shuffleUrlTypes.length >= 2);
     }
     shuffleHandler.init(conf);
@@ -1131,8 +1132,8 @@ public class TestShuffleHandler {
       connHelper = new HttpConnectionHelper(shuffleHandler.lastSocketAddress);
       connHelper.connectToUrls(urls, shuffleHandler.responseConfig, expectedHttpStatus);
       if (expectedHttpStatus == HttpURLConnection.HTTP_BAD_REQUEST) {
-        Assert.assertEquals(1, shuffleHandler.failures.size());
-        Assert.assertThat(shuffleHandler.failures.get(0).getMessage(),
+        assertEquals(1, shuffleHandler.failures.size());
+        assertThat(shuffleHandler.failures.get(0).getMessage(),
             CoreMatchers.containsString("Status: 400 Bad Request, message: Required param job, map and reduce"));
       }
     } finally {
@@ -1150,7 +1151,7 @@ public class TestShuffleHandler {
     });
     if (expectedHttpStatus == HttpURLConnection.HTTP_OK) {
       HttpConnectionAssert.assertKeepAliveConnectionsAreSame(connHelper);
-      Assert.assertEquals("Unexpected ShuffleHandler failure", Collections.emptyList(), shuffleHandler.failures);
+      assertEquals("Unexpected ShuffleHandler failure", Collections.emptyList(), shuffleHandler.failures);
     }
   }
 
@@ -1186,8 +1187,8 @@ public class TestShuffleHandler {
       conn.connect();
       int rc = conn.getResponseCode();
       conn.getInputStream();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
-      Assert.assertTrue("socket should be set KEEP_ALIVE",
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertTrue("socket should be set KEEP_ALIVE",
           shuffleHandler.isSocketKeepAlive());
     } finally {
       if (conn != null) {
@@ -1195,7 +1196,7 @@ public class TestShuffleHandler {
       }
       shuffleHandler.stop();
     }
-    Assert.assertEquals("Should have no caught exceptions",
+    assertEquals("Should have no caught exceptions",
         Collections.emptyList(), shuffleHandler.failures);
   }
 
@@ -1226,7 +1227,7 @@ public class TestShuffleHandler {
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
           i == 1 ? "1.0.0" : "1.0.1");
       conn.connect();
-      Assert.assertEquals(
+      assertEquals(
           HttpURLConnection.HTTP_BAD_REQUEST, conn.getResponseCode());
     }
 
@@ -1333,9 +1334,9 @@ public class TestShuffleHandler {
       } catch (IOException ioe) {
         LOG.info("Expected - connection should not be open");
       } catch (NumberFormatException ne) {
-        Assert.fail("Expected a numerical value for RETRY_AFTER header field");
+        fail("Expected a numerical value for RETRY_AFTER header field");
       } catch (Exception e) {
-        Assert.fail("Expected a IOException");
+        fail("Expected a IOException");
       }
       int statusCode = conn.getResponseCode();
       LOG.debug("Connection status code: {}", statusCode);
@@ -1344,7 +1345,7 @@ public class TestShuffleHandler {
       connectionList.add(conn);
     }
 
-    Assert.assertEquals(String.format("Expected only %s and %s response",
+    assertEquals(String.format("Expected only %s and %s response",
             OK_STATUS, ShuffleHandler.TOO_MANY_REQ_STATUS),
         Sets.newHashSet(
             HttpURLConnection.HTTP_OK,
@@ -1353,31 +1354,31 @@ public class TestShuffleHandler {
     
     List<HttpURLConnection> successfulConnections =
         mapOfConnections.get(HttpURLConnection.HTTP_OK);
-    Assert.assertEquals(String.format("Expected exactly %d requests " +
+    assertEquals(String.format("Expected exactly %d requests " +
             "with %s response", maxAllowedConnections, OK_STATUS),
         maxAllowedConnections, successfulConnections.size());
 
     //Ensure exactly one connection is HTTP 429 (TOO MANY REQUESTS)
     List<HttpURLConnection> closedConnections =
         mapOfConnections.get(ShuffleHandler.TOO_MANY_REQ_STATUS.code());
-    Assert.assertEquals(String.format("Expected exactly %d %s response",
+    assertEquals(String.format("Expected exactly %d %s response",
             notAcceptedConnections, ShuffleHandler.TOO_MANY_REQ_STATUS),
         notAcceptedConnections, closedConnections.size());
 
     // This connection should be closed because it is above the maximum limit
     HttpURLConnection conn = closedConnections.get(0);
-    Assert.assertEquals(String.format("Expected a %s response",
+    assertEquals(String.format("Expected a %s response",
             ShuffleHandler.TOO_MANY_REQ_STATUS),
         ShuffleHandler.TOO_MANY_REQ_STATUS.code(), conn.getResponseCode());
     long backoff = Long.parseLong(
         conn.getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
-    Assert.assertTrue("The backoff value cannot be negative.", backoff > 0);
+    assertTrue("The backoff value cannot be negative.", backoff > 0);
 
     shuffleHandler.stop();
 
     //It's okay to get a ClosedChannelException.
     //All other kinds of exceptions means something went wrong
-    Assert.assertEquals("Should have no caught exceptions",
+    assertEquals("Should have no caught exceptions",
         Collections.emptyList(), failures.stream()
             .filter(f -> !(f instanceof ClosedChannelException))
             .collect(toList()));
@@ -1481,18 +1482,18 @@ public class TestShuffleHandler {
       String message =
           "Owner '" + owner + "' for path " + fileMap.get(0).getAbsolutePath()
               + " did not match expected owner '" + user + "'";
-      Assert.assertTrue(String.format("Received string '%s' should contain " +
+      assertTrue(String.format("Received string '%s' should contain " +
           "message '%s'", receivedString, message),
           receivedString.contains(message));
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       LOG.info("received: " + receivedString);
-      Assert.assertNotEquals("", receivedString);
+      assertNotEquals("", receivedString);
     } finally {
       shuffleHandler.stop();
       FileUtil.fullyDelete(ABS_LOG_DIR);
     }
 
-    Assert.assertEquals("Should have no caught exceptions",
+    assertEquals("Should have no caught exceptions",
         Collections.emptyList(), failures);
   }
 
@@ -1581,7 +1582,7 @@ public class TestShuffleHandler {
 
       // verify we are authorized to shuffle
       int rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
 
       // emulate shuffle handler restart
       shuffle.close();
@@ -1593,12 +1594,12 @@ public class TestShuffleHandler {
 
       // verify we are still authorized to shuffle to the old application
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
 
       // shutdown app and verify access is lost
       shuffle.stopApplication(new ApplicationTerminationContext(appId));
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, rc);
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, rc);
 
       // emulate shuffle handler restart
       shuffle.close();
@@ -1609,7 +1610,7 @@ public class TestShuffleHandler {
 
       // verify we still don't have access
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, rc);
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, rc);
     } finally {
       if (shuffle != null) {
         shuffle.close();
@@ -1652,7 +1653,7 @@ public class TestShuffleHandler {
 
       // verify we are authorized to shuffle
       int rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
 
       // emulate shuffle handler restart
       shuffle.close();
@@ -1664,15 +1665,15 @@ public class TestShuffleHandler {
 
       // verify we are still authorized to shuffle to the old application
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
       Version version = Version.newInstance(1, 0);
-      Assert.assertEquals(version, shuffle.getCurrentVersion());
+      assertEquals(version, shuffle.getCurrentVersion());
     
       // emulate shuffle handler restart with compatible version
       Version version11 = Version.newInstance(1, 1);
       // update version info before close shuffle
       shuffle.storeVersion(version11);
-      Assert.assertEquals(version11, shuffle.loadVersion());
+      assertEquals(version11, shuffle.loadVersion());
       shuffle.close();
       shuffle = new ShuffleHandlerForTests();
       shuffle.setAuxiliaryLocalPathHandler(pathHandler);
@@ -1681,15 +1682,15 @@ public class TestShuffleHandler {
       shuffle.start();
       // shuffle version will be override by CURRENT_VERSION_INFO after restart
       // successfully.
-      Assert.assertEquals(version, shuffle.loadVersion());
+      assertEquals(version, shuffle.loadVersion());
       // verify we are still authorized to shuffle to the old application
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
     
       // emulate shuffle handler restart with incompatible version
       Version version21 = Version.newInstance(2, 1);
       shuffle.storeVersion(version21);
-      Assert.assertEquals(version21, shuffle.loadVersion());
+      assertEquals(version21, shuffle.loadVersion());
       shuffle.close();
       shuffle = new ShuffleHandlerForTests();
       shuffle.setAuxiliaryLocalPathHandler(pathHandler);
@@ -1698,9 +1699,9 @@ public class TestShuffleHandler {
     
       try {
         shuffle.start();
-        Assert.fail("Incompatible version, should expect fail here.");
+        fail("Incompatible version, should expect fail here.");
       } catch (ServiceStateException e) {
-        Assert.assertTrue("Exception message mismatch", 
+        assertTrue("Exception message mismatch", 
         e.getMessage().contains("Incompatible version for state DB schema:"));
       } 
     
@@ -1830,7 +1831,7 @@ public class TestShuffleHandler {
       } catch (EOFException e) {
         // ignore
       }
-      Assert.assertEquals("sendError called due to shuffle error",
+      assertEquals("sendError called due to shuffle error",
           0, failures.size());
     } finally {
       shuffleHandler.stop();
@@ -1882,7 +1883,7 @@ public class TestShuffleHandler {
     sh.close();
     sh.stop();
 
-    Assert.assertEquals("Should have no caught exceptions",
+    assertEquals("Should have no caught exceptions",
         Collections.emptyList(), sh.failures);
   }
 
@@ -1948,7 +1949,7 @@ public class TestShuffleHandler {
     long channelClosedTimestamp = System.currentTimeMillis();
     long secondsPassed =
         TimeUnit.SECONDS.convert(channelClosedTimestamp - beforeConnectionTimestamp, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(String.format("Expected at least %s seconds of timeout. " +
+    assertTrue(String.format("Expected at least %s seconds of timeout. " +
             "Actual timeout seconds: %s", expectedTimeoutSeconds, secondsPassed),
         secondsPassed >= expectedTimeoutSeconds);
     
