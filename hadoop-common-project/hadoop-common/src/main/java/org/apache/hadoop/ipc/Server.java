@@ -65,9 +65,12 @@ import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 import javax.security.sasl.Sasl;
@@ -127,6 +130,8 @@ import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
+
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
@@ -500,6 +505,11 @@ public abstract class Server {
   private Responder responder = null;
   private Handler[] handlers = null;
   private final AtomicInteger numInProcessHandler = new AtomicInteger();
+  private final LongAdder totalRequests = new LongAdder();
+  private long lastSeenTotalRequests = 0;
+  private long totalRequestsPerSecond = 0;
+  private final long metricsUpdaterInterval;
+  private final ScheduledExecutorService scheduledExecutorService;
 
   private boolean logSlowRPC = false;
 
@@ -513,6 +523,14 @@ public abstract class Server {
 
   public int getNumInProcessHandler() {
     return numInProcessHandler.get();
+  }
+
+  public long getTotalRequests() {
+    return totalRequests.sum();
+  }
+
+  public long getTotalRequestsPerSecond() {
+    return totalRequestsPerSecond;
   }
 
   /**
@@ -578,6 +596,7 @@ public abstract class Server {
   }
 
   void updateMetrics(Call call, long startTime, boolean connDropped) {
+    totalRequests.increment();
     // delta = handler + processing + response
     long deltaNanos = Time.monotonicNowNanos() - startTime;
     long timestampNanos = call.timestampNanos;
@@ -3304,6 +3323,14 @@ public abstract class Server {
     this.exceptionsHandler.addTerseLoggingExceptions(StandbyException.class);
     this.exceptionsHandler.addTerseLoggingExceptions(
         HealthCheckFailedException.class);
+    this.metricsUpdaterInterval =
+        conf.getLong(CommonConfigurationKeysPublic.IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL,
+            CommonConfigurationKeysPublic.IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL_DEFAULT);
+    this.scheduledExecutorService = new ScheduledThreadPoolExecutor(1,
+        new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Hadoop-Metrics-Updater-%d")
+            .build());
+    this.scheduledExecutorService.scheduleWithFixedDelay(new MetricsUpdateRunner(),
+        metricsUpdaterInterval, metricsUpdaterInterval, TimeUnit.MILLISECONDS);
   }
 
   public synchronized void addAuxiliaryListener(int auxiliaryPort)
@@ -3598,8 +3625,23 @@ public abstract class Server {
     }
     responder.interrupt();
     notifyAll();
+    shutdownMetricsUpdaterExecutor();
     this.rpcMetrics.shutdown();
     this.rpcDetailedMetrics.shutdown();
+  }
+
+  private void shutdownMetricsUpdaterExecutor() {
+    this.scheduledExecutorService.shutdown();
+    try {
+      boolean isExecutorShutdown =
+          this.scheduledExecutorService.awaitTermination(3, TimeUnit.SECONDS);
+      if (!isExecutorShutdown) {
+        LOG.info("Hadoop Metrics Updater executor could not be shutdown.");
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.info("Hadoop Metrics Updater executor shutdown interrupted.", e);
+    }
   }
 
   /**
@@ -4061,4 +4103,32 @@ public abstract class Server {
   public String getServerName() {
     return serverName;
   }
+
+  /**
+   * Server metrics updater thread, used to update some metrics on a regular basis.
+   * For instance, requests per second.
+   */
+  private class MetricsUpdateRunner implements Runnable {
+
+    private long lastExecuted = 0;
+
+    @Override
+    public synchronized void run() {
+      long currentTime = Time.monotonicNow();
+      if (lastExecuted == 0) {
+        lastExecuted = currentTime - metricsUpdaterInterval;
+      }
+      long currentTotalRequests = totalRequests.sum();
+      long totalRequestsDiff = currentTotalRequests - lastSeenTotalRequests;
+      lastSeenTotalRequests = currentTotalRequests;
+      if ((currentTime - lastExecuted) > 0) {
+        double totalRequestsPerSecInDouble =
+            (double) totalRequestsDiff / TimeUnit.MILLISECONDS.toSeconds(
+                currentTime - lastExecuted);
+        totalRequestsPerSecond = ((long) totalRequestsPerSecInDouble);
+      }
+      lastExecuted = currentTime;
+    }
+  }
+
 }

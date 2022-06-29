@@ -35,6 +35,8 @@ add_library(native_mini_dfs
     ../libhdfs/jni_helper.c
     ${OS_DIR}/mutexes.c
     ${OS_DIR}/thread_local_storage.c
+    $<TARGET_OBJECTS:x_platform_obj>
+    $<TARGET_OBJECTS:x_platform_obj_c_api>
 )
 
 add_executable(test_native_mini_dfs test_native_mini_dfs.c)

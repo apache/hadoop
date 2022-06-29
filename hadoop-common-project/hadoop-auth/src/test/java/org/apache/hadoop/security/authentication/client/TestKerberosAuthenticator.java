@@ -27,7 +27,7 @@ import java.nio.charset.CharacterCodingException;
 import javax.security.sasl.AuthenticationException;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.reflect.FieldUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;

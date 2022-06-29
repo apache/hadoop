@@ -174,6 +174,10 @@ public class LocalReplicaInPipeline extends LocalReplica
     getVolume().releaseLockedMemory(bytesReserved);
     bytesReserved = 0;
   }
+  @Override
+  public void releaseReplicaInfoBytesReserved() {
+    bytesReserved = 0;
+  }
 
   @Override
   public void setLastChecksumAndDataLen(long dataLength, byte[] checksum) {

@@ -230,7 +230,7 @@ Note: some operations on the input stream, such as `seek()` may not attempt any 
 at all. Such operations MAY NOT raise exceotions when interacting with
 nonexistent/unreadable files.
 
-## <a name="options"></a> Standard `openFile()` options since Hadoop 3.3.3
+## <a name="options"></a> Standard `openFile()` options since hadoop branch-3.3
 
 These are options which `FileSystem` and `FileContext` implementation
 MUST recognise and MAY support by changing the behavior of

@@ -51,6 +51,7 @@
     <module>hadoop-azure-datalake</module>
     <module>hadoop-aliyun</module>
     <module>hadoop-fs2img</module>
+    <module>hadoop-benchmark</module>
   </modules>
 
   <build>

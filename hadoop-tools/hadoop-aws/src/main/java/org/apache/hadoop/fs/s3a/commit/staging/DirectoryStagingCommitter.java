@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -98,17 +99,18 @@ public class DirectoryStagingCommitter extends StagingCommitter {
    * Pre-commit actions for a job.
    * Here: look at the conflict resolution mode and choose
    * an action based on the current policy.
-   * @param context job context
+   * @param commitContext commit context
    * @param pending pending commits
    * @throws IOException any failure
    */
   @Override
   public void preCommitJob(
-      final JobContext context,
+      final CommitContext commitContext,
       final ActiveCommit pending) throws IOException {
 
+    final JobContext context = commitContext.getJobContext();
     // see if the files can be loaded.
-    super.preCommitJob(context, pending);
+    super.preCommitJob(commitContext, pending);
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
     Configuration fsConf = fs.getConf();

@@ -69,7 +69,7 @@ public class ProtocolProxy<T> {
     }
     int[] serverMethodsCodes = serverInfo.getMethods();
     if (serverMethodsCodes != null) {
-      serverMethods = new HashSet<Integer>(serverMethodsCodes.length);
+      serverMethods = new HashSet<>(serverMethodsCodes.length);
       for (int m : serverMethodsCodes) {
         this.serverMethods.add(Integer.valueOf(m));
       }
