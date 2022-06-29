@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceHandlerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
@@ -208,6 +209,14 @@ public class ResourceHandlerModule {
     }
   }
 
+  private static ResourceHandler getNumaResourceHandler(Configuration conf,
+      Context nmContext) {
+    if (YarnConfiguration.numaAwarenessEnabled(conf)) {
+      return new NumaResourceHandlerImpl(conf, nmContext);
+    }
+    return null;
+  }
+
   private static void initializeConfiguredResourceHandlerChain(
       Configuration conf, Context nmContext)
       throws ResourceHandlerException {
@@ -218,6 +227,7 @@ public class ResourceHandlerModule {
     addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getCGroupsCpuResourceHandler(conf));
     addHandlersFromConfiguredResourcePlugins(handlerList, conf, nmContext);
+    addHandlerIfNotNull(handlerList, getNumaResourceHandler(conf, nmContext));
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 
