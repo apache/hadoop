@@ -153,7 +153,7 @@ public class TestShuffleHandler {
     private final boolean debugMode;
     private final boolean useProxy;
 
-    public TestExecution(boolean debugMode, boolean useProxy) {
+    TestExecution(boolean debugMode, boolean useProxy) {
       this.debugMode = debugMode;
       this.useProxy = useProxy;
     }
@@ -200,7 +200,8 @@ public class TestShuffleHandler {
     private long headerSize;
     public long contentLengthOfResponse;
 
-    public ResponseConfig(int headerWriteCount, int mapOutputCount, int contentLengthOfOneMapOutput) {
+    ResponseConfig(int headerWriteCount, int mapOutputCount,
+        int contentLengthOfOneMapOutput) {
       if (mapOutputCount <= 0 && contentLengthOfOneMapOutput > 0) {
         throw new IllegalStateException("mapOutputCount should be at least 1");
       }
@@ -235,7 +236,7 @@ public class TestShuffleHandler {
     final String asString;
     int totalBytesRead;
 
-    public InputStreamReadResult(byte[] bytes, int totalBytesRead) {
+    InputStreamReadResult(byte[] bytes, int totalBytesRead) {
       this.asString = new String(bytes, StandardCharsets.UTF_8);
       this.totalBytesRead = totalBytesRead;
     }
@@ -257,18 +258,20 @@ public class TestShuffleHandler {
     private boolean closeChannelOnError = true;
     private ResponseConfig responseConfig;
 
-    public ShuffleHandlerForKeepAliveTests(long attemptId, ResponseConfig responseConfig,
+    ShuffleHandlerForKeepAliveTests(long attemptId, ResponseConfig responseConfig,
         Consumer<IdleStateEvent> channelIdleCallback) throws IOException {
       this(attemptId, responseConfig);
       this.channelIdleCallback = channelIdleCallback;
     }
 
-    public ShuffleHandlerForKeepAliveTests(long attemptId, ResponseConfig responseConfig) throws IOException {
+    ShuffleHandlerForKeepAliveTests(long attemptId, ResponseConfig responseConfig)
+        throws IOException {
       this.responseConfig = responseConfig;
       this.shuffleHeaderProvider = new ShuffleHeaderProvider(attemptId);
       this.responseConfig.setHeaderSize(shuffleHeaderProvider.getShuffleHeaderSize());
       this.headerPopulator = new HeaderPopulator(this, responseConfig, shuffleHeaderProvider, true);
-      this.mapOutputSender = new MapOutputSender(responseConfig, lastSocketAddress, shuffleHeaderProvider);
+      this.mapOutputSender = new MapOutputSender(responseConfig, lastSocketAddress,
+          shuffleHeaderProvider);
       setUseOutboundExceptionHandler(true);
     }
 
@@ -313,7 +316,8 @@ public class TestShuffleHandler {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-          ctx.pipeline().replace(HttpResponseEncoder.class, ENCODER_HANDLER_NAME, new LoggingHttpResponseEncoder(false));
+          ctx.pipeline().replace(HttpResponseEncoder.class, ENCODER_HANDLER_NAME,
+              new LoggingHttpResponseEncoder(false));
           replaceTimeoutHandlerWithCustom(ctx);
           LOG.debug("Modified pipeline: {}", ctx.pipeline());
           super.channelActive(ctx);
@@ -365,7 +369,7 @@ public class TestShuffleHandler {
       private boolean channelIdle = false;
       private final Consumer<IdleStateEvent> channelIdleCallback;
 
-      public CustomTimeoutHandler(int connectionKeepAliveTimeOut,
+      CustomTimeoutHandler(int connectionKeepAliveTimeOut,
           Consumer<IdleStateEvent> channelIdleCallback) {
         super(connectionKeepAliveTimeOut);
         this.channelIdleCallback = channelIdleCallback;
@@ -390,7 +394,7 @@ public class TestShuffleHandler {
     private final ShuffleHeaderProvider shuffleHeaderProvider;
     private AdditionalMapOutputSenderOperations additionalMapOutputSenderOperations;
 
-    public MapOutputSender(ResponseConfig responseConfig, LastSocketAddress lastSocketAddress,
+    MapOutputSender(ResponseConfig responseConfig, LastSocketAddress lastSocketAddress,
         ShuffleHeaderProvider shuffleHeaderProvider) {
       this.responseConfig = responseConfig;
       this.lastSocketAddress = lastSocketAddress;
@@ -411,12 +415,14 @@ public class TestShuffleHandler {
       return future;
     }
 
-    private ChannelFuture writeHeaderNTimes(Channel ch, ShuffleHeader header, int iterations) throws IOException {
+    private ChannelFuture writeHeaderNTimes(Channel ch, ShuffleHeader header, int iterations)
+        throws IOException {
       DataOutputBuffer dob = new DataOutputBuffer();
       for (int i = 0; i < iterations; ++i) {
         header.write(dob);
       }
-      LOG.debug("MapOutputSender#writeHeaderNTimes WriteAndFlush big chunk of data, outputBufferSize: " + dob.size());
+      LOG.debug("MapOutputSender#writeHeaderNTimes WriteAndFlush big chunk of data, " +
+          "outputBufferSize: " + dob.size());
       return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
     }
   }
@@ -426,7 +432,7 @@ public class TestShuffleHandler {
     private int attemptCounter = 0;
     private int cachedSize = Integer.MIN_VALUE;
 
-    public ShuffleHeaderProvider(long attemptId) {
+    ShuffleHeaderProvider(long attemptId) {
       this.attemptId = attemptId;
     }
 
@@ -457,7 +463,7 @@ public class TestShuffleHandler {
     private final ShuffleHeaderProvider shuffleHeaderProvider;
     private final ResponseConfig responseConfig;
 
-    public HeaderPopulator(ShuffleHandler shuffleHandler,
+    HeaderPopulator(ShuffleHandler shuffleHandler,
         ResponseConfig responseConfig,
         ShuffleHeaderProvider shuffleHeaderProvider,
         boolean disableKeepAliveConfig) {
@@ -484,7 +490,7 @@ public class TestShuffleHandler {
     }
   }
 
-  private static class HttpConnectionData {
+  private static final class HttpConnectionData {
     private final Map<String, List<String>> headers;
     private HttpURLConnection conn;
     private final int payloadLength;
@@ -504,12 +510,13 @@ public class TestShuffleHandler {
       }
     }
 
-    static HttpConnectionData create(HttpURLConnection conn, int payloadLength, SocketAddress socket) {
+    static HttpConnectionData create(HttpURLConnection conn, int payloadLength,
+        SocketAddress socket) {
       return new HttpConnectionData(conn, payloadLength, socket);
     }
   }
 
-  private static class HttpConnectionAssert {
+  private static final class HttpConnectionAssert {
     private final HttpConnectionData connData;
 
     private HttpConnectionAssert(HttpConnectionData connData) {
@@ -520,7 +527,8 @@ public class TestShuffleHandler {
       return new HttpConnectionAssert(connData);
     }
 
-    public static void assertKeepAliveConnectionsAreSame(HttpConnectionHelper httpConnectionHelper) {
+    public static void assertKeepAliveConnectionsAreSame(
+        HttpConnectionHelper httpConnectionHelper) {
       assertTrue("At least two connection data " +
           "is required to perform this assertion",
           httpConnectionHelper.connectionData.size() >= 2);
@@ -567,7 +575,7 @@ public class TestShuffleHandler {
     private final LastSocketAddress lastSocketAddress;
     List<HttpConnectionData> connectionData = new ArrayList<>();
 
-    public HttpConnectionHelper(LastSocketAddress lastSocketAddress) {
+    HttpConnectionHelper(LastSocketAddress lastSocketAddress) {
       this.lastSocketAddress = lastSocketAddress;
     }
 
@@ -575,11 +583,13 @@ public class TestShuffleHandler {
       connectToUrlsInternal(urls, responseConfig, HttpURLConnection.HTTP_OK);
     }
 
-    public void connectToUrls(String[] urls, ResponseConfig responseConfig, int expectedHttpStatus) throws IOException {
+    public void connectToUrls(String[] urls, ResponseConfig responseConfig, int expectedHttpStatus)
+        throws IOException {
       connectToUrlsInternal(urls, responseConfig, expectedHttpStatus);
     }
 
-    private void connectToUrlsInternal(String[] urls, ResponseConfig responseConfig, int expectedHttpStatus) throws IOException {
+    private void connectToUrlsInternal(String[] urls, ResponseConfig responseConfig,
+        int expectedHttpStatus) throws IOException {
       int requests = urls.length;
       int expectedConnections = urls.length;
       LOG.debug("Will connect to URLs: {}", Arrays.toString(urls));
@@ -621,7 +631,8 @@ public class TestShuffleHandler {
         connectionData.add(HttpConnectionData
             .create(conn, result.totalBytesRead, lastSocketAddress.getSocketAddres()));
         input.close();
-        LOG.debug("Finished all interactions with URL: {}. Progress: {}/{}", url, (reqIdx + 1), requests);
+        LOG.debug("Finished all interactions with URL: {}. Progress: {}/{}", url, (reqIdx + 1),
+            requests);
       }
       assertEquals(expectedConnections, connectionData.size());
     }
@@ -657,11 +668,11 @@ public class TestShuffleHandler {
   class ShuffleHandlerForTests extends ShuffleHandler {
     public final ArrayList<Throwable> failures = new ArrayList<>();
 
-    public ShuffleHandlerForTests() {
+    ShuffleHandlerForTests() {
       setUseOutboundExceptionHandler(true);
     }
 
-    public ShuffleHandlerForTests(MetricsSystem ms) {
+    ShuffleHandlerForTests(MetricsSystem ms) {
       super(ms);
       setUseOutboundExceptionHandler(true);
     }
@@ -686,11 +697,11 @@ public class TestShuffleHandler {
     private final AuxiliaryLocalPathHandler pathHandler =
         new TestAuxiliaryLocalPathHandler();
 
-    public MockShuffleHandler() {
+    MockShuffleHandler() {
       setUseOutboundExceptionHandler(true);
     }
 
-    public MockShuffleHandler(MetricsSystem ms) {
+    MockShuffleHandler(MetricsSystem ms) {
       super(ms);
       setUseOutboundExceptionHandler(true);
     }
@@ -777,17 +788,17 @@ public class TestShuffleHandler {
   private static class MockShuffleHandler2 extends
       org.apache.hadoop.mapred.ShuffleHandler {
     final ArrayList<Throwable> failures = new ArrayList<>(1);
+    boolean socketKeepAlive = false;
 
-    public MockShuffleHandler2() {
+    MockShuffleHandler2() {
       setUseOutboundExceptionHandler(true);
     }
 
-    public MockShuffleHandler2(MetricsSystem ms) {
+    MockShuffleHandler2(MetricsSystem ms) {
       super(ms);
       setUseOutboundExceptionHandler(true);
     }
 
-    boolean socketKeepAlive = false;
     @Override
     protected Shuffle getShuffle(final Configuration conf) {
       return new Shuffle(conf) {
@@ -878,7 +889,7 @@ public class TestShuffleHandler {
     sh.metrics.shuffleConnections.incr();
     sh.metrics.shuffleOutputBytes.incr(2*MiB);
 
-    checkShuffleMetrics(ms, 3*MiB, 0 , 0, 2);
+    checkShuffleMetrics(ms, 3*MiB, 0, 0, 2);
 
     sh.metrics.operationComplete(cf);
     sh.metrics.operationComplete(cf);
@@ -972,8 +983,8 @@ public class TestShuffleHandler {
     // simulate a reducer that closes early by reading a single shuffle header
     // then closing the connection
     URL url = new URL("http://127.0.0.1:"
-      + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
-      + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
+        + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
+        + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
     HttpURLConnection conn = TEST_EXECUTION.openConnection(url);
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
         ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
@@ -1011,10 +1022,13 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT,
+        TEST_EXECUTION.getKeepAliveTimeout());
     ResponseConfig responseConfig = new ResponseConfig(HEADER_WRITE_COUNT, 0, 0);
-    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(ATTEMPT_ID, responseConfig);
-    testKeepAliveWithHttpOk(conf, shuffleHandler, ShuffleUrlType.SIMPLE, ShuffleUrlType.WITH_KEEPALIVE);
+    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(
+        ATTEMPT_ID, responseConfig);
+    testKeepAliveWithHttpOk(conf, shuffleHandler, ShuffleUrlType.SIMPLE,
+        ShuffleUrlType.WITH_KEEPALIVE);
   }
 
   @Test(timeout = 1000000)
@@ -1022,10 +1036,13 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT,
+        TEST_EXECUTION.getKeepAliveTimeout());
     ResponseConfig responseConfig = new ResponseConfig(HEADER_WRITE_COUNT, 0, 0);
-    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(ATTEMPT_ID, responseConfig);
-    testKeepAliveWithHttpOk(conf, shuffleHandler, ShuffleUrlType.WITH_KEEPALIVE, ShuffleUrlType.WITH_KEEPALIVE);
+    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(
+        ATTEMPT_ID, responseConfig);
+    testKeepAliveWithHttpOk(conf, shuffleHandler, ShuffleUrlType.WITH_KEEPALIVE,
+        ShuffleUrlType.WITH_KEEPALIVE);
   }
 
   //TODO snemeth implement keepalive test that used properly mocked ShuffleHandler
@@ -1034,10 +1051,13 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, false);
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT,
+        TEST_EXECUTION.getKeepAliveTimeout());
     ResponseConfig responseConfig = new ResponseConfig(HEADER_WRITE_COUNT, 0, 0);
-    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(ATTEMPT_ID, responseConfig);
-    testKeepAliveWithHttpOk(conf, shuffleHandler, ShuffleUrlType.WITH_KEEPALIVE, ShuffleUrlType.WITH_KEEPALIVE);
+    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(
+        ATTEMPT_ID, responseConfig);
+    testKeepAliveWithHttpOk(conf, shuffleHandler, ShuffleUrlType.WITH_KEEPALIVE,
+        ShuffleUrlType.WITH_KEEPALIVE);
   }
 
   @Test(timeout = 10000)
@@ -1048,24 +1068,29 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT,
+        TEST_EXECUTION.getKeepAliveTimeout());
     ResponseConfig responseConfig = new ResponseConfig(HEADER_WRITE_COUNT,
         mapOutputCount, mapOutputContentLength);
-    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(ATTEMPT_ID, responseConfig);
-    shuffleHandler.mapOutputSender.additionalMapOutputSenderOperations = new AdditionalMapOutputSenderOperations() {
-      @Override
-      public ChannelFuture perform(ChannelHandlerContext ctx, Channel ch) throws IOException {
-        File tmpFile = File.createTempFile("test", ".tmp");
-        Files.write(tmpFile.toPath(), "dummytestcontent123456".getBytes(StandardCharsets.UTF_8));
-        final DefaultFileRegion partition = new DefaultFileRegion(tmpFile, 0, mapOutputContentLength);
-        LOG.debug("Writing response partition: {}, channel: {}",
-            partition, ch.id());
-        return ch.writeAndFlush(partition)
-            .addListener((ChannelFutureListener) future ->
-                LOG.debug("Finished Writing response partition: {}, channel: " +
-                    "{}", partition, ch.id()));
-      }
-    };
+    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(
+        ATTEMPT_ID, responseConfig);
+    shuffleHandler.mapOutputSender.additionalMapOutputSenderOperations =
+        new AdditionalMapOutputSenderOperations() {
+          @Override
+          public ChannelFuture perform(ChannelHandlerContext ctx, Channel ch) throws IOException {
+            File tmpFile = File.createTempFile("test", ".tmp");
+            Files.write(tmpFile.toPath(),
+                "dummytestcontent123456".getBytes(StandardCharsets.UTF_8));
+            final DefaultFileRegion partition = new DefaultFileRegion(tmpFile, 0,
+                mapOutputContentLength);
+            LOG.debug("Writing response partition: {}, channel: {}",
+                partition, ch.id());
+            return ch.writeAndFlush(partition)
+                .addListener((ChannelFutureListener) future ->
+                    LOG.debug("Finished Writing response partition: {}, channel: " +
+                        "{}", partition, ch.id()));
+          }
+        };
     testKeepAliveWithHttpOk(conf, shuffleHandler,
         ShuffleUrlType.WITH_KEEPALIVE_MULTIPLE_MAP_IDS,
         ShuffleUrlType.WITH_KEEPALIVE_MULTIPLE_MAP_IDS);
@@ -1076,9 +1101,11 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT,
+        TEST_EXECUTION.getKeepAliveTimeout());
     ResponseConfig responseConfig = new ResponseConfig(HEADER_WRITE_COUNT, 0, 0);
-    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(ATTEMPT_ID, responseConfig);
+    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(
+        ATTEMPT_ID, responseConfig);
     shuffleHandler.setFailImmediatelyOnErrors(true);
     //Closing channels caused Netty to open another channel
     // so 1 request was handled with 2 separate channels,
@@ -1099,14 +1126,14 @@ public class TestShuffleHandler {
       Configuration conf,
       ShuffleHandlerForKeepAliveTests shuffleHandler,
       ShuffleUrlType... shuffleUrlTypes) throws IOException {
-    testKeepAliveWithHttpStatus(conf, shuffleHandler, shuffleUrlTypes, HttpURLConnection.HTTP_BAD_REQUEST);
+    testKeepAliveWithHttpStatus(conf, shuffleHandler, shuffleUrlTypes,
+        HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
   private void testKeepAliveWithHttpStatus(Configuration conf,
       ShuffleHandlerForKeepAliveTests shuffleHandler,
       ShuffleUrlType[] shuffleUrlTypes,
-      int expectedHttpStatus
-      ) throws IOException {
+      int expectedHttpStatus) throws IOException {
     if (expectedHttpStatus != HttpURLConnection.HTTP_BAD_REQUEST) {
       assertTrue("Expected at least two shuffle URL types ",
           shuffleUrlTypes.length >= 2);
@@ -1134,7 +1161,8 @@ public class TestShuffleHandler {
       if (expectedHttpStatus == HttpURLConnection.HTTP_BAD_REQUEST) {
         assertEquals(1, shuffleHandler.failures.size());
         assertThat(shuffleHandler.failures.get(0).getMessage(),
-            CoreMatchers.containsString("Status: 400 Bad Request, message: Required param job, map and reduce"));
+            CoreMatchers.containsString("Status: 400 Bad Request, " +
+                "message: Required param job, map and reduce"));
       }
     } finally {
       shuffleHandler.stop();
@@ -1145,13 +1173,14 @@ public class TestShuffleHandler {
     int expectedTimeout = configuredTimeout < 0 ? 1 : configuredTimeout;
 
     connHelper.validate(connData -> {
-        HttpConnectionAssert.create(connData)
-            .expectKeepAliveWithTimeout(expectedTimeout)
-            .expectResponseContentLength(shuffleHandler.responseConfig.contentLengthOfResponse);
+      HttpConnectionAssert.create(connData)
+          .expectKeepAliveWithTimeout(expectedTimeout)
+          .expectResponseContentLength(shuffleHandler.responseConfig.contentLengthOfResponse);
     });
     if (expectedHttpStatus == HttpURLConnection.HTTP_OK) {
       HttpConnectionAssert.assertKeepAliveConnectionsAreSame(connHelper);
-      assertEquals("Unexpected ShuffleHandler failure", Collections.emptyList(), shuffleHandler.failures);
+      assertEquals("Unexpected ShuffleHandler failure", Collections.emptyList(),
+          shuffleHandler.failures);
     }
   }
 
@@ -1161,7 +1190,8 @@ public class TestShuffleHandler {
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
     // try setting to negative keep alive timeout.
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, ARBITRARY_NEGATIVE_TIMEOUT_SECONDS);
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT,
+        ARBITRARY_NEGATIVE_TIMEOUT_SECONDS);
     HttpURLConnection conn = null;
     MockShuffleHandler2 shuffleHandler = new MockShuffleHandler2();
     AuxiliaryLocalPathHandler pathHandler =
@@ -1201,8 +1231,8 @@ public class TestShuffleHandler {
   }
 
   /**
-   * simulate a reducer that sends an invalid shuffle-header - sometimes a wrong
-   * header_name and sometimes a wrong version
+   * Simulate a reducer that sends an invalid shuffle-header - sometimes a wrong
+   * header_name and sometimes a wrong version.
    * 
    * @throws Exception exception
    */
@@ -1218,8 +1248,8 @@ public class TestShuffleHandler {
     // simulate a reducer that closes early by reading a single shuffle header
     // then closing the connection
     URL url = new URL("http://127.0.0.1:"
-      + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
-      + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
+        + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
+        + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
     for (int i = 0; i < failureNum; ++i) {
       HttpURLConnection conn = TEST_EXECUTION.openConnection(url);
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
@@ -1310,11 +1340,11 @@ public class TestShuffleHandler {
     HttpURLConnection[] conns = new HttpURLConnection[connAttempts];
 
     for (int i = 0; i < connAttempts; i++) {
-      String URLstring = "http://127.0.0.1:" 
+      String urlString = "http://127.0.0.1:" 
            + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
            + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_"
            + i + "_0";
-      URL url = new URL(URLstring);
+      URL url = new URL(urlString);
       conns[i] = TEST_EXECUTION.openConnection(url);
       conns[i].setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
@@ -1454,9 +1484,9 @@ public class TestShuffleHandler {
               "password".getBytes(), new Text(user), new Text("shuffleService"));
       jt.write(outputBuffer);
       shuffleHandler
-        .initializeApplication(new ApplicationInitializationContext(user,
-          appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
-            outputBuffer.getLength())));
+          .initializeApplication(new ApplicationInitializationContext(user,
+              appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
+              outputBuffer.getLength())));
       URL url =
           new URL(
               "http://127.0.0.1:"
@@ -1502,7 +1532,7 @@ public class TestShuffleHandler {
       List<File> fileMap) throws IOException {
     String attemptDir =
         StringUtils.join(Path.SEPARATOR,
-            new String[] { logDir.getAbsolutePath(),
+            new String[] {logDir.getAbsolutePath(),
                 ContainerLocalizer.USERCACHE, user,
                 ContainerLocalizer.APPCACHE, appId, "output", appAttemptId });
     File appAttemptDir = new File(attemptDir);
@@ -1516,8 +1546,7 @@ public class TestShuffleHandler {
     createMapOutputFile(mapOutputFile, conf);
   }
 
-  private static void
-    createMapOutputFile(File mapOutputFile, Configuration conf)
+  private static void createMapOutputFile(File mapOutputFile, Configuration conf)
           throws IOException {
     FileOutputStream out = new FileOutputStream(mapOutputFile);
     out.write("Creating new dummy map output file. Used only for testing"
@@ -1701,8 +1730,8 @@ public class TestShuffleHandler {
         shuffle.start();
         fail("Incompatible version, should expect fail here.");
       } catch (ServiceStateException e) {
-        assertTrue("Exception message mismatch", 
-        e.getMessage().contains("Incompatible version for state DB schema:"));
+        assertTrue("Exception message mismatch",
+            e.getMessage().contains("Incompatible version for state DB schema:"));
       } 
     
     } finally {
@@ -1900,7 +1929,8 @@ public class TestShuffleHandler {
     testHandlingIdleState(ARBITRARY_NEGATIVE_TIMEOUT_SECONDS, expectedTimeoutSeconds);
   }
 
-  private String getShuffleUrlWithKeepAlive(ShuffleHandler shuffleHandler, long jobId, long... attemptIds) {
+  private String getShuffleUrlWithKeepAlive(ShuffleHandler shuffleHandler, long jobId,
+      long... attemptIds) {
     String url = getShuffleUrl(shuffleHandler, jobId, attemptIds);
     return url + "&keepAlive=true";
   }
@@ -1926,7 +1956,8 @@ public class TestShuffleHandler {
     return shuffleBaseURL + location;
   }
 
-  private void testHandlingIdleState(int configuredTimeoutSeconds, int expectedTimeoutSeconds) throws IOException,
+  private void testHandlingIdleState(int configuredTimeoutSeconds, int expectedTimeoutSeconds)
+      throws IOException,
       InterruptedException {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
@@ -1935,20 +1966,23 @@ public class TestShuffleHandler {
 
     final CountDownLatch countdownLatch = new CountDownLatch(1);
     ResponseConfig responseConfig = new ResponseConfig(HEADER_WRITE_COUNT, 0, 0);
-    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(ATTEMPT_ID, responseConfig,
+    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(
+        ATTEMPT_ID, responseConfig,
         event -> countdownLatch.countDown());
     shuffleHandler.init(conf);
     shuffleHandler.start();
 
     String shuffleUrl = getShuffleUrl(shuffleHandler, ATTEMPT_ID, ATTEMPT_ID);
     String[] urls = new String[] {shuffleUrl};
-    HttpConnectionHelper httpConnectionHelper = new HttpConnectionHelper(shuffleHandler.lastSocketAddress);
+    HttpConnectionHelper httpConnectionHelper = new HttpConnectionHelper(
+        shuffleHandler.lastSocketAddress);
     long beforeConnectionTimestamp = System.currentTimeMillis();
     httpConnectionHelper.connectToUrls(urls, shuffleHandler.responseConfig);
     countdownLatch.await();
     long channelClosedTimestamp = System.currentTimeMillis();
     long secondsPassed =
-        TimeUnit.SECONDS.convert(channelClosedTimestamp - beforeConnectionTimestamp, TimeUnit.MILLISECONDS);
+        TimeUnit.SECONDS.convert(channelClosedTimestamp - beforeConnectionTimestamp,
+            TimeUnit.MILLISECONDS);
     assertTrue(String.format("Expected at least %s seconds of timeout. " +
             "Actual timeout seconds: %s", expectedTimeoutSeconds, secondsPassed),
         secondsPassed >= expectedTimeoutSeconds);
@@ -1962,10 +1996,10 @@ public class TestShuffleHandler {
     Mockito.doReturn(true).when(mockFuture).isSuccess();
     Mockito.doAnswer(invocation -> {
       //Add ReduceMapFileCount listener to a list
-      if (invocation.getArguments()[0].getClass() ==
-          ShuffleHandler.ReduceMapFileCount.class)
+      if (invocation.getArguments()[0].getClass() == ShuffleHandler.ReduceMapFileCount.class) {
         listenerList.add((ShuffleHandler.ReduceMapFileCount)
             invocation.getArguments()[0]);
+      }
       return null;
     }).when(mockFuture).addListener(Mockito.any(
         ShuffleHandler.ReduceMapFileCount.class));
@@ -1977,8 +2011,9 @@ public class TestShuffleHandler {
     Mockito.doReturn(HttpMethod.GET).when(mockHttpRequest).method();
     Mockito.doAnswer(invocation -> {
       String uri = "/mapOutput?job=job_12345_1&reduce=1";
-      for (int i = 0; i < 100; i++)
+      for (int i = 0; i < 100; i++) {
         uri = uri.concat("&map=attempt_12345_1_m_" + i + "_0");
+      }
       return uri;
     }).when(mockHttpRequest).uri();
     return mockHttpRequest;

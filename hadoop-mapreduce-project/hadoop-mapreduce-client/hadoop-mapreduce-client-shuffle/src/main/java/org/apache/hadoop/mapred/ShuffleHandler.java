@@ -184,7 +184,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
   public static final HttpResponseStatus TOO_MANY_REQ_STATUS =
       new HttpResponseStatus(429, "TOO MANY REQUESTS");
-  // This should kept in sync with Fetcher.FETCH_RETRY_DELAY_DEFAULT
+  // This should be kept in sync with Fetcher.FETCH_RETRY_DELAY_DEFAULT
   public static final long FETCH_RETRY_DELAY = 1000L;
   public static final String RETRY_AFTER_HEADER = "Retry-After";
   static final String ENCODER_HANDLER_NAME = "encoder";
@@ -206,7 +206,7 @@ public class ShuffleHandler extends AuxiliaryService {
   
   /**
    * Should the shuffle use posix_fadvise calls to manage the OS cache during
-   * sendfile
+   * sendfile.
    */
   private boolean manageOsCache;
   private int readaheadLength;
@@ -216,7 +216,7 @@ public class ShuffleHandler extends AuxiliaryService {
   private int maxSessionOpenFiles;
   private ReadaheadPool readaheadPool = ReadaheadPool.getInstance();
 
-  private Map<String,String> userRsrc;
+  private Map<String, String> userRsrc;
   private JobTokenSecretManager secretManager;
 
   private DB stateDb = null;
@@ -247,7 +247,7 @@ public class ShuffleHandler extends AuxiliaryService {
   public static final String CONNECTION_CLOSE = "close";
 
   public static final String SUFFLE_SSL_FILE_BUFFER_SIZE_KEY =
-    "mapreduce.shuffle.ssl.file.buffer.size";
+      "mapreduce.shuffle.ssl.file.buffer.size";
 
   public static final int DEFAULT_SUFFLE_SSL_FILE_BUFFER_SIZE = 60 * 1024;
 
@@ -352,7 +352,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
     private ReduceContext reduceContext;
 
-    public ReduceMapFileCount(ReduceContext rc) {
+    ReduceMapFileCount(ReduceContext rc) {
       this.reduceContext = rc;
     }
 
@@ -392,7 +392,6 @@ public class ShuffleHandler extends AuxiliaryService {
    * Allows sendMapOutput calls from operationComplete()
    */
   private static class ReduceContext {
-
     private List<String> mapIds;
     private AtomicInteger mapsToWait;
     private AtomicInteger mapsToSend;
@@ -403,7 +402,7 @@ public class ShuffleHandler extends AuxiliaryService {
     private String jobId;
     private final boolean keepAlive;
 
-    public ReduceContext(List<String> mapIds, int rId,
+    ReduceContext(List<String> mapIds, int rId,
                          ChannelHandlerContext context, String usr,
                          Map<String, Shuffle.MapOutputInfo> mapOutputInfoMap,
                          String jobId, boolean keepAlive) {
@@ -509,7 +508,8 @@ public class ShuffleHandler extends AuxiliaryService {
    * shuffle data requests.
    * @return the serialized version of the jobToken.
    */
-  public static ByteBuffer serializeServiceData(Token<JobTokenIdentifier> jobToken) throws IOException {
+  public static ByteBuffer serializeServiceData(Token<JobTokenIdentifier> jobToken)
+      throws IOException {
     //TODO these bytes should be versioned
     DataOutputBuffer jobToken_dob = new DataOutputBuffer();
     jobToken.write(jobToken_dob);
@@ -586,11 +586,11 @@ public class ShuffleHandler extends AuxiliaryService {
         DEFAULT_SHUFFLE_MAX_SESSION_OPEN_FILES);
 
     ThreadFactory bossFactory = new ThreadFactoryBuilder()
-      .setNameFormat("ShuffleHandler Netty Boss #%d")
-      .build();
+        .setNameFormat("ShuffleHandler Netty Boss #%d")
+        .build();
     ThreadFactory workerFactory = new ThreadFactoryBuilder()
-      .setNameFormat("ShuffleHandler Netty Worker #%d")
-      .build();
+        .setNameFormat("ShuffleHandler Netty Worker #%d")
+        .build();
     
     bossGroup = new NioEventLoopGroup(maxShuffleThreads, bossFactory);
     workerGroup = new NioEventLoopGroup(maxShuffleThreads, workerFactory);
@@ -804,7 +804,7 @@ public class ShuffleHandler extends AuxiliaryService {
     JobShuffleInfoProto proto = JobShuffleInfoProto.parseFrom(data);
     String user = proto.getUser();
     TokenProto tokenProto = proto.getJobToken();
-    Token<JobTokenIdentifier> jobToken = new Token<JobTokenIdentifier>(
+    Token<JobTokenIdentifier> jobToken = new Token<>(
         tokenProto.getIdentifier().toByteArray(),
         tokenProto.getPassword().toByteArray(),
         new Text(tokenProto.getKind()), new Text(tokenProto.getService()));
@@ -854,7 +854,7 @@ public class ShuffleHandler extends AuxiliaryService {
     private final int connectionKeepAliveTimeOut;
     private boolean enabledTimeout;
 
-    public TimeoutHandler(int connectionKeepAliveTimeOut) {
+    TimeoutHandler(int connectionKeepAliveTimeOut) {
       //disable reader timeout
       //set writer timeout to configured timeout value
       //disable all idle timeout
@@ -885,7 +885,7 @@ public class ShuffleHandler extends AuxiliaryService {
     final Shuffle SHUFFLE;
     private SSLFactory sslFactory;
 
-    public HttpPipelineFactory(Configuration conf) throws Exception {
+    HttpPipelineFactory(Configuration conf) throws Exception {
       SHUFFLE = getShuffle(conf);
       if (conf.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY,
                           MRConfig.SHUFFLE_SSL_ENABLED_DEFAULT)) {
@@ -920,7 +920,8 @@ public class ShuffleHandler extends AuxiliaryService {
         //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
         pipeline.addLast("outboundExceptionHandler", new ChannelOutboundHandlerAdapter() {
           @Override
-          public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+          public void write(ChannelHandlerContext ctx, Object msg,
+              ChannelPromise promise) throws Exception {
             promise.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
             super.write(ctx, msg, promise);
           }
@@ -936,8 +937,7 @@ public class ShuffleHandler extends AuxiliaryService {
   @ChannelHandler.Sharable
   class Shuffle extends ChannelInboundHandlerAdapter {
     private final IndexCache indexCache;
-    private final
-    LoadingCache<AttemptPathIdentifier, AttemptPathInfo> pathCache;
+    private final LoadingCache<AttemptPathIdentifier, AttemptPathInfo> pathCache;
 
     private int port;
 
@@ -1030,8 +1030,8 @@ public class ShuffleHandler extends AuxiliaryService {
       HttpRequest request = (HttpRequest) msg;
       LOG.debug("Received HTTP request: {}, channel id: {}", request, channel.id());
       if (request.method() != GET) {
-          sendError(ctx, METHOD_NOT_ALLOWED);
-          return;
+        sendError(ctx, METHOD_NOT_ALLOWED);
+        return;
       }
       // Check whether the shuffle version is compatible
       String shuffleVersion = ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION;
@@ -1047,14 +1047,15 @@ public class ShuffleHandler extends AuxiliaryService {
           !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(shuffleVersion)) {
         sendError(ctx, "Incompatible shuffle request version", BAD_REQUEST);
       }
-      final Map<String,List<String>> q =
-        new QueryStringDecoder(request.uri()).parameters();
+      final Map<String, List<String>> q = 
+          new QueryStringDecoder(request.uri()).parameters();
       final List<String> keepAliveList = q.get("keepAlive");
       boolean keepAliveParam = false;
       if (keepAliveList != null && keepAliveList.size() == 1) {
         keepAliveParam = Boolean.valueOf(keepAliveList.get(0));
         if (LOG.isDebugEnabled()) {
-          LOG.debug("KeepAliveParam: {} : {}, channel id: {}", keepAliveList, keepAliveParam, channel.id());
+          LOG.debug("KeepAliveParam: {} : {}, channel id: {}",
+              keepAliveList, keepAliveParam, channel.id());
         }
       }
       final List<String> mapIds = splitMaps(q.get("map"));
@@ -1116,7 +1117,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
       try {
         populateHeaders(mapIds, jobId, user, reduceId, request,
-          response, keepAliveParam, mapOutputInfoMap);
+            response, keepAliveParam, mapOutputInfoMap);
       } catch(IOException e) {
         //HADOOP-15327
         // Need to send an instance of LastHttpContent to define HTTP
@@ -1127,7 +1128,7 @@ public class ShuffleHandler extends AuxiliaryService {
         // See more details in jira.
         writeToChannelAndAddLastHttpContent(channel, response);
         LOG.error("Shuffle error while populating headers. Channel id: " + channel.id(), e);
-        sendError(ctx, getErrorMessage(e) , INTERNAL_SERVER_ERROR);
+        sendError(ctx, getErrorMessage(e), INTERNAL_SERVER_ERROR);
         return;
       }
       writeToChannel(channel, response).addListener((ChannelFutureListener) future -> {
@@ -1243,8 +1244,7 @@ public class ShuffleHandler extends AuxiliaryService {
         }
       }
 
-      IndexRecord info =
-        indexCache.getIndexInformation(mapId, reduce, pathInfo.indexPath, user);
+      IndexRecord info = indexCache.getIndexInformation(mapId, reduce, pathInfo.indexPath, user);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("getMapOutputInfo: jobId=" + jobId + ", mapId=" + mapId +
@@ -1303,7 +1303,7 @@ public class ShuffleHandler extends AuxiliaryService {
         response.headers().set(HttpHeader.CONNECTION.asString(), CONNECTION_CLOSE);
       } else {
         response.headers().set(HttpHeader.CONTENT_LENGTH.asString(),
-          String.valueOf(contentLength));
+            String.valueOf(contentLength));
         response.headers().set(HttpHeader.CONNECTION.asString(),
             HttpHeader.KEEP_ALIVE.asString());
         response.headers().set(HttpHeader.KEEP_ALIVE.asString(),
@@ -1348,9 +1348,8 @@ public class ShuffleHandler extends AuxiliaryService {
       // verify - throws exception
       SecureShuffleUtils.verifyReply(urlHashStr, encryptedURL, tokenSecret);
       // verification passed - encode the reply
-      String reply =
-        SecureShuffleUtils.generateHash(urlHashStr.getBytes(Charsets.UTF_8), 
-            tokenSecret);
+      String reply = SecureShuffleUtils.generateHash(urlHashStr.getBytes(Charsets.UTF_8),
+          tokenSecret);
       response.headers().set(
           SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH, reply);
       // Put shuffle version into http header
@@ -1371,8 +1370,8 @@ public class ShuffleHandler extends AuxiliaryService {
         String user, String mapId, int reduce, MapOutputInfo mapOutputInfo)
         throws IOException {
       final IndexRecord info = mapOutputInfo.indexRecord;
-      final ShuffleHeader header =
-        new ShuffleHeader(mapId, info.partLength, info.rawLength, reduce);
+      final ShuffleHeader header = new ShuffleHeader(mapId, info.partLength, info.rawLength,
+          reduce);
       final DataOutputBuffer dob = new DataOutputBuffer();
       header.write(dob);
       writeToChannel(ch, wrappedBuffer(dob.getData(), 0, dob.getLength()));
@@ -1477,7 +1476,7 @@ public class ShuffleHandler extends AuxiliaryService {
     private final Path indexPath;
     private final Path dataPath;
 
-    public AttemptPathInfo(Path indexPath, Path dataPath) {
+    AttemptPathInfo(Path indexPath, Path dataPath) {
       this.indexPath = indexPath;
       this.dataPath = dataPath;
     }
@@ -1488,7 +1487,7 @@ public class ShuffleHandler extends AuxiliaryService {
     private final String user;
     private final String attemptId;
 
-    public AttemptPathIdentifier(String jobId, String user, String attemptId) {
+    AttemptPathIdentifier(String jobId, String user, String attemptId) {
       this.jobId = jobId;
       this.user = user;
       this.attemptId = attemptId;

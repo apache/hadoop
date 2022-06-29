@@ -31,7 +31,7 @@ class LoggingHttpResponseEncoder extends HttpResponseEncoder {
   private static final Logger LOG = LoggerFactory.getLogger(LoggingHttpResponseEncoder.class);
   private final boolean logStacktraceOfEncodingMethods;
 
-  public LoggingHttpResponseEncoder(boolean logStacktraceOfEncodingMethods) {
+  LoggingHttpResponseEncoder(boolean logStacktraceOfEncodingMethods) {
     this.logStacktraceOfEncodingMethods = logStacktraceOfEncodingMethods;
   }
 
