@@ -17,23 +17,21 @@
 
 package org.apache.hadoop.yarn.server.router.security;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.File;
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-
-import org.apache.hadoop.minikdc.MiniKdc;
 import org.junit.Test;
-import org.apache.hadoop.security.authentication.KerberosTestUtils;
-
-import java.io.File;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class TestSecureLogin {
 
@@ -45,18 +43,14 @@ public class TestSecureLogin {
   private static MiniKdc testMiniKDC;
 
   @BeforeClass
-  public static void setUp() {
-    try {
-      testMiniKDC = new MiniKdc(MiniKdc.createConf(), TEST_ROOT_DIR);
-      testMiniKDC.start();
-      testMiniKDC.createPrincipal(routerKeytabFile, "yarn/localhost");
-    } catch (Exception e) {
-      fail("Couldn't setup MiniKDC");
-    }
+  public static void setUp() throws Exception {
+    testMiniKDC = new MiniKdc(MiniKdc.createConf(), TEST_ROOT_DIR);
+    testMiniKDC.start();
+    testMiniKDC.createPrincipal(routerKeytabFile, "yarn/localhost");
   }
 
   @Test
-  public void testRouterSecureLogin() {
+  public void testRouterSecureLogin() throws IOException {
     Router router = null;
     try {
       Configuration conf = new YarnConfiguration();
@@ -67,18 +61,18 @@ public class TestSecureLogin {
           "kerberos");
       conf.set("yarn.router.principal", "yarn/localhost@EXAMPLE.COM");
       conf.set("yarn.router.keytab", routerKeytabFile.getAbsolutePath());
-      assertEquals(AuthenticationMethod.SIMPLE,
+      assertEquals("Authentication Method should be simple before login!",
+          AuthenticationMethod.SIMPLE,
           UserGroupInformation.getLoginUser().getAuthenticationMethod());
       UserGroupInformation.setConfiguration(conf);
       router = new Router();
       router.init(conf);
       router.start();
-      assertEquals(AuthenticationMethod.KERBEROS,
+      assertEquals("Authentication Method should be kerberos after login!",
+          AuthenticationMethod.KERBEROS,
           UserGroupInformation.getLoginUser().getAuthenticationMethod());
       assertEquals("yarn/localhost@EXAMPLE.COM",
           UserGroupInformation.getLoginUser().getUserName());
-    } catch (Throwable t) {
-      fail("Can't start router!");
     } finally {
       if (router != null) {
         router.stop();
