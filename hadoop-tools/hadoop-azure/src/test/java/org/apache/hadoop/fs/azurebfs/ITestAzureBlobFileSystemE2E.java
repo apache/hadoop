@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
+import com.sun.tools.javac.util.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_TOLERATE_CONCURRENT_APPEND;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -104,8 +106,11 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     Configuration conf = this.getRawConfiguration();
     conf.setBoolean(AZURE_TOLERATE_CONCURRENT_APPEND, true);
     final AzureBlobFileSystem fs = getFileSystem(conf);
+    String clientCorrelationId = "valid-corr-id-123";
+    conf.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
+    AzureBlobFileSystem fs2 = getFileSystem(conf);
+    assertEquals(fs, fs2);
     int readBufferSize = fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize();
-
     byte[] bytesToRead = new byte[readBufferSize];
     final byte[] b = new byte[2 * readBufferSize];
     new Random().nextBytes(b);

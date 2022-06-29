@@ -27,6 +27,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.assertj.core.api.Assertions;
+import org.checkerframework.checker.units.qual.C;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
 import org.junit.Ignore;
@@ -49,6 +50,7 @@ import org.apache.hadoop.util.Preconditions;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
@@ -64,6 +66,94 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[0], true);
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[1], false);
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[2], false);
+  }
+
+  /*
+  Case 1 :- Filesystem 1 doesn't have clientCorrelationID set, so cache is not disabled.
+  Filesystem 2 has clientCorrelationId set but since cache is not disabled,
+  we return the instance from cache and hence both should be equal
+  */
+  @Test
+  public void testClientCorrelationIdWithoutConf() throws Exception{
+    Configuration conf = getRawConfiguration();
+    AzureBlobFileSystem fs1 = getFileSystem(conf);
+    conf.set(FS_AZURE_CLIENT_CORRELATIONID, CLIENT_CORRELATIONID_LIST[0]);
+    AzureBlobFileSystem fs2 = getFileSystem(conf);
+    assertEquals(fs1, fs2);
+    String correlationID = fs1.getClientCorrelationId();
+    String correlationID1 = fs2.getClientCorrelationId();
+    assertEquals(correlationID, correlationID1);
+  }
+
+  /*
+  Case 2 :- Filesystem 1 has clientCorrelationID set, so cache is disabled.
+  Filesystem 2 doesn't have any clientCorrelationId set but since cache is disabled,
+  a new instance will be created for the same.
+  Hence, both the instances should be different, and clientCorrelationId for the second instance is null.
+  */
+  @Test
+  public void testClientCorrelationIdWithConf() throws Exception {
+    Configuration conf = getRawConfiguration();
+    conf.set(FS_AZURE_CLIENT_CORRELATIONID, CLIENT_CORRELATIONID_LIST[0]);
+    AzureBlobFileSystem fs1 = getFileSystem(conf);
+    Configuration conf1 = getRawConfiguration();
+    conf1.unset(FS_AZURE_CLIENT_CORRELATIONID);
+    AzureBlobFileSystem fs2 = getFileSystem(conf1);
+    assertNotEquals(fs1, fs2);
+    String correlationID = fs1.getClientCorrelationId();
+    String correlationID1 = fs2.getClientCorrelationId();
+    assertNotEquals(correlationID, correlationID1);
+  }
+
+  /*
+  Case 3 :- Filesystem 1 has clientCorrelationID set, so cache is disabled.
+  Filesystem 2 also has clientCorrelationId set but since cache is disabled,
+  a new instance will be created for the same.
+  Hence, both the instances should be different, and clientCorrelationId for both should be different as well.
+  */
+  @Test
+  public void testClientCorrelationIdBothWithConf() throws Exception {
+    Configuration conf = getRawConfiguration();
+    conf.set(FS_AZURE_CLIENT_CORRELATIONID, CLIENT_CORRELATIONID_LIST[0]);
+    AzureBlobFileSystem fs1 = getFileSystem(conf);
+    conf.set(FS_AZURE_CLIENT_CORRELATIONID, CLIENT_CORRELATIONID_LIST[1]);
+    AzureBlobFileSystem fs2 = getFileSystem(conf);
+    assertNotEquals(fs1, fs2);
+    String correlationID = fs1.getClientCorrelationId();
+    String correlationID1 = fs2.getClientCorrelationId();
+    assertNotEquals(correlationID, correlationID1);
+  }
+
+  /*
+    Case 4 :- Filesystem 1 has clientCorrelationID set, so cache is disabled.
+    Filesystem 2 also has clientCorrelationId set but since cache is disabled,
+    a new instance will be created for the same.
+    Now we manually enable cache, so the filesystem instance 3 created with the same configuration
+    will be returned from the cache itself and will be equal to the first instance that was created with
+    the configuration.
+   */
+  @Test
+  public void testClientCorrelationIdNewConf() throws Exception {
+    Configuration conf = getRawConfiguration();
+    conf.set(FS_AZURE_CLIENT_CORRELATIONID, CLIENT_CORRELATIONID_LIST[0]);
+    AzureBlobFileSystem fs1 = getFileSystem(conf);
+    String scheme = fs1.getUri().getScheme();
+    String disableCacheName = String.format("fs.%s.impl.disable.cache", scheme);
+    Configuration conf2 = getRawConfiguration();
+    conf2.set(FS_AZURE_CLIENT_CORRELATIONID, CLIENT_CORRELATIONID_LIST[1]);
+    AzureBlobFileSystem fs2 = getFileSystem(conf2);
+    if(conf2.getBoolean(disableCacheName, true)){
+      conf2.setBoolean(disableCacheName, false);
+    }
+    conf2.set(FS_AZURE_CLIENT_CORRELATIONID, CLIENT_CORRELATIONID_LIST[2]);
+    AzureBlobFileSystem fs3 = getFileSystem(conf2);
+    assertNotEquals(fs1, fs2);
+    assertEquals(fs1, fs3);
+    String correlationID = fs1.getClientCorrelationId();
+    String correlationID1 = fs2.getClientCorrelationId();
+    String correlationID2 = fs3.getClientCorrelationId();
+    assertNotEquals(correlationID, correlationID1);
+    assertEquals(correlationID, correlationID2);
   }
 
   private String getOctalNotation(FsPermission fsPermission) {
