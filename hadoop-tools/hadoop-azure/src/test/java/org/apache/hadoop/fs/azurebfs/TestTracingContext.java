@@ -27,7 +27,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.assertj.core.api.Assertions;
-import org.checkerframework.checker.units.qual.C;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
 import org.junit.Ignore;
@@ -50,7 +49,6 @@ import org.apache.hadoop.util.Preconditions;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
