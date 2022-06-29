@@ -159,6 +159,11 @@ public class AzureBlobFileSystem extends FileSystem
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
     uri = ensureAuthority(uri, configuration);
+    /*
+      If the clientCorrelationId is set, disable the cache so that
+      a new instance is created and hence incorrect correlation is not
+      recorded
+     */
     String correlationId = configuration.get(FS_AZURE_CLIENT_CORRELATIONID);
     if(correlationId != null && !correlationId.equals("")) {
       String scheme = uri.getScheme();
