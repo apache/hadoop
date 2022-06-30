@@ -26,6 +26,6 @@ public final class TestLineRecordReaderBZip2 extends
 
   @Override
   protected BaseLineRecordReaderHelper newReader(Path file) {
-    return new LineRecordReaderHelper(file, conf);
+    return new LineRecordReaderHelper(file, getConf());
   }
 }

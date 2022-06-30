@@ -48,7 +48,7 @@ public final class LineRecordReaderHelper extends
 
   private LineRecordReader newReader(long start, long length)
       throws IOException {
-    FileSplit split = new FileSplit(filePath, start, length, (String[]) null);
-    return new LineRecordReader(conf, split, recordDelimiterBytes);
+    FileSplit split = new FileSplit(getFilePath(), start, length, (String[]) null);
+    return new LineRecordReader(getConf(), split, getRecordDelimiterBytes());
   }
 }

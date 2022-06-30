@@ -43,9 +43,21 @@ public abstract class BaseTestLineRecordReaderBZip2 {
   private static final byte[] CR = new byte[] {'\r'};
   private static final byte[] CR_LF = new byte[] {'\r', '\n'};
 
-  protected Configuration conf;
-  protected FileSystem fs;
-  protected Path tempFile;
+  private Configuration conf;
+  private FileSystem fs;
+  private Path tempFile;
+
+  public Configuration getConf() {
+    return conf;
+  }
+
+  public FileSystem getFs() {
+    return fs;
+  }
+
+  public Path getTempFile() {
+    return tempFile;
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -78,7 +90,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
   }
 
   @Test
-  public void firstBlockEndsWithLF_secondBlockStartsWithLF() throws Exception {
+  public void firstBlockEndsWithLFSecondBlockStartsWithLF() throws Exception {
     try (BZip2TextFileWriter writer = new BZip2TextFileWriter(tempFile, conf)) {
       writer.writeManyRecords(BLOCK_SIZE, 1000, LF);
       // Write 254 empty rows terminating at LF, as those records will get
@@ -100,7 +112,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
   }
 
   @Test
-  public void firstBlockEndsWithLF_secondBlockStartsWithCR() throws Exception {
+  public void firstBlockEndsWithLFSecondBlockStartsWithCR() throws Exception {
     try (BZip2TextFileWriter writer = new BZip2TextFileWriter(tempFile, conf)) {
       writer.writeManyRecords(BLOCK_SIZE, 1000, LF);
       writer.writeRecord(1, CR);
@@ -176,7 +188,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
   }
 
   @Test
-  public void lastByteInFirstBlockIsCR_FirstByteInSecondBlockIsNotLF()
+  public void lastByteInFirstBlockIsCRFirstByteInSecondBlockIsNotLF()
       throws Exception {
     try (BZip2TextFileWriter writer = new BZip2TextFileWriter(tempFile, conf)) {
       writer.writeManyRecords(BLOCK_SIZE, 1000, CR);
@@ -214,7 +226,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
   }
 
   @Test
-  public void customDelimiter_lastThreeBytesInBlockAreDelimiter()
+  public void customDelimiterLastThreeBytesInBlockAreDelimiter()
       throws Exception {
     byte[] delimiter = new byte[] {'e', 'n', 'd'};
     setDelimiter(delimiter);
@@ -229,7 +241,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
   }
 
   @Test
-  public void customDelimiter_delimiterSpansAcrossBlocks()
+  public void customDelimiterDelimiterSpansAcrossBlocks()
       throws Exception {
     byte[] delimiter = new byte[] {'e', 'n', 'd'};
     setDelimiter(delimiter);
@@ -245,7 +257,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
   }
 
   @Test
-  public void customDelimiter_lastRecordDelimiterStartsAtNextBlockStart()
+  public void customDelimiterLastRecordDelimiterStartsAtNextBlockStart()
       throws Exception {
     byte[] delimiter = new byte[] {'e', 'n', 'd'};
     setDelimiter(delimiter);
@@ -261,7 +273,7 @@ public abstract class BaseTestLineRecordReaderBZip2 {
   }
 
   @Test
-  public void customDelimiter_lastBlockBytesShareCommonPrefixWithDelimiter()
+  public void customDelimiterLastBlockBytesShareCommonPrefixWithDelimiter()
       throws Exception {
     byte[] delimiter = new byte[] {'e', 'n', 'd'};
     setDelimiter(delimiter);

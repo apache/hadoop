@@ -25,9 +25,11 @@ import org.apache.hadoop.fs.Path;
 
 public abstract class BaseLineRecordReaderHelper {
 
-  protected final Configuration conf;
-  protected final Path filePath;
-  protected final byte[] recordDelimiterBytes;
+  private final Configuration conf;
+  private final Path filePath;
+  private final byte[] recordDelimiterBytes;
+
+
 
   public BaseLineRecordReaderHelper(Path filePath, Configuration conf) {
     this.conf = conf;
@@ -36,9 +38,21 @@ public abstract class BaseLineRecordReaderHelper {
     conf.setInt(LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
 
     String delimiter = conf.get("textinputformat.record.delimiter");
-    recordDelimiterBytes =
+    this.recordDelimiterBytes =
         null != delimiter ? delimiter.getBytes(StandardCharsets.UTF_8) : null;
   }
 
   public abstract long countRecords(long start, long length) throws IOException;
+
+  public Configuration getConf() {
+    return conf;
+  }
+
+  public Path getFilePath() {
+    return filePath;
+  }
+
+  public byte[] getRecordDelimiterBytes() {
+    return recordDelimiterBytes;
+  }
 }

@@ -23,7 +23,12 @@ public final class TestLineRecordReaderBZip2
     extends BaseTestLineRecordReaderBZip2 {
 
   @Override
+  public void setUp() throws Exception {
+    super.setUp();
+  }
+
+  @Override
   protected BaseLineRecordReaderHelper newReader(Path file) {
-    return new LineRecordReaderHelper(file, conf);
+    return new LineRecordReaderHelper(file, getConf());
   }
 }

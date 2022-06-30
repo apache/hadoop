@@ -45,12 +45,12 @@ public final class LineRecordReaderHelper extends
 
   private LineRecordReader newReader(long start, long length)
       throws IOException {
-    FileSplit split = new FileSplit(filePath, start, length, null);
+    FileSplit split = new FileSplit(getFilePath(), start, length, null);
 
     TaskAttemptContext context =
-        new TaskAttemptContextImpl(conf, new TaskAttemptID());
+        new TaskAttemptContextImpl(getConf(), new TaskAttemptID());
 
-    LineRecordReader reader = new LineRecordReader(recordDelimiterBytes);
+    LineRecordReader reader = new LineRecordReader(getRecordDelimiterBytes());
     try {
       reader.initialize(split, context);
       return reader;
