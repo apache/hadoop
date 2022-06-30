@@ -76,7 +76,6 @@ import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -283,9 +282,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private TransferManager transfers;
   private ExecutorService boundedThreadPool;
   private ThreadPoolExecutor unboundedThreadPool;
-
-  // S3 reads are prefetched asynchronously using this future pool.
-  private ExecutorServiceFuturePool futurePool;
 
   // If true, the prefetching input stream is used for reads.
   private boolean prefetchEnabled;
@@ -602,17 +598,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
       stopAllServices();
-      if (this.futurePool != null) {
-        this.futurePool = null;
-      }
       throw translateException("initializing ", new Path(name), e);
     } catch (IOException | RuntimeException e) {
       // other exceptions: stop the services.
       cleanupWithLogger(LOG, span);
       stopAllServices();
-      if (this.futurePool != null) {
-        this.futurePool = null;
-      }
       throw e;
     }
   }
@@ -732,9 +722,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
-    if (this.prefetchEnabled) {
-      this.futurePool = new ExecutorServiceFuturePool(boundedThreadPool);
-    }
   }
 
   /**
@@ -1573,7 +1560,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         statistics,
         statisticsContext,
         fileStatus,
-        futurePool,
+        unboundedThreadPool,
         prefetchBlockSize,
         prefetchBlockCount)
         .withAuditSpan(auditSpan);

@@ -21,13 +21,13 @@ package org.apache.hadoop.fs.s3a.read;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.CachingBlockManager;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.common.Validate;
 
 /**
@@ -44,7 +44,7 @@ public class S3CachingBlockManager extends CachingBlockManager {
   /**
    * Constructs an instance of a {@code S3CachingBlockManager}.
    *
-   * @param futurePool asynchronous tasks are performed in this pool.
+   * @param threadPool asynchronous tasks are performed in this pool.
    * @param reader reader that reads from S3 file.
    * @param blockData information about each block of the S3 file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
@@ -52,11 +52,11 @@ public class S3CachingBlockManager extends CachingBlockManager {
    * @throws IllegalArgumentException if reader is null.
    */
   public S3CachingBlockManager(
-      ExecutorServiceFuturePool futurePool,
+      ExecutorService threadPool,
       S3Reader reader,
       BlockData blockData,
       int bufferPoolSize) {
-    super(futurePool, blockData, bufferPoolSize);
+    super(threadPool, blockData, bufferPoolSize);
 
     Validate.checkNotNull(reader, "reader");
 

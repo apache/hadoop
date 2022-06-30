@@ -20,6 +20,7 @@
 package org.apache.hadoop.fs.s3a.read;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.BlockManager;
 import org.apache.hadoop.fs.common.BufferData;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
@@ -67,7 +67,7 @@ public class S3CachingInputStream extends S3InputStream {
     this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
     this.blockManager = this.createBlockManager(
-        this.getContext().getFuturePool(),
+        this.getContext().getThreadPool(),
         this.getReader(),
         this.getBlockData(),
         bufferPoolSize);
@@ -186,10 +186,10 @@ public class S3CachingInputStream extends S3InputStream {
   }
 
   protected BlockManager createBlockManager(
-      ExecutorServiceFuturePool futurePool,
+      ExecutorService threadPool,
       S3Reader reader,
       BlockData blockData,
       int bufferPoolSize) {
-    return new S3CachingBlockManager(futurePool, reader, blockData, bufferPoolSize);
+    return new S3CachingBlockManager(threadPool, reader, blockData, bufferPoolSize);
   }
 }

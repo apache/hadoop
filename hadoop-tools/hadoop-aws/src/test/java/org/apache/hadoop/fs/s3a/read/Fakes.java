@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -39,17 +40,14 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.common.BlockCache;
 import org.apache.hadoop.fs.common.BlockData;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.common.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
-import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
@@ -111,7 +109,7 @@ public final class Fakes {
   }
 
   public static S3AReadOpContext createReadContext(
-      ExecutorServiceFuturePool futurePool,
+      ExecutorService threadPool,
       String key,
       int fileSize,
       int prefetchBlockSize,
@@ -130,7 +128,7 @@ public final class Fakes {
         statistics,
         statisticsContext,
         fileStatus,
-        futurePool,
+        threadPool,
         prefetchBlockSize,
         prefetchBlockCount);
   }
@@ -198,7 +196,7 @@ public final class Fakes {
 
   public static S3InputStream createInputStream(
       Class<? extends S3InputStream> clazz,
-      ExecutorServiceFuturePool futurePool,
+      ExecutorService threadPool,
       String bucket,
       String key,
       int fileSize,
@@ -210,7 +208,7 @@ public final class Fakes {
     S3AFileStatus fileStatus = createFileStatus(key, fileSize);
     S3ObjectAttributes s3ObjectAttributes = createObjectAttributes(bucket, key, fileSize);
     S3AReadOpContext s3AReadOpContext = createReadContext(
-        futurePool,
+        threadPool,
         key,
         fileSize,
         prefetchBlockSize,
@@ -228,17 +226,17 @@ public final class Fakes {
   }
 
   public static TestS3InMemoryInputStream createS3InMemoryInputStream(
-      ExecutorServiceFuturePool futurePool,
+      ExecutorService threadPool,
       String bucket,
       String key,
       int fileSize) {
 
     return (TestS3InMemoryInputStream) createInputStream(
-        TestS3InMemoryInputStream.class, futurePool, bucket, key, fileSize, 1, 1);
+        TestS3InMemoryInputStream.class, threadPool, bucket, key, fileSize, 1, 1);
   }
 
   public static TestS3CachingInputStream createS3CachingInputStream(
-      ExecutorServiceFuturePool futurePool,
+      ExecutorService threadPool,
       String bucket,
       String key,
       int fileSize,
@@ -247,7 +245,7 @@ public final class Fakes {
 
     return (TestS3CachingInputStream) createInputStream(
         TestS3CachingInputStream.class,
-        futurePool,
+        threadPool,
         bucket,
         key,
         fileSize,
@@ -325,11 +323,11 @@ public final class Fakes {
 
   public static class TestS3CachingBlockManager extends S3CachingBlockManager {
     public TestS3CachingBlockManager(
-        ExecutorServiceFuturePool futurePool,
+        ExecutorService threadPool,
         S3Reader reader,
         BlockData blockData,
         int bufferPoolSize) {
-      super(futurePool, reader, blockData, bufferPoolSize);
+      super(threadPool, reader, blockData, bufferPoolSize);
     }
 
     @Override
@@ -362,11 +360,11 @@ public final class Fakes {
 
     @Override
     protected S3CachingBlockManager createBlockManager(
-        ExecutorServiceFuturePool futurePool,
+        ExecutorService threadPool,
         S3Reader reader,
         BlockData blockData,
         int bufferPoolSize) {
-      return new TestS3CachingBlockManager(futurePool, reader, blockData, bufferPoolSize);
+      return new TestS3CachingBlockManager(threadPool, reader, blockData, bufferPoolSize);
     }
   }
 }

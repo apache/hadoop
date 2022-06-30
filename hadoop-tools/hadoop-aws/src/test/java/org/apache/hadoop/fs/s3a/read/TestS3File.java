@@ -25,7 +25,6 @@ import java.util.concurrent.Executors;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.common.ExceptionAsserts;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
@@ -35,12 +34,11 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 public class TestS3File extends AbstractHadoopTestBase {
   private final ExecutorService threadPool = Executors.newFixedThreadPool(1);
-  private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
   private final S3AInputStream.InputStreamCallbacks client = MockS3File.createClient("bucket");
 
   @Test
   public void testArgChecks() throws Exception {
-    S3AReadOpContext readContext = Fakes.createReadContext(futurePool, "key", 10, 10, 1);
+    S3AReadOpContext readContext = Fakes.createReadContext(threadPool, "key", 10, 10, 1);
     S3ObjectAttributes attrs = Fakes.createObjectAttributes("bucket", "key", 10);
     S3AInputStreamStatistics stats =
         readContext.getS3AStatisticsContext().newInputStreamStatistics();

@@ -22,6 +22,7 @@ package org.apache.hadoop.fs.common;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -40,7 +41,7 @@ public abstract class CachingBlockManager extends BlockManager {
   private static final int TIMEOUT_MINUTES = 60;
 
   // Asynchronous tasks are performed in this pool.
-  private final ExecutorServiceFuturePool futurePool;
+  private final ExecutorService threadPool;
 
   // Pool of shared ByteBuffer instances.
   private BufferPool bufferPool;
@@ -71,7 +72,7 @@ public abstract class CachingBlockManager extends BlockManager {
   /**
    * Constructs an instance of a {@code CachingBlockManager}.
    *
-   * @param futurePool asynchronous tasks are performed in this pool.
+   * @param threadPool asynchronous tasks are performed in this pool.
    * @param blockData information about each block of the underlying file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
    *
@@ -79,15 +80,15 @@ public abstract class CachingBlockManager extends BlockManager {
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
-      ExecutorServiceFuturePool futurePool,
+      ExecutorService threadPool,
       BlockData blockData,
       int bufferPoolSize) {
     super(blockData);
 
-    Validate.checkNotNull(futurePool, "futurePool");
+    Validate.checkNotNull(threadPool, "threadPool");
     Validate.checkPositiveInteger(bufferPoolSize, "bufferPoolSize");
 
-    this.futurePool = futurePool;
+    this.threadPool = threadPool;
     this.bufferPoolSize = bufferPoolSize;
     this.numCachingErrors = new AtomicInteger();
     this.numReadErrors = new AtomicInteger();
@@ -248,7 +249,7 @@ public abstract class CachingBlockManager extends BlockManager {
 
       BlockOperations.Operation op = this.ops.requestPrefetch(blockNumber);
       PrefetchTask prefetchTask = new PrefetchTask(data, this);
-      Future<Void> prefetchFuture = this.futurePool.executeFunction(prefetchTask);
+      Future<Void> prefetchFuture = this.threadPool.submit(prefetchTask::get);
       data.setPrefetch(prefetchFuture);
       this.ops.end(op);
     }
@@ -419,7 +420,7 @@ public abstract class CachingBlockManager extends BlockManager {
       }
 
       CachePutTask task = new CachePutTask(data, blockFuture, this);
-      Future<Void> actionFuture = this.futurePool.executeFunction(task);
+      Future<Void> actionFuture = this.threadPool.submit(task::get);
       data.setCaching(actionFuture);
       this.ops.end(op);
     }

@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.util.concurrent.ExecutorService;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
@@ -65,8 +66,8 @@ public class S3AReadOpContext extends S3AOpContext {
    */
   private long asyncDrainThreshold;
 
-  // S3 reads are prefetched asynchronously using this future pool.
-  private ExecutorServiceFuturePool futurePool;
+  // S3 async operations such as prefetched reads are performed using this pool.
+  private ExecutorService threadPool;
 
   // Size in bytes of a single prefetch block.
   private final int prefetchBlockSize;
@@ -81,7 +82,7 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param stats Fileystem statistics (may be null)
    * @param instrumentation statistics context
    * @param dstFileStatus target file status
-   * @param futurePool the ExecutorServiceFuturePool instance used by async prefetches.
+   * @param threadPool asynchronous operations are performed in this pool.
    * @param prefetchBlockSize the size (in number of bytes) of each prefetched block.
    * @param prefetchBlockCount maximum number of prefetched blocks.
    */
@@ -91,14 +92,14 @@ public class S3AReadOpContext extends S3AOpContext {
       @Nullable FileSystem.Statistics stats,
       S3AStatisticsContext instrumentation,
       FileStatus dstFileStatus,
-      ExecutorServiceFuturePool futurePool,
+      ExecutorService threadPool,
       int prefetchBlockSize,
       int prefetchBlockCount) {
 
     super(invoker, stats, instrumentation,
         dstFileStatus);
     this.path = requireNonNull(path);
-    this.futurePool = futurePool;
+    this.threadPool = threadPool;
     Preconditions.checkArgument(
         prefetchBlockSize > 0, "invalid prefetchBlockSize %d", prefetchBlockSize);
     this.prefetchBlockSize = prefetchBlockSize;
@@ -223,12 +224,12 @@ public class S3AReadOpContext extends S3AOpContext {
   }
 
   /**
-   * Gets the {@code ExecutorServiceFuturePool} used for asynchronous prefetches.
+   * Gets the ExecutorService used for asynchronous operations.
    *
-   * @return the {@code ExecutorServiceFuturePool} used for asynchronous prefetches.
+   * @return the ExecutorService used for asynchronous operations.
    */
-  public ExecutorServiceFuturePool getFuturePool() {
-    return this.futurePool;
+  public ExecutorService getThreadPool() {
+    return this.threadPool;
   }
 
   /**

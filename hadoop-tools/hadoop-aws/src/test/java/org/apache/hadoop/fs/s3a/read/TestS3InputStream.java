@@ -28,7 +28,6 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
@@ -44,12 +43,11 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
   private static final int FILE_SIZE = 10;
 
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
-  private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
   private final S3AInputStream.InputStreamCallbacks client = MockS3File.createClient("bucket");
 
   @Test
   public void testArgChecks() throws Exception {
-    S3AReadOpContext readContext = Fakes.createReadContext(futurePool, "key", 10, 10, 1);
+    S3AReadOpContext readContext = Fakes.createReadContext(threadPool, "key", 10, 10, 1);
     S3ObjectAttributes attrs = Fakes.createObjectAttributes("bucket", "key", 10);
 
     // Should not throw.
@@ -74,10 +72,10 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
   @Test
   public void testRead0SizedFile() throws Exception {
     S3InputStream inputStream =
-        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 0);
+        Fakes.createS3InMemoryInputStream(threadPool, "bucket", "key", 0);
     testRead0SizedFileHelper(inputStream, 9);
 
-    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 0, 5, 2);
+    inputStream = Fakes.createS3CachingInputStream(threadPool, "bucket", "key", 0, 5, 2);
     testRead0SizedFileHelper(inputStream, 5);
   }
 
@@ -95,11 +93,11 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
   @Test
   public void testRead() throws Exception {
     S3InputStream inputStream =
-        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", FILE_SIZE);
+        Fakes.createS3InMemoryInputStream(threadPool, "bucket", "key", FILE_SIZE);
     testReadHelper(inputStream, FILE_SIZE);
 
     inputStream =
-        Fakes.createS3CachingInputStream(futurePool, "bucket", "key", FILE_SIZE, 5, 2);
+        Fakes.createS3CachingInputStream(threadPool, "bucket", "key", FILE_SIZE, 5, 2);
     testReadHelper(inputStream, 5);
   }
 
@@ -138,10 +136,10 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
   @Test
   public void testSeek() throws Exception {
     S3InputStream inputStream;
-    inputStream = Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
+    inputStream = Fakes.createS3InMemoryInputStream(threadPool, "bucket", "key", 9);
     testSeekHelper(inputStream, 9, 9);
 
-    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 1);
+    inputStream = Fakes.createS3CachingInputStream(threadPool, "bucket", "key", 9, 5, 1);
     testSeekHelper(inputStream, 5, 9);
   }
 
@@ -174,10 +172,10 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
   @Test
   public void testRandomSeek() throws Exception {
     S3InputStream inputStream;
-    inputStream = Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
+    inputStream = Fakes.createS3InMemoryInputStream(threadPool, "bucket", "key", 9);
     testRandomSeekHelper(inputStream, 9, 9);
 
-    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 1);
+    inputStream = Fakes.createS3CachingInputStream(threadPool, "bucket", "key", 9, 5, 1);
     testRandomSeekHelper(inputStream, 5, 9);
   }
 
@@ -210,11 +208,11 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
   @Test
   public void testClose() throws Exception {
     S3InputStream inputStream =
-        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
+        Fakes.createS3InMemoryInputStream(threadPool, "bucket", "key", 9);
     testCloseHelper(inputStream, 9);
 
     inputStream =
-        Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 3);
+        Fakes.createS3CachingInputStream(threadPool, "bucket", "key", 9, 5, 3);
     testCloseHelper(inputStream, 5);
   }
 
