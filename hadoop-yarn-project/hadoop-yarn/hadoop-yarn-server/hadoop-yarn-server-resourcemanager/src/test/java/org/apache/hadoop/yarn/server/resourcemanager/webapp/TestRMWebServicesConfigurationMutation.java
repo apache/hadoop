@@ -73,7 +73,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test scheduler configuration mutation via REST API.
