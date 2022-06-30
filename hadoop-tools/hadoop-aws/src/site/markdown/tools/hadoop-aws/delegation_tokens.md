@@ -38,8 +38,8 @@ so restrict how long an application can access AWS on behalf of a user.
 Clients with this token have the full permissions of the user.
 
 *Role Delegation Tokens:* These contain an "STS Session Token" requested by the
-STS "Assume Role" API, so grant the caller to interact with S3 as specific AWS
-role, *with permissions restricted to purely accessing that specific S3 bucket*.
+STS "Assume Role" API, granting the caller permission to interact with S3 using a specific IAM
+role, *with permissions restricted to accessing a specific S3 bucket*.
 
 Role Delegation Tokens are the most powerful. By restricting the access rights
 of the granted STS token, no process receiving the token may perform
@@ -143,8 +143,8 @@ for specifics details on the (current) token lifespan.
 
 A Role Delegation Token is created by asking the AWS
 [Security Token Service](http://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html)
-for set of "Assumed Role" credentials, with an AWS account specific role for a limited duration.
-This role is restricted to only grant access the S3 bucket and all KMS keys.
+for a set of "Assumed Role" session credentials with a limited lifetime, belonging to a given IAM Role.
+The resulting session credentials are restricted to grant access to all KMS keys, and to the specific S3 bucket.
 They are marshalled into the S3A Delegation Token.
 
 Other S3A connectors can extract these credentials and use them to
@@ -181,7 +181,7 @@ Hadoop security enabled —which inevitably means with Kerberos.
 Even though S3A delegation tokens do not use Kerberos, the code in
 applications which fetch DTs is normally only executed when the cluster is
 running in secure mode; somewhere where the `core-site.xml` configuration
-sets `hadoop.security.authentication` to to `kerberos` or another valid
+sets `hadoop.security.authentication` to `kerberos` or another valid
 authentication mechanism.
 
 *Without enabling security at this level, delegation tokens will not
@@ -191,7 +191,6 @@ Once Kerberos is enabled, the process for acquiring tokens is as follows:
 
 1. Enable Delegation token support by setting `fs.s3a.delegation.token.binding`
 to the classname of the token binding to use.
-to use.
 1. Add any other binding-specific settings (STS endpoint, IAM role, etc.)
 1. Make sure the settings are the same in the service as well as the client.
 1. In the client, switch to using a [Hadoop Credential Provider](hadoop-project-dist/hadoop-common/CredentialProviderAPI.html)
@@ -414,6 +413,7 @@ The XML settings needed to enable session tokens are:
 
 A JSON role policy for the role/session will automatically be generated which will
 consist of:
+
 1. Full access to the S3 bucket for all operations used by the S3A client
 (read, write, list, multipart operations, get bucket location, etc).
 1. Full user access to KMS keys. This is to be able to decrypt any data
@@ -465,7 +465,7 @@ that of the role itself: 1h by default, though this can be changed to
 12h [In the IAM Console](https://console.aws.amazon.com/iam/home#/roles),
 or from the AWS CLI.
 
-Without increasing the duration of role, one hour is the maximum value;
+Without increasing the duration of the role, one hour is the maximum value;
 the error message `The requested DurationSeconds exceeds the MaxSessionDuration set for this role`
 is returned if the requested duration of a Role Delegation Token is greater
 than that available for the role.
