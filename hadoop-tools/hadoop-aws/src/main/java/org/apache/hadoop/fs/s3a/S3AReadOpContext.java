@@ -20,14 +20,14 @@ package org.apache.hadoop.fs.s3a;
 
 import java.util.concurrent.ExecutorService;
 
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
-
-import javax.annotation.Nullable;
 
 import org.apache.hadoop.util.Preconditions;
 

@@ -1560,7 +1560,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         statistics,
         statisticsContext,
         fileStatus,
-        unboundedThreadPool,
+        boundedThreadPool,
         prefetchBlockSize,
         prefetchBlockCount)
         .withAuditSpan(auditSpan);
