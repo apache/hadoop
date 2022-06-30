@@ -24,6 +24,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONN
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 import static org.apache.hadoop.ipc.RpcConstants.DISABLED_OBSERVER_READ_STATEID;
+import static org.apache.hadoop.ipc.RpcConstants.REQUEST_HEADER_NAMESPACE_STATEIDS_SET;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -62,6 +63,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.FederatedGSIContext;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -171,7 +173,8 @@ public class RouterRpcClient {
    * @param monitor Optional performance monitor.
    */
   public RouterRpcClient(Configuration conf, Router router,
-      ActiveNamenodeResolver resolver, RouterRpcMonitor monitor) {
+      ActiveNamenodeResolver resolver, RouterRpcMonitor monitor,
+      FederatedGSIContext federatedGSIContext) {
     this.router = router;
 
     this.namenodeResolver = resolver;
@@ -180,7 +183,7 @@ public class RouterRpcClient {
     this.contextFieldSeparator =
         clientConf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
             HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
-    this.connectionManager = new ConnectionManager(clientConf);
+    this.connectionManager = new ConnectionManager(clientConf, federatedGSIContext);
     this.connectionManager.start();
     this.routerRpcFairnessPolicyController =
         FederationUtil.newFairnessPolicyController(conf);
@@ -1744,6 +1747,14 @@ public class RouterRpcClient {
           + " is less than 0");
       return namenodes; // no need for msync
     }
+
+
+    Call call = Server.getCurCall().get();
+    if (call != null && call.getClientStateId() == REQUEST_HEADER_NAMESPACE_STATEIDS_SET) {
+      LOG.debug("Skipping msync because client used FederatedGSIContext.");
+      return namenodes;
+    }
+
     if (isObserverRead) {
       long callStartTime = callTime();
 

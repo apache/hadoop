@@ -56,6 +56,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.FederatedGSIContext;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -252,18 +253,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /**
    * Construct a router RPC server.
    *
-   * @param config HDFS Configuration.
+   * @param conf HDFS Configuration.
    * @param router A router using this RPC server.
    * @param nnResolver The NN resolver instance to determine active NNs in HA.
    * @param fileResolver File resolver to resolve file paths to subclusters.
    * @throws IOException If the RPC server could not be created.
    */
-  public RouterRpcServer(Configuration config, Router router,
+  public RouterRpcServer(Configuration conf, Router router,
       ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
           throws IOException {
     super(RouterRpcServer.class.getName());
 
-    this.conf = config;
+    this.conf = conf;
     this.router = router;
     this.namenodeResolver = nnResolver;
     this.subclusterResolver = fileResolver;
@@ -311,7 +312,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         GetUserMappingsProtocolProtos.GetUserMappingsProtocolService.
         newReflectiveBlockingService(getUserMappingXlator);
 
-    InetSocketAddress confRpcAddress = conf.getSocketAddr(
+    InetSocketAddress confRpcAddress = this.conf.getSocketAddr(
         RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
         RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
         RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
@@ -321,6 +322,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     // Create security manager
     this.securityManager = new RouterSecurityManager(this.conf);
+    FederatedGSIContext federatedGSIContext = new FederatedGSIContext();
 
     this.rpcServer = new RPC.Builder(this.conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
@@ -331,23 +333,22 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setnumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
-        .setAlignmentContext(new RouterStateIdContext())
+        .setAlignmentContext(new RouterStateIdContext(federatedGSIContext))
         .setSecretManager(this.securityManager.getSecretManager())
         .build();
 
     // Add all the RPC protocols that the Router implements
-    DFSUtil.addPBProtocol(
-        conf, NamenodeProtocolPB.class, nnPbService, this.rpcServer);
-    DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
+    DFSUtil.addPBProtocol(this.conf, NamenodeProtocolPB.class, nnPbService, this.rpcServer);
+    DFSUtil.addPBProtocol(this.conf, RefreshUserMappingsProtocolPB.class,
         refreshUserMappingService, this.rpcServer);
-    DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class,
+    DFSUtil.addPBProtocol(this.conf, GetUserMappingsProtocolPB.class,
         getUserMappingService, this.rpcServer);
 
     // Set service-level authorization security policy
-    this.serviceAuthEnabled = conf.getBoolean(
+    this.serviceAuthEnabled = this.conf.getBoolean(
         HADOOP_SECURITY_AUTHORIZATION, false);
     if (this.serviceAuthEnabled) {
-      rpcServer.refreshServiceAcl(conf, new RouterPolicyProvider());
+      rpcServer.refreshServiceAcl(this.conf, new RouterPolicyProvider());
     }
 
     // We don't want the server to log the full stack trace for some exceptions
@@ -371,29 +372,29 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     this.rpcAddress = new InetSocketAddress(
         confRpcAddress.getHostName(), listenAddress.getPort());
 
-    if (conf.getBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE,
+    if (this.conf.getBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE,
         RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE_DEFAULT)) {
       // Create metrics monitor
       Class<? extends RouterRpcMonitor> rpcMonitorClass = this.conf.getClass(
           RBFConfigKeys.DFS_ROUTER_METRICS_CLASS,
           RBFConfigKeys.DFS_ROUTER_METRICS_CLASS_DEFAULT,
           RouterRpcMonitor.class);
-      this.rpcMonitor = ReflectionUtils.newInstance(rpcMonitorClass, conf);
+      this.rpcMonitor = ReflectionUtils.newInstance(rpcMonitorClass, this.conf);
     } else {
       this.rpcMonitor = null;
     }
 
     // Create the client
     this.rpcClient = new RouterRpcClient(this.conf, this.router,
-        this.namenodeResolver, this.rpcMonitor);
+        this.namenodeResolver, this.rpcMonitor, federatedGSIContext);
 
     // Initialize modules
     this.quotaCall = new Quota(this.router, this);
     this.nnProto = new RouterNamenodeProtocol(this);
-    this.clientProto = new RouterClientProtocol(conf, this);
+    this.clientProto = new RouterClientProtocol(this.conf, this);
     this.routerProto = new RouterUserProtocol(this);
 
-    long dnCacheExpire = conf.getTimeDuration(
+    long dnCacheExpire = this.conf.getTimeDuration(
         DN_REPORT_CACHE_EXPIRE,
         DN_REPORT_CACHE_EXPIRE_MS_DEFAULT, TimeUnit.MILLISECONDS);
     this.dnCache = CacheBuilder.newBuilder()

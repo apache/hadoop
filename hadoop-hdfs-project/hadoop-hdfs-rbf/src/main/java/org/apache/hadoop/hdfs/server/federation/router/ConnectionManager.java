@@ -26,7 +26,6 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -34,8 +33,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.hdfs.ClientGSIContext;
-import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.hdfs.FederatedGSIContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -78,9 +76,8 @@ public class ConnectionManager {
   private final BlockingQueue<ConnectionPool> creatorQueue;
   /**
    * Alignment contexts to use incase nameservices have observer namenodes.
-   * The keys are the nameservice logical names.
    */
-  private final Map<String, AlignmentContext> alignmentContexts;
+  private final FederatedGSIContext federatedGSIContext;
   /** Max size of queue for creating new connections. */
   private final int creatorQueueMaxSize;
 
@@ -93,15 +90,18 @@ public class ConnectionManager {
   /** If the connection manager is running. */
   private boolean running = false;
 
+  public ConnectionManager(Configuration config) {
+    this(config, new FederatedGSIContext());
+  }
 
   /**
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
    */
-  public ConnectionManager(Configuration config) {
+  public ConnectionManager(Configuration config, FederatedGSIContext federatedGSIContext) {
     this.conf = config;
-
+    this.federatedGSIContext = federatedGSIContext;
     // Configure minimum, maximum and active connection pools
     this.maxSize = this.conf.getInt(
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE,
@@ -133,8 +133,6 @@ public class ConnectionManager {
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS_DEFAULT);
     LOG.info("Cleaning connections every {} seconds",
         TimeUnit.MILLISECONDS.toSeconds(this.connectionCleanupPeriodMs));
-    // Initialize observer context
-    alignmentContexts = new ConcurrentHashMap<>();
   }
 
   /**
@@ -214,10 +212,10 @@ public class ConnectionManager {
       try {
         pool = this.pools.get(connectionId);
         if (pool == null) {
-          alignmentContexts.putIfAbsent(nsId, new ClientGSIContext());
           pool = new ConnectionPool(
               this.conf, nnAddress, ugi, this.minSize, this.maxSize,
-              this.minActiveRatio, protocol, alignmentContexts.get(nsId));
+              this.minActiveRatio, protocol,
+              federatedGSIContext.getNameserviceAlignmentContext(nsId));
           this.pools.put(connectionId, pool);
         }
       } finally {

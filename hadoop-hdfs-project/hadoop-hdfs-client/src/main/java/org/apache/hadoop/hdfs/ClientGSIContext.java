@@ -39,8 +39,10 @@ import static org.apache.hadoop.ipc.RpcConstants.DISABLED_OBSERVER_READ_STATEID;
 @InterfaceStability.Evolving
 public class ClientGSIContext implements AlignmentContext {
 
+  private static Long STATEID_DEFAULT_VALUE = Long.MIN_VALUE;
   private final LongAccumulator lastSeenStateId =
-      new LongAccumulator(Math::max, Long.MIN_VALUE);
+      new LongAccumulator(Math::max, STATEID_DEFAULT_VALUE);
+  private FederatedGSIContext federatedGSIContext = new FederatedGSIContext();
 
   public void disableObserverRead() {
     if (lastSeenStateId.get() > DISABLED_OBSERVER_READ_STATEID) {
@@ -53,6 +55,10 @@ public class ClientGSIContext implements AlignmentContext {
   @Override
   public long getLastSeenStateId() {
     return lastSeenStateId.get();
+  }
+
+  public void updateLastSeenStateID(Long stateId) {
+    lastSeenStateId.accumulate(stateId);
   }
 
   @Override
@@ -80,6 +86,7 @@ public class ClientGSIContext implements AlignmentContext {
       //Observer read is disabled
       return;
     }
+    federatedGSIContext.updateStateUsingResponseHeader(header);
     lastSeenStateId.accumulate(header.getStateId());
   }
 
@@ -88,7 +95,10 @@ public class ClientGSIContext implements AlignmentContext {
    */
   @Override
   public void updateRequestState(RpcRequestHeaderProto.Builder header) {
-    header.setStateId(lastSeenStateId.longValue());
+    if (lastSeenStateId.longValue() != STATEID_DEFAULT_VALUE) {
+      header.setStateId(lastSeenStateId.longValue());
+    }
+    federatedGSIContext.setRequestHeaderState(header);
   }
 
   /**

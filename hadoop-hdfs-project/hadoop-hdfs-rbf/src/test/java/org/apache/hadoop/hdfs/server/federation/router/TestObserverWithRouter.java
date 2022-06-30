@@ -126,8 +126,8 @@ public class TestObserverWithRouter {
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // Create, complete and msync calls should be sent to active
-    assertEquals("Three calls should be sent to active", 3, rpcCountForActive);
+    // Create and complete calls should be sent to active
+    assertEquals("Two calls should be sent to active", 2, rpcCountForActive);
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
@@ -179,8 +179,8 @@ public class TestObserverWithRouter {
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // Create, complete, msync, getBlockLocation call should send to active
-    assertEquals("Four call should send to active", 4,
+    // Create, complete and getBlockLocation calls should be sent to active
+    assertEquals("Three calls should be sent to active", 3,
         rpcCountForActive);
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
@@ -235,11 +235,11 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
 
-    long expectedActiveRpc = 3;
+    long expectedActiveRpc = 2;
     long expectedObserverRpc = 1;
 
-    // Create, complete, msync call should send to active
-    assertEquals("Three call should send to active",
+    // Create and complete calls should be sent to active
+    assertEquals("Two calls should be sent to active",
         expectedActiveRpc, rpcCountForActive);
 
     long rpcCountForObserver = routerContext.getRouter()
@@ -257,9 +257,9 @@ public class TestObserverWithRouter {
     rpcCountForActive = routerContext.getRouter()
         .getRpcServer().getRPCMetrics().getActiveProxyOps();
 
-    // msync, getBlockLocation call should send to active
-    expectedActiveRpc += 2;
-    assertEquals("Two call should send to active", expectedActiveRpc,
+    // getBlockLocation call should be sent to active
+    expectedActiveRpc += 1;
+    assertEquals("One call should be sent to active", expectedActiveRpc,
         rpcCountForActive);
     expectedObserverRpc += 0;
     rpcCountForObserver = routerContext.getRouter()

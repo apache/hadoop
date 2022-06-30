@@ -23,12 +23,15 @@ import java.util.HashSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.FederatedGSIContext;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
+
+import static org.apache.hadoop.ipc.RpcConstants.*;
 
 /**
  * This is the router implementation responsible for passing
@@ -39,8 +42,10 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 class RouterStateIdContext implements AlignmentContext {
 
   private final HashSet<String> coordinatedMethods;
+  private final FederatedGSIContext federatedGSIContext;
 
-  RouterStateIdContext() {
+  RouterStateIdContext(FederatedGSIContext federatedGSIContext) {
+    this.federatedGSIContext = federatedGSIContext;
     this.coordinatedMethods = new HashSet<>();
     // For now, only ClientProtocol methods can be coordinated, so only checking
     // against ClientProtocol.
@@ -54,7 +59,7 @@ class RouterStateIdContext implements AlignmentContext {
 
   @Override
   public void updateResponseState(RpcResponseHeaderProto.Builder header) {
- // Do nothing.
+    federatedGSIContext.setResponseHeaderState(header);
   }
 
   @Override
@@ -70,8 +75,11 @@ class RouterStateIdContext implements AlignmentContext {
   @Override
   public long receiveRequestState(RpcRequestHeaderProto header,
       long clientWaitTime) throws RetriableException {
-    long clientStateId = header.getStateId();
-    return clientStateId;
+    federatedGSIContext.updateStateUsingRequestHeader(header);
+    if (header.getNameserviceStateIdsCount() > 0) {
+      return REQUEST_HEADER_NAMESPACE_STATEIDS_SET;
+    }
+    return header.getStateId();
   }
 
   @Override

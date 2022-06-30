@@ -39,6 +39,8 @@ public class RpcConstants {
   public static final int INVALID_RETRY_COUNT = -1;
   // Special value to indicate the client does not want routers to read from Observer Namenodes.
   public static final long DISABLED_OBSERVER_READ_STATEID = -1L;
+  // Special value to indicate client request header has nameserviceStateIds set.
+  public static final long REQUEST_HEADER_NAMESPACE_STATEIDS_SET = -2L;
   
  /**
   * The Rpc-connection header is as follows 
