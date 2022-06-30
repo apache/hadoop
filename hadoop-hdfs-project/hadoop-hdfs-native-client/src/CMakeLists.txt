@@ -152,8 +152,7 @@ add_subdirectory(main/native/libhdfs-tests)
 # Temporary fix to disable Libhdfs++ build on older systems that do not support thread_local
 include(CheckCXXSourceCompiles)
 unset (THREAD_LOCAL_SUPPORTED CACHE)
-set (CMAKE_CXX_STANDARD 11)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
+set (CMAKE_REQUIRED_DEFINITIONS "-std=c++11")
 set (CMAKE_REQUIRED_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 check_cxx_source_compiles(
     "#include <thread>
