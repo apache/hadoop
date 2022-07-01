@@ -52,19 +52,19 @@ public class TestSecureLogin {
   @Test
   public void testRouterSecureLogin() throws IOException {
     Router router = null;
+    Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.ROUTER_BIND_HOST, "0.0.0.0");
+    conf.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
+        "org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    conf.set("yarn.router.principal", "yarn/localhost@EXAMPLE.COM");
+    conf.set("yarn.router.keytab", routerKeytabFile.getAbsolutePath());
+    assertEquals("Authentication Method should be simple before login!",
+        AuthenticationMethod.SIMPLE,
+        UserGroupInformation.getLoginUser().getAuthenticationMethod());
+    UserGroupInformation.setConfiguration(conf);
     try {
-      Configuration conf = new YarnConfiguration();
-      conf.set(YarnConfiguration.ROUTER_BIND_HOST, "0.0.0.0");
-      conf.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
-          "org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor");
-      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-          "kerberos");
-      conf.set("yarn.router.principal", "yarn/localhost@EXAMPLE.COM");
-      conf.set("yarn.router.keytab", routerKeytabFile.getAbsolutePath());
-      assertEquals("Authentication Method should be simple before login!",
-          AuthenticationMethod.SIMPLE,
-          UserGroupInformation.getLoginUser().getAuthenticationMethod());
-      UserGroupInformation.setConfiguration(conf);
       router = new Router();
       router.init(conf);
       router.start();
