@@ -560,7 +560,7 @@ public class AbfsClient implements Closeable {
         if (op.getResult().getStorageErrorCode()
             .equals(RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode())
             && !isMetadataIncompleteState) {
-          //Logging
+          // Logging once
           ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
               .info("Rename Failure attempting to resolve tracking metadata state and retrying.");
 
