@@ -490,6 +490,10 @@ public interface HdfsFileStatus
    */
   int compareTo(FileStatus stat);
 
+  void setNsIdentify(String nsIdentify);
+
+  String getNsIdentify();
+
   /**
    * Set redundant flags for compatibility with existing applications.
    */

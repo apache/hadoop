@@ -58,6 +58,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -107,6 +108,7 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeCon
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -1448,6 +1450,43 @@ public class TestRouterRpc {
     boolean routerSuccess = routerProtocol.restoreFailedStorage("check");
     boolean nnSuccess = nnProtocol.restoreFailedStorage("check");
     assertEquals(nnSuccess, routerSuccess);
+  }
+
+  @Test
+  public void testRewnewLease() throws Exception {
+    // Install a mount point to a different path to check
+    MockResolver resolver =
+        (MockResolver)router.getRouter().getSubclusterResolver();
+    String ns0 = cluster.getNameservices().get(0);
+    String ns1 = cluster.getNameservices().get(1);
+    resolver.addLocation("/testRenewLease0", ns0, "/testRenewLease0");
+    resolver.addLocation("/testRenewLease1", ns1, "/testRenewLease1");
+
+    // Stop LeaseRenewer
+    DistributedFileSystem dfsRouterFS = (DistributedFileSystem) routerFS;
+    dfsRouterFS.getClient().getLeaseRenewer().interruptAndJoin();
+
+    Path testPath = new Path("/testRenewLease0/test.txt");
+    FSDataOutputStream fsDataOutputStream = routerFS.create(testPath);
+
+    FederationRPCMetrics rpcMetrics = router.getRouterRpcServer().getRPCMetrics();
+    long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
+    assertTrue(dfsRouterFS.getClient().renewLease());
+    long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
+    assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
+    fsDataOutputStream.close();
+
+    Path newTestPath0 = new Path("/testRenewLease0/test1.txt");
+    Path newTestPath1 = new Path("/testRenewLease1/test1.txt");
+    FSDataOutputStream fsDataOutputStream0 = routerFS.create(newTestPath0);
+    FSDataOutputStream fsDataOutputStream1 = routerFS.create(newTestPath1);
+
+    long proxyOpBeforeRenewLease2 = rpcMetrics.getProxyOps();
+    assertTrue(dfsRouterFS.getClient().renewLease());
+    long proxyOpAfterRenewLease2 = rpcMetrics.getProxyOps();
+    assertEquals((proxyOpBeforeRenewLease2 + 2), proxyOpAfterRenewLease2);
+    fsDataOutputStream0.close();
+    fsDataOutputStream1.close();
   }
 
   @Test

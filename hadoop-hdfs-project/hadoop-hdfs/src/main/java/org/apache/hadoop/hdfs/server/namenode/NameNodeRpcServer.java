@@ -1174,8 +1174,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void renewLease(String clientName) throws IOException {
+  public void renewLease(String clientName, String nsIdentifies)
+      throws IOException {
     checkNNStartup();
+    // just ignore nsIdentifies
     namesystem.renewLease(clientName);        
   }
 

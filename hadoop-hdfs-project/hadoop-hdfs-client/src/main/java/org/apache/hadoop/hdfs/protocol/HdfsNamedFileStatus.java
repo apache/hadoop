@@ -44,6 +44,8 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
   private final int childrenNum;
   private final byte storagePolicy;
 
+  private String nsIdentify = null;
+
   /**
    * Constructor.
    * @param length the number of bytes the file has
@@ -177,4 +179,13 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
     return super.hashCode();
   }
 
+  @Override
+  public String getNsIdentify() {
+    return nsIdentify;
+  }
+
+  @Override
+  public void setNsIdentify(String nsIdentify) {
+    this.nsIdentify = nsIdentify;
+  }
 }

@@ -763,7 +763,7 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  void renewLease(String clientName) throws IOException;
+  void renewLease(String clientName, String allNSIdentifies) throws IOException;
 
   /**
    * Start lease recovery.

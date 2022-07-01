@@ -41,6 +41,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -188,6 +189,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.tracing.Tracer;
@@ -580,6 +582,28 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get all nsIdentifies of DFSOutputStreams.
+   */
+  private String getRenewLeaseNSIdentifies() {
+    HashSet<String> allNSIdentifies = new HashSet<>();
+    synchronized (filesBeingWritten) {
+      if (filesBeingWritten.isEmpty()) {
+        return null;
+      }
+      for (DFSOutputStream outputStream : filesBeingWritten.values()) {
+        String nsIdentify = outputStream.getNsIdentify();
+        if (nsIdentify != null && !nsIdentify.isEmpty()) {
+          allNSIdentifies.add(nsIdentify);
+        }
+      }
+      if (allNSIdentifies.isEmpty()) {
+        return null;
+      }
+    }
+    return StringUtils.join(",", allNSIdentifies);
+  }
+
+  /**
    * Renew leases.
    * @return true if lease was renewed. May return false if this
    * client has been closed or has no files open.
@@ -587,7 +611,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public boolean renewLease() throws IOException {
     if (clientRunning && !isFilesBeingWrittenEmpty()) {
       try {
-        namenode.renewLease(clientName);
+        namenode.renewLease(clientName, getRenewLeaseNSIdentifies());
         updateLastLeaseRenewal();
         return true;
       } catch (IOException e) {
