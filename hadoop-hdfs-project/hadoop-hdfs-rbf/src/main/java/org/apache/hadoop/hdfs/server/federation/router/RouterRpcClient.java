@@ -1570,7 +1570,7 @@ public class RouterRpcClient {
   private Permit acquirePermit(final String nsId, final UserGroupInformation ugi,
       final RemoteMethod m, RouterRpcFairnessPolicyController controller)
       throws IOException {
-    Permit permit = Permit.DONT_NEED_PERMIT;
+    Permit permit = Permit.getDontNeedPermit();
     if (controller != null) {
       permit = controller.acquirePermit(nsId);
       if (permit.isNoPermit()) {

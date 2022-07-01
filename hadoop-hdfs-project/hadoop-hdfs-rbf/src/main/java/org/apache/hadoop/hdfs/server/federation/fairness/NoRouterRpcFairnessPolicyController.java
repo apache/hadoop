@@ -34,7 +34,7 @@ public class NoRouterRpcFairnessPolicyController implements
 
   @Override
   public Permit acquirePermit(String nsId) {
-    return Permit.DONT_NEED_PERMIT;
+    return Permit.getDontNeedPermit();
   }
 
   @Override

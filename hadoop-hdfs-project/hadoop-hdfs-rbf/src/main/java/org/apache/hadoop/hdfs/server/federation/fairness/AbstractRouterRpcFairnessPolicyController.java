@@ -77,7 +77,7 @@ public class AbstractRouterRpcFairnessPolicyController
     } else {
       // TODO Add one metric to monitor this abnormal case.
       LOG.warn("Can't find NSPermit for {}.", nsId, new Throwable());
-      return Permit.NO_PERMIT;
+      return Permit.getNoPermit();
     }
   }
 

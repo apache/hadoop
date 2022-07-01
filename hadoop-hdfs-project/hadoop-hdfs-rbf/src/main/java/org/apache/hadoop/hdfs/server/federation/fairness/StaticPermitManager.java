@@ -58,7 +58,7 @@ public class StaticPermitManager implements AbstractPermitManager {
 
   @Override
   public Permit acquirePermit() {
-    Permit permit = Permit.NO_PERMIT;
+    Permit permit = Permit.getNoPermit();
     try {
       if (dedicatedPermits.tryAcquire(1, TimeUnit.SECONDS)) {
         permit = this.cachedPermits.get(PermitType.DEDICATED);

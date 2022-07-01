@@ -32,18 +32,18 @@ import org.apache.hadoop.hdfs.server.federation.fairness.Permit.PermitType;
 public class ElasticPermitManager implements AbstractPermitManager {
   private static final Logger LOG = LoggerFactory.getLogger(ElasticPermitManager.class);
   private final String nsId;
-  /** Dedicated Permit Numbers **/
+  /** Dedicated Permit Numbers. **/
   private final int dedicatedCap;
   private final Semaphore dedicatedPermits;
-  /** The maximum number of elastic permits that can be acquired **/
+  /** The maximum number of elastic permits that can be acquired. **/
   private final int maximumELNumberCanUse;
   private final Semaphore maximumELPermitsCanUse;
-  /** Total elastic permits **/
+  /** Total elastic permits. **/
   private final Semaphore totalElasticPermits;
-  /** A version to ensure that permits can be correctly recycled
-   * after dynamically refreshing FairnessPolicyController **/
+  /** A version to ensure that permits can be correctly recycled,
+   * after dynamically refreshing FairnessPolicyController. **/
   private final int version;
-  /** A cached permits Map **/
+  /** A cached permits Map. **/
   private final Map<PermitType, Permit> cachedPermits;
 
   ElasticPermitManager(String nsId, int dedicatedCap,

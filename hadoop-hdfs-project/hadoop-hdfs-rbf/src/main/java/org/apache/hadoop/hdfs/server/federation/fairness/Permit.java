@@ -27,10 +27,18 @@ import java.util.Map;
  * A permit object contains PermitType and PermitVersion.
  */
 public class Permit {
-  public static Permit DONT_NEED_PERMIT =
+  private static final Permit DONTNEEDPERMIT =
       new Permit(PermitType.DONT_NEED_PERMIT, 0);
-  public static Permit NO_PERMIT =
+  private static final Permit NOPERMIT =
       new Permit(PermitType.NO_PERMIT, 0);
+
+  public static Permit getDontNeedPermit() {
+    return DONTNEEDPERMIT;
+  }
+
+  public static Permit getNoPermit() {
+    return NOPERMIT;
+  }
 
   private final PermitType permitType;
   private final int permitVersion;
@@ -68,13 +76,13 @@ public class Permit {
   }
 
   public enum PermitType {
-    /** permit which is dedicated by namespace */
+    /** permit which is dedicated by namespace. */
     DEDICATED,
-    /** permit which is shared by all namespaces */
+    /** permit which is shared by all namespaces. */
     SHARED,
-    /** mock permit while no need to get permit */
+    /** mock permit while no need to get permit. */
     DONT_NEED_PERMIT,
-    /** a mock permit while can't get permits */
+    /** a mock permit while can't get permits. */
     NO_PERMIT
   }
 

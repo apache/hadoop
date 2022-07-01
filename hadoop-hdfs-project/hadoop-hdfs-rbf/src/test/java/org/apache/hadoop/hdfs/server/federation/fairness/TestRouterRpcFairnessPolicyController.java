@@ -170,14 +170,14 @@ public class TestRouterRpcFairnessPolicyController {
       int totalDedicatedHandlers) {
     GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer
         .captureLogs(LoggerFactory.getLogger(
-            StaticRouterRpcFairnessPolicyController.class));
+            AbstractRouterRpcFairnessPolicyController.class));
     try {
       FederationUtil.newFairnessPolicyController(conf, 0);
     } catch (IllegalArgumentException e) {
       // Ignore the exception as it is expected here.
     }
     String errorMsg = String.format(
-        StaticRouterRpcFairnessPolicyController.ERROR_MSG, handlerCount,
+        AbstractRouterRpcFairnessPolicyController.ERROR_MSG, handlerCount,
         totalDedicatedHandlers);
     assertTrue("Should contain error message: " + errorMsg,
         logs.getOutput().contains(errorMsg));

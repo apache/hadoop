@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.server.federation.fairness.Permit.PermitType;
  * Test functionality of {@link ElasticRouterRpcFairnessPolicyController).
  */
 public class TestElasticRouterRpcFairnessPolicyController {
-  private final static String nameServices =
+  private final static String NAMESERVICES =
       "ns1.nn1, ns1.nn2, ns2.nn1, ns2.nn2";
 
   private void verifyAcquirePermit(RouterRpcFairnessPolicyController controller,
@@ -156,7 +156,7 @@ public class TestElasticRouterRpcFairnessPolicyController {
   private Configuration createConf(int handlers) {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFS_ROUTER_HANDLER_COUNT_KEY, handlers);
-    conf.set(DFS_ROUTER_MONITOR_NAMENODE, nameServices);
+    conf.set(DFS_ROUTER_MONITOR_NAMENODE, NAMESERVICES);
     conf.setClass(
         RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS,
         ElasticRouterRpcFairnessPolicyController.class,
