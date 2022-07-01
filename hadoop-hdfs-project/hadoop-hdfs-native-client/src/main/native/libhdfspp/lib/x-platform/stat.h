@@ -19,7 +19,7 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_STAT
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_STAT
 
-#if defined(_WIN64)
+#if defined(_WIN32)
 
 // Windows.
 #define S_IRUSR 0400
