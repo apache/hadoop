@@ -24,7 +24,7 @@
 // Windows.
 // These macros are derived from POSIX sys/stat.h. Windows defines some of
 // these macros, but not all. Thus, we align with the bits defined by POSIX for
-// all of them.
+// all of them to be consistent.
 #define S_IRUSR 0400
 #define S_IWUSR 0200
 #define S_IXUSR 0100
