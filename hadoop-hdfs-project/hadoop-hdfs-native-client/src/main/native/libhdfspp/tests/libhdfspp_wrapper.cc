@@ -20,4 +20,3 @@
 #include "libhdfspp_wrapper_defines.h"
 #include "bindings/c/hdfs.cc"
 #include "libhdfs_wrapper_undefs.h"
-
