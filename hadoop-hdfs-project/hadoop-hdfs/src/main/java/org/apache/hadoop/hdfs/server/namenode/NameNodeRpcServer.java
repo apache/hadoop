@@ -1174,8 +1174,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void renewLease(String clientName, String nsIdentifies)
+  public void renewLease(String clientName, List<String> namespaces)
       throws IOException {
+    if (namespaces != null && namespaces.size() > 0) {
+      LOG.warn("namespaces({}) should be null or empty "
+          + "on NameNode side, please check it.", namespaces);
+    }
     checkNNStartup();
     // just ignore nsIdentifies
     namesystem.renewLease(clientName);        

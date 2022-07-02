@@ -1794,8 +1794,8 @@ public class PBHelperClient {
             ? convertErasureCodingPolicy(fs.getEcPolicy())
             : null)
         .build();
-    if (fs.hasNsIdentify()) {
-      hdfsFileStatus.setNsIdentify(fs.getNsIdentify());
+    if (fs.hasNamespace()) {
+      hdfsFileStatus.setNamespace(fs.getNamespace());
     }
     return hdfsFileStatus;
   }
@@ -2403,8 +2403,8 @@ public class PBHelperClient {
     flags |= fs.isSnapshotEnabled() ? HdfsFileStatusProto.Flags
         .SNAPSHOT_ENABLED_VALUE : 0;
     builder.setFlags(flags);
-    if (fs.getNsIdentify() != null && !fs.getNsIdentify().isEmpty()) {
-      builder.setNsIdentify(fs.getNsIdentify());
+    if (fs.getNamespace() != null && !fs.getNamespace().isEmpty()) {
+      builder.setNamespace(fs.getNamespace());
     }
     return builder.build();
   }

@@ -63,6 +63,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -1012,6 +1013,9 @@ public class RouterRpcClient {
           // Valid result, stop here
           @SuppressWarnings("unchecked") R location = (R) loc;
           @SuppressWarnings("unchecked") T ret = (T) result;
+          if (ret instanceof LastBlockWithStatus) {
+            ((LastBlockWithStatus) ret).getFileStatus().setNamespace(ns);
+          }
           return new RemoteResult<>(location, ret);
         }
         if (firstResult == null) {

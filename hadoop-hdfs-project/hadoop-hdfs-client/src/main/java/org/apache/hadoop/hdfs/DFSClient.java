@@ -582,25 +582,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Get all nsIdentifies of DFSOutputStreams.
+   * Get all namespaces of DFSOutputStreams.
    */
-  private String getRenewLeaseNSIdentifies() {
-    HashSet<String> allNSIdentifies = new HashSet<>();
+  private List<String> getNamespaces() {
+    HashSet<String> namespaces = new HashSet<>();
     synchronized (filesBeingWritten) {
-      if (filesBeingWritten.isEmpty()) {
-        return null;
-      }
       for (DFSOutputStream outputStream : filesBeingWritten.values()) {
-        String nsIdentify = outputStream.getNsIdentify();
-        if (nsIdentify != null && !nsIdentify.isEmpty()) {
-          allNSIdentifies.add(nsIdentify);
+        String namespace = outputStream.getNamespace();
+        if (namespace == null || namespace.isEmpty()) {
+          return null;
+        } else {
+          namespaces.add(namespace);
         }
       }
-      if (allNSIdentifies.isEmpty()) {
+      if (namespaces.isEmpty()) {
         return null;
       }
     }
-    return StringUtils.join(",", allNSIdentifies);
+    return new ArrayList<>(namespaces);
   }
 
   /**
@@ -611,7 +610,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public boolean renewLease() throws IOException {
     if (clientRunning && !isFilesBeingWrittenEmpty()) {
       try {
-        namenode.renewLease(clientName, getRenewLeaseNSIdentifies());
+        namenode.renewLease(clientName, getNamespaces());
         updateLastLeaseRenewal();
         return true;
       } catch (IOException e) {

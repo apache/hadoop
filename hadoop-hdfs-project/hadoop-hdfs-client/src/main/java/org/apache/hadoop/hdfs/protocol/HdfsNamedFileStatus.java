@@ -44,7 +44,7 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
   private final int childrenNum;
   private final byte storagePolicy;
 
-  private String nsIdentify = null;
+  private String namespace = null;
 
   /**
    * Constructor.
@@ -180,12 +180,12 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
   }
 
   @Override
-  public String getNsIdentify() {
-    return nsIdentify;
+  public String getNamespace() {
+    return namespace;
   }
 
   @Override
-  public void setNsIdentify(String nsIdentify) {
-    this.nsIdentify = nsIdentify;
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
   }
 }

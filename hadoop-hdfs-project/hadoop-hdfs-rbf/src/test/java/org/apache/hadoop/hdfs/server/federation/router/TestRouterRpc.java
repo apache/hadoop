@@ -1465,28 +1465,80 @@ public class TestRouterRpc {
     // Stop LeaseRenewer
     DistributedFileSystem dfsRouterFS = (DistributedFileSystem) routerFS;
     dfsRouterFS.getClient().getLeaseRenewer().interruptAndJoin();
-
-    Path testPath = new Path("/testRenewLease0/test.txt");
-    FSDataOutputStream fsDataOutputStream = routerFS.create(testPath);
-
     FederationRPCMetrics rpcMetrics = router.getRouterRpcServer().getRPCMetrics();
-    long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
-    assertTrue(dfsRouterFS.getClient().renewLease());
-    long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
-    assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
-    fsDataOutputStream.close();
 
+    // Test Replica File
+    Path testPath = new Path("/testRenewLease0/test_replica.txt");
+    FSDataOutputStream replicaOutputStream = null;
+    try {
+      replicaOutputStream = routerFS.create(testPath);
+      replicaOutputStream.write("hello world create. \n".getBytes());
+      long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
+      assertTrue(dfsRouterFS.getClient().renewLease());
+      long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
+      assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
+    } finally {
+      if (replicaOutputStream != null) {
+        replicaOutputStream.close();
+      }
+    }
+
+    try {
+      replicaOutputStream = routerFS.append(testPath);
+      replicaOutputStream.write("hello world append. \n".getBytes());
+      long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
+      assertTrue(dfsRouterFS.getClient().renewLease());
+      long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
+      assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
+    } finally {
+      if (replicaOutputStream != null) {
+        replicaOutputStream.close();
+      }
+    }
+
+    // Test Replica File
+    Path testECPath = new Path("/testRenewLease0/ecDirectory/test_ec.txt");
+    FSDataOutputStream ecOutputStream = null;
+    try {
+      routerFS.mkdirs(testECPath.getParent());
+      ((DistributedFileSystem) routerFS).setErasureCodingPolicy(
+          testECPath.getParent(), "RS-6-3-1024k");
+      ecOutputStream = routerFS.create(testECPath);
+      ecOutputStream.write("hello world ec file. \n".getBytes());
+      ErasureCodingPolicy ecPolicy = ((DistributedFileSystem) routerFS)
+          .getErasureCodingPolicy(testECPath);
+      assertNotNull(ecPolicy);
+      assertEquals("RS-6-3-1024k", ecPolicy.getName());
+      long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
+      assertTrue(dfsRouterFS.getClient().renewLease());
+      long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
+      assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
+    } finally {
+      if (ecOutputStream != null) {
+        ecOutputStream.close();
+      }
+    }
+
+    FSDataOutputStream fsDataOutputStream0 = null;
+    FSDataOutputStream fsDataOutputStream1 = null;
     Path newTestPath0 = new Path("/testRenewLease0/test1.txt");
     Path newTestPath1 = new Path("/testRenewLease1/test1.txt");
-    FSDataOutputStream fsDataOutputStream0 = routerFS.create(newTestPath0);
-    FSDataOutputStream fsDataOutputStream1 = routerFS.create(newTestPath1);
+    try {
+      fsDataOutputStream0 = routerFS.create(newTestPath0);
+      fsDataOutputStream1 = routerFS.create(newTestPath1);
 
-    long proxyOpBeforeRenewLease2 = rpcMetrics.getProxyOps();
-    assertTrue(dfsRouterFS.getClient().renewLease());
-    long proxyOpAfterRenewLease2 = rpcMetrics.getProxyOps();
-    assertEquals((proxyOpBeforeRenewLease2 + 2), proxyOpAfterRenewLease2);
-    fsDataOutputStream0.close();
-    fsDataOutputStream1.close();
+      long proxyOpBeforeRenewLease2 = rpcMetrics.getProxyOps();
+      assertTrue(dfsRouterFS.getClient().renewLease());
+      long proxyOpAfterRenewLease2 = rpcMetrics.getProxyOps();
+      assertEquals((proxyOpBeforeRenewLease2 + 2), proxyOpAfterRenewLease2);
+    } finally {
+      if (fsDataOutputStream0 != null) {
+        fsDataOutputStream0.close();
+      }
+      if (fsDataOutputStream1 != null) {
+        fsDataOutputStream1.close();
+      }
+    }
   }
 
   @Test

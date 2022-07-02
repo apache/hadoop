@@ -54,7 +54,7 @@ public class HdfsLocatedFileStatus
   // BlockLocations[] is the user-facing type
   private transient LocatedBlocks hdfsloc;
 
-  private String nsIdentify = null;
+  private String namespace = null;
 
   /**
    * Constructor.
@@ -220,13 +220,13 @@ public class HdfsLocatedFileStatus
   }
 
   @Override
-  public String getNsIdentify() {
-    return nsIdentify;
+  public String getNamespace() {
+    return namespace;
   }
 
   @Override
-  public void setNsIdentify(String nsIdentify) {
-    this.nsIdentify = nsIdentify;
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
   }
 
 }
