@@ -190,6 +190,44 @@ public class TestRouterTrash {
   }
 
   @Test
+  public void testMoveToTrashWithKerberosUser() throws IOException,
+      URISyntaxException, InterruptedException {
+    //Constructs the structure of the KerBoers user name
+    String kerberosUser = "randomUser/dev@HADOOP.COM";
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(kerberosUser);
+    MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
+        Collections.singletonMap(ns1, MOUNT_POINT));
+    assertTrue(addMountTable(addEntry));
+    // current user client
+    MiniRouterDFSCluster.NamenodeContext nn1Context = cluster.getNamenode(ns1, null);
+    DFSClient currentUserClientNs0 = nnContext.getClient();
+    DFSClient currentUserClientNs1 = nn1Context.getClient();
+
+    currentUserClientNs0.setOwner("/", ugi.getShortUserName(), ugi.getShortUserName());
+    currentUserClientNs1.setOwner("/", ugi.getShortUserName(), ugi.getShortUserName());
+
+    // test user client
+    DFSClient testUserClientNs1 = nn1Context.getClient(ugi);
+    testUserClientNs1.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
+    assertTrue(testUserClientNs1.exists(MOUNT_POINT));
+    // create test file
+    testUserClientNs1.create(FILE, true);
+    Path filePath = new Path(FILE);
+
+    FileStatus[] fileStatuses = routerFs.listStatus(filePath);
+    assertEquals(1, fileStatuses.length);
+    assertEquals(ugi.getShortUserName(), fileStatuses[0].getOwner());
+    // move to Trash
+    Configuration routerConf = routerContext.getConf();
+    FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, routerConf);
+    Trash trash = new Trash(fs, routerConf);
+    assertTrue(trash.moveToTrash(filePath));
+    fileStatuses = fs.listStatus(
+        new Path("/user/" + ugi.getShortUserName() + "/.Trash/Current" + MOUNT_POINT));
+    assertEquals(1, fileStatuses.length);
+  }
+
+  @Test
   public void testDeleteToTrashExistMountPoint() throws IOException,
       URISyntaxException, InterruptedException {
     MountTable addEntry = MountTable.newInstance(MOUNT_POINT,

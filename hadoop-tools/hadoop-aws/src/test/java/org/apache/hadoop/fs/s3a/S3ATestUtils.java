@@ -35,8 +35,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
@@ -466,6 +464,17 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Skip a test if storage class tests are disabled.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfStorageClassTestsDisabled(
+      Configuration configuration) {
+    if (!configuration.getBoolean(KEY_STORAGE_CLASS_TESTS_ENABLED, true)) {
+      skip("Skipping storage class tests");
+    }
+  }
+
+  /**
    * Create a test path, using the value of
    * {@link S3ATestConstants#TEST_UNIQUE_FORK_ID} if it is set.
    * @param defVal default value
@@ -564,6 +573,19 @@ public final class S3ATestUtils {
     conf.set(DIRECTORY_MARKER_POLICY, directoryRetention);
 
     return conf;
+  }
+
+  /**
+   * build dir.
+   * @return the directory for the project's build, as set by maven,
+   * falling back to pwd + "target" if running from an IDE;
+   */
+  public static File getProjectBuildDir() {
+    String propval = System.getProperty(PROJECT_BUILD_DIRECTORY_PROPERTY);
+    if (StringUtils.isEmpty(propval)) {
+      propval = "target";
+    }
+    return new File(propval).getAbsoluteFile();
   }
 
   /**
@@ -1289,18 +1311,6 @@ public final class S3ATestUtils {
    */
   public static final DateFormat LISTING_FORMAT = new SimpleDateFormat(
       "yyyy-MM-dd HH:mm:ss");
-
-  /**
-   * Skip a test if the FS isn't marked as supporting magic commits.
-   * @param fs filesystem
-   */
-  public static void assumeMagicCommitEnabled(S3AFileSystem fs)
-      throws IOException {
-    assume("Magic commit option disabled on " + fs,
-        fs.hasPathCapability(
-            fs.getWorkingDirectory(),
-            CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
-  }
 
   /**
    * Probe for the configuration containing a specific credential provider.

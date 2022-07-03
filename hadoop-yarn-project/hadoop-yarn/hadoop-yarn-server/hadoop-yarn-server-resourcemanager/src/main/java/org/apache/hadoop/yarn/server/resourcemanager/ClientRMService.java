@@ -899,6 +899,9 @@ public class ClientRMService extends AbstractService implements
     String name = request.getName();
 
     final Map<ApplicationId, RMApp> apps = rmContext.getRMApps();
+    final Set<ApplicationId> runningAppsFilteredByQueues =
+        getRunningAppsFilteredByQueues(apps, queues);
+
     Iterator<RMApp> appsIter = apps.values().iterator();
     
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
@@ -912,17 +915,8 @@ public class ClientRMService extends AbstractService implements
       }
 
       if (queues != null && !queues.isEmpty()) {
-        Map<String, List<RMApp>> foundApps = queryApplicationsByQueues(apps, queues);
-        List<RMApp> runningAppsByQueues = foundApps.entrySet().stream()
-            .filter(e -> queues.contains(e.getKey()))
-            .map(Map.Entry::getValue)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toList());
-        List<RMApp> runningAppsById = runningAppsByQueues.stream()
-            .filter(app -> app.getApplicationId().equals(application.getApplicationId()))
-            .collect(Collectors.toList());
-
-        if (runningAppsById.isEmpty() && !queues.contains(application.getQueue())) {
+        if (!runningAppsFilteredByQueues.contains(application.getApplicationId()) &&
+            !queues.contains(application.getQueue())) {
           continue;
         }
       }
@@ -1001,20 +995,21 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
-  private Map<String, List<RMApp>> queryApplicationsByQueues(
+  private Set<ApplicationId> getRunningAppsFilteredByQueues(
       Map<ApplicationId, RMApp> apps, Set<String> queues) {
-    final Map<String, List<RMApp>> appsToQueues = new HashMap<>();
+    final Set<ApplicationId> runningApps = new HashSet<>();
     for (String queue : queues) {
       List<ApplicationAttemptId> appsInQueue = scheduler.getAppsInQueue(queue);
-      if (appsInQueue != null && !appsInQueue.isEmpty()) {
+      if (appsInQueue != null) {
         for (ApplicationAttemptId appAttemptId : appsInQueue) {
           RMApp rmApp = apps.get(appAttemptId.getApplicationId());
-          appsToQueues.putIfAbsent(queue, new ArrayList<>());
-          appsToQueues.get(queue).add(rmApp);
+          if (rmApp != null) {
+            runningApps.add(rmApp.getApplicationId());
+          }
         }
       }
     }
-    return appsToQueues;
+    return runningApps;
   }
 
   private Set<String> getLowerCasedAppTypes(GetApplicationsRequest request) {

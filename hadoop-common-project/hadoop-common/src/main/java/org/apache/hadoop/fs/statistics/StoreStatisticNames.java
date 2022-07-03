@@ -54,6 +54,9 @@ public final class StoreStatisticNames {
   public static final String OP_CREATE = "op_create";
 
   /** {@value}. */
+  public static final String OP_CREATE_FILE = "op_createfile";
+
+  /** {@value}. */
   public static final String OP_CREATE_NON_RECURSIVE =
       "op_create_non_recursive";
 
