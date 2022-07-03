@@ -1179,6 +1179,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (namespaces != null && namespaces.size() > 0) {
       LOG.warn("namespaces({}) should be null or empty "
           + "on NameNode side, please check it.", namespaces);
+      throw new IOException("namespaces(" + namespaces
+          + ") should be null or empty");
     }
     checkNNStartup();
     // just ignore nsIdentifies

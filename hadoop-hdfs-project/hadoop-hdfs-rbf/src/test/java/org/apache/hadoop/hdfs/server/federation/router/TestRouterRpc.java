@@ -1452,8 +1452,77 @@ public class TestRouterRpc {
     assertEquals(nnSuccess, routerSuccess);
   }
 
+  private void testRenewLeaseInternal(DistributedFileSystem dfs,
+      FederationRPCMetrics rpcMetrics, Path testPath, boolean createFlag)
+      throws Exception {
+    FSDataOutputStream outputStream = null;
+    try {
+      if (createFlag) {
+        outputStream = dfs.create(testPath);
+      } else {
+        outputStream = dfs.append(testPath);
+      }
+      outputStream.write("hello world. \n".getBytes());
+      long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
+      assertTrue(dfs.getClient().renewLease());
+      long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
+      assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
+    } finally {
+      if (outputStream != null) {
+        outputStream.close();
+      }
+    }
+  }
+
+
   @Test
-  public void testRewnewLease() throws Exception {
+  public void testRenewLeaseForECFile() throws Exception {
+    String ecName = "RS-6-3-1024k";
+    FederationRPCMetrics metrics = router.getRouterRpcServer().getRPCMetrics();
+    // Install a mount point to a different path to check
+    MockResolver resolver =
+        (MockResolver)router.getRouter().getSubclusterResolver();
+    String ns0 = cluster.getNameservices().get(0);
+    resolver.addLocation("/testRenewLease0", ns0, "/testRenewLease0");
+
+    // Stop LeaseRenewer
+    DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
+    routerDFS.getClient().getLeaseRenewer().interruptAndJoin();
+
+    Path testECPath = new Path("/testRenewLease0/ecDirectory/test_ec.txt");
+    routerDFS.mkdirs(testECPath.getParent());
+    routerDFS.setErasureCodingPolicy(
+        testECPath.getParent(), ecName);
+    testRenewLeaseInternal(routerDFS, metrics, testECPath, true);
+
+    ErasureCodingPolicy ecPolicy = routerDFS.getErasureCodingPolicy(testECPath);
+    assertNotNull(ecPolicy);
+    assertEquals(ecName, ecPolicy.getName());
+  }
+
+
+  @Test
+  public void testRenewLeaseForReplicaFile() throws Exception {
+    FederationRPCMetrics metrics = router.getRouterRpcServer().getRPCMetrics();
+    // Install a mount point to a different path to check
+    MockResolver resolver =
+        (MockResolver)router.getRouter().getSubclusterResolver();
+    String ns0 = cluster.getNameservices().get(0);
+    resolver.addLocation("/testRenewLease0", ns0, "/testRenewLease0");
+
+    // Stop LeaseRenewer
+    DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
+    routerDFS.getClient().getLeaseRenewer().interruptAndJoin();
+
+    // Test Replica File
+    Path testPath = new Path("/testRenewLease0/test_replica.txt");
+    testRenewLeaseInternal(routerDFS, metrics, testPath, true);
+    testRenewLeaseInternal(routerDFS, metrics, testPath, false);
+  }
+
+  @Test
+  public void testRenewLeaseWithMultiStream() throws Exception {
+    FederationRPCMetrics metrics = router.getRouterRpcServer().getRPCMetrics();
     // Install a mount point to a different path to check
     MockResolver resolver =
         (MockResolver)router.getRouter().getSubclusterResolver();
@@ -1463,81 +1532,19 @@ public class TestRouterRpc {
     resolver.addLocation("/testRenewLease1", ns1, "/testRenewLease1");
 
     // Stop LeaseRenewer
-    DistributedFileSystem dfsRouterFS = (DistributedFileSystem) routerFS;
-    dfsRouterFS.getClient().getLeaseRenewer().interruptAndJoin();
-    FederationRPCMetrics rpcMetrics = router.getRouterRpcServer().getRPCMetrics();
+    DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
+    routerDFS.getClient().getLeaseRenewer().interruptAndJoin();
 
-    // Test Replica File
-    Path testPath = new Path("/testRenewLease0/test_replica.txt");
-    FSDataOutputStream replicaOutputStream = null;
-    try {
-      replicaOutputStream = routerFS.create(testPath);
-      replicaOutputStream.write("hello world create. \n".getBytes());
-      long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
-      assertTrue(dfsRouterFS.getClient().renewLease());
-      long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
-      assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
-    } finally {
-      if (replicaOutputStream != null) {
-        replicaOutputStream.close();
-      }
-    }
-
-    try {
-      replicaOutputStream = routerFS.append(testPath);
-      replicaOutputStream.write("hello world append. \n".getBytes());
-      long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
-      assertTrue(dfsRouterFS.getClient().renewLease());
-      long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
-      assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
-    } finally {
-      if (replicaOutputStream != null) {
-        replicaOutputStream.close();
-      }
-    }
-
-    // Test Replica File
-    Path testECPath = new Path("/testRenewLease0/ecDirectory/test_ec.txt");
-    FSDataOutputStream ecOutputStream = null;
-    try {
-      routerFS.mkdirs(testECPath.getParent());
-      ((DistributedFileSystem) routerFS).setErasureCodingPolicy(
-          testECPath.getParent(), "RS-6-3-1024k");
-      ecOutputStream = routerFS.create(testECPath);
-      ecOutputStream.write("hello world ec file. \n".getBytes());
-      ErasureCodingPolicy ecPolicy = ((DistributedFileSystem) routerFS)
-          .getErasureCodingPolicy(testECPath);
-      assertNotNull(ecPolicy);
-      assertEquals("RS-6-3-1024k", ecPolicy.getName());
-      long proxyOpBeforeRenewLease = rpcMetrics.getProxyOps();
-      assertTrue(dfsRouterFS.getClient().renewLease());
-      long proxyOpAfterRenewLease = rpcMetrics.getProxyOps();
-      assertEquals((proxyOpBeforeRenewLease + 1), proxyOpAfterRenewLease);
-    } finally {
-      if (ecOutputStream != null) {
-        ecOutputStream.close();
-      }
-    }
-
-    FSDataOutputStream fsDataOutputStream0 = null;
-    FSDataOutputStream fsDataOutputStream1 = null;
     Path newTestPath0 = new Path("/testRenewLease0/test1.txt");
     Path newTestPath1 = new Path("/testRenewLease1/test1.txt");
-    try {
-      fsDataOutputStream0 = routerFS.create(newTestPath0);
-      fsDataOutputStream1 = routerFS.create(newTestPath1);
-
-      long proxyOpBeforeRenewLease2 = rpcMetrics.getProxyOps();
-      assertTrue(dfsRouterFS.getClient().renewLease());
-      long proxyOpAfterRenewLease2 = rpcMetrics.getProxyOps();
+    try (FSDataOutputStream outStream1 = routerDFS.create(newTestPath0);
+         FSDataOutputStream outStream2 = routerDFS.create(newTestPath1)) {
+      outStream1.write("hello world \n".getBytes());
+      outStream2.write("hello world \n".getBytes());
+      long proxyOpBeforeRenewLease2 = metrics.getProxyOps();
+      assertTrue(routerDFS.getClient().renewLease());
+      long proxyOpAfterRenewLease2 = metrics.getProxyOps();
       assertEquals((proxyOpBeforeRenewLease2 + 2), proxyOpAfterRenewLease2);
-    } finally {
-      if (fsDataOutputStream0 != null) {
-        fsDataOutputStream0.close();
-      }
-      if (fsDataOutputStream1 != null) {
-        fsDataOutputStream1.close();
-      }
     }
   }
 

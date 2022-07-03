@@ -114,7 +114,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -380,8 +379,11 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("append",
         new Class<?>[] {String.class, String.class, EnumSetWritable.class},
         new RemoteParam(), clientName, flag);
-    return rpcClient.invokeSequential(
-        locations, method, LastBlockWithStatus.class, null);
+    RemoteResult result = rpcClient.invokeSequential(
+        method, locations, LastBlockWithStatus.class, null);
+    LastBlockWithStatus lbws = (LastBlockWithStatus) result.getResult();
+    lbws.getFileStatus().setNamespace(result.getLocation().getNameserviceId());
+    return lbws;
   }
 
   @Override

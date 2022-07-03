@@ -1013,9 +1013,6 @@ public class RouterRpcClient {
           // Valid result, stop here
           @SuppressWarnings("unchecked") R location = (R) loc;
           @SuppressWarnings("unchecked") T ret = (T) result;
-          if (ret instanceof LastBlockWithStatus) {
-            ((LastBlockWithStatus) ret).getFileStatus().setNamespace(ns);
-          }
           return new RemoteResult<>(location, ret);
         }
         if (firstResult == null) {
