@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
 
@@ -493,6 +496,72 @@ public class NameNode extends ReconfigurableBase implements
 
   public static NameNodeMetrics getNameNodeMetrics() {
     return metrics;
+  }
+
+  private static String clientInfoFromContext(
+      final String[] ipProxyUsers) {
+    if (ipProxyUsers != null) {
+      UserGroupInformation user =
+          UserGroupInformation.getRealUserOrSelf(Server.getRemoteUser());
+      if (user != null &&
+          ArrayUtils.contains(ipProxyUsers, user.getShortUserName())) {
+        CallerContext context = CallerContext.getCurrent();
+        if (context != null && context.isContextValid()) {
+          return context.getContext();
+        }
+      }
+    }
+    return null;
+  }
+
+  private static String parseSpecialValue(String content, String key) {
+    int posn = content.indexOf(key);
+    if (posn != -1) {
+      posn += key.length();
+      int end = content.indexOf(",", posn);
+      return end == -1 ? content.substring(posn)
+          : content.substring(posn, end);
+    }
+    return null;
+  }
+
+  public static String getClientMachine(final String[] ipProxyUsers) {
+    String cc = clientInfoFromContext(ipProxyUsers);
+    if (cc != null) {
+      // if the rpc has a caller context of "clientIp:1.2.3.4,CLI",
+      // return "1.2.3.4" as the client machine.
+      String key = CallerContext.CLIENT_IP_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      return parseSpecialValue(cc, key);
+    }
+
+    String clientMachine = Server.getRemoteAddress();
+    if (clientMachine == null) { //not a RPC client
+      clientMachine = "";
+    }
+    return clientMachine;
+  }
+
+  public static Pair<byte[], Integer> getClientIdAndCallId(
+      final String[] ipProxyUsers) {
+    byte[] clientId = Server.getClientId();
+    int callId = Server.getCallId();
+    String cc = clientInfoFromContext(ipProxyUsers);
+    if (cc != null) {
+      String clientIdKey = CallerContext.CLIENT_ID_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      String clientIdStr = parseSpecialValue(cc, clientIdKey);
+      if (clientIdStr != null) {
+        clientId = StringUtils.hexStringToByte(clientIdStr);
+      }
+      String callIdKey = CallerContext.CLIENT_CALL_ID_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      String callIdStr = parseSpecialValue(cc, callIdKey);
+      if (callIdStr != null) {
+        callId = Integer.parseInt(callIdStr);
+      }
+    }
+    return Pair.of(clientId, callId);
   }
 
   /**
