@@ -91,7 +91,7 @@ public class TestLease {
       // stub the renew method.
       doThrow(new RemoteException(InvalidToken.class.getName(),
           "Your token is worthless")).when(spyNN).renewLease(
-              anyString(), null);
+              anyString(), any());
 
       // We don't need to wait the lease renewer thread to act.
       // call renewLease() manually.
@@ -132,7 +132,7 @@ public class TestLease {
       Assert.assertTrue(originalRenewer.isEmpty());
 
       // unstub
-      doNothing().when(spyNN).renewLease(anyString(), null);
+      doNothing().when(spyNN).renewLease(anyString(), any());
 
       // existing input streams should work
       try {
