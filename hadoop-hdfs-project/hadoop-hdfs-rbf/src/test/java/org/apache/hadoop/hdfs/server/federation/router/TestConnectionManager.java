@@ -36,6 +36,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertNotNull;
@@ -129,6 +130,44 @@ public class TestConnectionManager {
       connManager.cleanup(pool3);
     }
     checkPoolConnections(TEST_USER3, 4, 2);
+  }
+
+  @Test
+  public void testGetConnectionWithConcurrency() throws Exception {
+    Map<ConnectionPoolId, ConnectionPool> poolMap = connManager.getPools();
+    Configuration copyConf = new Configuration(conf);
+    copyConf.setInt(RBFConfigKeys.DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY, 20);
+
+    ConnectionPool pool = new ConnectionPool(
+        copyConf, TEST_NN_ADDRESS, TEST_USER1, 1, 10, 0.5f,
+        ClientProtocol.class);
+    poolMap.put(
+        new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS, ClientProtocol.class),
+        pool);
+    assertEquals(1, pool.getNumConnections());
+    // one connection can process the maximum number of requests concurrently.
+    for (int i = 0; i < 20; i++) {
+      ConnectionContext cc = pool.getConnection();
+      assertTrue(cc.isUsable());
+      cc.getClient();
+    }
+    assertEquals(1, pool.getNumConnections());
+
+    // Ask for more and this returns an unusable connection
+    ConnectionContext cc1 = pool.getConnection();
+    assertTrue(cc1.isActive());
+    assertFalse(cc1.isUsable());
+
+    // add a new connection into pool
+    pool.addConnection(pool.newConnection());
+    // will return the new connection
+    ConnectionContext cc2 = pool.getConnection();
+    assertTrue(cc2.isUsable());
+    cc2.getClient();
+
+    assertEquals(2, pool.getNumConnections());
+
+    checkPoolConnections(TEST_USER1, 2, 2);
   }
 
   @Test
@@ -317,6 +356,6 @@ public class TestConnectionManager {
         "Unsupported protocol for connection to NameNode: "
             + TestConnectionManager.class.getName(),
         () -> ConnectionPool.newConnection(conf, TEST_NN_ADDRESS, TEST_USER1,
-            TestConnectionManager.class));
+            TestConnectionManager.class, false, 0));
   }
 }
