@@ -51,6 +51,6 @@ public class TestRBFConfigFields extends TestConfigurationFieldsBase {
             + "EXAMPLENAMESERVICE");
     xmlPrefixToSkipCompare = new HashSet<String>();
     xmlPrefixToSkipCompare.add(
-        RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX);;
+        RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX);
   }
 }
