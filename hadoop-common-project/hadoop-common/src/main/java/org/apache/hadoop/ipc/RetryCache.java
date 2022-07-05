@@ -347,6 +347,8 @@ public class RetryCache {
   /**
    * Static method that provides null check for retryCache.
    * @param cache input Cache.
+   * @param clientId client id of this request
+   * @param callId client call id of this request
    * @return CacheEntry.
    */
   public static CacheEntry waitForCompletion(RetryCache cache,
@@ -363,6 +365,8 @@ public class RetryCache {
    * Static method that provides null check for retryCache.
    * @param cache input cache.
    * @param payload input payload.
+   * @param clientId client id of this request
+   * @param callId client call id of this request
    * @return CacheEntryWithPayload.
    */
   public static CacheEntryWithPayload waitForCompletion(RetryCache cache,

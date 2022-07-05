@@ -81,7 +81,7 @@ public class TestRouterRetryCache {
 
   @Test
   public void testRetryCache() throws Exception {
-    RetryInvocationHandler.setCallIdForTest.set(false);
+    RetryInvocationHandler.SET_CALL_ID_FOR_TEST.set(false);
     FileSystem routerFS = cluster.getRandomRouter().getFileSystem();
     Path testDir = new Path("/target-ns0/testdir");
     routerFS.mkdirs(testDir);

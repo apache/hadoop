@@ -47,7 +47,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
       RetryInvocationHandler.class);
 
   @VisibleForTesting
-  public static final ThreadLocal<Boolean> setCallIdForTest =
+  public static final ThreadLocal<Boolean> SET_CALL_ID_FOR_TEST =
       new ThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() {
@@ -168,7 +168,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     }
 
     Object invokeMethod() throws Throwable {
-      if (isRpc && setCallIdForTest.get()) {
+      if (isRpc && SET_CALL_ID_FOR_TEST.get()) {
         Client.setCallIdAndRetryCount(callId, counters.retries,
             retryInvocationHandler.asyncCallHandler);
       }
