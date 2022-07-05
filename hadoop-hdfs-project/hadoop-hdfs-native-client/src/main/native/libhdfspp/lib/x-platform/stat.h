@@ -19,26 +19,23 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_STAT
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_STAT
 
+#include <sys/stat.h>
+
 #if defined(_WIN32)
 
-// Windows.
-// These macros are derived from POSIX sys/stat.h. Windows defines some of
-// these macros, but not all. Thus, we align with the bits defined by POSIX for
-// all of them to be consistent.
-#define S_IRUSR 0400
-#define S_IWUSR 0200
-#define S_IXUSR 0100
+// Windows defines the macros for user RWX (_S_IREAD, _S_IWRITE and _S_IEXEC),
+// but not for group and others. We implement the permissions for group and
+// others through appropriate bit shifting.
+
+#define S_IRUSR _S_IREAD
+#define S_IWUSR _S_IWRITE
+#define S_IXUSR _S_IEXEC
 #define S_IRGRP (S_IRUSR >> 3)
 #define S_IWGRP (S_IWUSR >> 3)
 #define S_IXGRP (S_IXUSR >> 3)
 #define S_IROTH (S_IRGRP >> 3)
 #define S_IWOTH (S_IWGRP >> 3)
 #define S_IXOTH (S_IXGRP >> 3)
-
-#else
-
-// Linux (or other non-Windows OS).
-#include <sys/stat.h>
 
 #endif
 
