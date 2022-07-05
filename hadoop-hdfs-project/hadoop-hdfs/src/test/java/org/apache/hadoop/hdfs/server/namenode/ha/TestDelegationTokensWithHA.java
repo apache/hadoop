@@ -317,7 +317,7 @@ public class TestDelegationTokensWithHA {
     longUgi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        token.cancel(conf);;
+        token.cancel(conf);
         return null;
       }
     });

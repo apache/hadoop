@@ -745,7 +745,7 @@ public class IPCLoggerChannel implements AsyncLogger {
       URI uri = URI.create(ret.getFromURL());
       httpServerURL = getHttpServerURI(uri.getScheme(), uri.getPort());
     } else {
-      httpServerURL = getHttpServerURI("http", ret.getHttpPort());;
+      httpServerURL = getHttpServerURI("http", ret.getHttpPort());
     }
   }
 
@@ -754,7 +754,7 @@ public class IPCLoggerChannel implements AsyncLogger {
       URI uri = URI.create(ret.getFromURL());
       httpServerURL = getHttpServerURI(uri.getScheme(), uri.getPort());
     } else {
-      httpServerURL = getHttpServerURI("http", ret.getHttpPort());;
+      httpServerURL = getHttpServerURI("http", ret.getHttpPort());
     }
   }
 

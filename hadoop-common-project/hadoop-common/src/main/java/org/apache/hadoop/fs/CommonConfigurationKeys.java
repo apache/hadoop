@@ -401,6 +401,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String ZK_AUTH = ZK_PREFIX + "auth";
   /** Principal name for zookeeper servers. */
   public static final String ZK_SERVER_PRINCIPAL = ZK_PREFIX + "server.principal";
+  /** Kerberos principal name for zookeeper connection. */
+  public static final String ZK_KERBEROS_PRINCIPAL = ZK_PREFIX + "kerberos.principal";
+  /** Kerberos keytab for zookeeper connection. */
+  public static final String ZK_KERBEROS_KEYTAB = ZK_PREFIX + "kerberos.keytab";
 
   /** Address of the ZooKeeper ensemble. */
   public static final String ZK_ADDRESS = ZK_PREFIX + "address";
