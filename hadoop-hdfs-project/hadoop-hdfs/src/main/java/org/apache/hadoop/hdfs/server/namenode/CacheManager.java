@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
@@ -384,7 +383,7 @@ public class CacheManager {
       long maxRelativeExpiryTime) throws InvalidRequestException {
     LOG.trace("Validating directive {} pool maxRelativeExpiryTime {}", info,
         maxRelativeExpiryTime);
-    final long now = new Date().getTime();
+    final long now = Time.now();
     final long maxAbsoluteExpiryTime = now + maxRelativeExpiryTime;
     if (info == null || info.getExpiration() == null) {
       return maxAbsoluteExpiryTime;
