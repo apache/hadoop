@@ -751,13 +751,11 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation getPathStatusMetric(final String path,
-      TracingContext tracingContext, String metric) throws AzureBlobFileSystemException {
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    requestHeaders.add(new AbfsHttpHeader(X_MS_CLIENT_REQUEST_ID, metric));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    String operation = SASTokenProvider.GET_PROPERTIES_OPERATION;
+    String operation = SASTokenProvider.GET_STATUS_OPERATION;
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_STATUS);
-    operation = SASTokenProvider.GET_STATUS_OPERATION;
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
     appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());

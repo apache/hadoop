@@ -113,6 +113,11 @@ public class AbfsConfiguration{
   private boolean readSmallFilesCompletely;
 
   @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = AZURE_ENABLE_METRIC_COLLECTION,
+          DefaultValue = DEFAULT_AZURE_ENABLE_METRIC_COLLECTION)
+  private boolean enableMetricCollection;
+
+  @BooleanConfigurationValidatorAnnotation(
       ConfigurationKey = AZURE_READ_OPTIMIZE_FOOTER_READ,
       DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
   private boolean optimizeFooterRead;
@@ -687,6 +692,10 @@ public class AbfsConfiguration{
 
   public String getAppendBlobDirs() {
     return this.azureAppendBlobDirs;
+  }
+
+  public boolean isMetricCollectionEnabled() {
+    return enableMetricCollection;
   }
 
   public String getAzureInfiniteLeaseDirs() {

@@ -23,6 +23,9 @@ public enum TracingHeaderFormat {
 
   TWO_ID_FORMAT,  // <correlation-id>:<client-req-id>
 
-  ALL_ID_FORMAT;  // <client-correlation-id>:<client-req-id>:<filesystem-id>
+  ALL_ID_FORMAT,  // <client-correlation-id>:<client-req-id>:<filesystem-id>
   // :<primary-req-id>:<stream-id>:<hdfs-operation>:<retry-count>
+
+  INTERNAL_METRIC_FORMAT; // <client-correlation-id>:<client-req-id>:<filesystem-id>
+  // :<metric-results>
 }

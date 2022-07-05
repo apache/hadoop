@@ -144,6 +144,8 @@ public class AzureBlobFileSystem extends FileSystem
   private AbfsDelegationTokenManager delegationTokenManager;
   private AbfsCounters abfsCounters;
   private String clientCorrelationId;
+
+  private boolean isMetricCollectionEnabled;
   private TracingHeaderFormat tracingHeaderFormat;
   private Listener listener;
 
@@ -201,6 +203,7 @@ public class AzureBlobFileSystem extends FileSystem
         .getAbfsConfiguration();
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
+    isMetricCollectionEnabled = abfsConfiguration.isMetricCollectionEnabled();
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
@@ -681,27 +684,27 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
+    if(isMetricCollectionEnabled) {
       if(abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get() > 0) {
         try {
-        String metric = abfsCounters.getAbfsDriverMetrics().toString();
-        Configuration metricConfig = getConf();
-        String metricAccountName = getConf().get(FS_AZURE_METRIC_ACCOUNT_NAME);
-        String metricAccountKey = getConf().get(FS_AZURE_METRIC_ACCOUNT_KEY);
-        final String abfsMetricUrl = "metrics" + "@" + metricAccountName;
-        metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
-        URI metricUri;
-        try {
-          metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
-        } catch (URISyntaxException ex) {
-          throw new AssertionError(ex);
-        }
-        AzureBlobFileSystem metricfs
-            = (AzureBlobFileSystem) FileSystem.newInstance(metricUri,
-            metricConfig);
-        metricfs.sentMetric(metric);
-      }catch (AzureBlobFileSystemException ex) {
+          String metric = abfsCounters.getAbfsDriverMetrics().toString();
+          Configuration metricConfig = getConf();
+          String metricAccountName = getConf().get(FS_AZURE_METRIC_ACCOUNT_NAME);
+          String metricAccountKey = getConf().get(FS_AZURE_METRIC_ACCOUNT_KEY);
+          final String abfsMetricUrl = "metrics" + "@" + metricAccountName;
+          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
+          URI metricUri;
+          try {
+            metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
+          } catch (URISyntaxException ex) {
+            throw new AssertionError(ex);
+          }
+          AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
+          metricFs.sentMetric(metric);
+        } catch (AzureBlobFileSystemException ex) {
           // do nothing
-           }
+        }
+      }
     }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
@@ -720,10 +723,11 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   public void sentMetric(String metric) throws AzureBlobFileSystemException {
-    TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fileSystemId, FSOperationType.GET_ATTR, true, tracingHeaderFormat,
-        listener);
-     abfsStore.sentMetric(metric, tracingContext);
+    TracingHeaderFormat tracingHeaderFormatMetric = TracingHeaderFormat.INTERNAL_METRIC_FORMAT;
+    TracingContext tracingContextMetric = new TracingContext(clientCorrelationId,
+        fileSystemId, FSOperationType.GET_ATTR, true, tracingHeaderFormatMetric,
+        listener, metric);
+     abfsStore.sentMetric(metric, tracingContextMetric);
   }
 
   @Override
