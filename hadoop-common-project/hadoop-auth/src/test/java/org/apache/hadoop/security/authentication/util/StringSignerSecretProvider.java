@@ -18,7 +18,6 @@ import java.util.Properties;
 import javax.servlet.ServletContext;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 

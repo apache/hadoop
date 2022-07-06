@@ -32,6 +32,7 @@ public class AggregatedLogDeletionServiceForTest extends AggregatedLogDeletionSe
   private final List<ApplicationId> finishedApplications;
   private final List<ApplicationId> runningApplications;
   private final Configuration conf;
+  private ApplicationClientProtocol mockRMClient;
 
   public AggregatedLogDeletionServiceForTest(List<ApplicationId> runningApplications,
                                              List<ApplicationId> finishedApplications) {
@@ -48,11 +49,16 @@ public class AggregatedLogDeletionServiceForTest extends AggregatedLogDeletionSe
 
   @Override
   protected ApplicationClientProtocol createRMClient() throws IOException {
+    if (mockRMClient != null) {
+      return mockRMClient;
+    }
     try {
-      return createMockRMClient(finishedApplications, runningApplications);
+      mockRMClient =
+          createMockRMClient(finishedApplications, runningApplications);
     } catch (Exception e) {
       throw new IOException(e);
     }
+    return mockRMClient;
   }
 
   @Override
@@ -60,8 +66,7 @@ public class AggregatedLogDeletionServiceForTest extends AggregatedLogDeletionSe
     return conf;
   }
 
-  @Override
-  protected void stopRMClient() {
-    // DO NOTHING
+  public ApplicationClientProtocol getMockRMClient() {
+    return mockRMClient;
   }
 }
