@@ -1243,6 +1243,14 @@ public class AbfsClient implements Closeable {
     return abfsCounters;
   }
 
+  /**
+   * Getter for abfsConfiguration from AbfsClient.
+   * @return AbfsConfiguration instance
+   */
+  protected AbfsConfiguration getAbfsConfiguration() {
+    return abfsConfiguration;
+  }
+
   public int getNumLeaseThreads() {
     return abfsConfiguration.getNumLeaseThreads();
   }

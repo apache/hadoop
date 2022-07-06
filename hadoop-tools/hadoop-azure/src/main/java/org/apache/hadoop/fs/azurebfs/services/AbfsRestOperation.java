@@ -72,6 +72,7 @@ public class AbfsRestOperation {
   private int retryCount = 0;
   private boolean isThrottledRequest = false;
   private long maxRetryCount = 0L;
+  private int maxIoRetries = 0;
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
   private AbfsDriverMetrics abfsDriverMetrics;
@@ -123,8 +124,6 @@ public class AbfsRestOperation {
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders) {
     this(operationType, client, method, url, requestHeaders, null);
-    this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    this.metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -154,6 +153,7 @@ public class AbfsRestOperation {
     this.abfsCounters = client.getAbfsCounters();
     this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
     this.metricsMap = abfsDriverMetrics.getMetricsMap();
+    this.maxIoRetries = client.getAbfsConfiguration().getMaxIoRetries();
   }
 
   /**
@@ -183,9 +183,6 @@ public class AbfsRestOperation {
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
-    this.abfsCounters = client.getAbfsCounters();
-    this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    this.metricsMap = abfsDriverMetrics.getMetricsMap();
   }
 
   /**
@@ -251,11 +248,11 @@ public class AbfsRestOperation {
 
   private synchronized void updateDriverMetrics(int retryCount, int statusCode){
     if (statusCode == HttpURLConnection.HTTP_UNAVAILABLE) {
-      if (retryCount == 30) {
+      if (retryCount >= maxIoRetries) {
         abfsDriverMetrics.getNumberOfRequestsFailed().getAndIncrement();
       }
     } else {
-      if (retryCount > 0 && retryCount <= 30) {
+      if (retryCount > 0 && retryCount <= maxIoRetries) {
         maxRetryCount = Math.max(abfsDriverMetrics.getMaxRetryCount().get(), retryCount);
         abfsDriverMetrics.getMaxRetryCount().set(maxRetryCount);
         updateCount(retryCount);
