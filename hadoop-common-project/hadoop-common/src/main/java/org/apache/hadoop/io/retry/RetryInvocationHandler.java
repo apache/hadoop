@@ -48,12 +48,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
 
   @VisibleForTesting
   public static final ThreadLocal<Boolean> SET_CALL_ID_FOR_TEST =
-      new ThreadLocal<Boolean>() {
-        @Override
-        protected Boolean initialValue() {
-          return true;
-        }
-      };
+      ThreadLocal.withInitial(() -> true);
 
   static class Call {
     private final Method method;

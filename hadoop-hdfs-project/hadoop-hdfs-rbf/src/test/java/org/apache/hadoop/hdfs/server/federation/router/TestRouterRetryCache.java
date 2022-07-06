@@ -23,11 +23,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.retry.RetryInvocationHandler;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,6 +36,9 @@ import java.security.PrivilegedExceptionAction;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class TestRouterRetryCache {
   /** Federated HDFS cluster. */
@@ -99,24 +102,43 @@ public class TestRouterRetryCache {
     Path renameDst = new Path(testDir, "renameDst");
     joeFS.mkdirs(renameSrc);
 
-    Assert.assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
         cluster.getCluster().getNamesystem(0).getState());
 
     int callId = Client.nextCallId();
     Client.setCallIdAndRetryCount(callId, 0, null);
-    Assert.assertTrue(joeFS.rename(renameSrc, renameDst));
+    assertTrue(joeFS.rename(renameSrc, renameDst));
 
     Client.setCallIdAndRetryCount(callId, 0, null);
-    Assert.assertTrue(joeFS.rename(renameSrc, renameDst));
+    assertTrue(joeFS.rename(renameSrc, renameDst));
 
     String ns0 = cluster.getNameservices().get(0);
     cluster.switchToStandby(ns0, NAMENODES[0]);
     cluster.switchToActive(ns0, NAMENODES[1]);
 
-    Assert.assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
         cluster.getCluster().getNamesystem(1).getState());
 
     Client.setCallIdAndRetryCount(callId, 0, null);
-    Assert.assertTrue(joeFS.rename(renameSrc, renameDst));
+    assertTrue(joeFS.rename(renameSrc, renameDst));
+  }
+
+  @Test
+  public void testParseSpecialValue() {
+    String mockContent = "mockContent,clientIp:127.0.0.1," +
+        "clientCallId:12345,clientId:mockClientId";
+    String clientIp = NameNode.parseSpecialValue(mockContent, "clientIp:");
+    assertEquals("127.0.0.1", clientIp);
+
+    String clientCallId = NameNode.parseSpecialValue(
+        mockContent, "clientCallId:");
+    assertEquals("12345", clientCallId);
+
+    String clientId = NameNode.parseSpecialValue(mockContent, "clientId:");
+    assertEquals("mockClientId", clientId);
+
+    String clientRetryNum = NameNode.parseSpecialValue(
+        mockContent, "clientRetryNum:");
+    assertNull(clientRetryNum);
   }
 }

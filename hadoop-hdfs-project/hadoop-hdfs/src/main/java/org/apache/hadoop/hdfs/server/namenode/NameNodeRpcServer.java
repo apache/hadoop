@@ -270,7 +270,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   private final String defaultECPolicyName;
 
-  // Users who can override the client ip
+  // Users who can override the client info
   private final String[] ipProxyUsers;
 
   public NameNodeRpcServer(Configuration conf, NameNode nn)
@@ -723,6 +723,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     return ret;
   }
 
+  /**
+   * Return the current CacheEntry.
+   */
   private CacheEntry getCacheEntry() {
     Pair<byte[], Integer> clientInfo =
         NameNode.getClientIdAndCallId(this.ipProxyUsers);
@@ -730,6 +733,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         retryCache, clientInfo.getLeft(), clientInfo.getRight());
   }
 
+  /**
+   * Return the current CacheEntryWithPayload.
+   */
   private CacheEntryWithPayload getCacheEntryWithPayload(Object payload) {
     Pair<byte[], Integer> clientInfo =
         NameNode.getClientIdAndCallId(this.ipProxyUsers);
@@ -1924,6 +1930,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
   }
 
+  /**
+   * Get the actual client's machine.
+   */
   private String getClientMachine() {
     return NameNode.getClientMachine(this.ipProxyUsers);
   }

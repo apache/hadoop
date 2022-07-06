@@ -498,6 +498,10 @@ public class NameNode extends ReconfigurableBase implements
     return metrics;
   }
 
+  /**
+   * Try to obtain the actual client info according to the current user.
+   * @param ipProxyUsers Users who can override client infos
+   */
   private static String clientInfoFromContext(
       final String[] ipProxyUsers) {
     if (ipProxyUsers != null) {
@@ -514,7 +518,14 @@ public class NameNode extends ReconfigurableBase implements
     return null;
   }
 
-  private static String parseSpecialValue(String content, String key) {
+  /**
+   * Try to obtain the value corresponding to the key by parsing the content.
+   * @param content the full content to be parsed.
+   * @param key trying to obtain the value of the key.
+   * @return the value corresponding to the key.
+   */
+  @VisibleForTesting
+  public static String parseSpecialValue(String content, String key) {
     int posn = content.indexOf(key);
     if (posn != -1) {
       posn += key.length();
@@ -525,6 +536,11 @@ public class NameNode extends ReconfigurableBase implements
     return null;
   }
 
+  /**
+   * Try to obtain the actual client's machine according to the current user.
+   * @param ipProxyUsers Users who can override client infos.
+   * @return The actual client's machine.
+   */
   public static String getClientMachine(final String[] ipProxyUsers) {
     String cc = clientInfoFromContext(ipProxyUsers);
     if (cc != null) {
@@ -542,6 +558,12 @@ public class NameNode extends ReconfigurableBase implements
     return clientMachine;
   }
 
+  /**
+   * Try to obtain the actual client's id and call id
+   * according to the current user.
+   * @param ipProxyUsers Users who can override client infos
+   * @return The actual client's id and call id.
+   */
   public static Pair<byte[], Integer> getClientIdAndCallId(
       final String[] ipProxyUsers) {
     byte[] clientId = Server.getClientId();
