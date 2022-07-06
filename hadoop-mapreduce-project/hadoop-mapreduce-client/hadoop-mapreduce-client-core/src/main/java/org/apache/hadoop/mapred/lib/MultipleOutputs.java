@@ -27,6 +27,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -541,13 +545,34 @@ public class MultipleOutputs {
    *                             could not be closed properly.
    */
   public void close() throws IOException {
-    recordWriters.values().parallelStream().forEach(writer -> {
-      try {
-        writer.close(null);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    int nThreads = 10;
+    AtomicReference<IOException> ioException = new AtomicReference<>();
+    ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+
+    List<Callable<Object>> callableList = new ArrayList<>();
+
+    for (RecordWriter writer : recordWriters.values()) {
+      callableList.add(() -> {
+        try {
+          writer.close(null);
+          throw new IOException();
+        } catch (IOException e) {
+          ioException.set(e);
+        }
+        return null;
+      });
+    }
+    try {
+      executorService.invokeAll(callableList);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    } finally {
+      executorService.shutdown();
+    }
+
+    if (ioException.get() != null) {
+      throw new IOException(ioException.get());
+    }
   }
 
   private static class InternalFileOutputFormat extends
