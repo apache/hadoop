@@ -3391,10 +3391,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     INodesInPath iip = dir.resolvePath(pc, src, DirOp.WRITE_LINK);
     iip = iip.getExistingINodes();
-    if (null != iip.getParentINodesInPath())
+    if (null != iip.getParentINodesInPath()) {
       // switch the locks
       // Only content gets deleted, acquire only file / directory level lock.
       dir.getINodeMap().latchWriteLock(iip, new INode[0]);
+    }
   }
 
   FSPermissionChecker getPermissionChecker()

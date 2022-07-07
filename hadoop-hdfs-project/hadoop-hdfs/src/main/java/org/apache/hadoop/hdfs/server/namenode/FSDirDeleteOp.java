@@ -244,8 +244,7 @@ class FSDirDeleteOp {
     targetNode.recordModification(latestSnapshot);
 
     // switch the locks
-    fsd.getINodeMap().latchWriteLock(iip.getParentINodesInPath(),
-        new INode[] { iip.getLastINode() });
+    fsd.getINodeMap().latchWriteLock(iip.getParentINodesInPath(), new INode[] {iip.getLastINode()});
 
     // Remove the node from the namespace
     long removed = fsd.removeLastINode(iip);

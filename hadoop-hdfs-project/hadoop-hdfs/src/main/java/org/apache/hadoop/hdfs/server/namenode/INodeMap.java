@@ -329,4 +329,22 @@ public class INodeMap {
     ((PartitionedGSet<INode, INodeWithAdditionalFields>)
         map).latchWriteLock(allINodes);
   }
+
+  /**
+   * Take the partition lock on the given INode key.
+   * @param iNode INode to acquire the partition lock.
+   */
+  public void latchWriteLock(INode iNode) {
+    if (!(map instanceof PartitionedGSet)) {
+      return;
+    }
+
+    ((PartitionedGSet<INode, INodeWithAdditionalFields>) map).latchWriteLock(
+        new INode[] {iNode });
+  }
+
+  public boolean hasWriteLock(final INode key) {
+    return ((PartitionedGSet<INode, INodeWithAdditionalFields>) map).
+        hasWriteLock(key);
+  }
 }

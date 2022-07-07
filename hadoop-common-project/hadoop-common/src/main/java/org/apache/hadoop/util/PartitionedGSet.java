@@ -345,4 +345,21 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
     assert pLock != null : "pLock is null";
     pLock.writeTopUnlock();
   }
+
+  /**
+   * Verify whether the current thread holds the lock on given key / partition.
+   * @param key INode for which lock to be verified.
+   * @return true if the current thread holds the partition lock.
+   */
+  public boolean hasWriteLock(final K key) {
+    Entry<K, PartitionEntry> partEntry = partitions.floorEntry(key);
+    if (partEntry == null) {
+      return false;
+    }
+    PartitionEntry part = partEntry.getValue();
+    if (part == null) {
+      throw new IllegalStateException("Null partition for key: " + key);
+    }
+    return part.partLock.hasWriteChildLock();
+  }
 }
