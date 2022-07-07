@@ -26,7 +26,8 @@ import com.amazonaws.arn.Arn;
  * Represents an Arn Resource, this can be an accesspoint or bucket.
  */
 public final class ArnResource {
-  private final static String ACCESSPOINT_ENDPOINT_FORMAT = "s3-accesspoint.%s.amazonaws.com";
+  private final static String S3_ACCESSPOINT_ENDPOINT_FORMAT = "s3-accesspoint.%s.amazonaws.com";
+  private final static String S3_OUTPOSTS_ACCESSPOINT_ENDPOINT_FORMAT = "s3-outposts.%s.amazonaws.com";
 
   /**
    * Resource name.
@@ -69,6 +70,10 @@ public final class ArnResource {
     this.accessPointRegionKey = String.format("accesspoint-%s", region);
   }
 
+  private boolean isOutposts(){
+    return fullArn.contains("s3-outposts");
+  }
+
   /**
    * Resource name.
    * @return resource name.
@@ -106,7 +111,8 @@ public final class ArnResource {
    * @return resource endpoint.
    */
   public String getEndpoint() {
-    return String.format(ACCESSPOINT_ENDPOINT_FORMAT, region);
+    String format = isOutposts() ? S3_OUTPOSTS_ACCESSPOINT_ENDPOINT_FORMAT : S3_ACCESSPOINT_ENDPOINT_FORMAT;
+    return String.format(format, region);
   }
 
   /**

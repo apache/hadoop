@@ -56,7 +56,7 @@ public class TestArnResource extends HadoopTestBase {
       String region = testPair[0];
       String partition = testPair[1];
 
-      ArnResource resource = getArnResourceFrom(partition, region, MOCK_ACCOUNT, accessPoint);
+      ArnResource resource = getArnResourceFrom(partition, "s3", region, MOCK_ACCOUNT, accessPoint);
       assertEquals("Access Point name does not match", accessPoint, resource.getName());
       assertEquals("Account Id does not match", MOCK_ACCOUNT, resource.getOwnerAccountId());
       assertEquals("Region does not match", region, resource.getRegion());
@@ -64,12 +64,25 @@ public class TestArnResource extends HadoopTestBase {
   }
 
   @Test
-  public void makeSureEndpointHasTheCorrectFormat() {
+  public void makeSureS3EndpointHasTheCorrectFormat() {
     // Access point (AP) endpoints are different from S3 bucket endpoints, thus when using APs the
     // endpoints for the client are modified. This test makes sure endpoint is set up correctly.
-    ArnResource accessPoint = getArnResourceFrom("aws", "eu-west-1", MOCK_ACCOUNT,
+    ArnResource accessPoint = getArnResourceFrom("aws", "s3", "eu-west-1", MOCK_ACCOUNT,
         "test");
     String expected = "s3-accesspoint.eu-west-1.amazonaws.com";
+
+    Assertions.assertThat(accessPoint.getEndpoint())
+        .describedAs("Endpoint has invalid format. Access Point requests will not work")
+        .isEqualTo(expected);
+  }
+
+  @Test
+  public void makeSureS3OutpostsEndpointHasTheCorrectFormat() {
+    // Access point (AP) endpoints are different from S3 bucket endpoints, thus when using APs the
+    // endpoints for the client are modified. This test makes sure endpoint is set up correctly.
+    ArnResource accessPoint = getArnResourceFrom("aws", "s3-outposts", "eu-west-1", MOCK_ACCOUNT,
+        "test");
+    String expected = "s3-outposts.eu-west-1.amazonaws.com";
 
     Assertions.assertThat(accessPoint.getEndpoint())
         .describedAs("Endpoint has invalid format. Access Point requests will not work")
@@ -87,15 +100,16 @@ public class TestArnResource extends HadoopTestBase {
   /**
    * Create an {@link ArnResource} from string components
    * @param partition - partition for ARN
+   * @param service - service for ARN
    * @param region - region for ARN
    * @param accountId - accountId for ARN
    * @param resourceName - ARN resource name
    * @return ArnResource described by its properties
    */
-  private ArnResource getArnResourceFrom(String partition, String region, String accountId,
+  private ArnResource getArnResourceFrom(String partition, String service, String region, String accountId,
       String resourceName) {
     // arn:partition:service:region:account-id:resource-type/resource-id
-    String arn = String.format("arn:%s:s3:%s:%s:accesspoint/%s", partition, region, accountId,
+    String arn = String.format("arn:%s:%s:%s:%s:accesspoint/%s", partition, service, region, accountId,
         resourceName);
 
     return ArnResource.accessPointFromArn(arn);
