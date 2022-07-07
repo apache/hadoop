@@ -37,7 +37,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.44.v20210927</jetty.version>
+    <jetty.version>10.0.10</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
