@@ -42,12 +42,18 @@ public class PlatformName {
    * The java vendor name used in this platform.
    */
   public static final String JAVA_VENDOR_NAME = System.getProperty("java.vendor");
+  public static final String JAVA_RUNTIME_NAME = System.getProperty("java.runtime.name");
 
   /**
    * A public static variable to indicate the current java vendor is
-   * IBM java or not.
+   * IBM J9 java or not, where IBM Semeru and OpenJ9 implementations
+   * are excluded as no special actions are required.
    */
-  public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM");
+  public static final boolean IBM_J9_JAVA = JAVA_VENDOR_NAME.contains("IBM") && !JAVA_RUNTIME_NAME.contains("Semeru");
+
+  // IBM_JAVA must be preserved due to the public nature of the property
+  @Deprecated
+  public static final boolean IBM_JAVA = IBM_J9_JAVA;
 
   public static void main(String[] args) {
     System.out.println(PLATFORM_NAME);

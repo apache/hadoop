@@ -74,7 +74,7 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+import static org.apache.hadoop.util.PlatformName.IBM_J9_JAVA;
 
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
@@ -99,7 +99,7 @@ public class TestConfiguration {
     "./test-config-multi-byte-saved-TestConfiguration.xml").getAbsolutePath();
   final static Random RAN = new Random();
   final static String XMLHEADER =
-            IBM_JAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
+            IBM_J9_JAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
   "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>";
 
   /** Four apostrophes. */

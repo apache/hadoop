@@ -25,7 +25,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+import static org.apache.hadoop.util.PlatformName.IBM_J9_JAVA;
 
 class KerberosConfiguration extends javax.security.auth.login.Configuration {
   private String principal;
@@ -54,7 +54,7 @@ class KerberosConfiguration extends javax.security.auth.login.Configuration {
   @Override
   public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
     Map<String, String> options = new HashMap<String, String>();
-    if (IBM_JAVA) {
+    if (IBM_J9_JAVA) {
       options.put("useKeytab", keytab.startsWith("file://")
           ? keytab
           : "file://" + keytab);
@@ -74,7 +74,7 @@ class KerberosConfiguration extends javax.security.auth.login.Configuration {
     }
     String ticketCache = System.getenv("KRB5CCNAME");
     if (ticketCache != null) {
-      if (IBM_JAVA) {
+      if (IBM_J9_JAVA) {
         // IBM JAVA only respect system property and not env variable
         // The first value searched when "useDefaultCcache" is used.
         System.setProperty("KRB5CCNAME", ticketCache);

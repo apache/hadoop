@@ -38,8 +38,8 @@ import java.util.HashMap;
 import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
-  private static final boolean IBM_JAVA = System.getProperty("java.vendor")
-      .contains("IBM");
+  private static final boolean IBM_J9_JAVA = System.getProperty("java.vendor")
+      .contains("IBM") && !JAVA_RUNTIME_NAME.contains("Semeru");
   @Test
   public void testMiniKdcStart() {
     MiniKdc kdc = getKdc();
@@ -98,7 +98,7 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
       Map<String, String> options = new HashMap<String, String>();
       options.put("principal", principal);
       options.put("refreshKrb5Config", "true");
-      if (IBM_JAVA) {
+      if (IBM_J9_JAVA) {
         options.put("useKeytab", keytab);
         options.put("credsType", "both");
       } else {
