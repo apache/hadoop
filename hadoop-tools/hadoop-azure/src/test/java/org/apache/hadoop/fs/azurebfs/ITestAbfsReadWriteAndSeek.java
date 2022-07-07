@@ -51,16 +51,11 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   private static final String TEST_PATH = "/testfile";
 
 //  @Parameterized.Parameters(name = "Size={0}")
-//  public static Iterable<Object[]> sizes() {
-//    return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
-//        {DEFAULT_READ_BUFFER_SIZE},
-//        {APPENDBLOB_MAX_WRITE_BUFFER_SIZE},
-//        {MAX_BUFFER_SIZE}});
-//  }
-
-  @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
-    return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE}});
+    return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
+        {DEFAULT_READ_BUFFER_SIZE},
+        {APPENDBLOB_MAX_WRITE_BUFFER_SIZE},
+        {MAX_BUFFER_SIZE}});
   }
 
   private final int size;

@@ -689,8 +689,8 @@ public class AzureBlobFileSystem extends FileSystem
         try {
           String metric = abfsCounters.getAbfsDriverMetrics().toString();
           Configuration metricConfig = getConf();
-          String metricAccountName = getConf().get(FS_AZURE_METRIC_ACCOUNT_NAME);
-          String metricAccountKey = getConf().get(FS_AZURE_METRIC_ACCOUNT_KEY);
+          String metricAccountName = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_NAME);
+          String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
           final String abfsMetricUrl = "metrics" + "@" + metricAccountName;
           metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
           URI metricUri;
@@ -702,7 +702,7 @@ public class AzureBlobFileSystem extends FileSystem
           AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
           metricFs.sentMetric(metric);
         } catch (AzureBlobFileSystemException ex) {
-          // do nothing
+          //do nothing
         }
       }
     }

@@ -151,8 +151,11 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
-    this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    this.metricsMap = abfsDriverMetrics.getMetricsMap();
+    if(abfsCounters != null) {
+      this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
+    }if(abfsDriverMetrics != null) {
+      this.metricsMap = abfsDriverMetrics.getMetricsMap();
+    }
     this.maxIoRetries = client.getAbfsConfiguration().getMaxIoRetries();
   }
 
@@ -223,7 +226,9 @@ public class AbfsRestOperation {
     retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
     long sleepDuration = 0L;
-    abfsDriverMetrics.getTotalNumberOfRequests().getAndIncrement();
+    if(abfsDriverMetrics != null) {
+      abfsDriverMetrics.getTotalNumberOfRequests().getAndIncrement();
+    }
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
@@ -231,13 +236,17 @@ public class AbfsRestOperation {
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         sleepDuration = client.getRetryPolicy().getRetryInterval(retryCount);
-        updateTimeMetrics(retryCount, sleepDuration);
+        if(abfsDriverMetrics != null) {
+          updateTimeMetrics(retryCount, sleepDuration);
+        }
         Thread.sleep(sleepDuration);
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
     }
-    updateDriverMetrics(retryCount, result.getStatusCode());
+    if(abfsDriverMetrics != null) {
+      updateDriverMetrics(retryCount, result.getStatusCode());
+    }
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
