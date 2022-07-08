@@ -825,5 +825,4 @@ public final class RouterMetrics {
   public void incrMoveApplicationAcrossQueuesFailedRetrieved() {
     numMoveApplicationAcrossQueuesFailedRetrieved.incr();
   }
-
 }
