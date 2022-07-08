@@ -1508,7 +1508,7 @@ public class RouterRpcClient {
    * @return A prioritized list of NNs to use for communication.
    * @throws IOException If a NN cannot be located for the nameservice ID.
    */
-  public List<? extends FederationNamenodeContext> getNamenodesForNameservice(
+  private List<? extends FederationNamenodeContext> getNamenodesForNameservice(
       final String nsId) throws IOException {
 
     final List<? extends FederationNamenodeContext> namenodes =

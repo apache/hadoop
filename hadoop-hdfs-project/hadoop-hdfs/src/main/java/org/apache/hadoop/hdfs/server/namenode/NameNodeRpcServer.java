@@ -1183,7 +1183,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           + ") should be null or empty");
     }
     checkNNStartup();
-    // just ignore nsIdentifies
     namesystem.renewLease(clientName);        
   }
 
