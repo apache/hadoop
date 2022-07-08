@@ -94,7 +94,7 @@ public class AuditTool extends S3GuardTool {
    * @param args argument list
    * @param out  output stream
    * @throws Exception on any failure.
-   * @returnSUCCESS i.e, '0', which is an exit code
+   * @return SUCCESS i.e, '0', which is an exit code
    */
   @Override
   public int run(String[] args, PrintStream out)

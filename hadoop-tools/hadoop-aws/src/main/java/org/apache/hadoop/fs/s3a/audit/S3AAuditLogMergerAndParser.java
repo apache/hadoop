@@ -468,6 +468,7 @@ public class S3AAuditLogMergerAndParser {
    * @param s3AFileSystem filesystem
    * @param s3LogsPath    source path of logs
    * @param s3DestPath    destination path of merged log file
+   * @return true
    * @throws IOException on any failure
    */
   public boolean mergeAndParseAuditLogFiles(S3AFileSystem s3AFileSystem,
