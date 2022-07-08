@@ -60,6 +60,7 @@ protected:
   char * _buffer;
   uint32_t _capacity;
   void * _zstream;
+  bool _eof;
 public:
   GzipDecompressStream(InputStream * stream, uint32_t bufferSizeHint);
 
