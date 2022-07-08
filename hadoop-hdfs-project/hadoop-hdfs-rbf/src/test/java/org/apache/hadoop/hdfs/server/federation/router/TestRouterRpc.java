@@ -1474,7 +1474,6 @@ public class TestRouterRpc {
     }
   }
 
-
   @Test
   public void testRenewLeaseForECFile() throws Exception {
     String ecName = "RS-6-3-1024k";

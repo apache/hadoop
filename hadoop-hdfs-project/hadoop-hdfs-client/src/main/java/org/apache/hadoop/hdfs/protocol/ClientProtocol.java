@@ -759,7 +759,7 @@ public interface ClientProtocol {
    * the last call to renewLease(), the NameNode assumes the
    * client has died.
    *
-   * @param namespaces The full Namespace list that the release rpc
+   * @param namespaces The full Namespace list that the renewLease rpc
    *                   should be forwarded by RBF.
    *                   Tips: NN side, this value should be null.
    *                         RBF side, if this value is null, this rpc will

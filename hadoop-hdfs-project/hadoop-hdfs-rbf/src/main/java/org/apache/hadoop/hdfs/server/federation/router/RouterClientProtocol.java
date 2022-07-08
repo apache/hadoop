@@ -776,7 +776,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /**
    * Try to get a list of FederationNamespaceInfo for renewLease RPC.
    */
-  private List<FederationNamespaceInfo> getRewLeaseNSs(List<String> namespaces)
+  private List<FederationNamespaceInfo> getRenewLeaseNSs(List<String> namespaces)
       throws IOException {
     if (namespaces == null || namespaces.isEmpty()) {
       return new ArrayList<>(namenodeResolver.getNamespaces());
@@ -801,7 +801,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     RemoteMethod method = new RemoteMethod("renewLease",
         new Class<?>[] {String.class, List.class}, clientName, null);
-    List<FederationNamespaceInfo> nss = getRewLeaseNSs(namespaces);
+    List<FederationNamespaceInfo> nss = getRenewLeaseNSs(namespaces);
     if (nss.size() == 1) {
       rpcClient.invokeSingle(nss.get(0).getNameserviceId(), method);
     } else {
