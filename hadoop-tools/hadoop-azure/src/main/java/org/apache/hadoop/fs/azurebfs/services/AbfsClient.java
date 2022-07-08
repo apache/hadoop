@@ -251,8 +251,14 @@ public class AbfsClient implements Closeable {
         SecretKey encryptionContext =
             encryptionAdapter.createEncryptionContext();
         encryptionAdapter.computeKeys();
+        String base64EncodedSecret;
+        if(encryptionContext.getClass() == EncryptionAdapter.ABFSKey.class) {
+          base64EncodedSecret = ((EncryptionAdapter.ABFSKey)encryptionContext).getBase64EncodedString();
+        } else {
+          base64EncodedSecret = Base64.getEncoder().encodeToString(encryptionContext.getEncoded());
+        }
         requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
-            Base64.getEncoder().encodeToString(encryptionContext.getEncoded())));
+            base64EncodedSecret));
         try {
           encryptionContext.destroy();
         } catch (DestroyFailedException e) {

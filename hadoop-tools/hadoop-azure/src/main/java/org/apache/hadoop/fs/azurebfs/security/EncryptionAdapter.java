@@ -71,6 +71,11 @@ public class EncryptionAdapter implements Destroyable {
   public void computeKeys() throws IOException {
     SecretKey key = getEncryptionKey();
     Preconditions.checkNotNull(key, "Encryption key should not be null.");
+    if(key.getClass() == ABFSKey.class) {
+      encodedKey = ((ABFSKey) key).getBase64EncodedString();
+      encodedKeySHA = getBase64EncodedString(((ABFSKey) key).getSHA256Hash());
+      return;
+    }
     encodedKey = getBase64EncodedString(key.getEncoded());
     encodedKeySHA = getBase64EncodedString(getSHA256Hash(key.getEncoded()));
   }
@@ -97,7 +102,7 @@ public class EncryptionAdapter implements Destroyable {
   public class ABFSKey implements SecretKey {
     private final byte[] bytes;
     public ABFSKey(byte[] bytes) {
-      this.bytes = bytes;
+      this.bytes = (bytes != null) ? bytes.clone() : null;
     }
 
     @Override
@@ -112,7 +117,15 @@ public class EncryptionAdapter implements Destroyable {
 
     @Override
     public byte[] getEncoded() {
-      return bytes;
+      return bytes.clone();
+    }
+
+    public String getBase64EncodedString() {
+      return EncryptionAdapter.getBase64EncodedString(bytes);
+    }
+
+    public byte[] getSHA256Hash() throws IOException {
+      return EncryptionAdapter.getSHA256Hash(bytes);
     }
 
     @Override
