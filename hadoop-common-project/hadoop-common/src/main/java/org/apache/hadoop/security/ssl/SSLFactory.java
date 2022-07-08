@@ -25,7 +25,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.apache.hadoop.util.PlatformName.JAVA_VENDOR_NAME;
+import static org.apache.hadoop.util.PlatformName.USE_IBM_JAVA_PACKAGES;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -102,11 +102,11 @@ public class SSLFactory implements ConnectionConfigurator {
       "ssl.server.exclude.cipher.list";
 
   public static final String KEY_MANAGER_SSLCERTIFICATE =
-      JAVA_VENDOR_NAME.contains("IBM") ? "ibmX509" :
+      USE_IBM_JAVA_PACKAGES ? "ibmX509" :
           KeyManagerFactory.getDefaultAlgorithm();
 
   public static final String TRUST_MANAGER_SSLCERTIFICATE =
-      JAVA_VENDOR_NAME.contains("IBM") ? "ibmX509" :
+      USE_IBM_JAVA_PACKAGES ? "ibmX509" :
           TrustManagerFactory.getDefaultAlgorithm();
 
   public static final String KEYSTORES_FACTORY_CLASS_KEY =

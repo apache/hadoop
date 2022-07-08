@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import static org.apache.hadoop.util.PlatformName.IBM_J9_JAVA;
+import static org.apache.hadoop.util.PlatformName.USE_IBM_JAVA_PACKAGES;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class KerberosUtil {
 
   /* Return the Kerberos login module name */
   public static String getKrb5LoginModuleName() {
-    return (IBM_J9_JAVA)
+    return (USE_IBM_JAVA_PACKAGES)
       ? "com.ibm.security.auth.module.Krb5LoginModule"
       : "com.sun.security.auth.module.Krb5LoginModule";
   }
@@ -157,7 +157,7 @@ public class KerberosUtil {
     Object principalName; //of type sun.security.krb5.PrincipalName or IBM equiv
     String realmString = null;
     try {
-      if (IBM_J9_JAVA) {
+      if (USE_IBM_JAVA_PACKAGES) {
         classRef = Class.forName("com.ibm.security.krb5.PrincipalName");
       } else {
         classRef = Class.forName("sun.security.krb5.PrincipalName");

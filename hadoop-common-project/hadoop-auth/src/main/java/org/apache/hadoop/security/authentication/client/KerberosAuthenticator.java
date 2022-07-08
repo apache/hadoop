@@ -42,7 +42,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.hadoop.util.PlatformName.IBM_J9_JAVA;
+import static org.apache.hadoop.util.PlatformName.USE_IBM_JAVA_PACKAGES;
 
 /**
  * The {@link KerberosAuthenticator} implements the Kerberos SPNEGO authentication sequence.
@@ -88,7 +88,7 @@ public class KerberosAuthenticator implements Authenticator {
 
     /* Return the OS login module class name */
     private static String getOSLoginModuleName() {
-      if (IBM_J9_JAVA) {
+      if (USE_IBM_JAVA_PACKAGES) {
         if (windows) {
           return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
               : "com.ibm.security.auth.module.NTLoginModule";
@@ -117,14 +117,14 @@ public class KerberosAuthenticator implements Authenticator {
 
     static {
       String ticketCache = System.getenv("KRB5CCNAME");
-      if (IBM_J9_JAVA) {
+      if (USE_IBM_JAVA_PACKAGES) {
         USER_KERBEROS_OPTIONS.put("useDefaultCcache", "true");
       } else {
         USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
         USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
       }
       if (ticketCache != null) {
-        if (IBM_J9_JAVA) {
+        if (USE_IBM_JAVA_PACKAGES) {
           // The first value searched when "useDefaultCcache" is used.
           System.setProperty("KRB5CCNAME", ticketCache);
         } else {

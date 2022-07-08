@@ -47,7 +47,7 @@ import org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions;
 import static org.apache.hadoop.security.authentication.util.KerberosName.DEFAULT_MECHANISM;
 import static org.apache.hadoop.security.authentication.util.KerberosName.MECHANISM_HADOOP;
 import static org.apache.hadoop.security.authentication.util.KerberosName.MECHANISM_MIT;
-import static org.apache.hadoop.util.PlatformName.IBM_J9_JAVA;
+import static org.apache.hadoop.util.PlatformName.USE_IBM_JAVA_PACKAGES;
 
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -141,7 +141,7 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
     Object kerb5LoginObject = kerb5LoginConstr.newInstance();
     final Map<String, String> options = new HashMap<String, String>();
     options.put("debug", "true");
-    if (IBM_J9_JAVA) {
+    if (USE_IBM_JAVA_PACKAGES) {
       options.put("useKeytab",
           keytab_alice.getAbsolutePath().startsWith("file://")
             ? keytab_alice.getAbsolutePath()

@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
-  private static final boolean IBM_J9_JAVA = System.getProperty("java.vendor")
+  private static final boolean USE_IBM_JAVA_PACKAGES = System.getProperty("java.vendor")
       .contains("IBM") && !JAVA_RUNTIME_NAME.contains("Semeru");
   @Test
   public void testMiniKdcStart() {
@@ -98,7 +98,7 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
       Map<String, String> options = new HashMap<String, String>();
       options.put("principal", principal);
       options.put("refreshKrb5Config", "true");
-      if (IBM_J9_JAVA) {
+      if (USE_IBM_JAVA_PACKAGES) {
         options.put("useKeytab", keytab);
         options.put("credsType", "both");
       } else {

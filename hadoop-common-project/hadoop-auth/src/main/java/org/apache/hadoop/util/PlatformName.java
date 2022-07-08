@@ -42,18 +42,35 @@ public class PlatformName {
    * The java vendor name used in this platform.
    */
   public static final String JAVA_VENDOR_NAME = System.getProperty("java.vendor");
-  public static final String JAVA_RUNTIME_NAME = System.getProperty("java.runtime.name");
+
+  private boolean useIbmJavaSecurityPackages = false;
+
+  if (JAVA_VENDOR_NAME.contains("IBM")) {
+    try {
+      /**
+       * This class is provided by all supported IBM JTE Runtimes,
+       * but ensures we do not make assumptions of existence of
+       * specialised security modules based on vendor alone.
+       */
+      Class.forName("com.ibm.security.auth.module.JAASLoginModule");
+      useIbmJavaSecurityPackages = true;
+    } catch(ClassNotFoundException ignored) {}
+  }
 
   /**
    * A public static variable to indicate the current java vendor is
-   * IBM J9 java or not, where IBM Semeru and OpenJ9 implementations
-   * are excluded as no special actions are required.
+   * IBM and the type is Java Technology Edition which provides its
+   * own implementations of many security packages and Cipher suites.
+   * Note that these are not provided in Semeru runtimes:
+   * See https://developer.ibm.com/languages/java/semeru-runtimes/
    */
-  public static final boolean IBM_J9_JAVA = JAVA_VENDOR_NAME.contains("IBM") && !JAVA_RUNTIME_NAME.contains("Semeru");
+  public static final boolean USE_IBM_JAVA_PACKAGES = useIbmJavaSecurityPackages;
 
-  // IBM_JAVA must be preserved due to the public nature of the property
+  /*
+  * IBM_JAVA must be preserved due to the public nature of the property.
+  */
   @Deprecated
-  public static final boolean IBM_JAVA = IBM_J9_JAVA;
+  public static final boolean IBM_JAVA = USE_IBM_JAVA_PACKAGES;
 
   public static void main(String[] args) {
     System.out.println(PLATFORM_NAME);
