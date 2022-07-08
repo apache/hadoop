@@ -449,7 +449,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
       COMPLETE
     };
     
-    private State state;;
+    private State state;
     
     private final String cwd;
     private final String jobName;

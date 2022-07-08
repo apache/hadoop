@@ -117,7 +117,6 @@ public class AbfsClient implements Closeable {
   private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE =
       new LogExactlyOnce(LOG);
 
-
   private AbfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
