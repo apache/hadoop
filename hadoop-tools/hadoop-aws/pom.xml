@@ -438,6 +438,23 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-avro-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>schema</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <sourceDirectory>../../hadoop-tools/hadoop-aws/src/main/java/org/apache/hadoop/fs/s3a/audit/avro</sourceDirectory>
+          <outputDirectory>${project.build.directory}/generated-sources/avro</outputDirectory>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 

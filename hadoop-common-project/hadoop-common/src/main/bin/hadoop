@@ -46,7 +46,6 @@ function hadoop_usage
   hadoop_add_subcommand "registrydns" daemon "run the registry DNS server"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "kdiag" client "Diagnose Kerberos Problems"
-  hadoop_add_subcommand "s3audit" client "implements merging, parsing and analyzing the s3a audit logs"
   hadoop_add_subcommand "rbfbalance" client "move directories and files across router-based federation namespaces"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
@@ -157,9 +156,6 @@ function hadoopcmd_case
     ;;
     kdiag)
       HADOOP_CLASSNAME=org.apache.hadoop.security.KDiag
-    ;;
-    s3audit)
-      HADOOP_CLASSNAME=org.apache.hadoop.fs.s3a.audit.AuditTool
     ;;
     key)
       HADOOP_CLASSNAME=org.apache.hadoop.crypto.key.KeyShell
