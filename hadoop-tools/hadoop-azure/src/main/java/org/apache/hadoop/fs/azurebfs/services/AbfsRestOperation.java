@@ -423,7 +423,7 @@ public class AbfsRestOperation {
       }else if(retryCount >= 15 && retryCount < 25){
         retryCounter = "15_25";
       }else{
-        retryCounter = "25_30";
+        retryCounter = "25andabove";
       }
       return retryCounter;
     }

@@ -50,7 +50,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   private static final String TEST_PATH = "/testfile";
 
-//  @Parameterized.Parameters(name = "Size={0}")
+  @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
     return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
         {DEFAULT_READ_BUFFER_SIZE},

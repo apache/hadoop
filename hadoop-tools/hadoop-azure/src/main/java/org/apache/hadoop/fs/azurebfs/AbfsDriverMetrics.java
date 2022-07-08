@@ -59,7 +59,7 @@ public class AbfsDriverMetrics {
   }
 
   private void initializeMap() {
-    ArrayList<String> retryCountList = new ArrayList<String>(Arrays.asList("1","2","3","4","5_15","15_25","25_30"));
+    ArrayList<String> retryCountList = new ArrayList<String>(Arrays.asList("1","2","3","4","5_15","15_25","25andabove"));
     for (String s : retryCountList) {
       metricsMap.put(s, new AbfsDriverMetrics(s));
     }
@@ -121,6 +121,20 @@ public class AbfsDriverMetrics {
     return numberOfRequestsFailed;
   }
 
+  /*
+  Acronyms :-
+  1.RCTSI :- Request count that succeeded in x retries
+  2.MMA :- Min Max Average (This refers to the backoff or sleep time between 2 requests)
+  3.s :- seconds
+  4.BWT :- Number of Bandwidth throttled requests
+  5.IT :- Number of IOPS throttled requests
+  6.OT :- Number of Other throttled requests
+  7.%RT :- Percentage of requests that are throttled
+  8.TRNR :- Total number of requests which succeeded without retrying
+  9.TRF :- Total number of requests which failed
+  10.TR :- Total number of requests which were made
+  11.MRC :- Max retry count across all requests
+   */
   @Override
   public String toString() {
     StringBuilder metricString = new StringBuilder();
@@ -132,27 +146,27 @@ public class AbfsDriverMetrics {
           .append(entry.getValue().getNumberOfRequestsSucceeded()).append(" ");
       long totalRequests = entry.getValue().getTotalRequests().get();
       if(totalRequests > 0) {
-        metricString.append(" #MinMaxAvg#_").append(entry.getKey())
+        metricString.append(" #MMA#_").append(entry.getKey())
             .append("R_").append("=")
             .append(String.format("%.5f", (double) entry.getValue().getMinBackoff().get() / 1000L))
-            .append(" seconds ")
+            .append(" s ")
             .append(String.format("%.5f", (double) entry.getValue().getMaxBackoff().get() / 1000L))
-            .append(" seconds ")
+            .append(" s ")
             .append(String.format("%.5f", (double) ((entry.getValue().getTotalBackoff().get() / totalRequests) / 1000L)))
-            .append(" seconds ");
+            .append(" s ");
       }else {
-        metricString.append(" #MinMaxAvg#_").append(entry.getKey())
-            .append("R_").append("= 0 seconds ");
+        metricString.append(" #MMA#_").append(entry.getKey())
+            .append("R_").append("= 0 s ");
       }
     }
-    metricString.append(" #BandwidthThrottled = ").append(numberOfBandwidthThrottledRequests)
-        .append(" #IOPSThrottled = ").append(numberOfIOPSThrottledRequests)
-        .append(" #OtherThrottled = ").append(numberOfOtherThrottledRequests).append('\n');
-    metricString.append(" #Percentage of throttled requests = ").append(percentageOfRequestsThrottled).append('\n');
-    metricString.append(" #Total number of requests which succeeded without retrying = ").append(numberOfRequestsSucceededWithoutRetrying).append('\n');
-    metricString.append(" #Total number of requests which failed = ").append(numberOfRequestsFailed).append('\n');
-    metricString.append(" #Total number of requests = ").append(totalNumberOfRequests).append('\n');
-    metricString.append(" #Max retry count = ").append(maxRetryCount).append('\n');
+    metricString.append(" #BWT=").append(numberOfBandwidthThrottledRequests)
+        .append(" #IT=").append(numberOfIOPSThrottledRequests)
+        .append(" #OT=").append(numberOfOtherThrottledRequests).append('\n');
+    metricString.append(" #%RT=").append(percentageOfRequestsThrottled).append('\n');
+    metricString.append(" #TRNR=").append(numberOfRequestsSucceededWithoutRetrying).append('\n');
+    metricString.append(" #TRF=").append(numberOfRequestsFailed).append('\n');
+    metricString.append(" #TR=").append(totalNumberOfRequests).append('\n');
+    metricString.append(" #MRC = ").append(maxRetryCount).append('\n');
 
     return metricString + " ";
   }
