@@ -43,20 +43,6 @@ public class PlatformName {
    */
   public static final String JAVA_VENDOR_NAME = System.getProperty("java.vendor");
 
-  private boolean useIbmJavaSecurityPackages = false;
-
-  if (JAVA_VENDOR_NAME.contains("IBM")) {
-    try {
-      /**
-       * This class is provided by all supported IBM JTE Runtimes,
-       * but ensures we do not make assumptions of existence of
-       * specialised security modules based on vendor alone.
-       */
-      Class.forName("com.ibm.security.auth.module.JAASLoginModule");
-      useIbmJavaSecurityPackages = true;
-    } catch(ClassNotFoundException ignored) {}
-  }
-
   /**
    * A public static variable to indicate the current java vendor is
    * IBM and the type is Java Technology Edition which provides its
@@ -64,13 +50,29 @@ public class PlatformName {
    * Note that these are not provided in Semeru runtimes:
    * See https://developer.ibm.com/languages/java/semeru-runtimes/
    */
-  public static final boolean USE_IBM_JAVA_PACKAGES = useIbmJavaSecurityPackages;
+  public static final boolean USE_IBM_JAVA_PACKAGES = shouldUseIbmPackages();
 
   /*
   * IBM_JAVA must be preserved due to the public nature of the property.
   */
   @Deprecated
   public static final boolean IBM_JAVA = USE_IBM_JAVA_PACKAGES;
+
+  private static boolean shouldUseIbmPackages() {
+    if (JAVA_VENDOR_NAME.contains("IBM")) {
+      try {
+        /**
+         * This class is provided by all supported IBM JTE Runtimes,
+         * but ensures we do not make assumptions of existence of
+         * specialised security modules based on vendor alone.
+         */
+        Class.forName("com.ibm.security.auth.module.JAASLoginModule");
+        return true;
+      } catch(ClassNotFoundException ignored) {}
+    }
+
+    return false;
+  }
 
   public static void main(String[] args) {
     System.out.println(PLATFORM_NAME);

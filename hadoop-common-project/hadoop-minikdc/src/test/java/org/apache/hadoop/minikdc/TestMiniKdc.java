@@ -38,8 +38,19 @@ import java.util.HashMap;
 import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
-  private static final boolean USE_IBM_JAVA_PACKAGES = System.getProperty("java.vendor")
-      .contains("IBM") && !JAVA_RUNTIME_NAME.contains("Semeru");
+  private static final boolean USE_IBM_JAVA_PACKAGES = shouldUseIbmPackages();
+
+  private static boolean shouldUseIbmPackages() {
+    if (System.getProperty("java.vendor").contains("IBM")) {
+      try {
+        Class.forName("com.ibm.security.auth.module.JAASLoginModule");
+        return true;
+      } catch(ClassNotFoundException ignored) {}
+    }
+
+    return false;
+  }
+
   @Test
   public void testMiniKdcStart() {
     MiniKdc kdc = getKdc();
