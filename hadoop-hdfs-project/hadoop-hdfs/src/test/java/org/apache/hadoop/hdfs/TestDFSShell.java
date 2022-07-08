@@ -1410,7 +1410,7 @@ public class TestDFSShell {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test (timeout = 60000)
   public void testFilePermissions() throws IOException {
     Configuration conf = new HdfsConfiguration();
 

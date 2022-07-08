@@ -36,15 +36,44 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 @InterfaceStability.Evolving
 public interface RpcEngine {
 
-  /** Construct a client-side proxy object. 
-   * @param <T>*/
+  /**
+   * Construct a client-side proxy object.
+   *
+   * @param <T> Generics Type T.
+   * @param protocol input protocol.
+   * @param clientVersion input clientVersion.
+   * @param addr input addr.
+   * @param ticket input ticket.
+   * @param conf input Configuration.
+   * @param factory input factory.
+   * @param rpcTimeout input rpcTimeout.
+   * @param connectionRetryPolicy input connectionRetryPolicy.
+   * @throws IOException raised on errors performing I/O.
+   * @return ProtocolProxy.
+   */
   <T> ProtocolProxy<T> getProxy(Class<T> protocol,
                   long clientVersion, InetSocketAddress addr,
                   UserGroupInformation ticket, Configuration conf,
                   SocketFactory factory, int rpcTimeout,
                   RetryPolicy connectionRetryPolicy) throws IOException;
 
-  /** Construct a client-side proxy object. */
+  /**
+   * Construct a client-side proxy object.
+   *
+   * @param <T> Generics Type T.
+   * @param protocol input protocol.
+   * @param clientVersion input clientVersion.
+   * @param addr input addr.
+   * @param ticket input tocket.
+   * @param conf input Configuration.
+   * @param factory input factory.
+   * @param rpcTimeout input rpcTimeout.
+   * @param connectionRetryPolicy input connectionRetryPolicy.
+   * @param fallbackToSimpleAuth input fallbackToSimpleAuth.
+   * @param alignmentContext input alignmentContext.
+   * @throws IOException raised on errors performing I/O.
+   * @return ProtocolProxy.
+   */
   <T> ProtocolProxy<T> getProxy(Class<T> protocol,
                   long clientVersion, InetSocketAddress addr,
                   UserGroupInformation ticket, Configuration conf,
@@ -87,7 +116,7 @@ public interface RpcEngine {
    * @param conf, Configuration.
    * @param factory, Socket factory.
    * @return Proxy object.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   ProtocolProxy<ProtocolMetaInfoPB> getProtocolMetaInfoProxy(
       ConnectionId connId, Configuration conf, SocketFactory factory)

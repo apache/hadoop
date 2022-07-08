@@ -46,12 +46,22 @@ public class WritableComparator implements RawComparator, Configurable {
 
   private Configuration conf;
 
-  /** For backwards compatibility. **/
+  /**
+   * For backwards compatibility.
+   *
+   * @param c WritableComparable Type.
+   * @return WritableComparator.
+   */
   public static WritableComparator get(Class<? extends WritableComparable> c) {
     return get(c, null);
   }
 
-  /** Get a comparator for a {@link WritableComparable} implementation. */
+  /**
+   * Get a comparator for a {@link WritableComparable} implementation.
+   * @param c class.
+   * @param conf configuration.
+   * @return WritableComparator.
+   */
   public static WritableComparator get(
       Class<? extends WritableComparable> c, Configuration conf) {
     WritableComparator comparator = comparators.get(c);
@@ -95,9 +105,13 @@ public class WritableComparator implements RawComparator, Configurable {
     }
   } 
 
-  /** Register an optimized comparator for a {@link WritableComparable}
+  /**
+   * Register an optimized comparator for a {@link WritableComparable}
    * implementation. Comparators registered with this method must be
-   * thread-safe. */
+   * thread-safe.
+   * @param c class.
+   * @param comparator WritableComparator.
+   */
   public static void define(Class c, WritableComparator comparator) {
     comparators.put(c, comparator);
   }
@@ -111,7 +125,10 @@ public class WritableComparator implements RawComparator, Configurable {
     this(null);
   }
 
-  /** Construct for a {@link WritableComparable} implementation. */
+  /**
+   * Construct for a {@link WritableComparable} implementation.
+   * @param keyClass WritableComparable Class.
+   */
   protected WritableComparator(Class<? extends WritableComparable> keyClass) {
     this(keyClass, null, false);
   }
@@ -136,10 +153,16 @@ public class WritableComparator implements RawComparator, Configurable {
     }
   }
 
-  /** Returns the WritableComparable implementation class. */
+  /**
+   * Returns the WritableComparable implementation class.
+   * @return WritableComparable.
+   */
   public Class<? extends WritableComparable> getKeyClass() { return keyClass; }
 
-  /** Construct a new {@link WritableComparable} instance. */
+  /**
+   * Construct a new {@link WritableComparable} instance.
+   * @return WritableComparable.
+   */
   public WritableComparable newKey() {
     return ReflectionUtils.newInstance(keyClass, conf);
   }
@@ -168,27 +191,54 @@ public class WritableComparator implements RawComparator, Configurable {
     return compare(key1, key2);                   // compare them
   }
 
-  /** Compare two WritableComparables.
+  /**
+   * Compare two WritableComparables.
    *
-   * <p> The default implementation uses the natural ordering, calling {@link
-   * Comparable#compareTo(Object)}. */
+   * The default implementation uses the natural ordering, calling {@link
+   * Comparable#compareTo(Object)}.
+   * @param a the first object to be compared.
+   * @param b the second object to be compared.
+   * @return compare result.
+   */
   @SuppressWarnings("unchecked")
   public int compare(WritableComparable a, WritableComparable b) {
     return a.compareTo(b);
   }
 
+  /**
+   * Compare two Object.
+   *
+   * @param a the first object to be compared.
+   * @param b the second object to be compared.
+   * @return compare result.
+   */
   @Override
   public int compare(Object a, Object b) {
     return compare((WritableComparable)a, (WritableComparable)b);
   }
 
-  /** Lexicographic order of binary data. */
+  /**
+   * Lexicographic order of binary data.
+   * @param b1 b1.
+   * @param s1 s1.
+   * @param l1 l1.
+   * @param b2 b2.
+   * @param s2 s2.
+   * @param l2 l2.
+   * @return compare bytes.
+   */
   public static int compareBytes(byte[] b1, int s1, int l1,
                                  byte[] b2, int s2, int l2) {
     return FastByteComparisons.compareTo(b1, s1, l1, b2, s2, l2);
   }
 
-  /** Compute hash for binary data. */
+  /**
+   * Compute hash for binary data.
+   * @param bytes bytes.
+   * @param offset offset.
+   * @param length length.
+   * @return hash for binary data.
+   */
   public static int hashBytes(byte[] bytes, int offset, int length) {
     int hash = 1;
     for (int i = offset; i < offset + length; i++)
@@ -196,18 +246,33 @@ public class WritableComparator implements RawComparator, Configurable {
     return hash;
   }
   
-  /** Compute hash for binary data. */
+  /**
+   * Compute hash for binary data.
+   * @param bytes bytes.
+   * @param length length.
+   * @return hash for binary data.
+   */
   public static int hashBytes(byte[] bytes, int length) {
     return hashBytes(bytes, 0, length);
   }
 
-  /** Parse an unsigned short from a byte array. */
+  /**
+   * Parse an unsigned short from a byte array.
+   * @param bytes bytes.
+   * @param start start.
+   * @return unsigned short from a byte array
+   */
   public static int readUnsignedShort(byte[] bytes, int start) {
     return (((bytes[start]   & 0xff) <<  8) +
             ((bytes[start+1] & 0xff)));
   }
 
-  /** Parse an integer from a byte array. */
+  /**
+   * Parse an integer from a byte array.
+   * @param bytes bytes.
+   * @param start start.
+   * @return integer from a byte array
+   */
   public static int readInt(byte[] bytes, int start) {
     return (((bytes[start  ] & 0xff) << 24) +
             ((bytes[start+1] & 0xff) << 16) +
@@ -216,18 +281,33 @@ public class WritableComparator implements RawComparator, Configurable {
 
   }
 
-  /** Parse a float from a byte array. */
+  /**
+   * Parse a float from a byte array.
+   * @param bytes bytes.
+   * @param start start.
+   * @return float from a byte array
+   */
   public static float readFloat(byte[] bytes, int start) {
     return Float.intBitsToFloat(readInt(bytes, start));
   }
 
-  /** Parse a long from a byte array. */
+  /**
+   * Parse a long from a byte array.
+   * @param bytes bytes.
+   * @param start start.
+   * @return long from a byte array
+   */
   public static long readLong(byte[] bytes, int start) {
     return ((long)(readInt(bytes, start)) << 32) +
       (readInt(bytes, start+4) & 0xFFFFFFFFL);
   }
 
-  /** Parse a double from a byte array. */
+  /**
+   * Parse a double from a byte array.
+   * @param bytes bytes.
+   * @param start start.
+   * @return double from a byte array.
+   */
   public static double readDouble(byte[] bytes, int start) {
     return Double.longBitsToDouble(readLong(bytes, start));
   }
@@ -236,7 +316,7 @@ public class WritableComparator implements RawComparator, Configurable {
    * Reads a zero-compressed encoded long from a byte array and returns it.
    * @param bytes byte array with decode long
    * @param start starting index
-   * @throws java.io.IOException 
+   * @throws IOException raised on errors performing I/O.
    * @return deserialized long
    */
   public static long readVLong(byte[] bytes, int start) throws IOException {
@@ -261,7 +341,7 @@ public class WritableComparator implements RawComparator, Configurable {
    * Reads a zero-compressed encoded integer from a byte array and returns it.
    * @param bytes byte array with the encoded integer
    * @param start start index
-   * @throws java.io.IOException 
+   * @throws IOException raised on errors performing I/O.
    * @return deserialized integer
    */
   public static int readVInt(byte[] bytes, int start) throws IOException {

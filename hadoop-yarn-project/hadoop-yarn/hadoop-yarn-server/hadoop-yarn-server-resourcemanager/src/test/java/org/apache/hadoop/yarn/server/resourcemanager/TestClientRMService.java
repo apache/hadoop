@@ -1402,9 +1402,9 @@ public class TestClientRMService {
     request.setQueues(queueSet);
 
     queueSet.add(queues[0]);
-    assertEquals("Incorrect number of applications in queue", 2,
+    assertEquals("Incorrect number of applications in queue", 3,
         rmService.getApplications(request).getApplicationList().size());
-    assertEquals("Incorrect number of applications in queue", 2,
+    assertEquals("Incorrect number of applications in queue", 3,
         rmService.getApplications(request).getApplicationList().size());
 
     queueSet.add(queues[1]);

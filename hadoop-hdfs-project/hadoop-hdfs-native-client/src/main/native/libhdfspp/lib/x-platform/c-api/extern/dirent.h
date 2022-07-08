@@ -15,4 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocolPB;
+
+#ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_EXTERN_DIRENT_H
+#define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_EXTERN_DIRENT_H
+
+/*
+ * We will use extern "C" only on Windows.
+ */
+#if defined(WIN32) && defined(__cplusplus)
+extern "C" {
+#endif
+
+#include "x-platform/c-api/core/dirent.h"
+
+#if defined(WIN32) && defined(__cplusplus)
+}
+#endif
+
+#endif

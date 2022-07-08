@@ -51,10 +51,38 @@ public final class RouterMetrics {
   private MutableGaugeInt numAppsFailedRetrieved;
   @Metric("# of multiple applications reports failed to be retrieved")
   private MutableGaugeInt numMultipleAppsFailedRetrieved;
-  @Metric("# of applicationAttempt reports failed to be retrieved")
+  @Metric("# of getApplicationAttempts failed to be retrieved")
   private MutableGaugeInt numAppAttemptsFailedRetrieved;
   @Metric("# of getClusterMetrics failed to be retrieved")
   private MutableGaugeInt numGetClusterMetricsFailedRetrieved;
+  @Metric("# of getClusterNodes failed to be retrieved")
+  private MutableGaugeInt numGetClusterNodesFailedRetrieved;
+  @Metric("# of getNodeToLabels failed to be retrieved")
+  private MutableGaugeInt numGetNodeToLabelsFailedRetrieved;
+  @Metric("# of getNodeToLabels failed to be retrieved")
+  private MutableGaugeInt numGetLabelsToNodesFailedRetrieved;
+  @Metric("# of getClusterNodeLabels failed to be retrieved")
+  private MutableGaugeInt numGetClusterNodeLabelsFailedRetrieved;
+  @Metric("# of getApplicationAttemptReports failed to be retrieved")
+  private MutableGaugeInt numAppAttemptReportFailedRetrieved;
+  @Metric("# of getQueueUserAcls failed to be retrieved")
+  private MutableGaugeInt numGetQueueUserAclsFailedRetrieved;
+  @Metric("# of getContainerReport failed to be retrieved")
+  private MutableGaugeInt numGetContainerReportFailedRetrieved;
+  @Metric("# of getContainers failed to be retrieved")
+  private MutableGaugeInt numGetContainersFailedRetrieved;
+  @Metric("# of getContainers failed to be retrieved")
+  private MutableGaugeInt numListReservationsFailedRetrieved;
+  @Metric("# of getResourceTypeInfo failed to be retrieved")
+  private MutableGaugeInt numGetResourceTypeInfo;
+  @Metric("# of failApplicationAttempt failed to be retrieved")
+  private MutableGaugeInt numFailAppAttemptFailedRetrieved;
+  @Metric("# of updateApplicationPriority failed to be retrieved")
+  private MutableGaugeInt numUpdateAppPriorityFailedRetrieved;
+  @Metric("# of updateApplicationPriority failed to be retrieved")
+  private MutableGaugeInt numUpdateAppTimeoutsFailedRetrieved;
+  @Metric("# of signalToContainer failed to be retrieved")
+  private MutableGaugeInt numSignalToContainerFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -74,7 +102,34 @@ public final class RouterMetrics {
   @Metric("Total number of successful Retrieved getClusterMetrics and "
       + "latency(ms)")
   private MutableRate totalSucceededGetClusterMetricsRetrieved;
-
+  @Metric("Total number of successful Retrieved getClusterNodes and latency(ms)")
+  private MutableRate totalSucceededGetClusterNodesRetrieved;
+  @Metric("Total number of successful Retrieved getNodeToLabels and latency(ms)")
+  private MutableRate totalSucceededGetNodeToLabelsRetrieved;
+  @Metric("Total number of successful Retrieved getNodeToLabels and latency(ms)")
+  private MutableRate totalSucceededGetLabelsToNodesRetrieved;
+  @Metric("Total number of successful Retrieved getClusterNodeLabels and latency(ms)")
+  private MutableRate totalSucceededGetClusterNodeLabelsRetrieved;
+  @Metric("Total number of successful Retrieved getApplicationAttemptReport and latency(ms)")
+  private MutableRate totalSucceededAppAttemptReportRetrieved;
+  @Metric("Total number of successful Retrieved getQueueUserAcls and latency(ms)")
+  private MutableRate totalSucceededGetQueueUserAclsRetrieved;
+  @Metric("Total number of successful Retrieved getContainerReport and latency(ms)")
+  private MutableRate totalSucceededGetContainerReportRetrieved;
+  @Metric("Total number of successful Retrieved getContainers and latency(ms)")
+  private MutableRate totalSucceededGetContainersRetrieved;
+  @Metric("Total number of successful Retrieved listReservations and latency(ms)")
+  private MutableRate totalSucceededListReservationsRetrieved;
+  @Metric("Total number of successful Retrieved getResourceTypeInfo and latency(ms)")
+  private MutableRate totalSucceededGetResourceTypeInfoRetrieved;
+  @Metric("Total number of successful Retrieved failApplicationAttempt and latency(ms)")
+  private MutableRate totalSucceededFailAppAttemptRetrieved;
+  @Metric("Total number of successful Retrieved updateApplicationPriority and latency(ms)")
+  private MutableRate totalSucceededUpdateAppPriorityRetrieved;
+  @Metric("Total number of successful Retrieved updateApplicationTimeouts and latency(ms)")
+  private MutableRate totalSucceededUpdateAppTimeoutsRetrieved;
+  @Metric("Total number of successful Retrieved signalToContainer and latency(ms)")
+  private MutableRate totalSucceededSignalToContainerRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -86,8 +141,22 @@ public final class RouterMetrics {
   private MutableQuantiles getApplicationsReportLatency;
   private MutableQuantiles getApplicationAttemptReportLatency;
   private MutableQuantiles getClusterMetricsLatency;
+  private MutableQuantiles getClusterNodesLatency;
+  private MutableQuantiles getNodeToLabelsLatency;
+  private MutableQuantiles getLabelToNodesLatency;
+  private MutableQuantiles getClusterNodeLabelsLatency;
+  private MutableQuantiles getApplicationAttemptsLatency;
+  private MutableQuantiles getQueueUserAclsLatency;
+  private MutableQuantiles getContainerReportLatency;
+  private MutableQuantiles getContainerLatency;
+  private MutableQuantiles listReservationsLatency;
+  private MutableQuantiles listResourceTypeInfoLatency;
+  private MutableQuantiles failAppAttemptLatency;
+  private MutableQuantiles updateAppPriorityLatency;
+  private MutableQuantiles updateAppTimeoutsLatency;
+  private MutableQuantiles signalToContainerLatency;
 
-  private static volatile RouterMetrics INSTANCE = null;
+  private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
 
   private RouterMetrics() {
@@ -112,25 +181,81 @@ public final class RouterMetrics {
     getClusterMetricsLatency =
         registry.newQuantiles("getClusterMetricsLatency",
             "latency of get cluster metrics", "ops", "latency", 10);
+
+    getClusterNodesLatency =
+        registry.newQuantiles("getClusterNodesLatency",
+            "latency of get cluster nodes", "ops", "latency", 10);
+
+    getNodeToLabelsLatency =
+        registry.newQuantiles("getNodeToLabelsLatency",
+            "latency of get node labels", "ops", "latency", 10);
+
+    getLabelToNodesLatency =
+        registry.newQuantiles("getLabelToNodesLatency",
+            "latency of get label nodes", "ops", "latency", 10);
+
+    getClusterNodeLabelsLatency =
+        registry.newQuantiles("getClusterNodeLabelsLatency",
+            "latency of get cluster node labels", "ops", "latency", 10);
+
+    getApplicationAttemptsLatency =
+        registry.newQuantiles("getApplicationAttemptsLatency",
+            "latency of get application attempts", "ops", "latency", 10);
+
+    getQueueUserAclsLatency =
+        registry.newQuantiles("getQueueUserAclsLatency",
+            "latency of get queue user acls", "ops", "latency", 10);
+
+    getContainerReportLatency =
+        registry.newQuantiles("getContainerReportLatency",
+            "latency of get container report", "ops", "latency", 10);
+
+    getContainerLatency =
+        registry.newQuantiles("getContainerLatency",
+            "latency of get container", "ops", "latency", 10);
+
+    listReservationsLatency =
+        registry.newQuantiles("listReservationsLatency",
+            "latency of list reservations", "ops", "latency", 10);
+
+    listResourceTypeInfoLatency =
+        registry.newQuantiles("getResourceTypeInfoLatency",
+            "latency of get resource type info", "ops", "latency", 10);
+
+    failAppAttemptLatency =
+        registry.newQuantiles("failApplicationAttemptLatency",
+            "latency of fail application attempt", "ops", "latency", 10);
+
+    updateAppPriorityLatency =
+        registry.newQuantiles("updateApplicationPriorityLatency",
+            "latency of update application priority", "ops", "latency", 10);
+
+    updateAppTimeoutsLatency =
+        registry.newQuantiles("updateApplicationTimeoutsLatency",
+            "latency of update application timeouts", "ops", "latency", 10);
+
+    signalToContainerLatency =
+        registry.newQuantiles("signalToContainerLatency",
+            "latency of signal to container timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
     if (!isInitialized.get()) {
       synchronized (RouterMetrics.class) {
-        if (INSTANCE == null) {
-          INSTANCE = DefaultMetricsSystem.instance().register("RouterMetrics",
+        if (instance == null) {
+          instance = DefaultMetricsSystem.instance().register("RouterMetrics",
               "Metrics for the Yarn Router", new RouterMetrics());
           isInitialized.set(true);
         }
       }
     }
-    return INSTANCE;
+    return instance;
   }
 
   @VisibleForTesting
   synchronized static void destroy() {
     isInitialized.set(false);
-    INSTANCE = null;
+    instance = null;
   }
 
   @VisibleForTesting
@@ -169,6 +294,76 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetClusterNodesRetrieved(){
+    return totalSucceededGetClusterNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetNodeToLabelsRetrieved(){
+    return totalSucceededGetNodeToLabelsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetLabelsToNodesRetrieved(){
+    return totalSucceededGetLabelsToNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetClusterNodeLabelsRetrieved(){
+    return totalSucceededGetClusterNodeLabelsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededAppAttemptReportRetrieved(){
+    return totalSucceededAppAttemptReportRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetQueueUserAclsRetrieved(){
+    return totalSucceededGetQueueUserAclsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetContainerReportRetrieved() {
+    return totalSucceededGetContainerReportRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetContainersRetrieved() {
+    return totalSucceededGetContainersRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededListReservationsRetrieved() {
+    return totalSucceededListReservationsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetResourceTypeInfoRetrieved() {
+    return totalSucceededGetResourceTypeInfoRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededFailAppAttemptRetrieved() {
+    return totalSucceededFailAppAttemptRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededUpdateAppPriorityRetrieved() {
+    return totalSucceededUpdateAppPriorityRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededUpdateAppTimeoutsRetrieved() {
+    return totalSucceededUpdateAppTimeoutsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededSignalToContainerRetrieved() {
+    return totalSucceededSignalToContainerRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -185,7 +380,7 @@ public final class RouterMetrics {
 
   @VisibleForTesting
   public double getLatencySucceededGetAppAttemptReport() {
-    return totalSucceededAppAttemptsRetrieved.lastStat().mean();
+    return totalSucceededAppAttemptReportRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -201,6 +396,76 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededGetClusterMetricsRetrieved() {
     return totalSucceededGetClusterMetricsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetClusterNodesRetrieved() {
+    return totalSucceededGetClusterNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetNodeToLabelsRetrieved() {
+    return totalSucceededGetNodeToLabelsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetLabelsToNodesRetrieved() {
+    return totalSucceededGetLabelsToNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetClusterNodeLabelsRetrieved() {
+    return totalSucceededGetClusterNodeLabelsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededAppAttemptRetrieved() {
+    return totalSucceededAppAttemptsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetQueueUserAclsRetrieved() {
+    return totalSucceededGetQueueUserAclsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetContainerReportRetrieved() {
+    return totalSucceededGetContainerReportRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetContainersRetrieved() {
+    return totalSucceededGetContainersRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededListReservationsRetrieved() {
+    return totalSucceededListReservationsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetResourceTypeInfoRetrieved() {
+    return totalSucceededGetResourceTypeInfoRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededFailAppAttemptRetrieved() {
+    return totalSucceededFailAppAttemptRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededUpdateAppPriorityRetrieved() {
+    return totalSucceededUpdateAppPriorityRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededUpdateAppTimeoutsRetrieved() {
+    return totalSucceededUpdateAppTimeoutsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededSignalToContainerRetrieved() {
+    return totalSucceededSignalToContainerRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -225,7 +490,7 @@ public final class RouterMetrics {
 
   @VisibleForTesting
   public int getAppAttemptsFailedRetrieved() {
-    return numAppsFailedRetrieved.value();
+    return numAppAttemptsFailedRetrieved.value();
   }
 
   @VisibleForTesting
@@ -236,6 +501,76 @@ public final class RouterMetrics {
   @VisibleForTesting
   public int getClusterMetricsFailedRetrieved() {
     return numGetClusterMetricsFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getClusterNodesFailedRetrieved() {
+    return numGetClusterNodesFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getNodeToLabelsFailedRetrieved() {
+    return numGetNodeToLabelsFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getLabelsToNodesFailedRetrieved() {
+    return numGetLabelsToNodesFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getGetClusterNodeLabelsFailedRetrieved() {
+    return numGetClusterNodeLabelsFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getAppAttemptReportFailedRetrieved() {
+    return numAppAttemptReportFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getQueueUserAclsFailedRetrieved() {
+    return numGetQueueUserAclsFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getContainerReportFailedRetrieved() {
+    return numGetContainerReportFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getContainersFailedRetrieved() {
+    return numGetContainersFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getListReservationsFailedRetrieved() {
+    return numListReservationsFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getGetResourceTypeInfoRetrieved() {
+    return numGetResourceTypeInfo.value();
+  }
+
+  @VisibleForTesting
+  public int getFailApplicationAttemptFailedRetrieved() {
+    return numFailAppAttemptFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getUpdateApplicationPriorityFailedRetrieved() {
+    return numUpdateAppPriorityFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getUpdateApplicationTimeoutsFailedRetrieved() {
+    return numUpdateAppTimeoutsFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getSignalToContainerFailedRetrieved() {
+    return numSignalToContainerFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -265,12 +600,82 @@ public final class RouterMetrics {
 
   public void succeededAppAttemptsRetrieved(long duration) {
     totalSucceededAppAttemptsRetrieved.add(duration);
-    getApplicationAttemptReportLatency.add(duration);
+    getApplicationAttemptsLatency.add(duration);
   }
 
   public void succeededGetClusterMetricsRetrieved(long duration) {
     totalSucceededGetClusterMetricsRetrieved.add(duration);
     getClusterMetricsLatency.add(duration);
+  }
+
+  public void succeededGetClusterNodesRetrieved(long duration) {
+    totalSucceededGetClusterNodesRetrieved.add(duration);
+    getClusterNodesLatency.add(duration);
+  }
+
+  public void succeededGetNodeToLabelsRetrieved(long duration) {
+    totalSucceededGetNodeToLabelsRetrieved.add(duration);
+    getNodeToLabelsLatency.add(duration);
+  }
+
+  public void succeededGetLabelsToNodesRetrieved(long duration) {
+    totalSucceededGetLabelsToNodesRetrieved.add(duration);
+    getLabelToNodesLatency.add(duration);
+  }
+
+  public void succeededGetClusterNodeLabelsRetrieved(long duration) {
+    totalSucceededGetClusterNodeLabelsRetrieved.add(duration);
+    getClusterNodeLabelsLatency.add(duration);
+  }
+
+  public void succeededAppAttemptReportRetrieved(long duration) {
+    totalSucceededAppAttemptReportRetrieved.add(duration);
+    getApplicationAttemptReportLatency.add(duration);
+  }
+
+  public void succeededGetQueueUserAclsRetrieved(long duration) {
+    totalSucceededGetQueueUserAclsRetrieved.add(duration);
+    getQueueUserAclsLatency.add(duration);
+  }
+
+  public void succeededGetContainerReportRetrieved(long duration) {
+    totalSucceededGetContainerReportRetrieved.add(duration);
+    getContainerReportLatency.add(duration);
+  }
+
+  public void succeededGetContainersRetrieved(long duration) {
+    totalSucceededGetContainersRetrieved.add(duration);
+    getContainerLatency.add(duration);
+  }
+
+  public void succeededListReservationsRetrieved(long duration) {
+    totalSucceededListReservationsRetrieved.add(duration);
+    listReservationsLatency.add(duration);
+  }
+
+  public void succeededGetResourceTypeInfoRetrieved(long duration) {
+    totalSucceededGetResourceTypeInfoRetrieved.add(duration);
+    listResourceTypeInfoLatency.add(duration);
+  }
+
+  public void succeededFailAppAttemptRetrieved(long duration) {
+    totalSucceededFailAppAttemptRetrieved.add(duration);
+    failAppAttemptLatency.add(duration);
+  }
+
+  public void succeededUpdateAppPriorityRetrieved(long duration) {
+    totalSucceededUpdateAppPriorityRetrieved.add(duration);
+    updateAppPriorityLatency.add(duration);
+  }
+
+  public void succeededUpdateAppTimeoutsRetrieved(long duration) {
+    totalSucceededUpdateAppTimeoutsRetrieved.add(duration);
+    updateAppTimeoutsLatency.add(duration);
+  }
+
+  public void succeededSignalToContainerRetrieved(long duration) {
+    totalSucceededSignalToContainerRetrieved.add(duration);
+    signalToContainerLatency.add(duration);
   }
 
   public void incrAppsFailedCreated() {
@@ -301,4 +706,59 @@ public final class RouterMetrics {
     numGetClusterMetricsFailedRetrieved.incr();
   }
 
+  public void incrClusterNodesFailedRetrieved() {
+    numGetClusterNodesFailedRetrieved.incr();
+  }
+
+  public void incrNodeToLabelsFailedRetrieved() {
+    numGetNodeToLabelsFailedRetrieved.incr();
+  }
+
+  public void incrLabelsToNodesFailedRetrieved() {
+    numGetLabelsToNodesFailedRetrieved.incr();
+  }
+
+  public void incrClusterNodeLabelsFailedRetrieved() {
+    numGetClusterNodeLabelsFailedRetrieved.incr();
+  }
+
+  public void incrAppAttemptReportFailedRetrieved() {
+    numAppAttemptReportFailedRetrieved.incr();
+  }
+
+  public void incrQueueUserAclsFailedRetrieved() {
+    numGetQueueUserAclsFailedRetrieved.incr();
+  }
+
+  public void incrContainerReportFailedRetrieved() {
+    numGetContainerReportFailedRetrieved.incr();
+  }
+
+  public void incrContainerFailedRetrieved() {
+    numGetContainersFailedRetrieved.incr();
+  }
+
+  public void incrListReservationsFailedRetrieved() {
+    numListReservationsFailedRetrieved.incr();
+  }
+
+  public void incrResourceTypeInfoFailedRetrieved() {
+    numGetResourceTypeInfo.incr();
+  }
+
+  public void incrFailAppAttemptFailedRetrieved() {
+    numFailAppAttemptFailedRetrieved.incr();
+  }
+
+  public void incrUpdateAppPriorityFailedRetrieved() {
+    numUpdateAppPriorityFailedRetrieved.incr();
+  }
+
+  public void incrUpdateApplicationTimeoutsRetrieved() {
+    numUpdateAppTimeoutsFailedRetrieved.incr();
+  }
+
+  public void incrSignalToContainerFailedRetrieved() {
+    numSignalToContainerFailedRetrieved.incr();
+  }
 }

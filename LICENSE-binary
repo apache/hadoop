@@ -231,7 +231,7 @@ com.github.stephenc.jcip:jcip-annotations:1.0-1
 com.google:guice:4.0
 com.google:guice-servlet:4.0
 com.google.api.grpc:proto-google-common-protos:1.0.0
-com.google.code.gson:2.2.4
+com.google.code.gson:2.9.0
 com.google.errorprone:error_prone_annotations:2.2.0
 com.google.j2objc:j2objc-annotations:1.1
 com.google.json-simple:json-simple:1.1.1
@@ -241,7 +241,7 @@ com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:9.8.1
-com.squareup.okhttp:okhttp:2.7.5
+com.squareup.okhttp3:okhttp:4.9.3
 com.squareup.okio:okio:1.6.0
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.3

@@ -245,8 +245,10 @@ public class TestWriteToReplica {
       Assert.fail("Should not have appended to a non-existent replica " + 
           blocks[NON_EXISTENT]);
     } catch (ReplicaNotFoundException e) {
-      Assert.assertEquals(ReplicaNotFoundException.NON_EXISTENT_REPLICA + 
-          blocks[NON_EXISTENT], e.getMessage());
+      String expectMessage = ReplicaNotFoundException.NON_EXISTENT_REPLICA
+          + blocks[NON_EXISTENT].getBlockPoolId() + ":"
+          + blocks[NON_EXISTENT].getBlockId();
+      Assert.assertEquals(expectMessage, e.getMessage());
     }
     
     newGS = blocks[FINALIZED].getGenerationStamp()+1;

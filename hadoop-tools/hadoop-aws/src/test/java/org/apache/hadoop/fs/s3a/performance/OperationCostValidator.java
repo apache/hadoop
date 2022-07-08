@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.performance;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.metrics2.lib.MutableCounter;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
@@ -274,11 +276,25 @@ public final class OperationCostValidator {
 
     /**
      * Add a varargs list of metrics.
-     * @param stat statistics to monitor.
+     * @param stats statistics to monitor.
      * @return this.
      */
     public Builder withMetrics(Statistic...stats) {
       metrics.addAll(Arrays.asList(stats));
+      return this;
+    }
+
+    /**
+     * Add all counters and duration types to the
+     * metrics which can be asserted over.
+     * @return this.
+     */
+    public Builder withAllCounters() {
+      EnumSet.allOf(Statistic.class).stream()
+          .filter(s ->
+              s.getType() == StatisticTypeEnum.TYPE_COUNTER
+                  || s.getType() == StatisticTypeEnum.TYPE_DURATION)
+          .forEach(metrics::add);
       return this;
     }
 

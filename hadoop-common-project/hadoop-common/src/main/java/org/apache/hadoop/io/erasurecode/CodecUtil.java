@@ -83,6 +83,7 @@ public final class CodecUtil {
   /**
    * Create encoder corresponding to given codec.
    * @param options Erasure codec options
+   * @param conf configuration.
    * @return erasure encoder
    */
   public static ErasureEncoder createEncoder(Configuration conf,
@@ -100,6 +101,7 @@ public final class CodecUtil {
   /**
    * Create decoder corresponding to given codec.
    * @param options Erasure codec options
+   * @param conf configuration.
    * @return erasure decoder
    */
   public static ErasureDecoder createDecoder(Configuration conf,

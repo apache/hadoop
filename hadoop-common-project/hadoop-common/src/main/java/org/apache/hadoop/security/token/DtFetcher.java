@@ -28,14 +28,29 @@ import org.apache.hadoop.security.Credentials;
  *  compilation units.  Resolution of fetcher impl will be done at runtime.
  */
 public interface DtFetcher {
-  /** Return a key used to identify the object/service implementation. */
+  /**
+   * Return a key used to identify the object/service implementation.
+   * @return ServiceName.
+   */
   Text getServiceName();
 
-  /** Used to allow the service API to indicate whether a token is required. */
+  /**
+   * Used to allow the service API to indicate whether a token is required.
+   * @return isTokenRequired.
+   */
   boolean isTokenRequired();
 
-  /** Add any number of delegation tokens to Credentials object and return
-   *  a token instance that is appropriate for aliasing, or null if none. */
+  /**
+   * Add any number of delegation tokens to Credentials object and return
+   *  a token instance that is appropriate for aliasing, or null if none.
+   *
+   * @param conf configuration.
+   * @param creds credentials.
+   * @param renewer renewer.
+   * @param url url.
+   * @throws Exception Exception.
+   * @return DelegationTokens.
+   */
   Token<?> addDelegationTokens(Configuration conf, Credentials creds,
                                String renewer, String url) throws Exception;
 }

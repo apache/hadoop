@@ -35,7 +35,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -904,7 +903,7 @@ public class DFSAdmin extends FsShell {
                 + proxy.getAddress());
           }
         }catch (IOException ioe){
-          System.out.println("Save namespace failed for " +
+          System.err.println("Save namespace failed for " +
               proxy.getAddress());
           exceptions.add(ioe);
         }
@@ -961,7 +960,7 @@ public class DFSAdmin extends FsShell {
           System.out.println("restoreFailedStorage is set to " + res + " for "
               + proxy.getAddress());
         } catch (IOException ioe){
-          System.out.println("restoreFailedStorage failed for "
+          System.err.println("restoreFailedStorage failed for "
               + proxy.getAddress());
           exceptions.add(ioe);
         }
@@ -1004,7 +1003,7 @@ public class DFSAdmin extends FsShell {
           System.out.println("Refresh nodes successful for " +
               proxy.getAddress());
         }catch (IOException ioe){
-          System.out.println("Refresh nodes failed for " +
+          System.err.println("Refresh nodes failed for " +
               proxy.getAddress());
           exceptions.add(ioe);
         }
@@ -1060,7 +1059,7 @@ public class DFSAdmin extends FsShell {
       openFilesRemoteIterator = dfs.listOpenFiles(openFilesTypes, path);
       printOpenFiles(openFilesRemoteIterator);
     } catch (IOException ioe){
-      System.out.println("List open files failed.");
+      System.err.println("List open files failed.");
       throw ioe;
     }
     return 0;
@@ -1494,7 +1493,7 @@ public class DFSAdmin extends FsShell {
           System.out.println("Finalize upgrade successful for " +
               proxy.getAddress());
         }catch (IOException ioe){
-          System.out.println("Finalize upgrade failed for " +
+          System.err.println("Finalize upgrade failed for " +
               proxy.getAddress());
           exceptions.add(ioe);
         }
@@ -1623,7 +1622,7 @@ public class DFSAdmin extends FsShell {
             throw re;
           }
         } catch (IOException ioe) {
-          System.out.println("Created metasave file " + pathname
+          System.err.println("Created metasave file " + pathname
               + " in the log directory of namenode " + proxy.getAddress()
               + " failed");
           exceptions.add(ioe);
@@ -1648,40 +1647,45 @@ public class DFSAdmin extends FsShell {
    * @throws IOException If an error while getting datanode report
    */
   public int printTopology() throws IOException {
-      DistributedFileSystem dfs = getDFS();
-      final DatanodeInfo[] report = dfs.getDataNodeStats();
+    DistributedFileSystem dfs = getDFS();
+    final DatanodeInfo[] report = dfs.getDataNodeStats();
 
-      // Build a map of rack -> nodes from the datanode report
-      HashMap<String, TreeSet<String> > tree = new HashMap<String, TreeSet<String>>();
-      for(DatanodeInfo dni : report) {
-        String location = dni.getNetworkLocation();
-        String name = dni.getName();
+    // Build a map of rack -> nodes from the datanode report
+    Map<String, HashMap<String, String>> map = new HashMap<>();
+    for(DatanodeInfo dni : report) {
+      String location = dni.getNetworkLocation();
+      String name = dni.getName();
+      String dnState = dni.getAdminState().toString();
         
-        if(!tree.containsKey(location)) {
-          tree.put(location, new TreeSet<String>());
-        }
-        
-        tree.get(location).add(name);
+      if(!map.containsKey(location)) {
+        map.put(location, new HashMap<>());
       }
-      
-      // Sort the racks (and nodes) alphabetically, display in order
-      ArrayList<String> racks = new ArrayList<String>(tree.keySet());
-      Collections.sort(racks);
-      
-      for(String r : racks) {
-        System.out.println("Rack: " + r);
-        TreeSet<String> nodes = tree.get(r);
 
-        for(String n : nodes) {
-          System.out.print("   " + n);
-          String hostname = NetUtils.getHostNameOfIP(n);
-          if(hostname != null)
-            System.out.print(" (" + hostname + ")");
-          System.out.println();
+      Map<String, String> node = map.get(location);
+      node.put(name, dnState);
+    }
+      
+    // Sort the racks (and nodes) alphabetically, display in order
+    List<String> racks = new ArrayList<>(map.keySet());
+    Collections.sort(racks);
+      
+    for(String r : racks) {
+      System.out.println("Rack: " + r);
+      Map<String, String> nodes = map.get(r);
+
+      for(Map.Entry<String, String> entry : nodes.entrySet()) {
+        String n = entry.getKey();
+        System.out.print("   " + n);
+        String hostname = NetUtils.getHostNameOfIP(n);
+        if(hostname != null) {
+          System.out.print(" (" + hostname + ")");
         }
-
+        System.out.print(" " + entry.getValue());
         System.out.println();
       }
+
+      System.out.println();
+    }
     return 0;
   }
   
@@ -1722,7 +1726,7 @@ public class DFSAdmin extends FsShell {
           System.out.println("Refresh service acl successful for "
               + proxy.getAddress());
         }catch (IOException ioe){
-          System.out.println("Refresh service acl failed for "
+          System.err.println("Refresh service acl failed for "
               + proxy.getAddress());
           exceptions.add(ioe);
         }
@@ -1775,7 +1779,7 @@ public class DFSAdmin extends FsShell {
           System.out.println("Refresh user to groups mapping successful for "
               + proxy.getAddress());
         }catch (IOException ioe){
-          System.out.println("Refresh user to groups mapping failed for "
+          System.err.println("Refresh user to groups mapping failed for "
               + proxy.getAddress());
           exceptions.add(ioe);
         }
@@ -1830,7 +1834,7 @@ public class DFSAdmin extends FsShell {
           System.out.println("Refresh super user groups configuration " +
               "successful for " + proxy.getAddress());
         }catch (IOException ioe){
-          System.out.println("Refresh super user groups configuration " +
+          System.err.println("Refresh super user groups configuration " +
               "failed for " + proxy.getAddress());
           exceptions.add(ioe);
         }
@@ -1879,7 +1883,7 @@ public class DFSAdmin extends FsShell {
           System.out.println("Refresh call queue successful for "
               + proxy.getAddress());
         }catch (IOException ioe){
-          System.out.println("Refresh call queue failed for "
+          System.err.println("Refresh call queue failed for "
               + proxy.getAddress());
           exceptions.add(ioe);
         }

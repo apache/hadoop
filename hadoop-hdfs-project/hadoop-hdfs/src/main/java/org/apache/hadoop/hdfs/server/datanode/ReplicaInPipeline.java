@@ -52,6 +52,11 @@ public interface ReplicaInPipeline extends Replica {
   public void releaseAllBytesReserved();
 
   /**
+   * Release the reserved space from the ReplicaInfo.
+   */
+  void releaseReplicaInfoBytesReserved();
+
+  /**
    * store the checksum for the last chunk along with the data length
    * @param dataLength number of bytes on disk
    * @param lastChecksum - checksum bytes for the last chunk

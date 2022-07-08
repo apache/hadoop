@@ -255,7 +255,7 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       TimeUnit.MINUTES.toMillis(1);
   /**
    * Remote router mount table cache is updated through RouterClient(RPC call).
-   * To improve performance, RouterClient connections are cached but it should
+   * To improve performance, RouterClient connections are cached, but it should
    * not be kept in cache forever. This property defines the max time a
    * connection can be cached.
    */

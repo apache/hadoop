@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.apache.commons.lang3.Range;
 import org.slf4j.Logger;
@@ -913,7 +912,17 @@ public class ClientRMService extends AbstractService implements
       }
 
       if (queues != null && !queues.isEmpty()) {
-        if (!queues.contains(application.getQueue())) {
+        Map<String, List<RMApp>> foundApps = queryApplicationsByQueues(apps, queues);
+        List<RMApp> runningAppsByQueues = foundApps.entrySet().stream()
+            .filter(e -> queues.contains(e.getKey()))
+            .map(Map.Entry::getValue)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+        List<RMApp> runningAppsById = runningAppsByQueues.stream()
+            .filter(app -> app.getApplicationId().equals(application.getApplicationId()))
+            .collect(Collectors.toList());
+
+        if (runningAppsById.isEmpty() && !queues.contains(application.getQueue())) {
           continue;
         }
       }
@@ -990,6 +999,22 @@ public class ClientRMService extends AbstractService implements
       recordFactory.newRecordInstance(GetApplicationsResponse.class);
     response.setApplicationList(reports);
     return response;
+  }
+
+  private Map<String, List<RMApp>> queryApplicationsByQueues(
+      Map<ApplicationId, RMApp> apps, Set<String> queues) {
+    final Map<String, List<RMApp>> appsToQueues = new HashMap<>();
+    for (String queue : queues) {
+      List<ApplicationAttemptId> appsInQueue = scheduler.getAppsInQueue(queue);
+      if (appsInQueue != null && !appsInQueue.isEmpty()) {
+        for (ApplicationAttemptId appAttemptId : appsInQueue) {
+          RMApp rmApp = apps.get(appAttemptId.getApplicationId());
+          appsToQueues.putIfAbsent(queue, new ArrayList<>());
+          appsToQueues.get(queue).add(rmApp);
+        }
+      }
+    }
+    return appsToQueues;
   }
 
   private Set<String> getLowerCasedAppTypes(GetApplicationsRequest request) {
