@@ -27,6 +27,7 @@ package org.apache.hadoop.io.compress.bzip2;
 import java.io.OutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -781,8 +782,7 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
       inUse[i] = false;
     }
 
-    /* 20 is just a paranoia constant */
-    this.allowableBlockSize = (this.blockSize100k * BZip2Constants.baseBlockSize) - 20;
+    this.allowableBlockSize = getAllowableBlockSize(this.blockSize100k);
   }
 
   private void endBlock() throws IOException {
@@ -2093,4 +2093,9 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
 
   }
 
+  @VisibleForTesting
+  static int getAllowableBlockSize(int blockSize100k) {
+    /* 20 is just a paranoia constant */
+    return (blockSize100k * BZip2Constants.baseBlockSize) - 20;
+  }
 }
