@@ -397,6 +397,12 @@
       <groupId>org.wildfly.openssl</groupId>
       <artifactId>wildfly-openssl-java</artifactId>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.osgi</groupId>
+          <artifactId>org.osgi.core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.xerial.snappy</groupId>
