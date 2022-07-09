@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 
 /**
- * Defines the contract to be implemented by the request intercepter classes,
+ * Defines the contract to be implemented by the request interceptor classes,
  * that can be used to intercept and inspect messages sent from the client to
  * the resource manager server.
  *

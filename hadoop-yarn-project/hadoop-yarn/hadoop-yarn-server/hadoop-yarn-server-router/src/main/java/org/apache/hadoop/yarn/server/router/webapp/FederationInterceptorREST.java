@@ -404,7 +404,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (newApp == null || newApp.getApplicationId() == null) {
       routerMetrics.incrAppsFailedSubmitted();
       String errMsg = "Missing ApplicationSubmissionContextInfo or "
-          + "applicationSubmissionContex information.";
+          + "applicationSubmissionContext information.";
       return Response
           .status(Status.BAD_REQUEST)
           .entity(errMsg)
@@ -665,7 +665,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * ResourceManager: the Router calls each YARN RM in parallel by using one
    * thread for each YARN RM. In case a YARN RM fails, a single call will
-   * timeout. However the Router will merge the ApplicationReports it got, and
+   * timeout. However, the Router will merge the ApplicationReports it got, and
    * provides a partial list to the client.
    * <p>
    * State Store: the Router will timeout and it will retry depending on the
@@ -940,7 +940,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * ResourceManager: the Router calls each YARN RM in parallel by using one
    * thread for each YARN RM. In case a YARN RM fails, a single call will
-   * timeout. However the Router will use the NodesInfo it got, and provides a
+   * timeout. However, the Router will use the NodesInfo it got, and provides a
    * partial list to the client.
    * <p>
    * State Store: the Router will timeout and it will retry depending on the

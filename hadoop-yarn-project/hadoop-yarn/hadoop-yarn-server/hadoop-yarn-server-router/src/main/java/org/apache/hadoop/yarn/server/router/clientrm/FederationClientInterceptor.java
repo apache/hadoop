@@ -662,7 +662,7 @@ public class FederationClientInterceptor
    * Router: the Client will timeout and resubmit the request.
    *
    * ResourceManager: the Router calls each Yarn RM in parallel. In case a
-   * Yarn RM fails, a single call will timeout. However the Router will
+   * Yarn RM fails, a single call will timeout. However, the Router will
    * merge the ApplicationReports it got, and provides a partial list to
    * the client.
    *
