@@ -17,7 +17,7 @@
  */
 
 /**
- * This package provides a mechanism for tracking {@link NameNode} startup
+ * This package provides a mechanism for tracking NameNode startup
  * progress.  The package models NameNode startup as a series of {@link Phase}s,
  * with each phase further sub-divided into multiple {@link Step}s.  All phases
  * are coarse-grained and typically known in advance, implied by the structure of

@@ -40,6 +40,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -68,6 +69,7 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
@@ -102,6 +104,11 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /** IO Statistics. */
   private final IOStatistics iostatistics;
+
+  /**
+   * The options this instance was created with.
+   */
+  private final BlockOutputStreamBuilder builder;
 
   /** Total bytes for uploads submitted so far. */
   private long bytesSubmitted;
@@ -167,6 +174,7 @@ class S3ABlockOutputStream extends OutputStream implements
   S3ABlockOutputStream(BlockOutputStreamBuilder builder)
       throws IOException {
     builder.validate();
+    this.builder = builder;
     this.key = builder.key;
     this.blockFactory = builder.blockFactory;
     this.blockSize = (int) builder.blockSize;
@@ -332,6 +340,7 @@ class S3ABlockOutputStream extends OutputStream implements
    *                     initializing the upload, or if a previous operation
    *                     has failed.
    */
+  @Retries.RetryTranslated
   private synchronized void uploadCurrentBlock(boolean isLast)
       throws IOException {
     Preconditions.checkState(hasActiveBlock(), "No active block");
@@ -353,6 +362,7 @@ class S3ABlockOutputStream extends OutputStream implements
    * can take time and potentially fail.
    * @throws IOException failure to initialize the upload
    */
+  @Retries.RetryTranslated
   private void initMultipartUpload() throws IOException {
     if (multiPartUpload == null) {
       LOG.debug("Initiating Multipart upload");
@@ -546,9 +556,15 @@ class S3ABlockOutputStream extends OutputStream implements
     int size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
     final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
-        writeOperationHelper.createPutObjectRequest(key, uploadData.getFile())
-        : writeOperationHelper.createPutObjectRequest(key,
-            uploadData.getUploadStream(), size, null);
+        writeOperationHelper.createPutObjectRequest(
+            key,
+            uploadData.getFile(),
+            builder.putOptions)
+        : writeOperationHelper.createPutObjectRequest(
+            key,
+            uploadData.getUploadStream(),
+            size,
+            builder.putOptions);
     BlockUploadProgress callback =
         new BlockUploadProgress(
             block, progressListener,  now());
@@ -559,7 +575,7 @@ class S3ABlockOutputStream extends OutputStream implements
           try {
             // the putObject call automatically closes the input
             // stream afterwards.
-            return writeOperationHelper.putObject(putObjectRequest);
+            return writeOperationHelper.putObject(putObjectRequest, builder.putOptions);
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
           }
@@ -702,8 +718,21 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private IOException blockUploadFailure;
 
+    /**
+     * Constructor.
+     * Initiates the MPU request against S3.
+     * @param key upload destination
+     * @throws IOException failure
+     */
+
+    @Retries.RetryTranslated
     MultiPartUpload(String key) throws IOException {
-      this.uploadId = writeOperationHelper.initiateMultiPartUpload(key);
+      this.uploadId = trackDuration(statistics,
+          OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
+          () -> writeOperationHelper.initiateMultiPartUpload(
+              key,
+              builder.putOptions));
+
       this.partETagsFutures = new ArrayList<>(2);
       LOG.debug("Initiated multi-part upload for {} with " +
           "id '{}'", writeOperationHelper, uploadId);
@@ -887,7 +916,8 @@ class S3ABlockOutputStream extends OutputStream implements
                   uploadId,
                   partETags,
                   bytesSubmitted,
-                  errorCount);
+                  errorCount,
+                  builder.putOptions);
             });
       } finally {
         statistics.exceptionInMultipartComplete(errorCount.get());
@@ -1057,6 +1087,11 @@ class S3ABlockOutputStream extends OutputStream implements
     /** is Client side Encryption enabled? */
     private boolean isCSEEnabled;
 
+    /**
+     * Put object options.
+     */
+    private PutObjectOptions putOptions;
+
     private BlockOutputStreamBuilder() {
     }
 
@@ -1070,6 +1105,7 @@ class S3ABlockOutputStream extends OutputStream implements
       requireNonNull(statistics, "null statistics");
       requireNonNull(writeOperations, "null writeOperationHelper");
       requireNonNull(putTracker, "null putTracker");
+      requireNonNull(putOptions, "null putOptions");
       Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
           "Block size is too small: %s", blockSize);
     }
@@ -1180,6 +1216,17 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     public BlockOutputStreamBuilder withCSEEnabled(boolean value) {
       isCSEEnabled = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public BlockOutputStreamBuilder withPutOptions(
+        final PutObjectOptions value) {
+      putOptions = value;
       return this;
     }
   }
