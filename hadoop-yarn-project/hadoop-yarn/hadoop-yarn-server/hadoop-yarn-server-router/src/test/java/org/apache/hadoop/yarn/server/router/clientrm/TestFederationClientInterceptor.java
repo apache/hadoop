@@ -1200,7 +1200,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // null request
     LambdaTestUtils.intercept(YarnException.class,
-        "Missing getResourceProfile request or profileName.", () -> interceptor.getResourceProfile(null));
+        "Missing getResourceProfile request or profileName.",
+        () -> interceptor.getResourceProfile(null));
 
     // normal request
     GetResourceProfileRequest request = GetResourceProfileRequest.newInstance("maximum");
