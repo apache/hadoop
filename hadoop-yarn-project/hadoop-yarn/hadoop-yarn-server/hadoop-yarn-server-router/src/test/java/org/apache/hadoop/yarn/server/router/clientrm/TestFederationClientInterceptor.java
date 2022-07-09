@@ -78,6 +78,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesReq
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -188,7 +192,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
-
     return conf;
   }
 
@@ -1168,5 +1171,57 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertEquals(queueInfo.getCurrentCapacity(), 0.0, 0);
     Assert.assertEquals(queueInfo.getChildQueues().size(), 12, 0);
     Assert.assertEquals(queueInfo.getAccessibleNodeLabels().size(), 1);
+  }
+
+  @Test
+  public void testGetResourceProfiles() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get Resource Profiles request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getResourceProfiles request.",
+        () -> interceptor.getResourceProfiles(null));
+
+    // normal request
+    GetAllResourceProfilesRequest request = GetAllResourceProfilesRequest.newInstance();
+    GetAllResourceProfilesResponse response = interceptor.getResourceProfiles(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getResourceProfiles().get("maximum").getMemorySize(),  32768);
+    Assert.assertEquals(response.getResourceProfiles().get("maximum").getVirtualCores(),  16);
+    Assert.assertEquals(response.getResourceProfiles().get("default").getMemorySize(),  8192);
+    Assert.assertEquals(response.getResourceProfiles().get("default").getVirtualCores(),  8);
+    Assert.assertEquals(response.getResourceProfiles().get("minimum").getMemorySize(),  4096);
+    Assert.assertEquals(response.getResourceProfiles().get("minimum").getVirtualCores(),  4);
+  }
+
+  @Test
+  public void testGetResourceProfile() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get Resource Profile request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getResourceProfile request or profileName.", () -> interceptor.getResourceProfile(null));
+
+    // normal request
+    GetResourceProfileRequest request = GetResourceProfileRequest.newInstance("maximum");
+    GetResourceProfileResponse response = interceptor.getResourceProfile(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getResource().getMemorySize(), 32768);
+    Assert.assertEquals(response.getResource().getVirtualCores(), 16);
+
+    request = GetResourceProfileRequest.newInstance("default");
+    response = interceptor.getResourceProfile(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getResource().getMemorySize(), 8192);
+    Assert.assertEquals(response.getResource().getVirtualCores(), 8);
+
+    request = GetResourceProfileRequest.newInstance("minimum");
+    response = interceptor.getResourceProfile(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getResource().getMemorySize(), 4096);
+    Assert.assertEquals(response.getResource().getVirtualCores(), 4);
   }
 }

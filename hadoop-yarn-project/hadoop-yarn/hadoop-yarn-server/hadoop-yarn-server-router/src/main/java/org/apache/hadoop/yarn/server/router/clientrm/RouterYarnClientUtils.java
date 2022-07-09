@@ -434,7 +434,19 @@ public final class RouterYarnClientUtils {
     Map<String, Resource> profilesMap = new HashMap<>();
     for (GetAllResourceProfilesResponse response : responses) {
       if (response != null && response.getResourceProfiles() != null) {
-        profilesMap.putAll(response.getResourceProfiles());
+        for (Map.Entry<String, Resource> entry : response.getResourceProfiles().entrySet()) {
+          String key = entry.getKey();
+          Resource value = entry.getValue();
+          if (profilesMap.containsKey(key)) {
+            Resource resourceValue = profilesMap.get(key);
+            resourceValue.setVirtualCores(
+                resourceValue.getVirtualCores() + value.getVirtualCores());
+            resourceValue.setMemorySize(resourceValue.getMemorySize() + value.getMemorySize());
+            profilesMap.put(key, resourceValue);
+          } else {
+            profilesMap.put(key, value);
+          }
+        }
       }
     }
     profilesResponse.setResourceProfiles(profilesMap);
