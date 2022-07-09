@@ -123,7 +123,7 @@ public class HsTasksBlock extends HtmlBlock {
       long sortFinishTime = -1;
       long attemptFinishTime = -1;
       long elapsedShuffleTime = -1;
-      long elapsedSortTime = -1;;
+      long elapsedSortTime = -1;
       long elapsedReduceTime = -1;
       long attemptElapsed = -1;
       TaskAttempt successful = info.getSuccessful();
