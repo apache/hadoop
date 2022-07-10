@@ -30,6 +30,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -172,10 +173,7 @@ public class ProtocRunner {
 
     public void writeChecksums() throws IOException {
       ObjectMapper mapper = new ObjectMapper();
-      boolean folderCreated = checksumFile.getParentFile().mkdirs();
-      if (!folderCreated) {
-        throw new IOException("Unable to create path");
-      }
+      Files.createDirectories(checksumFile.getParentFile().toPath());
       try (BufferedOutputStream out = new BufferedOutputStream(
           new FileOutputStream(checksumFile))) {
         mapper.writeValue(out, computedChecksums);
