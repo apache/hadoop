@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -1163,9 +1162,8 @@ public class TestRPC extends TestRpcBase {
     server = setupTestServer(builder);
 
     @SuppressWarnings("unchecked")
-    CallQueueManager<Call> spy = spy((CallQueueManager<Call>)
-        FieldUtils.getField(Server.class, "callQueue", true).get(server));
-    FieldUtils.getField(Server.class, "callQueue", true).set(server, spy);
+    CallQueueManager<Call> spy = spy(server.getCallQueue());
+    server.setCallQueue(spy);
 
     Exception lastException = null;
     proxy = getClient(addr, conf);
@@ -1226,9 +1224,8 @@ public class TestRPC extends TestRpcBase {
     Server server = setupDecayRpcSchedulerandTestServer(ns + ".");
 
     @SuppressWarnings("unchecked")
-    CallQueueManager<Call> spy = spy((CallQueueManager<Call>)
-        FieldUtils.getField(Server.class, "callQueue", true).get(server));
-    FieldUtils.getField(Server.class, "callQueue", true).set(server, spy);
+    CallQueueManager<Call> spy = spy(server.getCallQueue());
+    server.setCallQueue(spy);
 
     Exception lastException = null;
     proxy = getClient(addr, conf);
@@ -1567,11 +1564,8 @@ public class TestRPC extends TestRpcBase {
       RPC.Builder builder = newServerBuilder(conf)
           .setQueueSizePerHandler(1).setNumHandlers(1).setVerbose(true);
       server = setupTestServer(builder);
-      FieldUtils.getField(Server.class, "rpcRequestClass", true).
-          set(server, FakeRequestClass.class);
-      MutableCounterLong authMetric =
-          (MutableCounterLong) FieldUtils.getField(RpcMetrics.class,
-           "rpcAuthorizationSuccesses", true).get(server.getRpcMetrics());
+      server.setRpcRequestClass(FakeRequestClass.class);
+      MutableCounterLong authMetric = server.getRpcMetrics().getRpcAuthorizationSuccesses();
 
       proxy = getClient(addr, conf);
       boolean isDisconnected = true;

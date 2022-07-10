@@ -4138,4 +4138,8 @@ public abstract class Server {
   public void setCallQueue(CallQueueManager<Call> callQueue) {
     this.callQueue = callQueue;
   }
+
+  public void setRpcRequestClass(Class<? extends Writable> rpcRequestClass) {
+    this.rpcRequestClass = rpcRequestClass;
+  }
 }
