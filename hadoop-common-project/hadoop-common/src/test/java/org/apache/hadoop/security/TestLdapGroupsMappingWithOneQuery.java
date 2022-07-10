@@ -158,7 +158,7 @@ public class TestLdapGroupsMappingWithOneQuery
             any(Object[].class), any(SearchControls.class));
   }
 
-  class TestLdapGroupsMapping extends LdapGroupsMapping {
+  private static final class TestLdapGroupsMapping extends LdapGroupsMapping {
     private boolean secondaryQueryCalled = false;
     public boolean isSecondaryQueryCalled() {
       return secondaryQueryCalled;
