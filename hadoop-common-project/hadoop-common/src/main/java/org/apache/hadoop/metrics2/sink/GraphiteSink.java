@@ -204,4 +204,11 @@ public class GraphiteSink implements MetricsSink, Closeable {
 
     }
 
+    public Graphite getGraphite() {
+        return graphite;
+    }
+
+    public void setGraphite(Graphite graphite) {
+        this.graphite = graphite;
+    }
 }

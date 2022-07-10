@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.metrics2.impl;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
@@ -58,7 +57,7 @@ public class TestGraphiteMetrics {
     }
 
     @Test
-    public void testPutMetrics() throws IllegalAccessException {
+    public void testPutMetrics() {
         GraphiteSink sink = new GraphiteSink();
         List<MetricsTag> tags = new ArrayList<MetricsTag>();
         tags.add(new MetricsTag(MsInfo.Context, "all"));
@@ -70,7 +69,7 @@ public class TestGraphiteMetrics {
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        FieldUtils.getField(GraphiteSink.class, "graphite", true).set(sink, mockGraphite);
+        sink.setGraphite(mockGraphite);
         sink.putMetrics(record);
 
         try {
@@ -102,7 +101,7 @@ public class TestGraphiteMetrics {
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        FieldUtils.getField(GraphiteSink.class, "graphite", true).set(sink, mockGraphite);
+        sink.setGraphite(mockGraphite);
         sink.putMetrics(record);
 
         try {
@@ -129,7 +128,7 @@ public class TestGraphiteMetrics {
       // setup GraphiteSink
       GraphiteSink sink = new GraphiteSink();
       final GraphiteSink.Graphite mockGraphite = makeGraphite();
-      FieldUtils.getField(GraphiteSink.class,"graphite",true).set(sink,mockGraphite);
+      sink.setGraphite(mockGraphite);
 
       // given two metrics records with timestamps 1000 milliseconds apart.
       List<MetricsTag> tags = Collections.emptyList();
@@ -169,7 +168,7 @@ public class TestGraphiteMetrics {
       MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
       final GraphiteSink.Graphite mockGraphite = makeGraphite();
-      FieldUtils.getField(GraphiteSink.class, "graphite", true).set(sink, mockGraphite);
+      sink.setGraphite(mockGraphite);
 
       // throw exception when first try
       doThrow(new IOException("IO exception")).when(mockGraphite).write(anyString());
@@ -199,7 +198,7 @@ public class TestGraphiteMetrics {
     public void testClose() throws IllegalAccessException {
       GraphiteSink sink = new GraphiteSink();
       final GraphiteSink.Graphite mockGraphite = makeGraphite();
-      FieldUtils.getField(GraphiteSink.class,"graphite",true).set(sink,mockGraphite);
+      sink.setGraphite(mockGraphite);
       try {
          sink.close();
       } catch (IOException ioe) {
