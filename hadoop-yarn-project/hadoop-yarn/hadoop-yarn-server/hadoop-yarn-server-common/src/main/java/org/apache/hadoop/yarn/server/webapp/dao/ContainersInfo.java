@@ -46,4 +46,7 @@ public class ContainersInfo {
     return container;
   }
 
+  public void addAll(ArrayList<ContainerInfo> containersInfo) {
+    container.addAll(containersInfo);
+  }
 }

@@ -1336,7 +1336,51 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    throw new NotImplementedException("Code is not implemented");
+    ContainersInfo containersInfo = new ContainersInfo();
+
+    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    try {
+      subClustersActive = federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      LOG.error(e.getLocalizedMessage());
+      return containersInfo;
+    }
+
+    // Send the requests in parallel
+    CompletionService<ContainersInfo> compSvc =
+        new ExecutorCompletionService<>(this.threadpool);
+
+    for (final SubClusterInfo info : subClustersActive.values()) {
+      compSvc.submit(() -> {
+        DefaultRequestInterceptorREST interceptor =
+            getOrCreateInterceptorForSubCluster(info.getSubClusterId(), info.getRMWebServiceAddress());
+        try {
+          ContainersInfo containers =
+              interceptor.getContainers(req, res, appId, appAttemptId);
+          return containers;
+        } catch (Exception e) {
+          LOG.error("SubCluster {} failed to return GetContainers.",
+              info.getSubClusterId());
+          return null;
+        }
+      });
+    }
+
+    // Collect all the responses in parallel
+    for (int i = 0; i < subClustersActive.size(); i++) {
+      try {
+        Future<ContainersInfo> future = compSvc.take();
+        ContainersInfo containersResponse = future.get();
+
+        if (containersResponse != null) {
+          containersInfo.addAll(containersResponse.getContainers());
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to get containers report. ", e);
+      }
+    }
+
+    return containersInfo;
   }
 
   @Override
