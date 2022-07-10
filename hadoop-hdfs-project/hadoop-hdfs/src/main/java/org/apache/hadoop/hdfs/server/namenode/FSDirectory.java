@@ -1608,6 +1608,18 @@ public class FSDirectory implements Closeable {
   public final void removeFromInodeMap(List<? extends INode> inodes) {
     if (inodes != null) {
       for (INode inode : inodes) {
+        if (inodeMap.hasWriteLock(inode)) {
+          // Consider /hive/blr to be removed, and it contains children as below
+          // /hive/blr/A1, /hive/blr/A2, /hive/blr/A3 all are in same
+          // partition P1
+          // /hive/blr/A3/a1, /hive/blr/A3/a2 and in Partition P2
+          // Here we iterate through all inodes (5), and acquire lock on each
+          // Partition only once
+          continue;
+        }
+        inodeMap.latchWriteLock(inode);
+      }
+      for (INode inode : inodes) {
         if (inode != null && inode instanceof INodeWithAdditionalFields) {
           inodeMap.remove(inode);
           ezManager.removeEncryptionZone(inode.getId());
