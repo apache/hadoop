@@ -313,6 +313,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * {@code openFile()}.
    */
   private S3AInputPolicy inputPolicy;
+  /** Vectored IO context. */
+  private VectoredIOContext vectoredIOContext;
+
+  private long readAhead;
   private ChangeDetectionPolicy changeDetectionPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private volatile boolean isClosed = false;
@@ -584,6 +588,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           longBytesOption(conf, ASYNC_DRAIN_THRESHOLD,
                         DEFAULT_ASYNC_DRAIN_THRESHOLD, 0),
           inputPolicy);
+      vectoredIOContext = populateVectoredIOContext(conf);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -595,6 +600,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       stopAllServices();
       throw e;
     }
+  }
+
+  /**
+   * Populates the configurations related to vectored IO operation
+   * in the context which has to passed down to input streams.
+   * @param conf configuration object.
+   * @return VectoredIOContext.
+   */
+  private VectoredIOContext populateVectoredIOContext(Configuration conf) {
+    final int minSeekVectored = (int) longBytesOption(conf, AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
+            DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, 0);
+    final int maxReadSizeVectored = (int) longBytesOption(conf, AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
+            DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, 0);
+    return new VectoredIOContext()
+            .setMinSeekForVectoredReads(minSeekVectored)
+            .setMaxReadSizeForVectoredReads(maxReadSizeVectored)
+            .build();
   }
 
   /**
@@ -1463,11 +1485,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
     return new FSDataInputStream(
-        new S3AInputStream(
-            readContext.build(),
-            createObjectAttributes(path, fileStatus),
-            createInputStreamCallbacks(auditSpan),
-            inputStreamStats));
+            new S3AInputStream(
+                  readContext.build(),
+                  createObjectAttributes(path, fileStatus),
+                  createInputStreamCallbacks(auditSpan),
+                  inputStreamStats,
+                  unboundedThreadPool));
   }
 
   /**
@@ -1551,7 +1574,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         invoker,
         statistics,
         statisticsContext,
-        fileStatus)
+        fileStatus,
+        vectoredIOContext)
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
     return roc.build();
@@ -4926,9 +4950,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * This is a proof of concept of a select API.
    * @param source path to source data
-   * @param expression select expression
    * @param options request configuration from the builder.
-   * @param providedStatus any passed in status
+   * @param fileInformation any passed in information.
    * @return the stream of the results
    * @throws IOException IO failure
    */

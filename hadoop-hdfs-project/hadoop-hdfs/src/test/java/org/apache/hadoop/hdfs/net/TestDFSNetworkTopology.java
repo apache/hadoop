@@ -26,7 +26,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.net.Node;
-import org.apache.hadoop.util.Sets;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,6 +33,7 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -309,11 +309,11 @@ public class TestDFSNetworkTopology {
     // test the choose random can return desired storage type nodes without
     // exclude
     Set<String> diskUnderL1 =
-        Sets.newHashSet("host2", "host4", "host5", "host6");
-    Set<String> archiveUnderL1 = Sets.newHashSet("host1", "host3");
-    Set<String> ramdiskUnderL1 = Sets.newHashSet("host7");
-    Set<String> ssdUnderL1 = Sets.newHashSet("host8");
-    Set<String> nvdimmUnderL1 = Sets.newHashSet("host9");
+        new HashSet<>(Arrays.asList("host2", "host4", "host5", "host6"));
+    Set<String> archiveUnderL1 = new HashSet<>(Arrays.asList("host1", "host3"));
+    Set<String> ramdiskUnderL1 = new HashSet<>(Arrays.asList("host7"));
+    Set<String> ssdUnderL1 = new HashSet<>(Arrays.asList("host8"));
+    Set<String> nvdimmUnderL1 = new HashSet<>(Arrays.asList("host9"));
     for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType("/l1", null, null,
           StorageType.DISK);
@@ -396,7 +396,7 @@ public class TestDFSNetworkTopology {
     assertEquals("host6", dd.getHostName());
     // exclude the host on r4 (since there is only one host, no randomness here)
     excluded.add(n);
-    Set<String> expectedSet = Sets.newHashSet("host4", "host5");
+    Set<String> expectedSet = new HashSet<>(Arrays.asList("host4", "host5"));
     for (int i = 0; i < 10; i++) {
       // under l1, there are four hosts with DISK:
       // /l1/d1/r1/host2, /l1/d1/r2/host4, /l1/d1/r2/host5 and /l1/d2/r3/host6

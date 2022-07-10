@@ -403,7 +403,6 @@ public class NameNode extends ReconfigurableBase implements
    */
   @Deprecated
   public static final int DEFAULT_PORT = DFS_NAMENODE_RPC_PORT_DEFAULT;
-  public static final String FS_HDFS_IMPL_KEY = "fs.hdfs.impl";
   public static final Logger LOG =
       LoggerFactory.getLogger(NameNode.class.getName());
   public static final Logger stateChangeLog =
