@@ -25,8 +25,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Map;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.junit.Assert;
 
 import org.apache.hadoop.oncrpc.RpcCall;
@@ -101,10 +99,7 @@ public class TestPortmap {
     // Give the server a chance to process the request
     Thread.sleep(100);
     boolean found = false;
-    @SuppressWarnings("unchecked")
-    Map<String, PortmapMapping> map = (Map<String, PortmapMapping>)
-        FieldUtils.getField(RpcProgramPortmap.class,
-       "map", true).get(pm.getHandler());
+    Map<String, PortmapMapping> map = pm.getHandler().getMap();
 
     for (PortmapMapping m : map.values()) {
       if (m.getPort() == sent.getPort()

@@ -58,33 +58,33 @@ public class TestGraphiteMetrics {
 
     @Test
     public void testPutMetrics() {
-        GraphiteSink sink = new GraphiteSink();
-        List<MetricsTag> tags = new ArrayList<MetricsTag>();
-        tags.add(new MetricsTag(MsInfo.Context, "all"));
-        tags.add(new MetricsTag(MsInfo.Hostname, "host"));
-        Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
-        metrics.add(makeMetric("foo1", 1.25));
-        metrics.add(makeMetric("foo2", 2.25));
-        MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
+      GraphiteSink sink = new GraphiteSink();
+      List<MetricsTag> tags = new ArrayList<MetricsTag>();
+      tags.add(new MetricsTag(MsInfo.Context, "all"));
+      tags.add(new MetricsTag(MsInfo.Hostname, "host"));
+      Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
+      metrics.add(makeMetric("foo1", 1.25));
+      metrics.add(makeMetric("foo2", 2.25));
+      MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
-        ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
-        final GraphiteSink.Graphite mockGraphite = makeGraphite();
-        sink.setGraphite(mockGraphite);
-        sink.putMetrics(record);
+      ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
+      final GraphiteSink.Graphite mockGraphite = makeGraphite();
+      sink.setGraphite(mockGraphite);
+      sink.putMetrics(record);
 
-        try {
-          verify(mockGraphite).write(argument.capture());
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
+      try {
+        verify(mockGraphite).write(argument.capture());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
 
-        String result = argument.getValue();
+      String result = argument.getValue();
 
-        assertEquals(true,
-            result.equals("null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n" +
-            "null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n") ||
-            result.equals("null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n" +
-            "null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n"));
+      assertEquals(true,
+         result.equals("null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n" +
+          "null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n") ||
+          result.equals("null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n" +
+          "null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n"));
     }
 
     @Test

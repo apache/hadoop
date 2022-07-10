@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;

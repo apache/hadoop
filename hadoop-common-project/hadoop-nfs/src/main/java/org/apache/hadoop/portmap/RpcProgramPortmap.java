@@ -54,7 +54,7 @@ final class RpcProgramPortmap extends IdleStateHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(RpcProgramPortmap.class);
 
-  private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<String, PortmapMapping>();
+  private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<>();
 
   /** ChannelGroup that remembers all active channels for gracefully shutdown. */
   private final ChannelGroup allChannels;
@@ -207,5 +207,9 @@ final class RpcProgramPortmap extends IdleStateHandler {
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable t) {
     LOG.warn("Encountered ", t);
     ctx.channel().close();
+  }
+
+  public ConcurrentHashMap<String, PortmapMapping> getMap() {
+    return map;
   }
 }
