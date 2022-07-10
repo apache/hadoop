@@ -1293,4 +1293,8 @@ public class RawLocalFileSystem extends FileSystem {
       return super.hasPathCapability(path, capability);
     }
   }
+
+  public static void setUseDeprecatedFileStatus(boolean useDeprecatedFileStatus) {
+    RawLocalFileSystem.useDeprecatedFileStatus = useDeprecatedFileStatus;
+  }
 }

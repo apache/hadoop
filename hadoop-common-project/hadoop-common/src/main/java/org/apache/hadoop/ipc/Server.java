@@ -4131,4 +4131,11 @@ public abstract class Server {
     }
   }
 
+  public CallQueueManager<Call> getCallQueue() {
+    return callQueue;
+  }
+
+  public void setCallQueue(CallQueueManager<Call> callQueue) {
+    this.callQueue = callQueue;
+  }
 }

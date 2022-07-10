@@ -881,9 +881,8 @@ public class TestIPC {
     // start server
     final TestServerQueue server =
         new TestServerQueue(clients, readers, callQ, handlers, conf);
-    CallQueueManager<Call> spy = spy((CallQueueManager<Call>)
-        FieldUtils.getField(Server.class, "callQueue", true).get(server));
-    FieldUtils.getField(Server.class, "callQueue", true).set(server, spy);
+    CallQueueManager<Call> spy = spy(server.getCallQueue());
+    server.setCallQueue(spy);
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();
 
