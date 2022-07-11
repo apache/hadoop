@@ -58,6 +58,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -458,7 +459,8 @@ public class LdapGroupsMapping
    * @return a list of strings representing group names of the user.
    * @throws NamingException if unable to find group names
    */
-  private List<String> lookupGroup(SearchResult result, DirContext c,
+  @VisibleForTesting
+  Set<String> lookupGroup(SearchResult result, DirContext c,
       int goUpHierarchy)
       throws NamingException {
     List<String> groups = new ArrayList<>();
@@ -544,6 +546,8 @@ public class LdapGroupsMapping
         }
       } catch (NamingException e) {
         // If the first lookup failed, fall back to the typical scenario.
+        // In order to force the fallback, we need to reset groups collection.
+        groups.clear();
         LOG.info("Failed to get groups from the first lookup. Initiating " +
                 "the second LDAP query using the user's DN.", e);
       }
