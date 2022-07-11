@@ -73,7 +73,7 @@ public class NumaResourceAllocator {
   private static final String SPACE = "\\s";
   private static final long DEFAULT_NUMA_NODE_MEMORY = 1024;
   private static final int DEFAULT_NUMA_NODE_CPUS = 1;
-  private static final String NUMA_RESOURCE_TYPE = "numa";
+  public static final String NUMA_RESOURCE_TYPE = "numa";
 
   private List<NumaNodeResource> numaNodesList = new ArrayList<>();
   private Map<String, NumaNodeResource> numaNodeIdVsResource = new HashMap<>();
@@ -312,6 +312,8 @@ public class NumaResourceAllocator {
     for (NumaNodeResource numaNode : numaNodesList) {
       numaNode.releaseResources(containerId);
     }
+    // delete key from NM State store
+    context.getNMStateStore().releaseNumaResource(containerId);
   }
 
   /**

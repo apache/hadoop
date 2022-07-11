@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.
+    numa.NumaResourceAllocator.NUMA_RESOURCE_TYPE;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -1811,6 +1813,23 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       throw new IOException(
         "Incompatible version for NM state: expecting NM state version " 
             + getCurrentVersion() + ", but loading version " + loadedVersion);
+    }
+  }
+  @Override
+  public void releaseNumaResource(ContainerId containerId)  {
+    LOG.info("Release NUMA resource Called for removing from statestore");
+    try {
+      try (WriteBatch batch = db.createWriteBatch()) {
+        String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+            + CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX + NUMA_RESOURCE_TYPE;
+        batch.delete(bytes(key));
+      }catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }catch (DBException e){
+      markStoreUnHealthy(e);
+      LOG.error("Failed to delete Key");
+      throw new RuntimeException(e);
     }
   }
 }
