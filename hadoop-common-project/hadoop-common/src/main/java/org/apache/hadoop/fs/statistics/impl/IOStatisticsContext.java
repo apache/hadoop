@@ -32,7 +32,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATIS
 import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATISTICS_ENABLED_DEFAULT;
 
 /**
- * Implementing the IOStatisticsContext interface.
+ * Implementing the IOStatisticsContext.
  *
  * A Context defined for IOStatistics collection per thread which captures
  * each worker thread's work in FS streams and stores it in the form of
@@ -51,21 +51,21 @@ public class IOStatisticsContext {
   private static final boolean IS_THREAD_IOSTATS_ENABLED;
 
   private static final WeakReferenceThreadMap<IOStatisticsContext>
-      ACTIVE_IOSTATS_CONTEXT = new WeakReferenceThreadMap<>(
-      IOStatisticsContext::createNewInstance,
-      IOStatisticsContext::referenceLostContext
+      ACTIVE_IOSTATS_CONTEXT =
+      new WeakReferenceThreadMap<>(IOStatisticsContext::createNewInstance,
+          IOStatisticsContext::referenceLostContext
   );
 
   /**
    * Collecting IOStatistics per thread.
    */
   private final WeakReferenceThreadMap<IOStatisticsAggregator>
-      threadIOStatsContext = new WeakReferenceThreadMap<>(
-      this::getIOStatisticsAggregatorFactory,
-      this::referenceLost);
+      threadIOStatsContext =
+      new WeakReferenceThreadMap<>(this::getIOStatisticsAggregatorFactory,
+          this::referenceLost);
 
   static {
-    // Work out if the current context have thread level IOStatistics enabled.
+    // Work out if the current context has thread level IOStatistics enabled.
     final Configuration configuration = new Configuration();
     IS_THREAD_IOSTATS_ENABLED =
         configuration.getBoolean(THREAD_LEVEL_IOSTATISTICS_ENABLED,
@@ -140,7 +140,8 @@ public class IOStatisticsContext {
     if (isThreadIOStatsPresent) {
       return threadIOStatsContext.getForCurrentThread();
     }
-
+    LOG.debug("No thread iostats present creating it for :{}",
+        Thread.currentThread().getId());
     // If no aggregator is defined to the thread ID, create one and assign it.
     IOStatisticsSnapshot ioStatisticsSnapshot = new IOStatisticsSnapshot();
     setThreadIOStatistics(ioStatisticsSnapshot);
@@ -164,11 +165,23 @@ public class IOStatisticsContext {
    *
    * @return IOStatisticsSnapshot of the current thread.
    */
-  public IOStatisticsSnapshot getThreadIOStatisticsSnapshot() {
+  public IOStatisticsSnapshot snapshotCurrentThreadIOStatistics() {
     if (IS_THREAD_IOSTATS_ENABLED) {
       return (IOStatisticsSnapshot) getThreadIOStatistics();
     }
     return new IOStatisticsSnapshot();
+  }
+
+  /**
+   * Reset the thread IOStatistics for current thread.
+   */
+  public void resetThreadIOStatisticsForCurrentThread() {
+    if (IS_THREAD_IOSTATS_ENABLED) {
+      IOStatisticsSnapshot currentThreadIOStatsSnapshot =
+          (IOStatisticsSnapshot) getThreadIOStatistics();
+      currentThreadIOStatsSnapshot.clear();
+      setThreadIOStatistics(currentThreadIOStatsSnapshot);
+    }
   }
 
   /**
@@ -179,7 +192,7 @@ public class IOStatisticsContext {
    */
   @VisibleForTesting
   public IOStatistics getThreadIOStatistics(long testThreadId) {
-    LOG.info("IOStatsContext thread ID required: {}", testThreadId);
+    LOG.debug("IOStatsContext thread ID required: {}", testThreadId);
 
     // Check if the thread have a context assigned.
     boolean isIOStatsContextInThread =

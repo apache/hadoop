@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -53,12 +54,19 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private static final int BYTES_SMALL = 50;
   private static final long TEST_THREAD_ID = Thread.currentThread().getId();
 
+  @Before
+  public void setUp() throws Exception {
+    // Reset the current context's thread IOStatistics.
+    currentIOStatisticsContext().resetThreadIOStatisticsForCurrentThread();
+  }
+
   /**
    * Run this before the tests once, to note down some work in the
    * constructor thread to be verified later on in a test.
    */
   @BeforeClass
   public static void beforeClass() throws Exception {
+    currentIOStatisticsContext().resetThreadIOStatisticsForCurrentThread();
     // Do some work in constructor thread.
     S3AFileSystem fs = new S3AFileSystem();
     Configuration conf = new Configuration();
@@ -77,6 +85,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     Configuration configuration = super.createConfiguration();
     removeBaseAndBucketOverrides(configuration,
         THREAD_LEVEL_IOSTATISTICS_ENABLED);
+    configuration.setBoolean(THREAD_LEVEL_IOSTATISTICS_ENABLED, true);
     return configuration;
   }
 
@@ -225,7 +234,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     }
 
     // Worker thread work and wait for it to finish.
-    TestWorkerThread workerThread = new TestWorkerThread();
+    TestWorkerThread workerThread = new TestWorkerThread(path);
     long workerThreadID = workerThread.getId();
     workerThread.start();
     workerThread.join();
@@ -253,7 +262,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
         (IOStatisticsSnapshot) s3aOut.getThreadIOStatistics();
     IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
         StreamStatisticNames.STREAM_WRITE_BYTES)
-        .describedAs("Bytes wrote are not as expected")
+        .describedAs("Bytes written are not as expected")
         .isEqualTo(writeBytes);
 
     return ioStatistics;
@@ -293,7 +302,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
 
     IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
         StreamStatisticNames.STREAM_WRITE_BYTES)
-        .describedAs("Bytes wrote are not as expected for thread :{}",
+        .describedAs("Bytes written are not as expected for thread :{}",
             testThreadId)
         .isEqualTo(expectedBytesWrittenAndRead);
 
@@ -308,21 +317,26 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
    * Simulating doing some work in a separate thread.
    */
   private class TestWorkerThread extends Thread implements Runnable {
+    private final Path workerThreadPath;
+
+    public TestWorkerThread(Path workerThreadPath) {
+      this.workerThreadPath = workerThreadPath;
+    }
+
     @Override
     public void run() {
       S3AFileSystem fs = getFileSystem();
-      Path path = new Path("workerThread");
       byte[] data = new byte[BYTES_SMALL];
 
       // Write in the worker thread.
-      try (FSDataOutputStream out = fs.create(path)) {
+      try (FSDataOutputStream out = fs.create(workerThreadPath)) {
         out.write(data);
       } catch (IOException e) {
         throw new UncheckedIOException("Failure while writing", e);
       }
 
       //Read in the worker thread.
-      try (FSDataInputStream in = fs.open(path)) {
+      try (FSDataInputStream in = fs.open(workerThreadPath)) {
         in.read(data);
       } catch (IOException e) {
         throw new UncheckedIOException("Failure while reading", e);
