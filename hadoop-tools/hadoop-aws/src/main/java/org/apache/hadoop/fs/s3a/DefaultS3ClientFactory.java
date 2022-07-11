@@ -110,6 +110,7 @@ public class DefaultS3ClientFactory extends Configured
   @Override
   public AmazonS3 createS3Client(
       final URI uri,
+      final URI name,
       final S3ClientCreationParameters parameters) throws IOException {
     Configuration conf = getConf();
     bucket = uri.getHost();

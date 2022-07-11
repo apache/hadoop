@@ -181,6 +181,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
             .newStatisticsFromAwsSdk());
     AmazonS3 client = factory.createS3Client(
         new URI("s3a://localhost/"),
+        new URI("s3a://localhost/path/")
         parameters);
     Assertions.assertThat(client.getRegionName())
         .describedAs("Client region name")

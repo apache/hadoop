@@ -593,7 +593,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
         .withUserAgentSuffix("ITestSessionDelegationInFileystem");
-    AmazonS3 s3 = factory.createS3Client(landsat, parameters);
+    AmazonS3 s3 = factory.createS3Client(landsat, landsat, parameters);
 
     return Invoker.once("HEAD", host,
         () -> s3.getObjectMetadata(host, landsat.getPath().substring(1)));
