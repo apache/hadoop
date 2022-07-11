@@ -1768,7 +1768,7 @@ function hadoop_java_exec
 
   export CLASSPATH
   #shellcheck disable=SC2086
-  exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
+  eval exec '"${JAVA}"' '"-Dproc_${command}"' ${HADOOP_OPTS} '"${class}"' '"$@"'
 }
 
 ## @description  Start a non-privileged daemon in the foreground.
@@ -1805,7 +1805,7 @@ function hadoop_start_daemon
 
   export CLASSPATH
   #shellcheck disable=SC2086
-  exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
+  eval exec '"${JAVA}"' '"-Dproc_${command}"' ${HADOOP_OPTS} '"${class}"' '"$@"'
 }
 
 ## @description  Start a non-privileged daemon in the background.
