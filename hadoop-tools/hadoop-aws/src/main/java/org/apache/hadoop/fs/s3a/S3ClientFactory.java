@@ -53,11 +53,12 @@ public interface S3ClientFactory {
    * Creates a new {@link AmazonS3} client.
    *
    * @param uri S3A file system URI
+   * @param name S3A file system URI that contains the full path
    * @param parameters parameter object
    * @return S3 client
    * @throws IOException IO problem
    */
-  AmazonS3 createS3Client(URI uri,
+  AmazonS3 createS3Client(URI uri, URI name, 
       S3ClientCreationParameters parameters) throws IOException;
 
   /**

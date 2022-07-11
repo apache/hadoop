@@ -896,7 +896,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRequestHandlers(auditManager.createRequestHandlers());
 
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-        .createS3Client(getUri(),
+        .createS3Client(getUri(), name,
             parameters);
   }
 
