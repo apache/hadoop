@@ -116,6 +116,11 @@ public interface S3ClientFactory {
     private String userAgentSuffix = "";
 
     /**
+     * Path
+     */
+    private URI pathUri = "";
+
+    /**
      * List of request handlers to include in the chain
      * of request execution in the SDK.
      * @return the handler list
@@ -214,7 +219,23 @@ public interface S3ClientFactory {
       return this;
     }
 
-    public String getEndpoint() {
+     /**
+     * Set path.
+     * @param value new value
+     * @return the path
+     */
+
+    public S3ClientCreationParameters withPath(
+        final URI value) {
+      pathUri = value;
+      return this;
+    }
+
+    public URI getPath() {
+      return pathUri;
+    }
+
+     public String getEndpoint() {
       return endpoint;
     }
 
