@@ -74,7 +74,7 @@ public class AbfsRestOperation {
   private long maxRetryCount = 0L;
   private int maxIoRetries = 0;
   private AbfsHttpOperation result;
-  private AbfsCounters abfsCounters;
+  private final AbfsCounters abfsCounters;
   private AbfsDriverMetrics abfsDriverMetrics;
   private Map<String, AbfsDriverMetrics> metricsMap;
   /**

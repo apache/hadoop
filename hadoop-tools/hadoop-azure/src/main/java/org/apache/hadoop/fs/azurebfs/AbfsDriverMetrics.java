@@ -149,24 +149,24 @@ public class AbfsDriverMetrics {
         metricString.append(" #MMA#_").append(entry.getKey())
             .append("R_").append("=")
             .append(String.format("%.5f", (double) entry.getValue().getMinBackoff().get() / 1000L))
-            .append(" s ")
+            .append("s ")
             .append(String.format("%.5f", (double) entry.getValue().getMaxBackoff().get() / 1000L))
-            .append(" s ")
+            .append("s ")
             .append(String.format("%.5f", (double) ((entry.getValue().getTotalBackoff().get() / totalRequests) / 1000L)))
-            .append(" s ");
+            .append("s ");
       }else {
         metricString.append(" #MMA#_").append(entry.getKey())
-            .append("R_").append("= 0 s ");
+            .append("R_").append("=0s ");
       }
     }
-    metricString.append(" #BWT=").append(numberOfBandwidthThrottledRequests)
+    metricString.append("#BWT=").append(numberOfBandwidthThrottledRequests)
         .append(" #IT=").append(numberOfIOPSThrottledRequests)
-        .append(" #OT=").append(numberOfOtherThrottledRequests).append('\n');
-    metricString.append(" #%RT=").append(percentageOfRequestsThrottled).append('\n');
-    metricString.append(" #TRNR=").append(numberOfRequestsSucceededWithoutRetrying).append('\n');
-    metricString.append(" #TRF=").append(numberOfRequestsFailed).append('\n');
-    metricString.append(" #TR=").append(totalNumberOfRequests).append('\n');
-    metricString.append(" #MRC = ").append(maxRetryCount).append('\n');
+        .append(" #OT=").append(numberOfOtherThrottledRequests);
+    metricString.append(" #%RT=").append(String.format("%.3f",percentageOfRequestsThrottled));
+    metricString.append(" #TRNR=").append(numberOfRequestsSucceededWithoutRetrying);
+    metricString.append(" #TRF=").append(numberOfRequestsFailed);
+    metricString.append(" #TR=").append(totalNumberOfRequests);
+    metricString.append(" #MRC=").append(maxRetryCount);
 
     return metricString + " ";
   }
