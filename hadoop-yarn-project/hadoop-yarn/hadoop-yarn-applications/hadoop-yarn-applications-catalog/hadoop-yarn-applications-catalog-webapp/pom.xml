@@ -248,11 +248,6 @@
             <artifactId>jackson-jaxrs-base</artifactId>
             <version>${jackson2.version}</version>
         </dependency>
-
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
-        </dependency>
     </dependencies>
     <build>
         <finalName>${artifact.name}</finalName>
