@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
-  private static final boolean USE_IBM_JAVA_PACKAGES = shouldUseIbmPackages();
+  private static final boolean IBM_JAVA = shouldUseIbmPackages();
 
   private static boolean shouldUseIbmPackages() {
     if (System.getProperty("java.vendor").contains("IBM")) {
@@ -109,7 +109,7 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
       Map<String, String> options = new HashMap<String, String>();
       options.put("principal", principal);
       options.put("refreshKrb5Config", "true");
-      if (USE_IBM_JAVA_PACKAGES) {
+      if (IBM_JAVA) {
         options.put("useKeytab", keytab);
         options.put("credsType", "both");
       } else {

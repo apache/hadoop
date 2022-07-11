@@ -53,7 +53,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions.*;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
 
-import static org.apache.hadoop.util.PlatformName.USE_IBM_JAVA_PACKAGES;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 /**
  * Implement the registry security ... a self contained service for
@@ -616,7 +616,7 @@ public class RegistrySecurity extends AbstractService {
    * Note the semicolon on the last entry
    */
   private static final String JAAS_ENTRY =
-      (USE_IBM_JAVA_PACKAGES ?
+      (IBM_JAVA ?
       "%s { %n"
       + " %s required%n"
       + " useKeytab=\"%s\"%n"

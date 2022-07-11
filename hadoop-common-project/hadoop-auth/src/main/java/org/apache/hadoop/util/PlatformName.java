@@ -50,13 +50,7 @@ public class PlatformName {
    * Note that these are not provided in Semeru runtimes:
    * See https://developer.ibm.com/languages/java/semeru-runtimes/
    */
-  public static final boolean USE_IBM_JAVA_PACKAGES = shouldUseIbmPackages();
-
-  /*
-  * IBM_JAVA must be preserved due to the public nature of the property.
-  */
-  @Deprecated
-  public static final boolean IBM_JAVA = USE_IBM_JAVA_PACKAGES;
+  public static final boolean IBM_JAVA = shouldUseIbmPackages();
 
   private static boolean shouldUseIbmPackages() {
     if (JAVA_VENDOR_NAME.contains("IBM")) {

@@ -25,7 +25,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKENS;
 import static org.apache.hadoop.security.UGIExceptionMessages.*;
-import static org.apache.hadoop.util.PlatformName.USE_IBM_JAVA_PACKAGES;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -430,7 +430,7 @@ public class UserGroupInformation {
   /* Return the OS login module class name */
   /* For IBM JDK, use the common OS login module class name for all platforms */
   private static String getOSLoginModuleName() {
-    if (USE_IBM_JAVA_PACKAGES) {
+    if (IBM_JAVA) {
       return "com.ibm.security.auth.module.JAASLoginModule";
     } else {
       return windows ? "com.sun.security.auth.module.NTLoginModule"
@@ -445,7 +445,7 @@ public class UserGroupInformation {
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
       String principalClass = null;
-      if (USE_IBM_JAVA_PACKAGES) {
+      if (IBM_JAVA) {
         principalClass = "com.ibm.security.auth.UsernamePrincipal";
       } else {
         principalClass = windows ? "com.sun.security.auth.NTUserPrincipal"
@@ -2203,7 +2203,7 @@ public class UserGroupInformation {
       }
 
       // use keytab if given else fallback to ticket cache.
-      if (USE_IBM_JAVA_PACKAGES) {
+      if (IBM_JAVA) {
         if (params.containsKey(LoginParam.KEYTAB)) {
           final String keytab = params.get(LoginParam.KEYTAB);
           if (keytab != null) {
