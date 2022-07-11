@@ -205,6 +205,20 @@ public final class ExitUtil {
   }
 
   /**
+   * Suppresses if legit and returns the first non-null of the two. Legit means
+   * <code>suppressor</code> if neither <code>null</code> nor <code>suppressed</code>.
+   */
+  private static <T extends Throwable> T addSuppressed(T suppressor, T suppressed) {
+    if (suppressor == null) {
+      return suppressed;
+    }
+    if (suppressor != suppressed) {
+      suppressor.addSuppressed(suppressed);
+    }
+    return suppressor;
+  }
+
+  /**
    * Exits the JVM if exit is enabled, rethrow provided exception or any raised error otherwise.
    * Inner termination: either exit with the exception's exit code,
    * or, if system exits are disabled, rethrow the exception.
@@ -213,8 +227,7 @@ public final class ExitUtil {
    * @throws Error if {@link System#exit(int)} is disabled and one Error arise, suppressing
    * anything else, even <code>ee</code>
    */
-  public static void terminate(ExitException ee)
-      throws ExitException {
+  public static void terminate(final ExitException ee) throws ExitException {
     final int status = ee.getExitCode();
     Error caught = null;
     if (status != 0) {
@@ -229,9 +242,7 @@ public final class ExitUtil {
         caught = e;
       } catch (Throwable t) {
         // all other kind of throwables are suppressed
-        if (ee != t) {
-          ee.addSuppressed(t);
-        }
+        addSuppressed(ee, t);
       }
     }
     if (systemExitDisabled) {
@@ -239,22 +250,17 @@ public final class ExitUtil {
         LOG.error("Terminate called", ee);
       } catch (Error e) {
         // errors have higher priority again, if it's a 2nd error, the 1st one suprpesses it
-        if (caught == null) {
-          caught = e;
-        } else if (caught != e) {
-          caught.addSuppressed(e);
-        }
+        caught = addSuppressed(caught, e);
       } catch (Throwable t) {
         // all other kind of throwables are suppressed
-        if (ee != t) {
-          ee.addSuppressed(t);
-        }
+        addSuppressed(ee, t);
       }
       FIRST_EXIT_EXCEPTION.compareAndSet(null, ee);
       if (caught != null) {
         caught.addSuppressed(ee);
         throw caught;
       }
+      // not suppressed by a higher prority error
       throw ee;
     } else {
       // when exit is enabled, whatever Throwable happened, we exit the VM
@@ -274,7 +280,7 @@ public final class ExitUtil {
    * @throws Error if {@link Runtime#halt(int)} is disabled and one Error arise, suppressing
    * anyuthing else, even <code>he</code>
    */
-  public static void halt(HaltException he) throws HaltException {
+  public static void halt(final HaltException he) throws HaltException {
     final int status = he.getExitCode();
     Error caught = null;
     if (status != 0) {
@@ -288,9 +294,7 @@ public final class ExitUtil {
         caught = e;
       } catch (Throwable t) {
         // all other kind of throwables are suppressed
-        if (he != t) {
-          he.addSuppressed(t);
-        }
+        addSuppressed(he, t);
       }
     }
     // systemHaltDisabled is volatile and not used in scenario nheding atomicty,
@@ -300,16 +304,10 @@ public final class ExitUtil {
         LOG.error("Halt called", he);
       } catch (Error e) {
         // errors have higher priority again, if it's a 2nd error, the 1st one suprpesses it
-        if (caught == null) {
-          caught = e;
-        } else if (caught != e) {
-          caught.addSuppressed(e);
-        }
+        caught = addSuppressed(caught, e);
       } catch (Throwable t) {
         // all other kind of throwables are suppressed
-        if (he != t) {
-          he.addSuppressed(t);
-        }
+        addSuppressed(he, t);
       }
       FIRST_HALT_EXCEPTION.compareAndSet(null, he);
       if (caught != null) {
