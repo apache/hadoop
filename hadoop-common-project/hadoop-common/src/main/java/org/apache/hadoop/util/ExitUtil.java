@@ -163,7 +163,7 @@ public final class ExitUtil {
    */
   public static boolean terminateCalled() {
     // Either we set this member or we actually called System#exit
-    return FIRST_EXIT_EXCEPTION.get()!=null;
+    return FIRST_EXIT_EXCEPTION.get() != null;
   }
 
   /**
@@ -171,7 +171,7 @@ public final class ExitUtil {
    */
   public static boolean haltCalled() {
     // Either we set this member or we actually called Runtime#halt
-    return FIRST_HALT_EXCEPTION.get()!=null;
+    return FIRST_HALT_EXCEPTION.get() != null;
   }
 
   /**
@@ -229,7 +229,9 @@ public final class ExitUtil {
         caught = e;
       } catch (Throwable t) {
         // all other kind of throwables are suppressed
-        ee.addSuppressed(t);
+        if (ee != t) {
+          ee.addSuppressed(t);
+        }
       }
     }
     if (systemExitDisabled) {
@@ -239,12 +241,14 @@ public final class ExitUtil {
         // errors have higher priority again, if it's a 2nd error, the 1st one suprpesses it
         if (caught == null) {
           caught = e;
-        } else {
+        } else if (caught != e) {
           caught.addSuppressed(e);
         }
       } catch (Throwable t) {
         // all other kind of throwables are suppressed
-        ee.addSuppressed(t);
+        if (ee != t) {
+          ee.addSuppressed(t);
+        }
       }
       FIRST_EXIT_EXCEPTION.compareAndSet(null, ee);
       if (caught != null) {
@@ -284,7 +288,9 @@ public final class ExitUtil {
         caught = e;
       } catch (Throwable t) {
         // all other kind of throwables are suppressed
-        he.addSuppressed(t);
+        if (he != t) {
+          he.addSuppressed(t);
+        }
       }
     }
     // systemHaltDisabled is volatile and not used in scenario nheding atomicty,
@@ -296,12 +302,14 @@ public final class ExitUtil {
         // errors have higher priority again, if it's a 2nd error, the 1st one suprpesses it
         if (caught == null) {
           caught = e;
-        } else {
+        } else if (caught != e) {
           caught.addSuppressed(e);
         }
       } catch (Throwable t) {
         // all other kind of throwables are suppressed
-        he.addSuppressed(t);
+        if (he != t) {
+          he.addSuppressed(t);
+        }
       }
       FIRST_HALT_EXCEPTION.compareAndSet(null, he);
       if (caught != null) {

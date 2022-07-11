@@ -17,17 +17,22 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
 
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.ExitUtil.HaltException;
 
-import org.junit.Test;
 
 public class TestExitUtil {
 
   @Test
-  public void testGetSetExitExceptions() {
+  public void testGetSetExitExceptions() throws Throwable {
     // prepare states and exceptions
     ExitUtil.disableSystemExit();
     ExitUtil.resetFirstExitException();
@@ -35,38 +40,36 @@ public class TestExitUtil {
     ExitException ee2 = new ExitException(2, "TestExitUtil forged 2nd ExitException");
     try {
       // check proper initial settings
-      assertFalse(ExitUtil.terminateCalled());
-      assertNull(ExitUtil.getFirstExitException());
+      assertFalse("ExitUtil.terminateCalled initial value should be false",
+          ExitUtil.terminateCalled());
+      assertNull("ExitUtil.getFirstExitException initial value should be null",
+          ExitUtil.getFirstExitException());
 
       // simulate/check 1st call
-      try {
-        ExitUtil.terminate(ee1);
-        fail("ExitUtil.terminate should have rethrown its ExitException argument but it returned");
-      } catch (ExitException ee) {
-        assertEquals("ExitUtil.terminate should have rethrown its ExitException argument but it "
-            +"had thrown something else", ee1, ee);
-      }
-      assertTrue(ExitUtil.terminateCalled());
-      assertEquals("ExitUtil.terminate should store its 1st call's ExitException",
+      ExitException ee = intercept(ExitException.class, ()->ExitUtil.terminate(ee1));
+      assertSame("ExitUtil.terminate should have rethrown its ExitException argument but it "
+          + "had thrown something else", ee1, ee);
+      assertTrue("ExitUtil.terminateCalled should be true after 1st ExitUtil.terminate call",
+          ExitUtil.terminateCalled());
+      assertSame("ExitUtil.terminate should store its 1st call's ExitException",
           ee1, ExitUtil.getFirstExitException());
 
       // simulate/check 2nd call not overwritting 1st one
-      try {
-        ExitUtil.terminate(ee2);
-        fail("ExitUtil.terminate should have rethrown its ExitException argument but it returned");
-      } catch (ExitException ee) {
-        assertEquals("ExitUtil.terminate should have rethrown its HaltException argument but it "
-            +"had thrown something else", ee2, ee);
-      }
-      assertTrue(ExitUtil.terminateCalled());
+      ee = intercept(ExitException.class, ()->ExitUtil.terminate(ee2));
+      assertSame("ExitUtil.terminate should have rethrown its HaltException argument but it "
+          + "had thrown something else", ee2, ee);
+      assertTrue("ExitUtil.terminateCalled should still be true after 2nd ExitUtil.terminate call",
+          ExitUtil.terminateCalled());
       // 2nd call rethrown the 2nd ExitException yet only the 1st only should have been stored
-      assertEquals("ExitUtil.terminate when called twice should only remember 1st call's "
-          +"ExitException", ee1, ExitUtil.getFirstExitException());
+      assertSame("ExitUtil.terminate when called twice should only remember 1st call's "
+          + "ExitException", ee1, ExitUtil.getFirstExitException());
 
       // simulate cleanup, also tries to make sure state is ok for all junit still has to do
       ExitUtil.resetFirstExitException();
-      assertFalse(ExitUtil.terminateCalled());
-      assertNull(ExitUtil.getFirstExitException());
+      assertFalse("ExitUtil.terminateCalled should be false after "
+          + "ExitUtil.resetFirstExitException call", ExitUtil.terminateCalled());
+      assertNull("ExitUtil.getFirstExitException should be null after "
+          + "ExitUtil.resetFirstExitException call", ExitUtil.getFirstExitException());
     } finally {
       // cleanup
       ExitUtil.resetFirstExitException();
@@ -74,7 +77,7 @@ public class TestExitUtil {
   }
 
   @Test
-  public void testGetSetHaltExceptions() {
+  public void testGetSetHaltExceptions() throws Throwable {
     // prepare states and exceptions
     ExitUtil.disableSystemHalt();
     ExitUtil.resetFirstHaltException();
@@ -82,38 +85,35 @@ public class TestExitUtil {
     HaltException he2 = new HaltException(2, "TestExitUtil forged 2nd HaltException");
     try {
       // check proper initial settings
-      assertFalse(ExitUtil.haltCalled());
-      assertNull(ExitUtil.getFirstHaltException());
+      assertFalse("ExitUtil.haltCalled initial value should be false",
+          ExitUtil.haltCalled());
+      assertNull("ExitUtil.getFirstHaltException initial value should be null",
+          ExitUtil.getFirstHaltException());
 
       // simulate/check 1st call
-      try {
-        ExitUtil.halt(he1);
-        fail("ExitUtil.halt should have rethrown its HaltException argument but it returned");
-      } catch (HaltException he) {
-        assertEquals("ExitUtil.halt should have rethrown its HaltException argument but it had "
-            +"thrown something else", he1, he);
-      }
-      assertTrue("ExitUtil.halt/haltCalled should remember halt has been called",
+      HaltException he = intercept(HaltException.class, ()->ExitUtil.halt(he1));
+      assertSame("ExitUtil.halt should have rethrown its HaltException argument but it had "
+          +"thrown something else", he1, he);
+      assertTrue("ExitUtil.haltCalled should be true after 1st ExitUtil.halt call",
           ExitUtil.haltCalled());
-      assertEquals("ExitUtil.halt should store its 1st call's HaltException",
+      assertSame("ExitUtil.halt should store its 1st call's HaltException",
           he1, ExitUtil.getFirstHaltException());
 
       // simulate/check 2nd call not overwritting 1st one
-      try {
-        ExitUtil.halt(he2);
-        fail("ExitUtil.halt should have rethrown its HaltException argument but it returned");
-      } catch (HaltException he) {
-        assertEquals("ExitUtil.halt should have rethrown its HaltException argument but it had "
-            +"thrown something else", he2, he);
-      }
-      assertTrue(ExitUtil.haltCalled());
-      assertEquals("ExitUtil.halt when called twice should only remember 1st call's HaltException",
+      he = intercept(HaltException.class, ()->ExitUtil.halt(he2));
+      assertSame("ExitUtil.halt should have rethrown its HaltException argument but it had "
+          +"thrown something else", he2, he);
+      assertTrue("ExitUtil.haltCalled should still be true after 2nd ExitUtil.halt call",
+          ExitUtil.haltCalled());
+      assertSame("ExitUtil.halt when called twice should only remember 1st call's HaltException",
           he1, ExitUtil.getFirstHaltException());
 
       // simulate cleanup, also tries to make sure state is ok for all junit still has to do
       ExitUtil.resetFirstHaltException();
-      assertFalse(ExitUtil.haltCalled());
-      assertNull(ExitUtil.getFirstHaltException());
+      assertFalse("ExitUtil.haltCalled should be false after "
+          + "ExitUtil.resetFirstHaltException call", ExitUtil.haltCalled());
+      assertNull("ExitUtil.getFirstHaltException should be null after "
+          + "ExitUtil.resetFirstHaltException call", ExitUtil.getFirstHaltException());
     } finally {
       // cleanup, useless if last test succeed, useful if not
       ExitUtil.resetFirstHaltException();
