@@ -37,19 +37,9 @@ import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Arrays;
 
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+
 public class TestMiniKdc extends KerberosSecurityTestcase {
-  private static final boolean IBM_JAVA = shouldUseIbmPackages();
-
-  private static boolean shouldUseIbmPackages() {
-    if (System.getProperty("java.vendor").contains("IBM")) {
-      try {
-        Class.forName("com.ibm.security.auth.module.JAASLoginModule");
-        return true;
-      } catch(ClassNotFoundException ignored) {}
-    }
-
-    return false;
-  }
 
   @Test
   public void testMiniKdcStart() {

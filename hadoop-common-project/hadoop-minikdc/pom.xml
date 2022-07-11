@@ -48,6 +48,11 @@
       <artifactId>junit</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-auth</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
