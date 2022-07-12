@@ -207,6 +207,9 @@ public final class ExitUtil {
   /**
    * Suppresses if legit and returns the first non-null of the two. Legit means
    * <code>suppressor</code> if neither <code>null</code> nor <code>suppressed</code>.
+   * @param suppressor <code>Throwable</code> that suppresses <code>suppressed</code>
+   * @param suppressed <code>Throwable</code> that is suppressed by <code>suppressor</code>
+   * @return <code>suppressor</code> if not <code>null</code>, <code>suppressed</code> otherwise
    */
   private static <T extends Throwable> T addSuppressed(T suppressor, T suppressed) {
     if (suppressor == null) {
