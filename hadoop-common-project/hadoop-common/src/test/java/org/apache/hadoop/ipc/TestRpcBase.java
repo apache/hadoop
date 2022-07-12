@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
@@ -245,8 +247,10 @@ public class TestRpcBase {
 
     @Override
     public int hashCode() {
-      int hashCode = super.hashCode();
-      return PRIME * hashCode + index;
+      return new HashCodeBuilder()
+          .append(PRIME * super.hashCode())
+          .append(this.index)
+          .toHashCode();
     }
 
     @Override
@@ -256,7 +260,9 @@ public class TestRpcBase {
       }
       if (obj instanceof MockConnectionId) {
         MockConnectionId other = (MockConnectionId)obj;
-        return this.index == other.index;
+        return new EqualsBuilder()
+            .append(this.index, other.index)
+            .isEquals();
       }
       return false;
     }

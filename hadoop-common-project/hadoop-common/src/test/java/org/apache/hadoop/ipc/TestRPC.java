@@ -400,8 +400,7 @@ public class TestRPC extends TestRpcBase {
   }
 
   @Test
-  public void testConnectionWithSocketFactory() throws IOException {
-    Server server;
+  public void testConnectionWithSocketFactory() throws IOException, ServiceException {
     TestRpcService firstProxy = null;
     TestRpcService secondProxy = null;
 
@@ -411,12 +410,12 @@ public class TestRPC extends TestRpcBase {
 
     RetryPolicy retryPolicy = RetryUtils.getDefaultRetryPolicy(
         newConf, "Test.No.Such.Key",
-        true,                     // defaultRetryPolicyEnabled = true
+        true,
         "Test.No.Such.Key", "10000,6",
         null);
 
     // create a server with two handlers
-    server = setupTestServer(newConf, 2);
+    Server server = setupTestServer(newConf, 2);
     try {
       // create the first client
       firstProxy = getClient(addr, newConf);
@@ -439,10 +438,8 @@ public class TestRPC extends TestRpcBase {
       firstProxy.ping(null, newEmptyRequest());
       secondProxy.ping(null, newEmptyRequest());
 
-      client = ProtobufRpcEngine2.getClient(newConf);
-      assertEquals(2, client.getConnectionIds().size());
-    } catch (ServiceException e) {
-      e.printStackTrace();
+      Client client2 = ProtobufRpcEngine2.getClient(newConf);
+      assertEquals(2, client2.getConnectionIds().size());
     } finally {
       System.out.println("Down slow rpc testing");
       stop(server, firstProxy, secondProxy);
