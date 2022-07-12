@@ -73,7 +73,7 @@ public class NumaResourceAllocator {
   private static final String SPACE = "\\s";
   private static final long DEFAULT_NUMA_NODE_MEMORY = 1024;
   private static final int DEFAULT_NUMA_NODE_CPUS = 1;
-  public static final String NUMA_RESOURCE_TYPE = "numa";
+  private static final String NUMA_RESOURCE_TYPE = "numa";
 
   private List<NumaNodeResource> numaNodesList = new ArrayList<>();
   private Map<String, NumaNodeResource> numaNodeIdVsResource = new HashMap<>();
@@ -231,7 +231,7 @@ public class NumaResourceAllocator {
   }
 
   private NumaResourceAllocation allocate(ContainerId containerId,
-      Resource resource) {
+      Resource resource) throws ResourceHandlerException {
     for (int index = 0; index < numaNodesList.size(); index++) {
       NumaNodeResource numaNode = numaNodesList
           .get((currentAssignNode + index) % numaNodesList.size());
@@ -306,14 +306,20 @@ public class NumaResourceAllocator {
    * Release assigned NUMA resources for the container.
    *
    * @param containerId the container ID
+   * @throws ResourceHandlerException while releasing numa resource
    */
-  public synchronized void releaseNumaResource(ContainerId containerId) {
+  public synchronized void releaseNumaResource(ContainerId containerId)
+      throws ResourceHandlerException {
     LOG.info("Releasing the assigned NUMA resources for " + containerId);
     for (NumaNodeResource numaNode : numaNodesList) {
       numaNode.releaseResources(containerId);
     }
-    // delete key from NM State store
-    context.getNMStateStore().releaseNumaResource(containerId);
+    // delete from NM State store
+    try {
+      context.getNMStateStore().releaseAssignedResources(containerId, NUMA_RESOURCE_TYPE);
+    } catch (IOException e){
+      throw new ResourceHandlerException(e);
+    }
   }
 
   /**
