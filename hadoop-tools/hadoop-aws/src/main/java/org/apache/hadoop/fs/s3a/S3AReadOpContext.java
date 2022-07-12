@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
-import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import javax.annotation.Nullable;
@@ -65,8 +64,6 @@ public class S3AReadOpContext extends S3AOpContext {
    */
   private long asyncDrainThreshold;
 
-  private final IOStatisticsAggregator ioStatisticsAggregator;
-
   /**
    * Vectored IO context for vectored read api
    * in {@code S3AInputStream#readVectored(List, IntFunction)}.
@@ -88,13 +85,11 @@ public class S3AReadOpContext extends S3AOpContext {
       @Nullable FileSystem.Statistics stats,
       S3AStatisticsContext instrumentation,
       FileStatus dstFileStatus,
-      VectoredIOContext vectoredIOContext,
-      final IOStatisticsAggregator ioStatisticsAggregator) {
+      VectoredIOContext vectoredIOContext) {
     super(invoker, stats, instrumentation,
         dstFileStatus);
     this.path = requireNonNull(path);
     this.vectoredIOContext = requireNonNull(vectoredIOContext, "vectoredIOContext");
-    this.ioStatisticsAggregator = ioStatisticsAggregator;
   }
 
   /**
@@ -218,10 +213,6 @@ public class S3AReadOpContext extends S3AOpContext {
    */
   public VectoredIOContext getVectoredIOContext() {
     return vectoredIOContext;
-  }
-
-  public IOStatisticsAggregator getIoStatisticsAggregator() {
-    return ioStatisticsAggregator;
   }
 
   @Override

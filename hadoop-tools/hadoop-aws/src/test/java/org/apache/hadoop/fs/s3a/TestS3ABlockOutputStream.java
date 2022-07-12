@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -68,8 +67,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
             .withProgress(progressable)
             .withPutTracker(putTracker)
             .withWriteOperations(oHelper)
-            .withPutOptions(PutObjectOptions.keepingDirs())
-            .withThreadLevelIOStatistics(currentIOStatisticsContext().getThreadIOStatistics());
+            .withPutOptions(PutObjectOptions.keepingDirs());
     return builder;
   }
 

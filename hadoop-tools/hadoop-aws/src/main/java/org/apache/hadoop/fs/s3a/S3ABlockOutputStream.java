@@ -207,7 +207,7 @@ class S3ABlockOutputStream extends OutputStream implements
       initMultipartUpload();
     }
     this.isCSEEnabled = builder.isCSEEnabled;
-    this.threadIOStatistics = builder.threadIOStatistics;
+    this.threadIOStatistics = currentIOStatisticsContext().getThreadIOStatistics();
   }
 
   /**
@@ -476,7 +476,6 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   private void mergeThreadIOStatistics(IOStatistics streamStatistics) {
     threadIOStatistics.aggregate(streamStatistics);
-    currentIOStatisticsContext().setThreadIOStatistics(threadIOStatistics);
   }
 
   /**
@@ -1117,9 +1116,6 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private PutObjectOptions putOptions;
 
-    /** IOStatistics Context for per thread iostats aggregation. */
-    private IOStatisticsAggregator threadIOStatistics;
-
     private BlockOutputStreamBuilder() {
     }
 
@@ -1134,7 +1130,6 @@ class S3ABlockOutputStream extends OutputStream implements
       requireNonNull(writeOperations, "null writeOperationHelper");
       requireNonNull(putTracker, "null putTracker");
       requireNonNull(putOptions, "null putOptions");
-      requireNonNull(threadIOStatistics, "null threadIOStatistics");
       Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
           "Block size is too small: %s", blockSize);
     }
@@ -1256,17 +1251,6 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withPutOptions(
         final PutObjectOptions value) {
       putOptions = value;
-      return this;
-    }
-
-    /**
-     * Set builder value.
-     * @param value new value
-     * @return the builder
-     */
-    public BlockOutputStreamBuilder withThreadLevelIOStatistics(
-        IOStatisticsAggregator value) {
-      threadIOStatistics = value;
       return this;
     }
   }

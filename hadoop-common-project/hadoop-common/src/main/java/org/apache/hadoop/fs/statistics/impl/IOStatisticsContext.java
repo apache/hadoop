@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import java.lang.ref.WeakReference;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +38,9 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATIS
  *
  * A Context defined for IOStatistics collection per thread which captures
  * each worker thread's work in FS streams and stores it in the form of
- * IOStatisticsAggregator which could be either IOStatisticsSnapshot or
- * EmptyIOStatisticsStore if thread level aggregation is enabled or not for
- * the FS. An active instance of the IOStatisticsContext can be used to
- * collect the statistics.
+ * IOStatisticsSnapshot if thread level aggregation is enabled else returning
+ * an instance of EmptyIOStatisticsStore for the FS. An active instance of
+ * the IOStatisticsContext can be used to collect the statistics.
  *
  * For the current thread the IOStatisticsSnapshot can be used as a way to
  * move the IOStatistics data between applications using the Serializable
@@ -50,6 +51,11 @@ public class IOStatisticsContext {
       LoggerFactory.getLogger(IOStatisticsContext.class);
   private static final boolean IS_THREAD_IOSTATS_ENABLED;
 
+  /**
+   * Active IOStatistics Context containing different worker thread's
+   * statistics. Weak Reference so that it gets cleaned up during GC and we
+   * avoid any memory leak issues due to long lived references.
+   */
   private static final WeakReferenceThreadMap<IOStatisticsContext>
       ACTIVE_IOSTATS_CONTEXT =
       new WeakReferenceThreadMap<>(IOStatisticsContext::createNewInstance,
@@ -59,9 +65,9 @@ public class IOStatisticsContext {
   /**
    * Collecting IOStatistics per thread.
    */
-  private final WeakReferenceThreadMap<IOStatisticsAggregator>
+  private final WeakReferenceThreadMap<IOStatisticsSnapshot>
       threadIOStatsContext =
-      new WeakReferenceThreadMap<>(this::getIOStatisticsAggregatorFactory,
+      new WeakReferenceThreadMap<>(this::getIOStatisticsSnapshotFactory,
           this::referenceLost);
 
   static {
@@ -98,8 +104,8 @@ public class IOStatisticsContext {
    * @param key ThreadID.
    * @return an Instance of IOStatisticsSnapshot.
    */
-  private IOStatisticsAggregator getIOStatisticsAggregatorFactory(Long key) {
-    return getThreadIOStatistics();
+  private IOStatisticsSnapshot getIOStatisticsSnapshotFactory(Long key) {
+    return new IOStatisticsSnapshot();
   }
 
   /**
@@ -156,7 +162,7 @@ public class IOStatisticsContext {
    *                               current thread.
    */
   public void setThreadIOStatistics(
-      IOStatisticsAggregator ioStatisticsAggregator) {
+      IOStatisticsSnapshot ioStatisticsAggregator) {
     threadIOStatsContext.setForCurrentThread(ioStatisticsAggregator);
   }
 
@@ -167,7 +173,9 @@ public class IOStatisticsContext {
    */
   public IOStatisticsSnapshot snapshotCurrentThreadIOStatistics() {
     if (IS_THREAD_IOSTATS_ENABLED) {
-      return (IOStatisticsSnapshot) getThreadIOStatistics();
+      if (threadIOStatsContext.containsKey(getCurrentThreadID())) {
+        return threadIOStatsContext.get(getCurrentThreadID());
+      }
     }
     return new IOStatisticsSnapshot();
   }
@@ -176,12 +184,23 @@ public class IOStatisticsContext {
    * Reset the thread IOStatistics for current thread.
    */
   public void resetThreadIOStatisticsForCurrentThread() {
-    if (IS_THREAD_IOSTATS_ENABLED) {
-      IOStatisticsSnapshot currentThreadIOStatsSnapshot =
-          (IOStatisticsSnapshot) getThreadIOStatistics();
-      currentThreadIOStatsSnapshot.clear();
-      setThreadIOStatistics(currentThreadIOStatsSnapshot);
+    WeakReference<IOStatisticsSnapshot> ioStatisticsSnapshotRef =
+        threadIOStatsContext.lookup(getCurrentThreadID());
+    if (ioStatisticsSnapshotRef != null) {
+      IOStatisticsSnapshot ioStatisticsSnapshot = ioStatisticsSnapshotRef.get();
+      // Get the snapshot for the current thread ID and clear it.
+      if(ioStatisticsSnapshot != null) {
+        ioStatisticsSnapshot.clear();
+      }
     }
+  }
+
+  /**
+   * Get the current thread's ID.
+   * @return long value of the thread ID.
+   */
+  private Long getCurrentThreadID() {
+    return Thread.currentThread().getId();
   }
 
   /**
@@ -200,10 +219,20 @@ public class IOStatisticsContext {
     if (isIOStatsContextInThread) {
       IOStatisticsContext ioStatisticsContext =
           ACTIVE_IOSTATS_CONTEXT.get(testThreadId);
-      return (IOStatistics) ioStatisticsContext.threadIOStatsContext
-          .get(testThreadId);
+      return ioStatisticsContext.threadIOStatsContext.get(testThreadId);
     }
     LOG.info("No Context assigned to this thread, return empty statistics..");
     return new IOStatisticsSnapshot();
+  }
+
+  /**
+   * In a test environment if we need to get a specific thread's context.
+   *
+   * @param testThreadId thread ID to be tested.
+   * @return IOStatisticsContext instance for this test thread ID.
+   */
+  @VisibleForTesting
+  public IOStatisticsContext getThreadSpecificContext(long testThreadId) {
+    return ACTIVE_IOSTATS_CONTEXT.get(testThreadId);
   }
 }

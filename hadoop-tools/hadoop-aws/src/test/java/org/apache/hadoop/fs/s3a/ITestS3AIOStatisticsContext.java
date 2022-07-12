@@ -52,7 +52,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private static final int SMALL_THREADS = 2;
   private static final int BYTES_BIG = 100;
   private static final int BYTES_SMALL = 50;
-  private static final long TEST_THREAD_ID = Thread.currentThread().getId();
+  private static IOStatisticsSnapshot iostatisticsSnapshotOfConstructorThread;
 
   @Before
   public void setUp() throws Exception {
@@ -78,6 +78,8 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     try (FSDataInputStream in = fs.open(path)) {
       in.read();
     }
+    iostatisticsSnapshotOfConstructorThread =
+        currentIOStatisticsContext().snapshotCurrentThreadIOStatistics();
   }
 
   @Override
@@ -242,7 +244,19 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     // Work done in constructor: Wrote and Read 1 byte.
     // Work done in Junit thread: Wrote and Read BYTES_BIG bytes.
     // Work done in Junit's worker thread: Wrote and Read BYTES_SMALL bytes.
-    assertThreadStatisticsForThread(TEST_THREAD_ID, 1);
+    IOStatisticAssertions.assertThatStatisticCounter(
+        iostatisticsSnapshotOfConstructorThread,
+        StreamStatisticNames.STREAM_WRITE_BYTES)
+        .describedAs("Bytes written are not as expected for constructor "
+            + "thread.")
+        .isEqualTo(1);
+    IOStatisticAssertions.assertThatStatisticCounter(
+        iostatisticsSnapshotOfConstructorThread,
+        StreamStatisticNames.STREAM_READ_BYTES)
+        .describedAs("Bytes read are not as expected for constructor "
+            + "thread.")
+        .isEqualTo(1);
+
     assertThreadStatisticsForThread(threadIdForTest, BYTES_BIG);
     assertThreadStatisticsForThread(workerThreadID, BYTES_SMALL);
 
@@ -297,19 +311,22 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private void assertThreadStatisticsForThread(long testThreadId,
       int expectedBytesWrittenAndRead) {
     LOG.info("Thread ID to be asserted: {}", testThreadId);
-    IOStatistics ioStatistics =
-        currentIOStatisticsContext().getThreadIOStatistics(testThreadId);
+    IOStatistics ioStatistics = currentIOStatisticsContext()
+            .getThreadSpecificContext(testThreadId)
+            .getThreadIOStatistics(testThreadId);
 
     IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
         StreamStatisticNames.STREAM_WRITE_BYTES)
-        .describedAs("Bytes written are not as expected for thread :{}",
-            testThreadId)
+        .describedAs(
+            String.format("Bytes written are not as expected for thread : %s",
+            testThreadId))
         .isEqualTo(expectedBytesWrittenAndRead);
 
     IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
         StreamStatisticNames.STREAM_READ_BYTES)
-        .describedAs("Bytes read are not as expected for thread :{}",
-            testThreadId)
+        .describedAs(
+            String.format("Bytes read are not as expected for thread : %s",
+                testThreadId))
         .isEqualTo(expectedBytesWrittenAndRead);
   }
 
@@ -319,7 +336,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private class TestWorkerThread extends Thread implements Runnable {
     private final Path workerThreadPath;
 
-    public TestWorkerThread(Path workerThreadPath) {
+    TestWorkerThread(Path workerThreadPath) {
       this.workerThreadPath = workerThreadPath;
     }
 

@@ -129,7 +129,6 @@ import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
@@ -1492,8 +1491,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             extractOrFetchSimpleFileStatus(path, fileInformation));
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
-        auditSpan,
-        ioStatisticsContext.getThreadIOStatistics());
+        auditSpan);
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
     return new FSDataInputStream(
@@ -1580,16 +1578,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   protected S3AReadOpContext createReadContext(
       final FileStatus fileStatus,
-      final AuditSpan auditSpan,
-      final IOStatisticsAggregator ioStatisticsAggregator) {
+      final AuditSpan auditSpan) {
     final S3AReadOpContext roc = new S3AReadOpContext(
         fileStatus.getPath(),
         invoker,
         statistics,
         statisticsContext,
         fileStatus,
-        vectoredIOContext,
-        ioStatisticsAggregator)
+        vectoredIOContext)
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
     return roc.build();
@@ -1756,8 +1752,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
         .withCSEEnabled(isCSEEnabled)
-        .withPutOptions(putOptions)
-        .withThreadLevelIOStatistics(ioStatisticsContext.getThreadIOStatistics());
+        .withPutOptions(putOptions);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
@@ -2117,8 +2112,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public S3AReadOpContext createReadContext(final FileStatus fileStatus) {
       return S3AFileSystem.this.createReadContext(fileStatus,
-          auditSpan,
-          ioStatisticsContext.getThreadIOStatistics());
+          auditSpan);
     }
 
     @Override
@@ -4990,8 +4984,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ChangeDetectionPolicy changePolicy = fileInformation.getChangePolicy();
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
-        auditSpan,
-        ioStatisticsContext.getThreadIOStatistics());
+        auditSpan);
     fileInformation.applyOptions(readContext);
 
     if (changePolicy.getSource() != ChangeDetectionPolicy.Source.None
