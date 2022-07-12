@@ -43,6 +43,9 @@ public class ABFSKey implements SecretKey {
     }
 
     public byte[] getSHA256Hash() {
+        if(sha256Hash == null) {
+            return null;
+        }
         return sha256Hash.clone();
     }
 

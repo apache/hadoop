@@ -69,8 +69,8 @@ public class EncryptionAdapter implements Destroyable {
   public void computeKeys() throws IOException {
     ABFSKey key = getEncryptionKey();
     Preconditions.checkNotNull(key, "Encryption key should not be null.");
-      encodedKey = key.getBase64EncodedString();
-      encodedKeySHA = EncodingHelper.getBase64EncodedString(key.getSHA256Hash());
+    encodedKey = key.getBase64EncodedString();
+    encodedKeySHA = EncodingHelper.getBase64EncodedString(key.getSHA256Hash());
   }
 
   public String getEncodedKey() throws IOException {
