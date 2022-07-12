@@ -460,7 +460,7 @@ public class LdapGroupsMapping
    * @throws NamingException if unable to find group names
    */
   @VisibleForTesting
-  Set<String> lookupGroup(SearchResult result, DirContext c,
+  List<String> lookupGroup(SearchResult result, DirContext c,
       int goUpHierarchy)
       throws NamingException {
     List<String> groups = new ArrayList<>();
