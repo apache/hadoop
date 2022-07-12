@@ -49,23 +49,18 @@ public class PlatformName {
    * own implementations of many security packages and Cipher suites.
    * Note that these are not provided in Semeru runtimes:
    * See https://developer.ibm.com/languages/java/semeru-runtimes/
+   * The class used is present in any supported IBM JTE Runtimes.
    */
-  public static final boolean IBM_JAVA = shouldUseIbmPackages();
+  public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM") &&
+    hasClass("com.ibm.security.auth.module.JAASLoginModule");
 
-  private static boolean shouldUseIbmPackages() {
-    if (JAVA_VENDOR_NAME.contains("IBM")) {
-      try {
-        /**
-         * This class is provided by all supported IBM JTE Runtimes,
-         * but ensures we do not make assumptions of existence of
-         * specialised security modules based on vendor alone.
-         */
-        Class.forName("com.ibm.security.auth.module.JAASLoginModule");
-        return true;
-      } catch(ClassNotFoundException ignored) {}
+  private static boolean hasClass(String className) {
+    try {
+      Thread.currentThread().getContextClassLoader().loadClass(className);
+      return true;
+    } catch(ClassNotFoundException ignored) {
+      return false;
     }
-
-    return false;
   }
 
   public static void main(String[] args) {
