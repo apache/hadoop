@@ -144,7 +144,7 @@ public class AzureBlobFileSystem extends FileSystem
   private AbfsDelegationTokenManager delegationTokenManager;
   private AbfsCounters abfsCounters;
   private String clientCorrelationId;
-  private boolean isMetricCollectionEnabled;
+  private boolean sendMetricsToStore;
   private TracingHeaderFormat tracingHeaderFormat;
   private Listener listener;
 
@@ -202,7 +202,7 @@ public class AzureBlobFileSystem extends FileSystem
         .getAbfsConfiguration();
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
-    isMetricCollectionEnabled = abfsConfiguration.isMetricCollectionEnabled();
+    sendMetricsToStore = abfsConfiguration.isMetricCollectionEnabled();
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
@@ -685,7 +685,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
     String metric = abfsCounters.getAbfsDriverMetrics().toString();
     LOG.debug("The metrics collected over this instance are " + metric);
-    if(isMetricCollectionEnabled) {
+    if(sendMetricsToStore) {
       if(abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get() > 0) {
         try {
           Configuration metricConfig = getConf();
