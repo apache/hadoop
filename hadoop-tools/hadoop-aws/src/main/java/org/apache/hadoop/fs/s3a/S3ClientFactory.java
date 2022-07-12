@@ -116,7 +116,7 @@ public interface S3ClientFactory {
     private String userAgentSuffix = "";
 
     /**
-     * Path
+     * Path to s3a bucket.
      */
     private URI pathUri = "";
 
@@ -235,7 +235,7 @@ public interface S3ClientFactory {
       return pathUri;
     }
 
-     public String getEndpoint() {
+    public String getEndpoint() {
       return endpoint;
     }
 
