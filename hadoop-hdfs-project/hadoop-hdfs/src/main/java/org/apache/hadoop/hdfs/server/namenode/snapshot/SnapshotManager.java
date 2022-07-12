@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -65,7 +65,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.Lists;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -391,8 +391,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       final INodesInPath iip) throws IOException {
     final INodeDirectory dir = getSnapshottableAncestorDir(iip);
     if (dir == null) {
-      throw new SnapshotException("Directory is neither snapshottable nor" +
-          " under a snap root!");
+      throw new SnapshotException("The path " + iip.getPath()
+          + " is neither snapshottable nor under a snapshot root!");
     }
     return dir;
   }
@@ -402,7 +402,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     final String path = iip.getPath();
     final INode inode = iip.getLastINode();
     final INodeDirectory dir;
-    if (inode instanceof INodeDirectory) {
+    if (inode != null && inode.isDirectory()) {
       dir = INodeDirectory.valueOf(inode, path);
     } else {
       dir = INodeDirectory.valueOf(iip.getINode(-2), iip.getParentPath());

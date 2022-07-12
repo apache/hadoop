@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -213,12 +213,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
         allocateResponse.getCompletedContainersStatuses().size();
 
     if (ask.size() > 0 || release.size() > 0) {
-      LOG.info("getResources() for " + applicationId + ":" + " ask="
-          + ask.size() + " release= " + release.size() + " newContainers="
-          + allocateResponse.getAllocatedContainers().size()
-          + " finishedContainers=" + numCompletedContainers
-          + " resourcelimit=" + availableResources + " knownNMs="
-          + clusterNmCount);
+      LOG.info("applicationId={}: ask={} release={} newContainers={} finishedContainers={}"
+              + " resourceLimit={} knownNMs={}", applicationId, ask.size(), release.size(),
+          allocateResponse.getAllocatedContainers().size(), numCompletedContainers,
+          availableResources, clusterNmCount);
     }
 
     ask.clear();

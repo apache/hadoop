@@ -32,7 +32,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -135,12 +135,12 @@ public class ConnectionManager {
     this.creator.start();
 
     // Schedule a task to remove stale connection pools and sockets
-    long recyleTimeMs = Math.min(
+    long recycleTimeMs = Math.min(
         poolCleanupPeriodMs, connectionCleanupPeriodMs);
     LOG.info("Cleaning every {} seconds",
-        TimeUnit.MILLISECONDS.toSeconds(recyleTimeMs));
+        TimeUnit.MILLISECONDS.toSeconds(recycleTimeMs));
     this.cleaner.scheduleAtFixedRate(
-        new CleanupTask(), 0, recyleTimeMs, TimeUnit.MILLISECONDS);
+        new CleanupTask(), 0, recycleTimeMs, TimeUnit.MILLISECONDS);
 
     // Mark the manager as running
     this.running = true;
@@ -364,9 +364,9 @@ public class ConnectionManager {
       long timeSinceLastActive = Time.now() - pool.getLastActiveTime();
       int total = pool.getNumConnections();
       // Active is a transient status in many cases for a connection since
-      // the handler thread uses the connection very quickly. Thus the number
+      // the handler thread uses the connection very quickly. Thus, the number
       // of connections with handlers using at the call time is constantly low.
-      // Recently active is more lasting status and it shows how many
+      // Recently active is more lasting status, and it shows how many
       // connections have been used with a recent time period. (i.e. 30 seconds)
       int active = pool.getNumActiveConnectionsRecently();
       float poolMinActiveRatio = pool.getMinActiveRatio();
@@ -376,9 +376,9 @@ public class ConnectionManager {
         // The number should at least be 1
         int targetConnectionsCount = Math.max(1,
             (int)(poolMinActiveRatio * total) - active);
-        List<ConnectionContext> conns =
+        List<ConnectionContext> connections =
             pool.removeConnections(targetConnectionsCount);
-        for (ConnectionContext conn : conns) {
+        for (ConnectionContext conn : connections) {
           conn.close();
         }
         LOG.debug("Removed connection {} used {} seconds ago. " +

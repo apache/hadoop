@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService
         .RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +76,7 @@ public class ContainerScheduler extends AbstractService implements
   private final Context context;
   // Capacity of the queue for opportunistic Containers.
   private final int maxOppQueueLength;
+  private final boolean forceStartGuaranteedContainers;
 
   // Queue of Guaranteed Containers waiting for resources to run
   private final LinkedHashMap<ContainerId, Container>
@@ -106,8 +109,36 @@ public class ContainerScheduler extends AbstractService implements
 
   private final AsyncDispatcher dispatcher;
   private final NodeManagerMetrics metrics;
+  private final OpportunisticContainersQueuePolicy oppContainersQueuePolicy;
 
   private Boolean usePauseEventForPreemption = false;
+
+  private static int getMaxOppQueueLengthFromConf(final Context context) {
+    if (context == null || context.getConf() == null) {
+      return YarnConfiguration
+          .DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH;
+    }
+
+    return context.getConf().getInt(
+        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
+        YarnConfiguration.DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH
+    );
+  }
+
+  private static OpportunisticContainersQueuePolicy
+      getOppContainersQueuePolicyFromConf(final Context context) {
+    final OpportunisticContainersQueuePolicy queuePolicy;
+    if (context == null || context.getConf() == null) {
+      queuePolicy = OpportunisticContainersQueuePolicy.DEFAULT;
+    } else {
+      queuePolicy = context.getConf().getEnum(
+          YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY,
+          OpportunisticContainersQueuePolicy.DEFAULT
+      );
+    }
+
+    return queuePolicy;
+  }
 
   @VisibleForTesting
   ResourceHandlerChain resourceHandlerChain = null;
@@ -120,10 +151,9 @@ public class ContainerScheduler extends AbstractService implements
    */
   public ContainerScheduler(Context context, AsyncDispatcher dispatcher,
       NodeManagerMetrics metrics) {
-    this(context, dispatcher, metrics, context.getConf().getInt(
-        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
-        YarnConfiguration.
-            DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH));
+    this(context, dispatcher, metrics,
+        getOppContainersQueuePolicyFromConf(context),
+        getMaxOppQueueLengthFromConf(context));
   }
 
 
@@ -149,13 +179,35 @@ public class ContainerScheduler extends AbstractService implements
   @VisibleForTesting
   public ContainerScheduler(Context context, AsyncDispatcher dispatcher,
       NodeManagerMetrics metrics, int qLength) {
+    this(context, dispatcher, metrics,
+        getOppContainersQueuePolicyFromConf(context), qLength);
+  }
+
+  @VisibleForTesting
+  public ContainerScheduler(Context context, AsyncDispatcher dispatcher,
+      NodeManagerMetrics metrics,
+      OpportunisticContainersQueuePolicy oppContainersQueuePolicy,
+      int qLength) {
     super(ContainerScheduler.class.getName());
     this.context = context;
     this.dispatcher = dispatcher;
     this.metrics = metrics;
-    this.maxOppQueueLength = (qLength <= 0) ? 0 : qLength;
     this.utilizationTracker =
         new AllocationBasedResourceUtilizationTracker(this);
+    this.oppContainersQueuePolicy = oppContainersQueuePolicy;
+    switch (oppContainersQueuePolicy) {
+    case BY_RESOURCES:
+      this.maxOppQueueLength = 0;
+      this.forceStartGuaranteedContainers = false;
+      LOG.info("Setting max opportunistic queue length to 0,"
+              + " as {} is incompatible with queue length",
+          oppContainersQueuePolicy);
+      break;
+    case BY_QUEUE_LEN:
+    default:
+      this.maxOppQueueLength = qLength;
+      this.forceStartGuaranteedContainers = (maxOppQueueLength <= 0);
+    }
     this.opportunisticContainersStatus =
         OpportunisticContainersStatus.newInstance();
   }
@@ -187,7 +239,7 @@ public class ContainerScheduler extends AbstractService implements
       shedQueuedOpportunisticContainers();
       break;
     case RECOVERY_COMPLETED:
-      startPendingContainers(maxOppQueueLength <= 0);
+      startPendingContainers(forceStartGuaranteedContainers);
       metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
           queuedGuaranteedContainers.size());
       break;
@@ -243,7 +295,7 @@ public class ContainerScheduler extends AbstractService implements
         LOG.warn(String.format("Could not update resources on " +
             "continer update of %s", containerId), ex);
       }
-      startPendingContainers(maxOppQueueLength <= 0);
+      startPendingContainers(forceStartGuaranteedContainers);
       metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
           queuedGuaranteedContainers.size());
     }
@@ -371,7 +423,6 @@ public class ContainerScheduler extends AbstractService implements
           ExecutionType.OPPORTUNISTIC) {
         this.metrics.completeOpportunisticContainer(container.getResource());
       }
-      boolean forceStartGuaranteedContainers = (maxOppQueueLength <= 0);
       startPendingContainers(forceStartGuaranteedContainers);
     }
     this.metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
@@ -380,13 +431,13 @@ public class ContainerScheduler extends AbstractService implements
 
   /**
    * Start pending containers in the queue.
-   * @param forceStartGuaranteedContaieners When this is true, start guaranteed
+   * @param forceStartGContainers When this is true, start guaranteed
    *        container without looking at available resource
    */
-  private void startPendingContainers(boolean forceStartGuaranteedContaieners) {
+  private void startPendingContainers(boolean forceStartGContainers) {
     // Start guaranteed containers that are paused, if resources available.
     boolean resourcesAvailable = startContainers(
-          queuedGuaranteedContainers.values(), forceStartGuaranteedContaieners);
+          queuedGuaranteedContainers.values(), forceStartGContainers);
     // Start opportunistic containers, if resources available.
     if (resourcesAvailable) {
       startContainers(queuedOpportunisticContainers.values(), false);
@@ -429,6 +480,21 @@ public class ContainerScheduler extends AbstractService implements
     return this.utilizationTracker.hasResourcesAvailable(container);
   }
 
+  private boolean resourceAvailableToQueueOppContainer(
+      Container newOppContainer) {
+    final Resource cumulativeResource = Resource.newInstance(Resources.none());
+    for (final Container container : queuedGuaranteedContainers.values()) {
+      Resources.addTo(cumulativeResource, container.getResource());
+    }
+
+    for (final Container container : queuedOpportunisticContainers.values()) {
+      Resources.addTo(cumulativeResource, container.getResource());
+    }
+
+    Resources.addTo(cumulativeResource, newOppContainer.getResource());
+    return this.utilizationTracker.hasResourcesAvailable(cumulativeResource);
+  }
+
   private boolean enqueueContainer(Container container) {
     boolean isGuaranteedContainer = container.getContainerTokenIdentifier().
         getExecutionType() == ExecutionType.GUARANTEED;
@@ -438,7 +504,21 @@ public class ContainerScheduler extends AbstractService implements
       queuedGuaranteedContainers.put(container.getContainerId(), container);
       isQueued = true;
     } else {
-      if (queuedOpportunisticContainers.size() < maxOppQueueLength) {
+      switch (oppContainersQueuePolicy) {
+      case BY_RESOURCES:
+        isQueued = resourceAvailableToQueueOppContainer(container);
+        break;
+      case BY_QUEUE_LEN:
+      default:
+        if (maxOppQueueLength <= 0) {
+          isQueued = false;
+        } else {
+          isQueued =
+              queuedOpportunisticContainers.size() < maxOppQueueLength;
+        }
+      }
+
+      if (isQueued) {
         LOG.info("Opportunistic container {} will be queued at the NM.",
             container.getContainerId());
         queuedOpportunisticContainers.put(
@@ -451,7 +531,6 @@ public class ContainerScheduler extends AbstractService implements
         container.sendKillEvent(
             ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER,
             "Opportunistic container queue is full.");
-        isQueued = false;
       }
     }
 
@@ -484,7 +563,6 @@ public class ContainerScheduler extends AbstractService implements
       // When opportunistic container not allowed (which is determined by
       // max-queue length of pending opportunistic containers <= 0), start
       // guaranteed containers without looking at available resources.
-      boolean forceStartGuaranteedContainers = (maxOppQueueLength <= 0);
       startPendingContainers(forceStartGuaranteedContainers);
 
       // if the guaranteed container is queued, we need to preempt opportunistic

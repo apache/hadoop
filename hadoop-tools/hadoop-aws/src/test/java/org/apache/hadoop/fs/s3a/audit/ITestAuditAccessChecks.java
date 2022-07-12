@@ -37,8 +37,9 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_ACCESS_CHECK_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_ACCESS;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_REQUEST;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.resetAuditOptions;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_ALL_PROBES;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_FILE_PROBE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.ROOT_FILE_STATUS_PROBE;
@@ -67,13 +68,16 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     Configuration conf = super.createConfiguration();
     resetAuditOptions(conf);
     conf.set(AUDIT_SERVICE_CLASSNAME, AccessCheckingAuditor.CLASS);
+    conf.setBoolean(AUDIT_ENABLED, true);
     return conf;
   }
 
   @Override
   public void setup() throws Exception {
     super.setup();
-    auditor = (AccessCheckingAuditor) getFileSystem().getAuditor();
+    final S3AFileSystem fs = getFileSystem();
+    auditor = (AccessCheckingAuditor) fs.getAuditor();
+    setSpanSource(fs);
   }
 
   @Test
@@ -87,7 +91,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     verifyMetrics(
         () -> access(fs, path),
         with(INVOCATION_ACCESS, 1),
-        whenRaw(FILE_STATUS_FILE_PROBE));
+        always(FILE_STATUS_FILE_PROBE));
   }
 
   @Test
@@ -100,7 +104,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     verifyMetrics(
         () -> access(fs, path),
         with(INVOCATION_ACCESS, 1),
-        whenRaw(FILE_STATUS_ALL_PROBES));
+        always(FILE_STATUS_ALL_PROBES));
   }
 
   @Test
@@ -113,7 +117,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     verifyMetrics(
         () -> access(fs, path),
         with(INVOCATION_ACCESS, 1),
-        whenRaw(ROOT_FILE_STATUS_PROBE));
+        always(ROOT_FILE_STATUS_PROBE));
   }
 
   /**
@@ -136,7 +140,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
         with(AUDIT_ACCESS_CHECK_FAILURE, 1),
         // one S3 request: a HEAD.
         with(AUDIT_REQUEST_EXECUTION, 1),
-        whenRaw(FILE_STATUS_FILE_PROBE));
+        always(FILE_STATUS_FILE_PROBE));
   }
 
   /**
@@ -160,7 +164,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
         with(AUDIT_REQUEST_EXECUTION, 2),
         with(STORE_IO_REQUEST, 2),
         with(AUDIT_ACCESS_CHECK_FAILURE, 1),
-        whenRaw(FILE_STATUS_ALL_PROBES));
+        always(FILE_STATUS_ALL_PROBES));
   }
 
   /**
@@ -181,7 +185,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
         // two S3 requests: a HEAD and a LIST.
         with(AUDIT_REQUEST_EXECUTION, 2),
         with(AUDIT_ACCESS_CHECK_FAILURE, 0),
-        whenRaw(FILE_STATUS_ALL_PROBES));
+        always(FILE_STATUS_ALL_PROBES));
   }
 
   /**

@@ -123,9 +123,10 @@ public class TestTrash {
 
   /**
    * Test trash for the shell's delete command for the default file system
-   * specified in the paramter conf
-   * @param conf 
+   * specified in the parameter conf
+   * @param conf - configuration object for the filesystem
    * @param base - the base path where files are created
+   * @param trashRootFs - the filesystem object to test trash
    * @param trashRoot - the expected place where the trashbin resides
    * @throws IOException
    */
@@ -746,7 +747,7 @@ public class TestTrash {
     Path myPath = new Path(TEST_DIR, "test/mkdirs");
     mkdir(fs, myPath);
     int fileIndex = 0;
-    Set<String> checkpoints = new HashSet<String>();
+    Set<String> checkpoints = new HashSet<>();
     while (true)  {
       // Create a file with a new name
       Path myFile = new Path(TEST_DIR, "test/mkdirs/myFile" + fileIndex++);
@@ -793,7 +794,7 @@ public class TestTrash {
     }
   }
 
-  static class TestLFS extends LocalFileSystem {
+  public static class TestLFS extends LocalFileSystem {
     private URI uriName = null;
     Path home;
     TestLFS() {

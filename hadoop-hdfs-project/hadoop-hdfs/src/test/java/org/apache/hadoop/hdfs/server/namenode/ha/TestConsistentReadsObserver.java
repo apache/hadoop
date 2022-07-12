@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -108,8 +109,6 @@ public class TestConsistentReadsObserver {
 
   @Test
   public void testRequeueCall() throws Exception {
-    setObserverRead(true);
-
     // Update the configuration just for the observer, by enabling
     // IPC backoff and using the test scheduler class, which starts to backoff
     // after certain number of calls.
@@ -125,6 +124,7 @@ public class TestConsistentReadsObserver {
         + CommonConfigurationKeys.IPC_BACKOFF_ENABLE, true);
 
     NameNodeAdapter.getRpcServer(nn).refreshCallQueue(configuration);
+    assertThat(NameNodeAdapter.getRpcServer(nn).getTotalRequests()).isGreaterThan(0);
 
     dfs.create(testPath, (short)1).close();
     assertSentTo(0);
@@ -134,6 +134,7 @@ public class TestConsistentReadsObserver {
     // be triggered and client should retry active NN.
     dfs.getFileStatus(testPath);
     assertSentTo(0);
+    assertThat(NameNodeAdapter.getRpcServer(nn).getTotalRequests()).isGreaterThan(1);
     // reset the original call queue
     NameNodeAdapter.getRpcServer(nn).refreshCallQueue(originalConf);
   }

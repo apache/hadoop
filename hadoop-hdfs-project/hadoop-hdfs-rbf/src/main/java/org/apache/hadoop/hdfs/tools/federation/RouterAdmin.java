@@ -77,6 +77,8 @@ import org.apache.hadoop.ipc.RefreshResponse;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -133,7 +135,7 @@ public class RouterAdmin extends Configured implements Tool {
               "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
               "-safemode", "-nameservice", "-getDisabledNameservices",
               "-refresh", "-refreshRouterArgs",
-              "-refreshSuperUserGroupsConfiguration"};
+              "-refreshSuperUserGroupsConfiguration", "-refreshCallQueue"};
       StringBuilder usage = new StringBuilder();
       usage.append("Usage: hdfs dfsrouteradmin :\n");
       for (int i = 0; i < commands.length; i++) {
@@ -183,13 +185,15 @@ public class RouterAdmin extends Configured implements Tool {
       return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
     } else if (cmd.equals("-refreshSuperUserGroupsConfiguration")) {
       return "\t[-refreshSuperUserGroupsConfiguration]";
+    } else if (cmd.equals("-refreshCallQueue")) {
+      return "\t[-refreshCallQueue]";
     }
     return getUsage(null);
   }
 
   /**
    * Usage: validates the maximum number of arguments for a command.
-   * @param arg List of of command line parameters.
+   * @param arg List of command line parameters.
    */
   private void validateMax(String[] arg) {
     if (arg[0].equals("-ls")) {
@@ -217,6 +221,10 @@ public class RouterAdmin extends Configured implements Tool {
         throw new IllegalArgumentException("No arguments allowed");
       }
     } else if (arg[0].equals("-refreshSuperUserGroupsConfiguration")) {
+      if (arg.length > 1) {
+        throw new IllegalArgumentException("No arguments allowed");
+      }
+    } else if (arg[0].equals("-refreshCallQueue")) {
       if (arg.length > 1) {
         throw new IllegalArgumentException("No arguments allowed");
       }
@@ -388,6 +396,8 @@ public class RouterAdmin extends Configured implements Tool {
         exitCode = genericRefresh(argv, i);
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
         exitCode = refreshSuperUserGroupsConfiguration();
+      } else if ("-refreshCallQueue".equals(cmd)) {
+        exitCode = refreshCallQueue();
       } else {
         throw new IllegalArgumentException("Unknown Command: " + cmd);
       }
@@ -397,7 +407,7 @@ public class RouterAdmin extends Configured implements Tool {
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
       printUsage(cmd);
     } catch (RemoteException e) {
-      // This is a error returned by the server.
+      // This is an error returned by the server.
       // Print out the first line of the error message, ignore the stack trace.
       exitCode = -1;
       debugException = e;
@@ -797,7 +807,7 @@ public class RouterAdmin extends Configured implements Tool {
     } else if (argv[i].equals("-d")) { // Check if -d parameter is specified.
       detail = true;
       if (argv.length == 2) {
-        path = "/"; // If no path is provide with -ls -d.
+        path = "/"; // If no path is provided with -ls -d.
       } else {
         path = argv[++i];
       }
@@ -1256,6 +1266,39 @@ public class RouterAdmin extends Configured implements Tool {
         return -1;
       }
     }
+  }
+
+  /**
+   * Refresh Router's call Queue.
+   *
+   * @throws IOException if the operation was not successful.
+   */
+  private int refreshCallQueue() throws IOException {
+    Configuration conf = getConf();
+    String hostport =  getConf().getTrimmed(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
+
+    // Create the client
+    Class<?> xface = RefreshCallQueueProtocolPB.class;
+    InetSocketAddress address = NetUtils.createSocketAddr(hostport);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
+    RefreshCallQueueProtocolPB proxy = (RefreshCallQueueProtocolPB)RPC.getProxy(
+        xface, RPC.getProtocolVersion(xface), address, ugi, conf,
+        NetUtils.getDefaultSocketFactory(conf), 0);
+
+    int returnCode = -1;
+    try (RefreshCallQueueProtocolClientSideTranslatorPB xlator =
+        new RefreshCallQueueProtocolClientSideTranslatorPB(proxy)) {
+      xlator.refreshCallQueue();
+      System.out.println("Refresh call queue successfully for " + hostport);
+      returnCode = 0;
+    } catch (IOException ioe){
+      System.out.println("Refresh call queue unsuccessfully for " + hostport);
+    }
+    return returnCode;
   }
 
   /**

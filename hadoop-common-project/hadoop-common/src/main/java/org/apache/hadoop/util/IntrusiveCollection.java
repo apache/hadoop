@@ -23,7 +23,6 @@ import java.util.NoSuchElementException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,38 +49,59 @@ public class IntrusiveCollection<E extends IntrusiveCollection.Element>
     /**
      * Insert this element into the list.  This is the first thing that will
      * be called on the element.
+     *
+     * @param list list.
+     * @param prev prev.
+     * @param next next.
      */
     void insertInternal(IntrusiveCollection<? extends Element> list,
         Element prev, Element next);
 
     /**
      * Set the prev pointer of an element already in the list.
+     *
+     * @param list list.
+     * @param prev prev.
      */
     void setPrev(IntrusiveCollection<? extends Element> list, Element prev);
 
     /**
      * Set the next pointer of an element already in the list.
+     *
+     * @param list list.
+     * @param next next.
      */
     void setNext(IntrusiveCollection<? extends Element> list, Element next);
 
     /**
      * Remove an element from the list.  This is the last thing that will be
      * called on an element.
+     *
+     * @param list list.
      */
     void removeInternal(IntrusiveCollection<? extends Element> list);
 
     /**
      * Get the prev pointer of an element.
+     *
+     * @param list list.
+     * @return Element.
      */
     Element getPrev(IntrusiveCollection<? extends Element> list);
 
     /**
      * Get the next pointer of an element.
+     *
+     * @param list list.
+     * @return Element.
      */
     Element getNext(IntrusiveCollection<? extends Element> list);
 
     /**
      * Returns true if this element is in the provided list.
+     *
+     * @param list list.
+     * @return if this element is in the provided list true, not false.
      */
     boolean isInList(IntrusiveCollection<? extends Element> list);
   }
@@ -261,6 +281,7 @@ public class IntrusiveCollection<E extends IntrusiveCollection.Element>
    * Add an element to the end of the list.
    * 
    * @param elem     The new element to add.
+   * @return add result.
    */
   @Override
   public boolean add(E elem) {
@@ -282,6 +303,7 @@ public class IntrusiveCollection<E extends IntrusiveCollection.Element>
    * Add an element to the front of the list.
    *
    * @param elem     The new element to add.
+   * @return if addFirst success true, not false.
    */
   public boolean addFirst(Element elem) {
     if (elem == null) {

@@ -28,12 +28,12 @@ import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.util.Preconditions;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,8 +63,8 @@ public final class MBeans {
    * Where the {@literal <serviceName> and <nameName>} are the supplied
    * parameters.
    *
-   * @param serviceName
-   * @param nameName
+   * @param serviceName serviceName.
+   * @param nameName nameName.
    * @param theMbean - the MBean to register
    * @return the named used to register the MBean
    */
@@ -79,8 +79,8 @@ public final class MBeans {
    * Where the {@literal <serviceName> and <nameName>} are the supplied
    * parameters.
    *
-   * @param serviceName
-   * @param nameName
+   * @param serviceName serviceName.
+   * @param nameName nameName.
    * @param properties - Key value pairs to define additional JMX ObjectName
    *                     properties.
    * @param theMbean    - the MBean to register

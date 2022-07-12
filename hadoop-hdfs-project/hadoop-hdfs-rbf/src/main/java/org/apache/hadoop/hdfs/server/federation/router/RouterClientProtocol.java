@@ -97,7 +97,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -305,7 +305,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * Check if an exception is caused by an unavailable subcluster or not. It
    * also checks the causes.
    * @param ioe IOException to check.
-   * @return If caused by an unavailable subcluster. False if the should not be
+   * @return If caused by an unavailable subcluster. False if they should not be
    *         retried (e.g., NSQuotaExceededException).
    */
   protected static boolean isUnavailableSubclusterException(
@@ -999,7 +999,21 @@ public class RouterClientProtocol implements ClientProtocol {
 
     Map<String, DatanodeStorageReport[]> dnSubcluster =
         rpcServer.getDatanodeStorageReportMap(type);
+    return mergeDtanodeStorageReport(dnSubcluster);
+  }
 
+  public DatanodeStorageReport[] getDatanodeStorageReport(
+      HdfsConstants.DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+
+    Map<String, DatanodeStorageReport[]> dnSubcluster =
+        rpcServer.getDatanodeStorageReportMap(type, requireResponse, timeOutMs);
+    return mergeDtanodeStorageReport(dnSubcluster);
+  }
+
+  private DatanodeStorageReport[] mergeDtanodeStorageReport(
+      Map<String, DatanodeStorageReport[]> dnSubcluster) {
     // Avoid repeating machines in multiple subclusters
     Map<String, DatanodeStorageReport> datanodesMap = new LinkedHashMap<>();
     for (DatanodeStorageReport[] dns : dnSubcluster.values()) {
@@ -1802,6 +1816,12 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+    return rpcServer.getSlowDatanodeReport(true, 0);
+  }
+
+  @Override
   public HAServiceProtocol.HAServiceState getHAServiceState() {
     if (rpcServer.isSafeMode()) {
       return HAServiceProtocol.HAServiceState.STANDBY;
@@ -1818,7 +1838,7 @@ public class RouterClientProtocol implements ClientProtocol {
    *          path may be located. On return this list is trimmed to include
    *          only the paths that have corresponding destinations in the same
    *          namespace.
-   * @param dst The destination path
+   * @param dstLocations The destination path
    * @return A map of all eligible source namespaces and their corresponding
    *         replacement value.
    * @throws IOException If the dst paths could not be determined.
@@ -1883,6 +1903,8 @@ public class RouterClientProtocol implements ClientProtocol {
     long quota = 0;
     long spaceConsumed = 0;
     long spaceQuota = 0;
+    long snapshotDirectoryCount = 0;
+    long snapshotFileCount = 0;
     String ecPolicy = "";
 
     for (ContentSummary summary : summaries) {
@@ -1892,6 +1914,8 @@ public class RouterClientProtocol implements ClientProtocol {
       quota = summary.getQuota();
       spaceConsumed += summary.getSpaceConsumed();
       spaceQuota = summary.getSpaceQuota();
+      snapshotDirectoryCount += summary.getSnapshotDirectoryCount();
+      snapshotFileCount += summary.getSnapshotFileCount();
       // We return from the first response as we assume that the EC policy
       // of each sub-cluster is same.
       if (ecPolicy.isEmpty()) {
@@ -1907,6 +1931,8 @@ public class RouterClientProtocol implements ClientProtocol {
         .spaceConsumed(spaceConsumed)
         .spaceQuota(spaceQuota)
         .erasureCodingPolicy(ecPolicy)
+        .snapshotDirectoryCount(snapshotDirectoryCount)
+        .snapshotFileCount(snapshotFileCount)
         .build();
     return ret;
   }

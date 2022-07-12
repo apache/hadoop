@@ -24,12 +24,13 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.tools.fedbalance.FedBalanceConfigs;
 import org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceJob;
@@ -62,7 +63,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TRASH;
  * dst sub-namespace with distcp.
  *
  * 1. Move data from the source path to the destination path with distcp.
- * 2. Update the the mount entry.
+ * 2. Update the mount entry.
  * 3. Delete the source path to trash.
  */
 public class RouterFedBalance extends Configured implements Tool {
@@ -76,7 +77,7 @@ public class RouterFedBalance extends Configured implements Tool {
   private static final String TRASH_PROCEDURE = "trash-procedure";
 
   /**
-   * This class helps building the balance job.
+   * This class helps to build the balance job.
    */
   private class Builder {
     /* Force close all open files while there is no diff. */
@@ -356,7 +357,7 @@ public class RouterFedBalance extends Configured implements Tool {
    */
   @VisibleForTesting
   static Configuration getDefaultConf() {
-    Configuration config = new Configuration();
+    Configuration config = new HdfsConfiguration();
     config.addResource(FED_BALANCE_DEFAULT_XML);
     config.addResource(FED_BALANCE_SITE_XML);
     return config;

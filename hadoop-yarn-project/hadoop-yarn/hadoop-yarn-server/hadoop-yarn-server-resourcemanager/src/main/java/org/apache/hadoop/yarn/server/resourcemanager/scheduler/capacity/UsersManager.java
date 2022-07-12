@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * {@link UsersManager} tracks users in the system and its respective data
@@ -55,10 +55,9 @@ public class UsersManager implements AbstractUsersManager {
   /*
    * Member declaration for UsersManager class.
    */
-  private final LeafQueue lQueue;
+  private final AbstractLeafQueue lQueue;
   private final RMNodeLabelsManager labelManager;
   private final ResourceCalculator resourceCalculator;
-  private final CapacitySchedulerContext scheduler;
   private Map<String, User> users = new ConcurrentHashMap<>();
 
   private ResourceUsage totalResUsageForActiveUsers = new ResourceUsage();
@@ -296,17 +295,13 @@ public class UsersManager implements AbstractUsersManager {
    *          Leaf Queue Object
    * @param labelManager
    *          Label Manager instance
-   * @param scheduler
-   *          Capacity Scheduler Context
    * @param resourceCalculator
    *          rc
    */
-  public UsersManager(QueueMetrics metrics, LeafQueue lQueue,
-      RMNodeLabelsManager labelManager, CapacitySchedulerContext scheduler,
-      ResourceCalculator resourceCalculator) {
+  public UsersManager(QueueMetrics metrics, AbstractLeafQueue lQueue,
+      RMNodeLabelsManager labelManager, ResourceCalculator resourceCalculator) {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.lQueue = lQueue;
-    this.scheduler = scheduler;
     this.labelManager = labelManager;
     this.resourceCalculator = resourceCalculator;
     this.qUsageRatios = new UsageRatios();
@@ -471,8 +466,7 @@ public class UsersManager implements AbstractUsersManager {
   }
 
   private float getUserWeightFromQueue(String userName) {
-    Float weight = lQueue.getUserWeights().get(userName);
-    return (weight == null) ? 1.0f : weight.floatValue();
+    return lQueue.getUserWeights().getByUser(userName);
   }
 
   /**
@@ -818,6 +812,7 @@ public class UsersManager implements AbstractUsersManager {
             lQueue.getMinimumAllocation());
 
     if (LOG.isDebugEnabled()) {
+      float weight = lQueue.getUserWeights().getByUser(userName);
       LOG.debug("User limit computation for " + userName
           + ",  in queue: " + lQueue.getQueuePath()
           + ",  userLimitPercent=" + lQueue.getUserLimit()
@@ -835,7 +830,7 @@ public class UsersManager implements AbstractUsersManager {
           + ",  Partition=" + nodePartition
           + ",  resourceUsed=" + resourceUsed
           + ",  maxUserLimit=" + maxUserLimit
-          + ",  userWeight=" + getUser(userName).getWeight()
+          + ",  userWeight=" + weight
       );
     }
     return userLimitResource;
@@ -844,10 +839,8 @@ public class UsersManager implements AbstractUsersManager {
   /**
    * Update new usage ratio.
    *
-   * @param partition
-   *          Node partition
-   * @param clusterResource
-   *          Cluster Resource
+   * @param partition Node partition
+   * @param clusterResource cluster resource
    */
   public void updateUsageRatio(String partition, Resource clusterResource) {
     writeLock.lock();
@@ -979,7 +972,7 @@ public class UsersManager implements AbstractUsersManager {
 
         // Update total resource usage of active and non-active after user
         // is moved from non-active to active.
-        for (String partition : resourceUsage.getNodePartitionsSet()) {
+        for (String partition : resourceUsage.getExistingNodeLabels()) {
           totalResUsageForNonActiveUsers.decUsed(partition,
               resourceUsage.getUsed(partition));
           totalResUsageForActiveUsers.incUsed(partition,
@@ -1020,7 +1013,7 @@ public class UsersManager implements AbstractUsersManager {
 
         // Update total resource usage of active and non-active after user is
         // moved from active to non-active.
-        for (String partition : resourceUsage.getNodePartitionsSet()) {
+        for (String partition : resourceUsage.getExistingNodeLabels()) {
           totalResUsageForActiveUsers.decUsed(partition,
               resourceUsage.getUsed(partition));
           totalResUsageForNonActiveUsers.incUsed(partition,
@@ -1064,6 +1057,8 @@ public class UsersManager implements AbstractUsersManager {
    *          Name of the user
    * @param resource
    *          Resource to increment/decrement
+   * @param clusterResource
+   *          Cluster resource (for testing purposes only)
    * @param nodePartition
    *          Node label
    * @param isAllocate
@@ -1071,6 +1066,7 @@ public class UsersManager implements AbstractUsersManager {
    * @return user
    */
   public User updateUserResourceUsage(String userName, Resource resource,
+      Resource clusterResource,
       String nodePartition, boolean isAllocate) {
     this.writeLock.lock();
     try {
@@ -1086,7 +1082,7 @@ public class UsersManager implements AbstractUsersManager {
 
       // Update usage ratios
       Resource resourceByLabel = labelManager.getResourceByLabel(nodePartition,
-          scheduler.getClusterResource());
+          clusterResource);
       incQueueUsageRatio(nodePartition, user.updateUsageRatio(
           resourceCalculator, resourceByLabel, nodePartition));
 

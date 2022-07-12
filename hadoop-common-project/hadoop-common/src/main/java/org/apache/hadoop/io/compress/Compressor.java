@@ -65,11 +65,13 @@ public interface Compressor {
 
   /**
    * Return number of uncompressed bytes input so far.
+   * @return bytes read.
    */
   public long getBytesRead();
 
   /**
    * Return number of compressed bytes output so far.
+   * @return bytes written.
    */
   public long getBytesWritten();
 
@@ -97,6 +99,7 @@ public interface Compressor {
    * @param off Start offset of the data
    * @param len Size of the buffer
    * @return The actual number of bytes of compressed data.
+   * @throws IOException raised on errors performing I/O.
    */
   public int compress(byte[] b, int off, int len) throws IOException;
   

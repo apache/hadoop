@@ -18,7 +18,7 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 
 import java.io.IOException;
@@ -68,7 +68,7 @@ public class DecodingValidator {
    * @param erasedIndexes indexes of erased units used for decoding
    * @param outputs decoded output buffers, which are ready to be read after
    *                the call
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void validate(ByteBuffer[] inputs, int[] erasedIndexes,
       ByteBuffer[] outputs) throws IOException {
@@ -133,7 +133,7 @@ public class DecodingValidator {
    * @param inputs input buffers used for decoding
    * @param erasedIndexes indexes of erased units used for decoding
    * @param outputs decoded output buffers
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void validate(ECChunk[] inputs, int[] erasedIndexes, ECChunk[] outputs)
       throws IOException {

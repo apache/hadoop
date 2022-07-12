@@ -60,7 +60,8 @@ public abstract class QueueInfo {
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled, float weight) {
+      boolean preemptionDisabled, float weight,
+      int maxParallelApps) {
     QueueInfo queueInfo = Records.newRecord(QueueInfo.class);
     queueInfo.setQueueName(queueName);
     queueInfo.setQueuePath(queuePath);
@@ -75,6 +76,7 @@ public abstract class QueueInfo {
     queueInfo.setQueueStatistics(queueStatistics);
     queueInfo.setPreemptionDisabled(preemptionDisabled);
     queueInfo.setWeight(weight);
+    queueInfo.setMaxParallelApps(maxParallelApps);
     return queueInfo;
   }
 
@@ -86,14 +88,14 @@ public abstract class QueueInfo {
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled, float weight,
+      boolean preemptionDisabled, float weight, int maxParallelApps,
       Map<String, QueueConfigurations> queueConfigurations) {
     QueueInfo queueInfo = QueueInfo.newInstance(queueName, queuePath, capacity,
         maximumCapacity, currentCapacity,
         childQueues, applications,
         queueState, accessibleNodeLabels,
         defaultNodeLabelExpression, queueStatistics,
-        preemptionDisabled, weight);
+        preemptionDisabled, weight, maxParallelApps);
     queueInfo.setQueueConfigurations(queueConfigurations);
     return queueInfo;
   }
@@ -106,7 +108,7 @@ public abstract class QueueInfo {
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled, float weight,
+      boolean preemptionDisabled, float weight, int maxParallelApps,
       Map<String, QueueConfigurations> queueConfigurations,
       boolean intraQueuePreemptionDisabled) {
     QueueInfo queueInfo = QueueInfo.newInstance(queueName, queuePath, capacity,
@@ -114,7 +116,7 @@ public abstract class QueueInfo {
         childQueues, applications,
         queueState, accessibleNodeLabels,
         defaultNodeLabelExpression, queueStatistics,
-        preemptionDisabled, weight, queueConfigurations);
+        preemptionDisabled, weight, maxParallelApps, queueConfigurations);
     queueInfo.setIntraQueuePreemptionDisabled(intraQueuePreemptionDisabled);
     return queueInfo;
   }
@@ -166,6 +168,18 @@ public abstract class QueueInfo {
   @Private
   @Unstable
   public abstract void setWeight(float weight);
+
+  /**
+   * Get the <em>configured max parallel apps</em> of the queue.
+   * @return <em>configured max parallel apps</em> of the queue
+   */
+  @Public
+  @Stable
+  public abstract int getMaxParallelApps();
+
+  @Private
+  @Unstable
+  public abstract void setMaxParallelApps(int maxParallelApps);
   
   /**
    * Get the <em>maximum capacity</em> of the queue.

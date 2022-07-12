@@ -36,7 +36,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Manage the heartbeats received from datanodes.
@@ -256,9 +256,12 @@ class HeartbeatManager implements DatanodeStatistics {
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
     stats.subtract(node);
-    blockManager.updateHeartbeat(node, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
-    stats.add(node);
+    try {
+      blockManager.updateHeartbeat(node, reports, cacheCapacity, cacheUsed,
+          xceiverCount, failedVolumes, volumeFailureSummary);
+    } finally {
+      stats.add(node);
+    }
   }
 
   synchronized void updateLifeline(final DatanodeDescriptor node,
@@ -266,13 +269,16 @@ class HeartbeatManager implements DatanodeStatistics {
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
     stats.subtract(node);
-    // This intentionally calls updateHeartbeatState instead of
-    // updateHeartbeat, because we don't want to modify the
-    // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
-    // not count as arrival of the first heartbeat.
-    blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
-    stats.add(node);
+    try {
+      // This intentionally calls updateHeartbeatState instead of
+      // updateHeartbeat, because we don't want to modify the
+      // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
+      // not count as arrival of the first heartbeat.
+      blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
+          xceiverCount, failedVolumes, volumeFailureSummary);
+    } finally {
+      stats.add(node);
+    }
   }
 
   synchronized void startDecommission(final DatanodeDescriptor node) {
@@ -497,7 +503,7 @@ class HeartbeatManager implements DatanodeStatistics {
         try {
           dm.removeDeadDatanode(dead, !dead.isMaintenance());
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("removeDeadDatanode");
         }
       }
       if (failedStorage != null) {
@@ -506,7 +512,7 @@ class HeartbeatManager implements DatanodeStatistics {
         try {
           blockManager.removeBlocksAssociatedTo(failedStorage);
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("removeBlocksAssociatedTo");
         }
       }
     }

@@ -56,6 +56,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -704,6 +705,7 @@ public class TestRouterRpc {
 
     DatanodeInfo[] combinedData =
         routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
+    assertEquals(0, routerProtocol.getSlowDatanodeReport().length);
     final Map<Integer, String> routerDNMap = new TreeMap<>();
     for (DatanodeInfo dn : combinedData) {
       String subcluster = dn.getNetworkLocation().split("/")[1];
@@ -1950,9 +1952,10 @@ public class TestRouterRpc {
     FsPermission permission = new FsPermission("755");
     routerProtocol.mkdirs(dirPath, permission, false);
 
-    // The audit log should contains "callerContext=clientContext,clientIp:"
-    assertTrue(auditlog.getOutput()
-        .contains("callerContext=clientContext,clientIp:"));
+    // The audit log should contains "callerContext=clientIp:...,clientContext"
+    final String logOutput = auditlog.getOutput();
+    assertTrue(logOutput.contains("callerContext=clientIp:"));
+    assertTrue(logOutput.contains(",clientContext"));
     assertTrue(verifyFileExists(routerFS, dirPath));
   }
 
@@ -1966,5 +1969,82 @@ public class TestRouterRpc {
     GenericTestUtils.waitFor(() ->  {
       return datanodes.get(0).getBalancerBandwidth() == newBandwidth;
     }, 100, 60 * 1000);
+  }
+
+  @Test
+  public void testAddClientIpPortToCallerContext() throws IOException {
+    GenericTestUtils.LogCapturer auditLog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+
+    // 1. ClientIp and ClientPort are not set on the client.
+    // Set client context.
+    CallerContext.setCurrent(
+        new CallerContext.Builder("clientContext").build());
+
+    // Create a directory via the router.
+    String dirPath = "/test";
+    routerProtocol.mkdirs(dirPath, new FsPermission("755"), false);
+
+    // The audit log should contains "clientIp:" and "clientPort:".
+    assertTrue(auditLog.getOutput().contains("clientIp:"));
+    assertTrue(auditLog.getOutput().contains("clientPort:"));
+    assertTrue(verifyFileExists(routerFS, dirPath));
+    auditLog.clearOutput();
+
+    // 2. ClientIp and ClientPort are set on the client.
+    // Reset client context.
+    CallerContext.setCurrent(
+        new CallerContext.Builder(
+            "clientContext,clientIp:1.1.1.1,clientPort:1234").build());
+
+    // Create a directory via the router.
+    routerProtocol.getFileInfo(dirPath);
+
+    // The audit log should not contain the original clientIp and clientPort
+    // set by client.
+    assertFalse(auditLog.getOutput().contains("clientIp:1.1.1.1"));
+    assertFalse(auditLog.getOutput().contains("clientPort:1234"));
+  }
+
+  @Test
+  public void testContentSummaryWithSnapshot() throws Exception {
+    DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
+    Path dirPath = new Path("/testdir");
+    Path subdirPath = new Path(dirPath, "subdir");
+    Path filePath1 = new Path(dirPath, "file");
+    Path filePath2 = new Path(subdirPath, "file2");
+
+    // Create directories.
+    routerDFS.mkdirs(dirPath);
+    routerDFS.mkdirs(subdirPath);
+
+    // Create files.
+    createFile(routerDFS, filePath1.toString(), 32);
+    createFile(routerDFS, filePath2.toString(), 16);
+
+    // Allow & Create snapshot.
+    routerDFS.allowSnapshot(dirPath);
+    routerDFS.createSnapshot(dirPath, "s1");
+
+    try {
+      // Check content summary, snapshot count should be 0
+      ContentSummary contentSummary = routerDFS.getContentSummary(dirPath);
+      assertEquals(0, contentSummary.getSnapshotDirectoryCount());
+      assertEquals(0, contentSummary.getSnapshotFileCount());
+
+      // Delete the file & subdir(Total 2 files deleted & 1 directory)
+      routerDFS.delete(filePath1, true);
+      routerDFS.delete(subdirPath, true);
+
+      // Get the Content Summary
+      contentSummary = routerDFS.getContentSummary(dirPath);
+      assertEquals(1, contentSummary.getSnapshotDirectoryCount());
+      assertEquals(2, contentSummary.getSnapshotFileCount());
+    } finally {
+      // Cleanup
+      routerDFS.deleteSnapshot(dirPath, "s1");
+      routerDFS.disallowSnapshot(dirPath);
+      routerDFS.delete(dirPath, true);
+    }
   }
 }

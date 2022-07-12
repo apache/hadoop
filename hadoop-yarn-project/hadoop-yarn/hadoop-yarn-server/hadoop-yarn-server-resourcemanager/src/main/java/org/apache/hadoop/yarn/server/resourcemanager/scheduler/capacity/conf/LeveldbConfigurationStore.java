@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.DBManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -204,8 +204,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   @Override
   public void confirmMutation(LogMutation pendingMutation,
       boolean isValid) {
-    WriteBatch updateBatch = db.createWriteBatch();
     if (isValid) {
+      WriteBatch updateBatch = db.createWriteBatch();
       for (Map.Entry<String, String> changes :
           pendingMutation.getUpdates().entrySet()) {
         if (changes.getValue() == null || changes.getValue().isEmpty()) {
@@ -215,8 +215,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
         }
       }
       increaseConfigVersion();
+      db.write(updateBatch);
     }
-    db.write(updateBatch);
   }
 
   private byte[] serLogMutations(LinkedList<LogMutation> mutations) throws

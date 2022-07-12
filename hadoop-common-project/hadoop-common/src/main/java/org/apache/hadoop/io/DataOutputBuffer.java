@@ -22,8 +22,7 @@ import java.io.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /** A reusable {@link DataOutput} implementation that writes to an in-memory
  * buffer.
@@ -100,27 +99,45 @@ public class DataOutputBuffer extends DataOutputStream {
     this.buffer = buffer;
   }
 
-  /** Returns the current contents of the buffer.
+  /**
+   * Returns the current contents of the buffer.
    *  Data is only valid to {@link #getLength()}.
+   *
+   * @return data byte.
    */
   public byte[] getData() { return buffer.getData(); }
 
-  /** Returns the length of the valid data currently in the buffer. */
+  /**
+   * Returns the length of the valid data currently in the buffer.
+   * @return length.
+   */
   public int getLength() { return buffer.getLength(); }
 
-  /** Resets the buffer to empty. */
+  /**
+   * Resets the buffer to empty.
+   * @return DataOutputBuffer.
+   */
   public DataOutputBuffer reset() {
     this.written = 0;
     buffer.reset();
     return this;
   }
 
-  /** Writes bytes from a DataInput directly into the buffer. */
+  /**
+   * Writes bytes from a DataInput directly into the buffer.
+   * @param in data input.
+   * @param length length.
+   * @throws IOException raised on errors performing I/O.
+   */
   public void write(DataInput in, int length) throws IOException {
     buffer.write(in, length);
   }
 
-  /** Write to a file stream */
+  /**
+   * Write to a file stream.
+   * @param out OutputStream.
+   * @throws IOException raised on errors performing I/O.
+   */
   public void writeTo(OutputStream out) throws IOException {
     buffer.writeTo(out);
   }
@@ -129,6 +146,10 @@ public class DataOutputBuffer extends DataOutputStream {
    * Overwrite an integer into the internal buffer. Note that this call can only
    * be used to overwrite existing data in the buffer, i.e., buffer#count cannot
    * be increased, and DataOutputStream#written cannot be increased.
+   *
+   * @param v v.
+   * @param offset offset.
+   * @throws IOException raised on errors performing I/O.
    */
   public void writeInt(int v, int offset) throws IOException {
     Preconditions.checkState(offset + 4 <= buffer.getLength());

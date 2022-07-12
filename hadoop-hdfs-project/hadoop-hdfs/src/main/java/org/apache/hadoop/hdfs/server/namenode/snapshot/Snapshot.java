@@ -24,11 +24,14 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Objects;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.DirectoryWithQuotaFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
@@ -194,6 +197,18 @@ public class Snapshot implements Comparable<byte[]> {
         int snapshotId, ContentSummaryComputationContext summary)
         throws AccessControlException {
       return computeDirectoryContentSummary(summary, snapshotId);
+    }
+
+    @Override
+    public boolean metadataEquals(INodeDirectoryAttributes other) {
+      return other != null && getQuotaCounts().equals(other.getQuotaCounts())
+          && getPermissionLong() == other.getPermissionLong()
+          // Acl feature maintains a reference counted map, thereby
+          // every snapshot copy should point to the same Acl object unless
+          // there is no change in acl values.
+          // Reference equals is hence intentional here.
+          && getAclFeature() == other.getAclFeature()
+          && Objects.equals(getXAttrFeature(), other.getXAttrFeature());
     }
 
     @Override

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -164,7 +164,7 @@ public class TestLocalFileSystem {
   public void testSyncable() throws IOException {
     FileSystem fs = fileSys.getRawFileSystem();
     Path file = new Path(TEST_ROOT_DIR, "syncable");
-    FSDataOutputStream out = fs.create(file);;
+    FSDataOutputStream out = fs.create(file);
     final int bytesWritten = 1;
     byte[] expectedBuf = new byte[] {'0', '1', '2', '3'};
     try {

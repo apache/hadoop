@@ -287,6 +287,13 @@
 </property>
 
 <property>
+  <name>mapreduce.task.ping-for-liveliness-check.enabled</name>
+  <value>false</value>
+  <description>Whether to consider ping from tasks in liveliness check.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.map.memory.mb</name>
   <value>-1</value>
   <description>The amount of memory to request from the scheduler for each
@@ -1715,7 +1722,7 @@
   must specify the appropriate classpath for that archive, and the name of
   the archive must be present in the classpath.
   If mapreduce.app-submission.cross-platform is false, platform-specific
-  environment vairable expansion syntax would be used to construct the default
+  environment variable expansion syntax would be used to construct the default
   CLASSPATH entries.
   For Linux:
   $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,
@@ -2231,4 +2238,23 @@
   </description>
 </property>
 
+<!-- not yet enabled by default.
+
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
+  <description>
+    The default committer factory for ABFS is for the manifest committer with
+    abfs-specific tuning.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.gs</name>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+  <description>
+    The default committer factory for google cloud storage is for the manifest committer.
+  </description>
+</property>
+-->
 </configuration>

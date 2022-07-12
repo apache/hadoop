@@ -30,7 +30,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -60,12 +63,8 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectReader;
-import org.codehaus.jackson.map.ObjectWriter;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class is used to create provided volumes.
@@ -134,7 +133,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     ProvidedBlockPoolSlice(String bpid, ProvidedVolumeImpl volume,
         Configuration conf) {
       this.providedVolume = volume;
-      bpVolumeMap = new ReplicaMap(new ReentrantReadWriteLock());
+      bpVolumeMap = new ReplicaMap();
       Class<? extends BlockAliasMap> fmt =
           conf.getClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
               TextFileRegionAliasMap.class, BlockAliasMap.class);
@@ -219,7 +218,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     }
 
     public boolean isEmpty() {
-      return bpVolumeMap.replicas(bpid).size() == 0;
+      return bpVolumeMap.size(bpid) == 0;
     }
 
     public void shutdown(BlockListAsLongs blocksListsAsLongs) {
@@ -371,14 +370,11 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
 
   private static final ObjectWriter WRITER =
       new ObjectMapper().writerWithDefaultPrettyPrinter();
-  private static final ObjectReader READER =
-      new ObjectMapper().reader(ProvidedBlockIteratorState.class);
 
   private static class ProvidedBlockIteratorState {
     ProvidedBlockIteratorState() {
       iterStartMs = Time.now();
       lastSavedMs = iterStartMs;
-      atEnd = false;
       lastBlockId = -1L;
     }
 
@@ -389,9 +385,6 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     // The wall-clock ms since the epoch at which this iterator was created.
     @JsonProperty
     private long iterStartMs;
-
-    @JsonProperty
-    private boolean atEnd;
 
     // The id of the last block read when the state of the iterator is saved.
     // This implementation assumes that provided blocks are returned

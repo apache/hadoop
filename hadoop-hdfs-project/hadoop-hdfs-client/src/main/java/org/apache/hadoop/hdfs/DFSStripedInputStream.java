@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.hdfs.protocol.BlockType;
@@ -141,14 +141,6 @@ public class DFSStripedInputStream extends DFSInputStream {
     return curStripeBuf;
   }
 
-  protected String getSrc() {
-    return src;
-  }
-
-  protected LocatedBlocks getLocatedBlocks() {
-    return locatedBlocks;
-  }
-
   protected ByteBufferPool getBufferPool() {
     return BUFFER_POOL;
   }
@@ -165,6 +157,8 @@ public class DFSStripedInputStream extends DFSInputStream {
     if (target >= getFileLength()) {
       throw new IOException("Attempted to read past end of file");
     }
+
+    maybeRegisterBlockRefresh();
 
     // Will be getting a new BlockReader.
     closeCurrentBlockReaders();
@@ -238,7 +232,7 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   boolean createBlockReader(LocatedBlock block, long offsetInBlock,
       LocatedBlock[] targetBlocks, BlockReaderInfo[] readerInfos,
-      int chunkIndex) throws IOException {
+      int chunkIndex, long readTo) throws IOException {
     BlockReader reader = null;
     final ReaderRetryPolicy retry = new ReaderRetryPolicy();
     DFSInputStream.DNAddrPair dnInfo =
@@ -256,9 +250,14 @@ public class DFSStripedInputStream extends DFSInputStream {
         if (dnInfo == null) {
           break;
         }
+        if (readTo < 0 || readTo > block.getBlockSize()) {
+          readTo = block.getBlockSize();
+        }
         reader = getBlockReader(block, offsetInBlock,
-            block.getBlockSize() - offsetInBlock,
+            readTo - offsetInBlock,
             dnInfo.addr, dnInfo.storageType, dnInfo.info);
+        DFSClientFaultInjector.get().onCreateBlockReader(block, chunkIndex, offsetInBlock,
+            readTo - offsetInBlock);
       } catch (IOException e) {
         if (e instanceof InvalidEncryptionKeyException &&
             retry.shouldRefetchEncryptionKey()) {
@@ -491,11 +490,16 @@ public class DFSStripedInputStream extends DFSInputStream {
     final LocatedBlock[] blks = StripedBlockUtil.parseStripedBlockGroup(
         blockGroup, cellSize, dataBlkNum, parityBlkNum);
     final BlockReaderInfo[] preaderInfos = new BlockReaderInfo[groupSize];
+    long readTo = -1;
+    for (AlignedStripe stripe : stripes) {
+      readTo = Math.max(readTo, stripe.getOffsetInBlock() + stripe.getSpanInBlock());
+    }
     try {
       for (AlignedStripe stripe : stripes) {
         // Parse group to get chosen DN location
         StripeReader preader = new PositionStripeReader(stripe, ecPolicy, blks,
             preaderInfos, corruptedBlocks, decoder, this);
+        preader.setReadTo(readTo);
         try {
           preader.readStripe();
         } finally {
@@ -560,4 +564,5 @@ public class DFSStripedInputStream extends DFSInputStream {
       parityBuf = null;
     }
   }
+
 }

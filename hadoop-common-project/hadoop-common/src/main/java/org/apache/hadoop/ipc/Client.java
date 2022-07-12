@@ -19,8 +19,8 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -112,7 +112,12 @@ public class Client implements AutoCloseable {
     return (AsyncGet<T, IOException>) ASYNC_RPC_RESPONSE.get();
   }
 
-  /** Set call id and retry count for the next call. */
+  /**
+   * Set call id and retry count for the next call.
+   * @param cid input cid.
+   * @param rc input rc.
+   * @param externalHandler input externalHandler.
+   */
   public static void setCallIdAndRetryCount(int cid, int rc,
                                             Object externalHandler) {
     Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
@@ -655,6 +660,16 @@ public class Client implements AutoCloseable {
       short timeoutFailures = 0;
       while (true) {
         try {
+          if (server.isUnresolved()) {
+            // Jump into the catch block. updateAddress() will re-resolve
+            // the address if this is just a temporary DNS failure. If not,
+            // it will timeout after max ipc client retries
+            throw NetUtils.wrapException(server.getHostName(),
+                server.getPort(),
+                NetUtils.getHostname(),
+                0,
+                new UnknownHostException());
+          }
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
           this.socket.setKeepAlive(true);
@@ -797,17 +812,18 @@ public class Client implements AutoCloseable {
      */
     private synchronized void setupIOstreams(
         AtomicBoolean fallbackToSimpleAuth) {
-      if (socket != null || shouldCloseConnection.get()) {
-        return;
-      }
-      UserGroupInformation ticket = remoteId.getTicket();
-      if (ticket != null) {
-        final UserGroupInformation realUser = ticket.getRealUser();
-        if (realUser != null) {
-          ticket = realUser;
-        }
-      }
       try {
+        if (socket != null || shouldCloseConnection.get()) {
+          setFallBackToSimpleAuth(fallbackToSimpleAuth);
+          return;
+        }
+        UserGroupInformation ticket = remoteId.getTicket();
+        if (ticket != null) {
+          final UserGroupInformation realUser = ticket.getRealUser();
+          if (realUser != null) {
+            ticket = realUser;
+          }
+        }
         connectingThread.set(Thread.currentThread());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
@@ -853,20 +869,8 @@ public class Client implements AutoCloseable {
               remoteId.saslQop =
                   (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
               LOG.debug("Negotiated QOP is :" + remoteId.saslQop);
-              if (fallbackToSimpleAuth != null) {
-                fallbackToSimpleAuth.set(false);
-              }
-            } else if (UserGroupInformation.isSecurityEnabled()) {
-              if (!fallbackAllowed) {
-                throw new AccessControlException(
-                    "Server asks us to fall back to SIMPLE " +
-                    "auth, but this client is configured to only allow secure " +
-                    "connections.");
-              }
-              if (fallbackToSimpleAuth != null) {
-                fallbackToSimpleAuth.set(true);
-              }
             }
+            setFallBackToSimpleAuth(fallbackToSimpleAuth);
           }
 
           if (doPing) {
@@ -899,7 +903,41 @@ public class Client implements AutoCloseable {
         connectingThread.set(null);
       }
     }
-    
+
+    private void setFallBackToSimpleAuth(AtomicBoolean fallbackToSimpleAuth)
+        throws AccessControlException {
+      if (authMethod == null || authProtocol != AuthProtocol.SASL) {
+        if (authProtocol == AuthProtocol.SASL) {
+          LOG.trace("Auth method is not set, yield from setting auth fallback.");
+        }
+        return;
+      }
+      if (fallbackToSimpleAuth == null) {
+        // this should happen only during testing.
+        LOG.trace("Connection {} will skip to set fallbackToSimpleAuth as it is null.", remoteId);
+      } else {
+        if (fallbackToSimpleAuth.get()) {
+          // we already set the value to true, we do not need to examine again.
+          return;
+        }
+      }
+      if (authMethod != AuthMethod.SIMPLE) {
+        if (fallbackToSimpleAuth != null) {
+          LOG.trace("Disabling fallbackToSimpleAuth, target does not use SIMPLE authentication.");
+          fallbackToSimpleAuth.set(false);
+        }
+      } else if (UserGroupInformation.isSecurityEnabled()) {
+        if (!fallbackAllowed) {
+          throw new AccessControlException("Server asks us to fall back to SIMPLE auth, but this "
+              + "client is configured to only allow secure connections.");
+        }
+        if (fallbackToSimpleAuth != null) {
+          LOG.trace("Enabling fallbackToSimpleAuth for target, as we are allowed to fall back.");
+          fallbackToSimpleAuth.set(true);
+        }
+      }
+    }
+
     private void closeConnection() {
       if (socket == null) {
         return;
@@ -1316,8 +1354,14 @@ public class Client implements AutoCloseable {
     }
   }
 
-  /** Construct an IPC client whose values are of the given {@link Writable}
-   * class. */
+  /**
+   * Construct an IPC client whose values are of the given {@link Writable}
+   * class.
+   *
+   * @param valueClass input valueClass.
+   * @param conf input configuration.
+   * @param factory input factory.
+   */
   public Client(Class<? extends Writable> valueClass, Configuration conf, 
       SocketFactory factory) {
     this.valueClass = valueClass;
@@ -1339,9 +1383,9 @@ public class Client implements AutoCloseable {
   }
 
   /**
-   * Construct an IPC client with the default SocketFactory
-   * @param valueClass
-   * @param conf
+   * Construct an IPC client with the default SocketFactory.
+   * @param valueClass input valueClass.
+   * @param conf input Configuration.
    */
   public Client(Class<? extends Writable> valueClass, Configuration conf) {
     this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
@@ -1399,7 +1443,7 @@ public class Client implements AutoCloseable {
    * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
    * <code>remoteId</code>, returning the rpc respond.
    *
-   * @param rpcKind
+   * @param rpcKind - input rpcKind.
    * @param rpcRequest -  contains serialized method and method parameters
    * @param remoteId - the target rpc server
    * @param fallbackToSimpleAuth - set to true or false during this method to
@@ -1407,6 +1451,7 @@ public class Client implements AutoCloseable {
    * @return the rpc response
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, AtomicBoolean fallbackToSimpleAuth)
@@ -1604,15 +1649,6 @@ public class Client implements AutoCloseable {
   private Connection getConnection(ConnectionId remoteId,
       Call call, int serviceClass, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
-    final InetSocketAddress address = remoteId.getAddress();
-    if (address.isUnresolved()) {
-      throw NetUtils.wrapException(address.getHostName(),
-          address.getPort(),
-          null,
-          0,
-          new UnknownHostException());
-    }
-
     final Consumer<Connection> removeMethod = c -> {
       final boolean removed = connections.remove(remoteId, c);
       if (removed && connections.isEmpty()) {
@@ -1736,7 +1772,7 @@ public class Client implements AutoCloseable {
       return maxRetriesOnSasl;
     }
 
-    /** max connection retries on socket time outs */
+    /** @return max connection retries on socket time outs */
     public int getMaxRetriesOnSocketTimeouts() {
       return maxRetriesOnSocketTimeouts;
     }
@@ -1906,10 +1942,12 @@ public class Client implements AutoCloseable {
         }
       }
       if (length <= 0) {
-        throw new RpcException("RPC response has invalid length");
+        throw new RpcException(String.format("RPC response has " +
+            "invalid length of %d", length));
       }
       if (maxResponseLength > 0 && length > maxResponseLength) {
-        throw new RpcException("RPC response exceeds maximum data length");
+        throw new RpcException(String.format("RPC response has a " +
+            "length of %d exceeds maximum data length", length));
       }
       ByteBuffer bb = ByteBuffer.allocate(length);
       in.readFully(bb.array());

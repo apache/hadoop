@@ -30,7 +30,7 @@ import java.util.EnumSet;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ByteBufferPositionedReadable;
@@ -157,7 +157,7 @@ public class CryptoInputStream extends FilterInputStream implements
    * @param off the buffer offset.
    * @param len the maximum number of decrypted data bytes to read.
    * @return int the total number of decrypted data bytes read into the buffer.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public int read(byte[] b, int off, int len) throws IOException {

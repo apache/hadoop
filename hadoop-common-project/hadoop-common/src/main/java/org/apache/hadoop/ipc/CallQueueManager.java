@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -405,6 +405,12 @@ public class CallQueueManager<E extends Schedulable>
   /**
    * Replaces active queue with the newly requested one and transfers
    * all calls to the newQ before returning.
+   *
+   * @param schedulerClass input schedulerClass.
+   * @param queueClassToUse input queueClassToUse.
+   * @param maxSize input maxSize.
+   * @param ns input ns.
+   * @param conf input configuration.
    */
   public synchronized void swapQueue(
       Class<? extends RpcScheduler> schedulerClass,

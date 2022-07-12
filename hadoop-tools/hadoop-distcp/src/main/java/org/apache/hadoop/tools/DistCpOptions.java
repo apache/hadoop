@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.util.DistCpUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -160,6 +162,8 @@ public final class DistCpOptions {
 
   private final boolean useIterator;
 
+  private final boolean updateRoot;
+
   /**
    * File attributes for preserve.
    *
@@ -226,6 +230,8 @@ public final class DistCpOptions {
     this.directWrite = builder.directWrite;
 
     this.useIterator = builder.useIterator;
+
+    this.updateRoot = builder.updateRoot;
   }
 
   public Path getSourceFileListing() {
@@ -234,7 +240,18 @@ public final class DistCpOptions {
 
   public List<Path> getSourcePaths() {
     return sourcePaths == null ?
-        null : Collections.unmodifiableList(sourcePaths);
+        null :
+        Collections.unmodifiableList(getUniquePaths(sourcePaths));
+  }
+
+  private List<Path> getUniquePaths(List<Path> srcPaths) {
+    Set<Path> uniquePaths = new LinkedHashSet<>();
+    for (Path path : srcPaths) {
+      if (!uniquePaths.add(path)) {
+        LOG.info("Path: {} added multiple times, ignoring the redundant entry.", path);
+      }
+    }
+    return new ArrayList<>(uniquePaths);
   }
 
   public Path getTargetPath() {
@@ -361,6 +378,10 @@ public final class DistCpOptions {
     return useIterator;
   }
 
+  public boolean shouldUpdateRoot() {
+    return updateRoot;
+  }
+
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
@@ -414,6 +435,9 @@ public final class DistCpOptions {
 
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.USE_ITERATOR,
         String.valueOf(useIterator));
+
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.UPDATE_ROOT,
+        String.valueOf(updateRoot));
   }
 
   /**
@@ -452,6 +476,7 @@ public final class DistCpOptions {
         ", verboseLog=" + verboseLog +
         ", directWrite=" + directWrite +
         ", useiterator=" + useIterator +
+        ", updateRoot=" + updateRoot +
         '}';
   }
 
@@ -504,6 +529,8 @@ public final class DistCpOptions {
     private boolean directWrite = false;
 
     private boolean useIterator = false;
+
+    private boolean updateRoot = false;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -657,7 +684,24 @@ public final class DistCpOptions {
       return this;
     }
 
+    /**
+     * whether builder with crc.
+     * @param newSkipCRC whether to skip crc check
+     * @return  Builder object whether to skip crc check
+     * @deprecated Use {@link #withSkipCRC(boolean)} instead.
+     */
+    @Deprecated
     public Builder withCRC(boolean newSkipCRC) {
+      this.skipCRC = newSkipCRC;
+      return this;
+    }
+
+    /**
+     * whether builder with crc.
+     * @param newSkipCRC whether to skip crc check
+     * @return  Builder object whether to skip crc check
+     */
+    public Builder withSkipCRC(boolean newSkipCRC) {
       this.skipCRC = newSkipCRC;
       return this;
     }
@@ -765,6 +809,11 @@ public final class DistCpOptions {
 
     public Builder withUseIterator(boolean useItr) {
       this.useIterator = useItr;
+      return this;
+    }
+
+    public Builder withUpdateRoot(boolean updateRootAttrs) {
+      this.updateRoot = updateRootAttrs;
       return this;
     }
   }

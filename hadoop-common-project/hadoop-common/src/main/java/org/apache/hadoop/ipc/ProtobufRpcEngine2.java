@@ -30,7 +30,7 @@ import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngine2Protos.RequestHeaderProt
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.thirdparty.protobuf.Message;
@@ -151,6 +151,11 @@ public class ProtobufRpcEngine2 implements RpcEngine {
 
     /**
      * This constructor takes a connectionId, instead of creating a new one.
+     *
+     * @param protocol input protocol.
+     * @param connId input connId.
+     * @param conf input Configuration.
+     * @param factory input factory.
      */
     protected Invoker(Class<?> protocol, Client.ConnectionId connId,
         Configuration conf, SocketFactory factory) {
@@ -458,6 +463,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
      * @param portRangeConfig A config parameter that can be used to restrict
      * the range of ports used when port is 0 (an ephemeral port)
      * @param alignmentContext provides server state info on client responses
+     * @throws IOException raised on errors performing I/O.
      */
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress, int port, int numHandlers,

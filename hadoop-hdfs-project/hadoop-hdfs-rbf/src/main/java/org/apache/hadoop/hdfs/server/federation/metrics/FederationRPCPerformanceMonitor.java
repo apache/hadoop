@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -26,6 +28,7 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcMonitor;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -49,7 +52,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /** Time for an operation to be received in the Router. */
   private static final ThreadLocal<Long> START_TIME = new ThreadLocal<>();
-  /** Time for an operation to be send to the Namenode. */
+  /** Time for an operation to be sent to the Namenode. */
   private static final ThreadLocal<Long> PROXY_TIME = new ThreadLocal<>();
 
   /** Configuration for the performance monitor. */
@@ -61,6 +64,9 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /** JMX interface to monitor the RPC metrics. */
   private FederationRPCMetrics metrics;
+  /** JMX interface to monitor each Nameservice RPC metrics. */
+  private Map<String, NameserviceRPCMetrics> nameserviceRPCMetricsMap =
+      new ConcurrentHashMap<>();
   private ObjectName registeredBean;
 
   /** Thread pool for logging stats. */
@@ -77,6 +83,11 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
     // Create metrics
     this.metrics = FederationRPCMetrics.create(conf, server);
+    for (String nameservice : FederationUtil.getAllConfiguredNS(conf)) {
+      LOG.info("Create Nameservice RPC Metrics for " + nameservice);
+      this.nameserviceRPCMetricsMap.computeIfAbsent(nameservice,
+          k -> NameserviceRPCMetrics.create(conf, k));
+    }
 
     // Create thread pool
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
@@ -136,26 +147,40 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpComplete(boolean success) {
+  public void proxyOpComplete(boolean success, String nsId) {
     if (success) {
       long proxyTime = getProxyTime();
-      if (metrics != null && proxyTime >= 0) {
-        metrics.addProxyTime(proxyTime);
+      if (proxyTime >= 0) {
+        if (metrics != null) {
+          metrics.addProxyTime(proxyTime);
+        }
+        if (nameserviceRPCMetricsMap != null &&
+            nameserviceRPCMetricsMap.containsKey(nsId)) {
+          nameserviceRPCMetricsMap.get(nsId).addProxyTime(proxyTime);
+        }
       }
     }
   }
 
   @Override
-  public void proxyOpFailureStandby() {
+  public void proxyOpFailureStandby(String nsId) {
     if (metrics != null) {
       metrics.incrProxyOpFailureStandby();
+    }
+    if (nameserviceRPCMetricsMap != null &&
+        nameserviceRPCMetricsMap.containsKey(nsId)) {
+      nameserviceRPCMetricsMap.get(nsId).incrProxyOpFailureStandby();
     }
   }
 
   @Override
-  public void proxyOpFailureCommunicate() {
+  public void proxyOpFailureCommunicate(String nsId) {
     if (metrics != null) {
       metrics.incrProxyOpFailureCommunicate();
+    }
+    if (nameserviceRPCMetricsMap != null &&
+        nameserviceRPCMetricsMap.containsKey(nsId)) {
+      nameserviceRPCMetricsMap.get(nsId).incrProxyOpFailureCommunicate();
     }
   }
 
@@ -181,9 +206,13 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpNoNamenodes() {
+  public void proxyOpNoNamenodes(String nsId) {
     if (metrics != null) {
       metrics.incrProxyOpNoNamenodes();
+    }
+    if (nameserviceRPCMetricsMap != null &&
+        nameserviceRPCMetricsMap.containsKey(nsId)) {
+      nameserviceRPCMetricsMap.get(nsId).incrProxyOpNoNamenodes();
     }
   }
 
@@ -218,7 +247,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /**
    * Get time between we receiving the operation and sending it to the Namenode.
-   * @return Processing time in nanoseconds.
+   * @return Processing time in milliseconds.
    */
   private long getProcessingTime() {
     if (START_TIME.get() != null && START_TIME.get() > 0 &&
@@ -230,7 +259,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /**
    * Get time between now and when the operation was forwarded to the Namenode.
-   * @return Current proxy time in nanoseconds.
+   * @return Current proxy time in milliseconds.
    */
   private long getProxyTime() {
     if (PROXY_TIME.get() != null && PROXY_TIME.get() > 0) {

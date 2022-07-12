@@ -76,7 +76,6 @@ import org.apache.hadoop.net.DomainNameResolver;
 import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,9 +107,9 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 @InterfaceAudience.Private
@@ -310,7 +309,11 @@ public class DFSUtil {
     // specifically not using StringBuilder to more efficiently build
     // string w/o excessive byte[] copies and charset conversions.
     final int range = offset + length;
-    Preconditions.checkPositionIndexes(offset, range, components.length);
+    if (offset < 0 || range < offset || range > components.length) {
+      throw new IndexOutOfBoundsException(
+          "Incorrect index [offset, range, size] ["
+              + offset + ", " + range + ", " + components.length + "]");
+    }
     if (length == 0) {
       return "";
     }
@@ -721,8 +724,9 @@ public class DFSUtil {
     } else {
       // Ensure that the internal service is indeed in the list of all available
       // nameservices.
-      Set<String> availableNameServices = Sets.newHashSet(conf
-          .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES));
+      Collection<String> namespaces = conf
+          .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES);
+      Set<String> availableNameServices = new HashSet<>(namespaces);
       for (String nsId : parentNameServices) {
         if (!availableNameServices.contains(nsId)) {
           throw new IOException("Unknown nameservice: " + nsId);

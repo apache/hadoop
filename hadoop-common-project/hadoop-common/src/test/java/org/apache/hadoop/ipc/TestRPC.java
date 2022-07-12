@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
+
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -83,6 +86,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -1107,6 +1111,37 @@ public class TestRPC extends TestRpcBase {
     }
   }
 
+  @Test
+  public void testNumInProcessHandlerMetrics() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.
+        createUserForTesting("user123", new String[0]);
+    // use 1 handler so the callq can be plugged
+    final Server server = setupTestServer(conf, 1);
+    try {
+      RpcMetrics rpcMetrics = server.getRpcMetrics();
+      assertEquals(0, rpcMetrics.getNumInProcessHandler());
+
+      ExternalCall<String> call1 = newExtCall(ugi, () -> {
+        assertEquals(1, rpcMetrics.getNumInProcessHandler());
+        return UserGroupInformation.getCurrentUser().getUserName();
+      });
+      ExternalCall<Void> call2 = newExtCall(ugi, () -> {
+        assertEquals(1, rpcMetrics.getNumInProcessHandler());
+        return null;
+      });
+
+      server.queueCall(call1);
+      server.queueCall(call2);
+
+      // Wait for call1 and call2 to enter the handler.
+      call1.get();
+      call2.get();
+      assertEquals(0, rpcMetrics.getNumInProcessHandler());
+    } finally {
+      server.stop();
+    }
+  }
+
   /**
    *  Test RPC backoff by queue full.
    */
@@ -1662,6 +1697,61 @@ public class TestRPC extends TestRpcBase {
         RPC.stopProxy(proxy2);
       }
       stop(server, proxy);
+    }
+  }
+
+  @Test
+  public void testNumTotalRequestsMetrics() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.
+        createUserForTesting("userXyz", new String[0]);
+
+    final Server server = setupTestServer(conf, 1);
+
+    ExecutorService executorService = null;
+    try {
+      RpcMetrics rpcMetrics = server.getRpcMetrics();
+      assertEquals(0, rpcMetrics.getTotalRequests());
+      assertEquals(0, rpcMetrics.getTotalRequestsPerSecond());
+
+      List<ExternalCall<Void>> externalCallList = new ArrayList<>();
+
+      executorService = Executors.newSingleThreadExecutor(
+          new ThreadFactoryBuilder().setDaemon(true).setNameFormat("testNumTotalRequestsMetrics")
+              .build());
+      AtomicInteger rps = new AtomicInteger(0);
+      CountDownLatch countDownLatch = new CountDownLatch(1);
+      executorService.submit(() -> {
+        while (true) {
+          int numRps = (int) rpcMetrics.getTotalRequestsPerSecond();
+          rps.getAndSet(numRps);
+          if (rps.get() > 0) {
+            countDownLatch.countDown();
+            break;
+          }
+        }
+      });
+
+      for (int i = 0; i < 100000; i++) {
+        externalCallList.add(newExtCall(ugi, () -> null));
+      }
+      for (ExternalCall<Void> externalCall : externalCallList) {
+        server.queueCall(externalCall);
+      }
+      for (ExternalCall<Void> externalCall : externalCallList) {
+        externalCall.get();
+      }
+
+      assertEquals(100000, rpcMetrics.getTotalRequests());
+      if (countDownLatch.await(10, TimeUnit.SECONDS)) {
+        assertTrue(rps.get() > 10);
+      } else {
+        throw new AssertionError("total requests per seconds are still 0");
+      }
+    } finally {
+      if (executorService != null) {
+        executorService.shutdown();
+      }
+      server.stop();
     }
   }
 

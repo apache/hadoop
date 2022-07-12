@@ -37,6 +37,7 @@ import java.util.zip.GZIPOutputStream;
 import java.util.function.Supplier;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.hdfs.protocol.XAttrNotFoundException;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1409,7 +1410,7 @@ public class TestDFSShell {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test (timeout = 60000)
   public void testFilePermissions() throws IOException {
     Configuration conf = new HdfsConfiguration();
 
@@ -3438,7 +3439,7 @@ public class TestDFSShell {
         String str = out.toString();
         assertTrue("xattr value was incorrectly returned",
           str.indexOf(
-              "getfattr: At least one of the attributes provided was not found")
+              "getfattr: " + XAttrNotFoundException.DEFAULT_EXCEPTION_MSG)
                >= 0);
         out.reset();
       }

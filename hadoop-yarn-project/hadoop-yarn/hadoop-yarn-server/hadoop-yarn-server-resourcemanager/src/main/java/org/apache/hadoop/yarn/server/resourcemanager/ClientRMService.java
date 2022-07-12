@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.apache.commons.lang3.Range;
 import org.slf4j.Logger;
@@ -198,7 +197,7 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
@@ -600,10 +599,12 @@ public class ClientRMService extends AbstractService implements
     // checked here, those that are dependent on RM configuration are validated
     // in RMAppManager.
 
+    UserGroupInformation userUgi = null;
     String user = null;
     try {
       // Safety
-      user = UserGroupInformation.getCurrentUser().getShortUserName();
+      userUgi = UserGroupInformation.getCurrentUser();
+      user = userUgi.getShortUserName();
     } catch (IOException ie) {
       LOG.warn("Unable to get the current user.", ie);
       RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
@@ -694,7 +695,7 @@ public class ClientRMService extends AbstractService implements
     try {
       // call RMAppManager to submit application directly
       rmAppManager.submitApplication(submissionContext,
-          System.currentTimeMillis(), user);
+          System.currentTimeMillis(), userUgi);
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user);
@@ -898,6 +899,9 @@ public class ClientRMService extends AbstractService implements
     String name = request.getName();
 
     final Map<ApplicationId, RMApp> apps = rmContext.getRMApps();
+    final Set<ApplicationId> runningAppsFilteredByQueues =
+        getRunningAppsFilteredByQueues(apps, queues);
+
     Iterator<RMApp> appsIter = apps.values().iterator();
     
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
@@ -911,7 +915,8 @@ public class ClientRMService extends AbstractService implements
       }
 
       if (queues != null && !queues.isEmpty()) {
-        if (!queues.contains(application.getQueue())) {
+        if (!runningAppsFilteredByQueues.contains(application.getApplicationId()) &&
+            !queues.contains(application.getQueue())) {
           continue;
         }
       }
@@ -988,6 +993,23 @@ public class ClientRMService extends AbstractService implements
       recordFactory.newRecordInstance(GetApplicationsResponse.class);
     response.setApplicationList(reports);
     return response;
+  }
+
+  private Set<ApplicationId> getRunningAppsFilteredByQueues(
+      Map<ApplicationId, RMApp> apps, Set<String> queues) {
+    final Set<ApplicationId> runningApps = new HashSet<>();
+    for (String queue : queues) {
+      List<ApplicationAttemptId> appsInQueue = scheduler.getAppsInQueue(queue);
+      if (appsInQueue != null) {
+        for (ApplicationAttemptId appAttemptId : appsInQueue) {
+          RMApp rmApp = apps.get(appAttemptId.getApplicationId());
+          if (rmApp != null) {
+            runningApps.add(rmApp.getApplicationId());
+          }
+        }
+      }
+    }
+    return runningApps;
   }
 
   private Set<String> getLowerCasedAppTypes(GetApplicationsRequest request) {

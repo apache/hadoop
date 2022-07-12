@@ -57,7 +57,7 @@ import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -231,8 +231,9 @@ public class TestHttpFSServer extends HFSTestCase {
     // HTTPFS configuration
     conf = new Configuration(false);
     if (addDelegationTokenAuthHandler) {
-      conf.set("httpfs.authentication.type",
-               HttpFSKerberosAuthenticationHandlerForTesting.class.getName());
+      conf.set(HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX +
+              AuthenticationFilter.AUTH_TYPE,
+          HttpFSKerberosAuthenticationHandlerForTesting.class.getName());
     }
     conf.set("httpfs.services.ext", MockGroups.class.getName());
     conf.set("httpfs.admin.group", HadoopUsersConfTestHelper.
@@ -243,8 +244,9 @@ public class TestHttpFSServer extends HFSTestCase {
     conf.set("httpfs.proxyuser." +
              HadoopUsersConfTestHelper.getHadoopProxyUser() + ".hosts",
              HadoopUsersConfTestHelper.getHadoopProxyUserHosts());
-    conf.set("httpfs.authentication.signature.secret.file",
-             secretFile.getAbsolutePath());
+    conf.set(HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX +
+            AuthenticationFilter.SIGNATURE_SECRET_FILE,
+        secretFile.getAbsolutePath());
     conf.set("httpfs.hadoop.config.dir", hadoopConfDir.toString());
     if (sslEnabled) {
       conf.set("httpfs.ssl.enabled", "true");
@@ -1709,8 +1711,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.connect();
     // Verify that we read what we wrote
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    String content = IOUtils.toString(
-        conn.getInputStream(), Charset.defaultCharset());
+    String content = IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);
     Assert.assertEquals(testContent, content);
 
 

@@ -50,7 +50,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
@@ -383,7 +383,7 @@ public class DelegationTokenSecretManager
           namesystem.logUpdateMasterKey(key);
         }
       } finally {
-        namesystem.readUnlock();
+        namesystem.readUnlock("logUpdateMasterKey");
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.
@@ -412,7 +412,7 @@ public class DelegationTokenSecretManager
           namesystem.logExpireDelegationToken(dtId);
         }
       } finally {
-        namesystem.readUnlock();
+        namesystem.readUnlock("logExpireToken");
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.

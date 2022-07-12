@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.log4j.LogManager;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
 /**
@@ -121,7 +120,12 @@ public class StringUtils {
     return TraditionalBinaryPrefix.long2String(number, "", 1);
   }
 
-  /** The same as String.format(Locale.ENGLISH, format, objects). */
+  /**
+   * The same as String.format(Locale.ENGLISH, format, objects).
+   * @param format format.
+   * @param objects objects.
+   * @return format string.
+   */
   public static String format(final String format, final Object... objects) {
     return String.format(Locale.ENGLISH, format, objects);
   }
@@ -157,7 +161,7 @@ public class StringUtils {
   /**
    * Given an array of bytes it will convert the bytes to a hex string
    * representation of the bytes
-   * @param bytes
+   * @param bytes bytes.
    * @param start start index, inclusively
    * @param end end index, exclusively
    * @return hex string representation of the byte array
@@ -173,7 +177,11 @@ public class StringUtils {
     return s.toString();
   }
 
-  /** Same as byteToHexString(bytes, 0, bytes.length). */
+  /**
+   * Same as byteToHexString(bytes, 0, bytes.length).
+   * @param bytes bytes.
+   * @return byteToHexString.
+   */
   public static String byteToHexString(byte bytes[]) {
     return byteToHexString(bytes, 0, bytes.length);
   }
@@ -204,8 +212,9 @@ public class StringUtils {
     return bts;
   }
   /**
-   * 
-   * @param uris
+   * uriToString.
+   * @param uris uris.
+   * @return uriToString.
    */
   public static String uriToString(URI[] uris){
     if (uris == null) {
@@ -243,8 +252,9 @@ public class StringUtils {
   }
   
   /**
-   * 
-   * @param str
+   * stringToPath.
+   * @param str str.
+   * @return path array.
    */
   public static Path[] stringToPath(String[] str){
     if (str == null) {
@@ -264,6 +274,8 @@ public class StringUtils {
    * 
    * @param finishTime finish time
    * @param startTime start time
+   * @return a String in the format Xhrs, Ymins, Z sec,
+   *         for the time difference between two times.
    */
   public static String formatTimeDiff(long finishTime, long startTime){
     long timeDiff = finishTime - startTime; 
@@ -276,6 +288,7 @@ public class StringUtils {
    * String in the format Xhrs, Ymins, Z sec. 
    * 
    * @param timeDiff The time difference to format
+   * @return formatTime String.
    */
   public static String formatTime(long timeDiff){
     StringBuilder buf = new StringBuilder();
@@ -306,6 +319,7 @@ public class StringUtils {
    * more than 100 hours ,it is displayed as 99hrs, 59mins, 59sec.
    *
    * @param timeDiff The time difference to format
+   * @return format time sortable.
    */
   public static String formatTimeSortable(long timeDiff) {
     StringBuilder buf = new StringBuilder();
@@ -564,6 +578,7 @@ public class StringUtils {
    * @param escapeChar character used to escape
    * @param start from where to search
    * @param split used to pass back the extracted string
+   * @return index.
    */
   public static int findNext(String str, char separator, char escapeChar, 
                              int start, StringBuilder split) {
@@ -616,7 +631,12 @@ public class StringUtils {
   }
   
   /**
+   * escapeString.
+   *
+   * @param str str.
+   * @param escapeChar escapeChar.
    * @param charsToEscape array of characters to be escaped
+   * @return escapeString.
    */
   public static String escapeString(String str, char escapeChar, 
                                     char[] charsToEscape) {
@@ -659,7 +679,11 @@ public class StringUtils {
   }
   
   /**
+   * unEscapeString.
+   * @param str str.
+   * @param escapeChar escapeChar.
    * @param charsToEscape array of characters to unescape
+   * @return escape string.
    */
   public static String unEscapeString(String str, char escapeChar, 
                                       char[] charsToEscape) {
@@ -808,7 +832,10 @@ public class StringUtils {
     }
 
     /**
-     * @return The TraditionalBinaryPrefix object corresponding to the symbol.
+     * The TraditionalBinaryPrefix object corresponding to the symbol.
+     *
+     * @param symbol symbol.
+     * @return traditional binary prefix object.
      */
     public static TraditionalBinaryPrefix valueOf(char symbol) {
       symbol = Character.toUpperCase(symbol);
@@ -908,7 +935,7 @@ public class StringUtils {
 
     /**
      * Escapes HTML Special characters present in the string.
-     * @param string
+     * @param string param string.
      * @return HTML Escaped String representation
      */
     public static String escapeHTML(String string) {
@@ -943,13 +970,22 @@ public class StringUtils {
     }
 
   /**
+   * a byte description of the given long interger value.
+   *
+   * @param len len.
    * @return a byte description of the given long interger value.
    */
   public static String byteDesc(long len) {
     return TraditionalBinaryPrefix.long2String(len, "B", 2);
   }
 
-  /** @deprecated use StringUtils.format("%.2f", d). */
+  /**
+   * limitDecimalTo2.
+   *
+   * @param d double param.
+   * @return string value ("%.2f").
+   * @deprecated use StringUtils.format("%.2f", d).
+   */
   @Deprecated
   public static String limitDecimalTo2(double d) {
     return format("%.2f", d);
@@ -960,6 +996,7 @@ public class StringUtils {
    *
    * @param separator Separator to join with.
    * @param strings Strings to join.
+   * @return join string.
    */
   public static String join(CharSequence separator, Iterable<?> strings) {
     Iterator<?> i = strings.iterator();
@@ -1055,6 +1092,8 @@ public class StringUtils {
   
   /**
    * Get stack trace for a given thread.
+   * @param t thread.
+   * @return stack trace string.
    */
   public static String getStackTrace(Thread t) {
     final StackTraceElement[] stackTrace = t.getStackTrace();

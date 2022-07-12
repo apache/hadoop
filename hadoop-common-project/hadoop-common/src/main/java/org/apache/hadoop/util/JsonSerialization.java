@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.util;
 
+import javax.annotation.Nullable;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -35,7 +36,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +43,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
  * Support for marshalling objects to and from JSON.
@@ -167,6 +174,9 @@ public class JsonSerialization<T> {
   @SuppressWarnings("unchecked")
   public synchronized T load(File jsonFile)
       throws IOException, JsonParseException, JsonMappingException {
+    if (!jsonFile.exists()) {
+      throw new FileNotFoundException("No such file: " + jsonFile);
+    }
     if (!jsonFile.isFile()) {
       throw new FileNotFoundException("Not a file: " + jsonFile);
     }
@@ -176,7 +186,7 @@ public class JsonSerialization<T> {
     try {
       return mapper.readValue(jsonFile, classType);
     } catch (IOException e) {
-      LOG.error("Exception while parsing json file {}", jsonFile, e);
+      LOG.warn("Exception while parsing json file {}", jsonFile, e);
       throw e;
     }
   }
@@ -229,30 +239,46 @@ public class JsonSerialization<T> {
 
   /**
    * Load from a Hadoop filesystem.
-   * There's a check for data availability after the file is open, by
-   * raising an EOFException if stream.available == 0.
-   * This allows for a meaningful exception without the round trip overhead
-   * of a getFileStatus call before opening the file. It may be brittle
-   * against an FS stream which doesn't return a value here, but the
-   * standard filesystems all do.
-   * JSON parsing and mapping problems
-   * are converted to IOEs.
    * @param fs filesystem
    * @param path path
    * @return a loaded object
-   * @throws IOException IO or JSON parse problems
+   * @throws PathIOException JSON parse problem
+   * @throws IOException IO problems
    */
   public T load(FileSystem fs, Path path) throws IOException {
-    try (FSDataInputStream dataInputStream = fs.open(path)) {
-      // throw an EOF exception if there is no data available.
-      if (dataInputStream.available() == 0) {
-        throw new EOFException("No data in " + path);
-      }
+    return load(fs, path, null);
+  }
+
+  /**
+   * Load from a Hadoop filesystem.
+   * If a file status is supplied, it's passed in to the openFile()
+   * call so that FS implementations can optimize their opening.
+   * @param fs filesystem
+   * @param path path
+   * @param status status of the file to open.
+   * @return a loaded object
+   * @throws PathIOException JSON parse problem
+   * @throws EOFException file status references an empty file
+   * @throws IOException IO problems
+   */
+  public T load(FileSystem fs, Path path, @Nullable FileStatus status)
+      throws IOException {
+
+    if (status != null && status.getLen() == 0) {
+      throw new EOFException("No data in " + path);
+    }
+    FutureDataInputStreamBuilder builder = fs.openFile(path)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY,
+            FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE);
+    if (status != null) {
+      builder.withFileStatus(status);
+    }
+    try (FSDataInputStream dataInputStream =
+             awaitFuture(builder.build())) {
       return fromJsonStream(dataInputStream);
     } catch (JsonProcessingException e) {
-      throw new IOException(
-          String.format("Failed to read JSON file \"%s\": %s", path, e),
-          e);
+      throw new PathIOException(path.toString(),
+          "Failed to read JSON file " + e, e);
     }
   }
 
@@ -261,7 +287,8 @@ public class JsonSerialization<T> {
    * @param fs filesystem
    * @param path path
    * @param overwrite should any existing file be overwritten
-   * @throws IOException IO exception
+   * @param instance instance
+   * @throws IOException IO exception.
    */
   public void save(FileSystem fs, Path path, T instance,
       boolean overwrite) throws
@@ -270,11 +297,12 @@ public class JsonSerialization<T> {
   }
 
   /**
-   * Write the JSON as bytes, then close the file.
+   * Write the JSON as bytes, then close the stream.
+   * @param instance instance to write
    * @param dataOutputStream an output stream that will always be closed
    * @throws IOException on any failure
    */
-  private void writeJsonAsBytes(T instance,
+  public void writeJsonAsBytes(T instance,
       OutputStream dataOutputStream) throws IOException {
     try {
       dataOutputStream.write(toBytes(instance));
@@ -298,6 +326,7 @@ public class JsonSerialization<T> {
    * @param bytes byte array
    * @throws IOException IO problems
    * @throws EOFException not enough data
+   * @return byte array.
    */
   public T fromBytes(byte[] bytes) throws IOException {
     return fromJson(new String(bytes, 0, bytes.length, UTF_8));

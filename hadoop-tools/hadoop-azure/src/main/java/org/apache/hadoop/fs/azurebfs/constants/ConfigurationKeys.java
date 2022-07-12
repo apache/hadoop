@@ -56,6 +56,37 @@ public final class ConfigurationKeys {
   public static final String AZURE_WRITE_MAX_CONCURRENT_REQUESTS = "fs.azure.write.max.concurrent.requests";
   public static final String AZURE_WRITE_MAX_REQUESTS_TO_QUEUE = "fs.azure.write.max.requests.to.queue";
   public static final String AZURE_WRITE_BUFFER_SIZE = "fs.azure.write.request.size";
+
+  /**
+   * Maximum Number of blocks a single output stream can have
+   * active (uploading, or queued to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link FileSystemConfigurations#BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT}
+   */
+  public static final String FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS =
+      "fs.azure.block.upload.active.blocks";
+
+  /**
+   * Buffer directory path for uploading AbfsOutputStream data blocks.
+   * Value: {@value}
+   */
+  public static final String FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR =
+      "fs.azure.buffer.dir";
+
+  /**
+   * What data block buffer to use.
+   * <br>
+   * Options include: "disk"(Default), "array", and "bytebuffer".
+   * <br>
+   * Default is {@link FileSystemConfigurations#DATA_BLOCKS_BUFFER_DEFAULT}.
+   * Value: {@value}
+   */
+  public static final String DATA_BLOCKS_BUFFER =
+      "fs.azure.data.blocks.buffer";
+
   /** If the data size written by Hadoop app is small, i.e. data size :
    *  (a) before any of HFlush/HSync call is made or
    *  (b) between 2 HFlush/Hsync API calls
@@ -188,6 +219,9 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
   /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
   public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
+
+  /** Key for rate limit capacity, as used by IO operations which try to throttle themselves. */
+  public static final String FS_AZURE_ABFS_IO_RATE_LIMIT = "fs.azure.io.rate.limit";
 
   public static String accountProperty(String property, String account) {
     return property + "." + account;

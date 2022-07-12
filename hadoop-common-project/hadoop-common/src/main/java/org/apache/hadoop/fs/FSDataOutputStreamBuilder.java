@@ -28,7 +28,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
@@ -123,6 +123,9 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Constructor.
+   *
+   * @param fileSystem file system.
+   * @param p the path.
    */
   protected FSDataOutputStreamBuilder(@Nonnull FileSystem fileSystem,
       @Nonnull Path p) {
@@ -149,6 +152,9 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set permission for the file.
+   *
+   * @param perm permission.
+   * @return B Generics Type.
    */
   public B permission(@Nonnull final FsPermission perm) {
     checkNotNull(perm);
@@ -162,6 +168,9 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set the size of the buffer to be used.
+   *
+   * @param bufSize buffer size.
+   * @return Generics Type B.
    */
   public B bufferSize(int bufSize) {
     bufferSize = bufSize;
@@ -174,6 +183,9 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set replication factor.
+   *
+   * @param replica replica.
+   * @return Generics Type B.
    */
   public B replication(short replica) {
     replication = replica;
@@ -186,6 +198,9 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set block size.
+   *
+   * @param blkSize block size.
+   * @return B Generics Type.
    */
   public B blockSize(long blkSize) {
     blockSize = blkSize;
@@ -194,6 +209,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Return true to create the parent directories if they do not exist.
+   *
+   * @return if create the parent directories if they do not exist true,not false.
    */
   protected boolean isRecursive() {
     return recursive;
@@ -201,6 +218,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Create the parent directory if they do not exist.
+   *
+   * @return B Generics Type.
    */
   public B recursive() {
     recursive = true;
@@ -213,6 +232,9 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set the facility of reporting progress.
+   *
+   * @param prog progress.
+   * @return B Generics Type.
    */
   public B progress(@Nonnull final Progressable prog) {
     checkNotNull(prog);
@@ -226,6 +248,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Create an FSDataOutputStream at the specified path.
+   *
+   * @return return Generics Type B.
    */
   public B create() {
     flags.add(CreateFlag.CREATE);
@@ -236,6 +260,9 @@ public abstract class FSDataOutputStreamBuilder
    * Set to true to overwrite the existing file.
    * Set it to false, an exception will be thrown when calling {@link #build()}
    * if the file exists.
+   *
+   * @param overwrite overrite.
+   * @return Generics Type B.
    */
   public B overwrite(boolean overwrite) {
     if (overwrite) {
@@ -248,6 +275,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Append to an existing file (optional operation).
+   *
+   * @return Generics Type B.
    */
   public B append() {
     flags.add(CreateFlag.APPEND);
@@ -260,6 +289,9 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set checksum opt.
+   *
+   * @param chksumOpt check sum opt.
+   * @return Generics Type B.
    */
   public B checksumOpt(@Nonnull final ChecksumOpt chksumOpt) {
     checkNotNull(chksumOpt);

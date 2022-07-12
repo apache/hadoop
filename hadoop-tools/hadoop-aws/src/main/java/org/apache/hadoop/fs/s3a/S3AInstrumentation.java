@@ -20,14 +20,13 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -42,6 +41,7 @@ import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
@@ -164,13 +164,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   private final MetricsRegistry registry =
       new MetricsRegistry("s3aFileSystem").setContext(CONTEXT);
-  private final MutableQuantiles putLatencyQuantile;
   private final MutableQuantiles throttleRateQuantile;
-  private final MutableQuantiles s3GuardThrottleRateQuantile;
-
-  /** Instantiate this without caring whether or not S3Guard is enabled. */
-  private final S3GuardInstrumentation s3GuardInstrumentation
-      = new S3GuardInstrumentation();
 
   /**
    * This is the IOStatistics store for the S3AFileSystem
@@ -224,10 +218,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     //todo need a config for the quantiles interval?
     int interval = 1;
-    putLatencyQuantile = quantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-        "ops", "latency", interval);
-    s3GuardThrottleRateQuantile = quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
-        "events", "frequency (Hz)", interval);
     throttleRateQuantile = quantiles(STORE_IO_THROTTLE_RATE,
         "events", "frequency (Hz)", interval);
 
@@ -472,6 +462,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   /**
    * Create an IOStatistics store which updates FS metrics
    * as well as IOStatistics.
+   * @return instance of the store.
    */
   public IOStatisticsStore createMetricsUpdatingStore() {
     return new MetricsUpdatingIOStatisticsStore();
@@ -677,15 +668,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   /**
-   * Create a MetastoreInstrumentation instrumentation instance.
-   * There's likely to be at most one instance of this per FS instance.
-   * @return the S3Guard instrumentation point.
-   */
-  public MetastoreInstrumentation getS3GuardInstrumentation() {
-    return s3GuardInstrumentation;
-  }
-
-  /**
    * Create a new instance of the committer statistics.
    * @return a new committer statistics instance
    */
@@ -702,9 +684,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     synchronized (METRICS_SYSTEM_LOCK) {
       // it is critical to close each quantile, as they start a scheduled
       // task in a shared thread pool.
-      putLatencyQuantile.stop();
       throttleRateQuantile.stop();
-      s3GuardThrottleRateQuantile.stop();
       metricsSystem.unregisterSource(metricsSourceName);
       metricsSourceActiveCounter--;
       int activeSources = metricsSourceActiveCounter;
@@ -858,7 +838,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_UNBUFFERED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
-          .withDurationTracking(ACTION_HTTP_GET_REQUEST)
+          .withDurationTracking(ACTION_HTTP_GET_REQUEST,
+              StoreStatisticNames.ACTION_FILE_OPENED,
+              StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
+              StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED)
           .build();
       setIOStatistics(st);
       aborted = st.getCounterReference(
@@ -1292,6 +1275,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return trackDuration(ACTION_HTTP_GET_REQUEST);
     }
 
+    @Override
+    public DurationTracker initiateInnerStreamClose(final boolean abort) {
+      return trackDuration(abort
+          ? StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED
+          : StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED);
+    }
   }
 
   /**
@@ -1319,8 +1308,18 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     incrementCounter(STREAM_WRITE_EXCEPTIONS,
         source.lookupCounterValue(
             StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
+
     // merge in all the IOStatistics
-    this.getIOStatistics().aggregate(source.getIOStatistics());
+    final IOStatisticsStore sourceIOStatistics = source.getIOStatistics();
+    this.getIOStatistics().aggregate(sourceIOStatistics);
+
+    // propagate any extra values into the FS-level stats.
+    incrementMutableCounter(OBJECT_PUT_REQUESTS.getSymbol(),
+        sourceIOStatistics.counters().get(OBJECT_PUT_REQUESTS.getSymbol()));
+    incrementMutableCounter(
+        COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
+        sourceIOStatistics.counters().get(COMMITTER_MAGIC_MARKER_PUT.getSymbol()));
+
   }
 
   /**
@@ -1377,9 +1376,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
           .withDurationTracking(
               ACTION_EXECUTOR_ACQUIRED,
+              COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
               INVOCATION_ABORT.getSymbol(),
+              MULTIPART_UPLOAD_COMPLETED.getSymbol(),
               OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(),
-              MULTIPART_UPLOAD_COMPLETED.getSymbol())
+              OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
+              OBJECT_PUT_REQUESTS.getSymbol())
           .build();
       setIOStatistics(st);
       // these are extracted to avoid lookups on heavily used counters.
@@ -1617,64 +1619,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   /**
-   * Instrumentation exported to S3Guard.
-   */
-  private final class S3GuardInstrumentation
-      implements MetastoreInstrumentation {
-
-    @Override
-    public void initialized() {
-      incrementCounter(S3GUARD_METADATASTORE_INITIALIZATION, 1);
-    }
-
-    @Override
-    public void storeClosed() {
-
-    }
-
-    @Override
-    public void throttled() {
-      // counters are incremented by owner.
-    }
-
-    @Override
-    public void retrying() {
-      // counters are incremented by owner.
-    }
-
-    @Override
-    public void recordsDeleted(int count) {
-      incrementCounter(S3GUARD_METADATASTORE_RECORD_DELETES, count);
-    }
-
-    @Override
-    public void recordsRead(int count) {
-      incrementCounter(S3GUARD_METADATASTORE_RECORD_READS, count);
-    }
-
-    @Override
-    public void recordsWritten(int count) {
-      incrementCounter(S3GUARD_METADATASTORE_RECORD_WRITES, count);
-    }
-
-    @Override
-    public void directoryMarkedAuthoritative() {
-      incrementCounter(
-          S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
-          1);
-    }
-
-    @Override
-    public void entryAdded(final long durationNanos) {
-      addValueToQuantiles(
-          S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-          durationNanos);
-      incrementCounter(S3GUARD_METADATASTORE_PUT_PATH_REQUEST, 1);
-    }
-
-  }
-
-  /**
    * Instrumentation exported to S3A Committers.
    * The S3AInstrumentation metrics and
    * {@link #instanceIOStatistics} are updated continuously.
@@ -1699,6 +1643,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               COMMITTER_TASKS_SUCCEEDED.getSymbol())
           .withDurationTracking(
               COMMITTER_COMMIT_JOB.getSymbol(),
+              COMMITTER_LOAD_SINGLE_PENDING_FILE.getSymbol(),
               COMMITTER_MATERIALIZE_FILE.getSymbol(),
               COMMITTER_STAGE_FILE_UPLOAD.getSymbol())
           .build();

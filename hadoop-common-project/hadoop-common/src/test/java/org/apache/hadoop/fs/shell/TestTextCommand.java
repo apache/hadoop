@@ -25,14 +25,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.lang.reflect.Method;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
@@ -124,7 +122,7 @@ public class TestTextCommand {
 
   private String inputStreamToString(InputStream stream) throws IOException {
     StringWriter writer = new StringWriter();
-    IOUtils.copy(stream, writer);
+    IOUtils.copy(stream, writer, StandardCharsets.UTF_8);
     return writer.toString();
   }
 

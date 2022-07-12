@@ -19,10 +19,13 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
@@ -43,6 +46,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.BLOCK_SIZE;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.CELL_SIZE;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.NUM_DATA_UNITS;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.NUM_PARITY_UNITS;
@@ -127,7 +131,7 @@ public class TestReadStripedFileWithDecoding {
   }
 
   @Test
-  public void testInvalidateBlock() throws IOException {
+  public void testInvalidateBlock() throws IOException, InterruptedException {
     final Path file = new Path("/invalidate");
     final int length = 10;
     final byte[] bytes = StripedFileTestUtil.generateBytes(length);
@@ -151,6 +155,8 @@ public class TestReadStripedFileWithDecoding {
     try {
       // delete the file
       dfs.delete(file, true);
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+          cluster.getNamesystem().getBlockManager());
       // check the block is added to invalidateBlocks
       final FSNamesystem fsn = cluster.getNamesystem();
       final BlockManager bm = fsn.getBlockManager();
@@ -161,5 +167,58 @@ public class TestReadStripedFileWithDecoding {
     } finally {
       DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
     }
+  }
+
+  @Test
+  public void testMoreThanOneCorruptedBlock() throws IOException {
+    final Path file = new Path("/corrupted");
+    final int length = BLOCK_SIZE * NUM_DATA_UNITS;
+    final byte[] bytes = StripedFileTestUtil.generateBytes(length);
+    DFSTestUtil.writeFile(dfs, file, bytes);
+
+    // read the file with more than one corrupted data block
+    byte[] buffer = new byte[length + 100];
+    for (int count = 2; count < NUM_PARITY_UNITS; ++count) {
+      ReadStripedFileWithDecodingHelper.corruptBlocks(cluster, dfs, file, count, 0,
+          false);
+      StripedFileTestUtil.verifyStatefulRead(dfs, file, length, bytes,
+          buffer);
+    }
+  }
+
+  @Test
+  public void testReadWithCorruptedDataBlockAndParityBlock() throws IOException {
+    final Path file = new Path("/corruptedDataBlockAndParityBlock");
+    final int length = BLOCK_SIZE * NUM_DATA_UNITS;
+    final byte[] bytes = StripedFileTestUtil.generateBytes(length);
+    DFSTestUtil.writeFile(dfs, file, bytes);
+
+    // set one dataBlock and the first parityBlock corrupted
+    int dataBlkDelNum = 1;
+    int parityBlkDelNum = 1;
+    int recoverBlkNum = dataBlkDelNum + parityBlkDelNum;
+    int[] dataBlkIndices = {0};
+    int[] parityBlkIndices = {6};
+
+    LocatedBlocks locatedBlocks = ReadStripedFileWithDecodingHelper.getLocatedBlocks(dfs, file);
+    LocatedStripedBlock lastBlock =
+        (LocatedStripedBlock)locatedBlocks.getLastLocatedBlock();
+
+    int[] delBlkIndices = new int[recoverBlkNum];
+    System.arraycopy(dataBlkIndices, 0,
+        delBlkIndices, 0, dataBlkIndices.length);
+    System.arraycopy(parityBlkIndices, 0,
+        delBlkIndices, dataBlkIndices.length, parityBlkIndices.length);
+    ExtendedBlock[] delBlocks = new ExtendedBlock[recoverBlkNum];
+    for (int i = 0; i < recoverBlkNum; i++) {
+      delBlocks[i] = StripedBlockUtil
+          .constructInternalBlock(lastBlock.getBlock(),
+              CELL_SIZE, NUM_DATA_UNITS, delBlkIndices[i]);
+      cluster.corruptBlockOnDataNodes(delBlocks[i]);
+    }
+
+    byte[] buffer = new byte[length + 100];
+    StripedFileTestUtil.verifyStatefulRead(dfs, file, length, bytes,
+        buffer);
   }
 }

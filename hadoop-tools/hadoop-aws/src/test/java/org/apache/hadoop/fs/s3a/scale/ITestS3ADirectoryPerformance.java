@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.RemoteIterators;
@@ -53,7 +55,6 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -148,14 +149,44 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           listContinueRequests,
           listStatusCalls,
           getFileStatusCalls);
-      if (!fs.hasMetadataStore()) {
-        assertEquals(listRequests.toString(), 1, listRequests.diff());
-      }
+      assertEquals(listRequests.toString(), 1, listRequests.diff());
       reset(metadataRequests,
           listRequests,
           listContinueRequests,
           listStatusCalls,
           getFileStatusCalls);
+
+      describe("Get content summary for directory");
+
+      NanoTimer getContentSummaryTimer = new NanoTimer();
+
+      ContentSummary rootPathSummary = fs.getContentSummary(scaleTestDir);
+      ContentSummary testPathSummary = fs.getContentSummary(listDir);
+
+      getContentSummaryTimer.end("getContentSummary of %s", created);
+
+      // only two list operations should have taken place
+      print(LOG,
+          metadataRequests,
+          listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
+      assertEquals(listRequests.toString(), 2, listRequests.diff());
+      reset(metadataRequests,
+          listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
+
+      assertTrue("Root directory count should be > test path",
+          rootPathSummary.getDirectoryCount() > testPathSummary.getDirectoryCount());
+      assertTrue("Root file count should be >= to test path",
+          rootPathSummary.getFileCount() >= testPathSummary.getFileCount());
+      assertEquals("Incorrect directory count", created.getDirCount() + 1,
+          testPathSummary.getDirectoryCount());
+      assertEquals("Incorrect file count", created.getFileCount(),
+          testPathSummary.getFileCount());
 
     } finally {
       describe("deletion");
@@ -197,7 +228,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
             getConfigurationWithConfiguredBatchSize(batchSize);
 
     removeBaseAndBucketOverrides(conf,
-        S3_METADATA_STORE_IMPL,
         DIRECTORY_MARKER_POLICY);
     // force directory markers = keep to save delete requests on every
     // file created.
@@ -210,7 +240,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
 
     NanoTimer uploadTimer = new NanoTimer();
     try {
-      assume("Test is only for raw fs", !fs.hasMetadataStore());
       fs.create(dir);
 
       // create a span for the write operations
@@ -229,9 +258,9 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
         ObjectMetadata om = fs.newObjectMetadata(0L);
         PutObjectRequest put = requestFactory
             .newPutObjectRequest(fs.pathToKey(file), om,
-                new FailingInputStream());
+                null, new FailingInputStream());
         futures.add(submit(executorService, () ->
-            writeOperationHelper.putObject(put)));
+            writeOperationHelper.putObject(put, PutObjectOptions.keepingDirs())));
       }
       LOG.info("Waiting for PUTs to complete");
       waitForCompletion(futures);
@@ -321,9 +350,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           .describedAs("Listing results using listLocatedStatus() must" +
               "match with original list of files")
           .hasSameElementsAs(originalListOfFiles);
-      // delete in this FS so S3Guard is left out of it.
-      // and so that the incremental listing is tested through
-      // the delete operation.
       fs.delete(dir, true);
     } finally {
       executorService.shutdown();

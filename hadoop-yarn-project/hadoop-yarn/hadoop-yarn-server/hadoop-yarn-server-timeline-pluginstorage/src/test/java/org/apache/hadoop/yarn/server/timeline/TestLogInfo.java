@@ -41,7 +41,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.util.EnumSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -156,23 +155,6 @@ public class TestLogInfo {
         fs);
     // Verify for the first batch
     PluginStoreTestUtils.verifyTestEntities(tdm);
-    // Load new data
-    TimelineEntity entityNew = PluginStoreTestUtils
-        .createEntity("id_3", "type_3", 789l, null, null,
-            null, null, "domain_id_1");
-    TimelineEntities entityList = new TimelineEntities();
-    entityList.addEntity(entityNew);
-    writeEntitiesLeaveOpen(entityList,
-        new Path(getTestRootPath(TEST_ATTEMPT_DIR_NAME), TEST_ENTITY_FILE_NAME));
-    testLogInfo.parseForStore(tdm, getTestRootPath(), true, jsonFactory, objMapper,
-        fs);
-    // Verify the newly added data
-    TimelineEntity entity3 = tdm.getEntity(entityNew.getEntityType(),
-        entityNew.getEntityId(), EnumSet.allOf(TimelineReader.Field.class),
-        UserGroupInformation.getLoginUser());
-    assertNotNull(entity3);
-    assertEquals("Failed to read out entity new",
-        entityNew.getStartTime(), entity3.getStartTime());
     tdm.close();
   }
 

@@ -24,8 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * FileEncryptionInfo encapsulates all the encryption-related information for
@@ -52,6 +52,7 @@ public class FileEncryptionInfo implements Serializable {
    * @param keyName name of the key used for the encryption zone
    * @param ezKeyVersionName name of the KeyVersion used to encrypt the
    *                         encrypted data encryption key.
+   * @param version version.
    */
   public FileEncryptionInfo(final CipherSuite suite,
       final CryptoProtocolVersion version, final byte[] edek,
@@ -134,6 +135,8 @@ public class FileEncryptionInfo implements Serializable {
    *
    * NOTE:
    * Currently this method is used by CLI for backward compatibility.
+   *
+   * @return stable string.
    */
   public String toStringStable() {
     StringBuilder builder = new StringBuilder("{")

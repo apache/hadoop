@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azure.integration;
 
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
+
 /**
  * Constants for the Azure tests.
  */
@@ -175,4 +177,15 @@ public interface AzureTestConstants {
    * Base directory for page blobs.
    */
   Path PAGE_BLOB_DIR = new Path("/" + DEFAULT_PAGE_BLOB_DIRECTORY);
+
+  /**
+   * Huge file for testing AbfsOutputStream uploads: {@value}
+   */
+  String AZURE_SCALE_HUGE_FILE_UPLOAD = AZURE_SCALE_TEST + "huge.upload";
+
+  /**
+   * Default value for Huge file to be tested for AbfsOutputStream uploads:
+   * {@value}
+   */
+  int AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT = 2 * DEFAULT_WRITE_BUFFER_SIZE;
 }

@@ -29,7 +29,7 @@ import java.util.Set;
 
 import org.apache.commons.net.util.SubnetUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,7 +89,7 @@ public class MachineList {
   /**
    * Accepts a collection of ip/cidr/host addresses
    * 
-   * @param hostEntries
+   * @param hostEntries hostEntries.
    * @param addressFactory addressFactory to convert host to InetAddress
    */
   public MachineList(Collection<String> hostEntries,
@@ -139,7 +139,7 @@ public class MachineList {
    * {@link #includes(InetAddress)} should be preferred
    * to avoid possibly re-resolving the ip address.
    *
-   * @param ipAddress
+   * @param ipAddress ipAddress.
    * @return true if ipAddress is part of the list
    */
   public boolean includes(String ipAddress) {
@@ -161,7 +161,7 @@ public class MachineList {
 
   /**
    * Accepts an inet address and return true if address is in the list.
-   * @param address
+   * @param address address.
    * @return true if address is part of the list
    */
   public boolean includes(InetAddress address) {

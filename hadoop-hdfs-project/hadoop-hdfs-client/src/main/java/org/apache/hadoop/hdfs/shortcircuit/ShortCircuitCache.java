@@ -54,8 +54,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Waitable;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
@@ -189,6 +189,7 @@ public class ShortCircuitCache implements Closeable {
       final DfsClientShm shm = (DfsClientShm)slot.getShm();
       final DomainSocket shmSock = shm.getPeer().getDomainSocket();
       final String path = shmSock.getPath();
+      DomainSocket domainSocket = pathToDomainSocket.get(path);
       DataOutputStream out = null;
       boolean success = false;
       int retries = 2;
@@ -196,9 +197,10 @@ public class ShortCircuitCache implements Closeable {
         while (retries > 0) {
           try {
             if (domainSocket == null || !domainSocket.isOpen()) {
-              // we are running in single thread mode, no protection needed for
-              // domainSocket
               domainSocket = DomainSocket.connect(path);
+              // we are running in single thread mode, no protection needed for
+              // pathToDomainSocket
+              pathToDomainSocket.put(path, domainSocket);
             }
 
             out = new DataOutputStream(
@@ -221,13 +223,16 @@ public class ShortCircuitCache implements Closeable {
           } catch (SocketException se) {
             // the domain socket on datanode may be timed out, we retry once
             retries--;
-            domainSocket.close();
-            domainSocket = null;
+            if (domainSocket != null) {
+              domainSocket.close();
+              domainSocket = null;
+              pathToDomainSocket.remove(path);
+            }
             if (retries == 0) {
               throw new SocketException("Create domain socket failed");
             }
           }
-        }
+        } // end of while block
       } catch (IOException e) {
         LOG.warn(ShortCircuitCache.this + ": failed to release "
             + "short-circuit shared memory slot " + slot + " by sending "
@@ -240,10 +245,10 @@ public class ShortCircuitCache implements Closeable {
         } else {
           shm.getEndpointShmManager().shutdown(shm);
           IOUtilsClient.cleanupWithLogger(LOG, domainSocket, out);
-          domainSocket = null;
+          pathToDomainSocket.remove(path);
         }
       }
-    }
+    } // end of run()
   }
 
   public interface ShortCircuitReplicaCreator {
@@ -354,7 +359,11 @@ public class ShortCircuitCache implements Closeable {
    */
   private final DfsClientShmManager shmManager;
 
-  private DomainSocket domainSocket = null;
+  /**
+   * A map contains all DomainSockets used in SlotReleaser. Keys are the domain socket
+   * paths of short-circuit shared memory segments.
+   */
+  private Map<String, DomainSocket> pathToDomainSocket = new HashMap<>();
 
   public static ShortCircuitCache fromConf(ShortCircuitConf conf) {
     return new ShortCircuitCache(

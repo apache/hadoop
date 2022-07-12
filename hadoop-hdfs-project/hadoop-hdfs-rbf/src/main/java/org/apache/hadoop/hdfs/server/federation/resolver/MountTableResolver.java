@@ -65,7 +65,7 @@ import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 
@@ -359,7 +359,7 @@ public class MountTableResolver
   public static String getTrashRoot() throws IOException {
     // Gets the Trash directory for the current user.
     return FileSystem.USER_HOME_PREFIX + "/" +
-        RouterRpcServer.getRemoteUser().getUserName() + "/" +
+        RouterRpcServer.getRemoteUser().getShortUserName() + "/" +
         FileSystem.TRASH_PREFIX;
   }
 

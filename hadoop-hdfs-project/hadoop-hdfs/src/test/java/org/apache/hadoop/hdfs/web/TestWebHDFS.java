@@ -23,6 +23,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.TestDistributedFileSystem.checkOpStatistics;
 import static org.apache.hadoop.hdfs.TestDistributedFileSystem.checkStatistics;
@@ -54,6 +55,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -521,6 +523,38 @@ public class TestWebHDFS {
     }
   }
 
+  @Test
+  public void testWebHdfsCreateWithInvalidPath() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    // A path name include duplicated slashes.
+    String path = "//tmp//file";
+    assertResponse(path);
+  }
+
+  private String getUri(String path) {
+    final String user = System.getProperty("user.name");
+    final StringBuilder uri = new StringBuilder(cluster.getHttpUri(0));
+    uri.append("/webhdfs/v1").
+        append(path).
+        append("?op=CREATE").
+        append("&user.name=" + user);
+    return uri.toString();
+  }
+
+  private void assertResponse(String path) throws IOException {
+    URL url = new URL(getUri(path));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    // Assert response code.
+    assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, conn.getResponseCode());
+    // Assert exception.
+    Map<?, ?> response = WebHdfsFileSystem.jsonParse(conn, true);
+    assertEquals("InvalidPathException",
+        ((LinkedHashMap) response.get("RemoteException")).get("exception"));
+    conn.disconnect();
+  }
+
   /**
    * Test allow and disallow snapshot through WebHdfs. Verifying webhdfs with
    * Distributed filesystem methods.
@@ -723,6 +757,7 @@ public class TestWebHDFS {
   @Test
   public void testWebHdfsSnapshotDiff() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
+    conf.setInt(DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT, 2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     final DistributedFileSystem dfs = cluster.getFileSystem();
@@ -1552,7 +1587,8 @@ public class TestWebHDFS {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod(TYPE);
     conn.setInstanceFollowRedirects(false);
-    String response = IOUtils.toString(conn.getInputStream());
+    String response =
+        IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);
     LOG.info("Response was : " + response);
     Assert.assertEquals(
       "Response wasn't " + HttpURLConnection.HTTP_OK,

@@ -117,6 +117,8 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     corruptReplicationOneBlocks.reset();
     lowRedundancyECBlockGroups.reset();
     corruptECBlockGroups.reset();
+    highestPriorityLowRedundancyReplicatedBlocks.reset();
+    highestPriorityLowRedundancyECBlocks.reset();
   }
 
   /** Return the total number of insufficient redundancy blocks. */
@@ -246,8 +248,8 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       // highest priority
       return QUEUE_HIGHEST_PRIORITY;
     } else if ((curReplicas * 3) < expectedReplicas) {
-      //can only afford one replica loss
-      //this is considered very insufficiently redundant blocks.
+      //there is less than a third as many blocks as requested;
+      //this is considered very under-replicated.
       return QUEUE_VERY_LOW_REDUNDANCY;
     } else {
       //add to the normal queue for insufficiently redundant blocks

@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -302,6 +303,12 @@ public final class ErasureCodingPolicyManager {
     if (!CodecUtil.hasCodec(policy.getCodecName())) {
       throw new HadoopIllegalArgumentException("Codec name "
           + policy.getCodecName() + " is not supported");
+    }
+
+    int blocksInGroup = policy.getNumDataUnits() + policy.getNumParityUnits();
+    if (blocksInGroup > HdfsServerConstants.MAX_BLOCKS_IN_GROUP) {
+      throw new HadoopIllegalArgumentException("Number of data and parity blocks in an EC group " +
+          blocksInGroup + " should not exceed maximum " + HdfsServerConstants.MAX_BLOCKS_IN_GROUP);
     }
 
     if (policy.getCellSize() > maxCellSize) {

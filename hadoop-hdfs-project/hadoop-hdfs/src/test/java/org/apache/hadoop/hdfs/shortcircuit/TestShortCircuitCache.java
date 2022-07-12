@@ -21,7 +21,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 import java.io.DataOutputStream;
@@ -63,6 +62,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry.RegisteredShm;
@@ -89,7 +89,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 
@@ -951,6 +951,83 @@ public class TestShortCircuitCache {
       Thread.sleep(2000);
       Assert.assertEquals(0,
           cluster.getDataNodes().get(0).getShortCircuitRegistry().getShmNum());
+      Assert.assertEquals(0, cache.getDfsClientShmManager().getShmNum());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  // Regression test for HDFS-16535
+  @Test(timeout = 60000)
+  public void testDomainSocketClosedByMultipleDNs() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    String testName = "testDomainSocketClosedByMultipleDNs";
+    Configuration conf = createShortCircuitConf(testName, sockDir);
+    conf.set(DFS_DOMAIN_SOCKET_PATH_KEY, new File(sockDir.getDir(),
+        testName + "._PORT").getAbsolutePath());
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final ShortCircuitCache cache =
+          fs.getClient().getClientContext().getShortCircuitCache();
+
+      ExtendedBlockId blockId0 = new ExtendedBlockId(123, "xyz");
+      ExtendedBlockId blockId1 = new ExtendedBlockId(456, "xyz");
+
+      DataNode dn0 = cluster.getDataNodes().get(0);
+      DataNode dn1 = cluster.getDataNodes().get(1);
+
+      DomainPeer peer0 = new DomainPeer(DomainSocket.connect(new File(
+          sockDir.getDir(), testName + "." + dn0.getXferPort()).getAbsolutePath()));
+      DomainPeer peer1 = new DomainPeer(DomainSocket.connect(new File(
+          sockDir.getDir(), testName + "." + dn1.getXferPort()).getAbsolutePath()));
+
+      final DatanodeInfo dnInfo0 = new DatanodeInfo.DatanodeInfoBuilder()
+          .setNodeID(dn0.getDatanodeId()).build();
+      final DatanodeInfo dnInfo1 = new DatanodeInfo.DatanodeInfoBuilder()
+          .setNodeID(dn1.getDatanodeId()).build();
+
+      // Allocate 2 shm slots from DataNode-0
+      MutableBoolean usedPeer = new MutableBoolean(false);
+      Slot slot1 = cache.allocShmSlot(dnInfo0, peer0, usedPeer, blockId0,
+          "testDomainSocketClosedByMultipleDNs_client");
+      dn0.getShortCircuitRegistry()
+          .registerSlot(blockId0, slot1.getSlotId(), false);
+
+      Slot slot2 = cache.allocShmSlot(dnInfo0, peer0, usedPeer, blockId0,
+          "testDomainSocketClosedByMultipleDNs_client");
+      dn0.getShortCircuitRegistry()
+          .registerSlot(blockId0, slot2.getSlotId(), false);
+
+      // Allocate 1 shm slot from DataNode-1
+      Slot slot3 = cache.allocShmSlot(dnInfo1, peer1, usedPeer, blockId1,
+          "testDomainSocketClosedByMultipleDNs_client");
+      dn1.getShortCircuitRegistry()
+          .registerSlot(blockId1, slot3.getSlotId(), false);
+
+      Assert.assertEquals(2, cache.getDfsClientShmManager().getShmNum());
+      Assert.assertEquals(1, dn0.getShortCircuitRegistry().getShmNum());
+      Assert.assertEquals(1, dn1.getShortCircuitRegistry().getShmNum());
+
+      // Release the slot of DataNode-1 first.
+      cache.scheduleSlotReleaser(slot3);
+      Thread.sleep(2000);
+      Assert.assertEquals(1, cache.getDfsClientShmManager().getShmNum());
+
+      // Release the slots of DataNode-0.
+      cache.scheduleSlotReleaser(slot1);
+      Thread.sleep(2000);
+      Assert.assertEquals("0 ShmNum means the shm of DataNode-0 is shutdown" +
+              " due to slot release failures.",
+          1, cache.getDfsClientShmManager().getShmNum());
+      cache.scheduleSlotReleaser(slot2);
+      Thread.sleep(2000);
+
+      Assert.assertEquals(0, dn0.getShortCircuitRegistry().getShmNum());
+      Assert.assertEquals(0, dn1.getShortCircuitRegistry().getShmNum());
       Assert.assertEquals(0, cache.getDfsClientShmManager().getShmNum());
     } finally {
       cluster.shutdown();

@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Extension of FSImage for the backup node.
@@ -222,7 +222,7 @@ public class BackupImage extends FSImage {
       try {
         getNamesystem().dir.updateCountForQuota();
       } finally {
-        getNamesystem().writeUnlock();
+        getNamesystem().writeUnlock("applyEdits");
       }
     } finally {
       backupInputStream.clear();

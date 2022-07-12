@@ -45,10 +45,7 @@
     <fs.s3a.scale.test.huge.partitionsize>unset</fs.s3a.scale.test.huge.partitionsize>
     <!-- Timeout in seconds for scale tests.-->
     <fs.s3a.scale.test.timeout>3600</fs.s3a.scale.test.timeout>
-    <!-- are scale tests enabled ? -->
-    <fs.s3a.s3guard.test.enabled>false</fs.s3a.s3guard.test.enabled>
-    <fs.s3a.s3guard.test.authoritative>false</fs.s3a.s3guard.test.authoritative>
-    <fs.s3a.s3guard.test.implementation>local</fs.s3a.s3guard.test.implementation>
+
     <!-- Set a longer timeout for integration test (in milliseconds) -->
     <test.integration.timeout>200000</test.integration.timeout>
 
@@ -166,10 +163,6 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- S3Guard -->
-                    <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
-                    <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
-                    <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
 
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
@@ -193,14 +186,10 @@
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSEC*.java</exclude>
                     <exclude>**/ITestS3AHuge*.java</exclude>
-                    <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
-                    <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
                     <!-- Terasort MR jobs spawn enough processes that they use up all RAM -->
                     <exclude>**/ITestTerasort*.java</exclude>
                     <!-- Root marker tool tests -->
                     <exclude>**/ITestMarkerToolRootOperations.java</exclude>
-                    <!-- operations across the metastore -->
-                    <exclude>**/ITestS3GuardDDBRootOperations.java</exclude>
                     <!-- leave this until the end for better statistics -->
                     <exclude>**/ITestAggregateIOStatistics.java</exclude>
                   </excludes>
@@ -223,10 +212,6 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- S3Guard -->
-                    <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
-                    <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
-                    <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
                     <!-- Markers-->
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
@@ -239,8 +224,6 @@
                     <include>**/ITestS3AHuge*.java</include>
                     <!-- SSE encrypted files confuse everything else -->
                     <include>**/ITestS3AEncryptionSSEC*.java</include>
-                    <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
-                    <include>**/ITestDynamoDBMetadataStoreScale.java</include>
                     <!-- the terasort tests both work with a file in the same path in -->
                     <!--  the local FS. Running them sequentially guarantees isolation -->
                     <!-- and that they don't conflict with the other MR jobs for RAM -->
@@ -249,9 +232,8 @@
                     <!-- MUST be run before the other root ops so there's
                      more likelihood of files in the bucket -->
                     <include>**/ITestMarkerToolRootOperations.java</include>
-                    <!-- operations across the metastore -->
+                    <!-- operations on the root dir -->
                     <include>**/ITestS3AContractRootDir.java</include>
-                    <include>**/ITestS3GuardDDBRootOperations.java</include>
                     <!-- leave this until the end for better statistics -->
                     <include>**/ITestAggregateIOStatistics.java</include>
                   </includes>
@@ -286,10 +268,6 @@
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- S3Guard -->
-                    <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
-                    <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
-                    <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
                     <!-- Markers-->
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
@@ -313,46 +291,6 @@
       </activation>
       <properties >
         <fs.s3a.scale.test.enabled>true</fs.s3a.scale.test.enabled>
-      </properties>
-    </profile>
-
-    <!-- Turn on S3Guard tests-->
-    <profile>
-      <id>s3guard</id>
-      <activation>
-        <property>
-          <name>s3guard</name>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.s3guard.test.enabled>true</fs.s3a.s3guard.test.enabled>
-      </properties>
-    </profile>
-
-    <!-- Switch to DynamoDB for S3Guard. Has no effect unless S3Guard is enabled -->
-    <profile>
-      <id>dynamo</id>
-      <activation>
-        <property>
-          <name>dynamo</name>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.s3guard.test.implementation>dynamo</fs.s3a.s3guard.test.implementation>
-      </properties>
-    </profile>
-
-    <!-- Switch S3Guard from Authoritative=false to true
-     Has no effect unless S3Guard is enabled -->
-    <profile>
-      <id>auth</id>
-      <activation>
-        <property>
-          <name>auth</name>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.s3guard.test.authoritative>true</fs.s3a.s3guard.test.authoritative>
       </properties>
     </profile>
 
@@ -467,6 +405,39 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports>
+                  <includeTestCode>false</includeTestCode>
+                  <reason>Restrict mapreduce imports to committer code</reason>
+                  <exclusions>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitterFactory</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.impl.*</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.magic.*</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.staging.*</exclusion>
+                  </exclusions>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.mapreduce.**</bannedImport>
+                    <bannedImport>org.apache.hadoop.mapred.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -475,6 +446,16 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.servlet</groupId>
+          <artifactId>servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.enterprise</groupId>
+          <artifactId>cdi-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -534,6 +515,12 @@
       <artifactId>hadoop-hdfs</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
+      <exclusions>
+        <exclusion>
+          <groupId>org.ow2.asm</groupId>
+          <artifactId>asm-commons</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

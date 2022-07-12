@@ -32,7 +32,7 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class provides secure APIs for opening and creating files on the local
@@ -90,7 +90,7 @@ public class SecureIOUtils {
   private final static FileSystem rawFilesystem;
 
   /**
-   * Open the given File for random read access, verifying the expected user/
+   * @return Open the given File for random read access, verifying the expected user/
    * group constraints if security is enabled.
    * 
    * Note that this function provides no additional security checks if hadoop
@@ -114,8 +114,14 @@ public class SecureIOUtils {
   }
 
   /**
-   * Same as openForRandomRead except that it will run even if security is off.
+   * @return Same as openForRandomRead except that it will run even if security is off.
    * This is used by unit tests.
+   *
+   * @param f input f.
+   * @param mode input mode.
+   * @param expectedOwner input expectedOwner.
+   * @param expectedGroup input expectedGroup.
+   * @throws IOException raised on errors performing I/O.
    */
   @VisibleForTesting
   protected static RandomAccessFile forceSecureOpenForRandomRead(File f,
@@ -145,6 +151,7 @@ public class SecureIOUtils {
    * @param expectedGroup the expected group owner for the file
    * @throws IOException if an IO Error occurred or the user/group does not
    * match if security is enabled
+   * @return FSDataInputStream.
    */
   public static FSDataInputStream openFSDataInputStream(File file,
       String expectedOwner, String expectedGroup) throws IOException {
@@ -157,6 +164,12 @@ public class SecureIOUtils {
   /**
    * Same as openFSDataInputStream except that it will run even if security is
    * off. This is used by unit tests.
+   *
+   * @param file input file.
+   * @param expectedOwner input expectedOwner.
+   * @param expectedGroup input expectedGroup.
+   * @throws IOException raised on errors performing I/O.
+   * @return FSDataInputStream.
    */
   @VisibleForTesting
   protected static FSDataInputStream forceSecureOpenFSDataInputStream(
@@ -182,7 +195,7 @@ public class SecureIOUtils {
    * Open the given File for read access, verifying the expected user/group
    * constraints if security is enabled.
    *
-   * Note that this function provides no additional checks if Hadoop
+   * @return Note that this function provides no additional checks if Hadoop
    * security is disabled, since doing the checks would be too expensive
    * when native libraries are not available.
    *
@@ -201,8 +214,12 @@ public class SecureIOUtils {
   }
 
   /**
-   * Same as openForRead() except that it will run even if security is off.
+   * @return Same as openForRead() except that it will run even if security is off.
    * This is used by unit tests.
+   * @param f input f.
+   * @param expectedOwner input expectedOwner.
+   * @param expectedGroup input expectedGroup.
+   * @throws IOException raised on errors performing I/O.
    */
   @VisibleForTesting
   protected static FileInputStream forceSecureOpenForRead(File f, String expectedOwner,
@@ -251,6 +268,7 @@ public class SecureIOUtils {
    *
    * @throws AlreadyExistsException if the file already exists
    * @throws IOException if any other error occurred
+   * @return createForWrite FileOutputStream.
    */
   public static FileOutputStream createForWrite(File f, int permissions)
   throws IOException {

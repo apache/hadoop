@@ -50,6 +50,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -118,7 +119,6 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -144,14 +144,14 @@ public class TestFsck {
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
   static final Pattern FSCK_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
-      "ugi=.*?\\s" + 
-      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
       "cmd=fsck\\ssrc=\\/\\sdst=null\\s" + 
       "perm=null\\s" + "proto=.*");
   static final Pattern GET_FILE_INFO_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
-      "ugi=.*?\\s" + 
-      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
       "cmd=getfileinfo\\ssrc=\\/\\sdst=null\\s" + 
       "perm=null\\s" + "proto=.*");
 
@@ -386,15 +386,15 @@ public class TestFsck {
                                         cluster.getNameNodePort()), conf);
     String[] fileNames = util.getFileNames(topDir);
     CorruptedTestFile[] ctFiles = new CorruptedTestFile[]{
-        new CorruptedTestFile(fileNames[0], Sets.newHashSet(0),
+        new CorruptedTestFile(fileNames[0], new HashSet<>(Arrays.asList(0)),
             dfsClient, numDatanodes, dfsBlockSize),
-        new CorruptedTestFile(fileNames[1], Sets.newHashSet(2, 3),
+        new CorruptedTestFile(fileNames[1], new HashSet<>(Arrays.asList(2, 3)),
             dfsClient, numDatanodes, dfsBlockSize),
-        new CorruptedTestFile(fileNames[2], Sets.newHashSet(4),
+        new CorruptedTestFile(fileNames[2], new HashSet<>(Arrays.asList(4)),
             dfsClient, numDatanodes, dfsBlockSize),
-        new CorruptedTestFile(fileNames[3], Sets.newHashSet(0, 1, 2, 3),
+        new CorruptedTestFile(fileNames[3], new HashSet<>(Arrays.asList(0, 1, 2, 3)),
             dfsClient, numDatanodes, dfsBlockSize),
-        new CorruptedTestFile(fileNames[4], Sets.newHashSet(1, 2, 3, 4),
+        new CorruptedTestFile(fileNames[4], new HashSet<>(Arrays.asList(1, 2, 3, 4)),
             dfsClient, numDatanodes, dfsBlockSize)
     };
     int totalMissingBlocks = 0;
@@ -2215,7 +2215,7 @@ public class TestFsck {
         new InetSocketAddress("localhost", cluster.getNameNodePort()), conf);
     final String blockFileToCorrupt = fileNames[0];
     final CorruptedTestFile ctf = new CorruptedTestFile(blockFileToCorrupt,
-        Sets.newHashSet(0), dfsClient, numDatanodes, dfsBlockSize);
+        new HashSet<>(Arrays.asList(0)), dfsClient, numDatanodes, dfsBlockSize);
     ctf.corruptBlocks(cluster);
 
     // Wait for fsck to discover all the missing blocks

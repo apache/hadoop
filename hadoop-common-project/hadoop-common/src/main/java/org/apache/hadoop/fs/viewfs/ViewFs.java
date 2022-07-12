@@ -36,7 +36,7 @@ import java.util.Map.Entry;
 
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -80,8 +80,8 @@ import org.slf4j.LoggerFactory;
 /**
  * ViewFs (extends the AbstractFileSystem interface) implements a client-side
  * mount table. The viewFs file system is implemented completely in memory on
- * the client side. The client-side mount table allows a client to provide a 
- * customized view of a file system namespace that is composed from 
+ * the client side. The client-side mount table allows a client to provide a
+ * customized view of a file system namespace that is composed from
  * one or more individual file systems (a localFs or Hdfs, S3fs, etc).
  * For example one could have a mount table that provides links such as
  * <ul>
@@ -89,26 +89,26 @@ import org.slf4j.LoggerFactory;
  * <li>  /project/foo   {@literal ->} hdfs://nnProject1/projects/foo
  * <li>  /project/bar   {@literal ->} hdfs://nnProject2/projects/bar
  * <li>  /tmp           {@literal ->} hdfs://nnTmp/privateTmpForUserXXX
- * </ul> 
- * 
- * ViewFs is specified with the following URI: <b>viewfs:///</b> 
+ * </ul>
+ *
+ * ViewFs is specified with the following URI: <b>viewfs:///</b>
  * <p>
  * To use viewfs one would typically set the default file system in the
  * config  (i.e. fs.defaultFS {@literal <} = viewfs:///) along with the
- * mount table config variables as described below. 
- * 
+ * mount table config variables as described below.
+ *
  * <p>
  * <b> ** Config variables to specify the mount table entries ** </b>
  * <p>
- * 
+ *
  * The file system is initialized from the standard Hadoop config through
  * config variables.
- * See {@link FsConstants} for URI and Scheme constants; 
- * See {@link Constants} for config var constants; 
+ * See {@link FsConstants} for URI and Scheme constants;
+ * See {@link Constants} for config var constants;
  * see {@link ConfigUtil} for convenient lib.
- * 
+ *
  * <p>
- * All the mount table config entries for view fs are prefixed by 
+ * All the mount table config entries for view fs are prefixed by
  * <b>fs.viewfs.mounttable.</b>
  * For example the above example can be specified with the following
  *  config variables:
@@ -122,8 +122,8 @@ import org.slf4j.LoggerFactory;
  *  <li> fs.viewfs.mounttable.default.link./tmp=
  *  hdfs://nnTmp/privateTmpForUserXXX
  *  </ul>
- *  
- * The default mount table (when no authority is specified) is 
+ *
+ * The default mount table (when no authority is specified) is
  * from config variables prefixed by <b>fs.viewFs.mounttable.default </b>
  * The authority component of a URI can be used to specify a different mount
  * table. For example,
@@ -131,11 +131,11 @@ import org.slf4j.LoggerFactory;
  * <li>  viewfs://sanjayMountable/
  * </ul>
  * is initialized from fs.viewFs.mounttable.sanjayMountable.* config variables.
- * 
- *  <p> 
+ *
+ *  <p>
  *  <b> **** Merge Mounts **** </b>(NOTE: merge mounts are not implemented yet.)
  *  <p>
- *  
+ *
  *   One can also use "MergeMounts" to merge several directories (this is
  *   sometimes  called union-mounts or junction-mounts in the literature.
  *   For example of the home directories are stored on say two file systems
@@ -156,7 +156,7 @@ import org.slf4j.LoggerFactory;
  *   <li>    fs.viewfs.mounttable.default.linkMergeSlash=hdfs://nn99/
  *   </ul>
  *   In this cases the root of the mount table is merged with the root of
- *            <b>hdfs://nn99/ </b> 
+ *            <b>hdfs://nn99/ </b>
  */
 
 @InterfaceAudience.Public
@@ -182,19 +182,21 @@ public class ViewFs extends AbstractFileSystem {
       final Path p) {
     return readOnlyMountTable(operation, p.toString());
   }
-  
-  
+
+
   static public class MountPoint {
-    private Path src;       // the src of the mount
-    private URI[] targets; //  target of the mount; Multiple targets imply mergeMount
-    MountPoint(Path srcPath, URI[] targetURIs) {
+    // the src of the mount
+    private Path src;
+    // Target of the mount; Multiple targets imply mergeMount
+    private String[] targets;
+    MountPoint(Path srcPath, String[] targetURIs) {
       src = srcPath;
       targets = targetURIs;
     }
     Path getSrc() {
       return src;
     }
-    URI[] getTargets() {
+    String[] getTargets() {
       return targets;
     }
   }
@@ -212,15 +214,15 @@ public class ViewFs extends AbstractFileSystem {
       URISyntaxException {
     this(FsConstants.VIEWFS_URI, conf);
   }
-  
+
   /**
    * This constructor has the signature needed by
    * {@link AbstractFileSystem#createFileSystem(URI, Configuration)}.
-   * 
+   *
    * @param theUri which must be that of ViewFs
    * @param conf
    * @throws IOException
-   * @throws URISyntaxException 
+   * @throws URISyntaxException
    */
   ViewFs(final URI theUri, final Configuration conf) throws IOException,
       URISyntaxException {
@@ -290,7 +292,7 @@ public class ViewFs extends AbstractFileSystem {
   @Override
   @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
-    return LocalConfigKeys.getServerDefaults(); 
+    return LocalConfigKeys.getServerDefaults();
   }
 
   @Override
@@ -308,7 +310,7 @@ public class ViewFs extends AbstractFileSystem {
   public int getUriDefaultPort() {
     return -1;
   }
- 
+
   @Override
   public Path getHomeDirectory() {
     if (homeDir == null) {
@@ -316,13 +318,13 @@ public class ViewFs extends AbstractFileSystem {
       if (base == null) {
         base = "/user";
       }
-      homeDir = (base.equals("/") ? 
+      homeDir = (base.equals("/") ?
         this.makeQualified(new Path(base + ugi.getShortUserName())):
         this.makeQualified(new Path(base + "/" + ugi.getShortUserName())));
     }
     return homeDir;
   }
-  
+
   @Override
   public Path resolvePath(final Path f) throws FileNotFoundException,
           AccessControlException, UnresolvedLinkException, IOException {
@@ -334,7 +336,7 @@ public class ViewFs extends AbstractFileSystem {
     return res.targetFileSystem.resolvePath(res.remainingPath);
 
   }
-  
+
   @Override
   public FSDataOutputStream createInternal(final Path f,
       final EnumSet<CreateFlag> flag, final FsPermission absolutePermission,
@@ -365,7 +367,7 @@ public class ViewFs extends AbstractFileSystem {
   public boolean delete(final Path f, final boolean recursive)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
     // If internal dir or target is a mount link (ie remainingPath is Slash)
     if (res.isInternalDir() || res.remainingPath == InodeTree.SlashPath) {
@@ -379,7 +381,7 @@ public class ViewFs extends AbstractFileSystem {
   public BlockLocation[] getFileBlockLocations(final Path f, final long start,
       final long len) throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
     return
       res.targetFileSystem.getFileBlockLocations(res.remainingPath, start, len);
@@ -389,7 +391,7 @@ public class ViewFs extends AbstractFileSystem {
   public FileChecksum getFileChecksum(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.getFileChecksum(res.remainingPath);
   }
@@ -405,20 +407,20 @@ public class ViewFs extends AbstractFileSystem {
   @Override
   public FileStatus getFileStatus(final Path f) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
 
-    //  FileStatus#getPath is a fully qualified path relative to the root of 
+    //  FileStatus#getPath is a fully qualified path relative to the root of
     // target file system.
     // We need to change it to viewfs URI - relative to root of mount table.
-    
+
     // The implementors of RawLocalFileSystem were trying to be very smart.
     // They implement FileStatus#getOwener lazily -- the object
     // returned is really a RawLocalFileSystem that expect the
     // FileStatus#getPath to be unchanged so that it can get owner when needed.
     // Hence we need to interpose a new ViewFsFileStatus that works around.
-    
-    
+
+
     FileStatus status =  res.targetFileSystem.getFileStatus(res.remainingPath);
     return new ViewFsFileStatus(status, this.makeQualified(f));
   }
@@ -435,11 +437,11 @@ public class ViewFs extends AbstractFileSystem {
   public FileStatus getFileLinkStatus(final Path f)
      throws AccessControlException, FileNotFoundException,
      UnsupportedFileSystemException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), false); // do not follow mount link
     return res.targetFileSystem.getFileLinkStatus(res.remainingPath);
   }
-  
+
   @Override
   public FsStatus getFsStatus() throws AccessControlException,
       FileNotFoundException, IOException {
@@ -486,7 +488,7 @@ public class ViewFs extends AbstractFileSystem {
       }
     };
   }
-  
+
   /**
    * {@inheritDoc}
    *
@@ -518,7 +520,7 @@ public class ViewFs extends AbstractFileSystem {
       FileNotFoundException, UnresolvedLinkException, IOException {
     InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
-    
+
     FileStatus[] statusLst = res.targetFileSystem.listStatus(res.remainingPath);
     if (!res.isInternalDir()) {
       // We need to change the name in the FileStatus as described in
@@ -540,7 +542,7 @@ public class ViewFs extends AbstractFileSystem {
       final boolean createParent) throws AccessControlException,
       FileAlreadyExistsException,
       FileNotFoundException, UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(dir), false);
     res.targetFileSystem.mkdir(res.remainingPath, permission, createParent);
   }
@@ -549,7 +551,7 @@ public class ViewFs extends AbstractFileSystem {
   public FSDataInputStream open(final Path f, final int bufferSize)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
         fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.open(res.remainingPath, bufferSize);
   }
@@ -566,7 +568,7 @@ public class ViewFs extends AbstractFileSystem {
   @Override
   public void renameInternal(final Path src, final Path dst,
       final boolean overwrite) throws IOException, UnresolvedLinkException {
-    // passing resolveLastComponet as false to catch renaming a mount point 
+    // passing resolveLastComponet as false to catch renaming a mount point
     // itself we need to catch this as an internal operation and fail if no
     // fallback.
     InodeTree.ResolveResult<AbstractFileSystem> resSrc =
@@ -640,12 +642,12 @@ public class ViewFs extends AbstractFileSystem {
       UnresolvedLinkException, IOException {
     renameInternal(src, dst, false);
   }
-  
+
   @Override
   public boolean supportsSymlinks() {
     return true;
   }
-  
+
   @Override
   public void createSymlink(final Path target, final Path link,
       final boolean createParent) throws IOException, UnresolvedLinkException {
@@ -661,12 +663,12 @@ public class ViewFs extends AbstractFileSystem {
     }
     assert(res.remainingPath != null);
     res.targetFileSystem.createSymlink(target, res.remainingPath,
-        createParent);  
+        createParent);
   }
 
   @Override
   public Path getLinkTarget(final Path f) throws IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), false); // do not follow mount link
     return res.targetFileSystem.getLinkTarget(res.remainingPath);
   }
@@ -675,26 +677,26 @@ public class ViewFs extends AbstractFileSystem {
   public void setOwner(final Path f, final String username,
       final String groupname) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
-    res.targetFileSystem.setOwner(res.remainingPath, username, groupname); 
+    res.targetFileSystem.setOwner(res.remainingPath, username, groupname);
   }
 
   @Override
   public void setPermission(final Path f, final FsPermission permission)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
-    res.targetFileSystem.setPermission(res.remainingPath, permission); 
-    
+    res.targetFileSystem.setPermission(res.remainingPath, permission);
+
   }
 
   @Override
   public boolean setReplication(final Path f, final short replication)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.setReplication(res.remainingPath, replication);
   }
@@ -703,47 +705,58 @@ public class ViewFs extends AbstractFileSystem {
   public void setTimes(final Path f, final long mtime, final long atime)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    InodeTree.ResolveResult<AbstractFileSystem> res = 
+    InodeTree.ResolveResult<AbstractFileSystem> res =
       fsState.resolve(getUriPath(f), true);
-    res.targetFileSystem.setTimes(res.remainingPath, mtime, atime); 
+    res.targetFileSystem.setTimes(res.remainingPath, mtime, atime);
   }
 
   @Override
   public void setVerifyChecksum(final boolean verifyChecksum)
       throws AccessControlException, IOException {
-    // This is a file system level operations, however ViewFs 
-    // points to many file systems. Noop for ViewFs. 
+    // This is a file system level operations, however ViewFs
+    // points to many file systems. Noop for ViewFs.
   }
-  
+
   public MountPoint[] getMountPoints() {
-    List<InodeTree.MountPoint<AbstractFileSystem>> mountPoints = 
+    List<InodeTree.MountPoint<AbstractFileSystem>> mountPoints =
                   fsState.getMountPoints();
-    
+
     MountPoint[] result = new MountPoint[mountPoints.size()];
     for ( int i = 0; i < mountPoints.size(); ++i ) {
-      result[i] = new MountPoint(new Path(mountPoints.get(i).src), 
+      result[i] = new MountPoint(new Path(mountPoints.get(i).src),
                               mountPoints.get(i).target.targetDirLinkList);
     }
     return result;
   }
-  
+
   @Override
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    List<InodeTree.MountPoint<AbstractFileSystem>> mountPoints = 
+    List<InodeTree.MountPoint<AbstractFileSystem>> mountPoints =
                 fsState.getMountPoints();
     int initialListSize  = 0;
     for (InodeTree.MountPoint<AbstractFileSystem> im : mountPoints) {
-      initialListSize += im.target.targetDirLinkList.length; 
+      initialListSize += im.target.targetDirLinkList.length;
     }
     List<Token<?>> result = new ArrayList<Token<?>>(initialListSize);
     for ( int i = 0; i < mountPoints.size(); ++i ) {
-      List<Token<?>> tokens = 
+      List<Token<?>> tokens =
           mountPoints.get(i).target.getTargetFileSystem()
               .getDelegationTokens(renewer);
       if (tokens != null) {
         result.addAll(tokens);
       }
     }
+
+    // Add tokens from fallback FS
+    if (this.fsState.getRootFallbackLink() != null) {
+      AbstractFileSystem rootFallbackFs =
+          this.fsState.getRootFallbackLink().getTargetFileSystem();
+      List<Token<?>> tokens = rootFallbackFs.getDelegationTokens(renewer);
+      if (tokens != null) {
+        result.addAll(tokens);
+      }
+    }
+
     return result;
   }
 
@@ -896,7 +909,7 @@ public class ViewFs extends AbstractFileSystem {
    *
    * @param src file or directory path.
    * @return storage policy for give file.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public BlockStoragePolicySpi getStoragePolicy(final Path src)
       throws IOException {
@@ -942,18 +955,18 @@ public class ViewFs extends AbstractFileSystem {
   }
 
   /*
-   * An instance of this class represents an internal dir of the viewFs 
+   * An instance of this class represents an internal dir of the viewFs
    * ie internal dir of the mount table.
    * It is a ready only mount tbale and create, mkdir or delete operations
    * are not allowed.
    * If called on create or mkdir then this target is the parent of the
    * directory in which one is trying to create or mkdir; hence
-   * in this case the path name passed in is the last component. 
+   * in this case the path name passed in is the last component.
    * Otherwise this target is the end point of the path and hence
-   * the path name passed in is null. 
+   * the path name passed in is null.
    */
   static class InternalDirOfViewFs extends AbstractFileSystem {
-    
+
     final InodeTree.INodeDir<AbstractFileSystem>  theInternalDir;
     final long creationTime; // of the the mount table
     final UserGroupInformation ugi; // the user/group of user who created mtable
@@ -1072,7 +1085,7 @@ public class ViewFs extends AbstractFileSystem {
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, null));
     }
-    
+
     @Override
     public FileStatus getFileLinkStatus(final Path f)
         throws IOException {
@@ -1085,8 +1098,7 @@ public class ViewFs extends AbstractFileSystem {
       }
       FileStatus result;
       if (inode.isLink()) {
-        INodeLink<AbstractFileSystem> inodelink = 
-          (INodeLink<AbstractFileSystem>) inode;
+        INodeLink<AbstractFileSystem> inodelink = inode.getLink();
         try {
           String linkedPath = inodelink.getTargetFileSystem()
               .getUri().getPath();
@@ -1114,7 +1126,7 @@ public class ViewFs extends AbstractFileSystem {
       }
       return result;
     }
-    
+
     @Override
     public FsStatus getFsStatus() {
       return new FsStatus(0, 0, 0);
@@ -1156,8 +1168,7 @@ public class ViewFs extends AbstractFileSystem {
         INode<AbstractFileSystem> inode = iEntry.getValue();
         Path path = new Path(inode.fullPath).makeQualified(myUri, null);
         if (inode.isLink()) {
-          INodeLink<AbstractFileSystem> link = 
-            (INodeLink<AbstractFileSystem>) inode;
+          INodeLink<AbstractFileSystem> link = inode.getLink();
 
           if (showMountLinksAsSymlinks) {
             // To maintain backward compatibility, with default option(showing
@@ -1306,18 +1317,18 @@ public class ViewFs extends AbstractFileSystem {
         throws AccessControlException, IOException {
       checkPathIsSlash(src);
       checkPathIsSlash(dst);
-      throw readOnlyMountTable("rename", src);     
+      throw readOnlyMountTable("rename", src);
     }
 
     @Override
     public boolean supportsSymlinks() {
       return true;
     }
-    
+
     @Override
     public void createSymlink(final Path target, final Path link,
         final boolean createParent) throws AccessControlException {
-      throw readOnlyMountTable("createSymlink", link);    
+      throw readOnlyMountTable("createSymlink", link);
     }
 
     @Override
@@ -1337,7 +1348,7 @@ public class ViewFs extends AbstractFileSystem {
     public void setPermission(final Path f, final FsPermission permission)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw readOnlyMountTable("setPermission", f);    
+      throw readOnlyMountTable("setPermission", f);
     }
 
     @Override
@@ -1351,13 +1362,13 @@ public class ViewFs extends AbstractFileSystem {
     public void setTimes(final Path f, final long mtime, final long atime)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw readOnlyMountTable("setTimes", f);    
+      throw readOnlyMountTable("setTimes", f);
     }
 
     @Override
     public void setVerifyChecksum(final boolean verifyChecksum)
         throws AccessControlException {
-      throw readOnlyMountTable("setVerifyChecksum", "");   
+      throw readOnlyMountTable("setVerifyChecksum", "");
     }
 
     @Override

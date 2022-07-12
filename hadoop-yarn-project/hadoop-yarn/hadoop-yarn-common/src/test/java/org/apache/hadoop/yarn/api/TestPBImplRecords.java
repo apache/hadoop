@@ -127,6 +127,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
@@ -184,6 +185,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerRetryContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.EnhancedHeadroomPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ExecutionTypeRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
@@ -200,6 +202,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionMessagePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionResourceRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.QueueConfigurationsPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueUserACLInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceOptionPBImpl;
@@ -243,6 +246,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionMessageProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.QueueConfigurationsProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceOptionProto;
@@ -430,12 +434,13 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(UpdatedContainer.class);
     generateByNewInstance(ContainerUpdateRequest.class);
     generateByNewInstance(ContainerUpdateResponse.class);
+    generateByNewInstance(EnhancedHeadroom.class);
     // genByNewInstance does not apply to QueueInfo, cause
     // it is recursive(has sub queues)
     typeValueCache.put(QueueInfo.class, QueueInfo.
         newInstance("root", "root", 1.0f,
         1.0f, 0.1f, null, null, QueueState.RUNNING, ImmutableSet.of("x", "y"),
-        "x && y", null, false, -1.0f, null, false));
+        "x && y", null, false, -1.0f, 10, null, false));
     generateByNewInstance(QueueStatistics.class);
     generateByNewInstance(QueueUserACLInfo.class);
     generateByNewInstance(YarnClusterMetrics.class);
@@ -916,6 +921,12 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   }
 
   @Test
+  public void testQueueConfigurationsPBImpl() throws Exception{
+    validatePBImplRecord(QueueConfigurationsPBImpl.class,
+        QueueConfigurationsProto.class);
+  }
+
+  @Test
   public void testQueueUserACLInfoPBImpl() throws Exception {
     validatePBImplRecord(QueueUserACLInfoPBImpl.class,
         QueueUserACLInfoProto.class);
@@ -1330,5 +1341,11 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   public void testGetNodesToAttributesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetNodesToAttributesResponsePBImpl.class,
         YarnServiceProtos.GetNodesToAttributesResponseProto.class);
+  }
+
+  @Test
+  public void testGetEnhancedHeadroomPBImpl() throws Exception {
+    validatePBImplRecord(EnhancedHeadroomPBImpl.class,
+        YarnServiceProtos.EnhancedHeadroomProto.class);
   }
 }

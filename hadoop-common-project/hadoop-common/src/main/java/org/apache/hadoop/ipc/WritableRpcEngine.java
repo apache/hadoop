@@ -282,9 +282,20 @@ public class WritableRpcEngine implements RpcEngine {
     return CLIENTS.getClient(conf);
   }
   
-  /** Construct a client-side proxy object that implements the named protocol,
+  /**
+   * Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. 
-   * @param <T>*/
+   * @param <T> Generics Type T
+   * @param protocol input protocol.
+   * @param clientVersion input clientVersion.
+   * @param addr input addr.
+   * @param ticket input ticket.
+   * @param conf input configuration.
+   * @param factory input factory.
+   * @param rpcTimeout input rpcTimeout.
+   * @param connectionRetryPolicy input connectionRetryPolicy.
+   * @throws IOException raised on errors performing I/O.
+   */
   @Override
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
                          InetSocketAddress addr, UserGroupInformation ticket,
@@ -295,9 +306,22 @@ public class WritableRpcEngine implements RpcEngine {
       rpcTimeout, connectionRetryPolicy, null, null);
   }
 
-  /** Construct a client-side proxy object that implements the named protocol,
+  /**
+   * Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. 
-   * @param <T>*/
+   * @param <T> Generics Type.
+   * @param protocol input protocol.
+   * @param clientVersion input clientVersion.
+   * @param addr input addr.
+   * @param ticket input ticket.
+   * @param conf input configuration.
+   * @param factory input factory.
+   * @param rpcTimeout input rpcTimeout.
+   * @param connectionRetryPolicy input connectionRetryPolicy.
+   * @param fallbackToSimpleAuth input fallbackToSimpleAuth.
+   * @param alignmentContext input alignmentContext.
+   * @return ProtocolProxy.
+   */
   @Override
   @SuppressWarnings("unchecked")
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
@@ -345,7 +369,8 @@ public class WritableRpcEngine implements RpcEngine {
      * @param bindAddress the address to bind on to listen for connection
      * @param port the port to listen for connections on
      * 
-     * @deprecated Use #Server(Class, Object, Configuration, String, int)    
+     * @deprecated Use #Server(Class, Object, Configuration, String, int)
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Server(Object instance, Configuration conf, String bindAddress,
@@ -360,6 +385,7 @@ public class WritableRpcEngine implements RpcEngine {
      * @param conf the configuration to use
      * @param bindAddress the address to bind on to listen for connection
      * @param port the port to listen for connections on
+     * @throws IOException raised on errors performing I/O.
      */
     public Server(Class<?> protocolClass, Object protocolImpl, 
         Configuration conf, String bindAddress, int port) 
@@ -376,9 +402,13 @@ public class WritableRpcEngine implements RpcEngine {
      * @param port the port to listen for connections on
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
+     * @param numReaders input numberReaders.
+     * @param queueSizePerHandler input queueSizePerHandler.
+     * @param secretManager input secretManager.
      * 
      * @deprecated use Server#Server(Class, Object, 
      *      Configuration, String, int, int, int, int, boolean, SecretManager)
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Server(Object protocolImpl, Configuration conf, String bindAddress,
@@ -401,9 +431,14 @@ public class WritableRpcEngine implements RpcEngine {
      * @param port the port to listen for connections on
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
+     * @param secretManager input secretManager.
+     * @param queueSizePerHandler input queueSizePerHandler.
+     * @param portRangeConfig input portRangeConfig.
+     * @param numReaders input numReaders.
      *
      * @deprecated use Server#Server(Class, Object,
      *      Configuration, String, int, int, int, int, boolean, SecretManager)
+     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Server(Class<?> protocolClass, Object protocolImpl,
@@ -428,6 +463,11 @@ public class WritableRpcEngine implements RpcEngine {
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
      * @param alignmentContext provides server state info on client responses
+     * @param numReaders input numReaders.
+     * @param portRangeConfig input portRangeConfig.
+     * @param queueSizePerHandler input queueSizePerHandler.
+     * @param secretManager input secretManager.
+     * @throws IOException raised on errors performing I/O.
      */
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress,  int port,

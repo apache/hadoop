@@ -30,6 +30,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -65,13 +67,12 @@ class FsDatasetAsyncDiskService {
   // ThreadPool core pool size
   private static final int CORE_THREADS_PER_VOLUME = 1;
   // ThreadPool maximum pool size
-  private static final int MAXIMUM_THREADS_PER_VOLUME = 4;
+  private final int maxNumThreadsPerVolume;
   // ThreadPool keep-alive time for threads over core pool size
   private static final long THREADS_KEEP_ALIVE_SECONDS = 60; 
   
   private final DataNode datanode;
   private final FsDatasetImpl fsdatasetImpl;
-  private final ThreadGroup threadGroup;
   private Map<String, ThreadPoolExecutor> executors
       = new HashMap<String, ThreadPoolExecutor>();
   private Map<String, Set<Long>> deletedBlockIds 
@@ -89,7 +90,12 @@ class FsDatasetAsyncDiskService {
   FsDatasetAsyncDiskService(DataNode datanode, FsDatasetImpl fsdatasetImpl) {
     this.datanode = datanode;
     this.fsdatasetImpl = fsdatasetImpl;
-    this.threadGroup = new ThreadGroup(getClass().getSimpleName());
+    maxNumThreadsPerVolume = datanode.getConf().getInt(
+      DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY,
+          DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_DEFAULT);
+    Preconditions.checkArgument(maxNumThreadsPerVolume > 0,
+        DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY +
+          " must be a positive integer.");
   }
 
   private void addExecutorForVolume(final FsVolumeImpl volume) {
@@ -102,7 +108,7 @@ class FsDatasetAsyncDiskService {
         synchronized (this) {
           thisIndex = counter++;
         }
-        Thread t = new Thread(threadGroup, r);
+        Thread t = new Thread(r);
         t.setName("Async disk worker #" + thisIndex +
             " for volume " + volume);
         return t;
@@ -110,7 +116,7 @@ class FsDatasetAsyncDiskService {
     };
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor(
-        CORE_THREADS_PER_VOLUME, MAXIMUM_THREADS_PER_VOLUME,
+        CORE_THREADS_PER_VOLUME, maxNumThreadsPerVolume,
         THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(), threadFactory);
 
@@ -210,16 +216,20 @@ class FsDatasetAsyncDiskService {
     }
   }
 
-  public void submitSyncFileRangeRequest(FsVolumeImpl volume,
-      final ReplicaOutputStreams streams, final long offset, final long nbytes,
-      final int flags) {
-    execute(volume, new Runnable() {
-      @Override
-      public void run() {
+  public void submitSyncFileRangeRequest(FsVolumeImpl volume, final ReplicaOutputStreams streams,
+      final long offset, final long nbytes, final int flags) {
+    execute(volume, () -> {
+      try {
+        streams.syncFileRangeIfPossible(offset, nbytes, flags);
+      } catch (NativeIOException e) {
         try {
-          streams.syncFileRangeIfPossible(offset, nbytes, flags);
-        } catch (NativeIOException e) {
-          LOG.warn("sync_file_range error", e);
+          LOG.warn("sync_file_range error. Volume: {}, Capacity: {}, Available space: {}, "
+                  + "File range offset: {}, length: {}, flags: {}", volume, volume.getCapacity(),
+              volume.getAvailable(), offset, nbytes, flags, e);
+        } catch (IOException ioe) {
+          LOG.warn("sync_file_range error. Volume: {}, Capacity: {}, "
+                  + "File range offset: {}, length: {}, flags: {}", volume, volume.getCapacity(),
+              offset, nbytes, flags, e);
         }
       }
     });

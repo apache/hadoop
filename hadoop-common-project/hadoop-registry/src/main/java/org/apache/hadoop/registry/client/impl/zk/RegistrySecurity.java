@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.registry.client.impl.zk;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.security.authentication.util.JaasConfiguration;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
@@ -33,7 +33,6 @@ import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.Environment;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.client.ZKClientConfig;
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
@@ -46,11 +45,9 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions.*;
@@ -796,65 +793,6 @@ public class RegistrySecurity extends AbstractService {
   public void setKerberosPrincipalAndKeytab(String principal, String keytab) {
     this.principal = principal;
     this.keytab = keytab;
-  }
-
-  /**
-   * Creates a programmatic version of a jaas.conf file. This can be used
-   * instead of writing a jaas.conf file and setting the system property,
-   * "java.security.auth.login.config", to point to that file. It is meant to be
-   * used for connecting to ZooKeeper.
-   */
-  @InterfaceAudience.Private
-  public static class JaasConfiguration extends
-      javax.security.auth.login.Configuration {
-
-    private final javax.security.auth.login.Configuration baseConfig =
-        javax.security.auth.login.Configuration.getConfiguration();
-    private static AppConfigurationEntry[] entry;
-    private String entryName;
-
-    /**
-     * Add an entry to the jaas configuration with the passed in name,
-     * principal, and keytab. The other necessary options will be set for you.
-     *
-     * @param entryName The name of the entry (e.g. "Client")
-     * @param principal The principal of the user
-     * @param keytab The location of the keytab
-     */
-    public JaasConfiguration(String entryName, String principal, String keytab) {
-      this.entryName = entryName;
-      Map<String, String> options = new HashMap<String, String>();
-      options.put("keyTab", keytab);
-      options.put("principal", principal);
-      options.put("useKeyTab", "true");
-      options.put("storeKey", "true");
-      options.put("useTicketCache", "false");
-      options.put("refreshKrb5Config", "true");
-      String jaasEnvVar = System.getenv("HADOOP_JAAS_DEBUG");
-      if (jaasEnvVar != null && "true".equalsIgnoreCase(jaasEnvVar)) {
-        options.put("debug", "true");
-      }
-      entry = new AppConfigurationEntry[]{
-          new AppConfigurationEntry(getKrb5LoginModuleName(),
-              AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-              options)};
-    }
-
-    @Override
-    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-      return (entryName.equals(name)) ? entry : ((baseConfig != null)
-          ? baseConfig.getAppConfigurationEntry(name) : null);
-    }
-
-    private String getKrb5LoginModuleName() {
-      String krb5LoginModuleName;
-      if (System.getProperty("java.vendor").contains("IBM")) {
-        krb5LoginModuleName = "com.ibm.security.auth.module.Krb5LoginModule";
-      } else {
-        krb5LoginModuleName = "com.sun.security.auth.module.Krb5LoginModule";
-      }
-      return krb5LoginModuleName;
-    }
   }
 
   /**

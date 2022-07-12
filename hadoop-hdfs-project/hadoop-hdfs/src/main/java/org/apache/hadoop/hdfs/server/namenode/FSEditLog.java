@@ -111,8 +111,8 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Lists;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1515,11 +1515,12 @@ public class FSEditLog implements LogsPurgeable {
     if (!isOpenForWrite()) {
       return;
     }
-    
-    assert curSegmentTxId == HdfsServerConstants.INVALID_TXID || // on format this is no-op
-      minTxIdToKeep <= curSegmentTxId :
-      "cannot purge logs older than txid " + minTxIdToKeep +
-      " when current segment starts at " + curSegmentTxId;
+
+    Preconditions.checkArgument(
+        curSegmentTxId == HdfsServerConstants.INVALID_TXID || // on format this is no-op
+        minTxIdToKeep <= curSegmentTxId,
+        "cannot purge logs older than txid " + minTxIdToKeep +
+        " when current segment starts at " + curSegmentTxId);
     if (minTxIdToKeep == 0) {
       return;
     }

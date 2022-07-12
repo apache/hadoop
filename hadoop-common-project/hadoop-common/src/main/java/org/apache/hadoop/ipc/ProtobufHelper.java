@@ -85,7 +85,7 @@ public class ProtobufHelper {
   /**
    * Get the ByteString for frequently used fixed and small set strings.
    * @param key string
-   * @return
+   * @return the ByteString for frequently used fixed and small set strings.
    */
   public static ByteString getFixedByteString(Text key) {
     ByteString value = FIXED_BYTESTRING_CACHE.get(key);
@@ -99,7 +99,7 @@ public class ProtobufHelper {
   /**
    * Get the ByteString for frequently used fixed and small set strings.
    * @param key string
-   * @return
+   * @return ByteString for frequently used fixed and small set strings.
    */
   public static ByteString getFixedByteString(String key) {
     ByteString value = FIXED_BYTESTRING_CACHE.get(key);

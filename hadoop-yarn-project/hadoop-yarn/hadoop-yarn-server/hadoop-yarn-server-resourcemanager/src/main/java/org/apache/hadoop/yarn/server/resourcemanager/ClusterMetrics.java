@@ -38,11 +38,9 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 import org.apache.hadoop.yarn.metrics.CustomResourceMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetricsForCustomResources;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 @InterfaceAudience.Private

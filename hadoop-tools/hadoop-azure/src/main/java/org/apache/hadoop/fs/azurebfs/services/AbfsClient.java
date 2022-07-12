@@ -28,7 +28,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -38,7 +37,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -62,18 +63,21 @@ import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 
 /**
  * AbfsClient.
@@ -99,6 +103,10 @@ public class AbfsClient implements Closeable {
   private final AbfsCounters abfsCounters;
 
   private final ListeningScheduledExecutorService executorService;
+
+  /** logging the rename failure if metadata is in an incomplete state. */
+  private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE =
+      new LogExactlyOnce(LOG);
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
@@ -383,6 +391,10 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException ex) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw ex;
+      }
       if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         String existingResource =
             op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
@@ -475,8 +487,34 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation renamePath(String source, final String destination,
-      final String continuation, TracingContext tracingContext)
+
+  /**
+   * Rename a file or directory.
+   * If a source etag is passed in, the operation will attempt to recover
+   * from a missing source file by probing the destination for
+   * existence and comparing etags.
+   * The second value in the result will be true to indicate that this
+   * took place.
+   * As rename recovery is only attempted if the source etag is non-empty,
+   * in normal rename operations rename recovery will never happen.
+   * @param source path to source file
+   * @param destination destination of rename.
+   * @param continuation continuation.
+   * @param tracingContext trace context
+   * @param sourceEtag etag of source file. may be null or empty
+   * @param isMetadataIncompleteState was there a rename failure due to
+   *                                  incomplete metadata state?
+   * @return AbfsClientRenameResult result of rename operation indicating the
+   * AbfsRest operation, rename recovery and incomplete metadata state failure.
+   * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
+   */
+  public AbfsClientRenameResult renamePath(
+      final String source,
+      final String destination,
+      final String continuation,
+      final TracingContext tracingContext,
+      final String sourceEtag,
+      boolean isMetadataIncompleteState)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
@@ -502,71 +540,109 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders);
-    Instant renameRequestStartTime = Instant.now();
     try {
+      incrementAbfsRenamePath();
       op.execute(tracingContext);
+      // AbfsClientResult contains the AbfsOperation, If recovery happened or
+      // not, and the incompleteMetaDataState is true or false.
+      // If we successfully rename a path and isMetadataIncompleteState was
+      // true, then rename was recovered, else it didn't, this is why
+      // isMetadataIncompleteState is used for renameRecovery(as the 2nd param).
+      return new AbfsClientRenameResult(op, isMetadataIncompleteState, isMetadataIncompleteState);
     } catch (AzureBlobFileSystemException e) {
-        final AbfsRestOperation idempotencyOp = renameIdempotencyCheckOp(
-            renameRequestStartTime, op, destination, tracingContext);
-        if (idempotencyOp.getResult().getStatusCode()
-            == op.getResult().getStatusCode()) {
+        // If we have no HTTP response, throw the original exception.
+        if (!op.hasResult()) {
+          throw e;
+        }
+
+        // ref: HADOOP-18242. Rename failure occurring due to a rare case of
+        // tracking metadata being in incomplete state.
+        if (op.getResult().getStorageErrorCode()
+            .equals(RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode())
+            && !isMetadataIncompleteState) {
+          //Logging
+          ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
+              .info("Rename Failure attempting to resolve tracking metadata state and retrying.");
+
+          // Doing a HEAD call resolves the incomplete metadata state and
+          // then we can retry the rename operation.
+          AbfsRestOperation sourceStatusOp = getPathStatus(source, false,
+              tracingContext);
+          isMetadataIncompleteState = true;
+          // Extract the sourceEtag, using the status Op, and set it
+          // for future rename recovery.
+          AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
+          String sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
+          renamePath(source, destination, continuation, tracingContext,
+              sourceEtagAfterFailure, isMetadataIncompleteState);
+        }
+        // if we get out of the condition without a successful rename, then
+        // it isn't metadata incomplete state issue.
+        isMetadataIncompleteState = false;
+
+        boolean etagCheckSucceeded = renameIdempotencyCheckOp(
+            source,
+            sourceEtag, op, destination, tracingContext);
+        if (!etagCheckSucceeded) {
           // idempotency did not return different result
           // throw back the exception
           throw e;
-        } else {
-          return idempotencyOp;
         }
+      return new AbfsClientRenameResult(op, true, isMetadataIncompleteState);
     }
+  }
 
-    return op;
+  private void incrementAbfsRenamePath() {
+    abfsCounters.incrementCounter(RENAME_PATH_ATTEMPTS, 1);
   }
 
   /**
    * Check if the rename request failure is post a retry and if earlier rename
    * request might have succeeded at back-end.
    *
-   * If there is a parallel rename activity happening from any other store
-   * interface, the logic here will detect the rename to have happened due to
-   * the one initiated from this ABFS filesytem instance as it was retried. This
-   * should be a corner case hence going ahead with LMT check.
-   * @param renameRequestStartTime startTime for the rename request
-   * @param op Rename request REST operation response
+   * If a source etag was passed in, and the error was 404, get the
+   * etag of any file at the destination.
+   * If it matches the source etag, then the rename is considered
+   * a success.
+   * Exceptions raised in the probe of the destination are swallowed,
+   * so that they do not interfere with the original rename failures.
+   * @param source source path
+   * @param op Rename request REST operation response with non-null HTTP response
    * @param destination rename destination path
+   * @param sourceEtag etag of source file. may be null or empty
    * @param tracingContext Tracks identifiers for request header
-   * @return REST operation response post idempotency check
-   * @throws AzureBlobFileSystemException if GetFileStatus hits any exception
+   * @return true if the file was successfully copied
    */
-  public AbfsRestOperation renameIdempotencyCheckOp(
-      final Instant renameRequestStartTime,
+  public boolean renameIdempotencyCheckOp(
+      final String source,
+      final String sourceEtag,
       final AbfsRestOperation op,
       final String destination,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
+      TracingContext tracingContext) {
+    Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
+
     if ((op.isARetriedRequest())
-        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
+        && isNotEmpty(sourceEtag)) {
+
       // Server has returned HTTP 404, which means rename source no longer
-      // exists. Check on destination status and if it has a recent LMT timestamp.
-      // If yes, return success, else fall back to original rename request failure response.
+      // exists. Check on destination status and if its etag matches
+      // that of the source, consider it to be a success.
+      LOG.debug("rename {} to {} failed, checking etag of destination",
+          source, destination);
 
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
             false, tracingContext);
-        if (destStatusOp.getResult().getStatusCode()
-            == HttpURLConnection.HTTP_OK) {
-          String lmt = destStatusOp.getResult().getResponseHeader(
-              HttpHeaderConfigurations.LAST_MODIFIED);
+        final AbfsHttpOperation result = destStatusOp.getResult();
 
-          if (DateTimeUtils.isRecentlyModified(lmt, renameRequestStartTime)) {
-            LOG.debug("Returning success response from rename idempotency logic");
-            return destStatusOp;
-          }
-        }
-      } catch (AzureBlobFileSystemException e) {
-        // GetFileStatus on the destination failed, return original op
-        return op;
+        return result.getStatusCode() == HttpURLConnection.HTTP_OK
+            && sourceEtag.equals(extractEtagHeader(result));
+      } catch (AzureBlobFileSystemException ignored) {
+        // GetFileStatus on the destination failed, the rename did not take place
       }
     }
-
-    return op;
+    return false;
   }
 
   public AbfsRestOperation append(final String path, final byte[] buffer,
@@ -612,6 +688,10 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw e;
+      }
       if (reqParams.isAppendBlob()
           && appendSuccessCheckOp(op, path,
           (reqParams.getPosition() + reqParams.getLength()), tracingContext)) {
@@ -796,6 +876,10 @@ public class AbfsClient implements Closeable {
     try {
     op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw e;
+      }
       final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
       if (idempotencyOp.getResult().getStatusCode()
           == op.getResult().getStatusCode()) {
@@ -822,10 +906,11 @@ public class AbfsClient implements Closeable {
    * delete issued from this filesystem instance.
    * These are few corner cases and usually returning a success at this stage
    * should help the job to continue.
-   * @param op Delete request REST operation response
+   * @param op Delete request REST operation response with non-null HTTP response
    * @return REST operation response post idempotency check
    */
   public AbfsRestOperation deleteIdempotencyCheckOp(final AbfsRestOperation op) {
+    Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
         && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {

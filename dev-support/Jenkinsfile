@@ -15,13 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-def getGithubAndJiraCreds() {
+def getGithubCreds() {
     return [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
                                 passwordVariable: 'GITHUB_TOKEN',
-                                usernameVariable: 'GITHUB_USER'),
-            usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
-                                passwordVariable: 'JIRA_PASSWORD',
-                                usernameVariable: 'JIRA_USER')]
+                                usernameVariable: 'GITHUB_USER')]
 }
 
 // Publish JUnit results only if there are XML files under surefire-reports
@@ -30,8 +27,10 @@ def publishJUnitResults() {
     boolean surefireReportsExist = findCmdExitCode == 0
     if (surefireReportsExist) {
         echo "XML files found under surefire-reports, running junit"
+        // The path should be relative to WORKSPACE for the junit.
+        SRC = "${SOURCEDIR}/**/target/surefire-reports/*.xml".replace("$WORKSPACE/","")
         try {
-            junit "${SOURCEDIR}/**/target/surefire-reports/*.xml"
+            junit "${SRC}"
         } catch(e) {
             echo 'junit processing: ' + e.toString()
         }
@@ -48,7 +47,7 @@ pipeline {
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
-        timeout (time: 24, unit: 'HOURS')
+        timeout (time: 48, unit: 'HOURS')
         timestamps()
         checkoutToSubdirectory('src')
     }
@@ -56,7 +55,7 @@ pipeline {
     environment {
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='f9ba0170a5787a5f4662d3769804fef0226a182f'
+        YETUS_VERSION='rel/0.14.0'
     }
 
     parameters {
@@ -128,7 +127,7 @@ pipeline {
             }
 
             steps {
-                withCredentials(getGithubAndJiraCreds()) {
+                withCredentials(getGithubCreds()) {
                     sh '''#!/usr/bin/env bash
 
                     chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
@@ -174,7 +173,7 @@ pipeline {
             }
 
             steps {
-                withCredentials(getGithubAndJiraCreds()) {
+                withCredentials(getGithubCreds()) {
                         sh '''#!/usr/bin/env bash
 
                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
@@ -220,7 +219,7 @@ pipeline {
             }
 
             steps {
-                withCredentials(getGithubAndJiraCreds()) {
+                withCredentials(getGithubCreds()) {
                     sh '''#!/usr/bin/env bash
 
                     chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
@@ -263,7 +262,7 @@ pipeline {
             }
 
             steps {
-                withCredentials(getGithubAndJiraCreds()) {
+                withCredentials(getGithubCreds()) {
                     sh '''#!/usr/bin/env bash
 
                     chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"

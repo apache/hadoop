@@ -25,8 +25,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.ByteBufferPool;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -48,6 +47,12 @@ public final class ByteBufferUtil {
 
   /**
    * Perform a fallback read.
+   *
+   * @param stream input stream.
+   * @param bufferPool bufferPool.
+   * @param maxLength maxLength.
+   * @throws IOException raised on errors performing I/O.
+   * @return byte buffer.
    */
   public static ByteBuffer fallbackRead(
       InputStream stream, ByteBufferPool bufferPool, int maxLength)

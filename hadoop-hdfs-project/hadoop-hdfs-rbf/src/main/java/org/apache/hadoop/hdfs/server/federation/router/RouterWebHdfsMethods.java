@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
+import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -72,6 +74,8 @@ import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
 import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.SnapshotNameParam;
+import org.apache.hadoop.hdfs.web.resources.SnapshotDiffStartPathParam;
+import org.apache.hadoop.hdfs.web.resources.SnapshotDiffIndexParam;
 import org.apache.hadoop.hdfs.web.resources.StartAfterParam;
 import org.apache.hadoop.hdfs.web.resources.StoragePolicyParam;
 import org.apache.hadoop.hdfs.web.resources.StorageSpaceQuotaParam;
@@ -93,7 +97,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -335,6 +339,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final FsActionParam fsAction,
       final SnapshotNameParam snapshotName,
       final OldSnapshotNameParam oldSnapshotName,
+      final SnapshotDiffStartPathParam snapshotDiffStartPath,
+      final SnapshotDiffIndexParam snapshotDiffIndex,
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
@@ -383,6 +389,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
         return super.get(ugi, delegation, username, doAsUser, fullpath, op,
             offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
+            snapshotDiffStartPath, snapshotDiffIndex,
             tokenKind, tokenService, noredirectParam, startAfter);
       }
       default:
@@ -403,7 +410,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
    * @param path Path to check.
    * @param op Operation to perform.
    * @param openOffset Offset for opening a file.
-   * @param excludeDatanodes Blocks to excluded.
+   * @param excludeDatanodes Blocks to exclude.
    * @param parameters Other parameters.
    * @return Redirection URI.
    * @throws URISyntaxException If it cannot parse the URI.
@@ -414,6 +421,9 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final DoAsParam doAsUser, final String path, final HttpOpParam.Op op,
       final long openOffset, final String excludeDatanodes,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
+    if (!DFSUtil.isValidName(path)) {
+      throw new InvalidPathException(path);
+    }
     final DatanodeInfo dn =
         chooseDatanode(router, path, op, openOffset, excludeDatanodes);
 

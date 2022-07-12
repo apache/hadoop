@@ -35,8 +35,8 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 
@@ -68,8 +68,7 @@ class DataXceiverServer implements Runnable {
    * Enforcing the limit is required in order to avoid data-node
    * running out of memory.
    */
-  int maxXceiverCount =
-    DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
+  volatile int maxXceiverCount;
 
   /**
    * A manager to make sure that cluster balancing does not take too much
@@ -513,5 +512,16 @@ class DataXceiverServer implements Runnable {
   @VisibleForTesting
   void setMaxReconfigureWaitTime(int max) {
     this.maxReconfigureWaitTime = max;
+  }
+
+  public void setMaxXceiverCount(int xceiverCount) {
+    Preconditions.checkArgument(xceiverCount > 0,
+        "dfs.datanode.max.transfer.threads should be larger than 0");
+    maxXceiverCount = xceiverCount;
+  }
+
+  @VisibleForTesting
+  public int getMaxXceiverCount() {
+    return maxXceiverCount;
   }
 }

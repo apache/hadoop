@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.io.compress.zstd;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -84,6 +84,8 @@ public class ZStandardCompressor implements Compressor {
   /**
    * Creates a new compressor with the default compression level.
    * Compressed data will be generated in ZStandard format.
+   * @param level level.
+   * @param bufferSize bufferSize.
    */
   public ZStandardCompressor(int level, int bufferSize) {
     this(level, bufferSize, bufferSize);

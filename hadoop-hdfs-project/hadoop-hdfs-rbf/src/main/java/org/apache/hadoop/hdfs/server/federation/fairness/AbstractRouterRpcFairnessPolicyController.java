@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public class AbstractRouterRpcFairnessPolicyController
     implements RouterRpcFairnessPolicyController {
 
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(AbstractRouterRpcFairnessPolicyController.class);
 
   /** Hash table to hold semaphore for each configured name service. */
@@ -62,6 +64,7 @@ public class AbstractRouterRpcFairnessPolicyController
 
   @Override
   public void shutdown() {
+    LOG.debug("Shutting down router fairness policy controller");
     // drain all semaphores
     for (Semaphore sema: this.permits.values()) {
       sema.drainPermits();
@@ -74,5 +77,20 @@ public class AbstractRouterRpcFairnessPolicyController
 
   protected int getAvailablePermits(String nsId) {
     return this.permits.get(nsId).availablePermits();
+  }
+
+  @Override
+  public String getAvailableHandlerOnPerNs() {
+    JSONObject json = new JSONObject();
+    for (Map.Entry<String, Semaphore> entry : permits.entrySet()) {
+      try {
+        String nsId = entry.getKey();
+        int availableHandler = entry.getValue().availablePermits();
+        json.put(nsId, availableHandler);
+      } catch (JSONException e) {
+        LOG.warn("Cannot put {} into JSONObject", entry.getKey(), e);
+      }
+    }
+    return json.toString();
   }
 }

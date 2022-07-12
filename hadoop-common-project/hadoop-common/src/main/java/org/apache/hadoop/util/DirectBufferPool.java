@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
@@ -53,6 +53,9 @@ public class DirectBufferPool {
    * Allocate a direct buffer of the specified size, in bytes.
    * If a pooled buffer is available, returns that. Otherwise
    * allocates a new one.
+   *
+   * @param size size.
+   * @return ByteBuffer.
    */
   public ByteBuffer getBuffer(int size) {
     Queue<WeakReference<ByteBuffer>> list = buffersBySize.get(size);

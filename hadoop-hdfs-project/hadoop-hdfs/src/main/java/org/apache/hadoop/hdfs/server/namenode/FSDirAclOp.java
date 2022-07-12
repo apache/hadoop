@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
@@ -228,10 +226,12 @@ class FSDirAclOp {
       int groupEntryIndex = Collections.binarySearch(
           featureEntries, groupEntryKey,
           AclTransformation.ACL_ENTRY_COMPARATOR);
-      Preconditions.checkPositionIndex(groupEntryIndex, featureEntries.size(),
-          "Invalid group entry index after binary-searching inode: " +
-              inode.getFullPathName() + "(" + inode.getId() + ") "
-              + "with featureEntries:" + featureEntries);
+      if (groupEntryIndex < 0 || groupEntryIndex > featureEntries.size()) {
+        throw new IndexOutOfBoundsException(
+            "Invalid group entry index after binary-searching inode: "
+                + inode.getFullPathName() + "(" + inode.getId() + ") "
+                + "with featureEntries:" + featureEntries);
+      }
       FsAction groupPerm = featureEntries.get(groupEntryIndex).getPermission();
       FsPermission newPerm = new FsPermission(perm.getUserAction(), groupPerm,
           perm.getOtherAction(), perm.getStickyBit());

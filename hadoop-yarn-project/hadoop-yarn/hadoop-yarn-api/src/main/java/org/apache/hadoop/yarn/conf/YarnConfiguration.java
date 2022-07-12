@@ -284,6 +284,10 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
       false;
 
+  /** Configure default application placement allocator. */
+  public static final String APPLICATION_PLACEMENT_TYPE_CLASS =
+      YARN_PREFIX + "scheduler.app-placement-allocator.class";
+
   /** Configured scheduler queue placement rules. */
   public static final String QUEUE_PLACEMENT_RULES = YARN_PREFIX
       + "scheduler.queue-placement-rules";
@@ -761,6 +765,20 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "system-metrics-publisher.dispatcher.pool-size";
   public static final int
       DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE = 10;
+
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.batch-size";
+  public static final int
+      DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE =
+      1000;
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.interval-seconds";
+  public static final int DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL =
+      60;
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED =
+      RM_PREFIX + "system-metrics-publisher.timeline-server-v1.enable-batch";
+  public static final boolean DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED =
+      false;
 
   //RM delegation token related keys
   public static final String RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY =
@@ -1241,7 +1259,21 @@ public class YarnConfiguration extends Configuration {
   /** Prefix for all node manager configs.*/
   public static final String NM_PREFIX = "yarn.nodemanager.";
 
-  /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM. */
+  /**
+   * At the NM, the policy to determine whether to queue an
+   * <code>OPPORTUNISTIC</code> container or not.
+   * If set to <code>BY_QUEUE_LEN</code>, uses the queue capacity, as set by
+   * {@link YarnConfiguration#NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH},
+   * to limit how many containers to accept/queue.
+   * If set to <code>BY_RESOURCES</code>, limits the number of containers
+   * accepted based on the resource capacity of the node.
+   */
+  public static final String NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY =
+      NM_PREFIX + "opportunistic-containers-queue-policy";
+
+  /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM.
+   *  If set to 0, NM does not accept any <code>OPPORTUNISTIC</code> containers.
+   *  If set to {@literal > 0}, enforces the queue capacity. */
   public static final String NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
       NM_PREFIX + "opportunistic-containers-max-queue-length";
   public static final int DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
@@ -3189,6 +3221,12 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETAIN_SECONDS_DEFAULT =
         7 * 24 * 60 * 60;
 
+  public static final String
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RECOVERY_ENABLED =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "recovery-enabled";
+  public static final boolean
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RECOVERY_ENABLED_DEFAULT = true;
+
   // how old the most recent log of an UNKNOWN app needs to be in the active
   // directory before we treat it as COMPLETED
   public static final String
@@ -4371,6 +4409,12 @@ public class YarnConfiguration extends Configuration {
   private static final String RM_NODE_LABELS_PREFIX = RM_PREFIX
       + "node-labels.";
 
+  public static final String AM_DEFAULT_NODE_LABEL =
+      RM_NODE_LABELS_PREFIX + "am.default-node-label-expression";
+
+  public static final String AM_ALLOW_NON_EXCLUSIVE_ALLOCATION =
+      RM_NODE_LABELS_PREFIX + "am.allow-non-exclusive-allocation";
+
   public static final String RM_NODE_LABELS_PROVIDER_CONFIG =
       RM_NODE_LABELS_PREFIX + "provider";
 
@@ -4384,6 +4428,12 @@ public class YarnConfiguration extends Configuration {
   //once in 30 mins
   public static final long DEFAULT_RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
       30 * 60 * 1000;
+
+  public static final String RM_NODE_LABELS_PROVIDER_UPDATE_NEWLY_REGISTERED_INTERVAL_MS =
+      RM_NODE_LABELS_PROVIDER_PREFIX + "update-newly-registered-nodes-interval-ms";
+
+  public static final long DEFAULT_RM_NODE_LABELS_PROVIDER_UPDATE_NEWLY_REGISTERED_INTERVAL_MS =
+      30 * 1000;
 
   @Private
   /**

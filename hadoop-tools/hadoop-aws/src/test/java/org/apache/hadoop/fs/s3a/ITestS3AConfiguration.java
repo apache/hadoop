@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.io.File;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
 
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -66,6 +65,8 @@ public class ITestS3AConfiguration {
   private static final String EXAMPLE_ID = "AKASOMEACCESSKEY";
   private static final String EXAMPLE_KEY =
       "RGV0cm9pdCBSZ/WQgY2xl/YW5lZCB1cAEXAMPLE";
+  private static final String AP_ILLEGAL_ACCESS =
+      "ARN of type accesspoint cannot be passed as a bucket";
 
   private Configuration conf;
   private S3AFileSystem fs;
@@ -361,6 +362,14 @@ public class ITestS3AConfiguration {
       // isn't in the same region as the s3 client default. See
       // http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
       assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.getStatusCode());
+    } catch (final IllegalArgumentException e) {
+      // Path style addressing does not work with AP ARNs
+      if (!fs.getBucket().contains("arn:")) {
+        LOG.error("Caught unexpected exception: ", e);
+        throw e;
+      }
+
+      GenericTestUtils.assertExceptionContains(AP_ILLEGAL_ACCESS, e);
     }
   }
 
@@ -448,17 +457,6 @@ public class ITestS3AConfiguration {
   }
 
   @Test
-  public void testReadAheadRange() throws Exception {
-    conf = new Configuration();
-    conf.set(Constants.READAHEAD_RANGE, "300K");
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    assertNotNull(fs);
-    long readAheadRange = fs.getReadAheadRange();
-    assertNotNull(readAheadRange);
-    assertEquals("Read Ahead Range Incorrect.", 300 * 1024, readAheadRange);
-  }
-
-  @Test
   public void testUsernameFromUGI() throws Throwable {
     final String alice = "alice";
     UserGroupInformation fakeUser =
@@ -502,81 +500,6 @@ public class ITestS3AConfiguration {
   }
 
   @Test
-  public void testBucketConfigurationPropagation() throws Throwable {
-    Configuration config = new Configuration(false);
-    setBucketOption(config, "b", "base", "1024");
-    String basekey = "fs.s3a.base";
-    assertOptionEquals(config, basekey, null);
-    String bucketKey = "fs.s3a.bucket.b.base";
-    assertOptionEquals(config, bucketKey, "1024");
-    Configuration updated = propagateBucketOptions(config, "b");
-    assertOptionEquals(updated, basekey, "1024");
-    // original conf is not updated
-    assertOptionEquals(config, basekey, null);
-
-    String[] sources = updated.getPropertySources(basekey);
-    assertEquals(1, sources.length);
-    String sourceInfo = sources[0];
-    assertTrue("Wrong source " + sourceInfo, sourceInfo.contains(bucketKey));
-  }
-
-  @Test
-  public void testBucketConfigurationPropagationResolution() throws Throwable {
-    Configuration config = new Configuration(false);
-    String basekey = "fs.s3a.base";
-    String baseref = "fs.s3a.baseref";
-    String baseref2 = "fs.s3a.baseref2";
-    config.set(basekey, "orig");
-    config.set(baseref2, "${fs.s3a.base}");
-    setBucketOption(config, "b", basekey, "1024");
-    setBucketOption(config, "b", baseref, "${fs.s3a.base}");
-    Configuration updated = propagateBucketOptions(config, "b");
-    assertOptionEquals(updated, basekey, "1024");
-    assertOptionEquals(updated, baseref, "1024");
-    assertOptionEquals(updated, baseref2, "1024");
-  }
-
-  @Test
-  public void testMultipleBucketConfigurations() throws Throwable {
-    Configuration config = new Configuration(false);
-    setBucketOption(config, "b", USER_AGENT_PREFIX, "UA-b");
-    setBucketOption(config, "c", USER_AGENT_PREFIX, "UA-c");
-    config.set(USER_AGENT_PREFIX, "UA-orig");
-    Configuration updated = propagateBucketOptions(config, "c");
-    assertOptionEquals(updated, USER_AGENT_PREFIX, "UA-c");
-  }
-
-  @Test
-  public void testClearBucketOption() throws Throwable {
-    Configuration config = new Configuration();
-    config.set(USER_AGENT_PREFIX, "base");
-    setBucketOption(config, "bucket", USER_AGENT_PREFIX, "overridden");
-    clearBucketOption(config, "bucket", USER_AGENT_PREFIX);
-    Configuration updated = propagateBucketOptions(config, "c");
-    assertOptionEquals(updated, USER_AGENT_PREFIX, "base");
-  }
-
-  @Test
-  public void testBucketConfigurationSkipsUnmodifiable() throws Throwable {
-    Configuration config = new Configuration(false);
-    String impl = "fs.s3a.impl";
-    config.set(impl, "orig");
-    setBucketOption(config, "b", impl, "b");
-    String metastoreImpl = "fs.s3a.metadatastore.impl";
-    String ddb = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
-    setBucketOption(config, "b", metastoreImpl, ddb);
-    setBucketOption(config, "b", "impl2", "b2");
-    setBucketOption(config, "b", "bucket.b.loop", "b3");
-    assertOptionEquals(config, "fs.s3a.bucket.b.impl", "b");
-
-    Configuration updated = propagateBucketOptions(config, "b");
-    assertOptionEquals(updated, impl, "orig");
-    assertOptionEquals(updated, "fs.s3a.impl2", "b2");
-    assertOptionEquals(updated, metastoreImpl, ddb);
-    assertOptionEquals(updated, "fs.s3a.bucket.b.loop", null);
-  }
-
-  @Test
   public void testConfOptionPropagationToFS() throws Exception {
     Configuration config = new Configuration();
     String testFSName = config.getTrimmed(TEST_FS_S3A_NAME, "");
@@ -585,53 +508,6 @@ public class ITestS3AConfiguration {
     fs = S3ATestUtils.createTestFileSystem(config);
     Configuration updated = fs.getConf();
     assertOptionEquals(updated, "fs.s3a.propagation", "propagated");
-  }
-
-  @Test
-  public void testSecurityCredentialPropagationNoOverride() throws Exception {
-    Configuration config = new Configuration();
-    config.set(CREDENTIAL_PROVIDER_PATH, "base");
-    patchSecurityCredentialProviders(config);
-    assertOptionEquals(config, CREDENTIAL_PROVIDER_PATH,
-        "base");
-  }
-
-  @Test
-  public void testSecurityCredentialPropagationOverrideNoBase()
-      throws Exception {
-    Configuration config = new Configuration();
-    config.unset(CREDENTIAL_PROVIDER_PATH);
-    config.set(S3A_SECURITY_CREDENTIAL_PROVIDER_PATH, "override");
-    patchSecurityCredentialProviders(config);
-    assertOptionEquals(config, CREDENTIAL_PROVIDER_PATH,
-        "override");
-  }
-
-  @Test
-  public void testSecurityCredentialPropagationOverride() throws Exception {
-    Configuration config = new Configuration();
-    config.set(CREDENTIAL_PROVIDER_PATH, "base");
-    config.set(S3A_SECURITY_CREDENTIAL_PROVIDER_PATH, "override");
-    patchSecurityCredentialProviders(config);
-    assertOptionEquals(config, CREDENTIAL_PROVIDER_PATH,
-        "override,base");
-    Collection<String> all = config.getStringCollection(
-        CREDENTIAL_PROVIDER_PATH);
-    assertTrue(all.contains("override"));
-    assertTrue(all.contains("base"));
-  }
-
-  @Test
-  public void testSecurityCredentialPropagationEndToEnd() throws Exception {
-    Configuration config = new Configuration();
-    config.set(CREDENTIAL_PROVIDER_PATH, "base");
-    setBucketOption(config, "b", S3A_SECURITY_CREDENTIAL_PROVIDER_PATH,
-        "override");
-    Configuration updated = propagateBucketOptions(config, "b");
-
-    patchSecurityCredentialProviders(updated);
-    assertOptionEquals(updated, CREDENTIAL_PROVIDER_PATH,
-        "override,base");
   }
 
   @Test(timeout = 10_000L)
@@ -650,7 +526,7 @@ public class ITestS3AConfiguration {
     Assert.assertEquals(s3SignerOverride,
         clientConfiguration.getSignerOverride());
     clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
     Assert.assertNull(clientConfiguration.getSignerOverride());
 
     // Configured base SIGNING_ALGORITHM, overridden for S3 only
@@ -662,41 +538,9 @@ public class ITestS3AConfiguration {
     Assert.assertEquals(s3SignerOverride,
         clientConfiguration.getSignerOverride());
     clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
+        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
     Assert
         .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
   }
 
-  @Test(timeout = 10_000L)
-  public void testDdbSpecificSignerOverride() throws IOException {
-    ClientConfiguration clientConfiguration = null;
-    Configuration config;
-
-    String signerOverride = "testSigner";
-    String ddbSignerOverride = "testDdbSigner";
-
-    // Default SIGNING_ALGORITHM, overridden for S3
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
-    Assert.assertEquals(ddbSignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert.assertNull(clientConfiguration.getSignerOverride());
-
-    // Configured base SIGNING_ALGORITHM, overridden for S3
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM, signerOverride);
-    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_DDB);
-    Assert.assertEquals(ddbSignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert
-        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
-  }
 }

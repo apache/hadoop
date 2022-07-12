@@ -24,8 +24,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * The value of <code>XAttr</code> is byte[], this class is to 
@@ -68,7 +67,7 @@ public enum XAttrCodec {
    * the given string is treated as text. 
    * @param value string representation of the value.
    * @return byte[] the value
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static byte[] decodeValue(String value) throws IOException {
     byte[] result = null;
@@ -103,9 +102,9 @@ public enum XAttrCodec {
    * while strings encoded as hexadecimal and base64 are prefixed with 
    * 0x and 0s, respectively.
    * @param value byte[] value
-   * @param encoding
+   * @param encoding encoding.
    * @return String string representation of value
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static String encodeValue(byte[] value, XAttrCodec encoding) 
       throws IOException {

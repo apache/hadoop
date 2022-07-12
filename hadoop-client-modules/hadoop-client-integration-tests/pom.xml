@@ -52,6 +52,11 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>
@@ -179,10 +184,22 @@
           <artifactId>hadoop-hdfs</artifactId>
           <scope>test</scope>
           <type>test-jar</type>
+          <exclusions>
+            <exclusion>
+              <groupId>org.ow2.asm</groupId>
+              <artifactId>asm-commons</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-server-tests</artifactId>
+          <scope>test</scope>
+          <type>test-jar</type>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
           <scope>test</scope>
           <type>test-jar</type>
         </dependency>

@@ -22,11 +22,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.Constants;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 
 /**
  * Internal constants private only to the S3A codebase.
@@ -89,11 +93,19 @@ public final class InternalConstants {
    * used becomes that of the select operation.
    */
   @InterfaceStability.Unstable
-  public static final Set<String> STANDARD_OPENFILE_KEYS =
-      Collections.unmodifiableSet(
-          new HashSet<>(
-              Arrays.asList(Constants.INPUT_FADVISE,
-                  Constants.READAHEAD_RANGE)));
+  public static final Set<String> S3A_OPENFILE_KEYS;
+
+  static {
+    Set<String> keys = Stream.of(
+        Constants.INPUT_FADVISE,
+        Constants.READAHEAD_RANGE)
+        .collect(Collectors.toSet());
+    keys.addAll(FS_OPTION_OPENFILE_STANDARD_OPTIONS);
+    S3A_OPENFILE_KEYS = Collections.unmodifiableSet(keys);
+  }
+
+  /** 403 error code. */
+  public static final int SC_403 = 403;
 
   /** 404 error code. */
   public static final int SC_404 = 404;
@@ -135,8 +147,27 @@ public final class InternalConstants {
   public static final int CSE_PADDING_LENGTH = 16;
 
   /**
-   * Error message to indicate S3-CSE is incompatible with S3Guard.
+   * Error message to indicate Access Points are required to be used for S3 access.
    */
-  public static final String CSE_S3GUARD_INCOMPATIBLE = "S3-CSE cannot be "
-      + "used with S3Guard";
+  public static final String AP_REQUIRED_EXCEPTION = "Access Points usage is required" +
+      " but not configured for the bucket.";
+
+  /**
+   * Error message to indicate Access Points are not accessible or don't exist.
+   */
+  public static final String AP_INACCESSIBLE = "Could not access through this access point";
+
+  /**
+   * AccessPoint ARN for the bucket. When set as a bucket override the requests for that bucket
+   * will go through the AccessPoint.
+   */
+  public static final String ARN_BUCKET_OPTION = "fs.s3a.bucket.%s.accesspoint.arn";
+
+  /**
+   * The known keys used in a createFile call.
+   */
+  public static final Set<String> CREATE_FILE_KEYS =
+      Collections.unmodifiableSet(
+          new HashSet<>(Arrays.asList(Constants.FS_S3A_CREATE_PERFORMANCE)));
+
 }

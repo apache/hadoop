@@ -54,13 +54,17 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-/**
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
+
+ /**
  * Download a single URL to the local disk.
  *
  */
@@ -285,23 +289,25 @@ public class FSDownload implements Callable<Path> {
       }
     }
 
-    downloadAndUnpack(sCopy, destination);
+    downloadAndUnpack(sCopy, sStat, destination);
   }
 
   /**
    * Copy source path to destination with localization rules.
-   * @param source source path to copy. Typically HDFS
+   * @param source source path to copy. Typically HDFS or an object store.
+   * @param sourceStatus status of source
    * @param destination destination path. Typically local filesystem
    * @exception YarnException Any error has occurred
    */
-  private void downloadAndUnpack(Path source, Path destination)
+  private void downloadAndUnpack(Path source,
+      FileStatus sourceStatus,  Path destination)
       throws YarnException {
     try {
       FileSystem sourceFileSystem = source.getFileSystem(conf);
       FileSystem destinationFileSystem = destination.getFileSystem(conf);
-      if (sourceFileSystem.getFileStatus(source).isDirectory()) {
+      if (sourceStatus.isDirectory()) {
         FileUtil.copy(
-            sourceFileSystem, source,
+            sourceFileSystem, sourceStatus,
             destinationFileSystem, destination, false,
             true, conf);
       } else {
@@ -329,7 +335,11 @@ public class FSDownload implements Callable<Path> {
                       FileSystem sourceFileSystem,
                       FileSystem destinationFileSystem)
       throws IOException, InterruptedException, ExecutionException {
-    try (InputStream inputStream = sourceFileSystem.open(source)) {
+    try (InputStream inputStream = awaitFuture(
+        sourceFileSystem.openFile(source)
+            .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
+            .build())) {
       File dst = new File(destination.toUri());
       String lowerDst = StringUtils.toLowerCase(dst.getName());
       switch (resource.getType()) {

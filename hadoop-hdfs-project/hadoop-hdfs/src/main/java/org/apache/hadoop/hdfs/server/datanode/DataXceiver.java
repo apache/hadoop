@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import javax.crypto.SecretKey;
 import org.apache.commons.logging.Log;
@@ -341,7 +341,7 @@ class DataXceiver extends Receiver implements Runnable {
    * the thread dies away.
    */
   private void collectThreadLocalStates() {
-    if (datanode.getPeerMetrics() != null) {
+    if (datanode.getDnConf().peerStatsEnabled && datanode.getPeerMetrics() != null) {
       datanode.getPeerMetrics().collectThreadLocalStates();
     }
   }
@@ -415,6 +415,9 @@ class DataXceiver extends Receiver implements Runnable {
                     "Not verifying {}", slotId);
         }
         success = true;
+        // update metrics
+        datanode.metrics.addReadBlockOp(elapsed());
+        datanode.metrics.incrReadsFromClient(true, blk.getNumBytes());
       }
     } finally {
       if ((!success) && (registeredSlotId != null)) {
@@ -948,6 +951,9 @@ class DataXceiver extends Receiver implements Runnable {
       IOUtils.closeStream(mirrorIn);
       IOUtils.closeStream(replyOut);
       IOUtils.closeSocket(mirrorSock);
+      if (blockReceiver != null) {
+        blockReceiver.releaseAnyRemainingReservedSpace();
+      }
       IOUtils.closeStream(blockReceiver);
       setCurrentBlockReceiver(null);
     }
@@ -1093,7 +1099,7 @@ class DataXceiver extends Receiver implements Runnable {
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
       String msg = "Not able to copy block " + block.getBlockId() + " " +
           "to " + peer.getRemoteAddressString() + " because threads " +
-          "quota is exceeded.";
+          "quota=" + dataXceiverServer.balanceThrottler.getMaxConcurrentMovers() + " is exceeded.";
       LOG.info(msg);
       sendResponse(ERROR, msg);
       return;
@@ -1167,7 +1173,7 @@ class DataXceiver extends Receiver implements Runnable {
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
       String msg = "Not able to receive block " + block.getBlockId() +
           " from " + peer.getRemoteAddressString() + " because threads " +
-          "quota is exceeded.";
+          "quota=" + dataXceiverServer.balanceThrottler.getMaxConcurrentMovers() + " is exceeded.";
       LOG.warn(msg);
       sendResponse(ERROR, msg);
       return;

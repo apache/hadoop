@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContex
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -454,7 +454,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
       fs.exists(rootPath);
     } catch (IOException e) {
       return new TimelineHealth(
-          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          TimelineHealth.TimelineHealthStatus.CONNECTION_FAILURE,
           e.getMessage()
           );
     }

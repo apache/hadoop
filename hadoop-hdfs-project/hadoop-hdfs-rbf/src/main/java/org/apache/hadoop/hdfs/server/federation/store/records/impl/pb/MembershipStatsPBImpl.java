@@ -297,4 +297,14 @@ public class MembershipStatsPBImpl extends MembershipStats
     return this.translator.getProtoOrBuilder()
         .getHighestPriorityLowRedundancyECBlocks();
   }
+
+  @Override
+  public void setPendingSPSPaths(int pendingSPSPaths) {
+    this.translator.getBuilder().setPendingSPSPaths(pendingSPSPaths);
+  }
+
+  @Override
+  public int getPendingSPSPaths() {
+    return this.translator.getProtoOrBuilder().getPendingSPSPaths();
+  }
 }

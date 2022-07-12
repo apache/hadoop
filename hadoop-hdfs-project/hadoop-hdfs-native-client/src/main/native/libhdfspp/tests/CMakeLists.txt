@@ -67,6 +67,7 @@ endfunction(add_memcheck_test)
 
 add_subdirectory(x-platform)
 add_subdirectory(utils)
+add_subdirectory(tools)
 
 add_executable(uri_test uri_test.cc)
 target_link_libraries(uri_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
@@ -133,7 +134,6 @@ add_executable(hdfs_config_connect_bugs_test $<TARGET_OBJECTS:test_utils> hdfs_c
 target_include_directories(hdfs_config_connect_bugs_test PRIVATE ../lib)
 target_link_libraries(hdfs_config_connect_bugs_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(hdfs_config_connect_bugs hdfs_config_connect_bugs_test)
-
 
 
 #

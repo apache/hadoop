@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,12 +45,17 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -72,6 +76,26 @@ public class TestBalancerWithHANameNodes {
 
   static {
     TestBalancer.initTestSetup();
+  }
+
+  public static void waitStoragesNoStale(MiniDFSCluster cluster,
+      ClientProtocol client, int nnIndex) throws Exception {
+    // trigger a full block report and wait all storages out of stale
+    cluster.triggerBlockReports();
+    DatanodeInfo[] dataNodes = client.getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
+    GenericTestUtils.waitFor(() -> {
+      BlockManager bm = cluster.getNamesystem(nnIndex).getBlockManager();
+      for (DatanodeInfo dn : dataNodes) {
+        DatanodeStorageInfo[] storageInfos = bm.getDatanodeManager()
+            .getDatanode(dn.getDatanodeUuid()).getStorageInfos();
+        for (DatanodeStorageInfo s : storageInfos) {
+          if (s.areBlockContentsStale()) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }, 300, 60000);
   }
 
   /**
@@ -102,13 +126,17 @@ public class TestBalancerWithHANameNodes {
       client = NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
           ClientProtocol.class).getProxy();
 
-      doTest(conf);
+      doTest(conf, true);
     } finally {
       cluster.shutdown();
     }
   }
 
   void doTest(Configuration conf) throws Exception {
+    doTest(conf, false);
+  }
+
+  void doTest(Configuration conf, boolean withHA) throws Exception {
     int numOfDatanodes = TEST_CAPACITIES.length;
     long totalCapacity = TestBalancer.sum(TEST_CAPACITIES);
     // fill up the cluster to be 30% full
@@ -116,12 +144,19 @@ public class TestBalancerWithHANameNodes {
     TestBalancer.createFile(cluster, TestBalancer.filePath, totalUsedSpace
         / numOfDatanodes, (short) numOfDatanodes, 0);
 
-    boolean isRequestStandby = conf.getBoolean(
-        DFS_HA_ALLOW_STALE_READ_KEY, DFS_HA_ALLOW_STALE_READ_DEFAULT);
+    boolean isRequestStandby = !conf.getBoolean(
+        DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+        DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
     if (isRequestStandby) {
       HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
           cluster.getNameNode(1));
     }
+
+    // all storages are stale after HA
+    if (withHA) {
+      waitStoragesNoStale(cluster, client, 0);
+    }
+
     // start up an empty node with the same capacity and on the same rack
     long newNodeCapacity = TestBalancer.CAPACITY; // new node's capacity
     String newNodeRack = TestBalancer.RACK2; // new node's rack
@@ -146,7 +181,7 @@ public class TestBalancerWithHANameNodes {
   @Test(timeout = 60000)
   public void testBalancerRequestSBNWithHA() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFS_HA_ALLOW_STALE_READ_KEY, true);
+    conf.setBoolean(DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY, false);
     conf.setLong(DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     //conf.setBoolean(DFS_HA_BALANCER_REQUEST_STANDBY_KEY, true);
     TestBalancer.initConf(conf);
@@ -167,15 +202,19 @@ public class TestBalancerWithHANameNodes {
     try {
       cluster.waitActive();
       cluster.transitionToActive(0);
+      String standbyNameNode = cluster.getNameNode(1).
+          getNameNodeAddress().getHostString();
       Thread.sleep(500);
       client = NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
           ClientProtocol.class).getProxy();
       doTest(conf);
       // Check getBlocks request to Standby NameNode.
       assertTrue(log.getOutput().contains(
-          "Request #getBlocks to Standby NameNode success."));
+          "Request #getBlocks to Standby NameNode success. remoteAddress: " +
+            standbyNameNode));
       assertTrue(log.getOutput().contains(
-          "Request #getLiveDatanodeStorageReport to Standby NameNode success"));
+          "Request #getLiveDatanodeStorageReport to Standby NameNode success. " +
+            "remoteAddress: " + standbyNameNode));
     } finally {
       cluster.shutdown();
     }
@@ -204,6 +243,11 @@ public class TestBalancerWithHANameNodes {
     // Avoid the same FS being reused between tests
     conf.setBoolean("fs.hdfs.impl.disable.cache", true);
     conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
+
+    // Reduce datanode retry so cluster shutdown won't be blocked.
+    if (withObserverFailure) {
+      conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 2);
+    }
 
     MiniQJMHACluster qjmhaCluster = null;
     try {
@@ -288,8 +332,8 @@ public class TestBalancerWithHANameNodes {
       nncActive.close();
 
       // Request to standby namenode.
-      conf.setBoolean(DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY,
-          true);
+      conf.setBoolean(DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+          false);
       NameNodeConnector nncStandby = new NameNodeConnector(
           "nncStandby", namenode,
           nsId, new Path("/test"),

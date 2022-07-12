@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -123,8 +123,8 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
 
   @Override
   public void stopTrackingNode(DatanodeDescriptor dn) {
-    pendingNodes.remove(dn);
-    outOfServiceNodeBlocks.remove(dn);
+    getPendingNodes().remove(dn);
+    getCancelledNodes().add(dn);
   }
 
   @Override
@@ -152,31 +152,46 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
     // Check decommission or maintenance progress.
     namesystem.writeLock();
     try {
+      processCancelledNodes();
       processPendingNodes();
       check();
     } catch (Exception e) {
       LOG.warn("DatanodeAdminMonitor caught exception when processing node.",
           e);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("DatanodeAdminMonitorThread");
     }
     if (numBlocksChecked + numNodesChecked > 0) {
       LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
               "in maintenance or transitioning state. {} nodes pending.",
           numBlocksChecked, numNodesChecked, outOfServiceNodeBlocks.size(),
-          pendingNodes.size());
+          getPendingNodes().size());
     }
   }
 
   /**
-   * Pop datanodes off the pending list and into decomNodeBlocks,
+   * Pop datanodes off the pending priority queue and into decomNodeBlocks,
    * subject to the maxConcurrentTrackedNodes limit.
    */
   private void processPendingNodes() {
-    while (!pendingNodes.isEmpty() &&
+    while (!getPendingNodes().isEmpty() &&
         (maxConcurrentTrackedNodes == 0 ||
             outOfServiceNodeBlocks.size() < maxConcurrentTrackedNodes)) {
-      outOfServiceNodeBlocks.put(pendingNodes.poll(), null);
+      outOfServiceNodeBlocks.put(getPendingNodes().poll(), null);
+    }
+  }
+
+  /**
+   * Process any nodes which have had their decommission or maintenance mode
+   * cancelled by an administrator.
+   *
+   * This method must be executed under the write lock to prevent the
+   * internal structures being modified concurrently.
+   */
+  private void processCancelledNodes() {
+    while(!getCancelledNodes().isEmpty()) {
+      DatanodeDescriptor dn = getCancelledNodes().poll();
+      outOfServiceNodeBlocks.remove(dn);
     }
   }
 
@@ -185,6 +200,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         it = new CyclicIteration<>(outOfServiceNodeBlocks,
         iterkey).iterator();
     final List<DatanodeDescriptor> toRemove = new ArrayList<>();
+    final List<DatanodeDescriptor> unhealthyDns = new ArrayList<>();
 
     while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
         .isRunning()) {
@@ -221,6 +237,10 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           LOG.debug("Processing {} node {}", dn.getAdminState(), dn);
           pruneReliableBlocks(dn, blocks);
         }
+        final boolean isHealthy = blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
+        if (!isHealthy) {
+          unhealthyDns.add(dn);
+        }
         if (blocks.size() == 0) {
           if (!fullScan) {
             // If we didn't just do a full scan, need to re-check with the
@@ -236,8 +256,6 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           }
           // If the full scan is clean AND the node liveness is okay,
           // we can finally mark as DECOMMISSIONED or IN_MAINTENANCE.
-          final boolean isHealthy =
-              blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
           if (blocks.size() == 0 && isHealthy) {
             if (dn.isDecommissionInProgress()) {
               dnAdmin.setDecommissioned(dn);
@@ -270,12 +288,32 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // an invalid state.
         LOG.warn("DatanodeAdminMonitor caught exception when processing node "
             + "{}.", dn, e);
-        pendingNodes.add(dn);
+        getPendingNodes().add(dn);
         toRemove.add(dn);
+        unhealthyDns.remove(dn);
       } finally {
         iterkey = dn;
       }
     }
+
+    // Having more nodes decommissioning than can be tracked will impact decommissioning
+    // performance due to queueing delay
+    int numTrackedNodes = outOfServiceNodeBlocks.size() - toRemove.size();
+    int numQueuedNodes = getPendingNodes().size();
+    int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
+    if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+      LOG.warn(
+          "{} nodes are decommissioning but only {} nodes will be tracked at a time. "
+              + "{} nodes are currently queued waiting to be decommissioned.",
+          numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
+
+      // Re-queue unhealthy nodes to make space for decommissioning healthy nodes
+      getUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
+        getPendingNodes().add(dn);
+        outOfServiceNodeBlocks.remove(dn);
+      });
+    }
+
     // Remove the datanodes that are DECOMMISSIONED or in service after
     // maintenance expiration.
     for (DatanodeDescriptor dn : toRemove) {
@@ -350,7 +388,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // lock.
         // Yielding is required in case of block number is greater than the
         // configured per-iteration-limit.
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("processBlocksInternal");
         try {
           LOG.debug("Yielded lock during decommission/maintenance check");
           Thread.sleep(0, 500);
@@ -367,8 +405,10 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       // Remove the block from the list if it's no longer in the block map,
       // e.g. the containing file has been deleted
       if (blockManager.blocksMap.getStoredBlock(block) == null) {
-        LOG.trace("Removing unknown block {}", block);
-        it.remove();
+        if (pruneReliableBlocks) {
+          LOG.trace("Removing unknown block {}", block);
+          it.remove();
+        }
         continue;
       }
 

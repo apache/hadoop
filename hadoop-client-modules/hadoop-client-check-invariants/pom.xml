@@ -56,7 +56,7 @@
           <dependency>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>extra-enforcer-rules</artifactId>
-            <version>1.0-beta-3</version>
+            <version>1.5.1</version>
           </dependency>
         </dependencies>
         <executions>
@@ -90,6 +90,8 @@
                     <exclude>com.google.code.findbugs:jsr305</exclude>
                     <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                     <exclude>org.bouncycastle:*</exclude>
+                    <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                    <exclude>org.xerial.snappy:*</exclude>
                   </excludes>
                 </banTransitiveDependencies>
                 <banDuplicateClasses>

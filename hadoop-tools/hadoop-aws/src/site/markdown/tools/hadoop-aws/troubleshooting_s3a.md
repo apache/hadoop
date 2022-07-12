@@ -336,13 +336,6 @@ spark.sql.hive.metastore.sharedPrefixes com.amazonaws.
 You are trying to use session/temporary credentials and the session token
 supplied is considered invalid.
 
-```
-org.apache.hadoop.fs.s3a.AWSBadRequestException: initTable on bucket:
-  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
-  The security token included in the request is invalid
-  (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: UnrecognizedClientException)
-```
-
 This can surface if your configuration is setting the `fs.s3a.secret.key`,
 `fs.s3a.access.key` and `fs.s3a.session.key` correctly, but the
 AWS credential provider list set in `AWS_CREDENTIALS_PROVIDER` does not include
@@ -554,24 +547,55 @@ When trying to write or read SEE-KMS-encrypted data, the client gets a
 The caller does not have the permissions to access
 the key with which the data was encrypted.
 
+### <a name="access_denied_requester_pays"></a>`AccessDeniedException` when using a "Requester Pays" enabled bucket
+
+When making cross-account requests to a requester pays enabled bucket, all calls must acknowledge via a header that the requester will be billed.
+
+If you don't enable this acknowledgement within S3A, then you will see a message similar to this:
+
+```
+java.nio.file.AccessDeniedException: s3a://my-bucket/my-object: getFileStatus on s3a://my-bucket/my-object:
+com.amazonaws.services.s3.model.AmazonS3Exception: Forbidden (Service: Amazon S3; Status Code: 403;
+Error Code: 403 Forbidden; Request ID: myshortreqid; S3 Extended Request ID: mylongreqid):403 Forbidden
+```
+
+To enable requester pays, set `fs.s3a.requester.pays.enabled` property to `true`.
+
+### <a name="access_denied_archive_storage_class"></a>`AccessDeniedException` "InvalidObjectState" when trying to read files
+
+```
+java.nio.file.AccessDeniedException: file1: copyFile(file1, file2) on file1: com.amazonaws.services.s3.model.AmazonS3Exception: Operation is not valid for the source object's storage class (Service: Amazon S3; Status Code: 403; Error Code: InvalidObjectState; Request ID: SK9EMPC1YRX75VZR; S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=; Proxy: null), S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=:InvalidObjectState
+
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Operation is not valid for the source object's storage class (Service: Amazon S3; Status Code: 403; Error Code: InvalidObjectState; Request ID: SK9EMPC1YRX75VZR; S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=; Proxy: null), S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=
+```
+
+This happens when you're trying to read or copy files that have archive storage class such as
+Glacier.
+
+If you want to access the file with S3A after writes, do not set `fs.s3a.create.storage.class` to `glacier` or `deep_archive`.
+
 ### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
 
-Region must be provided when requesting session credentials, or an exception will be thrown with the message:
+Region must be provided when requesting session credentials, or an exception will be thrown with the
+message:
+
 ```
 com.amazonaws.SdkClientException: Unable to find a region via the region provider
 chain. Must provide an explicit region in the builder or setup environment to supply a region.
 ```
-In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid
-S3 sts endpoint and region like the following:
+
+In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid S3 sts
+endpoint and region like the following:
 
 ```xml
+
 <property>
     <name>fs.s3a.assumed.role.sts.endpoint</name>
     <value>${sts.endpoint}</value>
 </property>
 <property>
-    <name>fs.s3a.assumed.role.sts.endpoint.region</name>
-    <value>${sts.region}</value>
+<name>fs.s3a.assumed.role.sts.endpoint.region</name>
+<value>${sts.region}</value>
 </property>
 ```
 
@@ -924,30 +948,48 @@ connector isn't saving any data at all. The `Syncable` API, especially the
 `hsync()` call, are critical for applications such as HBase to safely
 persist data.
 
-The S3A connector throws an `UnsupportedOperationException` when these API calls
-are made, because the guarantees absolutely cannot be met: nothing is being flushed
-or saved.
+When configured to do so, the S3A connector throws an `UnsupportedOperationException`
+when these API calls are made, because the API guarantees absolutely cannot be met:
+_nothing is being flushed or saved_.
 
-* Applications which intend to invoke the Syncable APIs call `hasCapability("hsync")` on
+* Applications which intend to invoke the Syncable APIs should call `hasCapability("hsync")` on
   the stream to see if they are supported.
 * Or catch and downgrade `UnsupportedOperationException`.
 
-These recommendations _apply to all filesystems_. 
+These recommendations _apply to all filesystems_.
 
-To downgrade the S3A connector to simply warning of the use of
+For consistency with other filesystems, S3A output streams
+do not by default reject the `Syncable` calls -instead
+they print a warning of its use.
+
+
+The count of invocations of the two APIs are collected in the S3A filesystem
+Statistics/IOStatistics and so their use can be monitored.
+
+To switch the S3A connector to rejecting all use of
 `hsync()` or `hflush()` calls, set the option
-`fs.s3a.downgrade.syncable.exceptions` to true.
+`fs.s3a.downgrade.syncable.exceptions` to `false`.
 
 ```xml
 <property>
   <name>fs.s3a.downgrade.syncable.exceptions</name>
-  <value>true</value>
+  <value>false</value>
 </property>
 ```
 
-The count of invocations of the two APIs are collected
-in the S3A filesystem Statistics/IOStatistics and so
-their use can be monitored.
+Regardless of the setting, the `Syncable` API calls do not work.
+Telling the store to *not* downgrade the calls is a way to
+1. Prevent applications which require Syncable to work from being deployed
+  against S3.
+2. Identify applications which are making the calls even though they don't
+  need to. These applications can then be fixed -something which may take
+  time.
+
+Put differently: it is safest to disable downgrading syncable exceptions.
+However, enabling the downgrade stops applications unintentionally using the API
+from breaking.
+
+*Tip*: try turning it on in staging environments to see what breaks.
 
 ### `RemoteFileChangedException` and read-during-overwrite
 
@@ -1012,32 +1054,6 @@ before versioning was enabled.
 See [Handling Read-During-Overwrite](./index.html#handling_read-during-overwrite)
 for more information.
 
-### `RemoteFileChangedException`: "File to rename not found on guarded S3 store after repeated attempts"
-
-A file being renamed and listed in the S3Guard table could not be found
-in the S3 bucket even after multiple attempts.
-
-Now that S3 is consistent, this is sign that the S3Guard table is out of sync with
-the S3 Data. 
-
-Fix: disable S3Guard: it is no longer needed.
-
-```
-org.apache.hadoop.fs.s3a.RemoteFileChangedException: copyFile(/sourcedir/missing, /destdir/)
- `s3a://example/sourcedir/missing': File not found on S3 after repeated attempts: `s3a://example/sourcedir/missing'
-at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFile(S3AFileSystem.java:3231)
-at org.apache.hadoop.fs.s3a.S3AFileSystem.access$700(S3AFileSystem.java:177)
-at org.apache.hadoop.fs.s3a.S3AFileSystem$RenameOperationCallbacksImpl.copyFile(S3AFileSystem.java:1368)
-at org.apache.hadoop.fs.s3a.impl.RenameOperation.copySourceAndUpdateTracker(RenameOperation.java:448)
-at org.apache.hadoop.fs.s3a.impl.RenameOperation.lambda$initiateCopy$0(RenameOperation.java:412)
-```
-
-If error occurs and the file is on S3, consider increasing the value of
-`fs.s3a.s3guard.consistency.retry.limit`.
-
-We also recommend using applications/application
-options which do  not rename files when committing work or when copying data
-to S3, but instead write directly to the final destination.
 
 ### Rename not behaving as "expected"
 
@@ -1209,12 +1225,12 @@ KMS key ID is required for CSE-KMS to encrypt data, not providing one leads
 ```
 2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize fileystem
 s3a://ap-south-cse/: java.lang.IllegalArgumentException: CSE-KMS
-method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to set it.
--ls: CSE-KMS method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to
+method requires KMS key ID. Use fs.s3a.encryption.key property to set it.
+-ls: CSE-KMS method requires KMS key ID. Use fs.s3a.encryption.key property to
  set it.
 ```
 
-set `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` generated through AWS console.
+set `fs.s3a.encryption.key=<KMS_KEY_ID>` generated through AWS console.
 
 ### `com.amazonaws.services.kms.model.IncorrectKeyException` The key ID in the request does not identify a CMK that can perform this operation.
 
@@ -1354,7 +1370,7 @@ work.
 
 ### com.amazonaws.services.kms.model.NotFoundException: Invalid keyId
 
-If the value in `fs.s3a.server-side-encryption.key` property, does not exist
+If the value in `fs.s3a.encryption.key` property, does not exist
 /valid in AWS KMS CMK(Customer managed keys), then this error would be seen.
 
 ```
@@ -1390,7 +1406,7 @@ Caused by: com.amazonaws.services.kms.model.NotFoundException: Invalid keyId abc
     ... 49 more
 ```
 
-Check if `fs.s3a.server-side-encryption.key` is set correctly and matches the
+Check if `fs.s3a.encryption.key` is set correctly and matches the
 same on AWS console.
 
 ### com.amazonaws.services.kms.model.AWSKMSException: User: <User_ARN> is not authorized to perform : kms :GenerateDataKey on resource: <KEY_ID>
@@ -1431,34 +1447,10 @@ User: arn:aws:iam::152813717728:user/<user> is not authorized to perform: kms:Ge
 ```
 
 The user trying to use the KMS Key ID should have the right permissions to access
-(encrypt/decrypt) using the AWS KMS Key used via `fs.s3a.server-side-encryption.key`.
+(encrypt/decrypt) using the AWS KMS Key used via `fs.s3a.encryption.key`.
 If not, then add permission(or IAM role) in "Key users" section by selecting the
 AWS-KMS CMK Key on AWS console.
 
-### S3-CSE cannot be used with S3Guard
-
-S3-CSE not supported for S3Guard enabled buckets.
-```
-org.apache.hadoop.fs.PathIOException: `s3a://test-bucket': S3-CSE cannot be used with S3Guard
-    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:543)
-    at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3460)
-    at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:172)
-    at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3565)
-    at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3512)
-    at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:539)
-    at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
-    at org.apache.hadoop.fs.shell.PathData.expandAsGlob(PathData.java:342)
-    at org.apache.hadoop.fs.shell.Command.expandArgument(Command.java:252)
-    at org.apache.hadoop.fs.shell.Command.expandArguments(Command.java:235)
-    at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:105)
-    at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
-    at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
-    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
-    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
-    at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
-```
-If you want to use S3Guard then disable S3-CSE or disable S3Guard if you want
-to use S3-CSE.
 
 ### <a name="not_all_bytes_were_read"></a> Message appears in logs "Not all bytes were read from the S3ObjectInputStream"
 
@@ -1534,6 +1526,56 @@ The specified bucket does not exist
     at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1712)
     at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1367)
 ```
+
+
+## <a name="s3guard"></a> S3Guard Errors
+
+S3Guard has been completely cut from the s3a connector
+[HADOOP-17409 Remove S3Guard - no longer needed](HADOOP-17409 Remove S3Guard - no longer needed).
+
+To avoid consistency problems with older releases, if an S3A filesystem is configured to use DynamoDB the filesystem
+will fail to initialize.
+
+### <a name="s3guard unsupported"></a> S3Guard is no longer needed/supported
+
+The option `fs.s3a.metadatastore.impl` or the per-bucket version has a value of
+`org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore`
+
+```
+org.apache.hadoop.fs.PathIOException: `s3a://production-london': S3Guard is no longer needed/supported,
+ yet s3a://production-london is configured to use DynamoDB as the S3Guard metadata store.
+ This is no longer needed or supported.
+ Origin of setting is fs.s3a.bucket.production-london.metadatastore.impl via [core-site.xml]
+        at org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard(S3Guard.java:111)
+        at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:540)
+        at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3459)
+        at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:171)
+        at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3564)
+        at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3511)
+        at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:538)
+        at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
+        at org.apache.hadoop.fs.shell.PathData.expandAsGlob(PathData.java:342)
+        at org.apache.hadoop.fs.shell.Command.expandArgument(Command.java:252)
+        at org.apache.hadoop.fs.shell.Command.expandArguments(Command.java:235)
+        at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:105)
+        at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
+        at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+        at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
+        at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
+        at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+
+ls: `s3a://production-london': S3Guard is no longer needed/supported,
+    yet s3a://production-london is configured to use DynamoDB as the S3Guard metadata store.
+    This is no longer needed or supported.
+    Origin of setting is fs.s3a.bucket.production-london.metadatastore.impl via [core-site.xml]
+```
+
+The error message will state the property from where it came, here `fs.s3a.bucket.production-london.metadatastore.impl` and which
+file the option was set if known, here `core-site.xml`.
+
+Fix: remove the configuration options enabling S3Guard.
+
+Consult the [S3Guard documentation](s3guard.html) for more details.
 
 ## <a name="other"></a> Other Errors
 
@@ -1907,44 +1949,6 @@ renaming() the directory tree or uploading files to the same location.
 Please don't do that. Given that the emulated directory rename and delete operations
 are not atomic, even without retries, multiple S3 clients working with the same
 paths can interfere with each other
-
-### <a name="retries"></a> Tuning S3Guard open/rename Retry Policies
-
-When the S3A connector attempts to open a file for which it has an entry in
-its database, it will retry if the desired file is not found. This is
-done if:
-
-* No file is found in S3.
-* There is a file but its version or etag is not consistent with S3Guard table.
-
-These can be symptoms of S3's eventual consistency, hence the retries.
-They can also be caused by changes having been made to the S3 Store without
-SGuard being kept up to date.
-
-For this reason, the number of retry events are limited.
-
-```xml
-<property>
-  <name>fs.s3a.s3guard.consistency.retry.limit</name>
-  <value>7</value>
-  <description>
-    Number of times to retry attempts to read/open/copy files when
-    S3Guard believes a specific version of the file to be available,
-    but the S3 request does not find any version of a file, or a different
-    version.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.s3guard.consistency.retry.interval</name>
-  <value>2s</value>
-  <description>
-    Initial interval between attempts to retry operations while waiting for S3
-    to become consistent with the S3Guard data.
-    An exponential back-off is used here: every failure doubles the delay.
-  </description>
-</property>
-```
 
 ### <a name="aws-timeouts"></a> Tuning AWS request timeouts
 

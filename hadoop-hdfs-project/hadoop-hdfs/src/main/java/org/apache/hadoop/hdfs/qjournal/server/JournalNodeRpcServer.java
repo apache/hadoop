@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.slf4j.Logger;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -55,6 +55,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_RPC_BIND_HOST_KEY;
 
 
@@ -63,9 +65,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_RPC_BIND_HOST
 public class JournalNodeRpcServer implements QJournalProtocol,
     InterQJournalProtocol {
   private static final Logger LOG = JournalNode.LOG;
-  private static final int HANDLER_COUNT = 5;
   private final JournalNode jn;
   private Server server;
+  private final int handlerCount;
 
   JournalNodeRpcServer(Configuration conf, JournalNode jn) throws IOException {
     this.jn = jn;
@@ -90,13 +92,25 @@ public class JournalNodeRpcServer implements QJournalProtocol,
         new QJournalProtocolServerSideTranslatorPB(this);
     BlockingService service = QJournalProtocolService
         .newReflectiveBlockingService(translator);
+    int confHandlerCount = conf.getInt(DFS_JOURNALNODE_HANDLER_COUNT_KEY,
+        DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT);
+    if (confHandlerCount <= 0) {
+      LOG.warn("Invalid value for: {} = {}, Should be > 0,"
+              + " will use default value of: {}.",
+          DFS_JOURNALNODE_HANDLER_COUNT_KEY, confHandlerCount,
+          DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT);
+      confHandlerCount = DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT;
+    }
+    this.handlerCount = confHandlerCount;
+    LOG.info("The number of JournalNodeRpcServer handlers is {}.",
+        this.handlerCount);
     
     this.server = new RPC.Builder(confCopy)
         .setProtocol(QJournalProtocolPB.class)
         .setInstance(service)
         .setBindAddress(bindHost)
         .setPort(addr.getPort())
-        .setNumHandlers(HANDLER_COUNT)
+        .setNumHandlers(this.handlerCount)
         .setVerbose(false)
         .build();
 
@@ -119,6 +133,11 @@ public class JournalNodeRpcServer implements QJournalProtocol,
           server.refreshServiceAcl(confCopy, new HDFSPolicyProvider());
     }
     this.server.setTracer(jn.tracer);
+  }
+
+  @VisibleForTesting
+  protected int getHandlerCount() {
+    return this.handlerCount;
   }
 
   void start() {

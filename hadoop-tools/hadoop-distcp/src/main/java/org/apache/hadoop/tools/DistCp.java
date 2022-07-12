@@ -21,7 +21,7 @@ package org.apache.hadoop.tools;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,7 +44,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * DistCp is the main driver-class for DistCpV2.
@@ -473,13 +473,18 @@ public class DistCp extends Configured implements Tool {
     return config;
   }
 
-  private synchronized void cleanup() {
+  /**
+   * Clean the staging folder created by distcp.
+   */
+  protected synchronized void cleanup() {
     try {
       if (metaFolder != null) {
-        if (jobFS != null) {
-          jobFS.delete(metaFolder, true);
+        synchronized (this) {
+          if (jobFS != null) {
+            jobFS.delete(metaFolder, true);
+          }
+          metaFolder = null;
         }
-        metaFolder = null;
       }
     } catch (IOException e) {
       LOG.error("Unable to cleanup meta folder: " + metaFolder, e);

@@ -63,7 +63,6 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
 
   public AvailableSpaceVolumeChoosingPolicy() {
     this(new Random());
-    initLocks();
   }
 
   private void initLocks() {

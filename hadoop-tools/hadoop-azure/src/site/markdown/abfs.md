@@ -676,8 +676,6 @@ cause problems.
 As with all Azure storage services, the Azure Datalake Gen 2 store offers
 a fully consistent view of the store, with complete
 Create, Read, Update, and Delete consistency for data and metadata.
-(Compare and contrast with S3 which only offers Create consistency;
-S3Guard adds CRUD to metadata, but not the underlying data).
 
 ### <a name="performance"></a> Performance and Scalability
 

@@ -28,8 +28,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.util.CleanerUtil;
+import org.apache.hadoop.util.Preconditions;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,11 @@ public class CryptoStreamUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(CryptoStreamUtils.class);
 
-  /** Forcibly free the direct buffer. */
+  /**
+   * Forcibly free the direct buffer.
+   *
+   * @param buffer buffer.
+   */
   public static void freeDB(ByteBuffer buffer) {
     if (CleanerUtil.UNMAP_SUPPORTED) {
       try {
@@ -52,13 +56,22 @@ public class CryptoStreamUtils {
     }
   }
 
-  /** Read crypto buffer size */
+  /**
+   * Read crypto buffer size.
+   *
+   * @param conf configuration.
+   * @return hadoop.security.crypto.buffer.size.
+   */
   public static int getBufferSize(Configuration conf) {
     return conf.getInt(HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY, 
         HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_DEFAULT);
   }
-  
-  /** AES/CTR/NoPadding or SM4/CTR/NoPadding is required. */
+
+  /**
+   * AES/CTR/NoPadding or SM4/CTR/NoPadding is required.
+   *
+   * @param codec crypto codec.
+   */
   public static void checkCodec(CryptoCodec codec) {
     if (codec.getCipherSuite() != CipherSuite.AES_CTR_NOPADDING &&
             codec.getCipherSuite() != CipherSuite.SM4_CTR_NOPADDING) {
@@ -67,17 +80,27 @@ public class CryptoStreamUtils {
     }
   }
 
-  /** Check and floor buffer size */
+  /**
+   * Check and floor buffer size.
+   *
+   * @param codec crypto codec.
+   * @param bufferSize the size of the buffer to be used.
+   * @return calc buffer size.
+   */
   public static int checkBufferSize(CryptoCodec codec, int bufferSize) {
     Preconditions.checkArgument(bufferSize >= MIN_BUFFER_SIZE, 
         "Minimum value of buffer size is " + MIN_BUFFER_SIZE + ".");
     return bufferSize - bufferSize % codec.getCipherSuite()
         .getAlgorithmBlockSize();
   }
-  
+
   /**
    * If input stream is {@link org.apache.hadoop.fs.Seekable}, return it's
    * current position, otherwise return 0;
+   *
+   * @param in wrapper.
+   * @return current position, otherwise return 0.
+   * @throws IOException raised on errors performing I/O.
    */
   public static long getInputStreamOffset(InputStream in) throws IOException {
     if (in instanceof Seekable) {

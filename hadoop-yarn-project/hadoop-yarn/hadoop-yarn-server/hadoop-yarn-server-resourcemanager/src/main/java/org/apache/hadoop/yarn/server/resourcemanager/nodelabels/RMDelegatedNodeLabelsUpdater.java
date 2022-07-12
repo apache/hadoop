@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Update nodes labels map for ResourceManager periodically. It collects
@@ -56,7 +56,7 @@ public class RMDelegatedNodeLabelsUpdater extends CompositeService {
   private Timer nodeLabelsScheduler;
   // 30 seconds
   @VisibleForTesting
-  public long nodeLabelsUpdateInterval = 30 * 1000;
+  public long nodeLabelsUpdateInterval;
 
   private Set<NodeId> newlyRegisteredNodes = new HashSet<NodeId>();
   // Lock to protect newlyRegisteredNodes
@@ -78,6 +78,9 @@ public class RMDelegatedNodeLabelsUpdater extends CompositeService {
     allNodesLabelUpdateInterval = conf.getLong(
         YarnConfiguration.RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
         YarnConfiguration.DEFAULT_RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS);
+    nodeLabelsUpdateInterval =
+        conf.getLong(YarnConfiguration.RM_NODE_LABELS_PROVIDER_UPDATE_NEWLY_REGISTERED_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_NODE_LABELS_PROVIDER_UPDATE_NEWLY_REGISTERED_INTERVAL_MS);
     rmNodeLabelsMappingProvider = createRMNodeLabelsMappingProvider(conf);
     addService(rmNodeLabelsMappingProvider);
     super.serviceInit(conf);

@@ -33,17 +33,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 public class QueueCapacities {
   private static final String NL = CommonNodeLabelsManager.NO_LABEL;
   private static final float LABEL_DOESNT_EXIST_CAP = 0f;
-  private Map<String, Capacities> capacitiesMap;
-  private ReadLock readLock;
-  private WriteLock writeLock;
+  private final Map<String, Capacities> capacitiesMap;
+  private final ReadLock readLock;
+  private final WriteLock writeLock;
   private final boolean isRoot;
 
   public QueueCapacities(boolean isRoot) {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
-
-    capacitiesMap = new HashMap<String, Capacities>();
+    capacitiesMap = new HashMap<>();
     this.isRoot = isRoot;
   }
   
@@ -52,15 +51,15 @@ public class QueueCapacities {
     USED_CAP(0), ABS_USED_CAP(1), MAX_CAP(2), ABS_MAX_CAP(3), CAP(4), ABS_CAP(5),
       MAX_AM_PERC(6), RESERVED_CAP(7), ABS_RESERVED_CAP(8), WEIGHT(9), NORMALIZED_WEIGHT(10);
 
-    private int idx;
+    private final int idx;
 
-    private CapacityType(int idx) {
+    CapacityType(int idx) {
       this.idx = idx;
     }
   }
 
   private static class Capacities {
-    private float[] capacitiesArr;
+    private final float[] capacitiesArr;
     
     public Capacities() {
       capacitiesArr = new float[CapacityType.values().length];
@@ -71,19 +70,17 @@ public class QueueCapacities {
     
     @Override
     public String toString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append("{used=" + capacitiesArr[0] + "%, ")
-          .append("abs_used=" + capacitiesArr[1] + "%, ")
-          .append("max_cap=" + capacitiesArr[2] + "%, ")
-          .append("abs_max_cap=" + capacitiesArr[3] + "%, ")
-          .append("cap=" + capacitiesArr[4] + "%, ")
-          .append("abs_cap=" + capacitiesArr[5] + "%, ")
-          .append("max_am_perc=" + capacitiesArr[6] + "%, ")
-          .append("reserved_cap=" + capacitiesArr[7] + "%, ")
-          .append("abs_reserved_cap=" + capacitiesArr[8] + "%, ")
-          .append("weight=" + capacitiesArr[9] + "w, ")
-          .append("normalized_weight=" + capacitiesArr[10] + "w}");
-      return sb.toString();
+      return "{used=" + capacitiesArr[0] + "%, " +
+          "abs_used=" + capacitiesArr[1] + "%, " +
+          "max_cap=" + capacitiesArr[2] + "%, " +
+          "abs_max_cap=" + capacitiesArr[3] + "%, " +
+          "cap=" + capacitiesArr[4] + "%, " +
+          "abs_cap=" + capacitiesArr[5] + "%, " +
+          "max_am_perc=" + capacitiesArr[6] + "%, " +
+          "reserved_cap=" + capacitiesArr[7] + "%, " +
+          "abs_reserved_cap=" + capacitiesArr[8] + "%, " +
+          "weight=" + capacitiesArr[9] + "w, " +
+          "normalized_weight=" + capacitiesArr[10] + "w}";
     }
   }
   
@@ -118,7 +115,6 @@ public class QueueCapacities {
     }
   }
 
-  /* Used Capacity Getter and Setter */
   public float getUsedCapacity() {
     return _get(NL, CapacityType.USED_CAP);
   }
@@ -135,7 +131,6 @@ public class QueueCapacities {
     _set(label, CapacityType.USED_CAP, value);
   }
 
-  /* Absolute Used Capacity Getter and Setter */
   public float getAbsoluteUsedCapacity() {
     return _get(NL, CapacityType.ABS_USED_CAP);
   }
@@ -152,7 +147,6 @@ public class QueueCapacities {
     _set(label, CapacityType.ABS_USED_CAP, value);
   }
 
-  /* Capacity Getter and Setter */
   public float getCapacity() {
     return _get(NL, CapacityType.CAP);
   }
@@ -173,7 +167,6 @@ public class QueueCapacities {
     _set(label, CapacityType.CAP, value);
   }
 
-  /* Absolute Capacity Getter and Setter */
   public float getAbsoluteCapacity() {
     return _get(NL, CapacityType.ABS_CAP);
   }
@@ -193,7 +186,6 @@ public class QueueCapacities {
     _set(label, CapacityType.ABS_CAP, value);
   }
 
-  /* Maximum Capacity Getter and Setter */
   public float getMaximumCapacity() {
     return _get(NL, CapacityType.MAX_CAP);
   }
@@ -210,7 +202,6 @@ public class QueueCapacities {
     _set(label, CapacityType.MAX_CAP, value);
   }
 
-  /* Absolute Maximum Capacity Getter and Setter */
   public float getAbsoluteMaximumCapacity() {
     return _get(NL, CapacityType.ABS_MAX_CAP);
   }
@@ -226,8 +217,6 @@ public class QueueCapacities {
   public void setAbsoluteMaximumCapacity(String label, float value) {
     _set(label, CapacityType.ABS_MAX_CAP, value);
   }
-
-  /* Absolute Maximum AM resource percentage Getter and Setter */
 
   public float getMaxAMResourcePercentage() {
     return _get(NL, CapacityType.MAX_AM_PERC);
@@ -245,7 +234,6 @@ public class QueueCapacities {
     _set(NL, CapacityType.MAX_AM_PERC, value);
   }
 
-  /* Reserved Capacity Getter and Setter */
   public float getReservedCapacity() {
     return _get(NL, CapacityType.RESERVED_CAP);
   }
@@ -262,7 +250,6 @@ public class QueueCapacities {
     _set(label, CapacityType.RESERVED_CAP, value);
   }
 
-  /* Absolute Reserved Capacity Getter and Setter */
   public float getAbsoluteReservedCapacity() {
     return _get(NL, CapacityType.ABS_RESERVED_CAP);
   }
@@ -279,7 +266,6 @@ public class QueueCapacities {
     _set(label, CapacityType.ABS_RESERVED_CAP, value);
   }
 
-  /* Weight Getter and Setter */
   public float getWeight() {
     return _get(NL, CapacityType.WEIGHT);
   }
@@ -296,7 +282,6 @@ public class QueueCapacities {
     _set(label, CapacityType.WEIGHT, value);
   }
 
-  /* Weight Getter and Setter */
   public float getNormalizedWeight() {
     return _get(NL, CapacityType.NORMALIZED_WEIGHT);
   }
@@ -327,7 +312,7 @@ public class QueueCapacities {
         _set(label, CapacityType.MAX_CAP, 0);
         _set(label, CapacityType.ABS_CAP, 0);
         _set(label, CapacityType.ABS_MAX_CAP, 0);
-        _set(label, CapacityType.WEIGHT, 0);
+        _set(label, CapacityType.WEIGHT, -1);
       }
     } finally {
       writeLock.unlock();
@@ -348,15 +333,6 @@ public class QueueCapacities {
     readLock.lock();
     try {
       return this.capacitiesMap.toString();
-    } finally {
-      readLock.unlock();
-    }
-  }
-  
-  public Set<String> getNodePartitionsSet() {
-    readLock.lock();
-    try {
-      return capacitiesMap.keySet();
     } finally {
       readLock.unlock();
     }

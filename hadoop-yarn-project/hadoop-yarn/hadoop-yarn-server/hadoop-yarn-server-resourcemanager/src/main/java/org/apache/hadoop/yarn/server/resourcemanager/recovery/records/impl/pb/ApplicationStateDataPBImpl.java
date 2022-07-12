@@ -148,7 +148,22 @@ public class ApplicationStateDataPBImpl extends ApplicationStateData {
     maybeInitBuilder();
     builder.setUser(user);
   }
-  
+
+  @Override
+  public String getRealUser() {
+    ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasRealUser()) {
+      return null;
+    }
+    return (p.getRealUser());
+  }
+
+  @Override
+  public void setRealUser(String realUser) {
+    maybeInitBuilder();
+    builder.setRealUser(realUser);
+  }
+
   @Override
   public ApplicationSubmissionContext getApplicationSubmissionContext() {
     ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;

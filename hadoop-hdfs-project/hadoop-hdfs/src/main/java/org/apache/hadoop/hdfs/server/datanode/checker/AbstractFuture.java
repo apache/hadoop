@@ -22,14 +22,13 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.Beta;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.GwtCompatible;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.hadoop.util.Preconditions;
+
 import static java.util.concurrent.atomic.AtomicReferenceFieldUpdater
     .newUpdater;
 
@@ -290,7 +289,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
     final Throwable exception;
 
     Failure(Throwable exception) {
-      this.exception = checkNotNull(exception);
+      this.exception = Preconditions.checkNotNull(exception);
     }
   }
 
@@ -679,8 +678,8 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
    */
   @Override
   public void addListener(Runnable listener, Executor executor) {
-    checkNotNull(listener, "Runnable was null.");
-    checkNotNull(executor, "Executor was null.");
+    Preconditions.checkNotNull(listener, "Runnable was null.");
+    Preconditions.checkNotNull(executor, "Executor was null.");
     Listener oldHead = listeners;
     if (oldHead != Listener.TOMBSTONE) {
       Listener newNode = new Listener(listener, executor);
@@ -737,7 +736,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
    * @return true if the attempt was accepted, completing the {@code Future}
    */
   protected boolean setException(Throwable throwable) {
-    Object valueToSet = new Failure(checkNotNull(throwable));
+    Object valueToSet = new Failure(Preconditions.checkNotNull(throwable));
     if (ATOMIC_HELPER.casValue(this, null, valueToSet)) {
       complete(this);
       return true;
@@ -771,7 +770,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
    */
   @Beta
   protected boolean setFuture(ListenableFuture<? extends V> future) {
-    checkNotNull(future);
+    Preconditions.checkNotNull(future);
     Object localValue = value;
     if (localValue == null) {
       if (future.isDone()) {
@@ -1097,7 +1096,7 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
     }
 
     public static void throwIfUnchecked(Throwable throwable) {
-      checkNotNull(throwable);
+      Preconditions.checkNotNull(throwable);
       if (throwable instanceof RuntimeException) {
         throw (RuntimeException) throwable;
       }

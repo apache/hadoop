@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import static javax.servlet.http.HttpServletResponse.SC_ACCEPTED;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+import static javax.servlet.http.HttpServletResponse.SC_SERVICE_UNAVAILABLE;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.APPLICATION_XML;
@@ -142,6 +142,8 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.WebResource.Builder;
 
 import net.jcip.annotations.NotThreadSafe;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * This test validate E2E the correctness of the RouterWebServices. It starts
@@ -423,7 +425,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getNodes()} inside Router.
+   * {@link RMWebServiceProtocol#getNodes(String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testNodesEmptyXML() throws Exception {
@@ -444,7 +446,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getNodes()} inside Router.
+   * {@link RMWebServiceProtocol#getNodes(String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testNodesXML() throws Exception {
@@ -465,7 +467,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getNode()} inside Router.
+   * {@link RMWebServiceProtocol#getNode(String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testNodeXML() throws Exception {
@@ -528,7 +530,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getActivities()} inside Router.
+   * {@link RMWebServiceProtocol#getActivities(HttpServletRequest, String, String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testActiviesXML() throws Exception {
@@ -600,7 +602,7 @@ public class TestRouterWebServicesREST {
         performCall(RM_WEB_SERVICE_PATH + SCHEDULER_LOGS,
             null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ClientResponse response = performCall(
@@ -623,7 +625,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION, null,
         null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ClientResponse response = performCall(
@@ -646,7 +648,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + APPS, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ApplicationSubmissionContextInfo context =
@@ -771,7 +773,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         pathApp, null, null, null, POST);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     AppState appState = new AppState("KILLED");
@@ -820,7 +822,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + format(APPS_APPID_PRIORITY, appId),
         null, null, null, POST);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     AppPriority appPriority = new AppPriority(1);
@@ -870,7 +872,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + format(APPS_APPID_QUEUE, appId),
         null, null, null, POST);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     AppQueue appQueue = new AppQueue("default");
@@ -945,7 +947,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + format(APPS_TIMEOUT, appId),
         null, null, null, POST);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with a bad request
     AppTimeoutInfo appTimeoutInfo = new AppTimeoutInfo();
@@ -971,7 +973,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + RESERVATION_NEW,
         null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ClientResponse response = performCall(
@@ -995,7 +997,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + RESERVATION_SUBMIT, null,
         null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     ReservationSubmissionRequestInfo context =
@@ -1022,7 +1024,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + RESERVATION_UPDATE, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     String reservationId = getNewReservationId().getReservationId();
@@ -1048,7 +1050,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + RESERVATION_DELETE, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     String reservationId = getNewReservationId().getReservationId();
@@ -1185,7 +1187,7 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + ADD_NODE_LABELS,
         null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
 
@@ -1203,17 +1205,17 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#removeFromCluserNodeLabels()} inside Router.
+   * {@link RMWebServiceProtocol#removeFromClusterNodeLabels} inside Router.
    */
   @Test(timeout = 2000)
-  public void testRemoveFromCluserNodeLabelsXML()
+  public void testRemoveFromClusterNodeLabelsXML()
       throws Exception {
 
     // Test with a wrong HTTP method
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + REMOVE_NODE_LABELS, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     addNodeLabel();
@@ -1238,7 +1240,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         RM_WEB_SERVICE_PATH + REPLACE_NODE_TO_LABELS, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     addNodeLabel();
@@ -1267,7 +1269,7 @@ public class TestRouterWebServicesREST {
     ClientResponse badResponse = performCall(
         pathNode, null, null, null, PUT);
 
-    assertEquals(SC_INTERNAL_SERVER_ERROR, badResponse.getStatus());
+    assertEquals(SC_SERVICE_UNAVAILABLE, badResponse.getStatus());
 
     // Test with the correct HTTP method
     addNodeLabel();

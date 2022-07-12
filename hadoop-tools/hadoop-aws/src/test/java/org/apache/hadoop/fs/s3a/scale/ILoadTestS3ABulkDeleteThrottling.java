@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -247,7 +247,7 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
             new ContractTestUtils.NanoTimer();
         Exception ex = null;
         try {
-          fs.removeKeys(fileList, false, null);
+          fs.removeKeys(fileList, false);
         } catch (IOException e) {
           ex = e;
         }

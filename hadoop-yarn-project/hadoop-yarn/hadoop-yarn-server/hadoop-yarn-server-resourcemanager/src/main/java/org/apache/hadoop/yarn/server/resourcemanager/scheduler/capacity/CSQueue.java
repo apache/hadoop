@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -51,7 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * <code>CSQueue</code> represents a node in the tree of 
@@ -89,6 +88,19 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return the full name of the queue
    */
   public String getQueuePath();
+
+  /**
+   * Gets the queue path object.
+   * @return the object of the queue
+   */
+  QueuePath getQueuePathObject();
+
+  /**
+   * Checks whether the queue is a dynamic queue (created dynamically in the fashion of auto queue
+   * creation v2).
+   * @return true, if it is a dynamic queue, false otherwise
+   */
+  boolean isDynamicQueue();
 
   public PrivilegedEntity getPrivilegedEntity();
 
@@ -151,6 +163,12 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return current run-state
    */
   public QueueState getState();
+
+  /**
+   * Get the max-parallel-applications property of the queue
+   * @return max-parallel-applications
+   */
+  public int getMaxParallelApps();
   
   /**
    * Get child queues
@@ -387,10 +405,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   Priority getPriority();
 
   /**
-   * Get a map of usernames and weights
-   * @return map of usernames and corresponding weight
+   * Get the UserWeights object that wraps a map of usernames and weights
+   * @return The UserWeights object.
    */
-  Map<String, Float> getUserWeights();
+  UserWeights getUserWeights();
 
   /**
    * Get QueueResourceQuotas associated with each queue.
@@ -413,6 +431,14 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return effective queue capacity
    */
   Resource getEffectiveCapacity(String label);
+
+  /**
+   * Get configured capacity resource vector parsed from the capacity config
+   * of the queue.
+   * @param label node label (partition)
+   * @return capacity resource vector
+   */
+  QueueCapacityVector getConfiguredCapacityVector(String label);
 
   /**
    * Get effective capacity of queue. If min/max resource is configured,

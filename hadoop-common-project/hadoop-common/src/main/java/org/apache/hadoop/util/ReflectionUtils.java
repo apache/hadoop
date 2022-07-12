@@ -21,7 +21,6 @@ package org.apache.hadoop.util;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -29,7 +28,7 @@ import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -120,6 +119,7 @@ public class ReflectionUtils {
    * 
    * @param theClass class of which an object is created
    * @param conf Configuration
+   * @param <T> Generics Type T.
    * @return a new object
    */
   @SuppressWarnings("unchecked")
@@ -133,6 +133,7 @@ public class ReflectionUtils {
    * @param conf Configuration
    * @param argTypes the types of the arguments
    * @param values the values of the arguments
+   * @param <T> Generics Type.
    * @return a new object
    */
   @SuppressWarnings("unchecked")
@@ -244,7 +245,7 @@ public class ReflectionUtils {
         try {
           ByteArrayOutputStream buffer = new ByteArrayOutputStream();
           printThreadInfo(new PrintStream(buffer, false, "UTF-8"), title);
-          log.info(buffer.toString(Charset.defaultCharset().name()));
+          log.info(buffer.toString(StandardCharsets.UTF_8.name()));
         } catch (UnsupportedEncodingException ignored) {
         }
       }
@@ -273,7 +274,7 @@ public class ReflectionUtils {
         try {
           ByteArrayOutputStream buffer = new ByteArrayOutputStream();
           printThreadInfo(new PrintStream(buffer, false, "UTF-8"), title);
-          log.info(buffer.toString(Charset.defaultCharset().name()));
+          log.info(buffer.toString(StandardCharsets.UTF_8.name()));
         } catch (UnsupportedEncodingException ignored) {
         }
       }
@@ -284,6 +285,7 @@ public class ReflectionUtils {
    * Return the correctly-typed {@link Class} of the given object.
    *  
    * @param o object whose correctly-typed <code>Class</code> is to be obtained
+   * @param <T> Generics Type T.
    * @return the correctly typed <code>Class</code> of the given object.
    */
   @SuppressWarnings("unchecked")
@@ -332,11 +334,13 @@ public class ReflectionUtils {
   }
   
   /**
-   * Make a copy of the writable object using serialization to a buffer
+   * Make a copy of the writable object using serialization to a buffer.
    * @param src the object to copy from
    * @param dst the object to copy into, which is destroyed
+   * @param <T> Generics Type.
+   * @param conf configuration.
    * @return dst param (the copy)
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @SuppressWarnings("unchecked")
   public static <T> T copy(Configuration conf, 
@@ -368,6 +372,9 @@ public class ReflectionUtils {
   /**
    * Gets all the declared fields of a class including fields declared in
    * superclasses.
+   *
+   * @param clazz clazz
+   * @return field List
    */
   public static List<Field> getDeclaredFieldsIncludingInherited(Class<?> clazz) {
     List<Field> fields = new ArrayList<Field>();
@@ -390,6 +397,9 @@ public class ReflectionUtils {
   /**
    * Gets all the declared methods of a class including methods declared in
    * superclasses.
+   *
+   * @param clazz clazz.
+   * @return Method List.
    */
   public static List<Method> getDeclaredMethodsIncludingInherited(Class<?> clazz) {
     List<Method> methods = new ArrayList<Method>();

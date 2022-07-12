@@ -97,7 +97,8 @@ public class TestJournalNode {
       conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY,
           editsDir.getAbsolutePath());
     } else if (testName.getMethodName().equals(
-        "testJournalDefaultDirForOneNameSpace")) {
+        "testJournalDefaultDirForOneNameSpace") ||
+        testName.getMethodName().equals("testJournalMetricTags")) {
       FileUtil.fullyDelete(new File(DFSConfigKeys
           .DFS_JOURNALNODE_EDITS_DIR_DEFAULT));
       setFederationConf();
@@ -141,6 +142,10 @@ public class TestJournalNode {
           "qjournal://journalnode0:9900;journalnode1:9901/" + journalId);
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn2",
           "qjournal://journalnode0:9902;journalnode1:9903/" + journalId);
+    } else if (testName.getMethodName().equals("testConfAbnormalHandlerNumber")) {
+      conf.setInt(DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY, -1);
+    } else if (testName.getMethodName().equals("testConfNormalHandlerNumber")) {
+      conf.setInt(DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY, 10);
     }
     jn = new JournalNode();
     jn.setConf(conf);
@@ -151,7 +156,8 @@ public class TestJournalNode {
         testName.getMethodName().equals(
             "testJournalCommonDirAcrossNameSpace") ||
         testName.getMethodName().equals(
-            "testJournalDefaultDirForOneNameSpace")) {
+            "testJournalDefaultDirForOneNameSpace") ||
+        testName.getMethodName().equals("testJournalMetricTags")) {
       Collection<String> nameServiceIds = DFSUtilClient.getNameServiceIds(conf);
       for(String nsId: nameServiceIds) {
         journalId = "test-journalid-" + nsId;
@@ -240,6 +246,23 @@ public class TestJournalNode {
         File.separator + jid);
     assertEquals(editsDir.toString(), journalStorage.getRoot().toString());
   }
+
+  @Test(timeout=100000)
+  public void testJournalMetricTags() {
+    setupStaticHostResolution(2, "journalnode");
+    String jid = "test-journalid-ns1";
+    Journal nsJournal = jn.getJournal(jid);
+    MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(
+        nsJournal.getMetrics().getName());
+    MetricsAsserts.assertTag("JournalId", jid, metrics);
+
+    jid = "test-journalid-ns2";
+    nsJournal = jn.getJournal(jid);
+    metrics = MetricsAsserts.getMetrics(
+        nsJournal.getMetrics().getName());
+    MetricsAsserts.assertTag("JournalId", jid, metrics);
+  }
+
   @Test(timeout=100000)
   public void testJournal() throws Exception {
     MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(
@@ -653,4 +676,26 @@ public class TestJournalNode {
     }
   }
 
+  @Test
+  public void testConfNormalHandlerNumber() {
+    int confHandlerNumber = jn.getConf().getInt(
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT);
+    assertTrue(confHandlerNumber > 0);
+    int handlerCount = jn.getRpcServer().getHandlerCount();
+    assertEquals(confHandlerNumber, handlerCount);
+    assertEquals(10, handlerCount);
+  }
+
+  @Test
+  public void testConfAbnormalHandlerNumber() {
+    int confHandlerCount = jn.getConf().getInt(
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT);
+    assertTrue(confHandlerCount <= 0);
+    int handlerCount = jn.getRpcServer().getHandlerCount();
+    assertEquals(
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT,
+        handlerCount);
+  }
 }

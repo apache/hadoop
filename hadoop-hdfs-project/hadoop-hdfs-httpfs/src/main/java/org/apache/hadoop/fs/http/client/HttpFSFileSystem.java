@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.web.JsonUtilClient;
@@ -73,7 +74,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import java.io.BufferedInputStream;
@@ -92,7 +93,6 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -136,6 +136,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String POLICY_NAME_PARAM = "storagepolicy";
   public static final String SNAPSHOT_NAME_PARAM = "snapshotname";
   public static final String OLD_SNAPSHOT_NAME_PARAM = "oldsnapshotname";
+  public static final String SNAPSHOT_DIFF_START_PATH = "snapshotdiffstartpath";
+  public static final String SNAPSHOT_DIFF_INDEX = "snapshotdiffindex";
   public static final String FSACTION_MODE_PARAM = "fsaction";
   public static final String EC_POLICY_NAME_PARAM = "ecpolicy";
 
@@ -266,8 +268,8 @@ public class HttpFSFileSystem extends FileSystem
     RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
     GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSNAPSHOTLIST(HTTP_GET),
     GETSERVERDEFAULTS(HTTP_GET),
-    CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(
-        HTTP_GET), UNSETECPOLICY(HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT);
+    CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(HTTP_GET), UNSETECPOLICY(
+        HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET);
 
     private String httpMethod;
 
@@ -1575,6 +1577,22 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.toSnapshotDiffReport(json);
+  }
+
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(Path path, String snapshotOldName,
+      String snapshotNewName, byte[] snapshotDiffStartPath, Integer snapshotDiffIndex)
+      throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETSNAPSHOTDIFFLISTING.toString());
+    params.put(SNAPSHOT_NAME_PARAM, snapshotNewName);
+    params.put(OLD_SNAPSHOT_NAME_PARAM, snapshotOldName);
+    params.put(SNAPSHOT_DIFF_START_PATH, DFSUtilClient.bytes2String(snapshotDiffStartPath));
+    params.put(SNAPSHOT_DIFF_INDEX, snapshotDiffIndex.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.GETSNAPSHOTDIFFLISTING.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toSnapshotDiffReportListing(json);
   }
 
   public SnapshottableDirectoryStatus[] getSnapshottableDirectoryList()

@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Abstract base class for MapWritable and SortedMapWritable
@@ -84,7 +84,10 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
     idToClassMap.put(id, clazz);
   }
   
-  /** Add a Class to the maps if it is not already present. */ 
+  /**
+   * Add a Class to the maps if it is not already present.
+   * @param clazz clazz.
+   */
   protected synchronized void addToMap(Class<?> clazz) {
     if (classToIdMap.containsKey(clazz)) {
       return;
@@ -97,17 +100,28 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
     addToMap(clazz, id);
   }
 
-  /** @return the Class class for the specified id */
+  /**
+   * the Class class for the specified id.
+   * @param id id.
+   * @return the Class class for the specified id.
+   */
   protected Class<?> getClass(byte id) {
     return idToClassMap.get(id);
   }
 
-  /** @return the id for the specified Class */
+  /**
+   * get id.
+   * @return the id for the specified Class.
+   * @param clazz clazz.
+   */
   protected byte getId(Class<?> clazz) {
     return classToIdMap.containsKey(clazz) ? classToIdMap.get(clazz) : -1;
   }
 
-  /** Used by child copy constructors. */
+  /**
+   * Used by child copy constructors.
+   * @param other other.
+   */
   protected synchronized void copy(Writable other) {
     if (other != null) {
       try {

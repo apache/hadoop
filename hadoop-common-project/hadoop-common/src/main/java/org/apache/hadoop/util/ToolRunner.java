@@ -57,6 +57,7 @@ public class ToolRunner {
    * @param tool <code>Tool</code> to run.
    * @param args command-line arguments to the tool.
    * @return exit code of the {@link Tool#run(String[])} method.
+   * @throws Exception Exception.
    */
   public static int run(Configuration conf, Tool tool, String[] args) 
     throws Exception{
@@ -89,6 +90,7 @@ public class ToolRunner {
    * @param tool <code>Tool</code> to run.
    * @param args command-line arguments to the tool.
    * @return exit code of the {@link Tool#run(String[])} method.
+   * @throws Exception exception.
    */
   public static int run(Tool tool, String[] args) 
     throws Exception{
@@ -107,7 +109,13 @@ public class ToolRunner {
   
   /**
    * Print out a prompt to the user, and return true if the user
-   * responds with "y" or "yes". (case insensitive)
+   * responds with "y" or "yes". (case insensitive).
+   *
+   * @param prompt prompt.
+   * @throws IOException raised on errors performing I/O.
+   * @return if the user
+   *         responds with "y" or "yes". (case insensitive) true,
+   *         not false.
    */
   public static boolean confirmPrompt(String prompt) throws IOException {
     while (true) {

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.client.api.impl;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,10 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -208,12 +211,21 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     return Arrays.asList(entity);
   }
 
+  @VisibleForTesting
+  protected String encodeValue(String value) throws UnsupportedEncodingException {
+    // Since URLEncoder doesn't use and doesn't have an option for percent-encoding
+    // (as specified in RFC 3986) the spaces are encoded to + signs, which need to be replaced
+    // manually
+    return URLEncoder.encode(value, StandardCharsets.UTF_8.toString())
+        .replaceAll("\\+", "%20");
+  }
+
   private void mergeFilters(MultivaluedMap<String, String> defaults,
-      Map<String, String> filters) {
+                            Map<String, String> filters) throws UnsupportedEncodingException {
     if (filters != null && !filters.isEmpty()) {
       for (Map.Entry<String, String> entry : filters.entrySet()) {
         if (!defaults.containsKey(entry.getKey())) {
-          defaults.add(entry.getKey(), filters.get(entry.getValue()));
+          defaults.add(entry.getKey(), encodeValue(entry.getValue()));
         }
       }
     }

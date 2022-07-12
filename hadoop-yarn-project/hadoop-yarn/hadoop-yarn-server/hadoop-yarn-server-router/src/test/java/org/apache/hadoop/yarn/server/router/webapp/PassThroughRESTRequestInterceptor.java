@@ -248,9 +248,9 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
-  public Response removeFromCluserNodeLabels(Set<String> oldNodeLabels,
+  public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    return getNextInterceptor().removeFromCluserNodeLabels(oldNodeLabels, hsr);
+    return getNextInterceptor().removeFromClusterNodeLabels(oldNodeLabels, hsr);
   }
 
   @Override

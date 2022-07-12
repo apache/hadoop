@@ -189,41 +189,49 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   }
 
   @Override
+  @Metric({"RpcServerCallQueue", "Length of the rpc server call queue"})
   public int getRpcServerCallQueue() {
     return rpcServer.getServer().getCallQueueLen();
   }
 
   @Override
+  @Metric({"RpcServerNumOpenConnections", "Number of the rpc server open connections"})
   public int getRpcServerNumOpenConnections() {
     return rpcServer.getServer().getNumOpenConnections();
   }
 
   @Override
+  @Metric({"RpcClientNumConnections", "Number of the rpc client open connections"})
   public int getRpcClientNumConnections() {
     return rpcServer.getRPCClient().getNumConnections();
   }
 
   @Override
+  @Metric({"RpcClientNumActiveConnections", "Number of the rpc client active connections"})
   public int getRpcClientNumActiveConnections() {
     return rpcServer.getRPCClient().getNumActiveConnections();
   }
 
   @Override
+  @Metric({"RpcClientNumIdleConnections", "Number of the rpc client idle connections"})
   public int getRpcClientNumIdleConnections() {
     return rpcServer.getRPCClient().getNumIdleConnections();
   }
 
   @Override
+  @Metric({"RpcClientNumActiveConnectionsRecently", "Number of the rpc client active connections recently"})
   public int getRpcClientNumActiveConnectionsRecently() {
     return rpcServer.getRPCClient().getNumActiveConnectionsRecently();
   }
 
   @Override
+  @Metric({"RpcClientNumCreatingConnections", "Number of the rpc client creating connections"})
   public int getRpcClientNumCreatingConnections() {
     return rpcServer.getRPCClient().getNumCreatingConnections();
   }
 
   @Override
+  @Metric({"RpcClientNumConnectionPools", "Number of the rpc client connection pools"})
   public int getRpcClientNumConnectionPools() {
     return rpcServer.getRPCClient().getNumConnectionPools();
   }
@@ -231,6 +239,12 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   @Override
   public String getRpcClientConnections() {
     return rpcServer.getRPCClient().getJSON();
+  }
+
+  @Override
+  public String getAvailableHandlerOnPerNs() {
+    return rpcServer.getRPCClient().
+        getRouterRpcFairnessPolicyController().getAvailableHandlerOnPerNs();
   }
 
   @Override
@@ -285,5 +299,15 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   @Override
   public long getProxyOpPermitRejected() {
     return proxyOpPermitRejected.value();
+  }
+
+  @Override
+  public String getProxyOpPermitRejectedPerNs() {
+    return rpcServer.getRPCClient().getRejectedPermitsPerNsJSON();
+  }
+
+  @Override
+  public String getProxyOpPermitAcceptedPerNs() {
+    return rpcServer.getRPCClient().getAcceptedPermitsPerNsJSON();
   }
 }

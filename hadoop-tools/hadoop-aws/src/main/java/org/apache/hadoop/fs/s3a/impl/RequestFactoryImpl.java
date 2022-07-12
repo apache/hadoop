@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -46,8 +48,9 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,8 +63,8 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * The standard implementation of the request factory.
@@ -107,16 +110,19 @@ public class RequestFactoryImpl implements RequestFactory {
   private final long multipartPartCountLimit;
 
   /**
-   * Requester Pays.
-   * This is to be wired up in a PR with its
-   * own tests and docs.
-   */
-  private final boolean requesterPays;
-
-  /**
    * Callback to prepare requests.
    */
   private final PrepareRequest requestPreparer;
+
+  /**
+   * Content encoding (null for none).
+   */
+  private final String contentEncoding;
+
+  /**
+   * Storage class.
+   */
+  private final StorageClass storageClass;
 
   /**
    * Constructor.
@@ -128,8 +134,9 @@ public class RequestFactoryImpl implements RequestFactory {
     this.cannedACL = builder.cannedACL;
     this.encryptionSecrets = builder.encryptionSecrets;
     this.multipartPartCountLimit = builder.multipartPartCountLimit;
-    this.requesterPays = builder.requesterPays;
     this.requestPreparer = builder.requestPreparer;
+    this.contentEncoding = builder.contentEncoding;
+    this.storageClass = builder.storageClass;
   }
 
   /**
@@ -194,6 +201,24 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   /**
+   * Get the content encoding (e.g. gzip) or return null if none.
+   * @return content encoding
+   */
+  @Override
+  public String getContentEncoding() {
+    return contentEncoding;
+  }
+
+  /**
+   * Get the object storage class, return null if none.
+   * @return storage class
+   */
+  @Override
+  public StorageClass getStorageClass() {
+    return storageClass;
+  }
+
+  /**
    * Sets server side encryption parameters to the part upload
    * request when encryption is enabled.
    * @param request upload part request
@@ -236,12 +261,17 @@ public class RequestFactoryImpl implements RequestFactory {
   /**
    * Set the optional metadata for an object being created or copied.
    * @param metadata to update.
+   * @param isDirectoryMarker is this for a directory marker?
    */
-  protected void setOptionalObjectMetadata(ObjectMetadata metadata) {
+  protected void setOptionalObjectMetadata(ObjectMetadata metadata,
+      boolean isDirectoryMarker) {
     final S3AEncryptionMethods algorithm
         = getServerSideEncryptionAlgorithm();
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
       metadata.setSSEAlgorithm(algorithm.getMethod());
+    }
+    if (contentEncoding != null && !isDirectoryMarker) {
+      metadata.setContentEncoding(contentEncoding);
     }
   }
 
@@ -255,8 +285,21 @@ public class RequestFactoryImpl implements RequestFactory {
    */
   @Override
   public ObjectMetadata newObjectMetadata(long length) {
+    return createObjectMetadata(length, false);
+  }
+
+  /**
+   * Create a new object metadata instance.
+   * Any standard metadata headers are added here, for example:
+   * encryption.
+   *
+   * @param length length of data to set in header; Ignored if negative
+   * @param isDirectoryMarker is this for a directory marker?
+   * @return a new metadata instance
+   */
+  private ObjectMetadata createObjectMetadata(long length, boolean isDirectoryMarker) {
     final ObjectMetadata om = new ObjectMetadata();
-    setOptionalObjectMetadata(om);
+    setOptionalObjectMetadata(om, isDirectoryMarker);
     if (length >= 0) {
       om.setContentLength(length);
     }
@@ -271,7 +314,7 @@ public class RequestFactoryImpl implements RequestFactory {
         new CopyObjectRequest(getBucket(), srcKey, getBucket(), dstKey);
     ObjectMetadata dstom = newObjectMetadata(srcom.getContentLength());
     HeaderProcessing.cloneObjectMetadata(srcom, dstom);
-    setOptionalObjectMetadata(dstom);
+    setOptionalObjectMetadata(dstom, false);
     copyEncryptionParameters(srcom, copyObjectRequest);
     copyObjectRequest.setCannedAccessControlList(cannedACL);
     copyObjectRequest.setNewObjectMetadata(dstom);
@@ -318,20 +361,27 @@ public class RequestFactoryImpl implements RequestFactory {
   }
   /**
    * Create a putObject request.
-   * Adds the ACL and metadata
+   * Adds the ACL, storage class and metadata
    * @param key key of object
    * @param metadata metadata header
+   * @param options options for the request, including headers
    * @param srcfile source file
    * @return the request
    */
   @Override
   public PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, File srcfile) {
+      ObjectMetadata metadata,
+      final PutObjectOptions options,
+      File srcfile) {
     Preconditions.checkNotNull(srcfile);
     PutObjectRequest putObjectRequest = new PutObjectRequest(getBucket(), key,
         srcfile);
+    maybeSetMetadata(options, metadata);
     setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
+    if (storageClass != null) {
+      putObjectRequest.setStorageClass(storageClass);
+    }
     putObjectRequest.setMetadata(metadata);
     return prepareRequest(putObjectRequest);
   }
@@ -342,15 +392,18 @@ public class RequestFactoryImpl implements RequestFactory {
    * operation.
    * @param key key of object
    * @param metadata metadata header
+   * @param options options for the request
    * @param inputStream source data.
    * @return the request
    */
   @Override
   public PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata,
+      @Nullable final PutObjectOptions options,
       InputStream inputStream) {
     Preconditions.checkNotNull(inputStream);
     Preconditions.checkArgument(isNotEmpty(key), "Null/empty key");
+    maybeSetMetadata(options, metadata);
     PutObjectRequest putObjectRequest = new PutObjectRequest(getBucket(), key,
         inputStream, metadata);
     setOptionalPutRequestParameters(putObjectRequest);
@@ -371,10 +424,10 @@ public class RequestFactoryImpl implements RequestFactory {
       }
     };
     // preparation happens in here
-    final ObjectMetadata md = newObjectMetadata(0L);
+    final ObjectMetadata md = createObjectMetadata(0L, true);
     md.setContentType(HeaderProcessing.CONTENT_TYPE_X_DIRECTORY);
     PutObjectRequest putObjectRequest =
-        newPutObjectRequest(key, md, im);
+        newPutObjectRequest(key, md, null, im);
     return putObjectRequest;
   }
 
@@ -400,12 +453,18 @@ public class RequestFactoryImpl implements RequestFactory {
 
   @Override
   public InitiateMultipartUploadRequest newMultipartUploadRequest(
-      String destKey) {
+      final String destKey,
+      @Nullable final PutObjectOptions options) {
+    final ObjectMetadata objectMetadata = newObjectMetadata(-1);
+    maybeSetMetadata(options, objectMetadata);
     final InitiateMultipartUploadRequest initiateMPURequest =
         new InitiateMultipartUploadRequest(getBucket(),
             destKey,
-            newObjectMetadata(-1));
+            objectMetadata);
     initiateMPURequest.setCannedACL(getCannedACL());
+    if (getStorageClass() != null) {
+      initiateMPURequest.withStorageClass(getStorageClass());
+    }
     setOptionalMultipartUploadRequestParameters(initiateMPURequest);
     return prepareRequest(initiateMPURequest);
   }
@@ -542,17 +601,33 @@ public class RequestFactoryImpl implements RequestFactory {
 
   @Override
   public DeleteObjectsRequest newBulkDeleteRequest(
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean quiet) {
+          List<DeleteObjectsRequest.KeyVersion> keysToDelete) {
     return prepareRequest(
         new DeleteObjectsRequest(bucket)
             .withKeys(keysToDelete)
-            .withQuiet(quiet));
+            .withQuiet(true));
   }
 
   @Override
   public void setEncryptionSecrets(final EncryptionSecrets secrets) {
     encryptionSecrets = secrets;
+  }
+
+  /**
+   * Set the metadata from the options if the options are not
+   * null and the metadata contains headers.
+   * @param options options for the request
+   * @param objectMetadata metadata to patch
+   */
+  private void maybeSetMetadata(
+      @Nullable PutObjectOptions options,
+      final ObjectMetadata objectMetadata) {
+    if (options != null) {
+      Map<String, String> headers = options.getHeaders();
+      if (headers != null) {
+        objectMetadata.setUserMetadata(headers);
+      }
+    }
   }
 
   /**
@@ -583,8 +658,13 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     private CannedAccessControlList cannedACL = null;
 
-    /** Requester Pays flag. */
-    private boolean requesterPays = false;
+    /** Content Encoding. */
+    private String contentEncoding;
+
+    /**
+     * Storage class.
+     */
+    private StorageClass storageClass;
 
     /**
      * Multipart limit.
@@ -605,6 +685,26 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     public RequestFactory build() {
       return new RequestFactoryImpl(this);
+    }
+
+    /**
+     * Content encoding.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withContentEncoding(final String value) {
+      contentEncoding = value;
+      return this;
+    }
+
+    /**
+     * Storage class.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withStorageClass(final StorageClass value) {
+      storageClass = value;
+      return this;
     }
 
     /**
@@ -636,17 +736,6 @@ public class RequestFactoryImpl implements RequestFactory {
     public RequestFactoryBuilder withCannedACL(
         final CannedAccessControlList value) {
       cannedACL = value;
-      return this;
-    }
-
-    /**
-     * Requester Pays flag.
-     * @param value new value
-     * @return the builder
-     */
-    public RequestFactoryBuilder withRequesterPays(
-        final boolean value) {
-      requesterPays = value;
       return this;
     }
 

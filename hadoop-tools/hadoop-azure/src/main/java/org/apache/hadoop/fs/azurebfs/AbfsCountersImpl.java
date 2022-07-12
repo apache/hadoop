@@ -22,7 +22,7 @@ import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -87,7 +87,11 @@ public class AbfsCountersImpl implements AbfsCounters {
       BYTES_RECEIVED,
       READ_THROTTLES,
       WRITE_THROTTLES,
-      SERVER_UNAVAILABLE
+      SERVER_UNAVAILABLE,
+      RENAME_RECOVERY,
+      METADATA_INCOMPLETE_RENAME_FAILURES,
+      RENAME_PATH_ATTEMPTS
+
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {

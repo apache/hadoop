@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.io.serialization.ValidatingObjectInputStream;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,6 @@ import org.apache.zookeeper.data.ACL;
 import java.io.IOException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -251,7 +251,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
   private boolean createNewZkPath(String path) throws Exception {
     if (!zkManager.exists(path)) {
       try {
-        zkManager.create(path);
+        zkManager.create(path, zkAcl);
       } catch(NodeExistsException e) {
         LOG.warn(NODEEXISTS_MSG, e);
         return false;
@@ -314,7 +314,8 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
 
   private static Object deserializeObject(byte[] bytes) throws Exception {
     try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-        ObjectInputStream ois = new ObjectInputStream(bais);) {
+         ValidatingObjectInputStream ois = new ValidatingObjectInputStream(bais);) {
+      ois.accept(LinkedList.class, LogMutation.class, HashMap.class, String.class);
       return ois.readObject();
     }
   }

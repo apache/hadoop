@@ -24,15 +24,41 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.impl.BlockReaderRemote;
+import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -69,6 +95,7 @@ public class DebugAdmin extends Configured implements Tool {
       new VerifyMetaCommand(),
       new ComputeMetaCommand(),
       new RecoverLeaseCommand(),
+      new VerifyECCommand(),
       new HelpCommand()
   };
 
@@ -388,6 +415,209 @@ public class DebugAdmin extends Configured implements Tool {
   }
 
   /**
+   * The command for verifying the correctness of erasure coding on an erasure coded file.
+   */
+  private class VerifyECCommand extends DebugCommand {
+    private DFSClient client;
+    private int dataBlkNum;
+    private int parityBlkNum;
+    private int cellSize;
+    private boolean useDNHostname;
+    private CachingStrategy cachingStrategy;
+    private int stripedReadBufferSize;
+    private CompletionService<Integer> readService;
+    private RawErasureEncoder encoder;
+    private BlockReader[] blockReaders;
+
+
+    VerifyECCommand() {
+      super("verifyEC",
+          "verifyEC -file <file>",
+          "  Verify HDFS erasure coding on all block groups of the file.");
+    }
+
+    int run(List<String> args) throws IOException {
+      if (args.size() < 2) {
+        System.out.println(usageText);
+        System.out.println(helpText + System.lineSeparator());
+        return 1;
+      }
+      String file = StringUtils.popOptionWithArgument("-file", args);
+      Path path = new Path(file);
+      DistributedFileSystem dfs = AdminHelper.getDFS(getConf());
+      this.client = dfs.getClient();
+
+      FileStatus fileStatus;
+      try {
+        fileStatus = dfs.getFileStatus(path);
+      } catch (FileNotFoundException e) {
+        System.err.println("File " + file + " does not exist.");
+        return 1;
+      }
+
+      if (!fileStatus.isFile()) {
+        System.err.println("File " + file + " is not a regular file.");
+        return 1;
+      }
+      if (!dfs.isFileClosed(path)) {
+        System.err.println("File " + file + " is not closed.");
+        return 1;
+      }
+      this.useDNHostname = getConf().getBoolean(DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
+          DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
+      this.cachingStrategy = CachingStrategy.newDefaultStrategy();
+      this.stripedReadBufferSize = getConf().getInt(
+          DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
+          DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_DEFAULT);
+
+      LocatedBlocks locatedBlocks = client.getLocatedBlocks(file, 0, fileStatus.getLen());
+      if (locatedBlocks.getErasureCodingPolicy() == null) {
+        System.err.println("File " + file + " is not erasure coded.");
+        return 1;
+      }
+      ErasureCodingPolicy ecPolicy = locatedBlocks.getErasureCodingPolicy();
+      this.dataBlkNum = ecPolicy.getNumDataUnits();
+      this.parityBlkNum = ecPolicy.getNumParityUnits();
+      this.cellSize = ecPolicy.getCellSize();
+      this.encoder = CodecUtil.createRawEncoder(getConf(), ecPolicy.getCodecName(),
+          new ErasureCoderOptions(
+              ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits()));
+      int blockNum = dataBlkNum + parityBlkNum;
+      this.readService = new ExecutorCompletionService<>(
+          DFSUtilClient.getThreadPoolExecutor(blockNum, blockNum, 60,
+              new LinkedBlockingQueue<>(), "read-", false));
+      this.blockReaders = new BlockReader[dataBlkNum + parityBlkNum];
+
+      for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
+        System.out.println("Checking EC block group: blk_" + locatedBlock.getBlock().getBlockId());
+        LocatedStripedBlock blockGroup = (LocatedStripedBlock) locatedBlock;
+
+        try {
+          verifyBlockGroup(blockGroup);
+          System.out.println("Status: OK");
+        } catch (Exception e) {
+          System.err.println("Status: ERROR, message: " + e.getMessage());
+          return 1;
+        } finally {
+          closeBlockReaders();
+        }
+      }
+      System.out.println("\nAll EC block group status: OK");
+      return 0;
+    }
+
+    private void verifyBlockGroup(LocatedStripedBlock blockGroup) throws Exception {
+      final LocatedBlock[] indexedBlocks = StripedBlockUtil.parseStripedBlockGroup(blockGroup,
+          cellSize, dataBlkNum, parityBlkNum);
+
+      int blockNumExpected = Math.min(dataBlkNum,
+          (int) ((blockGroup.getBlockSize() - 1) / cellSize + 1)) + parityBlkNum;
+      if (blockGroup.getBlockIndices().length < blockNumExpected) {
+        throw new Exception("Block group is under-erasure-coded.");
+      }
+
+      long maxBlockLen = 0L;
+      DataChecksum checksum = null;
+      for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
+        LocatedBlock block = indexedBlocks[i];
+        if (block == null) {
+          blockReaders[i] = null;
+          continue;
+        }
+        if (block.getBlockSize() > maxBlockLen) {
+          maxBlockLen = block.getBlockSize();
+        }
+        BlockReader blockReader = createBlockReader(block.getBlock(),
+            block.getLocations()[0], block.getBlockToken());
+        if (checksum == null) {
+          checksum = blockReader.getDataChecksum();
+        } else {
+          assert checksum.equals(blockReader.getDataChecksum());
+        }
+        blockReaders[i] = blockReader;
+      }
+      assert checksum != null;
+      int bytesPerChecksum = checksum.getBytesPerChecksum();
+      int bufferSize = stripedReadBufferSize < bytesPerChecksum ? bytesPerChecksum :
+          stripedReadBufferSize - stripedReadBufferSize % bytesPerChecksum;
+      final ByteBuffer[] buffers = new ByteBuffer[dataBlkNum + parityBlkNum];
+      final ByteBuffer[] outputs = new ByteBuffer[parityBlkNum];
+      for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
+        buffers[i] = ByteBuffer.allocate(bufferSize);
+      }
+      for (int i = 0; i < parityBlkNum; i++) {
+        outputs[i] = ByteBuffer.allocate(bufferSize);
+      }
+      long positionInBlock = 0L;
+      while (positionInBlock < maxBlockLen) {
+        final int toVerifyLen = (int) Math.min(bufferSize, maxBlockLen - positionInBlock);
+        List<Future<Integer>> futures = new ArrayList<>(dataBlkNum + parityBlkNum);
+        for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
+          final int fi = i;
+          futures.add(this.readService.submit(() -> {
+            BlockReader blockReader = blockReaders[fi];
+            ByteBuffer buffer = buffers[fi];
+            buffer.clear();
+            buffer.limit(toVerifyLen);
+            int readLen = 0;
+            if (blockReader != null) {
+              int toRead = buffer.remaining();
+              while (readLen < toRead) {
+                int nread = blockReader.read(buffer);
+                if (nread <= 0) {
+                  break;
+                }
+                readLen += nread;
+              }
+            }
+            while (buffer.hasRemaining()) {
+              buffer.put((byte) 0);
+            }
+            buffer.flip();
+            return readLen;
+          }));
+        }
+        for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
+          futures.get(i).get(1, TimeUnit.MINUTES);
+        }
+        ByteBuffer[] inputs = new ByteBuffer[dataBlkNum];
+        System.arraycopy(buffers, 0, inputs, 0, dataBlkNum);
+        for (int i = 0; i < parityBlkNum; i++) {
+          outputs[i].clear();
+          outputs[i].limit(toVerifyLen);
+        }
+        this.encoder.encode(inputs, outputs);
+        for (int i = 0; i < parityBlkNum; i++) {
+          if (!buffers[dataBlkNum + i].equals(outputs[i])) {
+            throw new Exception("EC compute result not match.");
+          }
+        }
+        positionInBlock += toVerifyLen;
+      }
+    }
+
+    private BlockReader createBlockReader(ExtendedBlock block, DatanodeInfo dnInfo,
+                                          Token<BlockTokenIdentifier> token) throws IOException {
+      InetSocketAddress dnAddress = NetUtils.createSocketAddr(dnInfo.getXferAddr(useDNHostname));
+      Peer peer = client.newConnectedPeer(dnAddress, token, dnInfo);
+      return BlockReaderRemote.newBlockReader(
+          "dummy", block, token, 0,
+          block.getNumBytes(), true, "", peer, dnInfo,
+          null, cachingStrategy, -1, getConf());
+    }
+
+    private void closeBlockReaders() {
+      for (int i = 0; i < blockReaders.length; i++) {
+        if (blockReaders[i] != null) {
+          IOUtils.closeStream(blockReaders[i]);
+          blockReaders[i] = null;
+        }
+      }
+    }
+
+  }
+
+  /**
    * The command for getting help about other commands.
    */
   private class HelpCommand extends DebugCommand {
@@ -459,9 +689,9 @@ public class DebugAdmin extends Configured implements Tool {
       if (!command.name.equals("help")) {
         System.out.println(command.usageText);
       }
-      System.out.println();
-      ToolRunner.printGenericCommandUsage(System.out);
     }
+    System.out.println();
+    ToolRunner.printGenericCommandUsage(System.out);
   }
 
   public static void main(String[] argsArray) throws Exception {

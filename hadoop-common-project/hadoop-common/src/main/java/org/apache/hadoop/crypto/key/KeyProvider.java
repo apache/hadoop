@@ -27,17 +27,17 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +57,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  * <code>KeyProvider</code> implementations must be thread safe.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
+@InterfaceStability.Stable
 public abstract class KeyProvider implements Closeable {
   public static final String DEFAULT_CIPHER_NAME =
       CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY;
@@ -135,20 +135,14 @@ public abstract class KeyProvider implements Closeable {
         return false;
       }
       final KeyVersion kv = (KeyVersion) rhs;
-      return new EqualsBuilder().
-          append(name, kv.name).
-          append(versionName, kv.versionName).
-          append(material, kv.material).
-          isEquals();
+      return Objects.equals(name, kv.name)
+          && Objects.equals(versionName, kv.versionName)
+          && Arrays.equals(material, kv.material);
     }
 
     @Override
     public int hashCode() {
-      return new HashCodeBuilder().
-          append(name).
-          append(versionName).
-          append(material).
-          toHashCode();
+      return Objects.hash(name, versionName, Arrays.hashCode(material));
     }
   }
 
@@ -248,7 +242,7 @@ public abstract class KeyProvider implements Closeable {
     /**
      * Serialize the metadata to a set of bytes.
      * @return the serialized bytes
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     protected byte[] serialize() throws IOException {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -287,7 +281,7 @@ public abstract class KeyProvider implements Closeable {
     /**
      * Deserialize a new metadata object from a set of bytes.
      * @param bytes the serialized metadata
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     protected Metadata(byte[] bytes) throws IOException {
       String cipher = null;
@@ -456,7 +450,7 @@ public abstract class KeyProvider implements Closeable {
    * when decrypting data.
    * @param versionName the name of a specific version of the key
    * @return the key material
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract KeyVersion getKeyVersion(String versionName
                                             ) throws IOException;
@@ -464,14 +458,15 @@ public abstract class KeyProvider implements Closeable {
   /**
    * Get the key names for all keys.
    * @return the list of key names
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract List<String> getKeys() throws IOException;
 
   /**
    * Get key metadata in bulk.
    * @param names the names of the keys to get
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
+   * @return Metadata Array.
    */
   public Metadata[] getKeysMetadata(String... names) throws IOException {
     Metadata[] result = new Metadata[names.length];
@@ -483,8 +478,10 @@ public abstract class KeyProvider implements Closeable {
 
   /**
    * Get the key material for all versions of a specific key name.
+   *
+   * @param name the base name of the key.
    * @return the list of key material
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract List<KeyVersion> getKeyVersions(String name) throws IOException;
 
@@ -494,7 +491,7 @@ public abstract class KeyProvider implements Closeable {
    * @param name the base name of the key
    * @return the version name of the current version of the key or null if the
    *    key version doesn't exist
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public KeyVersion getCurrentKey(String name) throws IOException {
     Metadata meta = getMetadata(name);
@@ -508,7 +505,7 @@ public abstract class KeyProvider implements Closeable {
    * Get metadata about the key.
    * @param name the basename of the key
    * @return the key's metadata or null if the key doesn't exist
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract Metadata getMetadata(String name) throws IOException;
 
@@ -518,7 +515,7 @@ public abstract class KeyProvider implements Closeable {
    * @param material the key material for the first version of the key.
    * @param options the options for the new key.
    * @return the version name of the first version of the key.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract KeyVersion createKey(String name, byte[] material,
                                        Options options) throws IOException;
@@ -543,7 +540,7 @@ public abstract class KeyProvider implements Closeable {
    * @param size length of the key.
    * @param algorithm algorithm to use for generating the key.
    * @return the generated key.
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchAlgorithmException no such algorithm exception.
    */
   protected byte[] generateKey(int size, String algorithm)
       throws NoSuchAlgorithmException {
@@ -564,8 +561,8 @@ public abstract class KeyProvider implements Closeable {
    * @param name the base name of the key
    * @param options the options for the new key.
    * @return the version name of the first version of the key.
-   * @throws IOException
-   * @throws NoSuchAlgorithmException
+   * @throws IOException raised on errors performing I/O.
+   * @throws NoSuchAlgorithmException no such algorithm exception.
    */
   public KeyVersion createKey(String name, Options options)
       throws NoSuchAlgorithmException, IOException {
@@ -576,7 +573,7 @@ public abstract class KeyProvider implements Closeable {
   /**
    * Delete the given key.
    * @param name the name of the key to delete
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void deleteKey(String name) throws IOException;
 
@@ -585,7 +582,7 @@ public abstract class KeyProvider implements Closeable {
    * @param name the basename of the key
    * @param material the new key material
    * @return the name of the new version of the key
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract KeyVersion rollNewVersion(String name,
                                              byte[] material
@@ -607,7 +604,10 @@ public abstract class KeyProvider implements Closeable {
    *
    * @param name the basename of the key
    * @return the name of the new version of the key
-   * @throws IOException
+   * @throws IOException              raised on errors performing I/O.
+   * @throws NoSuchAlgorithmException This exception is thrown when a particular
+   *                                  cryptographic algorithm is requested
+   *                                  but is not available in the environment.
    */
   public KeyVersion rollNewVersion(String name) throws NoSuchAlgorithmException,
                                                        IOException {
@@ -626,7 +626,7 @@ public abstract class KeyProvider implements Closeable {
    * version of the given key.
    *
    * @param name the basename of the key
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void invalidateCache(String name) throws IOException {
     // NOP
@@ -634,7 +634,7 @@ public abstract class KeyProvider implements Closeable {
 
   /**
    * Ensures that any changes to the keys are written to persistent store.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void flush() throws IOException;
 
@@ -643,7 +643,7 @@ public abstract class KeyProvider implements Closeable {
    * "/aaa/bbb".
    * @param versionName the version name to split
    * @return the base name of the key
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static String getBaseName(String versionName) throws IOException {
     int div = versionName.lastIndexOf('@');
@@ -666,9 +666,11 @@ public abstract class KeyProvider implements Closeable {
 
   /**
    * Find the provider with the given key.
+   *
    * @param providerList the list of providers
-   * @param keyName the key name we are looking for
+   * @param keyName the key name we are looking for.
    * @return the KeyProvider that has the key
+   * @throws IOException raised on errors performing I/O.
    */
   public static KeyProvider findProvider(List<KeyProvider> providerList,
                                          String keyName) throws IOException {
@@ -686,7 +688,7 @@ public abstract class KeyProvider implements Closeable {
    * means. If true, the password should be provided by the caller using
    * setPassword().
    * @return Whether or not the provider requires a password
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public boolean needsPassword() throws IOException {
     return false;

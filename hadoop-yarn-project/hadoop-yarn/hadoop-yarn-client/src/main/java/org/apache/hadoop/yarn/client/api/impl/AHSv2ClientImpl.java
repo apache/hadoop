@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -137,9 +137,8 @@ public class AHSv2ClientImpl extends AHSClient {
     ApplicationId appId = applicationAttemptId.getApplicationId();
     ApplicationReport appReport = getApplicationReport(appId);
     Map<String, String> filters = new HashMap<>();
-    filters.put("infofilters", "SYSTEM_INFO_PARENT_ENTITY eq {\"id\":\"" +
-        applicationAttemptId.toString() +
-        "\",\"type\":\"YARN_APPLICATION_ATTEMPT\"}");
+    filters.put("infofilters", "SYSTEM_INFO_PARENT_ENTITY eq "
+        + "{\"type\":\"YARN_APPLICATION_ATTEMPT\",\"id\":\"" + applicationAttemptId + "\"}");
     List<TimelineEntity> entities = readerClient.getContainerEntities(
         appId, "ALL", filters, 0, null);
     List<ContainerReport> containers =

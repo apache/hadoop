@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +62,7 @@ public class OutlierDetector {
   /**
    * Minimum number of resources to run outlier detection.
    */
-  private final long minNumResources;
+  private volatile long minNumResources;
 
   /**
    * The multiplier is from Leys, C. et al.
@@ -70,7 +72,7 @@ public class OutlierDetector {
   /**
    * Threshold in milliseconds below which a node/ disk is definitely not slow.
    */
-  private final long lowThresholdMs;
+  private volatile long lowThresholdMs;
 
   /**
    * Deviation multiplier. A sample is considered to be an outlier if it
@@ -108,6 +110,26 @@ public class OutlierDetector {
    * @return
    */
   public Map<String, Double> getOutliers(Map<String, Double> stats) {
+    final Map<String, Double> slowResources = new HashMap<>();
+    Map<String, OutlierMetrics> slowResourceMetrics = getOutlierMetrics(stats);
+    slowResourceMetrics.forEach(
+        (node, outlierMetrics) -> slowResources.put(node, outlierMetrics.getActualLatency()));
+    return slowResources;
+  }
+
+  /**
+   * Return a set of nodes whose latency is much higher than
+   * their counterparts. The input is a map of (resource {@literal ->} aggregate
+   * latency) entries.
+   *
+   * The aggregate may be an arithmetic mean or a percentile e.g.
+   * 90th percentile. Percentiles are a better choice than median
+   * since latency is usually not a normal distribution.
+   *
+   * @param stats map of aggregate latency entries.
+   * @return map of outlier nodes to outlier metrics.
+   */
+  public Map<String, OutlierMetrics> getOutlierMetrics(Map<String, Double> stats) {
     if (stats.size() < minNumResources) {
       LOG.debug("Skipping statistical outlier detection as we don't have " +
               "latency data for enough resources. Have {}, need at least {}",
@@ -124,19 +146,20 @@ public class OutlierDetector {
     upperLimitLatency = Math.max(
         upperLimitLatency, median + (DEVIATION_MULTIPLIER * mad));
 
-    final Map<String, Double> slowResources = new HashMap<>();
+    final Map<String, OutlierMetrics> slowResources = new HashMap<>();
 
-    LOG.trace("getOutliers: List={}, MedianLatency={}, " +
-        "MedianAbsoluteDeviation={}, upperLimitLatency={}",
-        sorted, median, mad, upperLimitLatency);
+    LOG.trace("getOutliers: List={}, MedianLatency={}, "
+            + "MedianAbsoluteDeviation={}, upperLimitLatency={}", sorted, median, mad,
+        upperLimitLatency);
 
     // Find resources whose latency exceeds the threshold.
     for (Map.Entry<String, Double> entry : stats.entrySet()) {
       if (entry.getValue() > upperLimitLatency) {
-        slowResources.put(entry.getKey(), entry.getValue());
+        OutlierMetrics outlierMetrics =
+            new OutlierMetrics(median, mad, upperLimitLatency, entry.getValue());
+        slowResources.put(entry.getKey(), outlierMetrics);
       }
     }
-
     return slowResources;
   }
 
@@ -179,5 +202,21 @@ public class OutlierDetector {
       median /= 2;
     }
     return median;
+  }
+
+  public void setMinNumResources(long minNodes) {
+    minNumResources = minNodes;
+  }
+
+  public long getMinOutlierDetectionNodes() {
+    return minNumResources;
+  }
+
+  public void setLowThresholdMs(long thresholdMs) {
+    lowThresholdMs = thresholdMs;
+  }
+
+  public long getLowThresholdMs() {
+    return lowThresholdMs;
   }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.crypto.key.kms;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
+import java.net.SocketException;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
@@ -29,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -50,8 +51,8 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * A simple LoadBalancing KMSClientProvider that round-robins requests
@@ -182,10 +183,10 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       } catch (IOException ioe) {
         LOG.warn("KMS provider at [{}] threw an IOException: ",
             provider.getKMSUrl(), ioe);
-        // SSLHandshakeException can occur here because of lost connection
+        // SSLException can occur here because of lost connection
         // with the KMS server, creating a ConnectException from it,
         // so that the FailoverOnNetworkExceptionRetry policy will retry
-        if (ioe instanceof SSLHandshakeException) {
+        if (ioe instanceof SSLException || ioe instanceof SocketException) {
           Exception cause = ioe;
           ioe = new ConnectException("SSLHandshakeException: "
               + cause.getMessage());

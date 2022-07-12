@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * An {@link AuthenticationHandler} that implements Kerberos SPNEGO mechanism
@@ -89,7 +89,7 @@ public abstract class DelegationTokenAuthenticationHandler
 
   public static final String TOKEN_KIND = PREFIX + "token-kind";
 
-  private static final Set<String> DELEGATION_TOKEN_OPS = new HashSet<String>();
+  private static final Set<String> DELEGATION_TOKEN_OPS = new HashSet<>();
 
   public static final String DELEGATION_TOKEN_UGI_ATTRIBUTE =
       "hadoop.security.delegation-token.ugi";
