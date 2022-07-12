@@ -750,10 +750,13 @@ public class Journal implements Closeable {
           "is a requirement to fetch journaled edits via RPC. Please enable " +
           "it via " + DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY);
     }
-    if (sinceTxId > getHighestWrittenTxId()) {
-      // Requested edits that don't exist yet; short-circuit the cache here
+    long highestTxId = getHighestWrittenTxId();
+    if (sinceTxId > highestTxId) {
+      // Requested edits that don't exist yet and is newer than highestTxId.
       metrics.rpcEmptyResponses.incr();
-      return GetJournaledEditsResponseProto.newBuilder().setTxnCount(0).build();
+      throw new NewerTxnIdException(
+          "Highest txn ID available in the journal is %d, but requested txns starting at %d.",
+          highestTxId, sinceTxId);
     }
     try {
       List<ByteBuffer> buffers = new ArrayList<>();

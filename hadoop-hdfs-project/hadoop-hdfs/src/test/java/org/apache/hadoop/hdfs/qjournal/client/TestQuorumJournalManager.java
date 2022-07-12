@@ -28,7 +28,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
+import static org.mockito.ArgumentMatchers.eq;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -40,11 +40,15 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.net.MockDomainNameResolver;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.util.Lists;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +57,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.server.JournalFaultInjector;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
@@ -1099,6 +1104,68 @@ public class TestQuorumJournalManager {
     for (AsyncLogger logger : spies) {
       Mockito.verify(logger, Mockito.times(1)).getEditLogManifest(1, true);
     }
+  }
+
+  /**
+   * Test selecting EditLogInputStream after some journalNode jitter.
+   * And the corner case as below:
+   * 1. Journal 0 has some abnormal cases when journaling Edits with start txId 11.
+   * 2. NameNode just ignore the abnormal journal 0 and continue to write Edits to Journal 1 and 2.
+   * 3. Journal 0 backed to health.
+   * 4. Observer NameNode try to select EditLogInputStream vis PRC with start txId 21.
+   * 5. Journal 1 has some abnormal cases caused slow response.
+   *
+   * The expected result should contain txn 21 - 40.
+   */
+  @Test
+  public void testSelectViaRPCAfterJNJitter() throws Exception {
+    EditLogOutputStream stm = qjm.startLogSegment(
+        1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    SettableFuture<Void> slowLog = SettableFuture.create();
+    Mockito.doReturn(slowLog).when(spies.get(0))
+        .sendEdits(eq(1L), eq(11L), eq(10), Mockito.any());
+    // Successfully write these edits to JN0 ~ JN2
+    writeTxns(stm, 1, 10);
+    // Failed write these edits to JN0, but successfully write them to JN1 ~ JN2
+    writeTxns(stm, 11, 10);
+    // Successfully write these edits to JN1 ~ JN2
+    writeTxns(stm, 21, 20);
+
+    Semaphore semaphore = new Semaphore(0);
+
+    Mockito.doAnswer((Answer<ListenableFuture<GetJournaledEditsResponseProto>>) invocation -> {
+      semaphore.release(1);
+      @SuppressWarnings("unchecked")
+      ListenableFuture<GetJournaledEditsResponseProto> result =
+          (ListenableFuture<GetJournaledEditsResponseProto>) invocation.callRealMethod();
+      return result;
+    }).when(spies.get(0)).getJournaledEdits(21,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+
+    Mockito.doAnswer((Answer<ListenableFuture<GetJournaledEditsResponseProto>>) invocation -> {
+      semaphore.release(1);
+      @SuppressWarnings("unchecked")
+      ListenableFuture<GetJournaledEditsResponseProto> result =
+          (ListenableFuture<GetJournaledEditsResponseProto>) invocation.callRealMethod();
+      return result;
+    }).when(spies.get(1)).getJournaledEdits(21,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+
+    Mockito.doAnswer((Answer<ListenableFuture<GetJournaledEditsResponseProto>>) invocation -> {
+      semaphore.acquire(2);
+      @SuppressWarnings("unchecked")
+      ListenableFuture<GetJournaledEditsResponseProto> result =
+          (ListenableFuture<GetJournaledEditsResponseProto>) invocation.callRealMethod();
+      return result;
+    }).when(spies.get(2)).getJournaledEdits(21,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 21, true, true);
+
+    assertEquals(1, streams.size());
+    assertEquals(21, streams.get(0).getFirstTxId());
+    assertEquals(40, streams.get(0).getLastTxId());
   }
 
   @Test
