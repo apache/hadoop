@@ -1003,6 +1003,9 @@ used for pushing metrics to the store.
 `fs.azure.enable.metric.collection`: This configuration provides an option to specify whether we want to push the metrics or not. 
 By default, this config will be set to false.
 
+`fs.azure.metric.uri`: This configuration provides the uri in the format of containername@accountname.dfs.core.windows.net. 
+This should be a part of the config in order to prevent extra calls to create the filesystem. We use an existing filsystem to push the metrics.
+
 ## <a name="troubleshooting"></a> Troubleshooting
 
 The problems associated with the connector usually come down to, in order

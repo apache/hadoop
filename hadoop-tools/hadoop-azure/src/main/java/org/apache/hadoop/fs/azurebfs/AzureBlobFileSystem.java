@@ -49,7 +49,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -113,14 +112,17 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -689,10 +691,13 @@ public class AzureBlobFileSystem extends FileSystem
       if(abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get() > 0) {
         try {
           Configuration metricConfig = getConf();
-          String metricAccountName = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_NAME);
           String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
-          final String abfsMetricUrl = "metrics" + "@" + metricAccountName;
+          final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
+          if(abfsMetricUrl == null){
+            return;
+          }
           metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
+          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
           URI metricUri;
           try {
             metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
