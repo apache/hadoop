@@ -249,7 +249,9 @@ function startgpgagent
       eval $("${GPGAGENT}" --daemon \
         --options "${LOGDIR}/gpgagent.conf" \
         --log-file="${LOGDIR}/create-release-gpgagent.log")
-      GPGAGENTPID=$(echo "${GPG_AGENT_INFO}" | cut -f 2 -d:)
+      GPGAGENTPID=$(pgrep "${GPGAGENT}")
+      GPG_AGENT_INFO="$HOME/.gnupg/S.gpg-agent:$GPGAGENTPID:1"
+      export GPG_AGENT_INFO
     fi
 
     if [[ -n "${GPG_AGENT_INFO}" ]]; then
