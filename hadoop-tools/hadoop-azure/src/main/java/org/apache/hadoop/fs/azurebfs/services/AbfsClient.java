@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.Path;
@@ -248,23 +249,14 @@ public class AbfsClient implements Closeable {
     case ENCRYPTION_CONTEXT:
       if (isCreateFileRequest) {
         // get new context for create file request
-        SecretKey encryptionContext =
+        final ABFSKey encryptionContext =
             encryptionAdapter.createEncryptionContext();
         encryptionAdapter.computeKeys();
         String base64EncodedSecret;
-        if(encryptionContext.getClass() == EncryptionAdapter.ABFSKey.class) {
-          base64EncodedSecret = ((EncryptionAdapter.ABFSKey)encryptionContext).getBase64EncodedString();
-        } else {
-          base64EncodedSecret = Base64.getEncoder().encodeToString(encryptionContext.getEncoded());
-        }
+          base64EncodedSecret = encryptionContext.getBase64EncodedString();
         requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
             base64EncodedSecret));
-        try {
-          encryptionContext.destroy();
-        } catch (DestroyFailedException e) {
-          throw new IOException(
-              "Could not destroy encryptionContext: " + e.getMessage());
-        }
+        encryptionContext.destroy();
       } else if (encryptionAdapter == null) {
         // get encryption context from GetPathStatus response header
         byte[] encryptionContext;

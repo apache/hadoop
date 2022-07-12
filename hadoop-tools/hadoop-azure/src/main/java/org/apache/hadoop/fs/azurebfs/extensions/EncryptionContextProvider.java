@@ -23,6 +23,7 @@ import javax.security.auth.Destroyable;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
 
 public interface EncryptionContextProvider extends Destroyable {
   /**
@@ -42,7 +43,7 @@ public interface EncryptionContextProvider extends Destroyable {
    * @return encryptionContext string
    * @throws IOException error in fetching encryption context
    */
-  SecretKey getEncryptionContext(String path) throws IOException;
+  ABFSKey getEncryptionContext(String path) throws IOException;
 
   /**
    * Fetch encryption key in-exchange for encryption context
@@ -52,7 +53,7 @@ public interface EncryptionContextProvider extends Destroyable {
    * @return Encryption key
    * @throws IOException error in fetching encryption key
    */
-  SecretKey getEncryptionKey(String path, SecretKey encryptionContext) throws IOException;
+  ABFSKey getEncryptionKey(String path, ABFSKey encryptionContext) throws IOException;
 
   void destroy();
 }

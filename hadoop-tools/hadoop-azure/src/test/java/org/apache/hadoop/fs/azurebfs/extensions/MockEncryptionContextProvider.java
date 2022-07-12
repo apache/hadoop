@@ -28,32 +28,32 @@ import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ENCRYPTION_KEY_LEN;
 
 public class MockEncryptionContextProvider implements EncryptionContextProvider {
   private HashMap<String, String> pathToContextMap = new HashMap<>();
-  private HashMap<String, Key> contextToKeyMap = new HashMap<>();
+  private HashMap<String, ABFSKey> contextToKeyMap = new HashMap<>();
   @Override
   public void initialize(Configuration configuration, String accountName,
       String fileSystem) throws IOException {
   }
 
   @Override
-  public SecretKey getEncryptionContext(String path)
+  public ABFSKey getEncryptionContext(String path)
       throws IOException {
     String newContext = UUID.randomUUID().toString();
     pathToContextMap.put(path, newContext);
     byte[] newKey = new byte[ENCRYPTION_KEY_LEN];
     new Random().nextBytes(newKey);
-    Key key = new Key(newKey);
+    ABFSKey key = new ABFSKey(newKey);
     contextToKeyMap.put(newContext, key);
-    return new Key(newContext.getBytes(StandardCharsets.UTF_8));
+    return new ABFSKey(newContext.getBytes(StandardCharsets.UTF_8));
   }
 
   @Override
-  public SecretKey getEncryptionKey(String path,
-      SecretKey encryptionContext) throws IOException {
+  public ABFSKey getEncryptionKey(String path, ABFSKey encryptionContext) throws IOException {
     String encryptionContextString =
         new String(encryptionContext.getEncoded(), StandardCharsets.UTF_8);
     if (!encryptionContextString.equals(pathToContextMap.get(path))) {
@@ -65,7 +65,7 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
   @Override
   public void destroy() {
     pathToContextMap = null;
-    for (Key encryptionKey : contextToKeyMap.values()) {
+    for (ABFSKey encryptionKey : contextToKeyMap.values()) {
       encryptionKey.destroy();
     }
     contextToKeyMap = null;

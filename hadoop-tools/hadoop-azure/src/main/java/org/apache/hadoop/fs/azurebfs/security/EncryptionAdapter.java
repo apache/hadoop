@@ -21,9 +21,7 @@ package org.apache.hadoop.fs.azurebfs.security;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Base64;
-import javax.crypto.SecretKey;
 import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
 
@@ -33,8 +31,8 @@ import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 
 public class EncryptionAdapter implements Destroyable {
   private final String path;
-  private SecretKey encryptionContext;
-  private SecretKey encryptionKey;
+  private ABFSKey encryptionContext;
+  private ABFSKey encryptionKey;
   private final EncryptionContextProvider provider;
   private String encodedKey = null;
   private String encodedKeySHA = null;
@@ -53,7 +51,7 @@ public class EncryptionAdapter implements Destroyable {
     this.path = path;
   }
 
-  public SecretKey getEncryptionKey() throws IOException {
+  public ABFSKey getEncryptionKey() throws IOException {
     if (encryptionKey != null) {
       return encryptionKey;
     }
@@ -61,7 +59,7 @@ public class EncryptionAdapter implements Destroyable {
     return encryptionKey;
   }
 
-  public SecretKey createEncryptionContext() throws IOException {
+  public ABFSKey createEncryptionContext() throws IOException {
     encryptionContext = provider.getEncryptionContext(path);
     Preconditions.checkNotNull(encryptionContext,
         "Encryption context should not be null.");
@@ -69,15 +67,10 @@ public class EncryptionAdapter implements Destroyable {
   }
 
   public void computeKeys() throws IOException {
-    SecretKey key = getEncryptionKey();
+    ABFSKey key = getEncryptionKey();
     Preconditions.checkNotNull(key, "Encryption key should not be null.");
-    if(key.getClass() == ABFSKey.class) {
-      encodedKey = ((ABFSKey) key).getBase64EncodedString();
-      encodedKeySHA = getBase64EncodedString(((ABFSKey) key).getSHA256Hash());
-      return;
-    }
-    encodedKey = getBase64EncodedString(key.getEncoded());
-    encodedKeySHA = getBase64EncodedString(getSHA256Hash(key.getEncoded()));
+      encodedKey = key.getBase64EncodedString();
+      encodedKeySHA = EncodingHelper.getBase64EncodedString(key.getSHA256Hash());
   }
 
   public String getEncodedKey() throws IOException {
@@ -97,53 +90,5 @@ public class EncryptionAdapter implements Destroyable {
   public void destroy() throws DestroyFailedException {
     encryptionKey.destroy();
     provider.destroy();
-  }
-
-  public class ABFSKey implements SecretKey {
-    private final byte[] bytes;
-    public ABFSKey(byte[] bytes) {
-      this.bytes = (bytes != null) ? bytes.clone() : null;
-    }
-
-    @Override
-    public String getAlgorithm() {
-      return null;
-    }
-
-    @Override
-    public String getFormat() {
-      return null;
-    }
-
-    @Override
-    public byte[] getEncoded() {
-      return bytes.clone();
-    }
-
-    public String getBase64EncodedString() {
-      return EncryptionAdapter.getBase64EncodedString(bytes);
-    }
-
-    public byte[] getSHA256Hash() throws IOException {
-      return EncryptionAdapter.getSHA256Hash(bytes);
-    }
-
-    @Override
-    public void destroy() {
-      Arrays.fill(bytes, (byte) 0);
-    }
-  }
-
-  public static byte[] getSHA256Hash(byte[] key) throws IOException {
-    try {
-      final MessageDigest digester = MessageDigest.getInstance("SHA-256");
-      return digester.digest(key);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IOException(e);
-    }
-  }
-
-  public static String getBase64EncodedString(byte[] bytes) {
-    return Base64.getEncoder().encodeToString(bytes);
   }
 }

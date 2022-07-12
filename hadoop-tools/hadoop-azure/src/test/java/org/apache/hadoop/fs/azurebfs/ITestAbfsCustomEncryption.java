@@ -25,6 +25,8 @@ import java.util.Base64;
 import java.util.Hashtable;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
+import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -146,8 +148,8 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
         getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
             false));
     new Random().nextBytes(cpk);
-    cpkSHAEncoded = EncryptionAdapter.getBase64EncodedString(
-        EncryptionAdapter.getSHA256Hash(cpk));
+    cpkSHAEncoded = EncodingHelper.getBase64EncodedString(
+        EncodingHelper.getSHA256Hash(cpk));
   }
 
   @Test
@@ -165,8 +167,8 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     if (isCpkResponseHdrExpected) {
       if (requestEncryptionType == ENCRYPTION_CONTEXT) {
         String encryptionContext = ecp.getEncryptionContextForTest(relativePath);
-        String expectedKeySHA = EncryptionAdapter.getBase64EncodedString(
-            EncryptionAdapter.getSHA256Hash(
+        String expectedKeySHA = EncodingHelper.getBase64EncodedString(
+            EncodingHelper.getSHA256Hash(
                 ecp.getEncryptionKeyForTest(encryptionContext)));
         Assertions.assertThat(httpOp.getResponseHeader(X_MS_ENCRYPTION_KEY_SHA256))
             .isEqualTo(expectedKeySHA);
@@ -273,9 +275,9 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   private AzureBlobFileSystem getCPKEnabledFS() throws IOException {
     Configuration conf = getRawConfiguration();
-    String cpkEncoded = EncryptionAdapter.getBase64EncodedString(cpk);
-    String cpkEncodedSHA = EncryptionAdapter.getBase64EncodedString(
-        EncryptionAdapter.getSHA256Hash(cpk));
+    String cpkEncoded = EncodingHelper.getBase64EncodedString(cpk);
+    String cpkEncodedSHA = EncodingHelper.getBase64EncodedString(
+        EncodingHelper.getSHA256Hash(cpk));
     conf.set(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY + "."
         + getAccountName(), cpkEncoded);
     conf.set(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
