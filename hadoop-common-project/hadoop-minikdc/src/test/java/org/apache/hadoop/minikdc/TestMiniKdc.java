@@ -39,7 +39,7 @@ import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
   private static final boolean IBM_JAVA = shouldUseIbmPackages();
-
+  // duplicated to avoid cycles in the build
   private static boolean shouldUseIbmPackages() {
     if (System.getProperty("java.vendor").contains("IBM")) {
       try {
