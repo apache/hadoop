@@ -144,7 +144,6 @@ public class AzureBlobFileSystem extends FileSystem
   private AbfsDelegationTokenManager delegationTokenManager;
   private AbfsCounters abfsCounters;
   private String clientCorrelationId;
-
   private boolean isMetricCollectionEnabled;
   private TracingHeaderFormat tracingHeaderFormat;
   private Listener listener;
@@ -684,10 +683,11 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
+    String metric = abfsCounters.getAbfsDriverMetrics().toString();
+    LOG.debug("The metrics collected over this instance are " + metric);
     if(isMetricCollectionEnabled) {
       if(abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get() > 0) {
         try {
-          String metric = abfsCounters.getAbfsDriverMetrics().toString();
           Configuration metricConfig = getConf();
           String metricAccountName = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_NAME);
           String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
@@ -700,7 +700,7 @@ public class AzureBlobFileSystem extends FileSystem
             throw new AssertionError(ex);
           }
           AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
-          metricFs.sentMetric(metric);
+          metricFs.sendMetric(metric);
         } catch (AzureBlobFileSystemException ex) {
           //do nothing
         }
@@ -722,12 +722,12 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
-  public void sentMetric(String metric) throws AzureBlobFileSystemException {
+  public void sendMetric(String metric) throws AzureBlobFileSystemException {
     TracingHeaderFormat tracingHeaderFormatMetric = TracingHeaderFormat.INTERNAL_METRIC_FORMAT;
     TracingContext tracingContextMetric = new TracingContext(clientCorrelationId,
         fileSystemId, FSOperationType.GET_ATTR, true, tracingHeaderFormatMetric,
         listener, metric);
-     abfsStore.sentMetric(metric, tracingContextMetric);
+     abfsStore.sendMetric(metric, tracingContextMetric);
   }
 
   @Override

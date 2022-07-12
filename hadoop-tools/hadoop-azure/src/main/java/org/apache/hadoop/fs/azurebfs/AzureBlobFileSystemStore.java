@@ -1974,7 +1974,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return etag;
   }
 
-  public void sentMetric(String metric, TracingContext tracingContext) throws AzureBlobFileSystemException{
+  public void sendMetric(String metric, TracingContext tracingContext) throws AzureBlobFileSystemException{
     client.getPathStatusMetric("/..$$@@", tracingContext); // Will sent a GFS calls that will fail to register in MDM x-ms-client-metric
   }
 }

@@ -141,21 +141,21 @@ public class AbfsDriverMetrics {
     long totalRequestsThrottled = numberOfBandwidthThrottledRequests.get() + numberOfIOPSThrottledRequests.get() + numberOfOtherThrottledRequests.get();
     double percentageOfRequestsThrottled = ((double)totalRequestsThrottled/totalNumberOfRequests.get())*100;
     for (Map.Entry<String, AbfsDriverMetrics> entry : metricsMap.entrySet()) {
-      metricString.append(" #RCTSI#_").append(entry.getKey())
+      metricString.append("#RCTSI#_").append(entry.getKey())
           .append("R_").append("=")
           .append(entry.getValue().getNumberOfRequestsSucceeded()).append(" ");
       long totalRequests = entry.getValue().getTotalRequests().get();
       if(totalRequests > 0) {
-        metricString.append(" #MMA#_").append(entry.getKey())
+        metricString.append("#MMA#_").append(entry.getKey())
             .append("R_").append("=")
-            .append(String.format("%.5f", (double) entry.getValue().getMinBackoff().get() / 1000L))
+            .append(String.format("%.3f", (double) entry.getValue().getMinBackoff().get() / 1000L))
             .append("s ")
-            .append(String.format("%.5f", (double) entry.getValue().getMaxBackoff().get() / 1000L))
+            .append(String.format("%.3f", (double) entry.getValue().getMaxBackoff().get() / 1000L))
             .append("s ")
-            .append(String.format("%.5f", (double) ((entry.getValue().getTotalBackoff().get() / totalRequests) / 1000L)))
+            .append(String.format("%.3f", (double) ((entry.getValue().getTotalBackoff().get() / totalRequests) / 1000L)))
             .append("s ");
       }else {
-        metricString.append(" #MMA#_").append(entry.getKey())
+        metricString.append("#MMA#_").append(entry.getKey())
             .append("R_").append("=0s ");
       }
     }
