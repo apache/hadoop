@@ -306,7 +306,7 @@ public class NumaResourceAllocator {
    * Release assigned NUMA resources for the container.
    *
    * @param containerId the container ID
-   * @throws ResourceHandlerException while releasing numa resource
+   * @throws ResourceHandlerException when failed to release numa resource
    */
   public synchronized void releaseNumaResource(ContainerId containerId)
       throws ResourceHandlerException {
