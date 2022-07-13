@@ -117,6 +117,7 @@ public interface S3ClientFactory {
 
     /**
      * S3A path.
+     * added in HADOOP-18330
      */
     private URI pathUri;
 
@@ -281,6 +282,7 @@ public interface S3ClientFactory {
 
     /**
      * Set full s3a path.
+     * added in HADOOP-18330
      * @param value new value
      * @return the builder
      */
