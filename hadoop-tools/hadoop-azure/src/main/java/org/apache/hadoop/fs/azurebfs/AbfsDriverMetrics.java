@@ -33,6 +33,7 @@ public class AbfsDriverMetrics {
   private AtomicLong numberOfIOPSThrottledRequests;
   private AtomicLong numberOfBandwidthThrottledRequests;
   private AtomicLong numberOfOtherThrottledRequests;
+  private AtomicLong numberOfNetworkFailedRequests;
   private AtomicLong maxRetryCount;
   private AtomicLong totalNumberOfRequests;
   private AtomicLong numberOfRequestsSucceededWithoutRetrying;
@@ -48,6 +49,7 @@ public class AbfsDriverMetrics {
     this.maxRetryCount = new AtomicLong();
     this.numberOfRequestsSucceededWithoutRetrying = new AtomicLong();
     this.numberOfRequestsFailed = new AtomicLong();
+    this.numberOfNetworkFailedRequests = new AtomicLong();
   }
   public AbfsDriverMetrics(String retryCount) {
     this.retryCount = retryCount;
@@ -59,7 +61,7 @@ public class AbfsDriverMetrics {
   }
 
   private void initializeMap() {
-    ArrayList<String> retryCountList = new ArrayList<String>(Arrays.asList("1","2","3","4","5_15","15_25","25andabove"));
+    ArrayList<String> retryCountList = new ArrayList<String>(Arrays.asList("1","2","3","4","5_15","15_25","25AndAbove"));
     for (String s : retryCountList) {
       metricsMap.put(s, new AbfsDriverMetrics(s));
     }
@@ -121,20 +123,25 @@ public class AbfsDriverMetrics {
     return numberOfRequestsFailed;
   }
 
+  public AtomicLong getNumberOfNetworkFailedRequests() {
+    return numberOfNetworkFailedRequests;
+  }
+
   /*
-  Acronyms :-
-  1.RCTSI :- Request count that succeeded in x retries
-  2.MMA :- Min Max Average (This refers to the backoff or sleep time between 2 requests)
-  3.s :- seconds
-  4.BWT :- Number of Bandwidth throttled requests
-  5.IT :- Number of IOPS throttled requests
-  6.OT :- Number of Other throttled requests
-  7.%RT :- Percentage of requests that are throttled
-  8.TRNR :- Total number of requests which succeeded without retrying
-  9.TRF :- Total number of requests which failed
-  10.TR :- Total number of requests which were made
-  11.MRC :- Max retry count across all requests
-   */
+    Acronyms :-
+    1.RCTSI :- Request count that succeeded in x retries
+    2.MMA :- Min Max Average (This refers to the backoff or sleep time between 2 requests)
+    3.s :- seconds
+    4.BWT :- Number of Bandwidth throttled requests
+    5.IT :- Number of IOPS throttled requests
+    6.OT :- Number of Other throttled requests
+    7.NFR :- Number of requests which failed due to network errors
+    7.%RT :- Percentage of requests that are throttled
+    8.TRNR :- Total number of requests which succeeded without retrying
+    9.TRF :- Total number of requests which failed
+    10.TR :- Total number of requests which were made
+    11.MRC :- Max retry count across all requests
+     */
   @Override
   public String toString() {
     StringBuilder metricString = new StringBuilder();
@@ -161,12 +168,13 @@ public class AbfsDriverMetrics {
     }
     metricString.append("#BWT=").append(numberOfBandwidthThrottledRequests)
         .append(" #IT=").append(numberOfIOPSThrottledRequests)
-        .append(" #OT=").append(numberOfOtherThrottledRequests);
-    metricString.append(" #%RT=").append(String.format("%.3f",percentageOfRequestsThrottled));
-    metricString.append(" #TRNR=").append(numberOfRequestsSucceededWithoutRetrying);
-    metricString.append(" #TRF=").append(numberOfRequestsFailed);
-    metricString.append(" #TR=").append(totalNumberOfRequests);
-    metricString.append(" #MRC=").append(maxRetryCount);
+        .append(" #OT=").append(numberOfOtherThrottledRequests)
+        .append(" #%RT=").append(String.format("%.3f",percentageOfRequestsThrottled))
+        .append( "#NFR").append(numberOfNetworkFailedRequests)
+        .append(" #TRNR=").append(numberOfRequestsSucceededWithoutRetrying)
+        .append(" #TRF=").append(numberOfRequestsFailed)
+        .append(" #TR=").append(totalNumberOfRequests)
+        .append(" #MRC=").append(maxRetryCount);
 
     return metricString + " ";
   }

@@ -256,7 +256,8 @@ public class AbfsRestOperation {
   }
 
   private synchronized void updateDriverMetrics(int retryCount, int statusCode){
-    if (statusCode == HttpURLConnection.HTTP_UNAVAILABLE) {
+    if(statusCode < HttpURLConnection.HTTP_OK
+        || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
       if (retryCount >= maxIoRetries) {
         abfsDriverMetrics.getNumberOfRequestsFailed().getAndIncrement();
       }
@@ -325,7 +326,7 @@ public class AbfsRestOperation {
       }
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
-      if(!isThrottledRequest && httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE){
+      if(!isThrottledRequest && httpOperation.getStatusCode() >= HttpURLConnection.HTTP_INTERNAL_ERROR){
         isThrottledRequest = true;
         AzureServiceErrorCode serviceErrorCode =
             AzureServiceErrorCode.getAzureServiceCode(httpOperation.getStatusCode(), httpOperation.getStorageErrorCode(), httpOperation.getStorageErrorMessage());
@@ -354,6 +355,7 @@ public class AbfsRestOperation {
       hostname = httpOperation.getHost();
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
+      abfsDriverMetrics.getNumberOfRequestsFailed().getAndIncrement();
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         updateDriverMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex);
@@ -363,7 +365,7 @@ public class AbfsRestOperation {
       if (LOG.isDebugEnabled()) {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
-
+      abfsDriverMetrics.getNumberOfNetworkFailedRequests().getAndIncrement();
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         updateDriverMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex);
@@ -423,7 +425,7 @@ public class AbfsRestOperation {
       }else if(retryCount >= 15 && retryCount < 25){
         retryCounter = "15_25";
       }else{
-        retryCounter = "25andabove";
+        retryCounter = "25AndAbove";
       }
       return retryCounter;
     }
