@@ -270,6 +270,11 @@ public interface S3ClientFactory {
       return headers;
     }
 
+    /**
+     * Get the full s3 path.
+     * added in HADOOP-18330
+     * @return path URI
+     */
     public URI getPath() {
       return pathUri;
     }
