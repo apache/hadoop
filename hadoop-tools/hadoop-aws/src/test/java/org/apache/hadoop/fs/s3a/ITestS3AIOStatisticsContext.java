@@ -36,13 +36,13 @@ import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextImpl;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATISTICS_ENABLED;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 
 /**
  * Tests to verify the Thread-level IOStatistics.
@@ -57,7 +57,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   @Before
   public void setUp() throws Exception {
     // Reset the current context's thread IOStatistics.
-    currentIOStatisticsContext().resetThreadIOStatisticsForCurrentThread();
+    getFileSystem().getIoStatisticsContext().reset();
   }
 
   /**
@@ -66,12 +66,13 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
    */
   @BeforeClass
   public static void beforeClass() throws Exception {
-    currentIOStatisticsContext().resetThreadIOStatisticsForCurrentThread();
     // Do some work in constructor thread.
     S3AFileSystem fs = new S3AFileSystem();
     Configuration conf = new Configuration();
     fs.initialize(new URI(conf.get(TEST_FS_S3A_NAME)), conf);
     Path path = new Path("testConstructor");
+    IOStatisticsContextImpl ioStatisticsContext = fs.getIoStatisticsContext();
+    ioStatisticsContext.reset();
     try (FSDataOutputStream out = fs.create(path)) {
       out.write('a');
     }
@@ -79,7 +80,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
       in.read();
     }
     iostatisticsSnapshotOfConstructorThread =
-        currentIOStatisticsContext().snapshotCurrentThreadIOStatistics();
+        ioStatisticsContext.snapshot();
   }
 
   @Override
@@ -241,7 +242,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     workerThread.start();
     workerThread.join();
 
-    // Work done in constructor: Wrote and Read 1 byte.
+    // Work done in constructor: Wrote and Read 1 byte. Took Snapshot.
     // Work done in Junit thread: Wrote and Read BYTES_BIG bytes.
     // Work done in Junit's worker thread: Wrote and Read BYTES_SMALL bytes.
     IOStatisticAssertions.assertThatStatisticCounter(
@@ -311,9 +312,10 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private void assertThreadStatisticsForThread(long testThreadId,
       int expectedBytesWrittenAndRead) {
     LOG.info("Thread ID to be asserted: {}", testThreadId);
-    IOStatistics ioStatistics = currentIOStatisticsContext()
-            .getThreadSpecificContext(testThreadId)
-            .getThreadIOStatistics(testThreadId);
+    IOStatisticsContextImpl ioStatisticsContext =
+        getFileSystem().getIoStatisticsContext();
+    IOStatistics ioStatistics = ioStatisticsContext
+            .getThreadSpecificIOStatistics(testThreadId);
 
     IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
         StreamStatisticNames.STREAM_WRITE_BYTES)

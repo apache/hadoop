@@ -73,7 +73,6 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -168,8 +167,8 @@ class S3ABlockOutputStream extends OutputStream implements
   /** is client side encryption enabled? */
   private final boolean isCSEEnabled;
 
-  /** Thread level IOStatistics. */
-  private final IOStatisticsAggregator threadIOStatistics;
+  /** Thread level IOStatistics Aggregator. */
+  private final IOStatisticsAggregator threadIOStatisticsAggregator;
 
   /**
    * An S3A output stream which uploads partitions in a separate pool of
@@ -207,7 +206,7 @@ class S3ABlockOutputStream extends OutputStream implements
       initMultipartUpload();
     }
     this.isCSEEnabled = builder.isCSEEnabled;
-    this.threadIOStatistics = currentIOStatisticsContext().getThreadIOStatistics();
+    this.threadIOStatisticsAggregator = builder.ioStatisticsAggregator;
   }
 
   /**
@@ -475,7 +474,7 @@ class S3ABlockOutputStream extends OutputStream implements
    *                         statistics aggregator.
    */
   private void mergeThreadIOStatistics(IOStatistics streamStatistics) {
-    threadIOStatistics.aggregate(streamStatistics);
+    threadIOStatisticsAggregator.aggregate(streamStatistics);
   }
 
   /**
@@ -722,7 +721,7 @@ class S3ABlockOutputStream extends OutputStream implements
 
   @VisibleForTesting
   public IOStatisticsAggregator getThreadIOStatistics() {
-    return threadIOStatistics;
+    return threadIOStatisticsAggregator;
   }
 
   /**
@@ -1116,6 +1115,11 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private PutObjectOptions putOptions;
 
+    /**
+     * thread-level IOStatistics Aggregator.
+     */
+    private IOStatisticsAggregator ioStatisticsAggregator;
+
     private BlockOutputStreamBuilder() {
     }
 
@@ -1132,6 +1136,7 @@ class S3ABlockOutputStream extends OutputStream implements
       requireNonNull(putOptions, "null putOptions");
       Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
           "Block size is too small: %s", blockSize);
+      requireNonNull(ioStatisticsAggregator, "null ioStatisticsAggregator");
     }
 
     /**
@@ -1251,6 +1256,18 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withPutOptions(
         final PutObjectOptions value) {
       putOptions = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public BlockOutputStreamBuilder withIOStatisticsAggregator(
+        final IOStatisticsAggregator value) {
+      ioStatisticsAggregator = value;
       return this;
     }
   }

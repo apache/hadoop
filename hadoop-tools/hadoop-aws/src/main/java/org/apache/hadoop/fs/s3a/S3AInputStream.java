@@ -66,7 +66,6 @@ import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
 import static org.apache.hadoop.fs.s3a.Invoker.onceTrackingDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -230,7 +229,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.asyncDrainThreshold = ctx.getAsyncDrainThreshold();
     this.unboundedThreadPool = unboundedThreadPool;
     this.vectoredIOContext = context.getVectoredIOContext();
-    this.threadIOStatistics = currentIOStatisticsContext().getThreadIOStatistics();
+    this.threadIOStatistics = ctx.getIOStatisticsAggregator();
   }
 
   /**

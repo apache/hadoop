@@ -22,37 +22,29 @@ import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 
 /**
- * An interface defined to capture thread-level IOStatistics by using per
- * thread context consisting of IOStatisticsSnapshot thread map for each
- * worker thread.
- * EmptyIOStatisticsSource is returned as an aggregator if this feature is
- * disabled, resulting in a no-op in aggregation.
+ * Empty IOStatistics context which serves no-op for all the operations and
+ * returns an empty Snapshot if asked.
+ *
  */
-public interface IOStatisticsContext {
+public class EmptyIOStatisticsContextImpl implements IOStatisticsContext {
+  private final IOStatisticsSnapshot emptyIOStatisticsSnapshot =
+      new IOStatisticsSnapshot();
 
-  /**
-   * Get the current thread's IOStatisticsContext.
-   *
-   * @return instance of IOStatisticsContext for the current thread.
-   */
-  IOStatisticsContext getCurrentIOStatisticsContext();
+  @Override
+  public IOStatisticsContext getCurrentIOStatisticsContext() {
+    return this;
+  }
 
-  /**
-   * Capture the snapshot of current thread's IOStatistics.
-   *
-   * @return IOStatisticsSnapshot for current thread.
-   */
-  IOStatisticsSnapshot snapshot();
+  @Override
+  public IOStatisticsSnapshot snapshot() {
+    return emptyIOStatisticsSnapshot;
+  }
 
-  /**
-   * Get the IOStatisticsAggregator for the current thread.
-   *
-   * @return return the aggregator for current thread.
-   */
-  IOStatisticsAggregator getThreadIOStatisticsAggregator();
+  @Override
+  public IOStatisticsAggregator getThreadIOStatisticsAggregator() {
+    return EmptyIOStatisticsStore.getInstance();
+  }
 
-  /**
-   * Reset the current thread's IOStatistics.
-   */
-  void reset();
+  @Override
+  public void reset() {}
 }

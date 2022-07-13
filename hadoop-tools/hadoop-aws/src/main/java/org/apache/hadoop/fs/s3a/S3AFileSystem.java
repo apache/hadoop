@@ -132,6 +132,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextImpl;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
@@ -236,7 +237,6 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContext.currentIOStatisticsContext;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemoteIterator;
@@ -707,7 +707,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
         });
     // Get the current active IOStatisticsContext.
-    ioStatisticsContext = currentIOStatisticsContext();
+    ioStatisticsContext =
+        new IOStatisticsContextImpl().getCurrentIOStatisticsContext();
 
   }
 
@@ -1585,7 +1586,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         statistics,
         statisticsContext,
         fileStatus,
-        vectoredIOContext)
+        vectoredIOContext,
+        ioStatisticsContext.getThreadIOStatisticsAggregator())
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
     return roc.build();
@@ -1752,7 +1754,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
         .withCSEEnabled(isCSEEnabled)
-        .withPutOptions(putOptions);
+        .withPutOptions(putOptions)
+        .withIOStatisticsAggregator(ioStatisticsContext.getThreadIOStatisticsAggregator());
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
@@ -5230,5 +5233,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public boolean isCSEEnabled() {
     return isCSEEnabled;
+  }
+
+  /**
+   * Get the FileSystem's IOStatisticsContext.
+   * @return the instance of IOStatisticsContextImpl.
+   */
+  @VisibleForTesting
+  public IOStatisticsContextImpl getIoStatisticsContext() {
+    return (IOStatisticsContextImpl) ioStatisticsContext.getCurrentIOStatisticsContext();
   }
 }
