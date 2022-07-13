@@ -547,7 +547,9 @@ public class LdapGroupsMapping
       } catch (NamingException e) {
         // If the first lookup failed, fall back to the typical scenario.
         // In order to force the fallback, we need to reset groups collection.
-        groups.clear();
+        if (groups != null) {
+          groups.clear();
+        }
         LOG.info("Failed to get groups from the first lookup. Initiating " +
                 "the second LDAP query using the user's DN.", e);
       }
