@@ -27,8 +27,6 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import java.io.IOException;
 import java.util.concurrent.atomic.LongAccumulator;
 
-import static org.apache.hadoop.ipc.RpcConstants.DISABLED_OBSERVER_READ_STATEID;
-
 /**
  * Global State Id context for the client.
  * <p>
@@ -43,14 +41,6 @@ public class ClientGSIContext implements AlignmentContext {
   private final LongAccumulator lastSeenStateId =
       new LongAccumulator(Math::max, STATEID_DEFAULT_VALUE);
   private FederatedGSIContext federatedGSIContext = new FederatedGSIContext();
-
-  public void disableObserverRead() {
-    if (lastSeenStateId.get() > DISABLED_OBSERVER_READ_STATEID) {
-      throw new IllegalStateException(
-          "Can't disable observer read after communicate.");
-    }
-    lastSeenStateId.accumulate(DISABLED_OBSERVER_READ_STATEID);
-  }
 
   @Override
   public long getLastSeenStateId() {
@@ -82,10 +72,6 @@ public class ClientGSIContext implements AlignmentContext {
    */
   @Override
   public void receiveResponseState(RpcResponseHeaderProto header) {
-    if (lastSeenStateId.get() == DISABLED_OBSERVER_READ_STATEID) {
-      //Observer read is disabled
-      return;
-    }
     federatedGSIContext.updateStateUsingResponseHeader(header);
     lastSeenStateId.accumulate(header.getStateId());
   }

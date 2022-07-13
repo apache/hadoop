@@ -6446,13 +6446,4 @@
       frequently than this time, the client will give up waiting.
     </description>
   </property>
-  <property>
-    <name>dfs.observer.read.enable</name>
-    <value>true</value>
-    <description>
-      Enables the client to use observer namenode for read operations. With Router Based Federation,
-      it enables the routers to proxy client reads to the observer namenode. This option should not
-      be set to false when clients communicate directly with observer namenodes.
-    </description>
-  </property>
 </configuration>

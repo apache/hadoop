@@ -23,7 +23,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_C
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
-import static org.apache.hadoop.ipc.RpcConstants.DISABLED_OBSERVER_READ_STATEID;
 import static org.apache.hadoop.ipc.RpcConstants.REQUEST_HEADER_NAMESPACE_STATEIDS_SET;
 
 import java.io.EOFException;
@@ -1799,11 +1798,6 @@ public class RouterRpcClient {
    */
   private static boolean isReadCall(Method method) {
     if (!method.isAnnotationPresent(ReadOnly.class)) {
-      return false;
-    }
-    Call call = Server.getCurCall().get();
-    if (call != null && call.getClientStateId() == DISABLED_OBSERVER_READ_STATEID) {
-      // Client disabled observer read
       return false;
     }
     return !method.getAnnotationsByType(ReadOnly.class)[0].activeOnly();

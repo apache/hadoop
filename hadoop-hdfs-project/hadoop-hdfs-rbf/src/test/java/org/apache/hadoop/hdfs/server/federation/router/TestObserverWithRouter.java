@@ -191,33 +191,6 @@ public class TestObserverWithRouter {
   }
 
   @Test
-  public void disableObserverReadFromClient() throws Exception {
-    startUpCluster(1);
-    RouterContext routerContext = cluster.getRandomRouter();
-    Configuration conf = routerContext.getConf();
-    conf.setBoolean(HdfsClientConfigKeys.DFS_OBSERVER_READ_ENABLE, false);
-    FileSystem fileSystem = routerContext.getFileSystem();
-    Path path = new Path("/testFile2");
-    // Send Create call to active
-    fileSystem.create(path).close();
-
-    // Send read request
-    fileSystem.open(path).close();
-
-    long rpcCountForActive = routerContext.getRouter()
-        .getRpcServer().getRPCMetrics().getActiveProxyOps();
-    // Create, close, getBlockLocation call should send to active
-    assertEquals("Three call should send to active", 3,
-        rpcCountForActive);
-
-    long rpcCountForObserver = routerContext.getRouter()
-        .getRpcServer().getRPCMetrics().getObserverProxyOps();
-    assertEquals("No call should send to observer", 0,
-        rpcCountForObserver);
-    fileSystem.close();
-  }
-
-  @Test
   public void testMultipleObserver() throws Exception {
     startUpCluster(2);
     RouterContext routerContext = cluster.getRandomRouter();

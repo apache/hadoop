@@ -31,7 +31,7 @@ import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
-import static org.apache.hadoop.ipc.RpcConstants.*;
+import static org.apache.hadoop.ipc.RpcConstants.REQUEST_HEADER_NAMESPACE_STATEIDS_SET;
 
 /**
  * This is the router implementation responsible for passing

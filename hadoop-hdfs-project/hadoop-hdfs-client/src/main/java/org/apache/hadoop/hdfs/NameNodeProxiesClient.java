@@ -352,15 +352,6 @@ public class NameNodeProxiesClient {
     if (alignmentContext == null) {
       alignmentContext = new ClientGSIContext();
     }
-    if (!conf.getBoolean(HdfsClientConfigKeys.DFS_OBSERVER_READ_ENABLE,
-        HdfsClientConfigKeys.DFS_OBSERVER_READ_ENABLE_DEFAULT)) {
-      //Disabled observer read
-      if (alignmentContext instanceof ClientGSIContext) {
-        ((ClientGSIContext) alignmentContext).disableObserverRead();
-        LOG.info("Observer read is disabled in client");
-      }
-    }
-
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
         ProtobufRpcEngine2.class);
 
