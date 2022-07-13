@@ -2312,23 +2312,23 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     for (int i = 0; i < invalidBlks.length; i++) {
       final ReplicaInfo removing;
       final FsVolumeImpl v;
-      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
-        final ReplicaInfo info = volumeMap.get(bpid, invalidBlks[i]);
-        if (info == null) {
-          ReplicaInfo infoByBlockId =
-              volumeMap.get(bpid, invalidBlks[i].getBlockId());
-          if (infoByBlockId == null) {
-            // It is okay if the block is not found -- it
-            // may be deleted earlier.
-            LOG.info("Failed to delete replica " + invalidBlks[i]
-                + ": ReplicaInfo not found.");
-          } else {
-            errors.add("Failed to delete replica " + invalidBlks[i]
-                + ": GenerationStamp not matched, existing replica is "
-                + Block.toString(infoByBlockId));
-          }
-          continue;
+      final ReplicaInfo info = volumeMap.get(bpid, invalidBlks[i]);
+      if (info == null) {
+        ReplicaInfo infoByBlockId =
+                volumeMap.get(bpid, invalidBlks[i].getBlockId());
+        if (infoByBlockId == null) {
+          // It is okay if the block is not found -- it
+          // may be deleted earlier.
+          LOG.info("Failed to delete replica " + invalidBlks[i]
+                  + ": ReplicaInfo not found.");
+        } else {
+          errors.add("Failed to delete replica " + invalidBlks[i]
+                  + ": GenerationStamp not matched, existing replica is "
+                  + Block.toString(infoByBlockId));
         }
+        continue;
+      }
+      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, bpid, info.getStorageUuid())) {
 
         v = (FsVolumeImpl)info.getVolume();
         if (v == null) {
