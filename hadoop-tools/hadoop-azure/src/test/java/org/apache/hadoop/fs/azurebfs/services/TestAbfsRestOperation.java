@@ -34,6 +34,7 @@ public class TestAbfsRestOperation extends
     for(int retryCount: retryCounts) {
       getMetrics.invoke(op, retryCount, statusCode);
     }
+    //For retry count greater than max configured value, the request should fail
     Assert.assertEquals(testClient.getAbfsCounters().getAbfsDriverMetrics().getNumberOfRequestsFailed().toString(), "3");
     fs.close();
   }
