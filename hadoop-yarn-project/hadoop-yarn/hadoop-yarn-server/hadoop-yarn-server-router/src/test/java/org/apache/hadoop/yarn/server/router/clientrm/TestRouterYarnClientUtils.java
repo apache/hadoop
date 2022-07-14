@@ -27,7 +27,16 @@ import java.util.HashSet;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.yarn.api.protocolrecords.*;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -564,8 +573,8 @@ public class TestRouterYarnClientUtils {
     GetAllResourceProfilesResponse response =
         RouterYarnClientUtils.mergeClusterResourceProfilesResponse(responses);
     Resource resource = response.getResourceProfiles().get("maximum");
-    Assert.assertEquals(resource.getVirtualCores(), 3);
-    Assert.assertEquals(resource.getMemorySize(), 3072);
+    Assert.assertEquals(3, resource.getVirtualCores());
+    Assert.assertEquals(3072, resource.getMemorySize());
   }
 
   @Test
@@ -598,7 +607,7 @@ public class TestRouterYarnClientUtils {
     GetResourceProfileResponse response =
         RouterYarnClientUtils.mergeClusterResourceProfileResponse(responses);
     Resource resource = response.getResource();
-    Assert.assertEquals(resource.getVirtualCores(), 3);
-    Assert.assertEquals(resource.getMemorySize(), 3072);
+    Assert.assertEquals(3, resource.getVirtualCores());
+    Assert.assertEquals(3072, resource.getMemorySize());
   }
 }
