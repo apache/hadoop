@@ -140,8 +140,8 @@ public class RetryCache {
     
     @Override
     public String toString() {
-      return (new UUID(this.clientIdMsb, this.clientIdLsb)) + ":"
-          + this.callId + ":" + this.state;
+      return String.format("%s:%s:%s", new UUID(this.clientIdMsb, this.clientIdLsb),
+          this.callId, this.state);
     }
   }
 
