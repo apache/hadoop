@@ -41,6 +41,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -580,6 +581,27 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get all namespaces of DFSOutputStreams.
+   */
+  private List<String> getNamespaces() {
+    HashSet<String> namespaces = new HashSet<>();
+    synchronized (filesBeingWritten) {
+      for (DFSOutputStream outputStream : filesBeingWritten.values()) {
+        String namespace = outputStream.getNamespace();
+        if (namespace == null || namespace.isEmpty()) {
+          return null;
+        } else {
+          namespaces.add(namespace);
+        }
+      }
+      if (namespaces.isEmpty()) {
+        return null;
+      }
+    }
+    return new ArrayList<>(namespaces);
+  }
+
+  /**
    * Renew leases.
    * @return true if lease was renewed. May return false if this
    * client has been closed or has no files open.
@@ -587,7 +609,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public boolean renewLease() throws IOException {
     if (clientRunning && !isFilesBeingWrittenEmpty()) {
       try {
-        namenode.renewLease(clientName);
+        namenode.renewLease(clientName, getNamespaces());
         updateLastLeaseRenewal();
         return true;
       } catch (IOException e) {
