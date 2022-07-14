@@ -786,6 +786,15 @@ public abstract class NMStateStoreService extends AbstractService {
       String resourceType, List<Serializable> assignedResources)
       throws IOException;
 
+  /**
+   * Delete the assigned resources of a container of specific resourceType.
+   * @param containerId Container Id
+   * @param resourceType resource Type
+   * @throws IOException while releasing resources
+   */
+  public void releaseAssignedResources(ContainerId containerId, String resourceType)
+      throws IOException {}
+
   protected abstract void initStorage(Configuration conf) throws IOException;
 
   protected abstract void startStorage() throws IOException;
