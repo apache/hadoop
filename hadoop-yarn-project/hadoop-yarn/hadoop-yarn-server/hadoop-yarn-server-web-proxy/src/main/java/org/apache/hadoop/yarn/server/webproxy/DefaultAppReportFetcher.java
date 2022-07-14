@@ -87,11 +87,9 @@ public class DefaultAppReportFetcher extends AppReportFetcher {
   }
 
   public void stop() {
+    super.stop();
     if (this.applicationsManager != null) {
       RPC.stopProxy(this.applicationsManager);
-    }
-    if (this.getHistoryManager() != null) {
-      RPC.stopProxy(this.getHistoryManager());
     }
   }
 }

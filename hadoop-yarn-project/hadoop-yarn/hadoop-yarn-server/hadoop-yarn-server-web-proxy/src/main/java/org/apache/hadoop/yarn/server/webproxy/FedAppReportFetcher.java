@@ -97,11 +97,9 @@ public class FedAppReportFetcher extends AppReportFetcher {
   }
 
   public void stop() {
+    super.stop();
     for (Pair pair : this.subClusters.values()) {
       RPC.stopProxy(pair.getRight());
-    }
-    if (this.getHistoryManager() != null) {
-      RPC.stopProxy(this.getHistoryManager());
     }
   }
 

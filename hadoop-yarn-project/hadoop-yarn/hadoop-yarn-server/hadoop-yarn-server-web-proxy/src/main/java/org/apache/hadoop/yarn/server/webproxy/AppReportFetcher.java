@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -117,7 +118,7 @@ public abstract class AppReportFetcher {
         throw e;
       }
       //Fetch the application report from AHS
-      appReport = getHistoryManager().getApplicationReport(request).getApplicationReport();
+      appReport = historyManager.getApplicationReport(request).getApplicationReport();
       fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.AHS);
     }
     return fetchedAppReport;
@@ -129,14 +130,14 @@ public abstract class AppReportFetcher {
     return this.ahsAppPageUrlBase;
   }
 
-  public abstract void stop();
-
   protected Configuration getConf() {
     return this.conf;
   }
 
-  protected ApplicationHistoryProtocol getHistoryManager() {
-    return this.historyManager;
+  public void stop() {
+    if (this.historyManager != null) {
+      RPC.stopProxy(this.historyManager);
+    }
   }
 
   @VisibleForTesting
