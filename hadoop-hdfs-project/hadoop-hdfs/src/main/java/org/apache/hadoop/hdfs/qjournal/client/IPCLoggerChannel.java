@@ -155,10 +155,8 @@ public class IPCLoggerChannel implements AsyncLogger {
   
   static final Factory FACTORY = IPCLoggerChannel::new;
 
-  public IPCLoggerChannel(Configuration conf,
-      NamespaceInfo nsInfo,
-      String journalId,
-      InetSocketAddress addr) {
+  public IPCLoggerChannel(Configuration conf, NamespaceInfo nsInfo,
+      String journalId, InetSocketAddress addr) {
     this(conf, nsInfo, journalId, null, addr);
   }
 
@@ -220,10 +218,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     
     // Need to set NODELAY or else batches larger than MTU can trigger 
     // 40ms nailing delays.
-    confCopy.setBoolean(
-        CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_KEY,
-        true);
-    
+    confCopy.setBoolean(CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_KEY, true);
     RPC.setProtocolEngine(confCopy,
         QJournalProtocolPB.class, ProtobufRpcEngine2.class);
     return SecurityUtil.doAsLoginUser(
@@ -247,10 +242,8 @@ public class IPCLoggerChannel implements AsyncLogger {
     return Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder()
           .setDaemon(true)
-          .setNameFormat("Logger channel (from single-thread executor) to " +
-              addr)
-          .setUncaughtExceptionHandler(
-              UncaughtExceptionHandlers.systemExit())
+          .setNameFormat("Logger channel (from single-thread executor) to " + addr)
+          .setUncaughtExceptionHandler(UncaughtExceptionHandlers.systemExit())
           .build());
   }
 
@@ -324,15 +317,13 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   @Override
   public ListenableFuture<Boolean> isFormatted() {
-    return singleThreadExecutor.submit(
-        () -> getProxy().isFormatted(journalId, nameServiceId));
+    return singleThreadExecutor.submit(() -> getProxy().isFormatted(journalId, nameServiceId));
   }
 
   @Override
   public ListenableFuture<GetJournalStateResponseProto> getJournalState() {
     return singleThreadExecutor.submit(() -> {
-      GetJournalStateResponseProto ret =
-          getProxy().getJournalState(journalId, nameServiceId);
+      GetJournalStateResponseProto ret = getProxy().getJournalState(journalId, nameServiceId);
       constructHttpServerURI(ret);
       return ret;
     });
@@ -366,14 +357,11 @@ public class IPCLoggerChannel implements AsyncLogger {
 
         long rpcSendTimeNanos = System.nanoTime();
         try {
-          getProxy().journal(createReqInfo(),
-              segmentTxId, firstTxnId, numTxns, data);
+          getProxy().journal(createReqInfo(), segmentTxId, firstTxnId, numTxns, data);
         } catch (IOException e) {
-          QuorumJournalManager.LOG.warn(
-              "Remote journal " + IPCLoggerChannel.this + " failed to " +
-              "write txns " + firstTxnId + "-" + (firstTxnId + numTxns - 1) +
-              ". Will try to write to this JN again after the next " +
-              "log roll.", e);
+          QuorumJournalManager.LOG.warn("Remote journal {} failed to write txns {}-{}."
+                  + " Will try to write to this JN again after the next log roll.",
+              IPCLoggerChannel.this, firstTxnId, (firstTxnId + numTxns - 1), e);
           synchronized (IPCLoggerChannel.this) {
             outOfSync = true;
           }
@@ -388,9 +376,8 @@ public class IPCLoggerChannel implements AsyncLogger {
           metrics.addWriteRpcLatency(rpcTime);
           if (rpcTime / 1000 > WARN_JOURNAL_MILLIS_THRESHOLD) {
             QuorumJournalManager.LOG.warn(
-                "Took " + (rpcTime / 1000) + "ms to send a batch of " +
-                numTxns + " edits (" + data.length + " bytes) to " +
-                "remote journal " + IPCLoggerChannel.this);
+                "Took {}ms to send a batch of {} edits ({} bytes) to remote journal {}.",
+                rpcTime / 1000, numTxns, data.length, IPCLoggerChannel.this);
           }
         }
         synchronized (IPCLoggerChannel.this) {
@@ -429,8 +416,7 @@ public class IPCLoggerChannel implements AsyncLogger {
       // Even if we're out of sync, it's useful to send an RPC
       // to the remote node in order to update its lag metrics, etc.
       heartbeatIfNecessary();
-      throw new JournalOutOfSyncException(
-          "Journal disabled until next roll");
+      throw new JournalOutOfSyncException("Journal disabled until next roll");
     }
   }
 
@@ -462,10 +448,9 @@ public class IPCLoggerChannel implements AsyncLogger {
     Preconditions.checkArgument(size >= 0);
     if (queuedEditsSizeBytes + size > queueSizeLimitBytes &&
         queuedEditsSizeBytes > 0) {
-      QuorumJournalManager.LOG.warn("Pending edits to " + IPCLoggerChannel.this
-          + " is going to exceed limit size: " + queueSizeLimitBytes
-          + ", current queued edits size: " + queuedEditsSizeBytes
-          + ", will silently drop " + size + " bytes of edits!");
+      QuorumJournalManager.LOG.warn("Pending edits to {} is going to exceed limit size: {}"
+          + ", current queued edits size: {}, will silently drop {} bytes of edits!",
+          IPCLoggerChannel.class, queueSizeLimitBytes, queuedEditsSizeBytes, size);
       throw new LoggerTooFarBehindException();
     }
     queuedEditsSizeBytes += size;
@@ -494,9 +479,8 @@ public class IPCLoggerChannel implements AsyncLogger {
         if (outOfSync) {
           outOfSync = false;
           QuorumJournalManager.LOG.info(
-              "Restarting previously-stopped writes to " +
-              IPCLoggerChannel.this + " in segment starting at txid " +
-              txid);
+              "Restarting previously-stopped writes to {} in segment starting at txid {}.",
+                  IPCLoggerChannel.class, txid);
         }
       }
       return null;
@@ -524,9 +508,8 @@ public class IPCLoggerChannel implements AsyncLogger {
   @Override
   public ListenableFuture<GetJournaledEditsResponseProto> getJournaledEdits(
       long fromTxnId, int maxTransactions) {
-    return parallelExecutor.submit(
-        () -> getProxy().getJournaledEdits(journalId, nameServiceId,
-            fromTxnId, maxTransactions));
+    return parallelExecutor.submit(() -> getProxy().getJournaledEdits(
+        journalId, nameServiceId, fromTxnId, maxTransactions));
   }
 
   @Override
@@ -547,7 +530,7 @@ public class IPCLoggerChannel implements AsyncLogger {
       final long segmentTxId) {
     return singleThreadExecutor.submit(() -> {
       if (!hasHttpServerEndPoint()) {
-        // force an RPC call so we know what the HTTP port should be if it
+        // force an RPC call, so we know what the HTTP port should be if it
         // hasn't done so.
         GetJournalStateResponseProto ret = getProxy().getJournalState(
             journalId, nameServiceId);
@@ -616,14 +599,12 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   @Override
   public ListenableFuture<Long> getJournalCTime() {
-    return singleThreadExecutor.submit(
-        () -> getProxy().getJournalCTime(journalId, nameServiceId));
+    return singleThreadExecutor.submit(() -> getProxy().getJournalCTime(journalId, nameServiceId));
   }
 
   @Override
   public String toString() {
-    return InetAddresses.toAddrString(addr.getAddress()) + ':' +
-        addr.getPort();
+    return InetAddresses.toAddrString(addr.getAddress()) + ':' + addr.getPort();
   }
 
   @Override
