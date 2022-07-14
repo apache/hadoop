@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Preconditions;
@@ -290,6 +291,7 @@ public class CommitOperations extends AbstractStoreOperation
         .executeWith(commitContext.getOuterSubmitter())
         .run(status -> {
           Path path = status.getPath();
+          commitContext.switchToIOStatisticsContext();
           try {
             // load the file
             SinglePendingCommit singleCommit = trackDuration(statistics,
@@ -639,16 +641,20 @@ public class CommitOperations extends AbstractStoreOperation
    * @param context job context
    * @param path path for all work.
    * @param committerThreads thread pool size
+   * @param ioStatisticsContext IOStatistics context of current thread
    * @return the commit context to pass in.
    * @throws IOException failure.
    */
   public CommitContext createCommitContext(
       JobContext context,
       Path path,
-      int committerThreads) throws IOException {
+      int committerThreads,
+      IOStatisticsContext ioStatisticsContext) throws IOException {
     return new CommitContext(this, context,
-        committerThreads);
+        committerThreads,
+        ioStatisticsContext);
   }
+
 
   /**
    * Create a stub commit context for tests.
@@ -668,7 +674,8 @@ public class CommitOperations extends AbstractStoreOperation
     return new CommitContext(this,
         getStoreContext().getConfiguration(),
         id,
-        committerThreads);
+        committerThreads,
+        IOStatisticsContext.getCurrentIOStatisticsContext());
   }
 
   /**

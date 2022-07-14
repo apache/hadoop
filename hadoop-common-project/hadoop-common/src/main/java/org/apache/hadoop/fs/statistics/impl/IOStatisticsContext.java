@@ -20,22 +20,28 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * An interface defined to capture thread-level IOStatistics by using per
- * thread context consisting of IOStatisticsSnapshot thread map for each
- * worker thread.
- * EmptyIOStatisticsSource is returned as an aggregator if this feature is
- * disabled, resulting in a no-op in aggregation.
+ * thread context.
+ * <p>
+ * The aggregator should be collected in their constructor by statistics-generating
+ * classes to obtain the aggregator to update <i>across all threads</i>.
+ * <p>
+ * The {@link #snapshot()} call creates a snapshot of the statistics;
+ * <p>
+ * The {@link #reset()} call resets the statistics in the current thread so
+ * that later snapshots will get the incremental data.
  */
-public interface IOStatisticsContext {
+public interface IOStatisticsContext extends IOStatisticsSource {
 
   /**
-   * Get the current thread's IOStatisticsContext.
+   * Get the IOStatisticsAggregator for the current thread.
    *
-   * @return instance of IOStatisticsContext for the current thread.
+   * @return return the aggregator for current thread.
    */
-  IOStatisticsContext getCurrentIOStatisticsContext();
+  IOStatisticsAggregator getAggregator();
 
   /**
    * Capture the snapshot of current thread's IOStatistics.
@@ -45,14 +51,27 @@ public interface IOStatisticsContext {
   IOStatisticsSnapshot snapshot();
 
   /**
-   * Get the IOStatisticsAggregator for the current thread.
-   *
-   * @return return the aggregator for current thread.
-   */
-  IOStatisticsAggregator getThreadIOStatisticsAggregator();
-
-  /**
    * Reset the current thread's IOStatistics.
    */
   void reset();
+
+  /**
+   * Get the current thread's IOStatisticsContext.
+   *
+   * @return instance of IOStatisticsContext for the current thread.
+   */
+  static IOStatisticsContext getCurrentIOStatisticsContext() {
+    return IOStatisticsContextIntegration.getCurrentIOStatisticsContext();
+  }
+
+  /**
+   * Set the IOStatisticsContext for the current thread.
+   * @param statisticsContext IOStatistics context instance for the
+   * current thread.
+   */
+  static void setThreadIOStatisticsContext(
+      IOStatisticsContext statisticsContext) {
+    IOStatisticsContextIntegration.setThreadIOStatisticsContext(
+        statisticsContext);
+  }
 }

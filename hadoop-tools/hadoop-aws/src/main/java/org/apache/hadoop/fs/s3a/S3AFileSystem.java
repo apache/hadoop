@@ -387,11 +387,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private ArnResource accessPoint;
 
-  /**
-   * Thread-level IOStats context.
-   */
-  private IOStatisticsContext ioStatisticsContext;
-
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -706,10 +701,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             return S3AFileSystem.this.statistics;
           }
         });
-    // Get the current active IOStatisticsContext.
-    ioStatisticsContext =
-        new IOStatisticsContextImpl().getCurrentIOStatisticsContext();
-
   }
 
   /**
@@ -1587,7 +1578,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         statisticsContext,
         fileStatus,
         vectoredIOContext,
-        ioStatisticsContext.getThreadIOStatisticsAggregator())
+        IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
     return roc.build();
@@ -1755,7 +1746,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
         .withCSEEnabled(isCSEEnabled)
         .withPutOptions(putOptions)
-        .withIOStatisticsAggregator(ioStatisticsContext.getThreadIOStatisticsAggregator());
+        .withIOStatisticsAggregator(
+            IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator());
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
@@ -5233,14 +5225,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public boolean isCSEEnabled() {
     return isCSEEnabled;
-  }
-
-  /**
-   * Get the FileSystem's IOStatisticsContext.
-   * @return the instance of IOStatisticsContextImpl.
-   */
-  @VisibleForTesting
-  public IOStatisticsContextImpl getIoStatisticsContext() {
-    return (IOStatisticsContextImpl) ioStatisticsContext.getCurrentIOStatisticsContext();
   }
 }

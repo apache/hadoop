@@ -20,22 +20,18 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextImpl;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
@@ -43,6 +39,11 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATIS
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration.getThreadSpecificIOStatisticsContext;
 
 /**
  * Tests to verify the Thread-level IOStatistics.
@@ -52,36 +53,6 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private static final int SMALL_THREADS = 2;
   private static final int BYTES_BIG = 100;
   private static final int BYTES_SMALL = 50;
-  private static IOStatisticsSnapshot iostatisticsSnapshotOfConstructorThread;
-
-  @Before
-  public void setUp() throws Exception {
-    // Reset the current context's thread IOStatistics.
-    getFileSystem().getIoStatisticsContext().reset();
-  }
-
-  /**
-   * Run this before the tests once, to note down some work in the
-   * constructor thread to be verified later on in a test.
-   */
-  @BeforeClass
-  public static void beforeClass() throws Exception {
-    // Do some work in constructor thread.
-    S3AFileSystem fs = new S3AFileSystem();
-    Configuration conf = new Configuration();
-    fs.initialize(new URI(conf.get(TEST_FS_S3A_NAME)), conf);
-    Path path = new Path("testConstructor");
-    IOStatisticsContextImpl ioStatisticsContext = fs.getIoStatisticsContext();
-    ioStatisticsContext.reset();
-    try (FSDataOutputStream out = fs.create(path)) {
-      out.write('a');
-    }
-    try (FSDataInputStream in = fs.open(path)) {
-      in.read();
-    }
-    iostatisticsSnapshotOfConstructorThread =
-        ioStatisticsContext.snapshot();
-  }
 
   @Override
   protected Configuration createConfiguration() {
@@ -114,23 +85,21 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
       for (int i = 0; i < SMALL_THREADS; i++) {
         executor.submit(() -> {
           try {
-            IOStatistics ioStatisticsFirst;
+            // get the thread context and reset
+            IOStatisticsContext context =
+                getAndResetThreadStatisticsContext();
             try (FSDataInputStream in = fs.open(path)) {
               in.seek(50);
               in.read(readDataFirst);
-              in.close();
-              ioStatisticsFirst = assertThreadStatisticsBytesRead(in,
-                  BYTES_BIG);
             }
+            assertContextBytesRead(context, BYTES_BIG);
             // Stream is closed for a thread. Re-open and do more operations.
-            IOStatistics ioStatisticsSecond;
             try (FSDataInputStream in = fs.open(path)) {
               in.seek(100);
               in.read(readDataSecond);
-              in.close();
-              ioStatisticsSecond = assertThreadStatisticsBytesRead(in,
-                  BYTES_BIG + BYTES_SMALL);
             }
+            assertContextBytesRead(context, BYTES_BIG + BYTES_SMALL);
+
             latch.countDown();
           } catch (Exception e) {
             latch.countDown();
@@ -149,10 +118,21 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
       executor.shutdown();
     }
 
-    // Check if an Excp or ASE was caught while the test threads were running.
+    // Check if an Exception or ASE was caught while the test threads were running.
     maybeReThrowFutureException();
     maybeReThrowFutureASE();
 
+  }
+
+  /**
+   * get the thread context and reset.
+   * @return thread context
+   */
+  private static IOStatisticsContext getAndResetThreadStatisticsContext() {
+    IOStatisticsContext context =
+        IOStatisticsContext.getCurrentIOStatisticsContext();
+    context.reset();
+    return context;
   }
 
   /**
@@ -175,21 +155,19 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
       for (int i = 0; i < SMALL_THREADS; i++) {
         executor.submit(() -> {
           try {
-            IOStatistics ioStatisticsFirst;
+            // get the thread context and reset
+            IOStatisticsContext context =
+                getAndResetThreadStatisticsContext();
             try (FSDataOutputStream out = fs.create(path)) {
               out.write(writeDataFirst);
-              out.close();
-              ioStatisticsFirst = assertThreadStatisticsBytesWrite(out,
-                  BYTES_BIG);
             }
+            assertContextBytesWrite(context, BYTES_BIG);
+
             // Stream is closed for a thread. Re-open and do more operations.
-            IOStatistics ioStatisticsSecond;
             try (FSDataOutputStream out = fs.create(path)) {
               out.write(writeDataSecond);
-              out.close();
-              ioStatisticsSecond = assertThreadStatisticsBytesWrite(out,
-                  BYTES_BIG + BYTES_SMALL);
             }
+            assertContextBytesWrite(context, BYTES_BIG + BYTES_SMALL);
             latch.countDown();
           } catch (Exception e) {
             latch.countDown();
@@ -211,7 +189,6 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     // Check if an Excp or ASE was caught while the test threads were running.
     maybeReThrowFutureException();
     maybeReThrowFutureASE();
-
   }
 
   /**
@@ -225,6 +202,11 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     Path path = path(getMethodName());
     byte[] data = new byte[BYTES_BIG];
     long threadIdForTest = Thread.currentThread().getId();
+    IOStatisticsContext context =
+        getAndResetThreadStatisticsContext();
+    Assertions.assertThat(((IOStatisticsContextImpl)context).getId())
+        .describedAs("Thread ID of %s", context)
+        .isEqualTo(threadIdForTest);
 
     // Write in the Junit thread.
     try (FSDataOutputStream out = fs.create(path)) {
@@ -237,70 +219,76 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     }
 
     // Worker thread work and wait for it to finish.
-    TestWorkerThread workerThread = new TestWorkerThread(path);
+    TestWorkerThread workerThread = new TestWorkerThread(path, null);
     long workerThreadID = workerThread.getId();
     workerThread.start();
     workerThread.join();
 
-    // Work done in constructor: Wrote and Read 1 byte. Took Snapshot.
-    // Work done in Junit thread: Wrote and Read BYTES_BIG bytes.
-    // Work done in Junit's worker thread: Wrote and Read BYTES_SMALL bytes.
-    IOStatisticAssertions.assertThatStatisticCounter(
-        iostatisticsSnapshotOfConstructorThread,
-        StreamStatisticNames.STREAM_WRITE_BYTES)
-        .describedAs("Bytes written are not as expected for constructor "
-            + "thread.")
-        .isEqualTo(1);
-    IOStatisticAssertions.assertThatStatisticCounter(
-        iostatisticsSnapshotOfConstructorThread,
-        StreamStatisticNames.STREAM_READ_BYTES)
-        .describedAs("Bytes read are not as expected for constructor "
-            + "thread.")
-        .isEqualTo(1);
-
     assertThreadStatisticsForThread(threadIdForTest, BYTES_BIG);
     assertThreadStatisticsForThread(workerThreadID, BYTES_SMALL);
-
   }
 
   /**
-   * Assert bytes wrote by the current thread.
-   *
-   * @param out        OutputStream.
-   * @param writeBytes expected bytes.
-   * @return IOStatistics for this stream.
+   * Verify stats collection and aggregation for constructor thread, Junit
+   * thread and a worker thread.
    */
-  private IOStatistics assertThreadStatisticsBytesWrite(FSDataOutputStream out,
-      int writeBytes) {
-    S3ABlockOutputStream s3aOut = (S3ABlockOutputStream) out.getWrappedStream();
-    IOStatistics ioStatistics =
-        (IOStatisticsSnapshot) s3aOut.getThreadIOStatistics();
-    IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
-        StreamStatisticNames.STREAM_WRITE_BYTES)
-        .describedAs("Bytes written are not as expected")
-        .isEqualTo(writeBytes);
+  @Test
+  public void testThreadSharingIOStatistics()
+      throws IOException, InterruptedException {
+    S3AFileSystem fs = getFileSystem();
+    Path path = path(getMethodName());
+    byte[] data = new byte[BYTES_BIG];
+    long threadIdForTest = Thread.currentThread().getId();
+    IOStatisticsContext context =
+        getAndResetThreadStatisticsContext();
 
-    return ioStatistics;
+
+    // Write in the Junit thread.
+    try (FSDataOutputStream out = fs.create(path)) {
+      out.write(data);
+    }
+
+    // Read in the Junit thread.
+    try (FSDataInputStream in = fs.open(path)) {
+      in.read(data);
+    }
+
+    // Worker thread will share the same context.
+    TestWorkerThread workerThread = new TestWorkerThread(path, context);
+    long workerThreadID = workerThread.getId();
+    workerThread.start();
+    workerThread.join();
+
+    assertThreadStatisticsForThread(threadIdForTest, BYTES_BIG + BYTES_SMALL);
+
   }
 
   /**
-   * Assert bytes read by the current thread.
+   * Assert bytes written by the statistics context.
    *
-   * @param in        InputStream.
+   * @param context statistics context.
+   * @param bytes expected bytes.
+   */
+  private void assertContextBytesWrite(IOStatisticsContext context,
+      int bytes) {
+    verifyStatisticCounterValue(
+        context.getIOStatistics(),
+        STREAM_WRITE_BYTES,
+        bytes);
+  }
+
+  /**
+   * Assert bytes read by the statistics context.
+   *
+   * @param context statistics context.
    * @param readBytes expected bytes.
-   * @return IOStatistics for this stream.
    */
-  private IOStatistics assertThreadStatisticsBytesRead(FSDataInputStream in,
+  private void assertContextBytesRead(IOStatisticsContext context,
       int readBytes) {
-    S3AInputStream s3AInputStream =
-        (S3AInputStream) in.getWrappedStream();
-    IOStatistics ioStatistics = s3AInputStream.getThreadIOStatistics();
-    IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
-        StreamStatisticNames.STREAM_READ_BYTES)
-        .describedAs("Bytes read are not as expected")
-        .isEqualTo(readBytes);
-
-    return ioStatistics;
+    verifyStatisticCounterValue(
+        context.getIOStatistics(),
+        STREAM_READ_BYTES,
+        readBytes);
   }
 
   /**
@@ -312,40 +300,60 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private void assertThreadStatisticsForThread(long testThreadId,
       int expectedBytesWrittenAndRead) {
     LOG.info("Thread ID to be asserted: {}", testThreadId);
-    IOStatisticsContextImpl ioStatisticsContext =
-        getFileSystem().getIoStatisticsContext();
-    IOStatistics ioStatistics = ioStatisticsContext
-            .getThreadSpecificIOStatistics(testThreadId);
+    IOStatisticsContext ioStatisticsContext =
+        getThreadSpecificIOStatisticsContext(testThreadId);
+    Assertions.assertThat(ioStatisticsContext)
+        .describedAs("IOStatisticsContext for %d", testThreadId)
+        .isNotNull();
 
-    IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
-        StreamStatisticNames.STREAM_WRITE_BYTES)
-        .describedAs(
-            String.format("Bytes written are not as expected for thread : %s",
-            testThreadId))
+
+    IOStatistics ioStatistics = ioStatisticsContext.snapshot();
+
+
+    assertThatStatisticCounter(ioStatistics,
+            STREAM_WRITE_BYTES)
+        .describedAs("Bytes written are not as expected for thread : %s",
+                testThreadId)
         .isEqualTo(expectedBytesWrittenAndRead);
 
-    IOStatisticAssertions.assertThatStatisticCounter(ioStatistics,
-        StreamStatisticNames.STREAM_READ_BYTES)
-        .describedAs(
-            String.format("Bytes read are not as expected for thread : %s",
-                testThreadId))
+    assertThatStatisticCounter(ioStatistics,
+        STREAM_READ_BYTES)
+        .describedAs("Bytes read are not as expected for thread : %s",
+                testThreadId)
         .isEqualTo(expectedBytesWrittenAndRead);
   }
 
   /**
    * Simulating doing some work in a separate thread.
+   * If constructed with an IOStatisticsContext then
+   * that context is switched to before performing the IO.
    */
   private class TestWorkerThread extends Thread implements Runnable {
     private final Path workerThreadPath;
 
-    TestWorkerThread(Path workerThreadPath) {
+    private final IOStatisticsContext ioStatisticsContext;
+
+    /**
+     * create.
+     * @param workerThreadPath thread path.
+     * @param ioStatisticsContext optional statistics context     *
+     */
+    TestWorkerThread(
+        final Path workerThreadPath,
+        final IOStatisticsContext ioStatisticsContext) {
       this.workerThreadPath = workerThreadPath;
+      this.ioStatisticsContext = ioStatisticsContext;
     }
 
     @Override
     public void run() {
       S3AFileSystem fs = getFileSystem();
       byte[] data = new byte[BYTES_SMALL];
+
+      // maybe switch context
+      if (ioStatisticsContext != null) {
+        IOStatisticsContext.setThreadIOStatisticsContext(ioStatisticsContext);
+      }
 
       // Write in the worker thread.
       try (FSDataOutputStream out = fs.create(workerThreadPath)) {

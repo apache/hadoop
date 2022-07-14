@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.audit.AuditConstants;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -488,6 +489,10 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     // and the current statistics
     snapshot.aggregate(getIOStatistics());
 
+    // and include the context statistics
+    snapshot.aggregate(
+        IOStatisticsContext.getCurrentIOStatisticsContext().getIOStatistics());
+
     return maybeCreateSuccessMarker(context, filenames, snapshot);
   }
 
@@ -729,6 +734,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final FileStatus status) throws IOException {
 
     final Path path = status.getPath();
+    commitContext.switchToIOStatisticsContext();
     try (DurationInfo ignored =
              new DurationInfo(LOG,
                  "Loading and committing files in pendingset %s", path)) {
@@ -775,6 +781,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final FileStatus status) throws IOException {
 
     final Path path = status.getPath();
+    commitContext.switchToIOStatisticsContext();
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, "Committing %s", path)) {
       PendingSet pendingSet = PersistentCommitData.load(
@@ -806,6 +813,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final boolean deleteRemoteFiles) throws IOException {
 
     final Path path = status.getPath();
+    commitContext.switchToIOStatisticsContext();
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, "Aborting %s", path)) {
       PendingSet pendingSet = PersistentCommitData.load(
@@ -832,6 +840,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
 
   /**
    * Start the final job commit/abort commit operations.
+   * The IO Statistics context is reset then included in the
+   * commit context so worker threads can use it.
    * @param context job context
    * @return a commit context through which the operations can be invoked.
    * @throws IOException failure.
@@ -840,14 +850,21 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final JobContext context)
       throws IOException {
 
+    IOStatisticsContext ioStatisticsContext =
+        IOStatisticsContext.getCurrentIOStatisticsContext();
+    ioStatisticsContext.reset();
     return getCommitOperations().createCommitContext(
         context,
         getOutputPath(),
-        getJobCommitThreadCount(context));
+        getJobCommitThreadCount(context),
+        ioStatisticsContext);
   }
+
   /**
    * Start a ask commit/abort commit operations.
    * This may have a different thread count.
+   * The IO Statistics context is reset then included in the
+   * commit context so worker threads can use it.
    * @param context job or task context
    * @return a commit context through which the operations can be invoked.
    * @throws IOException failure.
@@ -856,10 +873,14 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final JobContext context)
       throws IOException {
 
+    IOStatisticsContext ioStatisticsContext =
+        IOStatisticsContext.getCurrentIOStatisticsContext();
+    ioStatisticsContext.reset();
     return getCommitOperations().createCommitContext(
         context,
         getOutputPath(),
-        getTaskCommitThreadCount(context));
+        getTaskCommitThreadCount(context),
+        ioStatisticsContext);
   }
 
   /**

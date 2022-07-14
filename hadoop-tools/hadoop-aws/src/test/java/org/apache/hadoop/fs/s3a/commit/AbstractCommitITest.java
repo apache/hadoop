@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.AfterClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,9 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -65,6 +69,12 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractCommitITest.class);
+
+  /**
+   * Job statistics accrued across all test cases
+   */
+  private static IOStatisticsSnapshot JOB_STATISTICS =
+      IOStatisticsSupport.snapshotIOStatistics();
 
   /**
    * Helper class for commit operations and assertions.
@@ -103,6 +113,11 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     return conf;
   }
 
+  @AfterClass
+  public static void printStatistics() {
+    LOG.info("Aggregate statistics\n",
+        IOStatisticsLogging.ioStatisticsToPrettyString(JOB_STATISTICS));
+  }
   /**
    * Get the log; can be overridden for test case log.
    * @return a log.
@@ -397,6 +412,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   /**
    * Load a success file; fail if the file is empty/nonexistent.
+   * The statistics in {@link #JOB_STATISTICS} are updated with
+   * the statistics from the success file
    * @param fs filesystem
    * @param outputPath directory containing the success file.
    * @param origin origin of the file
@@ -426,6 +443,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     String body = ContractTestUtils.readUTF8(fs, success, -1);
     LOG.info("Loading committer success file {}. Actual contents=\n{}", success,
         body);
-    return SuccessData.load(fs, success);
+    SuccessData successData = SuccessData.load(fs, success);
+    JOB_STATISTICS.aggregate(successData.getIOStatistics());
+    return successData;
   }
 }

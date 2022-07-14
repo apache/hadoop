@@ -229,7 +229,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.asyncDrainThreshold = ctx.getAsyncDrainThreshold();
     this.unboundedThreadPool = unboundedThreadPool;
     this.vectoredIOContext = context.getVectoredIOContext();
-    this.threadIOStatistics = ctx.getIOStatisticsAggregator();
+    this.threadIOStatistics = requireNonNull(ctx.getIOStatisticsAggregator());
   }
 
   /**
@@ -1366,10 +1366,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Override
   public IOStatistics getIOStatistics() {
     return ioStatistics;
-  }
-
-  public IOStatistics getThreadIOStatistics() {
-    return (IOStatistics) threadIOStatistics;
   }
 
   /**

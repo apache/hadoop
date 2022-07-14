@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 
@@ -26,25 +27,42 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
  * returns an empty Snapshot if asked.
  *
  */
-public class EmptyIOStatisticsContextImpl implements IOStatisticsContext {
-  private final IOStatisticsSnapshot emptyIOStatisticsSnapshot =
-      new IOStatisticsSnapshot();
+final class EmptyIOStatisticsContextImpl implements IOStatisticsContext {
 
-  @Override
-  public IOStatisticsContext getCurrentIOStatisticsContext() {
-    return this;
+  private static final IOStatisticsContext EMPTY_CONTEXT = new EmptyIOStatisticsContextImpl();
+
+  private EmptyIOStatisticsContextImpl() {
   }
 
+  /**
+   * Create a new empty snapshot.
+   * A new one is always created for isolation.
+   *
+   * @return a statistics snapshot
+   */
   @Override
   public IOStatisticsSnapshot snapshot() {
-    return emptyIOStatisticsSnapshot;
+    return new IOStatisticsSnapshot();
   }
 
   @Override
-  public IOStatisticsAggregator getThreadIOStatisticsAggregator() {
+  public IOStatisticsAggregator getAggregator() {
     return EmptyIOStatisticsStore.getInstance();
   }
 
   @Override
+  public IOStatistics getIOStatistics() {
+    return EmptyIOStatistics.getInstance();
+  }
+
+  @Override
   public void reset() {}
+
+  /**
+   * Get the single instance.
+   * @return an instance.
+   */
+  static IOStatisticsContext getInstance() {
+    return EMPTY_CONTEXT;
+  }
 }

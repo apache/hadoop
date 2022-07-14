@@ -40,7 +40,6 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.util.Preconditions;
@@ -474,7 +473,7 @@ class S3ABlockOutputStream extends OutputStream implements
    *                         statistics aggregator.
    */
   private void mergeThreadIOStatistics(IOStatistics streamStatistics) {
-    threadIOStatisticsAggregator.aggregate(streamStatistics);
+    getThreadIOStatistics().aggregate(streamStatistics);
   }
 
   /**
@@ -719,8 +718,11 @@ class S3ABlockOutputStream extends OutputStream implements
     return iostatistics;
   }
 
-  @VisibleForTesting
-  public IOStatisticsAggregator getThreadIOStatistics() {
+  /**
+   * Get the IOStatistics aggregator passed in the builder.
+   * @return an aggregator
+   */
+  protected IOStatisticsAggregator getThreadIOStatistics() {
     return threadIOStatisticsAggregator;
   }
 

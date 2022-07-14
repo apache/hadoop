@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.impl;
 
+import java.lang.ref.WeakReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -48,7 +49,15 @@ public class WeakReferenceThreadMap<V> extends WeakReferenceMap<Long, V> {
   }
 
   public V setForCurrentThread(V newVal) {
-    return put(currentThreadId(), newVal);
+    long id = currentThreadId();
+
+    // if the same object is already in the map, just return it.
+    WeakReference<V> ref = lookup(id);
+    if (ref != null && ref.get() == newVal) {
+      return ref.get();
+    }
+
+    return put(id, newVal);
   }
 
 }

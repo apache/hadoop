@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.commit.impl;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -123,24 +125,28 @@ public final class CommitContext implements Closeable {
    */
   private final int committerThreads;
 
+  private final IOStatisticsContext ioStatisticsContext;
+
   /**
    * Create.
    * @param commitOperations commit callbacks
    * @param jobContext job context
    * @param committerThreads number of commit threads
+   * @param ioStatisticsContext IOStatistics context of current thread
    */
   public CommitContext(
       final CommitOperations commitOperations,
       final JobContext jobContext,
-      final int committerThreads) {
+      final int committerThreads,
+      final IOStatisticsContext ioStatisticsContext) {
     this.commitOperations = commitOperations;
     this.jobContext = jobContext;
     this.conf = jobContext.getConfiguration();
     this.jobId = jobContext.getJobID().toString();
+    this.ioStatisticsContext = Objects.requireNonNull(ioStatisticsContext);
     this.auditContextUpdater = new AuditContextUpdater(jobContext);
     this.auditContextUpdater.updateCurrentAuditContext();
     this.committerThreads = committerThreads;
-
     buildSubmitters();
   }
 
@@ -152,15 +158,18 @@ public final class CommitContext implements Closeable {
    * @param conf job conf
    * @param jobId ID
    * @param committerThreads number of commit threads
+   * @param ioStatisticsContext IOStatistics context of current thread
    */
   public CommitContext(final CommitOperations commitOperations,
       final Configuration conf,
       final String jobId,
-      final int committerThreads) {
+      final int committerThreads,
+      final IOStatisticsContext ioStatisticsContext) {
     this.commitOperations = commitOperations;
     this.jobContext = null;
     this.conf = conf;
     this.jobId = jobId;
+    this.ioStatisticsContext = Objects.requireNonNull(ioStatisticsContext);
     this.auditContextUpdater = new AuditContextUpdater(jobId);
     this.auditContextUpdater.updateCurrentAuditContext();
     this.committerThreads = committerThreads;
@@ -356,6 +365,22 @@ public final class CommitContext implements Closeable {
    */
   public String getJobId() {
     return jobId;
+  }
+
+  /**
+   * IOStatistics context of the created thread
+   * @return the IOStatistics
+   */
+  public IOStatisticsContext getIOStatisticsContext() {
+    return ioStatisticsContext;
+  }
+
+  /**
+   * Switch to the context IOStatistics context,
+   * if needed.
+   */
+  public void switchToIOStatisticsContext() {
+    IOStatisticsContext.setThreadIOStatisticsContext(ioStatisticsContext);
   }
 
   /**

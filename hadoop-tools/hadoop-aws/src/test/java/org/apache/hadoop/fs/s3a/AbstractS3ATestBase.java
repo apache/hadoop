@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.io.IOUtils;
@@ -109,6 +110,9 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     S3AFileSystem.initializeClass();
     super.setup();
     setSpanSource(getFileSystem());
+    // Reset the current context's thread IOStatistics.`
+    // this ensures that the context stats will always be from the test case
+    IOStatisticsContext.getCurrentIOStatisticsContext().reset();
   }
 
   @Override
