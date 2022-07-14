@@ -63,6 +63,8 @@ public class TracingContext {
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
 
+  private String metricResults = EMPTY_STRING;
+
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
@@ -101,6 +103,14 @@ public class TracingContext {
     }
   }
 
+  public TracingContext(String clientCorrelationID, String fileSystemID,
+                        FSOperationType opType, boolean needsPrimaryReqId,
+                        TracingHeaderFormat tracingHeaderFormat, Listener listener,
+                        String metricResults) {
+    this(clientCorrelationID, fileSystemID, opType, needsPrimaryReqId, tracingHeaderFormat, listener);
+    this.metricResults = metricResults;
+  }
+
   public TracingContext(TracingContext originalTracingContext) {
     this.fileSystemID = originalTracingContext.fileSystemID;
     this.streamID = originalTracingContext.streamID;
@@ -113,7 +123,6 @@ public class TracingContext {
       this.listener = originalTracingContext.listener.getClone();
     }
   }
-
   public static String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
@@ -122,6 +131,10 @@ public class TracingContext {
       return EMPTY_STRING;
     }
     return clientCorrelationID;
+  }
+
+  public String getMetricResults() {
+    return metricResults;
   }
 
   public void setPrimaryRequestID() {
@@ -164,6 +177,9 @@ public class TracingContext {
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
+      break;
+    case INTERNAL_METRIC_FORMAT:
+      header = clientCorrelationID + ":" + clientRequestId + ":" +  fileSystemID + ":" + metricResults;
       break;
     default:
       header = clientRequestId; //case SINGLE_ID_FORMAT

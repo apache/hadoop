@@ -45,10 +45,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
-
+import org.mockito.Mockito;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -60,7 +62,6 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.Delet
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-
 
 /**
  * Test delete operation.
@@ -217,6 +218,36 @@ public class ITestAzureBlobFileSystemDelete extends
             "Idempotency check to happen only for HTTP 404 response.")
         .isEqualTo(HTTP_BAD_REQUEST);
 
+  }
+
+  @Test
+  public void testTryStatus() throws java.io.IOException {
+    AbfsConfiguration abfsConfig
+        = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(
+        getConfiguration(),
+        5, 5000);
+
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    AbfsClient abfsClient = fs.getAbfsStore().getClient();
+    AbfsClient testClient = TestAbfsClient.createTestClientFromCurrentContext(
+        abfsClient,
+        abfsConfig);
+
+    final AbfsRestOperation mockRestOperation = mock(AbfsRestOperation.class);
+    when(mockRestOperation.isARetriedRequest()).thenReturn(true);
+
+    // Case 1: Mock instance of Http Operation response. This will return
+    // HTTP:Not Found
+    AbfsHttpOperation httpOperation = mock(AbfsHttpOperation.class);
+    when(httpOperation.getStatusCode()).thenReturn(HTTP_INTERNAL_ERROR);
+
+    // Mock delete response to 404
+    when(mockRestOperation.getResult()).thenReturn(httpOperation);
+    when(mockRestOperation.hasResult()).thenReturn(true);
+    TracingContext tracingContext = new TracingContext("abcd",
+        fs.getFileSystemId(), FSOperationType.TEST_OP,
+        org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat.ALL_ID_FORMAT, null);
+    fs.close();
   }
 
   @Test

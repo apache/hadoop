@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.azurebfs.contracts.services;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -42,8 +43,9 @@ public enum AzureServiceErrorCode {
   INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE("InvalidSourceOrDestinationResourceType", HttpURLConnection.HTTP_CONFLICT, null),
   RENAME_DESTINATION_PARENT_PATH_NOT_FOUND("RenameDestinationParentPathNotFound", HttpURLConnection.HTTP_NOT_FOUND, null),
   INVALID_RENAME_SOURCE_PATH("InvalidRenameSourcePath", HttpURLConnection.HTTP_CONFLICT, null),
-  INGRESS_OVER_ACCOUNT_LIMIT(null, HttpURLConnection.HTTP_UNAVAILABLE, "Ingress is over the account limit."),
-  EGRESS_OVER_ACCOUNT_LIMIT(null, HttpURLConnection.HTTP_UNAVAILABLE, "Egress is over the account limit."),
+  INGRESS_OVER_ACCOUNT_LIMIT("ServerBusy", HttpURLConnection.HTTP_UNAVAILABLE, "Ingress is over the account limit."),
+  EGRESS_OVER_ACCOUNT_LIMIT("ServerBusy", HttpURLConnection.HTTP_UNAVAILABLE, "Egress is over the account limit."),
+  REQUEST_OVER_ACCOUNT_LIMIT("ServerBusy", HttpURLConnection.HTTP_UNAVAILABLE, "Operations per second is over the account limit."),
   INVALID_QUERY_PARAMETER_VALUE("InvalidQueryParameterValue", HttpURLConnection.HTTP_BAD_REQUEST, null),
   AUTHORIZATION_PERMISSION_MISS_MATCH("AuthorizationPermissionMismatch", HttpURLConnection.HTTP_FORBIDDEN, null),
   ACCOUNT_REQUIRES_HTTPS("AccountRequiresHttps", HttpURLConnection.HTTP_BAD_REQUEST, null),
@@ -52,6 +54,9 @@ public enum AzureServiceErrorCode {
   private final String errorCode;
   private final int httpStatusCode;
   private final String errorMessage;
+
+  private static final Logger LOG1 = LoggerFactory.getLogger(AzureServiceErrorCode.class);
+
   AzureServiceErrorCode(String errorCode, int httpStatusCodes, String errorMessage) {
     this.errorCode = errorCode;
     this.httpStatusCode = httpStatusCodes;
@@ -64,6 +69,10 @@ public enum AzureServiceErrorCode {
 
   public String getErrorCode() {
     return this.errorCode;
+  }
+
+  public String getErrorMessage() {
+    return this.errorMessage;
   }
 
   public static List<AzureServiceErrorCode> getAzureServiceCode(int httpStatusCode) {
@@ -93,24 +102,21 @@ public enum AzureServiceErrorCode {
         return azureServiceErrorCode;
       }
     }
-
     return UNKNOWN;
   }
 
-  public static AzureServiceErrorCode getAzureServiceCode(int httpStatusCode, String errorCode, final String errorMessage) {
+  public static AzureServiceErrorCode getAzureServiceCode(int httpStatusCode, String errorCode, String errorMessage) {
     if (errorCode == null || errorCode.isEmpty() || httpStatusCode == UNKNOWN.httpStatusCode || errorMessage == null || errorMessage.isEmpty()) {
       return UNKNOWN;
     }
-
+    String[] errorMessages = errorMessage.split(System.lineSeparator(), 2);
     for (AzureServiceErrorCode azureServiceErrorCode : AzureServiceErrorCode.values()) {
-      if (azureServiceErrorCode.httpStatusCode == httpStatusCode
-          && errorCode.equalsIgnoreCase(azureServiceErrorCode.errorCode)
-          && errorMessage.equalsIgnoreCase(azureServiceErrorCode.errorMessage)
-      ) {
-        return azureServiceErrorCode;
+      if (azureServiceErrorCode.getStatusCode() == httpStatusCode
+          && azureServiceErrorCode.getErrorCode().equalsIgnoreCase(errorCode) &&
+      azureServiceErrorCode.getErrorMessage().equalsIgnoreCase(errorMessages[0])) {
+          return azureServiceErrorCode;
+        }
       }
-    }
-
     return UNKNOWN;
   }
 }

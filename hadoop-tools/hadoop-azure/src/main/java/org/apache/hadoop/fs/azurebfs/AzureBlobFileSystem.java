@@ -49,7 +49,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -113,9 +112,13 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -141,6 +144,7 @@ public class AzureBlobFileSystem extends FileSystem
   private AbfsDelegationTokenManager delegationTokenManager;
   private AbfsCounters abfsCounters;
   private String clientCorrelationId;
+  private boolean sendMetricsToStore;
   private TracingHeaderFormat tracingHeaderFormat;
   private Listener listener;
 
@@ -198,6 +202,7 @@ public class AzureBlobFileSystem extends FileSystem
         .getAbfsConfiguration();
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
+    sendMetricsToStore = abfsConfiguration.isMetricCollectionEnabled();
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
@@ -678,6 +683,32 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
+    String metric = abfsCounters.getAbfsDriverMetrics().toString();
+    LOG.debug("The metrics collected over this instance are " + metric);
+    if(sendMetricsToStore) {
+      if(abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get() > 0) {
+        try {
+          Configuration metricConfig = getConf();
+          String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
+          final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
+          if(abfsMetricUrl == null){
+            return;
+          }
+          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
+          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
+          URI metricUri;
+          try {
+            metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
+          } catch (URISyntaxException ex) {
+            throw new AssertionError(ex);
+          }
+          AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
+          metricFs.sendMetric(metric);
+        } catch (AzureBlobFileSystemException ex) {
+          //do nothing
+        }
+      }
+    }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");
@@ -692,6 +723,14 @@ public class AzureBlobFileSystem extends FileSystem
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());
     }
+  }
+
+  public void sendMetric(String metric) throws AzureBlobFileSystemException {
+    TracingHeaderFormat tracingHeaderFormatMetric = TracingHeaderFormat.INTERNAL_METRIC_FORMAT;
+    TracingContext tracingContextMetric = new TracingContext(clientCorrelationId,
+        fileSystemId, FSOperationType.GET_ATTR, true, tracingHeaderFormatMetric,
+        listener, metric);
+     abfsStore.sendMetric(tracingContextMetric);
   }
 
   @Override

@@ -314,7 +314,6 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation getFilesystemProperties(TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
@@ -800,7 +799,6 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation getPathStatus(final String path, final boolean includeProperties,
                                          TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String operation = SASTokenProvider.GET_PROPERTIES_OPERATION;
     if (!includeProperties) {
@@ -1030,7 +1028,6 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation getAclStatus(final String path, final boolean useUPN,
                                         TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_ACCESS_CONTROL);
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(useUPN));
@@ -1271,6 +1268,14 @@ public class AbfsClient implements Closeable {
    */
   protected AbfsCounters getAbfsCounters() {
     return abfsCounters;
+  }
+
+  /**
+   * Getter for abfsConfiguration from AbfsClient.
+   * @return AbfsConfiguration instance
+   */
+  protected AbfsConfiguration getAbfsConfiguration() {
+    return abfsConfiguration;
   }
 
   public int getNumLeaseThreads() {

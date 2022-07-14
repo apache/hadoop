@@ -36,6 +36,7 @@ import org.apache.hadoop.metrics2.lib.MutableMetric;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Instrumentation of Abfs counters.
@@ -62,6 +63,8 @@ public class AbfsCountersImpl implements AbfsCounters {
       new MetricsRegistry("abfsMetrics").setContext(CONTEXT);
 
   private final IOStatisticsStore ioStatisticsStore;
+
+  private AtomicReference<AbfsDriverMetrics> abfsDriverMetrics = null;
 
   private static final AbfsStatistic[] STATISTIC_LIST = {
       CALL_CREATE,
@@ -121,6 +124,7 @@ public class AbfsCountersImpl implements AbfsCounters {
       ioStatisticsStoreBuilder.withDurationTracking(durationStats.getStatName());
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
+    abfsDriverMetrics = new AtomicReference<>(new AbfsDriverMetrics());
   }
 
   /**
@@ -186,6 +190,10 @@ public class AbfsCountersImpl implements AbfsCounters {
    */
   private MetricsRegistry getRegistry() {
     return registry;
+  }
+
+  public AbfsDriverMetrics getAbfsDriverMetrics() {
+    return abfsDriverMetrics.get();
   }
 
   /**

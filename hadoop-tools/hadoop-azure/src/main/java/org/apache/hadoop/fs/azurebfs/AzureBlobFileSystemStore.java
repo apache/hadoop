@@ -1991,4 +1991,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       abfsCounters.incrementCounter(METADATA_INCOMPLETE_RENAME_FAILURES, 1);
     }
   }
+  public void sendMetric(TracingContext tracingContext) throws AzureBlobFileSystemException{
+    client.getPathStatus("/..$$@@", true, tracingContext); // Will sent a GFS calls that will fail to register in MDM x-ms-client-metric
+  }
 }

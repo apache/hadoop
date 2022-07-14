@@ -38,7 +38,7 @@ public final class FileSystemConfigurations {
   private static final int SIXTY_SECONDS = 60 * 1000;
 
   // Retry parameter defaults.
-  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000;  // 3s
+  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 25 * 10;  // 3s
   public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000;  // 30s
   public static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000;  // 3s
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
@@ -60,6 +60,7 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_READ_BUFFER_SIZE = 4 * ONE_MB;  // 4 MB
   public static final boolean DEFAULT_READ_SMALL_FILES_COMPLETELY = false;
   public static final boolean DEFAULT_OPTIMIZE_FOOTER_READ = false;
+  public static final boolean DEFAULT_AZURE_ENABLE_METRIC_COLLECTION = false;
   public static final boolean DEFAULT_ALWAYS_READ_BUFFER_SIZE = false;
   public static final int DEFAULT_READ_AHEAD_BLOCK_SIZE = 4 * ONE_MB;
   public static final int DEFAULT_READ_AHEAD_RANGE = 64 * ONE_KB; // 64 KB

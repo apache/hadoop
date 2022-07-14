@@ -345,7 +345,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     this.statusCode = this.connection.getResponseCode();
-
+    //this.statusCode = 503;
     if (this.isTraceEnabled) {
       this.recvResponseTimeMs = elapsedTimeMs(startTime);
     }

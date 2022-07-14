@@ -97,6 +97,9 @@ public class TracingHeaderValidator implements Listener {
     } else if (format == TracingHeaderFormat.TWO_ID_FORMAT) {
       Assertions.assertThat(idList)
           .describedAs("header should have 2 elements").hasSize(2);
+    } else if (format == TracingHeaderFormat.INTERNAL_METRIC_FORMAT) {
+      Assertions.assertThat(idList)
+              .describedAs("header should have 4 elements").hasSize(4);
     } else {
       Assertions.assertThat(idList).describedAs("header should have 1 element")
           .hasSize(1);
