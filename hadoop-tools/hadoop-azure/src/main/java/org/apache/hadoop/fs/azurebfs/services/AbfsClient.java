@@ -1220,7 +1220,7 @@ public class AbfsClient implements Closeable {
    * Getter for abfsCounters from AbfsClient.
    * @return AbfsCounters instance.
    */
-  public AbfsCounters getAbfsCounters() {
+  protected AbfsCounters getAbfsCounters() {
     return abfsCounters;
   }
 
