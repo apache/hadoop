@@ -1342,7 +1342,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       subClustersActive = federationFacade.getSubClusters(true);
     } catch (YarnException e) {
-      LOG.error(e.getLocalizedMessage());
+      LOG.error("Get All active sub cluster(s) error.", e);
       return containersInfo;
     }
 
