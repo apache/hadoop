@@ -110,8 +110,7 @@ public class TestWebAppProxyServlet {
     ((ServerConnector)server.getConnectors()[0]).setHost("localhost");
     server.start();
     originalPort = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
-    LOG.info("Running embedded servlet container at: http://localhost:"
-        + originalPort);
+    LOG.info("Running embedded servlet container at: http://localhost:{}", originalPort);
     // This property needs to be set otherwise CORS Headers will be dropped
     // by HttpUrlConnection
     System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
@@ -378,8 +377,8 @@ public class TestWebAppProxyServlet {
     String appAddressInAhs = WebAppUtils.getHttpSchemePrefix(configuration) +
         WebAppUtils.getAHSWebAppURLWithoutScheme(configuration) +
         "/applicationhistory" + "/app/" + app.toString();
-    assertEquals("Webapp proxy servlet should have redirected to AHS",
-        appAddressInAhs, proxyConn.getURL().toString());
+      assertEquals("Webapp proxy servlet should have redirected to AHS", appAddressInAhs,
+          proxyConn.getURL().toString());
     }
     finally {
       proxy.close();
@@ -679,16 +678,14 @@ public class TestWebAppProxyServlet {
 
     @VisibleForTesting
     public String getAhsAppPageUrlBase() {
-      return ahsAppPageUrlBase != null ? ahsAppPageUrlBase
-          : super.getAhsAppPageUrlBase();
+      return ahsAppPageUrlBase != null ? ahsAppPageUrlBase : super.getAhsAppPageUrlBase();
     }
 
     @VisibleForTesting
     public void setAhsAppPageUrlBase(Configuration conf) {
-      this.ahsAppPageUrlBase =
-          StringHelper.pjoin(WebAppUtils.getHttpSchemePrefix(conf)
-                  + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
-              "applicationhistory", "app");
+      this.ahsAppPageUrlBase = StringHelper.pjoin(
+          WebAppUtils.getHttpSchemePrefix(conf) + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
+          "applicationhistory", "app");
     }
   }
 }

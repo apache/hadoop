@@ -137,15 +137,14 @@ public class WebAppProxyServlet extends HttpServlet {
           "cluster", "failure");
   }
 
-  private String getRmAppPageUrlBase(ApplicationId id)
-      throws YarnException, IOException {
-    return ((AppReportFetcher) getServletContext()
-        .getAttribute(WebAppProxy.FETCHER_ATTRIBUTE)).getRmAppPageUrlBase(id);
+  private String getRmAppPageUrlBase(ApplicationId id) throws YarnException, IOException {
+    return ((AppReportFetcher) getServletContext().getAttribute(WebAppProxy.FETCHER_ATTRIBUTE))
+        .getRmAppPageUrlBase(id);
   }
 
   private String getAhsAppPageUrlBase() {
-    return ((AppReportFetcher) getServletContext()
-        .getAttribute(WebAppProxy.FETCHER_ATTRIBUTE)).getAhsAppPageUrlBase();
+    return ((AppReportFetcher) getServletContext().getAttribute(WebAppProxy.FETCHER_ATTRIBUTE))
+        .getAhsAppPageUrlBase();
   }
 
   /**

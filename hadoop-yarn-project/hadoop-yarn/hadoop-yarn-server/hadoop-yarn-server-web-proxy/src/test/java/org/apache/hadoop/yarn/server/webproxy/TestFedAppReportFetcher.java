@@ -18,7 +18,9 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -43,6 +45,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.junit.Assert.fail;
+
 public class TestFedAppReportFetcher {
 
   private Configuration conf;
@@ -50,12 +54,10 @@ public class TestFedAppReportFetcher {
 
   private SubClusterId subClusterId1 = SubClusterId.newInstance("subCluster1");
   private SubClusterId subClusterId2 = SubClusterId.newInstance("subCluster2");
-  private SubClusterInfo clusterInfo1 = SubClusterInfo
-      .newInstance(subClusterId1, "10.0.0.1:1000", "10.0.0.1:1000",
-          "10.0.0.1:1000", "10.0.0.1:1000", SubClusterState.SC_RUNNING, 0L, "");
-  private SubClusterInfo clusterInfo2 = SubClusterInfo
-      .newInstance(subClusterId2, "10.0.0.2:1000", "10.0.0.2:1000",
-          "10.0.0.2:1000", "10.0.0.2:1000", SubClusterState.SC_RUNNING, 0L, "");
+  private SubClusterInfo clusterInfo1 = SubClusterInfo.newInstance(subClusterId1, "10.0.0.1:1000",
+      "10.0.0.1:1000", "10.0.0.1:1000", "10.0.0.1:1000", SubClusterState.SC_RUNNING, 0L, "");
+  private SubClusterInfo clusterInfo2 = SubClusterInfo.newInstance(subClusterId2, "10.0.0.2:1000",
+      "10.0.0.2:1000", "10.0.0.2:1000", "10.0.0.2:1000", SubClusterState.SC_RUNNING, 0L, "");
   private ApplicationClientProtocol appManager1;
   private ApplicationClientProtocol appManager2;
   private ApplicationId appId1 = ApplicationId.newInstance(0, 1);
@@ -73,11 +75,9 @@ public class TestFedAppReportFetcher {
   private void testHelper(boolean isAHSEnabled)
       throws YarnException, IOException {
     conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
-        isAHSEnabled);
+    conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, isAHSEnabled);
 
-    FederationStateStoreFacade fedFacade =
-        FederationStateStoreFacade.getInstance();
+    FederationStateStoreFacade fedFacade = FederationStateStoreFacade.getInstance();
     FederationStateStore fss = new MemoryFederationStateStore();
     fss.init(conf);
     fedFacade.reinitialize(fss, conf);
@@ -85,20 +85,16 @@ public class TestFedAppReportFetcher {
     fss.registerSubCluster(SubClusterRegisterRequest.newInstance(clusterInfo1));
     fss.registerSubCluster(SubClusterRegisterRequest.newInstance(clusterInfo2));
     fss.addApplicationHomeSubCluster(AddApplicationHomeSubClusterRequest
-        .newInstance(ApplicationHomeSubCluster.newInstance(appId1,
-            subClusterId1)));
+        .newInstance(ApplicationHomeSubCluster.newInstance(appId1, subClusterId1)));
     fss.addApplicationHomeSubCluster(AddApplicationHomeSubClusterRequest
-        .newInstance(ApplicationHomeSubCluster.newInstance(appId2,
-            subClusterId2)));
+        .newInstance(ApplicationHomeSubCluster.newInstance(appId2, subClusterId2)));
 
     appManager1 = Mockito.mock(ApplicationClientProtocol.class);
-    Mockito.when(appManager1
-        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class)))
+    Mockito.when(appManager1.getApplicationReport(Mockito.any(GetApplicationReportRequest.class)))
         .thenThrow(new ApplicationNotFoundException(appNotFoundExceptionMsg));
 
     appManager2 = Mockito.mock(ApplicationClientProtocol.class);
-    Mockito.when(appManager2
-        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class)))
+    Mockito.when(appManager2.getApplicationReport(Mockito.any(GetApplicationReportRequest.class)))
         .thenThrow(new ApplicationNotFoundException(appNotFoundExceptionMsg));
 
     fetcher = new TestFedAppReportFetcher.FedAppReportFetcherForTest(conf);
@@ -120,43 +116,34 @@ public class TestFedAppReportFetcher {
   }
 
   @Test
-  public void testFetchReportAHSDisabled() throws YarnException, IOException {
+  public void testFetchReportAHSDisabled() throws Exception {
     testHelper(false);
-    try {
-      fetcher.getApplicationReport(appId1);
-    } catch (ApplicationNotFoundException e) {
-      Assert.assertEquals(e.getMessage(), appNotFoundExceptionMsg);
-      /* RM will not know of the app and Application History Service is disabled
-       * So we will not try to get the report from AHS and RM will throw
-       * ApplicationNotFoundException
-       */
-    }
-    try {
-      fetcher.getApplicationReport(appId2);
-    } catch (ApplicationNotFoundException e) {
-      Assert.assertEquals(e.getMessage(), appNotFoundExceptionMsg);
-      /* RM will not know of the app and Application History Service is disabled
-       * So we will not try to get the report from AHS and RM will throw
-       * ApplicationNotFoundException
-       */
-    }
+
+    /* RM will not know of the app and Application History Service is disabled
+     * So we will not try to get the report from AHS and RM will throw
+     * ApplicationNotFoundException
+     */
+    LambdaTestUtils.intercept(ApplicationNotFoundException.class, appNotFoundExceptionMsg,
+        () -> fetcher.getApplicationReport(appId1));
+    LambdaTestUtils.intercept(ApplicationNotFoundException.class, appNotFoundExceptionMsg,
+        () -> fetcher.getApplicationReport(appId2));
+
     Mockito.verify(appManager1, Mockito.times(1))
         .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
     Mockito.verify(appManager2, Mockito.times(1))
         .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
-    Assert.assertNull("HistoryManager should be null as AHS is disabled",
-        history);
+    Assert.assertNull("HistoryManager should be null as AHS is disabled", history);
   }
 
   @Test
   public void testGetRmAppPageUrlBase() throws IOException, YarnException {
     testHelper(true);
     Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId1), StringHelper.pjoin(
-        WebAppUtils.getHttpSchemePrefix(conf) + clusterInfo1
-            .getRMWebServiceAddress(), "cluster", "app"));
+        WebAppUtils.getHttpSchemePrefix(conf) + clusterInfo1.getRMWebServiceAddress(), "cluster",
+        "app"));
     Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId2), StringHelper.pjoin(
-        WebAppUtils.getHttpSchemePrefix(conf) + clusterInfo2
-            .getRMWebServiceAddress(), "cluster", "app"));
+        WebAppUtils.getHttpSchemePrefix(conf) + clusterInfo2.getRMWebServiceAddress(), "cluster",
+        "app"));
   }
 
   static class FedAppReportFetcherForTest extends FedAppReportFetcher {
@@ -172,11 +159,11 @@ public class TestFedAppReportFetcher {
           mock(GetApplicationReportResponse.class);
       history = Mockito.mock(ApplicationHistoryProtocol.class);
       try {
-        Mockito.when(history.getApplicationReport(Mockito
-            .any(GetApplicationReportRequest.class))).thenReturn(resp);
+        Mockito.when(history.getApplicationReport(Mockito.any(GetApplicationReportRequest.class)))
+            .thenReturn(resp);
       } catch (YarnException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        // This should never happen
+        fail("Found exception when getApplicationReport!");
       }
       return history;
     }

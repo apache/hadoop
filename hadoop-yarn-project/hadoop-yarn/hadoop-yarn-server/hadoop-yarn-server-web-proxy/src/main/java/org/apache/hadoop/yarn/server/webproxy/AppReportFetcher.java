@@ -19,13 +19,17 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.client.AHSProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -43,8 +47,7 @@ public abstract class AppReportFetcher {
   private final Configuration conf;
   private ApplicationHistoryProtocol historyManager;
   private String ahsAppPageUrlBase;
-  private final RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
+  private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private boolean isAHSEnabled;
 
   public AppReportFetcher(Configuration conf) {
@@ -52,10 +55,9 @@ public abstract class AppReportFetcher {
     if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
         YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
       this.isAHSEnabled = true;
-      this.ahsAppPageUrlBase =
-          StringHelper.pjoin(WebAppUtils.getHttpSchemePrefix(conf)
-                  + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
-              "applicationhistory", "app");
+      this.ahsAppPageUrlBase = StringHelper.pjoin(
+          WebAppUtils.getHttpSchemePrefix(conf) + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
+          "applicationhistory", "app");
     }
     try {
       if (this.isAHSEnabled) {
@@ -70,8 +72,7 @@ public abstract class AppReportFetcher {
 
   protected ApplicationHistoryProtocol getAHSProxy(Configuration configuration)
       throws IOException {
-    return AHSProxy.createAHSProxy(configuration,
-        ApplicationHistoryProtocol.class,
+    return AHSProxy.createAHSProxy(configuration, ApplicationHistoryProtocol.class,
         configuration.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT));
@@ -88,8 +89,41 @@ public abstract class AppReportFetcher {
   public abstract FetchedAppReport getApplicationReport(ApplicationId appId)
       throws YarnException, IOException;
 
-  public abstract String getRmAppPageUrlBase(ApplicationId appId)
-      throws IOException, YarnException;
+  /**
+   * Get an application report for the specified application id from the RM and
+   * fall back to the Application History Server if not found in RM.
+   *
+   * @param applicationsManager what to use to get the RM reports.
+   * @param appId id of the application to get.
+   * @return the ApplicationReport for the appId.
+   * @throws YarnException on any error.
+   * @throws IOException   connection exception.
+   */
+  protected FetchedAppReport getApplicationReport(ApplicationClientProtocol applicationsManager,
+                                                  ApplicationId appId)
+      throws YarnException, IOException {
+    GetApplicationReportRequest request =
+        getRecordFactory().newRecordInstance(GetApplicationReportRequest.class);
+    request.setApplicationId(appId);
+
+    ApplicationReport appReport;
+    FetchedAppReport fetchedAppReport;
+    try {
+      appReport = applicationsManager.getApplicationReport(request).getApplicationReport();
+      fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.RM);
+    } catch (ApplicationNotFoundException e) {
+      if (!isAHSEnabled()) {
+        // Just throw it as usual if historyService is not enabled.
+        throw e;
+      }
+      //Fetch the application report from AHS
+      appReport = getHistoryManager().getApplicationReport(request).getApplicationReport();
+      fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.AHS);
+    }
+    return fetchedAppReport;
+  }
+
+  public abstract String getRmAppPageUrlBase(ApplicationId appId) throws IOException, YarnException;
 
   public String getAhsAppPageUrlBase() {
     return this.ahsAppPageUrlBase;
@@ -114,8 +148,7 @@ public abstract class AppReportFetcher {
   }
 
   @VisibleForTesting
-  public void setHistoryManager(
-      ApplicationHistoryProtocol historyManager) {
+  public void setHistoryManager(ApplicationHistoryProtocol historyManager) {
     this.historyManager = historyManager;
   }
 
@@ -128,8 +161,7 @@ public abstract class AppReportFetcher {
     private ApplicationReport appReport;
     private AppReportSource appReportSource;
 
-    public FetchedAppReport(ApplicationReport appReport,
-        AppReportSource appReportSource) {
+    public FetchedAppReport(ApplicationReport appReport, AppReportSource appReportSource) {
       this.appReport = appReport;
       this.appReportSource = appReportSource;
     }

@@ -18,14 +18,12 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
-import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.StringHelper;
@@ -39,16 +37,15 @@ public class DefaultAppReportFetcher extends AppReportFetcher {
   /**
    * Create a new Connection to the RM/Application History Server
    * to fetch Application reports.
+   *
    * @param conf the conf to use to know where the RM is.
    */
   public DefaultAppReportFetcher(Configuration conf) {
     super(conf);
-    this.rmAppPageUrlBase = StringHelper
-        .pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
-            "cluster", "app");
+    this.rmAppPageUrlBase =
+        StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
     try {
-      this.applicationsManager = ClientRMProxy.createRMProxy(conf,
-          ApplicationClientProtocol.class);
+      this.applicationsManager = ClientRMProxy.createRMProxy(conf, ApplicationClientProtocol.class);
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
@@ -58,53 +55,34 @@ public class DefaultAppReportFetcher extends AppReportFetcher {
    * Create a direct connection to RM instead of a remote connection when
    * the proxy is running as part of the RM. Also create a remote connection to
    * Application History Server if it is enabled.
-   * @param conf the configuration to use
+   *
+   * @param conf                the configuration to use
    * @param applicationsManager what to use to get the RM reports.
    */
   public DefaultAppReportFetcher(Configuration conf,
-      ApplicationClientProtocol applicationsManager) {
+                                 ApplicationClientProtocol applicationsManager) {
     super(conf);
-    this.rmAppPageUrlBase = StringHelper
-        .pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
-            "cluster", "app");
+    this.rmAppPageUrlBase =
+        StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
     this.applicationsManager = applicationsManager;
   }
 
   /**
    * Get an application report for the specified application id from the RM and
    * fall back to the Application History Server if not found in RM.
+   *
    * @param appId id of the application to get.
    * @return the ApplicationReport for the appId.
    * @throws YarnException on any error.
-   * @throws IOException connection exception.
+   * @throws IOException   connection exception.
    */
+  @Override
   public FetchedAppReport getApplicationReport(ApplicationId appId)
       throws YarnException, IOException {
-    GetApplicationReportRequest request = getRecordFactory()
-        .newRecordInstance(GetApplicationReportRequest.class);
-    request.setApplicationId(appId);
-
-    ApplicationReport appReport;
-    FetchedAppReport fetchedAppReport;
-    try {
-      appReport = applicationsManager.
-          getApplicationReport(request).getApplicationReport();
-      fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.RM);
-    } catch (ApplicationNotFoundException e) {
-      if (!isAHSEnabled()) {
-        // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
-      //Fetch the application report from AHS
-      appReport = getHistoryManager().getApplicationReport(request)
-          .getApplicationReport();
-      fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.AHS);
-    }
-    return fetchedAppReport;
+    return super.getApplicationReport(applicationsManager, appId);
   }
 
-  public String getRmAppPageUrlBase(ApplicationId appId)
-      throws YarnException, IOException {
+  public String getRmAppPageUrlBase(ApplicationId appId) throws YarnException, IOException {
     return this.rmAppPageUrlBase;
   }
 

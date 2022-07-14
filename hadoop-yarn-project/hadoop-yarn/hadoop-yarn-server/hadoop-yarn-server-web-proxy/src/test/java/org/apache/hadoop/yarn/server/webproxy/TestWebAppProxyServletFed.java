@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +30,7 @@ import java.net.URL;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -64,21 +65,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test the WebAppProxyServlet and WebAppProxy. For back end use simple web
- * server.
+ * Test the WebAppProxyServlet and WebAppProxy. For back end use simple web server.
  */
 public class TestWebAppProxyServletFed {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      TestWebAppProxyServletFed.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWebAppProxyServletFed.class);
 
   public static final String AM_PREFIX = "AM";
   public static final String RM_PREFIX = "RM";
   public static final String AHS_PREFIX = "AHS";
 
   /*
-  * Mocked Server is used for simulating the web of AppMaster, ResourceMamanger
-  * or TimelineServer.
+  * Mocked Server is used for simulating the web of AppMaster, ResourceMamanger or TimelineServer.
   * */
   private static Server mockServer;
   private static int mockServerPort = 0;
@@ -92,20 +90,16 @@ public class TestWebAppProxyServletFed {
     ((QueuedThreadPool) mockServer.getThreadPool()).setMaxThreads(20);
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/");
-    context.addServlet(new ServletHolder(new MockWebServlet(AM_PREFIX)),
-        "/amweb/*");
-    context.addServlet(new ServletHolder(new MockWebServlet(RM_PREFIX)),
-        "/cluster/app/*");
+    context.addServlet(new ServletHolder(new MockWebServlet(AM_PREFIX)), "/amweb/*");
+    context.addServlet(new ServletHolder(new MockWebServlet(RM_PREFIX)), "/cluster/app/*");
     context.addServlet(new ServletHolder(new MockWebServlet(AHS_PREFIX)),
         "/applicationhistory/app/*");
     mockServer.setHandler(context);
 
     ((ServerConnector) mockServer.getConnectors()[0]).setHost("localhost");
     mockServer.start();
-    mockServerPort = ((ServerConnector) mockServer.getConnectors()[0])
-        .getLocalPort();
-    LOG.info("Running embedded servlet container at: http://localhost:"
-        + mockServerPort);
+    mockServerPort = ((ServerConnector) mockServer.getConnectors()[0]).getLocalPort();
+    LOG.info("Running embedded servlet container at: http://localhost:" + mockServerPort);
   }
 
   @AfterClass
@@ -121,7 +115,7 @@ public class TestWebAppProxyServletFed {
   public void testWebServlet() throws IOException {
     HttpURLConnection conn;
     // 1. Mocked AppMaster web Test
-    URL url = new URL("http://localhost:" + mockServerPort + "/amweb/apptest");
+    URL url = new URL("http", "localhost", mockServerPort, "/amweb/apptest");
     conn = (HttpURLConnection) url.openConnection();
     conn.connect();
     assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
@@ -129,8 +123,7 @@ public class TestWebAppProxyServletFed {
     conn.disconnect();
 
     // 2. Mocked RM web Test
-    url = new URL(
-        "http://localhost:" + mockServerPort + "/cluster/app/apptest");
+    url = new URL("http", "localhost", mockServerPort, "/cluster/app/apptest");
     conn = (HttpURLConnection) url.openConnection();
     conn.connect();
     assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
@@ -138,8 +131,7 @@ public class TestWebAppProxyServletFed {
     conn.disconnect();
 
     // 3. Mocked AHS web Test
-    url = new URL("http://localhost:" + mockServerPort
-        + "/applicationhistory/app/apptest");
+    url = new URL("http", "localhost", mockServerPort, "/applicationhistory/app/apptest");
     conn = (HttpURLConnection) url.openConnection();
     conn.connect();
     assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
@@ -154,20 +146,18 @@ public class TestWebAppProxyServletFed {
     conf.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9090");
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
-    conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-        "localhost:" + mockServerPort);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, "localhost:" + mockServerPort);
     // overriding num of web server threads, see HttpServer.HTTP_MAXTHREADS
     conf.setInt("hadoop.http.max.threads", 10);
 
     // Create sub cluster information.
     SubClusterId subClusterId1 = SubClusterId.newInstance("scid1");
     SubClusterId subClusterId2 = SubClusterId.newInstance("scid2");
-    SubClusterInfo subClusterInfo1 = SubClusterInfo.newInstance(subClusterId1,
-        "10.0.0.1:1", "10.0.0.1:1", "10.0.0.1:1",
-        "localhost:" + mockServerPort, SubClusterState.SC_RUNNING, 0, "");
-    SubClusterInfo subClusterInfo2 = SubClusterInfo.newInstance(subClusterId2,
-        "10.0.0.2:1", "10.0.0.2:1", "10.0.0.2:1",
-        "10.0.0.2:1", SubClusterState.SC_RUNNING, 0, "");
+    SubClusterInfo subClusterInfo1 = SubClusterInfo.newInstance(subClusterId1, "10.0.0.1:1",
+        "10.0.0.1:1", "10.0.0.1:1", "localhost:" + mockServerPort, SubClusterState.SC_RUNNING, 0,
+        "");
+    SubClusterInfo subClusterInfo2 = SubClusterInfo.newInstance(subClusterId2, "10.0.0.2:1",
+        "10.0.0.2:1", "10.0.0.2:1", "10.0.0.2:1", SubClusterState.SC_RUNNING, 0, "");
 
     // App1 and App2 is running applications.
     ApplicationId appId1 = ApplicationId.newInstance(0, 1);
@@ -176,48 +166,37 @@ public class TestWebAppProxyServletFed {
     String appUrl2 = "http://localhost:" + mockServerPort + "/amweb/" + appId2;
     // App3 is accepted application, has not registered original url to am.
     ApplicationId appId3 = ApplicationId.newInstance(0, 3);
-    // App4 is finished application, has remove from rm, but not remove from
-    // timeline server.
+    // App4 is finished application, has remove from rm, but not remove from timeline server.
     ApplicationId appId4 = ApplicationId.newInstance(0, 4);
 
     // Mock for application
-    ApplicationClientProtocol appManager1 = Mockito
-        .mock(ApplicationClientProtocol.class);
-    Mockito.when(appManager1
-        .getApplicationReport(GetApplicationReportRequest.newInstance(appId1)))
-        .thenReturn(GetApplicationReportResponse.newInstance(
-            newApplicationReport(appId1, YarnApplicationState.RUNNING,
-                appUrl1)));
-    Mockito.when(appManager1
-        .getApplicationReport(GetApplicationReportRequest.newInstance(appId3)))
-        .thenReturn(GetApplicationReportResponse.newInstance(
-            newApplicationReport(appId3, YarnApplicationState.ACCEPTED, null)));
+    ApplicationClientProtocol appManager1 = Mockito.mock(ApplicationClientProtocol.class);
+    Mockito.when(appManager1.getApplicationReport(GetApplicationReportRequest.newInstance(appId1)))
+        .thenReturn(GetApplicationReportResponse
+            .newInstance(newApplicationReport(appId1, YarnApplicationState.RUNNING, appUrl1)));
+    Mockito.when(appManager1.getApplicationReport(GetApplicationReportRequest.newInstance(appId3)))
+        .thenReturn(GetApplicationReportResponse
+            .newInstance(newApplicationReport(appId3, YarnApplicationState.ACCEPTED, null)));
 
-    ApplicationClientProtocol appManager2 = Mockito
-        .mock(ApplicationClientProtocol.class);
-    Mockito.when(appManager2
-        .getApplicationReport(GetApplicationReportRequest.newInstance(appId2)))
-        .thenReturn(GetApplicationReportResponse.newInstance(
-            newApplicationReport(appId2, YarnApplicationState.RUNNING,
-                appUrl2)));
-    Mockito.when(appManager2
-        .getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
+    ApplicationClientProtocol appManager2 = Mockito.mock(ApplicationClientProtocol.class);
+    Mockito.when(appManager2.getApplicationReport(GetApplicationReportRequest.newInstance(appId2)))
+        .thenReturn(GetApplicationReportResponse
+            .newInstance(newApplicationReport(appId2, YarnApplicationState.RUNNING, appUrl2)));
+    Mockito.when(appManager2.getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
         .thenThrow(new ApplicationNotFoundException("APP NOT FOUND"));
 
-    ApplicationHistoryProtocol historyManager = Mockito
-        .mock(ApplicationHistoryProtocol.class);
-    Mockito.when(historyManager
-        .getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
-        .thenReturn(GetApplicationReportResponse.newInstance(
-            newApplicationReport(appId4, YarnApplicationState.FINISHED, null)));
+    ApplicationHistoryProtocol historyManager = Mockito.mock(ApplicationHistoryProtocol.class);
+    Mockito
+        .when(historyManager.getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
+        .thenReturn(GetApplicationReportResponse
+            .newInstance(newApplicationReport(appId4, YarnApplicationState.FINISHED, null)));
 
     // Initial federation store.
-    FederationStateStoreFacade facade = FederationStateStoreFacade
-        .getInstance();
-    facade.getStateStore().registerSubCluster(
-        SubClusterRegisterRequest.newInstance(subClusterInfo1));
-    facade.getStateStore().registerSubCluster(
-        SubClusterRegisterRequest.newInstance(subClusterInfo2));
+    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+    facade.getStateStore()
+        .registerSubCluster(SubClusterRegisterRequest.newInstance(subClusterInfo1));
+    facade.getStateStore()
+        .registerSubCluster(SubClusterRegisterRequest.newInstance(subClusterInfo2));
     facade.addApplicationHomeSubCluster(
         ApplicationHomeSubCluster.newInstance(appId1, subClusterId1));
     facade.addApplicationHomeSubCluster(
@@ -232,20 +211,19 @@ public class TestWebAppProxyServletFed {
     proxy.init(conf);
     proxy.start();
 
-    // set Mocked rm and timeline
-    int proxyPort = proxy.proxy.proxyServer.getConnectorAddress(0).getPort();
-    FedAppReportFetcher appReportFetcher = proxy.proxy.appReportFetcher;
-    appReportFetcher.registerSubCluster(subClusterInfo1, appManager1);
-    appReportFetcher.registerSubCluster(subClusterInfo2, appManager2);
-    appReportFetcher.setHistoryManager(historyManager);
-
-    HttpURLConnection conn;
     try {
+      // set Mocked rm and timeline
+      int proxyPort = proxy.proxy.proxyServer.getConnectorAddress(0).getPort();
+      FedAppReportFetcher appReportFetcher = proxy.proxy.appReportFetcher;
+      appReportFetcher.registerSubCluster(subClusterInfo1, appManager1);
+      appReportFetcher.registerSubCluster(subClusterInfo2, appManager2);
+      appReportFetcher.setHistoryManager(historyManager);
+
       // App1 is running in subcluster1, and original url is registered
       // in rm of subCluster1. So proxy server will get original url from rm by
       // getApplicationReport. Then proxy server will fetch the webapp directly.
-      URL url = new URL("http://localhost:" + proxyPort + "/proxy/" + appId1.toString());
-      conn = (HttpURLConnection) url.openConnection();
+      URL url = new URL("http", "localhost", proxyPort, "/proxy/" + appId1.toString());
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       assertEquals(AM_PREFIX + "/" + appId1.toString(), readResponse(conn));
@@ -254,7 +232,7 @@ public class TestWebAppProxyServletFed {
       // App2 is running in subcluster2, and original url is registered
       // in rm of subCluster2. So proxy server will get original url from rm by
       // getApplicationReport. Then proxy server will fetch the webapp directly.
-      url = new URL("http://localhost:" + proxyPort + "/proxy/" + appId2.toString());
+      url = new URL("http", "localhost", proxyPort, "/proxy/" + appId2.toString());
       conn = (HttpURLConnection) url.openConnection();
       conn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
@@ -263,7 +241,7 @@ public class TestWebAppProxyServletFed {
 
       // App3 is accepted in subcluster1, and original url is not registered
       // yet. So proxy server will fetch the application web from rm.
-      url = new URL("http://localhost:" + proxyPort + "/proxy/" + appId3.toString());
+      url = new URL("http", "localhost", proxyPort, "/proxy/" + appId3.toString());
       conn = (HttpURLConnection) url.openConnection();
       conn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
@@ -273,7 +251,7 @@ public class TestWebAppProxyServletFed {
       // App4 is finished in subcluster2, and have removed from rm, but not
       // removed from timeline server. So proxy server will fetch the
       // application web from timeline server.
-      url = new URL("http://localhost:" + proxyPort + "/proxy/" + appId4.toString());
+      url = new URL("http", "localhost", proxyPort, "/proxy/" + appId4.toString());
       conn = (HttpURLConnection) url.openConnection();
       conn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
@@ -286,9 +264,8 @@ public class TestWebAppProxyServletFed {
 
   private ApplicationReport newApplicationReport(ApplicationId appId,
       YarnApplicationState state, String origTrackingUrl) {
-    return ApplicationReport
-        .newInstance(appId, null, "testuser", null, null, null, 0, null, state,
-            null, null, 0, 0, 0, null, null, origTrackingUrl, 0f, null, null);
+    return ApplicationReport.newInstance(appId, null, "testuser", null, null, null, 0, null, state,
+        null, null, 0, 0, 0, null, null, origTrackingUrl, 0f, null, null);
   }
 
   private String readResponse(HttpURLConnection conn) throws IOException {
@@ -329,7 +306,7 @@ public class TestWebAppProxyServletFed {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
         throws IOException {
-      if (req.getPathInfo() != null)  {
+      if (req.getPathInfo() != null) {
         resp.getWriter().write(role + req.getPathInfo());
       }
       resp.setStatus(HttpServletResponse.SC_OK);
@@ -361,19 +338,17 @@ public class TestWebAppProxyServletFed {
       Configuration conf = getConfig();
       String bindAddress = conf.get(YarnConfiguration.PROXY_ADDRESS);
       bindAddress = StringUtils.split(bindAddress, ':')[0];
-      AccessControlList acl = new AccessControlList(
-          conf.get(YarnConfiguration.YARN_ADMIN_ACL,
-              YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+      AccessControlList acl = new AccessControlList(conf.get(YarnConfiguration.YARN_ADMIN_ACL,
+          YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
       proxyServer = new HttpServer2.Builder()
           .setName("proxy")
-          .addEndpoint(
-              URI.create(WebAppUtils.getHttpSchemePrefix(conf) + bindAddress
-                  + ":0")).setFindPort(true)
+          .addEndpoint(URI.create(WebAppUtils.getHttpSchemePrefix(conf) + bindAddress + ":0"))
+          .setFindPort(true)
           .setConf(conf)
           .setACL(acl)
           .build();
-      proxyServer.addServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
-          ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
+      proxyServer.addServlet(ProxyUriUtils.PROXY_SERVLET_NAME, ProxyUriUtils.PROXY_PATH_SPEC,
+          WebAppProxyServlet.class);
 
       appReportFetcher = new FedAppReportFetcher(conf);
       proxyServer.setAttribute(FETCHER_ATTRIBUTE, appReportFetcher);
@@ -385,8 +360,7 @@ public class TestWebAppProxyServletFed {
 
       proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
       proxyServer.start();
-      LOG.info("Proxy server is started at port {}",
-          proxyServer.getConnectorAddress(0).getPort());
+      LOG.info("Proxy server is started at port {}", proxyServer.getConnectorAddress(0).getPort());
     }
   }
 }

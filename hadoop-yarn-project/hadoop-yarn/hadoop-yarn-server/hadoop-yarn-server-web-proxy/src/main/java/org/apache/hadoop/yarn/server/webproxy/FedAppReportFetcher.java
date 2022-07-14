@@ -20,16 +20,14 @@ package org.apache.hadoop.yarn.server.webproxy;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
-import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -69,30 +67,9 @@ public class FedAppReportFetcher extends AppReportFetcher {
       throws YarnException, IOException {
     SubClusterId scid = federationFacade.getApplicationHomeSubCluster(appId);
     makeSureGetClusterInfo(scid);
-    ApplicationClientProtocol applicationsManager = subClusters.get(scid)
-        .getRight();
+    ApplicationClientProtocol applicationsManager = subClusters.get(scid).getRight();
 
-    GetApplicationReportRequest request = getRecordFactory()
-        .newRecordInstance(GetApplicationReportRequest.class);
-    request.setApplicationId(appId);
-
-    ApplicationReport appReport;
-    FetchedAppReport fetchedAppReport;
-    try {
-      appReport = applicationsManager.
-          getApplicationReport(request).getApplicationReport();
-      fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.RM);
-    } catch (ApplicationNotFoundException e) {
-      if (!isAHSEnabled()) {
-        // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
-      //Fetch the application report from AHS
-      appReport = getHistoryManager().getApplicationReport(request)
-          .getApplicationReport();
-      fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.AHS);
-    }
-    return fetchedAppReport;
+    return super.getApplicationReport(applicationsManager, appId);
   }
 
   @Override
@@ -102,20 +79,19 @@ public class FedAppReportFetcher extends AppReportFetcher {
     makeSureGetClusterInfo(scid);
 
     SubClusterInfo subClusterInfo = subClusters.get(scid).getLeft();
-    return StringHelper.pjoin(WebAppUtils.getHttpSchemePrefix(getConf())
-        + subClusterInfo.getRMWebServiceAddress(), "cluster", "app");
+    return StringHelper.pjoin(
+        WebAppUtils.getHttpSchemePrefix(getConf()) + subClusterInfo.getRMWebServiceAddress(),
+        "cluster", "app");
   }
 
-  private void makeSureGetClusterInfo(SubClusterId scid)
-      throws YarnException, IOException {
+  private void makeSureGetClusterInfo(SubClusterId scid) throws YarnException, IOException {
     if (subClusters.get(scid) == null) {
       SubClusterInfo subClusterInfo = federationFacade.getSubCluster(scid);
       Configuration subClusterConf = new Configuration(getConf());
       FederationProxyProviderUtil.updateConfForFederation(subClusterConf,
           subClusterInfo.getSubClusterId().toString());
       ApplicationClientProtocol proxy =
-          ClientRMProxy
-              .createRMProxy(subClusterConf, ApplicationClientProtocol.class);
+          ClientRMProxy.createRMProxy(subClusterConf, ApplicationClientProtocol.class);
       subClusters.put(scid, Pair.of(subClusterInfo, proxy));
     }
   }
@@ -130,8 +106,7 @@ public class FedAppReportFetcher extends AppReportFetcher {
   }
 
   @VisibleForTesting
-  public void registerSubCluster(SubClusterInfo info, ApplicationClientProtocol
-      proxy) {
+  public void registerSubCluster(SubClusterInfo info, ApplicationClientProtocol proxy) {
     subClusters.put(info.getSubClusterId(), Pair.of(info, proxy));
   }
 }
