@@ -221,36 +221,6 @@ public class ITestAzureBlobFileSystemDelete extends
   }
 
   @Test
-  public void testTryStatus() throws java.io.IOException {
-    AbfsConfiguration abfsConfig
-        = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(
-        getConfiguration(),
-        5, 5000);
-
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    AbfsClient abfsClient = fs.getAbfsStore().getClient();
-    AbfsClient testClient = TestAbfsClient.createTestClientFromCurrentContext(
-        abfsClient,
-        abfsConfig);
-
-    final AbfsRestOperation mockRestOperation = mock(AbfsRestOperation.class);
-    when(mockRestOperation.isARetriedRequest()).thenReturn(true);
-
-    // Case 1: Mock instance of Http Operation response. This will return
-    // HTTP:Not Found
-    AbfsHttpOperation httpOperation = mock(AbfsHttpOperation.class);
-    when(httpOperation.getStatusCode()).thenReturn(HTTP_INTERNAL_ERROR);
-
-    // Mock delete response to 404
-    when(mockRestOperation.getResult()).thenReturn(httpOperation);
-    when(mockRestOperation.hasResult()).thenReturn(true);
-    TracingContext tracingContext = new TracingContext("abcd",
-        fs.getFileSystemId(), FSOperationType.TEST_OP,
-        org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat.ALL_ID_FORMAT, null);
-    fs.close();
-  }
-
-  @Test
   public void testDeleteIdempotencyTriggerHttp404() throws Exception {
 
     final AzureBlobFileSystem fs = getFileSystem();
