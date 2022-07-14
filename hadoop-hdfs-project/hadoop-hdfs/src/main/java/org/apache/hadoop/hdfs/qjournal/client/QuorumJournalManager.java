@@ -241,7 +241,7 @@ public class QuorumJournalManager implements JournalManager {
     
     long myEpoch = maxPromised + 1;
     Map<AsyncLogger, NewEpochResponseProto> resps =
-        loggers.waitForWriteQuorum(loggers.newEpoch(nsInfo, myEpoch),
+        loggers.waitForWriteQuorum(loggers.newEpoch(myEpoch),
             newEpochTimeoutMs, "newEpoch(" + myEpoch + ")");
         
     loggers.setEpoch(myEpoch);
