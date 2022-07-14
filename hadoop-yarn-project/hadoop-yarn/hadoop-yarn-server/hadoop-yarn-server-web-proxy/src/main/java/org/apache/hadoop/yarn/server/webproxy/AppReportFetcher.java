@@ -103,7 +103,7 @@ public abstract class AppReportFetcher {
                                                   ApplicationId appId)
       throws YarnException, IOException {
     GetApplicationReportRequest request =
-        getRecordFactory().newRecordInstance(GetApplicationReportRequest.class);
+        this.recordFactory.newRecordInstance(GetApplicationReportRequest.class);
     request.setApplicationId(appId);
 
     ApplicationReport appReport;
@@ -112,7 +112,7 @@ public abstract class AppReportFetcher {
       appReport = applicationsManager.getApplicationReport(request).getApplicationReport();
       fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.RM);
     } catch (ApplicationNotFoundException e) {
-      if (!isAHSEnabled()) {
+      if (!isAHSEnabled) {
         // Just throw it as usual if historyService is not enabled.
         throw e;
       }
@@ -137,14 +137,6 @@ public abstract class AppReportFetcher {
 
   protected ApplicationHistoryProtocol getHistoryManager() {
     return this.historyManager;
-  }
-
-  protected RecordFactory getRecordFactory() {
-    return this.recordFactory;
-  }
-
-  protected boolean isAHSEnabled() {
-    return this.isAHSEnabled;
   }
 
   @VisibleForTesting
