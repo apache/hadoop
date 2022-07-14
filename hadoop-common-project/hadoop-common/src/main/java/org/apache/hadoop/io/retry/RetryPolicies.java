@@ -183,7 +183,7 @@ public class RetryPolicies {
   /**
    * <p>
    * A retry policy where RemoteException and SaslException are not retried, other individual
-   * exception types can have RetryPolicy overrides, & any other exception type without an
+   * exception types can have RetryPolicy overrides, and any other exception type without an
    * override is not retried.
    * </p>
    *
