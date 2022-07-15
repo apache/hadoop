@@ -1524,7 +1524,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           new S3PrefetchingInputStream(
               readContext.build(),
               createObjectAttributes(path, fileStatus),
-              createInputStreamCallbacks(auditSpan)));
+              createInputStreamCallbacks(auditSpan),
+              inputStreamStats));
     } else {
       return new FSDataInputStream(
           new S3AInputStream(

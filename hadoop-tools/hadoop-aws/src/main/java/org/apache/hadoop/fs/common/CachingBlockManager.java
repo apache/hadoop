@@ -31,6 +31,8 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+
 /**
  * Provides read access to the underlying file one block at a time.
  * Improve read performance by prefetching and locall caching blocks.
@@ -204,7 +206,7 @@ public abstract class CachingBlockManager extends BlockManager {
     // Cancel any prefetches in progress.
     this.cancelPrefetches();
 
-    Io.closeIgnoringIoException(this.cache);
+    cleanupWithLogger(LOG, this.cache);
 
     this.ops.end(op);
     LOG.info(this.ops.getSummary(false));
