@@ -685,24 +685,30 @@ public class AzureBlobFileSystem extends FileSystem
     }
     String metric = abfsCounters.getAbfsDriverMetrics().toString();
     LOG.debug("The metrics collected over this instance are " + metric);
-    if(sendMetricsToStore) {
-      if(abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get() > 0) {
+    if (sendMetricsToStore) {
+      if (abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get()
+          > 0) {
         try {
           Configuration metricConfig = getConf();
-          String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
+          String metricAccountKey = metricConfig.get(
+              FS_AZURE_METRIC_ACCOUNT_KEY);
           final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
-          if(abfsMetricUrl == null){
+          if (abfsMetricUrl == null) {
             return;
           }
-          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
-          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
+          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME,
+              metricAccountKey);
+          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
+              "false");
           URI metricUri;
           try {
             metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
           } catch (URISyntaxException ex) {
             throw new AssertionError(ex);
           }
-          AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
+          AzureBlobFileSystem metricFs
+              = (AzureBlobFileSystem) FileSystem.newInstance(metricUri,
+              metricConfig);
           metricFs.sendMetric(metric);
         } catch (AzureBlobFileSystemException ex) {
           //do nothing

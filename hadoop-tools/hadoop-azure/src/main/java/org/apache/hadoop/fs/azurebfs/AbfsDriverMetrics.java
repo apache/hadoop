@@ -23,22 +23,39 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
+
 public class AbfsDriverMetrics {
+
   private AtomicLong numberOfRequestsSucceeded;
+
   private AtomicLong minBackoff;
+
   private AtomicLong maxBackoff;
+
   private AtomicLong totalRequests;
+
   private AtomicLong totalBackoff;
+
   private String retryCount;
+
   private AtomicLong numberOfIOPSThrottledRequests;
+
   private AtomicLong numberOfBandwidthThrottledRequests;
+
   private AtomicLong numberOfOtherThrottledRequests;
+
   private AtomicLong numberOfNetworkFailedRequests;
+
   private AtomicLong maxRetryCount;
+
   private AtomicLong totalNumberOfRequests;
+
   private AtomicLong numberOfRequestsSucceededWithoutRetrying;
+
   private AtomicLong numberOfRequestsFailed;
-  private final Map<String, AbfsDriverMetrics> metricsMap = new ConcurrentHashMap<>();
+
+  private final Map<String, AbfsDriverMetrics> metricsMap
+      = new ConcurrentHashMap<>();
 
   public AbfsDriverMetrics() {
     initializeMap();
@@ -51,6 +68,7 @@ public class AbfsDriverMetrics {
     this.numberOfRequestsFailed = new AtomicLong();
     this.numberOfNetworkFailedRequests = new AtomicLong();
   }
+
   public AbfsDriverMetrics(String retryCount) {
     this.retryCount = retryCount;
     this.numberOfRequestsSucceeded = new AtomicLong();
@@ -61,7 +79,8 @@ public class AbfsDriverMetrics {
   }
 
   private void initializeMap() {
-    ArrayList<String> retryCountList = new ArrayList<String>(Arrays.asList("1","2","3","4","5_15","15_25","25AndAbove"));
+    ArrayList<String> retryCountList = new ArrayList<String>(
+        Arrays.asList("1", "2", "3", "4", "5_15", "15_25", "25AndAbove"));
     for (String s : retryCountList) {
       metricsMap.put(s, new AbfsDriverMetrics(s));
     }
@@ -145,36 +164,52 @@ public class AbfsDriverMetrics {
   @Override
   public String toString() {
     StringBuilder metricString = new StringBuilder();
-    long totalRequestsThrottled = numberOfBandwidthThrottledRequests.get() + numberOfIOPSThrottledRequests.get() + numberOfOtherThrottledRequests.get();
-    double percentageOfRequestsThrottled = ((double)totalRequestsThrottled/totalNumberOfRequests.get())*100;
+    long totalRequestsThrottled = numberOfBandwidthThrottledRequests.get()
+        + numberOfIOPSThrottledRequests.get()
+        + numberOfOtherThrottledRequests.get();
+    double percentageOfRequestsThrottled =
+        ((double) totalRequestsThrottled / totalNumberOfRequests.get()) * 100;
     for (Map.Entry<String, AbfsDriverMetrics> entry : metricsMap.entrySet()) {
       metricString.append("#RCTSI#_").append(entry.getKey())
           .append("R_").append("=")
           .append(entry.getValue().getNumberOfRequestsSucceeded()).append(" ");
       long totalRequests = entry.getValue().getTotalRequests().get();
-      if(totalRequests > 0) {
+      if (totalRequests > 0) {
         metricString.append("#MMA#_").append(entry.getKey())
             .append("R_").append("=")
-            .append(String.format("%.3f", (double) entry.getValue().getMinBackoff().get() / 1000L))
+            .append(String.format("%.3f",
+                (double) entry.getValue().getMinBackoff().get() / 1000L))
             .append("s ")
-            .append(String.format("%.3f", (double) entry.getValue().getMaxBackoff().get() / 1000L))
+            .append(String.format("%.3f",
+                (double) entry.getValue().getMaxBackoff().get() / 1000L))
             .append("s ")
-            .append(String.format("%.3f", (double) ((entry.getValue().getTotalBackoff().get() / totalRequests) / 1000L)))
+            .append(String.format("%.3f", (double) (
+                (entry.getValue().getTotalBackoff().get() / totalRequests)
+                    / 1000L)))
             .append("s ");
-      }else {
+      } else {
         metricString.append("#MMA#_").append(entry.getKey())
             .append("R_").append("=0s ");
       }
     }
-    metricString.append("#BWT=").append(numberOfBandwidthThrottledRequests)
-        .append(" #IT=").append(numberOfIOPSThrottledRequests)
-        .append(" #OT=").append(numberOfOtherThrottledRequests)
-        .append(" #%RT=").append(String.format("%.3f",percentageOfRequestsThrottled))
-        .append( "#NFR").append(numberOfNetworkFailedRequests)
-        .append(" #TRNR=").append(numberOfRequestsSucceededWithoutRetrying)
-        .append(" #TRF=").append(numberOfRequestsFailed)
-        .append(" #TR=").append(totalNumberOfRequests)
-        .append(" #MRC=").append(maxRetryCount);
+    metricString.append("#BWT=")
+        .append(numberOfBandwidthThrottledRequests)
+        .append(" #IT=")
+        .append(numberOfIOPSThrottledRequests)
+        .append(" #OT=")
+        .append(numberOfOtherThrottledRequests)
+        .append(" #%RT=")
+        .append(String.format("%.3f", percentageOfRequestsThrottled))
+        .append("#NFR")
+        .append(numberOfNetworkFailedRequests)
+        .append(" #TRNR=")
+        .append(numberOfRequestsSucceededWithoutRetrying)
+        .append(" #TRF=")
+        .append(numberOfRequestsFailed)
+        .append(" #TR=")
+        .append(totalNumberOfRequests)
+        .append(" #MRC=")
+        .append(maxRetryCount);
 
     return metricString + " ";
   }

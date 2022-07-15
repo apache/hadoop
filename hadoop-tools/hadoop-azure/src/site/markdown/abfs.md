@@ -993,18 +993,23 @@ settings to track their end-to-end latency.
 
 ### <a name="drivermetricoptions"></a> Driver Metric Options
 
-`fs.azure.metric.account.name`: This configuration parameter is used to specify 
-the name of the account which will be used to push a failed(404) GetPathStatus request to the
-backend. We can configure a separate account to push metrics to the store or use the same for as the existing account on which other requests are made.
+`fs.azure.metric.account.name`: This configuration parameter is used to specify
+the name of the account which will be used to push a failed(404) GetPathStatus
+request to the
+backend. We can configure a separate account to push metrics to the store or use
+the same for as the existing account on which other requests are made.
 
-`fs.azure.metric.account.key`: This is the access key for the storage account 
+`fs.azure.metric.account.key`: This is the access key for the storage account
 used for pushing metrics to the store.
 
-`fs.azure.enable.metric.collection`: This configuration provides an option to specify whether we want to push the metrics or not. 
+`fs.azure.enable.metric.collection`: This configuration provides an option to
+specify whether we want to push the metrics or not.
 By default, this config will be set to false.
 
-`fs.azure.metric.uri`: This configuration provides the uri in the format of containername@accountname.dfs.core.windows.net. 
-This should be a part of the config in order to prevent extra calls to create the filesystem. We use an existing filsystem to push the metrics.
+`fs.azure.metric.uri`: This configuration provides the uri in the format of
+containername@accountname.dfs.core.windows.net.
+This should be a part of the config in order to prevent extra calls to create
+the filesystem. We use an existing filsystem to push the metrics.
 
 ## <a name="troubleshooting"></a> Troubleshooting
 

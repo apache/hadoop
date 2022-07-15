@@ -113,10 +113,11 @@ public enum AzureServiceErrorCode {
     for (AzureServiceErrorCode azureServiceErrorCode : AzureServiceErrorCode.values()) {
       if (azureServiceErrorCode.getStatusCode() == httpStatusCode
           && azureServiceErrorCode.getErrorCode().equalsIgnoreCase(errorCode) &&
-      azureServiceErrorCode.getErrorMessage().equalsIgnoreCase(errorMessages[0])) {
-          return azureServiceErrorCode;
-        }
+          azureServiceErrorCode.getErrorMessage()
+              .equalsIgnoreCase(errorMessages[0])) {
+        return azureServiceErrorCode;
       }
+    }
     return UNKNOWN;
   }
 }

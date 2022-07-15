@@ -151,9 +151,10 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
-    if(abfsCounters != null) {
+    if (abfsCounters != null) {
       this.abfsDriverMetrics = abfsCounters.getAbfsDriverMetrics();
-    }if(abfsDriverMetrics != null) {
+    }
+    if (abfsDriverMetrics != null) {
       this.metricsMap = abfsDriverMetrics.getMetricsMap();
     }
     this.maxIoRetries = client.getAbfsConfiguration().getMaxIoRetries();
@@ -226,7 +227,7 @@ public class AbfsRestOperation {
     retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
     long sleepDuration = 0L;
-    if(abfsDriverMetrics != null) {
+    if (abfsDriverMetrics != null) {
       abfsDriverMetrics.getTotalNumberOfRequests().getAndIncrement();
     }
     while (!executeHttpOperation(retryCount, tracingContext)) {
@@ -244,7 +245,7 @@ public class AbfsRestOperation {
         Thread.currentThread().interrupt();
       }
     }
-    if(abfsDriverMetrics != null) {
+    if (abfsDriverMetrics != null) {
       updateDriverMetrics(retryCount, result.getStatusCode());
     }
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
@@ -256,18 +257,20 @@ public class AbfsRestOperation {
   }
 
   private synchronized void updateDriverMetrics(int retryCount, int statusCode){
-    if(statusCode < HttpURLConnection.HTTP_OK
+    if (statusCode < HttpURLConnection.HTTP_OK
         || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
       if (retryCount >= maxIoRetries) {
         abfsDriverMetrics.getNumberOfRequestsFailed().getAndIncrement();
       }
     } else {
       if (retryCount > 0 && retryCount <= maxIoRetries) {
-        maxRetryCount = Math.max(abfsDriverMetrics.getMaxRetryCount().get(), retryCount);
+        maxRetryCount = Math.max(abfsDriverMetrics.getMaxRetryCount().get(),
+            retryCount);
         abfsDriverMetrics.getMaxRetryCount().set(maxRetryCount);
         updateCount(retryCount);
       } else {
-        abfsDriverMetrics.getNumberOfRequestsSucceededWithoutRetrying().getAndIncrement();
+        abfsDriverMetrics.getNumberOfRequestsSucceededWithoutRetrying()
+            .getAndIncrement();
       }
     }
   }
@@ -326,19 +329,31 @@ public class AbfsRestOperation {
       }
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
-      if(!isThrottledRequest && httpOperation.getStatusCode() >= HttpURLConnection.HTTP_INTERNAL_ERROR){
+      if (!isThrottledRequest && httpOperation.getStatusCode()
+          >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
         isThrottledRequest = true;
         AzureServiceErrorCode serviceErrorCode =
-            AzureServiceErrorCode.getAzureServiceCode(httpOperation.getStatusCode(), httpOperation.getStorageErrorCode(), httpOperation.getStorageErrorMessage());
-        LOG1.trace("Service code is " + serviceErrorCode + " status code is " + httpOperation.getStatusCode() + " error code is " + httpOperation.getStorageErrorCode()
+            AzureServiceErrorCode.getAzureServiceCode(
+                httpOperation.getStatusCode(),
+                httpOperation.getStorageErrorCode(),
+                httpOperation.getStorageErrorMessage());
+        LOG1.trace("Service code is " + serviceErrorCode + " status code is "
+            + httpOperation.getStatusCode() + " error code is "
+            + httpOperation.getStorageErrorCode()
             + " error message is " + httpOperation.getStorageErrorMessage());
-        if(serviceErrorCode.equals(AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT) ||
-            serviceErrorCode.equals(AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)){
-          abfsDriverMetrics.getNumberOfBandwidthThrottledRequests().getAndIncrement();
-        }else if(serviceErrorCode.equals(AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)){
-          abfsDriverMetrics.getNumberOfIOPSThrottledRequests().getAndIncrement();
-        }else{
-          abfsDriverMetrics.getNumberOfOtherThrottledRequests().getAndIncrement();
+        if (serviceErrorCode.equals(
+            AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT) ||
+            serviceErrorCode.equals(
+                AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
+          abfsDriverMetrics.getNumberOfBandwidthThrottledRequests()
+              .getAndIncrement();
+        } else if (serviceErrorCode.equals(
+            AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)) {
+          abfsDriverMetrics.getNumberOfIOPSThrottledRequests()
+              .getAndIncrement();
+        } else {
+          abfsDriverMetrics.getNumberOfOtherThrottledRequests()
+              .getAndIncrement();
         }
       }
         incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
@@ -418,13 +433,13 @@ public class AbfsRestOperation {
 
     private String getKey(int retryCount) {
       String retryCounter;
-      if(retryCount >= 1 && retryCount <= 4){
+      if (retryCount >= 1 && retryCount <= 4) {
         retryCounter = Integer.toString(retryCount);
-      }else if(retryCount >= 5 && retryCount < 15){
+      } else if (retryCount >= 5 && retryCount < 15) {
         retryCounter = "5_15";
-      }else if(retryCount >= 15 && retryCount < 25){
+      } else if (retryCount >= 15 && retryCount < 25) {
         retryCounter = "15_25";
-      }else{
+      } else {
         retryCounter = "25AndAbove";
       }
       return retryCounter;
