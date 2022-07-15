@@ -492,7 +492,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
-      this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, true);
+      this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, false);
       this.prefetchBlockSize = intOption(
           conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, PREFETCH_BLOCK_DEFAULT_SIZE);
       this.prefetchBlockCount =
