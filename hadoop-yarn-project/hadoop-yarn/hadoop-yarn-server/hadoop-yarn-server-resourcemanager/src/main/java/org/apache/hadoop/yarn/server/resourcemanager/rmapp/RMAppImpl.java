@@ -1122,8 +1122,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      RMAppLogAggregationStatusEvent logEvent =
-          (RMAppLogAggregationStatusEvent) event;
+      RMAppLogAggregationStatusEvent logEvent = (RMAppLogAggregationStatusEvent) event;
       app.aggregateLogReport(logEvent.getNodeId(), logEvent.getReport());
     }
   }

@@ -116,8 +116,7 @@ public class TestRMDeadLockTriggerByApp {
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
-    conf.setInt(
-        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 10);
+    conf.setInt(YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 10);
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     conf.setInt(YarnConfiguration.NM_VCORES, LOOP);
     conf.setInt(YarnConfiguration.YARN_MINICLUSTER_NM_PMEM_MB, 512 * LOOP);
@@ -134,12 +133,10 @@ public class TestRMDeadLockTriggerByApp {
     yarnClient.start();
 
     // get node info
-    assertTrue("All node managers did not connect to the RM within the "
-            + "allotted 5-second timeout",
+    assertTrue("All node managers did not connect to the RM within the allotted 5-second timeout",
         yarnCluster.waitForNodeManagersToConnect(5000L));
     this.nodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
-    assertEquals("Not all node managers were reported running",
-        NODE_COUNT, nodeReports.size());
+    assertEquals("Not all node managers were reported running", NODE_COUNT, nodeReports.size());
 
     // get rm and nm info
     this.rm = yarnCluster.getResourceManager(0);
@@ -177,8 +174,7 @@ public class TestRMDeadLockTriggerByApp {
     GenericTestUtils.waitFor(() -> {
       try {
         ApplicationReport appReport = yarnClient.getApplicationReport(appId);
-        if (appReport.getYarnApplicationState()
-            == YarnApplicationState.ACCEPTED) {
+        if (appReport.getYarnApplicationState() == YarnApplicationState.ACCEPTED) {
           this.attemptId = appReport.getCurrentApplicationAttemptId();
           RMAppAttempt appAttempt = rm.getRMContext().getRMApps()
               .get(attemptId.getApplicationId()).getCurrentAppAttempt();
@@ -194,16 +190,15 @@ public class TestRMDeadLockTriggerByApp {
 
     // Just dig into the ResourceManager and get the AMRMToken just for the sake
     // of testing.
-    UserGroupInformation.setLoginUser(UserGroupInformation
-        .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
+    UserGroupInformation.setLoginUser(
+        UserGroupInformation.createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
 
     // emulate RM setup of AMRM token in credentials by adding the token
     // *before* setting the token service
     RMAppAttempt appAttempt = rm.getRMContext().getRMApps()
         .get(attemptId.getApplicationId()).getCurrentAppAttempt();
     UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
-    appAttempt.getAMRMToken().setService(
-        ClientRMProxy.getAMRMTokenService(conf));
+    appAttempt.getAMRMToken().setService(ClientRMProxy.getAMRMTokenService(conf));
 
     // create AMRMClient
     this.amClient = AMRMClient.createAMRMClient();
@@ -284,8 +279,7 @@ public class TestRMDeadLockTriggerByApp {
       try {
         for (int i = 0; i < LOOP; i++) {
           amClient.addContainerRequest(request);
-          for (ContainerId containerId : nm.getNMContext().getContainers()
-              .keySet()) {
+          for (ContainerId containerId : nm.getNMContext().getContainers().keySet()) {
             // release all container except am container
             if (!amContainerId.equals(containerId)) {
               amClient.releaseAssignedContainer(containerId);
@@ -339,9 +333,9 @@ public class TestRMDeadLockTriggerByApp {
 
   private ContainerRequest setupContainerAskForRM() {
     Priority pri = Priority.newInstance(1);
-    ContainerRequest request = new ContainerRequest(
-        Resource.newInstance(512, 1), null, null, pri, 0, true, null,
-        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED, true), "");
+    ContainerRequest request =
+        new ContainerRequest(Resource.newInstance(512, 1), null, null, pri, 0, true, null,
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED, true), "");
     return request;
   }
 }

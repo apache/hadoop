@@ -290,8 +290,7 @@ public class TestRMAppLogAggregationStatus {
     LogAggregationReport[] report1_3 = new LogAggregationReport[10];
     for (int i = 0; i < 10 ; i ++) {
       report1_3[i] = LogAggregationReport
-          .newInstance(appId, LogAggregationStatus.RUNNING,
-              "test_message_" + i);
+          .newInstance(appId, LogAggregationStatus.RUNNING, "test_message_" + i);
       node1ReportForApp3.add(report1_3[i]);
     }
     LogAggregationReport report1_3_s = LogAggregationReport.newInstance(appId,
@@ -302,11 +301,9 @@ public class TestRMAppLogAggregationStatus {
     node1.handle(new RMNodeStatusEvent(node1.getNodeID(), nodeStatus1,
         node1ReportForApp3));
     for (int i = 0; i < 10; i++) {
-      rmApp.handle(
-          new RMAppLogAggregationStatusEvent(appId, nodeId1, report1_3[i]));
+      rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId1, report1_3[i]));
     }
-    rmApp.handle(
-        new RMAppLogAggregationStatusEvent(appId, nodeId1, report1_3_s));
+    rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId1, report1_3_s));
 
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
     Assert.assertEquals(2, logAggregationStatus.size());

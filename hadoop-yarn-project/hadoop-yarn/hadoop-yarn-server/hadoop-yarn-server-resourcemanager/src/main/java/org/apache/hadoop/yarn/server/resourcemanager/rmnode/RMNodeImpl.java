@@ -1704,8 +1704,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       RMApp rmApp = this.context.getRMApps().get(report.getApplicationId());
       if (rmApp != null) {
         this.context.getDispatcher().getEventHandler().handle(
-            new RMAppLogAggregationStatusEvent(rmApp.getApplicationId(),
-                this.nodeId, report));
+            new RMAppLogAggregationStatusEvent(rmApp.getApplicationId(), this.nodeId, report));
       }
     }
   }
