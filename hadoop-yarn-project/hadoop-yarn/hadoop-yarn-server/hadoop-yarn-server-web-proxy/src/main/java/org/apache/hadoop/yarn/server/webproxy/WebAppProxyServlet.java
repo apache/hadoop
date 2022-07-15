@@ -590,13 +590,15 @@ public class WebAppProxyServlet extends HttpServlet {
         // and Application Report was fetched from RM
         LOG.debug("Original tracking url is '{}'. Redirecting to RM app page",
             originalUri == null ? "NULL" : originalUri);
-        ProxyUtils.sendRedirect(req, resp, StringHelper.pjoin(getRmAppPageUrlBase(id), id.toString()));
+        ProxyUtils.sendRedirect(req, resp, StringHelper.pjoin(getRmAppPageUrlBase(id),
+            id.toString()));
       } else if (appReportSource == AppReportSource.AHS) {
         // fallback to Application History Server app page if the application
         // report was fetched from AHS
         LOG.debug("Original tracking url is '{}'. Redirecting to AHS app page",
             originalUri == null ? "NULL" : originalUri);
-        ProxyUtils.sendRedirect(req, resp, StringHelper.pjoin(getAhsAppPageUrlBase(), id.toString()));
+        ProxyUtils.sendRedirect(req, resp, StringHelper.pjoin(getAhsAppPageUrlBase(),
+            id.toString()));
       }
     } else if (ProxyUriUtils.getSchemeFromUrl(originalUri).isEmpty()) {
       trackingUri =

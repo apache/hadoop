@@ -362,8 +362,7 @@ public class TestWebAppProxyServlet {
         proxyConn.getURL().toString().equals(appAddressInRm));
 
     //set AHS_ENBALED = true to simulate getting the app report from AHS
-    configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
-        true);
+    configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
     proxy.proxy.appReportFetcher.setAhsAppPageUrlBase(configuration);
     proxyConn = (HttpURLConnection) url.openConnection();
     proxyConn.connect();

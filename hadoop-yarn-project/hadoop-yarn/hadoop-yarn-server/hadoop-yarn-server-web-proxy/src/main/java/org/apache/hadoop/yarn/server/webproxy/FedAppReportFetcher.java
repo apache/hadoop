@@ -89,8 +89,10 @@ public class FedAppReportFetcher extends AppReportFetcher {
     }
     SubClusterInfo subClusterInfo = federationFacade.getSubCluster(scId);
     Configuration subClusterConf = new Configuration(getConf());
-    FederationProxyProviderUtil.updateConfForFederation(subClusterConf, subClusterInfo.getSubClusterId().toString());
-    ApplicationClientProtocol proxy = ClientRMProxy.createRMProxy(subClusterConf, ApplicationClientProtocol.class);
+    FederationProxyProviderUtil
+        .updateConfForFederation(subClusterConf, subClusterInfo.getSubClusterId().toString());
+    ApplicationClientProtocol proxy =
+        ClientRMProxy.createRMProxy(subClusterConf, ApplicationClientProtocol.class);
     subClusters.put(scId, Pair.of(subClusterInfo, proxy));
   }
 

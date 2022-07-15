@@ -140,9 +140,9 @@ public class TestFedAppReportFetcher {
     testHelper(true);
     String scheme = WebAppUtils.getHttpSchemePrefix(conf);
     Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId1),
-      StringHelper.pjoin(scheme + clusterInfo1.getRMWebServiceAddress(), "cluster", "app"));
+        StringHelper.pjoin(scheme + clusterInfo1.getRMWebServiceAddress(), "cluster", "app"));
     Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId2),
-      StringHelper.pjoin(scheme + clusterInfo2.getRMWebServiceAddress(), "cluster", "app"));
+        StringHelper.pjoin(scheme + clusterInfo2.getRMWebServiceAddress(), "cluster", "app"));
   }
 
   static class FedAppReportFetcherForTest extends FedAppReportFetcher {
