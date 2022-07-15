@@ -216,8 +216,7 @@ public class TestRouterClientRejectOverload {
           routerProto.renewLease(clientName, null);
         } catch (RemoteException re) {
           IOException ioe = re.unwrapRemoteException();
-          assertTrue("Wrong exception: " + ioe,
-              ioe instanceof StandbyException);
+          assertTrue("Wrong exception: " + ioe, ioe instanceof StandbyException);
           assertExceptionContains("is overloaded", ioe);
           overloadException.incrementAndGet();
         } catch (IOException e) {

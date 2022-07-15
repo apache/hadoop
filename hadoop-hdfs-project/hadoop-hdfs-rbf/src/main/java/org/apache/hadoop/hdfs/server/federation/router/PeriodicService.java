@@ -178,7 +178,7 @@ public abstract class PeriodicService extends AbstractService {
         lastRun = Time.now();
       } catch (Exception ex) {
         errorCount++;
-        LOG.warn(serviceName + " service threw an exception", ex);
+        LOG.warn("{} service threw an exception", serviceName, ex);
       }
     };
 
