@@ -39,7 +39,7 @@ Multiple blocks may be read in parallel.
 
 |Property    |Meaning    |Default    |
 |---|---|---|
-|`fs.s3a.prefetch.enabled`    |Enable the prefetch input stream    |`true` |
+|`fs.s3a.prefetch.enabled`    |Enable the prefetch input stream    |`false` |
 |`fs.s3a.prefetch.block.size`    |Size of a block    |`8M`    |
 |`fs.s3a.prefetch.block.count`    |Number of blocks to prefetch    |`8`    |
 
