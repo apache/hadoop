@@ -19,15 +19,10 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.security.Principal;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
@@ -92,6 +87,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -1053,7 +1049,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     // Collect all the responses in parallel
-
     for (int i = 0; i < subClustersActive.size(); i++) {
       try {
         Future<ClusterMetricsInfo> future = compSvc.take();
@@ -1336,48 +1331,29 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
+
     ContainersInfo containersInfo = new ContainersInfo();
 
-    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
-      LOG.error("Get All active sub cluster(s) error.", e);
+      subClustersActive = getActiveSubclusters();
+    } catch (NotFoundException e) {
+      LOG.error("Get all active sub cluster(s) error.", e);
       return containersInfo;
     }
 
-    // Send the requests in parallel
-    CompletionService<ContainersInfo> compSvc =
-        new ExecutorCompletionService<>(this.threadpool);
-
-    for (final SubClusterInfo info : subClustersActive.values()) {
-      compSvc.submit(() -> {
-        DefaultRequestInterceptorREST interceptor =
-            getOrCreateInterceptorForSubCluster(info.getSubClusterId(), info.getRMWebServiceAddress());
-        try {
-          ContainersInfo containers =
-              interceptor.getContainers(req, res, appId, appAttemptId);
-          return containers;
-        } catch (Exception e) {
-          LOG.error("SubCluster {} failed to return GetContainers.",
-              info.getSubClusterId());
-          return null;
-        }
-      });
-    }
-
-    // Collect all the responses in parallel
-    for (int i = 0; i < subClustersActive.size(); i++) {
-      try {
-        Future<ContainersInfo> future = compSvc.take();
-        ContainersInfo containersResponse = future.get();
-
-        if (containersResponse != null) {
-          containersInfo.addAll(containersResponse.getContainers());
-        }
-      } catch (Throwable e) {
-        LOG.warn("Failed to get containers report. ", e);
+    try {
+      ClientMethod remoteMethod = new ClientMethod("getContainers",
+          new Class[]{HttpServletRequest.class, HttpServletResponse.class, String.class,
+              String.class}, new Object[]{req, res, appId, appAttemptId});
+      Map<SubClusterInfo, ContainersInfo> containersInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, ContainersInfo.class);
+      if (containersInfoMap != null) {
+        containersInfoMap.values().forEach(containers -> containersInfo.addAll(containers.getContainers()));
       }
+
+    } catch (Exception ex) {
+      LOG.error("Failed to return GetContainers.",  ex);
     }
 
     return containersInfo;
@@ -1409,5 +1385,50 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (threadpool != null) {
       threadpool.shutdown();
     }
+  }
+
+  <R> Map<SubClusterInfo, R> invokeConcurrent(Collection<SubClusterInfo> clusterIds,
+       ClientMethod request, Class<R> clazz) throws YarnException, IOException {
+    ArrayList<SubClusterInfo> clusterIdList = new ArrayList<>(clusterIds);
+    return invokeConcurrent(clusterIdList, request, clazz);
+  }
+
+  private <R> Map<SubClusterInfo, R> invokeConcurrent(ArrayList<SubClusterInfo> subClusterInfo,
+      ClientMethod request, Class<R> clazz) {
+
+    Map<SubClusterInfo, R> results = new HashMap<>();
+
+    // Send the requests in parallel
+    CompletionService<R> compSvc = new ExecutorCompletionService<>(this.threadpool);
+
+    for (final SubClusterInfo info : subClusterInfo) {
+      compSvc.submit(() -> {
+        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+            info.getSubClusterId(), info.getRMWebServiceAddress());
+        try {
+          Method method = DefaultRequestInterceptorREST.class.
+              getMethod(request.getMethodName(), request.getTypes());
+          return clazz.cast(method.invoke(interceptor, request.getParams()));
+        } catch (Exception e) {
+          LOG.error("SubCluster {} failed to Call {} Method}.", info.getSubClusterId(),
+              request.getMethodName(), e);
+          return null;
+        }
+      });
+    }
+
+    for (int i = 0; i < subClusterInfo.size(); i++) {
+      try {
+        Future<R> future = compSvc.take();
+        R response = future.get();
+        if (response != null) {
+          results.put(subClusterInfo.get(i), response);
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to get containers report. ", e);
+      }
+    }
+
+    return results;
   }
 }

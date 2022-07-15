@@ -586,4 +586,26 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     Assert.assertEquals(4, responseGet.getContainers().size());
   }
+
+  @Test
+  public void testGetContainersNotExists() {
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ContainersInfo response =
+        interceptor.getContainers(null, null, appId.toString(), null);
+    Assert.assertTrue(response.getContainers().isEmpty());
+  }
+
+  @Test
+  public void testGetContainersWrongFormat() {
+    ContainersInfo response =
+        interceptor.getContainers(null, null, "Application_wrong_id", null);
+
+    Assert.assertNotNull(response);
+    Assert.assertTrue(response.getContainers().isEmpty());
+
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    response = interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id");
+
+    Assert.assertTrue(response.getContainers().isEmpty());
+  }
 }
