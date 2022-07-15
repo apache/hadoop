@@ -42,8 +42,7 @@ public class DefaultAppReportFetcher extends AppReportFetcher {
    */
   public DefaultAppReportFetcher(Configuration conf) {
     super(conf);
-    this.rmAppPageUrlBase =
-        StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
+    this.rmAppPageUrlBase = StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
     try {
       this.applicationsManager = ClientRMProxy.createRMProxy(conf, ApplicationClientProtocol.class);
     } catch (IOException e) {
@@ -59,11 +58,9 @@ public class DefaultAppReportFetcher extends AppReportFetcher {
    * @param conf                the configuration to use
    * @param applicationsManager what to use to get the RM reports.
    */
-  public DefaultAppReportFetcher(Configuration conf,
-                                 ApplicationClientProtocol applicationsManager) {
+  public DefaultAppReportFetcher(Configuration conf, ApplicationClientProtocol applicationsManager) {
     super(conf);
-    this.rmAppPageUrlBase =
-        StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
+    this.rmAppPageUrlBase = StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
     this.applicationsManager = applicationsManager;
   }
 

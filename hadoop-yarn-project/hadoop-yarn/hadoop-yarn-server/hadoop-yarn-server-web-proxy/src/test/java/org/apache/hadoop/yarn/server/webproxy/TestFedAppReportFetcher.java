@@ -138,12 +138,11 @@ public class TestFedAppReportFetcher {
   @Test
   public void testGetRmAppPageUrlBase() throws IOException, YarnException {
     testHelper(true);
-    Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId1), StringHelper.pjoin(
-        WebAppUtils.getHttpSchemePrefix(conf) + clusterInfo1.getRMWebServiceAddress(), "cluster",
-        "app"));
-    Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId2), StringHelper.pjoin(
-        WebAppUtils.getHttpSchemePrefix(conf) + clusterInfo2.getRMWebServiceAddress(), "cluster",
-        "app"));
+    String scheme = WebAppUtils.getHttpSchemePrefix(conf);
+    Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId1),
+      StringHelper.pjoin(scheme + clusterInfo1.getRMWebServiceAddress(), "cluster", "app"));
+    Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId2),
+      StringHelper.pjoin(scheme + clusterInfo2.getRMWebServiceAddress(), "cluster", "app"));
   }
 
   static class FedAppReportFetcherForTest extends FedAppReportFetcher {

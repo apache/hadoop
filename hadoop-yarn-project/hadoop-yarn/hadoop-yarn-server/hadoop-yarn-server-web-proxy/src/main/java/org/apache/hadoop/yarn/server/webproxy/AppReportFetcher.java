@@ -56,9 +56,9 @@ public abstract class AppReportFetcher {
     if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
         YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
       this.isAHSEnabled = true;
-      this.ahsAppPageUrlBase = StringHelper.pjoin(
-          WebAppUtils.getHttpSchemePrefix(conf) + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
-          "applicationhistory", "app");
+      String scheme = WebAppUtils.getHttpSchemePrefix(conf);
+      String historyUrl = WebAppUtils.getAHSWebAppURLWithoutScheme(conf);
+      this.ahsAppPageUrlBase = StringHelper.pjoin(scheme + historyUrl, "applicationhistory", "app");
     }
     try {
       if (this.isAHSEnabled) {

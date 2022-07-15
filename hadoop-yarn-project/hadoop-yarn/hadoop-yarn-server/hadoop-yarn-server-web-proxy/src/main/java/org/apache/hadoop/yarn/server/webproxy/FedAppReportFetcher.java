@@ -66,7 +66,7 @@ public class FedAppReportFetcher extends AppReportFetcher {
   public FetchedAppReport getApplicationReport(ApplicationId appId)
       throws YarnException, IOException {
     SubClusterId scid = federationFacade.getApplicationHomeSubCluster(appId);
-    makeSureGetClusterInfo(scid);
+    createSubclusterIfAbsent(scid);
     ApplicationClientProtocol applicationsManager = subClusters.get(scid).getRight();
 
     return super.getApplicationReport(applicationsManager, appId);
@@ -76,24 +76,22 @@ public class FedAppReportFetcher extends AppReportFetcher {
   public String getRmAppPageUrlBase(ApplicationId appId)
       throws IOException, YarnException {
     SubClusterId scid = federationFacade.getApplicationHomeSubCluster(appId);
-    makeSureGetClusterInfo(scid);
+    createSubclusterIfAbsent(scid);
 
     SubClusterInfo subClusterInfo = subClusters.get(scid).getLeft();
-    return StringHelper.pjoin(
-        WebAppUtils.getHttpSchemePrefix(getConf()) + subClusterInfo.getRMWebServiceAddress(),
-        "cluster", "app");
+    String scheme = WebAppUtils.getHttpSchemePrefix(getConf());
+    return StringHelper.pjoin(scheme + subClusterInfo.getRMWebServiceAddress(), "cluster", "app");
   }
 
-  private void makeSureGetClusterInfo(SubClusterId scid) throws YarnException, IOException {
-    if (subClusters.get(scid) == null) {
-      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(scid);
-      Configuration subClusterConf = new Configuration(getConf());
-      FederationProxyProviderUtil.updateConfForFederation(subClusterConf,
-          subClusterInfo.getSubClusterId().toString());
-      ApplicationClientProtocol proxy =
-          ClientRMProxy.createRMProxy(subClusterConf, ApplicationClientProtocol.class);
-      subClusters.put(scid, Pair.of(subClusterInfo, proxy));
+  private void createSubclusterIfAbsent(SubClusterId scId) throws YarnException, IOException {
+    if (subClusters.containsKey(scId)) {
+      return;
     }
+    SubClusterInfo subClusterInfo = federationFacade.getSubCluster(scId);
+    Configuration subClusterConf = new Configuration(getConf());
+    FederationProxyProviderUtil.updateConfForFederation(subClusterConf, subClusterInfo.getSubClusterId().toString());
+    ApplicationClientProtocol proxy = ClientRMProxy.createRMProxy(subClusterConf, ApplicationClientProtocol.class);
+    subClusters.put(scId, Pair.of(subClusterInfo, proxy));
   }
 
   public void stop() {
