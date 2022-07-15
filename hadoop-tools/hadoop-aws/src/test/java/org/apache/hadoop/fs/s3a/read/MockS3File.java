@@ -79,7 +79,7 @@ class MockS3File extends S3File {
   }
 
   @Override
-  public void close(InputStream inputStream) {
+  public void close(InputStream inputStream, int numRemainingBytes) {
     // do nothing since we do not use a real S3 stream.
   }
 
