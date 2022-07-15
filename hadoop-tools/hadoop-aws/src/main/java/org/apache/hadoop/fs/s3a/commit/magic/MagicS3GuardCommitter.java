@@ -219,6 +219,10 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       }
       pendingSet.putExtraData(TASK_ATTEMPT_ID, taskId);
       pendingSet.setJobId(jobId);
+      // add in the IOStatistics of all the file loading
+      pendingSet.getIOStatistics().aggregate(
+          commitContext.getIOStatisticsContext()
+          .getIOStatistics());
       Path jobAttemptPath = getJobAttemptPath(context);
       TaskAttemptID taskAttemptID = context.getTaskAttemptID();
       Path taskOutcomePath = new Path(jobAttemptPath,

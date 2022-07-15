@@ -73,7 +73,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   /**
    * Job statistics accrued across all test cases
    */
-  private static IOStatisticsSnapshot JOB_STATISTICS =
+  private static final IOStatisticsSnapshot JOB_STATISTICS =
       IOStatisticsSupport.snapshotIOStatistics();
 
   /**
@@ -115,7 +115,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   @AfterClass
   public static void printStatistics() {
-    LOG.info("Aggregate statistics\n",
+    LOG.info("Aggregate job statistics {}\n",
         IOStatisticsLogging.ioStatisticsToPrettyString(JOB_STATISTICS));
   }
   /**

@@ -31,9 +31,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextImpl;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
+import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATISTICS_ENABLED;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -44,6 +47,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration.getThreadSpecificIOStatisticsContext;
+import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
  * Tests to verify the Thread-level IOStatistics.
@@ -54,6 +58,8 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private static final int BYTES_BIG = 100;
   private static final int BYTES_SMALL = 50;
 
+  private ExecutorService executor;
+
   @Override
   protected Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
@@ -61,6 +67,20 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
         THREAD_LEVEL_IOSTATISTICS_ENABLED);
     configuration.setBoolean(THREAD_LEVEL_IOSTATISTICS_ENABLED, true);
     return configuration;
+  }
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    executor = HadoopExecutors.newFixedThreadPool(SMALL_THREADS);
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    if (executor != null) {
+      executor.shutdown();
+    }
+    super.teardown();
   }
 
   /**
@@ -77,8 +97,6 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     byte[] readDataSecond = new byte[BYTES_SMALL];
     writeDataset(fs, path, data, data.length, 1024, true);
 
-    final ExecutorService executor =
-        HadoopExecutors.newFixedThreadPool(SMALL_THREADS);
     CountDownLatch latch = new CountDownLatch(SMALL_THREADS);
 
     try {
@@ -322,6 +340,70 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
                 testThreadId)
         .isEqualTo(expectedBytesWrittenAndRead);
   }
+
+  @Test
+  public void testListingStatisticsContext() throws Throwable {
+    describe("verify the list operations update on close()");
+
+    S3AFileSystem fs = getFileSystem();
+    Path path = methodPath();
+    fs.mkdirs(methodPath());
+
+    // after all setup, get the reset context
+    IOStatisticsContext context =
+        getAndResetThreadStatisticsContext();
+    IOStatistics ioStatistics = context.getIOStatistics();
+
+    fs.listStatus(path);
+    verifyStatisticCounterValue(ioStatistics,
+        StoreStatisticNames.OBJECT_LIST_REQUEST,
+        1);
+
+    context.reset();
+    foreach(fs.listStatusIterator(path), i -> {});
+    verifyStatisticCounterValue(ioStatistics,
+        StoreStatisticNames.OBJECT_LIST_REQUEST,
+        1);
+
+    context.reset();
+    foreach(fs.listLocatedStatus(path), i -> {});
+    verifyStatisticCounterValue(ioStatistics,
+        StoreStatisticNames.OBJECT_LIST_REQUEST,
+        1);
+
+    context.reset();
+    foreach(fs.listFiles(path, true), i -> {});
+    verifyStatisticCounterValue(ioStatistics,
+        StoreStatisticNames.OBJECT_LIST_REQUEST,
+        1);
+  }
+
+  @Test
+  public void testListingThroughTaskPool() throws Throwable {
+    describe("verify the list operations are updated through taskpool");
+
+    S3AFileSystem fs = getFileSystem();
+    Path path = methodPath();
+    fs.mkdirs(methodPath());
+
+    // after all setup, get the reset context
+    IOStatisticsContext context =
+        getAndResetThreadStatisticsContext();
+    IOStatistics ioStatistics = context.getIOStatistics();
+
+    CloseableTaskPoolSubmitter submitter =
+        new CloseableTaskPoolSubmitter(executor);
+    TaskPool.foreach(fs.listStatusIterator(path))
+        .executeWith(submitter)
+        .run(i -> {});
+
+    verifyStatisticCounterValue(ioStatistics,
+        StoreStatisticNames.OBJECT_LIST_REQUEST,
+        1);
+
+  }
+
+
 
   /**
    * Simulating doing some work in a separate thread.
