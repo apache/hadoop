@@ -154,8 +154,7 @@ public class TestFedAppReportFetcher {
     @Override
     protected ApplicationHistoryProtocol getAHSProxy(Configuration conf)
         throws IOException {
-      GetApplicationReportResponse resp = Mockito.
-          mock(GetApplicationReportResponse.class);
+      GetApplicationReportResponse resp = Mockito.mock(GetApplicationReportResponse.class);
       history = Mockito.mock(ApplicationHistoryProtocol.class);
       try {
         Mockito.when(history.getApplicationReport(Mockito.any(GetApplicationReportRequest.class)))
