@@ -580,8 +580,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
 
-    ContainersInfo responseGet = interceptor.getContainers(null, null,
-        appId.toString(), appAttempt.toString());
+    ContainersInfo responseGet = interceptor.getContainers(
+        null, null, appId.toString(), appAttempt.toString());
 
     Assert.assertEquals(4, responseGet.getContainers().size());
   }
