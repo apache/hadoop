@@ -18,11 +18,30 @@
 
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
+# Need this CMake policy for using the MultiThreaded MSVC runtime library.
+cmake_policy(SET CMP0091 NEW)
+
+# Need this CMake policy for invoking target_link_libraries on a target in any directory.
+cmake_policy(SET CMP0079 NEW)
+
 project(hadoop_hdfs_native_client)
 
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 17)
+
+# Instructs MSVC to use the static version of the runtime library.
+# More info - https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-170
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+
+# This indicates that Windows 10 and above are supported.
+# More info - https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt?view=msvc-170
+set(NT_REQUIRED_VERSION 0x0A00)
+add_definitions(-D_WIN32_WINNT=${NT_REQUIRED_VERSION})
+
+# Windows.h defines the "min" and "max" macros which conflicts with the std::min and std::max from C++ STL.
+# Adding the below definition will disable this macro.
+add_definitions(-DNOMINMAX)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../hadoop-common-project/hadoop-common)
 include(HadoopCommon)
