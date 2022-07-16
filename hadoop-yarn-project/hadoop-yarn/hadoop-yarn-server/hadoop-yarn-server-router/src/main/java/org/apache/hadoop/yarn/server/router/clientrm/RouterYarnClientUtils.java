@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -436,16 +437,9 @@ public final class RouterYarnClientUtils {
       if (response != null && response.getResourceProfiles() != null) {
         for (Map.Entry<String, Resource> entry : response.getResourceProfiles().entrySet()) {
           String key = entry.getKey();
-          Resource value = entry.getValue();
-          if (profilesMap.containsKey(key)) {
-            Resource resourceValue = profilesMap.get(key);
-            resourceValue.setVirtualCores(
-                resourceValue.getVirtualCores() + value.getVirtualCores());
-            resourceValue.setMemorySize(resourceValue.getMemorySize() + value.getMemorySize());
-            profilesMap.put(key, resourceValue);
-          } else {
-            profilesMap.put(key, value);
-          }
+          Resource r1 = profilesMap.getOrDefault(key, null);
+          Resource r2 = entry.getValue();
+          profilesMap.put(key, ResourceUtils.mergeResources(r1, r2));
         }
       }
     }
@@ -466,9 +460,8 @@ public final class RouterYarnClientUtils {
     Resource resource = Resource.newInstance(0, 0);
     for (GetResourceProfileResponse response : responses) {
       if (response != null && response.getResource() != null) {
-        resource.setMemorySize(resource.getMemorySize() + response.getResource().getMemorySize());
-        resource.setVirtualCores(resource.getVirtualCores() +
-            response.getResource().getVirtualCores());
+        Resource responseResource = response.getResource();
+        resource = ResourceUtils.mergeResources(resource, responseResource);
       }
     }
     profileResponse.setResource(resource);

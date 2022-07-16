@@ -600,4 +600,28 @@ public class TestResourceUtils {
     assertThat(mulResource.getResourceInformation("yarn.io/test-volume").
         getValue()).isEqualTo(2);
   }
+
+  @Test
+  public void testMergeResources() {
+    Resource res1 = ResourceUtils.createResourceFromString("memory=20g,vcores=3",
+        ResourceUtils.getResourcesTypeInfo());
+    Resource res2 = ResourceUtils.createResourceFromString("memory=40g,vcores=3",
+        ResourceUtils.getResourcesTypeInfo());
+
+    Resource result = ResourceUtils.mergeResources(res1, res2);
+    Assert.assertEquals(61440, result.getMemorySize());
+    Assert.assertEquals(6, result.getVirtualCores());
+
+    Resource result1 = ResourceUtils.mergeResources(res1, null);
+    Assert.assertEquals(20480, result1.getMemorySize());
+    Assert.assertEquals(3, result1.getVirtualCores());
+
+    Resource result2 = ResourceUtils.mergeResources(null, res2);
+    Assert.assertEquals(40960, result2.getMemorySize());
+    Assert.assertEquals(3, result2.getVirtualCores());
+
+    Resource result3 = ResourceUtils.mergeResources(null, null);
+    Assert.assertEquals(0, result3.getMemorySize());
+    Assert.assertEquals(0, result3.getVirtualCores());
+  }
 }
