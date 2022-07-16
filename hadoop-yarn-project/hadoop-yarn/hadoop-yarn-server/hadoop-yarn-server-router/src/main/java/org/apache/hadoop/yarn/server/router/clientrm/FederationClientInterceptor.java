@@ -822,7 +822,27 @@ public class FederationClientInterceptor
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getQueueName() == null) {
+      routerMetrics.incrGetQueueInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getQueueInfo request or queueName.", null);
+    }
+
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getQueueInfo",
+        new Class[]{GetQueueInfoRequest.class}, new Object[]{request});
+    Collection<GetQueueInfoResponse> queues = null;
+    try {
+      queues = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetQueueInfoResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrGetQueueInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get queue [" +
+          request.getQueueName() + "] to exception.", ex);
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetQueueInfoRetrieved(stopTime - startTime);
+    // Merge the GetQueueInfoResponse
+    return RouterYarnClientUtils.mergeQueues(queues);
   }
 
   @Override
@@ -854,7 +874,44 @@ public class FederationClientInterceptor
   public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
       MoveApplicationAcrossQueuesRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getApplicationId() == null || request.getTargetQueue() == null) {
+      routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing moveApplicationAcrossQueues request or " +
+          "applicationId or target queue.", null);
+    }
+
+    long startTime = clock.getTime();
+    SubClusterId subClusterId = null;
+
+    ApplicationId applicationId = request.getApplicationId();
+    try {
+      subClusterId = federationFacade
+          .getApplicationHomeSubCluster(applicationId);
+    } catch (YarnException e) {
+      routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Application " +
+          applicationId + " does not exist in FederationStateStore.", e);
+    }
+
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    MoveApplicationAcrossQueuesResponse response = null;
+    try {
+      response = clientRMProxy.moveApplicationAcrossQueues(request);
+    } catch (Exception e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to moveApplicationAcrossQueues for " +
+          applicationId + " to SubCluster " + subClusterId.getId(), e);
+    }
+
+    if (response == null) {
+      LOG.error("No response when moveApplicationAcrossQueues "
+           + "the applicationId {} to Queue {} In SubCluster {}.",
+           request.getApplicationId(), request.getTargetQueue(), subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededMoveApplicationAcrossQueuesRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override

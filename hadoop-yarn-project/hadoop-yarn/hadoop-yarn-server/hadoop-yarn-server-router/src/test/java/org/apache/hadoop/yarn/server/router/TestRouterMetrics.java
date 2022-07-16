@@ -418,6 +418,16 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed signalContainer call");
       metrics.incrSignalToContainerFailedRetrieved();
     }
+
+    public void getQueueInfo() {
+      LOG.info("Mocked: failed getQueueInfo call");
+      metrics.incrGetQueueInfoFailedRetrieved();
+    }
+
+    public void moveApplicationAcrossQueuesFailed() {
+      LOG.info("Mocked: failed moveApplicationAcrossQueuesFailed call");
+      metrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -532,6 +542,16 @@ public class TestRouterMetrics {
     public void getSignalToContainerTimeouts(long duration) {
       LOG.info("Mocked: successful signalToContainer call with duration {}", duration);
       metrics.succeededSignalToContainerRetrieved(duration);
+    }
+
+    public void getQueueInfoRetrieved(long duration) {
+      LOG.info("Mocked: successful getQueueInfo call with duration {}", duration);
+      metrics.succeededGetQueueInfoRetrieved(duration);
+    }
+
+    public void moveApplicationAcrossQueuesRetrieved(long duration) {
+      LOG.info("Mocked: successful moveApplicationAcrossQueues call with duration {}", duration);
+      metrics.succeededMoveApplicationAcrossQueuesRetrieved(duration);
     }
   }
 
@@ -837,6 +857,52 @@ public class TestRouterMetrics {
     badSubCluster.getSignalContainer();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getSignalToContainerFailedRetrieved());
+  }
+
+  @Test
+  public void testSucceededGetQueueInfoRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetQueueInfoRetrieved();
+    goodSubCluster.getQueueInfoRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetQueueInfoRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetQueueInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getQueueInfoRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetQueueInfoRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetQueueInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetQueueInfoFailed() {
+    long totalBadBefore = metrics.getQueueInfoFailedRetrieved();
+    badSubCluster.getQueueInfo();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getQueueInfoFailedRetrieved());
+  }
+
+  @Test
+  public void testSucceededMoveApplicationAcrossQueuesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededMoveApplicationAcrossQueuesRetrieved();
+    goodSubCluster.moveApplicationAcrossQueuesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededMoveApplicationAcrossQueuesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededMoveApplicationAcrossQueuesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.moveApplicationAcrossQueuesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededMoveApplicationAcrossQueuesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededMoveApplicationAcrossQueuesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testMoveApplicationAcrossQueuesRetrievedFailed() {
+    long totalBadBefore = metrics.getMoveApplicationAcrossQueuesFailedRetrieved();
+    badSubCluster.moveApplicationAcrossQueuesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getMoveApplicationAcrossQueuesFailedRetrieved());
   }
 
 }

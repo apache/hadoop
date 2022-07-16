@@ -74,6 +74,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -86,6 +90,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -1100,5 +1105,68 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         interceptor.signalToContainer(signalContainerRequest);
 
     Assert.assertNotNull(signalContainerResponse);
+  }
+
+  @Test
+  public void testMoveApplicationAcrossQueues() throws Exception {
+    LOG.info("Test FederationClientInterceptor : MoveApplication AcrossQueues request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing moveApplicationAcrossQueues request " +
+        "or applicationId or target queue.", () -> interceptor.moveApplicationAcrossQueues(null));
+
+    // normal request
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
+    Assert.assertNotNull(subClusterId);
+
+    MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
+    mockRM.waitForState(appId, RMAppState.ACCEPTED);
+    RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+            RMAppAttemptState.SCHEDULED);
+    MockNM nm = interceptor.getMockNMs().get(subClusterId);
+    nm.nodeHeartbeat(true);
+    mockRM.waitForState(rmApp.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
+    mockRM.sendAMLaunched(rmApp.getCurrentAppAttempt().getAppAttemptId());
+
+    MoveApplicationAcrossQueuesRequest acrossQueuesRequest =
+        MoveApplicationAcrossQueuesRequest.newInstance(appId, "root.target");
+    MoveApplicationAcrossQueuesResponse acrossQueuesResponse =
+        interceptor.moveApplicationAcrossQueues(acrossQueuesRequest);
+
+    Assert.assertNotNull(acrossQueuesResponse);
+  }
+
+
+  @Test
+  public void testGetQueueInfo() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get Queue Info request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getQueueInfo request or queueName.",
+        () -> interceptor.getQueueInfo(null));
+
+    // normal request
+    GetQueueInfoResponse response = interceptor.getQueueInfo(
+        GetQueueInfoRequest.newInstance("root", true, true, true));
+
+    Assert.assertNotNull(response);
+
+    QueueInfo queueInfo = response.getQueueInfo();
+    Assert.assertNotNull(queueInfo);
+    Assert.assertEquals(queueInfo.getQueueName(),  "root");
+    Assert.assertEquals(queueInfo.getCapacity(), 4.0, 0);
+    Assert.assertEquals(queueInfo.getCurrentCapacity(), 0.0, 0);
+    Assert.assertEquals(queueInfo.getChildQueues().size(), 12, 0);
+    Assert.assertEquals(queueInfo.getAccessibleNodeLabels().size(), 1);
   }
 }

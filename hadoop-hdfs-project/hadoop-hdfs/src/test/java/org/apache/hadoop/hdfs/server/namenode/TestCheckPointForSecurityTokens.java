@@ -91,7 +91,7 @@ public class TestCheckPointForSecurityTokens {
         log.scanLog(Long.MAX_VALUE, true);
         long numTransactions = (log.getLastTxId() - log.getFirstTxId()) + 1;
         assertEquals("In-progress log " + log + " should have 5 transactions",
-                     5, numTransactions);;
+                     5, numTransactions);
       }
 
       // Saving image in safe mode should succeed

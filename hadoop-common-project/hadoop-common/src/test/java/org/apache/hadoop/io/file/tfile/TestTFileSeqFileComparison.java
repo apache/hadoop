@@ -516,7 +516,7 @@ public class TestTFileSeqFileComparison {
   }
 
   private static class MyOptions {
-    String rootDir = GenericTestUtils.getTestDir().getAbsolutePath();;
+    String rootDir = GenericTestUtils.getTestDir().getAbsolutePath();
     String compress = "gz";
     String format = "tfile";
     int dictSize = 1000;
