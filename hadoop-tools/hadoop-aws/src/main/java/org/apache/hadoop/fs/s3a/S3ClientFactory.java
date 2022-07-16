@@ -174,7 +174,7 @@ public interface S3ClientFactory {
     }
 
     /**
-     * Requester pays option. Not yet wired up.
+     * Set requester pays option.
      * @param value new value
      * @return the builder
      */
@@ -288,7 +288,7 @@ public interface S3ClientFactory {
      */
     public S3ClientCreationParameters withPath(
         final URI value) {
-      pathUri = value;
+      pathUri = value;C
       return this;
     }
   }
