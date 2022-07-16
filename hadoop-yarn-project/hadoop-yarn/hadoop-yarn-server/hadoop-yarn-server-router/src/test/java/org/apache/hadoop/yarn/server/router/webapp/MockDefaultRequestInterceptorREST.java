@@ -243,7 +243,7 @@ public class MockDefaultRequestInterceptorREST
 
   @Override
   public ContainersInfo getContainers(HttpServletRequest req, HttpServletResponse res,
-    String appId, String appAttemptId) {
+      String appId, String appAttemptId) {
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
@@ -255,9 +255,9 @@ public class MockDefaultRequestInterceptorREST
     int subClusterId = Integer.valueOf(getSubClusterId().getId());
 
     ContainerId containerId = ContainerId.newContainerId(
-      ApplicationAttemptId.fromString(appAttemptId), subClusterId);
+        ApplicationAttemptId.fromString(appAttemptId), subClusterId);
     Resource allocatedResource =
-      Resource.newInstance(subClusterId, subClusterId);
+        Resource.newInstance(subClusterId, subClusterId);
 
     NodeId assignedNode = NodeId.newInstance("Node", subClusterId);
     Priority priority = Priority.newInstance(subClusterId);
@@ -270,7 +270,7 @@ public class MockDefaultRequestInterceptorREST
     String nodeHttpAddress = "HttpAddress " + subClusterId;
 
     ContainerReport containerReport =
-      ContainerReport.newInstance(containerId, allocatedResource,
+        ContainerReport.newInstance(containerId, allocatedResource,
         assignedNode, priority, creationTime, finishTime, diagnosticInfo,
         logUrl, containerExitStatus, containerState, nodeHttpAddress);
 

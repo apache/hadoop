@@ -565,7 +565,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
   @Test
   public void testGetContainers()
-    throws YarnException, IOException, InterruptedException {
+      throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
