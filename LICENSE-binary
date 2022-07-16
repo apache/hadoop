@@ -416,7 +416,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 bootstrap v3.3.6
 broccoli-asset-rev v2.4.2
 broccoli-funnel v1.0.1
-datatables v1.10.8
+datatables v1.10.19
 em-helpers v0.5.13
 em-table v0.1.6
 ember v2.2.0
