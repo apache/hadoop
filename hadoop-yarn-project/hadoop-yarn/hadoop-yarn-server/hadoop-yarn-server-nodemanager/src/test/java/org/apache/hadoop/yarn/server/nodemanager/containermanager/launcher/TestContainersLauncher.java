@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -124,10 +123,8 @@ public class TestContainersLauncher {
   @SuppressWarnings("unchecked")
   @Test
   public void testLaunchContainerEvent()
-      throws IllegalArgumentException, IllegalAccessException {
-    Map<ContainerId, ContainerLaunch> dummyMap =
-        (Map<ContainerId, ContainerLaunch>) FieldUtils.
-        getField(ContainersLauncher.class, "running").get(spy);
+      throws IllegalArgumentException {
+    Map<ContainerId, ContainerLaunch> dummyMap = spy.running;
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.LAUNCH_CONTAINER);
     assertEquals(0, dummyMap.size());
@@ -140,10 +137,8 @@ public class TestContainersLauncher {
   @SuppressWarnings("unchecked")
   @Test
   public void testRelaunchContainerEvent()
-      throws IllegalArgumentException, IllegalAccessException {
-    Map<ContainerId, ContainerLaunch> dummyMap =
-        (Map<ContainerId, ContainerLaunch>)
-        FieldUtils.getField(ContainersLauncher.class, "running", true).get(spy);
+      throws IllegalArgumentException {
+    Map<ContainerId, ContainerLaunch> dummyMap = spy.running;
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.RELAUNCH_CONTAINER);
     assertEquals(0, dummyMap.size());
@@ -160,10 +155,8 @@ public class TestContainersLauncher {
   @SuppressWarnings("unchecked")
   @Test
   public void testRecoverContainerEvent()
-      throws IllegalArgumentException, IllegalAccessException {
-    Map<ContainerId, ContainerLaunch> dummyMap =
-        (Map<ContainerId, ContainerLaunch>)
-        FieldUtils.getField(ContainersLauncher.class, "running", true).get(spy);
+      throws IllegalArgumentException {
+    Map<ContainerId, ContainerLaunch> dummyMap = spy.running;
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.RECOVER_CONTAINER);
     assertEquals(0, dummyMap.size());
@@ -179,7 +172,7 @@ public class TestContainersLauncher {
 
   @Test
   public void testRecoverPausedContainerEvent()
-      throws IllegalArgumentException, IllegalAccessException {
+      throws IllegalArgumentException {
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.RECOVER_PAUSED_CONTAINER);
     spy.handle(event);
@@ -193,9 +186,8 @@ public class TestContainersLauncher {
     Map<ContainerId, ContainerLaunch> dummyMap = Collections
         .synchronizedMap(new HashMap<>());
     dummyMap.put(containerId, containerLaunch);
-    Field running = FieldUtils.getField(ContainersLauncher.class, "running");
-    running.setAccessible(true);
-    running.set(spy, dummyMap);
+    spy.running.clear();
+    spy.running.putAll(dummyMap);
 
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.CLEANUP_CONTAINER);
@@ -212,9 +204,8 @@ public class TestContainersLauncher {
     Map<ContainerId, ContainerLaunch> dummyMap = Collections
         .synchronizedMap(new HashMap<>());
     dummyMap.put(containerId, containerLaunch);
-    Field running = FieldUtils.getField(ContainersLauncher.class, "running");
-    running.setAccessible(true);
-    running.set(spy, dummyMap);
+    spy.running.clear();
+    spy.running.putAll(dummyMap);
 
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.CLEANUP_CONTAINER_FOR_REINIT);
@@ -243,9 +234,8 @@ public class TestContainersLauncher {
     when(containerId.getApplicationAttemptId().getApplicationId())
         .thenReturn(appId);
 
-    Field running = FieldUtils.getField(ContainersLauncher.class, "running");
-    running.setAccessible(true);
-    running.set(spy, dummyMap);
+    spy.running.clear();
+    spy.running.putAll(dummyMap);
     when(dummyEvent.getType())
         .thenReturn(ContainersLauncherEventType.SIGNAL_CONTAINER);
     when(dummyEvent.getCommand())
@@ -264,9 +254,8 @@ public class TestContainersLauncher {
     Map<ContainerId, ContainerLaunch> dummyMap = Collections
         .synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
     dummyMap.put(containerId, containerLaunch);
-    Field running = FieldUtils.getField(ContainersLauncher.class, "running");
-    running.setAccessible(true);
-    running.set(spy, dummyMap);
+    spy.running.clear();
+    spy.running.putAll(dummyMap);
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.PAUSE_CONTAINER);
     doNothing().when(containerLaunch).pauseContainer();
@@ -281,9 +270,8 @@ public class TestContainersLauncher {
     Map<ContainerId, ContainerLaunch> dummyMap = Collections
         .synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
     dummyMap.put(containerId, containerLaunch);
-    Field running = FieldUtils.getField(ContainersLauncher.class, "running");
-    running.setAccessible(true);
-    running.set(spy, dummyMap);
+    spy.running.clear();
+    spy.running.putAll(dummyMap);
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.RESUME_CONTAINER);
     doNothing().when(containerLaunch).resumeContainer();
