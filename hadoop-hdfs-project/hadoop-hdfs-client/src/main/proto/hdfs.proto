@@ -481,6 +481,7 @@ message HdfsFileStatusProto {
 
   // Set of flags
   optional uint32 flags = 18 [default = 0];
+  optional string namespace = 19;
 }
 
 /**
