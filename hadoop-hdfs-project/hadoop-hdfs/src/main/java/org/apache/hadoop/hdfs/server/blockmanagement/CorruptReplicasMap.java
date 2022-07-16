@@ -54,8 +54,18 @@ public class CorruptReplicasMap{
     CORRUPTION_REPORTED  // client or datanode reported the corruption
   }
 
-  private final Map<Block, Map<DatanodeDescriptor, Reason>> corruptReplicasMap =
-    new HashMap<Block, Map<DatanodeDescriptor, Reason>>();
+  public class CorruptBlockReplica {
+    public final Reason reason;
+    public final long generationStamp;
+
+    CorruptBlockReplica(Reason reason, long generationStamp) {
+      this.reason = reason;
+      this.generationStamp = generationStamp;
+    }
+  }
+
+  private final Map<Block, Map<DatanodeDescriptor, CorruptBlockReplica>> corruptReplicasMap =
+      new HashMap<Block, Map<DatanodeDescriptor, CorruptBlockReplica>>();
 
   private final LongAdder totalCorruptBlocks = new LongAdder();
   private final LongAdder totalCorruptECBlockGroups = new LongAdder();
@@ -70,9 +80,9 @@ public class CorruptReplicasMap{
    */
   void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
       String reason, Reason reasonCode, boolean isStriped) {
-    Map <DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
+    Map <DatanodeDescriptor, CorruptBlockReplica> nodes = corruptReplicasMap.get(blk);
     if (nodes == null) {
-      nodes = new HashMap<DatanodeDescriptor, Reason>();
+      nodes = new HashMap<DatanodeDescriptor, CorruptBlockReplica>();
       corruptReplicasMap.put(blk, nodes);
       incrementBlockStat(isStriped);
     }
@@ -96,7 +106,7 @@ public class CorruptReplicasMap{
               Server.getRemoteIp(), reasonText);
     }
     // Add the node or update the reason.
-    nodes.put(dn, reasonCode);
+    nodes.put(dn, new CorruptBlockReplica(reasonCode, blk.getGenerationStamp()));
   }
 
   /**
@@ -105,7 +115,7 @@ public class CorruptReplicasMap{
    */
   void removeFromCorruptReplicasMap(BlockInfo blk) {
     if (corruptReplicasMap != null) {
-      Map<DatanodeDescriptor, Reason> value = corruptReplicasMap.remove(blk);
+      Map<DatanodeDescriptor, CorruptBlockReplica> value = corruptReplicasMap.remove(blk);
       if (value != null) {
         decrementBlockStat(blk.isStriped());
       }
@@ -126,13 +136,13 @@ public class CorruptReplicasMap{
 
   boolean removeFromCorruptReplicasMap(
       BlockInfo blk, DatanodeDescriptor datanode, Reason reason) {
-    Map <DatanodeDescriptor, Reason> datanodes = corruptReplicasMap.get(blk);
+    Map <DatanodeDescriptor, CorruptBlockReplica> datanodes = corruptReplicasMap.get(blk);
     if (datanodes == null) {
       return false;
     }
 
     // if reasons can be compared but don't match, return false.
-    Reason storedReason = datanodes.get(datanode);
+    Reason storedReason = datanodes.get(datanode).reason;
     if (reason != Reason.ANY && storedReason != null &&
         reason != storedReason) {
       return false;
@@ -172,7 +182,7 @@ public class CorruptReplicasMap{
    * @return collection of nodes. Null if does not exists
    */
   Collection<DatanodeDescriptor> getNodes(Block blk) {
-    Map <DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
+    Map <DatanodeDescriptor, CorruptBlockReplica> nodes = corruptReplicasMap.get(blk);
     if (nodes == null)
       return null;
     return nodes.keySet();
@@ -248,6 +258,23 @@ public class CorruptReplicasMap{
   }
 
   /**
+   * return the generation stamp of a corrupt replica for a given block
+   * on a given dn
+   * @param block block that has corrupted replica
+   * @param node datanode that contains this corrupted replica
+   * @return reason
+   */
+  Long getCorruptReplicaGenerationStamp(Block block, DatanodeDescriptor node) {
+    Long generationStamp = null;
+    if(corruptReplicasMap.containsKey(block)) {
+      if (corruptReplicasMap.get(block).containsKey(node)) {
+        generationStamp = corruptReplicasMap.get(block).get(node).generationStamp;
+      }
+    }
+    return generationStamp;
+  }
+
+  /**
    * return the reason about corrupted replica for a given block
    * on a given dn
    * @param block block that has corrupted replica
@@ -258,7 +285,7 @@ public class CorruptReplicasMap{
     Reason reason = null;
     if(corruptReplicasMap.containsKey(block)) {
       if (corruptReplicasMap.get(block).containsKey(node)) {
-        reason = corruptReplicasMap.get(block).get(node);
+        reason = corruptReplicasMap.get(block).get(node).reason;
       }
     }
     if (reason != null) {

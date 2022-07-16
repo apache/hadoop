@@ -3730,9 +3730,19 @@ public class BlockManager implements BlockStatsMXBean {
         nodes.toArray(new DatanodeDescriptor[nodes.size()]);
     for (DatanodeDescriptor node : nodesCopy) {
       try {
-        if (!invalidateBlock(new BlockToMarkCorrupt(reported, blk, null,
-            Reason.ANY), node, numberReplicas)) {
-          removedFromBlocksMap = false;
+        Long genStamp = corruptReplicas.getCorruptReplicaGenerationStamp(blk, node);
+        if (genStamp == null) {
+          LOG.warn("CorruptReplicasMap unexpectedly missing generationStamp for datanode {}",
+              node.getXferAddr());
+          if (!invalidateBlock(new BlockToMarkCorrupt(reported, blk, null,
+              Reason.ANY), node, numberReplicas)) {
+            removedFromBlocksMap = false;
+          }
+        } else {
+          if (!invalidateBlock(new BlockToMarkCorrupt(reported, blk, genStamp, null,
+              Reason.ANY), node, numberReplicas)) {
+            removedFromBlocksMap = false;
+          }
         }
       } catch (IOException e) {
         if(blockLog.isDebugEnabled()) {
