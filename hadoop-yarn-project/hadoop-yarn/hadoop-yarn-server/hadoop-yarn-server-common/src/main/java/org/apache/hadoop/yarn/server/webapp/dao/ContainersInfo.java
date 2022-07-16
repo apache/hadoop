@@ -48,6 +48,6 @@ public class ContainersInfo {
   }
 
   public void addAll(Collection<ContainerInfo> containersInfo) {
-    container.addAll(new ArrayList<>(containersInfo));
+    container.addAll(containersInfo);
   }
 }

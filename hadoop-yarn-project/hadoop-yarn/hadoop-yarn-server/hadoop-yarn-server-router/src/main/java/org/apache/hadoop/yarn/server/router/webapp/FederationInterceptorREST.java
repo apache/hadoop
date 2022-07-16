@@ -21,8 +21,14 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.security.Principal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
@@ -1343,15 +1349,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      ClientMethod remoteMethod = new ClientMethod("getContainers",
-          new Class[]{HttpServletRequest.class, HttpServletResponse.class, String.class,
-              String.class}, new Object[]{req, res, appId, appAttemptId});
+      Class[] argsClasses = new Class[]{
+          HttpServletRequest.class, HttpServletResponse.class, String.class, String.class};
+      Object[] args = new Object[]{req, res, appId, appAttemptId};
+      ClientMethod remoteMethod = new ClientMethod("getContainers", argsClasses, args);
       Map<SubClusterInfo, ContainersInfo> containersInfoMap =
           invokeConcurrent(subClustersActive.values(), remoteMethod, ContainersInfo.class);
       if (containersInfoMap != null) {
-        containersInfoMap.values().forEach(containers -> containersInfo.addAll(containers.getContainers()));
+        containersInfoMap.values().forEach(containers ->
+            containersInfo.addAll(containers.getContainers()));
       }
-
     } catch (Exception ex) {
       LOG.error("Failed to return GetContainers.",  ex);
     }
@@ -1387,13 +1394,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
   }
 
-  <R> Map<SubClusterInfo, R> invokeConcurrent(Collection<SubClusterInfo> clusterIds,
-       ClientMethod request, Class<R> clazz) throws YarnException, IOException {
-    ArrayList<SubClusterInfo> clusterIdList = new ArrayList<>(clusterIds);
-    return invokeConcurrent(clusterIdList, request, clazz);
-  }
-
-  private <R> Map<SubClusterInfo, R> invokeConcurrent(ArrayList<SubClusterInfo> subClusterInfo,
+  private <R> Map<SubClusterInfo, R> invokeConcurrent(Collection<SubClusterInfo> clusterIds,
       ClientMethod request, Class<R> clazz) {
 
     Map<SubClusterInfo, R> results = new HashMap<>();
@@ -1401,34 +1402,33 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // Send the requests in parallel
     CompletionService<R> compSvc = new ExecutorCompletionService<>(this.threadpool);
 
-    for (final SubClusterInfo info : subClusterInfo) {
+    for (final SubClusterInfo info : clusterIds) {
       compSvc.submit(() -> {
         DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
             info.getSubClusterId(), info.getRMWebServiceAddress());
         try {
           Method method = DefaultRequestInterceptorREST.class.
               getMethod(request.getMethodName(), request.getTypes());
-          return clazz.cast(method.invoke(interceptor, request.getParams()));
+          return (R) clazz.cast(method.invoke(interceptor, request.getParams()));
         } catch (Exception e) {
-          LOG.error("SubCluster {} failed to Call {} Method}.", info.getSubClusterId(),
+          LOG.error("SubCluster {} failed to call {} method.", info.getSubClusterId(),
               request.getMethodName(), e);
           return null;
         }
       });
     }
 
-    for (int i = 0; i < subClusterInfo.size(); i++) {
+    clusterIds.stream().forEach(clusterId -> {
       try {
         Future<R> future = compSvc.take();
         R response = future.get();
         if (response != null) {
-          results.put(subClusterInfo.get(i), response);
+          results.put(clusterId, response);
         }
       } catch (Throwable e) {
-        LOG.warn("Failed to get containers report. ", e);
+        LOG.warn("SubCluster {} failed to {} report.", clusterId, request.getMethodName(), e);
       }
-    }
-
+    });
     return results;
   }
 }

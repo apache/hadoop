@@ -578,8 +578,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(response);
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
-    ApplicationAttemptId appAttempt =
-        ApplicationAttemptId.newInstance(appId, 1);
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
 
     ContainersInfo responseGet = interceptor.getContainers(null, null,
         appId.toString(), appAttempt.toString());
@@ -590,15 +589,13 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testGetContainersNotExists() {
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    ContainersInfo response =
-        interceptor.getContainers(null, null, appId.toString(), null);
+    ContainersInfo response = interceptor.getContainers(null, null, appId.toString(), null);
     Assert.assertTrue(response.getContainers().isEmpty());
   }
 
   @Test
   public void testGetContainersWrongFormat() {
-    ContainersInfo response =
-        interceptor.getContainers(null, null, "Application_wrong_id", null);
+    ContainersInfo response = interceptor.getContainers(null, null, "Application_wrong_id", null);
 
     Assert.assertNotNull(response);
     Assert.assertTrue(response.getContainers().isEmpty());
