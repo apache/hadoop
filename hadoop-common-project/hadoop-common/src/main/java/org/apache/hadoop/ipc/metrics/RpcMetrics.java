@@ -365,6 +365,7 @@ public class RpcMetrics {
     return registry.getTag(tagName);
   }
 
+  @VisibleForTesting
   public MutableCounterLong getRpcAuthorizationSuccesses() {
     return rpcAuthorizationSuccesses;
   }

@@ -199,15 +199,15 @@ public class TestGraphiteMetrics {
     final GraphiteSink.Graphite mockGraphite = makeGraphite();
     sink.setGraphite(mockGraphite);
     try {
-       sink.close();
+      sink.close();
     } catch (IOException ioe) {
-       ioe.printStackTrace();
+      ioe.printStackTrace();
     }
 
     try {
-       verify(mockGraphite).close();
+      verify(mockGraphite).close();
     } catch (IOException ioe) {
-       ioe.printStackTrace();
+      ioe.printStackTrace();
     }
   }
 }

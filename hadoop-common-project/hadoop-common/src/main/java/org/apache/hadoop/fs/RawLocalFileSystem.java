@@ -1294,7 +1294,8 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
 
-  public static void setUseDeprecatedFileStatus(boolean useDeprecatedFileStatus) {
+  @VisibleForTesting
+  static void setUseDeprecatedFileStatus(boolean useDeprecatedFileStatus) {
     RawLocalFileSystem.useDeprecatedFileStatus = useDeprecatedFileStatus;
   }
 }

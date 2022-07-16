@@ -4131,15 +4131,18 @@ public abstract class Server {
     }
   }
 
-  public CallQueueManager<Call> getCallQueue() {
+  @VisibleForTesting
+  CallQueueManager<Call> getCallQueue() {
     return callQueue;
   }
 
-  public void setCallQueue(CallQueueManager<Call> callQueue) {
+  @VisibleForTesting
+  void setCallQueue(CallQueueManager<Call> callQueue) {
     this.callQueue = callQueue;
   }
 
-  public void setRpcRequestClass(Class<? extends Writable> rpcRequestClass) {
+  @VisibleForTesting
+  void setRpcRequestClass(Class<? extends Writable> rpcRequestClass) {
     this.rpcRequestClass = rpcRequestClass;
   }
 }
