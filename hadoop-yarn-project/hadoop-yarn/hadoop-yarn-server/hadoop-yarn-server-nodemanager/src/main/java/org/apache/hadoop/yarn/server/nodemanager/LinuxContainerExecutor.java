@@ -111,7 +111,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private boolean containerLimitUsers;
   private ResourceHandler resourceHandlerChain;
   private LinuxContainerRuntime linuxContainerRuntime;
-  private Context nmContext;
 
   /**
    * The container exit code.
@@ -263,13 +262,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         defaultPath);
   }
 
-  private void addNumaArgsToCommand(List<String> prefixCommands,
-      List<String> numaArgs) {
-    if (numaArgs != null) {
-      prefixCommands.addAll(numaArgs);
-    }
-  }
-
   /**
    * Add a niceness level to the process that will be executed.  Adds
    * {@code -n <nice>} to the given command. The niceness level will be
@@ -291,7 +283,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
   @Override
   public void init(Context nmContext) throws IOException {
-    this.nmContext = nmContext;
     Configuration conf = super.getConf();
 
     // Send command to executor which will just start up,
@@ -484,7 +475,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             container.getResource());
     String resourcesOptions = resourcesHandler.getResourcesOption(containerId);
     String tcCommandFile = null;
-    List<String> numaArgs = null;
 
     try {
       if (resourceHandlerChain != null) {
@@ -505,9 +495,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
               break;
             case TC_MODIFY_STATE:
               tcCommandFile = op.getArguments().get(0);
-              break;
-            case ADD_NUMA_PARAMS:
-              numaArgs = op.getArguments();
               break;
             default:
               LOG.warn("PrivilegedOperation type unsupported in launch: "
@@ -542,7 +529,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             .Builder(container);
 
         addSchedPriorityCommand(prefixCommands);
-        addNumaArgsToCommand(prefixCommands, numaArgs);
         if (prefixCommands.size() > 0) {
           builder.setExecutionAttribute(CONTAINER_LAUNCH_PREFIX_COMMANDS,
               prefixCommands);
