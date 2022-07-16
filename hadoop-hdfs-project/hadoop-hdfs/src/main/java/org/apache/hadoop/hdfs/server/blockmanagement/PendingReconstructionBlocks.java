@@ -76,6 +76,14 @@ class PendingReconstructionBlocks {
     timerThread.start();
   }
 
+  public void setTimeout(long timeoutPeriod) {
+    this.timeout = timeoutPeriod;
+  }
+
+  public long getTimeout() {
+    return this.timeout;
+  }
+
   /**
    * Add a block to the list of pending reconstructions
    * @param block The corresponding block
