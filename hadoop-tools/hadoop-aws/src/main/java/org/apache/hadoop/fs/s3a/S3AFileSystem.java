@@ -888,7 +888,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(credentials)
-        .withPath(name)
         .withEndpoint(endpoint)
         .withMetrics(statisticsContext.newStatisticsFromAwsSdk())
         .withPathStyleAccess(conf.getBoolean(PATH_STYLE_ACCESS, false))

@@ -116,12 +116,6 @@ public interface S3ClientFactory {
     private String userAgentSuffix = "";
 
     /**
-     * S3A path.
-     * added in HADOOP-18330
-     */
-    private URI pathUri;
-
-    /**
      * List of request handlers to include in the chain
      * of request execution in the SDK.
      * @return the handler list
@@ -269,27 +263,6 @@ public interface S3ClientFactory {
      */
     public Map<String, String> getHeaders() {
       return headers;
-    }
-
-    /**
-     * Get the full s3 path.
-     * added in HADOOP-18330
-     * @return path URI
-     */
-    public URI getPath() {
-      return pathUri;
-    }
-
-    /**
-     * Set full s3a path.
-     * added in HADOOP-18330
-     * @param value new value
-     * @return the builder
-     */
-    public S3ClientCreationParameters withPath(
-            final URI value) {
-      pathUri = value;
-      return this;
     }
   }
 }

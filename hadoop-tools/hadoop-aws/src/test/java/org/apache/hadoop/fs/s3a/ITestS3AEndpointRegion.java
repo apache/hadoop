@@ -176,7 +176,6 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     S3ClientFactory.S3ClientCreationParameters parameters
         = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(new AnonymousAWSCredentialsProvider())
-        .withPath(new URI("s3a://localhost/"))
         .withEndpoint(endpoint)
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk());

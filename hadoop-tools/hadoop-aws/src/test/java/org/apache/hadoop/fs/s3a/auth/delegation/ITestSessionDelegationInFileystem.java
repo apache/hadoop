@@ -590,7 +590,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(testingCreds)
-        .withPath(new URI("s3a://localhost/"))
         .withEndpoint(DEFAULT_ENDPOINT)
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
