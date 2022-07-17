@@ -42,7 +42,7 @@
     <test.exclude.pattern>_</test.exclude.pattern>
 
     <!-- number of threads/forks to use when running tests in parallel, see parallel-tests profile -->
-    <testsThreadCount>2</testsThreadCount>
+    <testsThreadCount>4</testsThreadCount>
 
     <!-- These 2 versions are defined here because they are used -->
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
@@ -71,9 +71,6 @@
     <!-- jackson versions -->
     <jackson2.version>2.13.2</jackson2.version>
     <jackson2.databind.version>2.13.2.2</jackson2.databind.version>
-
-    <!-- javax ws rs api version -->
-    <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -800,11 +797,6 @@
         <groupId>javax.ws.rs</groupId>
         <artifactId>jsr311-api</artifactId>
         <version>1.1.1</version>
-      </dependency>
-      <dependency>
-        <groupId>javax.ws.rs</groupId>
-        <artifactId>javax.ws.rs-api</artifactId>
-        <version>${javax.ws.rs-api.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
