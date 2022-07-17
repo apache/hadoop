@@ -798,11 +798,6 @@
       </dependency>
       <dependency>
         <groupId>javax.ws.rs</groupId>
-        <artifactId>jsr311-api</artifactId>
-        <version>1.1.1</version>
-      </dependency>
-      <dependency>
-        <groupId>javax.ws.rs</groupId>
         <artifactId>javax.ws.rs-api</artifactId>
         <version>${javax.ws.rs-api.version}</version>
       </dependency>
@@ -897,6 +892,10 @@
           <exclusion>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
           </exclusion>
         </exclusions>
       </dependency>

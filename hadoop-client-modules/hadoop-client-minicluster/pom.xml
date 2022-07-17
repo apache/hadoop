@@ -396,6 +396,14 @@
       </exclusions>
     </dependency>
 
+    <!-- Adding javax.ws.rs-api so we can make it optional to remove from our transitive tree -->
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Add back in Mockito since the hadoop-hdfs test jar needs it. -->
     <dependency>
       <groupId>org.mockito</groupId>

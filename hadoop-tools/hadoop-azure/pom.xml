@@ -301,7 +301,7 @@
 
     <dependency>
       <groupId>javax.ws.rs</groupId>
-      <artifactId>jsr311-api</artifactId>
+      <artifactId>javax.ws.rs-api</artifactId>
       <scope>test</scope>
     </dependency>
 
