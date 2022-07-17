@@ -58,6 +58,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -458,7 +459,8 @@ public class LdapGroupsMapping
    * @return a list of strings representing group names of the user.
    * @throws NamingException if unable to find group names
    */
-  private List<String> lookupGroup(SearchResult result, DirContext c,
+  @VisibleForTesting
+  List<String> lookupGroup(SearchResult result, DirContext c,
       int goUpHierarchy)
       throws NamingException {
     List<String> groups = new ArrayList<>();
@@ -510,6 +512,7 @@ public class LdapGroupsMapping
   List<String> doGetGroups(String user, int goUpHierarchy)
       throws NamingException {
     DirContext c = getDirContext();
+    List<String> groups = new ArrayList<>();
 
     // Search for the user. We'll only ever need to look at the first result
     NamingEnumeration<SearchResult> results = c.search(userbaseDN,
@@ -518,11 +521,10 @@ public class LdapGroupsMapping
     if (!results.hasMoreElements()) {
       LOG.debug("doGetGroups({}) returned no groups because the " +
           "user is not found.", user);
-      return new ArrayList<>();
+      return groups;
     }
     SearchResult result = results.nextElement();
 
-    List<String> groups = null;
     if (useOneQuery) {
       try {
         /**
@@ -536,7 +538,6 @@ public class LdapGroupsMapping
               memberOfAttr + "' attribute." +
               "Returned user object: " + result.toString());
         }
-        groups = new ArrayList<>();
         NamingEnumeration groupEnumeration = groupDNAttr.getAll();
         while (groupEnumeration.hasMore()) {
           String groupDN = groupEnumeration.next().toString();
@@ -544,11 +545,13 @@ public class LdapGroupsMapping
         }
       } catch (NamingException e) {
         // If the first lookup failed, fall back to the typical scenario.
+        // In order to force the fallback, we need to reset groups collection.
+        groups.clear();
         LOG.info("Failed to get groups from the first lookup. Initiating " +
                 "the second LDAP query using the user's DN.", e);
       }
     }
-    if (groups == null || groups.isEmpty() || goUpHierarchy > 0) {
+    if (groups.isEmpty() || goUpHierarchy > 0) {
       groups = lookupGroup(result, c, goUpHierarchy);
     }
     LOG.debug("doGetGroups({}) returned {}", user, groups);
