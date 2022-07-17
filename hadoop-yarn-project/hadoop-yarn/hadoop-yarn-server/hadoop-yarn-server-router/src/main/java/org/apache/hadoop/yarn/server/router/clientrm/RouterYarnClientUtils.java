@@ -439,7 +439,7 @@ public final class RouterYarnClientUtils {
           String key = entry.getKey();
           Resource r1 = profilesMap.getOrDefault(key, null);
           Resource r2 = entry.getValue();
-          profilesMap.put(key, ResourceUtils.mergeResources(r1, r2));
+          profilesMap.put(key, r1 == null ? r2 : Resources.add(r1, r2));
         }
       }
     }
@@ -461,7 +461,7 @@ public final class RouterYarnClientUtils {
     for (GetResourceProfileResponse response : responses) {
       if (response != null && response.getResource() != null) {
         Resource responseResource = response.getResource();
-        resource = ResourceUtils.mergeResources(resource, responseResource);
+        resource = Resources.add(resource, responseResource);
       }
     }
     profileResponse.setResource(resource);

@@ -115,8 +115,7 @@ public class ResourceUtils {
      * Supporting 'memory', 'memory-mb', 'vcores' also as invalid resource
      * names, in addition to 'MEMORY' for historical reasons
      */
-    String[] keys = {"memory", ResourceInformation.MEMORY_URI,
-        ResourceInformation.VCORES_URI};
+    String[] keys = {"memory", ResourceInformation.MEMORY_URI, ResourceInformation.VCORES_URI};
     for(String key : keys) {
       if (resourceInformationMap.containsKey(key)) {
         LOG.warn("Attempt to define resource '" + key + "', but it is not allowed.");
@@ -918,18 +917,5 @@ public class ResourceUtils {
       }
     }
     return  res;
-  }
-
-  public static Resource mergeResources(Resource r1, Resource r2) {
-    Resource resource = Resource.newInstance(0, 0);
-    if (r1 != null && r2 != null) {
-      resource.setVirtualCores(r1.getVirtualCores() + r2.getVirtualCores());
-      resource.setMemorySize(r1.getMemorySize() + r2.getMemorySize());
-    } else if (r1 != null && r2 == null) {
-      resource = r1;
-    } else if (r1 == null && r2 != null) {
-      resource = r2;
-    }
-    return resource;
   }
 }
