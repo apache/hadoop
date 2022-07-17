@@ -269,10 +269,9 @@ public class MockDefaultRequestInterceptorREST
     ContainerState containerState = ContainerState.COMPLETE;
     String nodeHttpAddress = "HttpAddress " + subClusterId;
 
-    ContainerReport containerReport =
-        ContainerReport.newInstance(containerId, allocatedResource,
-        assignedNode, priority, creationTime, finishTime, diagnosticInfo,
-        logUrl, containerExitStatus, containerState, nodeHttpAddress);
+    ContainerReport containerReport = ContainerReport.newInstance(containerId, allocatedResource,
+        assignedNode, priority, creationTime, finishTime, diagnosticInfo, logUrl,
+            containerExitStatus, containerState, nodeHttpAddress);
 
     ContainerInfo container = new ContainerInfo(containerReport);
     containers.add(container);
