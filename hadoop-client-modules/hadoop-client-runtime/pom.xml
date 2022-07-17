@@ -164,6 +164,7 @@
                       <!-- Leave snappy that includes native methods which cannot be relocated. -->
                       <exclude>org.xerial.snappy:*</exclude>
                       <exclude>javax.ws.rs:javax.ws.rs-api</exclude>
+                      <exclude>jakarta.ws.rs:jakarta.ws.rs-api</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
