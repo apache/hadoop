@@ -1455,18 +1455,17 @@ public class FederationClientInterceptor
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getResourceProfiles",
         new Class[] {GetAllResourceProfilesRequest.class}, new Object[] {request});
-    Collection<GetAllResourceProfilesResponse> resourceProfiles;
+    Collection<GetAllResourceProfilesResponse> resourceProfiles = null;
     try {
       resourceProfiles = invokeAppClientProtocolMethod(true, remoteMethod,
           GetAllResourceProfilesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetResourceProfilesFailedRetrieved();
-      LOG.error("Unable to get resource profiles due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException("Unable to get resource profiles due to exception.",
+          ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetResourceProfilesRetrieved(stopTime - startTime);
-    // Merge the GetAllResourceProfilesResponse
     return RouterYarnClientUtils.mergeClusterResourceProfilesResponse(resourceProfiles);
   }
 
@@ -1481,18 +1480,17 @@ public class FederationClientInterceptor
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getResourceProfile",
         new Class[] {GetResourceProfileRequest.class}, new Object[] {request});
-    Collection<GetResourceProfileResponse> resourceProfile;
+    Collection<GetResourceProfileResponse> resourceProfile = null;
     try {
       resourceProfile = invokeAppClientProtocolMethod(true, remoteMethod,
           GetResourceProfileResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetResourceProfileFailedRetrieved();
-      LOG.error("Unable to get resource profile due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException("Unable to get resource profile due to exception.",
+          ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetResourceProfileRetrieved(stopTime - startTime);
-    // Merge the GetResourceProfileResponse
     return RouterYarnClientUtils.mergeClusterResourceProfileResponse(resourceProfile);
   }
 

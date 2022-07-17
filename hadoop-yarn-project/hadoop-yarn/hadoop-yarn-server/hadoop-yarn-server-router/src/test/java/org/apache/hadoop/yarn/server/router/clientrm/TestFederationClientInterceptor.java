@@ -1190,16 +1190,16 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Map<String, Resource> resProfiles = response.getResourceProfiles();
 
     Resource maxResProfiles = resProfiles.get("maximum");
-    Assert.assertEquals(maxResProfiles.getMemorySize(),  32768);
-    Assert.assertEquals(maxResProfiles.getVirtualCores(),  16);
+    Assert.assertEquals(32768, maxResProfiles.getMemorySize());
+    Assert.assertEquals(16, maxResProfiles.getVirtualCores());
 
     Resource defaultResProfiles = resProfiles.get("default");
-    Assert.assertEquals(defaultResProfiles.getMemorySize(),  8192);
-    Assert.assertEquals(defaultResProfiles.getVirtualCores(),  8);
+    Assert.assertEquals(8192, defaultResProfiles.getMemorySize());
+    Assert.assertEquals(8, defaultResProfiles.getVirtualCores());
 
     Resource minimumResProfiles = resProfiles.get("minimum");
-    Assert.assertEquals(minimumResProfiles.getMemorySize(),  4096);
-    Assert.assertEquals(minimumResProfiles.getVirtualCores(),  4);
+    Assert.assertEquals(4096, minimumResProfiles.getMemorySize());
+    Assert.assertEquals(4, minimumResProfiles.getVirtualCores());
   }
 
   @Test
@@ -1216,21 +1216,21 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetResourceProfileResponse response = interceptor.getResourceProfile(request);
 
     Assert.assertNotNull(response);
-    Assert.assertEquals(response.getResource().getMemorySize(), 32768);
-    Assert.assertEquals(response.getResource().getVirtualCores(), 16);
+    Assert.assertEquals(32768, response.getResource().getMemorySize());
+    Assert.assertEquals(16, response.getResource().getVirtualCores());
 
     GetResourceProfileRequest request2 = GetResourceProfileRequest.newInstance("default");
     GetResourceProfileResponse response2 = interceptor.getResourceProfile(request2);
 
     Assert.assertNotNull(response2);
-    Assert.assertEquals(response2.getResource().getMemorySize(), 8192);
-    Assert.assertEquals(response2.getResource().getVirtualCores(), 8);
+    Assert.assertEquals(8192, response2.getResource().getMemorySize());
+    Assert.assertEquals(8, response2.getResource().getVirtualCores());
 
     GetResourceProfileRequest request3 = GetResourceProfileRequest.newInstance("minimum");
     GetResourceProfileResponse response3 = interceptor.getResourceProfile(request3);
 
     Assert.assertNotNull(response3);
-    Assert.assertEquals(response3.getResource().getMemorySize(), 4096);
-    Assert.assertEquals(response3.getResource().getVirtualCores(), 4);
+    Assert.assertEquals(4096, response3.getResource().getMemorySize());
+    Assert.assertEquals(4, response3.getResource().getVirtualCores());
   }
 }
