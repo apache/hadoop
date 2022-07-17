@@ -54,7 +54,7 @@ public class CorruptReplicasMap{
     CORRUPTION_REPORTED  // client or datanode reported the corruption
   }
 
-  public class CorruptBlockReplica {
+  private static class CorruptBlockReplica {
     public final Reason reason;
     public final long generationStamp;
 
@@ -142,9 +142,9 @@ public class CorruptReplicasMap{
     }
 
     // if reasons can be compared but don't match, return false.
-    Reason storedReason = datanodes.get(datanode).reason;
-    if (reason != Reason.ANY && storedReason != null &&
-        reason != storedReason) {
+    CorruptBlockReplica corruptReplica = datanodes.get(datanode);
+    if (reason != Reason.ANY && corruptReplica != null &&
+        reason != corruptReplica.reason) {
       return false;
     }
 
