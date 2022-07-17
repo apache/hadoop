@@ -28,7 +28,7 @@ project (libhdfspp)
 
 cmake_minimum_required(VERSION 2.8)
 
-find_package (Boost 1.72.0 REQUIRED COMPONENTS date_time)
+find_package (Boost 1.72.0 REQUIRED)
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
@@ -274,6 +274,7 @@ endif()
 
 set(LIBHDFSPP_VERSION "0.1.0")
 set(LIBHDFSPP_ALL_OBJECTS $<TARGET_OBJECTS:x_platform_obj> $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:fs_obj> $<TARGET_OBJECTS:rpc_obj> $<TARGET_OBJECTS:reader_obj> $<TARGET_OBJECTS:proto_obj> $<TARGET_OBJECTS:connection_obj> $<TARGET_OBJECTS:common_obj> $<TARGET_OBJECTS:uriparser2_obj>)
+# HDFS-16464: We don't support building Hadoop DLL for Windows yet.
 if (HADOOP_BUILD AND NOT MSVC)
   hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   hadoop_target_link_dual_libraries(hdfspp
@@ -292,8 +293,7 @@ else (HADOOP_BUILD AND NOT MSVC)
     ${PROTOBUF_LIBRARY}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${Boost_LIBRARIES})
+    ${CMAKE_THREAD_LIBS_INIT})
   if(BUILD_SHARED_HDFSPP)
     add_library(hdfspp SHARED ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
     set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})

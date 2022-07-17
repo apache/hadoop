@@ -30,18 +30,20 @@ enable_testing()
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Instructs MSVC to use the static version of the runtime library.
-# More info - https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-170
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+if (MSVC)
+    # Instructs MSVC to use the static version of the runtime library.
+    # More info - https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-170
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
-# This indicates that Windows 10 and above are supported.
-# More info - https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt?view=msvc-170
-set(NT_REQUIRED_VERSION 0x0A00)
-add_definitions(-D_WIN32_WINNT=${NT_REQUIRED_VERSION})
+    # This indicates that Windows 10 and above are supported.
+    # More info - https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt?view=msvc-170
+    set(NT_REQUIRED_VERSION 0x0A00)
+    add_definitions(-D_WIN32_WINNT=${NT_REQUIRED_VERSION})
 
-# Windows.h defines the "min" and "max" macros which conflicts with the std::min and std::max from C++ STL.
-# Adding the below definition will disable this macro.
-add_definitions(-DNOMINMAX)
+    # Windows.h defines the "min" and "max" macros which conflicts with the std::min and std::max from C++ STL.
+    # Adding the below definition will disable this macro.
+    add_definitions(-DNOMINMAX)
+endif (MSVC)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../hadoop-common-project/hadoop-common)
 include(HadoopCommon)
