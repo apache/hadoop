@@ -40,6 +40,7 @@ public class PartitionQueueMetrics extends QueueMetrics {
       String parentMetricName =
           partition + METRIC_NAME_DELIMITER + newQueueName;
       setParent(getQueueMetrics().get(parentMetricName));
+      storedPartitionMetrics = null;
     }
   }
 

@@ -122,6 +122,7 @@ public abstract class Shell {
    * delimiters, no extra count will be added for delimiters.
    *
    * @param commands command parts, including any space delimiters
+   * @throws IOException raised on errors performing I/O.
    */
   public static void checkWindowsCommandLineLength(String...commands)
       throws IOException {
@@ -205,7 +206,11 @@ public abstract class Shell {
   public static final boolean PPC_64
                 = System.getProperties().getProperty("os.arch").contains("ppc64");
 
-  /** a Unix command to get the current user's groups list. */
+  /**
+   * a Unix command to get the current user's groups list.
+   *
+   * @return group command array.
+   */
   public static String[] getGroupsCommand() {
     return (WINDOWS)? new String[]{"cmd", "/c", "groups"}
                     : new String[]{"groups"};
@@ -216,6 +221,9 @@ public abstract class Shell {
    * If the OS is not WINDOWS, the command will get the user's primary group
    * first and finally get the groups list which includes the primary group.
    * i.e. the user's primary group will be included twice.
+   *
+   * @param user user.
+   * @return groups for user command.
    */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is inconsistent across different unixes
@@ -235,6 +243,9 @@ public abstract class Shell {
    * first and finally get the groups list which includes the primary group.
    * i.e. the user's primary group will be included twice.
    * This command does not support Windows and will only return group names.
+   *
+   * @param user user.
+   * @return groups id for user command.
    */
   public static String[] getGroupsIDForUserCommand(final String user) {
     //'groups username' command return is inconsistent across different unixes
@@ -248,19 +259,34 @@ public abstract class Shell {
     }
   }
 
-  /** A command to get a given netgroup's user list. */
+  /**
+   * A command to get a given netgroup's user list.
+   *
+   * @param netgroup net group.
+   * @return users for net group command.
+   */
   public static String[] getUsersForNetgroupCommand(final String netgroup) {
     //'groups username' command return is non-consistent across different unixes
     return new String[] {"getent", "netgroup", netgroup};
   }
 
-  /** Return a command to get permission information. */
+  /**
+   * Return a command to get permission information.
+   *
+   * @return permission command.
+   */
   public static String[] getGetPermissionCommand() {
     return (WINDOWS) ? new String[] { getWinUtilsPath(), "ls", "-F" }
                      : new String[] { "ls", "-ld" };
   }
 
-  /** Return a command to set permission. */
+  /**
+   * Return a command to set permission.
+   *
+   * @param perm permission.
+   * @param recursive recursive.
+   * @return set permission command.
+   */
   public static String[] getSetPermissionCommand(String perm, boolean recursive) {
     if (recursive) {
       return (WINDOWS) ?
@@ -290,21 +316,37 @@ public abstract class Shell {
     return cmdWithFile;
   }
 
-  /** Return a command to set owner. */
+  /**
+   * Return a command to set owner.
+   *
+   * @param owner owner.
+   * @return set owner command.
+   */
   public static String[] getSetOwnerCommand(String owner) {
     return (WINDOWS) ?
         new String[] { getWinUtilsPath(), "chown", "\"" + owner + "\"" }
         : new String[] { "chown", owner };
   }
 
-  /** Return a command to create symbolic links. */
+  /**
+   * Return a command to create symbolic links.
+   *
+   * @param target target.
+   * @param link link.
+   * @return symlink command.
+   */
   public static String[] getSymlinkCommand(String target, String link) {
     return WINDOWS ?
        new String[] { getWinUtilsPath(), "symlink", link, target }
        : new String[] { "ln", "-s", target, link };
   }
 
-  /** Return a command to read the target of the a symbolic link. */
+  /**
+   * Return a command to read the target of the a symbolic link.
+   *
+   * @param link link.
+   * @return read link command.
+   */
   public static String[] getReadlinkCommand(String link) {
     return WINDOWS ?
         new String[] { getWinUtilsPath(), "readlink", link }
@@ -320,7 +362,13 @@ public abstract class Shell {
     return getSignalKillCommand(0, pid);
   }
 
-  /** Return a command to send a signal to a given pid. */
+  /**
+   * Return a command to send a signal to a given pid.
+   *
+   * @param code code.
+   * @param pid pid.
+   * @return signal kill command.
+   */
   public static String[] getSignalKillCommand(int code, String pid) {
     // Code == 0 means check alive
     if (Shell.WINDOWS) {
@@ -347,7 +395,11 @@ public abstract class Shell {
   /** Regular expression for environment variables: {@value}. */
   public static final String ENV_NAME_REGEX = "[A-Za-z_][A-Za-z0-9_]*";
 
-  /** Return a regular expression string that match environment variables. */
+  /**
+   * Return a regular expression string that match environment variables.
+   *
+   * @return environment variable regex.
+   */
   public static String getEnvironmentVariableRegex() {
     return (WINDOWS)
         ? "%(" + ENV_NAME_REGEX + "?)%"
@@ -890,7 +942,11 @@ public abstract class Shell {
     this.dir = dir;
   }
 
-  /** Check to see if a command needs to be executed and execute if needed. */
+  /**
+   * Check to see if a command needs to be executed and execute if needed.
+   *
+   * @throws IOException raised on errors performing I/O.
+   */
   protected void run() throws IOException {
     if (lastTime + interval > Time.monotonicNow()) {
       return;
@@ -902,7 +958,11 @@ public abstract class Shell {
     runCommand();
   }
 
-  /** Run the command. */
+  /**
+   * Run the command.
+   *
+   * @throws IOException raised on errors performing I/O.
+   */
   private void runCommand() throws IOException {
     ProcessBuilder builder = new ProcessBuilder(getExecString());
     Timer timeOutTimer = null;
@@ -1049,10 +1109,19 @@ public abstract class Shell {
     }
   }
 
-  /** return an array containing the command name and its parameters. */
+  /**
+   * return an array containing the command name and its parameters.
+   *
+   * @return exec string array.
+   */
   protected abstract String[] getExecString();
 
-  /** Parse the execution result */
+  /**
+   * Parse the execution result.
+   *
+   * @param lines lines.
+   * @throws IOException raised on errors performing I/O.
+   * */
   protected abstract void parseExecResult(BufferedReader lines)
   throws IOException;
 
@@ -1283,6 +1352,7 @@ public abstract class Shell {
    * the <code>Shell</code> interface.
    * @param cmd shell command to execute.
    * @return the output of the executed command.
+   * @throws IOException raised on errors performing I/O.
    */
   public static String execCommand(String ... cmd) throws IOException {
     return execCommand(null, cmd, 0L);
@@ -1367,6 +1437,8 @@ public abstract class Shell {
 
   /**
    * Static method to return a Set of all <code>Shell</code> objects.
+   *
+   * @return all shells set.
    */
   public static Set<Shell> getAllShells() {
     synchronized (CHILD_SHELLS) {

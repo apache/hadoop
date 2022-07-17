@@ -37,7 +37,6 @@ import org.apache.hadoop.mapred.nativetask.handlers.BufferPusher;
 import org.apache.hadoop.mapred.nativetask.handlers.IDataLoader;
 import org.apache.hadoop.mapred.nativetask.testutil.TestInput;
 import org.apache.hadoop.mapred.nativetask.testutil.TestInput.KV;
-import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 import org.apache.hadoop.util.Progress;
 
 import org.junit.Assert;

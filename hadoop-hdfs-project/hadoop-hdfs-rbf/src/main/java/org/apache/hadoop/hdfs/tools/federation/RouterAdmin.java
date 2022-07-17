@@ -193,7 +193,7 @@ public class RouterAdmin extends Configured implements Tool {
 
   /**
    * Usage: validates the maximum number of arguments for a command.
-   * @param arg List of of command line parameters.
+   * @param arg List of command line parameters.
    */
   private void validateMax(String[] arg) {
     if (arg[0].equals("-ls")) {
@@ -407,7 +407,7 @@ public class RouterAdmin extends Configured implements Tool {
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
       printUsage(cmd);
     } catch (RemoteException e) {
-      // This is a error returned by the server.
+      // This is an error returned by the server.
       // Print out the first line of the error message, ignore the stack trace.
       exitCode = -1;
       debugException = e;
@@ -807,7 +807,7 @@ public class RouterAdmin extends Configured implements Tool {
     } else if (argv[i].equals("-d")) { // Check if -d parameter is specified.
       detail = true;
       if (argv.length == 2) {
-        path = "/"; // If no path is provide with -ls -d.
+        path = "/"; // If no path is provided with -ls -d.
       } else {
         path = argv[++i];
       }

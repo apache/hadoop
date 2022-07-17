@@ -246,7 +246,7 @@ public class TestHarFileSystemBasics {
     // test.har has the following contents:
     //   dir1/1.txt
     //   dir1/2.txt
-    Set<String> expectedFileNames = new HashSet<String>();
+    Set<String> expectedFileNames = new HashSet<>();
     expectedFileNames.add("1.txt");
     expectedFileNames.add("2.txt");
 

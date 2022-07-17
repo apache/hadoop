@@ -111,7 +111,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         s3AReadOpContext,
         s3ObjectAttributes,
         getMockedInputStreamCallback(),
-        s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics());
+        s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics(),
+            null);
   }
 
   /**

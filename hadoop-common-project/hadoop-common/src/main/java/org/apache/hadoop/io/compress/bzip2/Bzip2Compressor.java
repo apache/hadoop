@@ -67,6 +67,7 @@ public class Bzip2Compressor implements Compressor {
 
   /**
    * Creates a new compressor, taking settings from the configuration.
+   * @param conf configuration.
    */
   public Bzip2Compressor(Configuration conf) {
     this(Bzip2Factory.getBlockSize(conf),

@@ -1174,7 +1174,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void renewLease(String clientName) throws IOException {
+  public void renewLease(String clientName, List<String> namespaces)
+      throws IOException {
+    if (namespaces != null && namespaces.size() > 0) {
+      LOG.warn("namespaces({}) should be null or empty "
+          + "on NameNode side, please check it.", namespaces);
+      throw new IOException("namespaces(" + namespaces
+          + ") should be null or empty");
+    }
     checkNNStartup();
     namesystem.renewLease(clientName);        
   }
@@ -1507,6 +1514,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     } finally {
       RetryCache.setState(cacheEntry, success);
     }
+  }
+
+  @Override
+  public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
+    checkNNStartup();
+    return namesystem.slowDataNodesReport();
   }
 
   @Override // ClientProtocol

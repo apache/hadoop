@@ -29,6 +29,7 @@ public final class CapacitySchedulerQueueHelpers {
 
   public static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
   public static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+  public static final String A_CHILD = A + ".a";
   public static final String A1 = A + ".a1";
   public static final String A2 = A + ".a2";
   public static final String B1 = B + ".b1";
@@ -85,6 +86,64 @@ public final class CapacitySchedulerQueueHelpers {
     conf.setUserLimitFactor(B2, 100.0f);
     conf.setCapacity(B3, B3_CAPACITY);
     conf.setUserLimitFactor(B3, 100.0f);
+
+    return conf;
+  }
+
+  public static CapacitySchedulerConfiguration setupAdditionalQueues(
+      CapacitySchedulerConfiguration conf) {
+
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a", "b"});
+
+    conf.setCapacity(A, A_CAPACITY);
+    conf.setCapacity(B, B_CAPACITY);
+
+    // Define 2nd-level queues
+    conf.setQueues(A, new String[]{"a1", "a2", "a3"});
+    conf.setCapacity(A1, 30.0f);
+    conf.setUserLimitFactor(A1, 100.0f);
+    conf.setCapacity(A2, 30.0f);
+    conf.setUserLimitFactor(A2, 100.0f);
+    conf.setCapacity("root.a.a3", 40.0f);
+    conf.setUserLimitFactor("root.a.a3", 100.0f);
+
+    conf.setQueues(B, new String[]{"b1", "b2", "b3"});
+    conf.setCapacity(B1, B1_CAPACITY);
+    conf.setUserLimitFactor(B1, 100.0f);
+    conf.setCapacity(B2, B2_CAPACITY);
+    conf.setUserLimitFactor(B2, 100.0f);
+    conf.setCapacity(B3, B3_CAPACITY);
+    conf.setUserLimitFactor(B3, 100.0f);
+
+    return conf;
+  }
+
+  /**
+   * @param conf, to be modified
+   * @return CS configuration which has deleted all children of queue(b)
+   *           root
+   *          /     \
+   *        a        b
+   *       / \
+   *      a1  a2
+   */
+  public static CapacitySchedulerConfiguration setupQueueConfAmbiguousQueue(
+      CapacitySchedulerConfiguration conf) {
+
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[]{"a", "b"});
+
+    conf.setCapacity(A, A_CAPACITY);
+    conf.setCapacity(B, B_CAPACITY);
+
+    // Define 2nd-level queues
+    conf.setQueues(A, new String[]{"a", "a1"});
+    conf.setCapacity(A_CHILD, A1_CAPACITY);
+    conf.setUserLimitFactor(A1, 100.0f);
+    conf.setCapacity(A1, A2_CAPACITY);
+    conf.setUserLimitFactor(A2, 100.0f);
 
     return conf;
   }

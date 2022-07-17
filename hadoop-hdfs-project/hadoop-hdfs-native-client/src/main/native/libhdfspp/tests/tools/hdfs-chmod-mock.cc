@@ -55,6 +55,15 @@ void ChmodMock::SetExpectations(
         .WillOnce(testing::Return(true));
   }
 
+  if (*test_case_func == &PassInvalidPermissionsAndAPath<ChmodMock>) {
+    const auto arg1 = args[0];
+    const auto arg2 = args[1];
+
+    EXPECT_CALL(*this, HandlePath(arg1, false, arg2))
+        .Times(1)
+        .WillOnce(testing::Return(false));
+  }
+
   if (*test_case_func == &PassRecursivePermissionsAndAPath<ChmodMock>) {
     const auto arg1 = args[1];
     const auto arg2 = args[2];

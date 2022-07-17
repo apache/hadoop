@@ -68,7 +68,7 @@ public class TestRouterRPCClientRetries {
   private static ClientProtocol routerProtocol;
 
   @Rule
-  public final Timeout testTimeout = new Timeout(100000);
+  public final Timeout testTimeout = new Timeout(100000L, TimeUnit.MILLISECONDS);
 
   @Before
   public void setUp() throws Exception {
@@ -153,7 +153,7 @@ public class TestRouterRPCClientRetries {
 
     DFSClient client = nnContext1.getClient();
     // Renew lease for the DFS client, it will succeed.
-    routerProtocol.renewLease(client.getClientName());
+    routerProtocol.renewLease(client.getClientName(), null);
 
     // Verify the retry times, it will retry one time for ns0.
     FederationRPCMetrics rpcMetrics = routerContext.getRouter()

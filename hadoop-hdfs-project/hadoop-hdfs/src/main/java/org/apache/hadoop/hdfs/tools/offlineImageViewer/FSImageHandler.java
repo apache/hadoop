@@ -76,7 +76,7 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
   @Override
   public void channelRead0(ChannelHandlerContext ctx, HttpRequest request)
       throws Exception {
-    if (request.getMethod() != HttpMethod.GET) {
+    if (request.method() != HttpMethod.GET) {
       DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1,
           METHOD_NOT_ALLOWED);
       resp.headers().set(CONNECTION, CLOSE);
@@ -84,7 +84,7 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
       return;
     }
 
-    QueryStringDecoder decoder = new QueryStringDecoder(request.getUri());
+    QueryStringDecoder decoder = new QueryStringDecoder(request.uri());
     // check path. throw exception if path doesn't start with WEBHDFS_PREFIX
     String path = getPath(decoder);
     final String op = getOp(decoder);
@@ -140,7 +140,7 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
           throws Exception {
     Exception e = cause instanceof Exception ? (Exception) cause : new
-      Exception(cause);
+        Exception(cause);
     final String output = JsonUtil.toJsonString(e);
     ByteBuf content = Unpooled.wrappedBuffer(output.getBytes(Charsets.UTF_8));
     final DefaultFullHttpResponse resp = new DefaultFullHttpResponse(

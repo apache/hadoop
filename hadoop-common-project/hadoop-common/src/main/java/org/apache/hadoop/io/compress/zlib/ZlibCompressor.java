@@ -240,6 +240,7 @@ public class ZlibCompressor implements Compressor {
 
   /**
    * Creates a new compressor, taking settings from the configuration.
+   * @param conf configuration.
    */
   public ZlibCompressor(Configuration conf) {
     this(ZlibFactory.getCompressionLevel(conf),
