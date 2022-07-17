@@ -191,9 +191,9 @@ public class TestContainersLauncher {
 
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.CLEANUP_CONTAINER);
-    assertEquals(1, dummyMap.size());
+    assertEquals(1, spy.running.size());
     spy.handle(event);
-    assertEquals(0, dummyMap.size());
+    assertEquals(0, spy.running.size());
     Mockito.verify(containerLauncher, Mockito.times(1))
         .submit(Mockito.any(ContainerCleanup.class));
   }
