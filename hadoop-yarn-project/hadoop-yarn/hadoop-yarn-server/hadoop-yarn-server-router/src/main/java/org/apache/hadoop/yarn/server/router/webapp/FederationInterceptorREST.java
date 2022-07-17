@@ -1409,7 +1409,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         try {
           Method method = DefaultRequestInterceptorREST.class.
               getMethod(request.getMethodName(), request.getTypes());
-          return (R) clazz.cast(method.invoke(interceptor, request.getParams()));
+          Object retObj = method.invoke(interceptor, request.getParams());
+          R ret = clazz.cast(retObj);
+          return ret;
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.", info.getSubClusterId(),
               request.getMethodName(), e);
