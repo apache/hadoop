@@ -820,7 +820,7 @@ public abstract class Server {
     private volatile String detailedMetricsName = "";
     final int callId;            // the client's call id
     final int retryCount;        // the retry count of the call
-    long timestampNanos;         // time the call was received
+    private final long timestampNanos; // time the call was received
     long responseTimestampNanos; // time the call was served
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
     final RPC.RpcKind rpcKind;
@@ -1002,6 +1002,10 @@ public abstract class Server {
 
     public void setDeferredError(Throwable t) {
     }
+
+    public long getTimestampNanos() {
+      return timestampNanos;
+    }
   }
 
   /** A RPC extended call queued for handling. */
@@ -1083,7 +1087,7 @@ public abstract class Server {
 
       try {
         value = call(
-            rpcKind, connection.protocolName, rpcRequest, timestampNanos);
+            rpcKind, connection.protocolName, rpcRequest, getTimestampNanos());
       } catch (Throwable e) {
         populateResponseParamsOnError(e, responseParams);
       }
