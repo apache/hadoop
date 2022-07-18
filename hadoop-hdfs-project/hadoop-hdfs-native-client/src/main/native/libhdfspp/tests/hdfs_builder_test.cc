@@ -129,7 +129,6 @@ TEST(HdfsBuilderTest, TestSet)
   }
 }
 
-
 int main(int argc, char *argv[]) {
   /*
    *  The following line must be executed to initialize Google Mock
