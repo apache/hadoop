@@ -105,7 +105,7 @@ public class S3Reader implements Closeable {
     this.streamStatistics.readOperationStarted(offset, size);
     Invoker invoker = this.s3File.getReadInvoker();
 
-    invoker.retry("read", this.s3File.getPath(), true,
+    int invokerResponse = invoker.retry("read", this.s3File.getPath(), true,
         trackDurationOfOperation(streamStatistics, STREAM_READ_REMOTE_BLOCK_READ, () -> {
           try {
             this.readOneBlock(buffer, offset, size);
@@ -124,7 +124,12 @@ public class S3Reader implements Closeable {
     int numBytesRead = buffer.position();
     buffer.limit(numBytesRead);
     this.s3File.getStatistics().readOperationCompleted(size, numBytesRead);
-    return numBytesRead;
+
+    if (invokerResponse < 0) {
+      return invokerResponse;
+    } else {
+      return numBytesRead;
+    }
   }
 
   private void readOneBlock(ByteBuffer buffer, long offset, int size) throws IOException {
@@ -158,7 +163,7 @@ public class S3Reader implements Closeable {
       }
       while (!this.closed && (numRemainingBytes > 0));
     } finally {
-      s3File.close(inputStream);
+      s3File.close(inputStream, numRemainingBytes);
     }
   }
 }
