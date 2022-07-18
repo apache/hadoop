@@ -112,8 +112,8 @@ public enum AzureServiceErrorCode {
     String[] errorMessages = errorMessage.split(System.lineSeparator(), 2);
     for (AzureServiceErrorCode azureServiceErrorCode : AzureServiceErrorCode.values()) {
       if (azureServiceErrorCode.getStatusCode() == httpStatusCode
-          && azureServiceErrorCode.getErrorCode().equalsIgnoreCase(errorCode) &&
-          azureServiceErrorCode.getErrorMessage()
+          && azureServiceErrorCode.getErrorCode().equalsIgnoreCase(errorCode)
+          && azureServiceErrorCode.getErrorMessage()
               .equalsIgnoreCase(errorMessages[0])) {
         return azureServiceErrorCode;
       }

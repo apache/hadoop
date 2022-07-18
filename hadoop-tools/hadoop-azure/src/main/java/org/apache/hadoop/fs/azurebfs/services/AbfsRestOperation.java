@@ -237,7 +237,7 @@ public class AbfsRestOperation {
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         sleepDuration = client.getRetryPolicy().getRetryInterval(retryCount);
-        if(abfsDriverMetrics != null) {
+        if (abfsDriverMetrics != null) {
           updateTimeMetrics(retryCount, sleepDuration);
         }
         Thread.sleep(sleepDuration);
@@ -341,14 +341,11 @@ public class AbfsRestOperation {
             + httpOperation.getStatusCode() + " error code is "
             + httpOperation.getStorageErrorCode()
             + " error message is " + httpOperation.getStorageErrorMessage());
-        if (serviceErrorCode.equals(
-            AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT) ||
-            serviceErrorCode.equals(
-                AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
+        if (serviceErrorCode.equals(AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT)
+            || serviceErrorCode.equals(AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
           abfsDriverMetrics.getNumberOfBandwidthThrottledRequests()
               .getAndIncrement();
-        } else if (serviceErrorCode.equals(
-            AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)) {
+        } else if (serviceErrorCode.equals(AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)) {
           abfsDriverMetrics.getNumberOfIOPSThrottledRequests()
               .getAndIncrement();
         } else {
