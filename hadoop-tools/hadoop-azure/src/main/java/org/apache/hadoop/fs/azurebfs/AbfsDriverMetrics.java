@@ -183,9 +183,9 @@ public class AbfsDriverMetrics {
             .append(String.format("%.3f",
                 (double) entry.getValue().getMaxBackoff().get() / 1000L))
             .append("s ")
-            .append(String.format("%.3f", (double) (
-                (entry.getValue().getTotalBackoff().get() / totalRequests)
-                    / 1000L)))
+            .append(String.format("%.3f",
+                ((double)entry.getValue().getTotalBackoff().get() / totalRequests)
+                    / 1000L))
             .append("s ");
       } else {
         metricString.append("#MMA#_").append(entry.getKey())
