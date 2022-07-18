@@ -45,6 +45,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -2309,89 +2310,104 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private void invalidate(String bpid, Block[] invalidBlks, boolean async)
       throws IOException {
     final List<String> errors = new ArrayList<String>();
-    for (int i = 0; i < invalidBlks.length; i++) {
-      final ReplicaInfo removing;
-      final FsVolumeImpl v;
-      final ReplicaInfo info = volumeMap.get(bpid, invalidBlks[i]);
+
+    // sort all blocks by storage id
+    Map<String, List<Pair<Block, ReplicaInfo>>> invalidBlksMap = new HashMap<>();
+    for (Block invalidBlk : invalidBlks) {
+      final ReplicaInfo info = volumeMap.get(bpid, invalidBlk);
       if (info == null) {
         ReplicaInfo infoByBlockId =
-                volumeMap.get(bpid, invalidBlks[i].getBlockId());
+                volumeMap.get(bpid, invalidBlk.getBlockId());
         if (infoByBlockId == null) {
           // It is okay if the block is not found -- it
           // may be deleted earlier.
-          LOG.info("Failed to delete replica " + invalidBlks[i]
+          LOG.info("Failed to delete replica " + invalidBlk
                   + ": ReplicaInfo not found.");
         } else {
-          errors.add("Failed to delete replica " + invalidBlks[i]
+          errors.add("Failed to delete replica " + invalidBlk
                   + ": GenerationStamp not matched, existing replica is "
                   + Block.toString(infoByBlockId));
         }
         continue;
       }
-      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, bpid, info.getStorageUuid())) {
+      List<Pair<Block,ReplicaInfo>> invalidList = invalidBlksMap.computeIfAbsent(info.getStorageUuid(),
+              k -> new ArrayList<>());
+      invalidList.add(new Pair<>(invalidBlk, info));
+    }
 
-        v = (FsVolumeImpl)info.getVolume();
-        if (v == null) {
-          errors.add("Failed to delete replica " + invalidBlks[i]
-              +  ". No volume for replica " + info);
-          continue;
-        }
-        try {
-          File blockFile = new File(info.getBlockURI());
-          if (blockFile != null && blockFile.getParentFile() == null) {
-            errors.add("Failed to delete replica " + invalidBlks[i]
-                +  ". Parent not found for block file: " + blockFile);
+    for (Map.Entry<String, List<Pair<Block, ReplicaInfo>>> storageBlocks : invalidBlksMap.entrySet()) {
+      List<Pair<Block, ReplicaInfo>> removingBlockInfo = new ArrayList<>();
+
+      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, bpid, storageBlocks.getKey())) {
+        for (Pair<Block, ReplicaInfo> blockInfoPair : storageBlocks.getValue()) {
+          final ReplicaInfo removing;
+          final FsVolumeImpl v = (FsVolumeImpl)blockInfoPair.getValue().getVolume();
+          if (v == null) {
+            errors.add("Failed to delete replica " + blockInfoPair.getKey()
+                    +  ". No volume for replica " + blockInfoPair.getValue());
             continue;
           }
-        } catch(IllegalArgumentException e) {
-          LOG.warn("Parent directory check failed; replica {} is " +
-              "not backed by a local file", info);
-        }
-        removing = volumeMap.remove(bpid, invalidBlks[i]);
-        addDeletingBlock(bpid, removing.getBlockId());
-        LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
-        if (removing instanceof ReplicaInPipeline) {
-          ((ReplicaInPipeline) removing).releaseAllBytesReserved();
-        }
-      }
-
-      if (v.isTransientStorage()) {
-        RamDiskReplica replicaInfo =
-          ramDiskReplicaTracker.getReplica(bpid, invalidBlks[i].getBlockId());
-        if (replicaInfo != null) {
-          if (!replicaInfo.getIsPersisted()) {
-            datanode.getMetrics().incrRamDiskBlocksDeletedBeforeLazyPersisted();
+          try {
+            File blockFile = new File(blockInfoPair.getValue().getBlockURI());
+            if (blockFile.getParentFile() == null) {
+              errors.add("Failed to delete replica " + blockInfoPair.getKey()
+                      +  ". Parent not found for block file: " + blockFile);
+              continue;
+            }
+          } catch(IllegalArgumentException e) {
+            LOG.warn("Parent directory check failed; replica {} is " +
+                    "not backed by a local file", blockInfoPair.getValue());
           }
-          ramDiskReplicaTracker.discardReplica(replicaInfo.getBlockPoolId(),
-            replicaInfo.getBlockId(), true);
+          removing = volumeMap.remove(bpid, blockInfoPair.getValue());
+          addDeletingBlock(bpid, removing.getBlockId());
+          LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
+          if (removing instanceof ReplicaInPipeline) {
+            ((ReplicaInPipeline) removing).releaseAllBytesReserved();
+          }
+          removingBlockInfo.add(new Pair<>(blockInfoPair.getKey(), removing));
         }
       }
 
-      // If a DFSClient has the replica in its cache of short-circuit file
-      // descriptors (and the client is using ShortCircuitShm), invalidate it.
-      datanode.getShortCircuitRegistry().processBlockInvalidation(
-                new ExtendedBlockId(invalidBlks[i].getBlockId(), bpid));
-
-      // If the block is cached, start uncaching it.
-      cacheManager.uncacheBlock(bpid, invalidBlks[i].getBlockId());
-
-      try {
-        if (async) {
-          // Delete the block asynchronously to make sure we can do it fast
-          // enough.
-          // It's ok to unlink the block file before the uncache operation
-          // finishes.
-          asyncDiskService.deleteAsync(v.obtainReference(), removing,
-              new ExtendedBlock(bpid, invalidBlks[i]),
-              dataStorage.getTrashDirectoryForReplica(bpid, removing));
-        } else {
-          asyncDiskService.deleteSync(v.obtainReference(), removing,
-              new ExtendedBlock(bpid, invalidBlks[i]),
-              dataStorage.getTrashDirectoryForReplica(bpid, removing));
+      // async adding block into deleting queue
+      for (Pair<Block, ReplicaInfo> blockInfoPair : removingBlockInfo) {
+        final FsVolumeImpl v = (FsVolumeImpl)blockInfoPair.getValue().getVolume();
+        if (v.isTransientStorage()) {
+          RamDiskReplica replicaInfo =
+                  ramDiskReplicaTracker.getReplica(bpid, blockInfoPair.getKey().getBlockId());
+          if (replicaInfo != null) {
+            if (!replicaInfo.getIsPersisted()) {
+              datanode.getMetrics().incrRamDiskBlocksDeletedBeforeLazyPersisted();
+            }
+            ramDiskReplicaTracker.discardReplica(replicaInfo.getBlockPoolId(),
+                    replicaInfo.getBlockId(), true);
+          }
         }
-      } catch (ClosedChannelException e) {
-        LOG.warn("Volume {} is closed, ignore the deletion task for " +
-            "block: {}", v, invalidBlks[i]);
+        // If a DFSClient has the replica in its cache of short-circuit file
+        // descriptors (and the client is using ShortCircuitShm), invalidate it.
+        datanode.getShortCircuitRegistry().processBlockInvalidation(
+                new ExtendedBlockId(blockInfoPair.getKey().getBlockId(), bpid));
+
+        // If the block is cached, start uncaching it.
+        cacheManager.uncacheBlock(bpid, blockInfoPair.getKey().getBlockId());
+
+        try {
+          if (async) {
+            // Delete the block asynchronously to make sure we can do it fast
+            // enough.
+            // It's ok to unlink the block file before the uncache operation
+            // finishes.
+            asyncDiskService.deleteAsync(v.obtainReference(), blockInfoPair.getValue(),
+                    new ExtendedBlock(bpid, blockInfoPair.getKey()),
+                    dataStorage.getTrashDirectoryForReplica(bpid, blockInfoPair.getValue()));
+          } else {
+            asyncDiskService.deleteSync(v.obtainReference(), blockInfoPair.getValue(),
+                    new ExtendedBlock(bpid, blockInfoPair.getKey()),
+                    dataStorage.getTrashDirectoryForReplica(bpid, blockInfoPair.getValue()));
+          }
+        } catch (ClosedChannelException e) {
+          LOG.warn("Volume {} is closed, ignore the deletion task for " +
+                  "block: {}", v, blockInfoPair.getKey());
+        }
       }
     }
     if (!errors.isEmpty()) {
