@@ -66,6 +66,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningE
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.UncaughtExceptionHandlers;
+import org.apache.hadoop.util.Time;
 
 /**
  * Channel to a remote JournalNode using Hadoop IPC.
@@ -190,7 +191,7 @@ public class IPCLoggerChannel implements AsyncLogger {
         "Trying to move committed txid backwards in client " +
          "old: %s new: %s", committedTxId, txid);
     this.committedTxId = txid;
-    this.lastCommitNanos = System.nanoTime();
+    this.lastCommitNanos = Time.monotonicNowNanos();
   }
   
   @Override
@@ -348,14 +349,14 @@ public class IPCLoggerChannel implements AsyncLogger {
     
     // When this batch is acked, we use its submission time in order
     // to calculate how far we are lagging.
-    final long submitNanos = System.nanoTime();
+    final long submitNanos = Time.monotonicNowNanos();
     
     ListenableFuture<Void> ret = null;
     try {
       ret = singleThreadExecutor.submit(() -> {
         throwIfOutOfSync();
 
-        long rpcSendTimeNanos = System.nanoTime();
+        final long rpcSendTimeNanos = Time.monotonicNowNanos();
         try {
           getProxy().journal(createReqInfo(), segmentTxId, firstTxnId, numTxns, data);
         } catch (IOException e) {
@@ -367,17 +368,17 @@ public class IPCLoggerChannel implements AsyncLogger {
           }
           throw e;
         } finally {
-          long now = System.nanoTime();
-          long rpcTime = TimeUnit.MICROSECONDS.convert(
-              now - rpcSendTimeNanos, TimeUnit.NANOSECONDS);
-          long endToEndTime = TimeUnit.MICROSECONDS.convert(
-              now - submitNanos, TimeUnit.NANOSECONDS);
-          metrics.addWriteEndToEndLatency(endToEndTime);
-          metrics.addWriteRpcLatency(rpcTime);
-          if (rpcTime / 1000 > WARN_JOURNAL_MILLIS_THRESHOLD) {
+          final long nowNanos = Time.monotonicNowNanos();
+          final long rpcTimeMicros = TimeUnit.MICROSECONDS.convert(
+              (nowNanos - rpcSendTimeNanos), TimeUnit.NANOSECONDS);
+          final long endToEndTimeMicros = TimeUnit.MICROSECONDS.convert(
+              (nowNanos - submitNanos), TimeUnit.NANOSECONDS);
+          metrics.addWriteEndToEndLatency(endToEndTimeMicros);
+          metrics.addWriteRpcLatency(rpcTimeMicros);
+          if (rpcTimeMicros / 1000 > WARN_JOURNAL_MILLIS_THRESHOLD) {
             QuorumJournalManager.LOG.warn(
                 "Took {}ms to send a batch of {} edits ({} bytes) to remote journal {}.",
-                rpcTime / 1000, numTxns, data.length, IPCLoggerChannel.this);
+                rpcTimeMicros / 1000, numTxns, data.length, IPCLoggerChannel.this);
           }
         }
         synchronized (IPCLoggerChannel.this) {
@@ -446,8 +447,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   private synchronized void reserveQueueSpace(int size)
       throws LoggerTooFarBehindException {
     Preconditions.checkArgument(size >= 0);
-    if (queuedEditsSizeBytes + size > queueSizeLimitBytes &&
-        queuedEditsSizeBytes > 0) {
+    if (queuedEditsSizeBytes + size > queueSizeLimitBytes && queuedEditsSizeBytes > 0) {
       QuorumJournalManager.LOG.warn("Pending edits to {} is going to exceed limit size: {}"
           + ", current queued edits size: {}, will silently drop {} bytes of edits!",
           IPCLoggerChannel.class, queueSizeLimitBytes, queuedEditsSizeBytes, size);
@@ -462,8 +462,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
-  public ListenableFuture<Void> format(final NamespaceInfo nsInfo,
-      final boolean force) {
+  public ListenableFuture<Void> format(final NamespaceInfo nsInfo, final boolean force) {
     return singleThreadExecutor.submit(() -> {
       getProxy().format(journalId, nameServiceId, nsInfo, force);
       return null;
@@ -471,8 +470,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
   
   @Override
-  public ListenableFuture<Void> startLogSegment(final long txid,
-      final int layoutVersion) {
+  public ListenableFuture<Void> startLogSegment(final long txid, final int layoutVersion) {
     return singleThreadExecutor.submit(() -> {
       getProxy().startLogSegment(createReqInfo(), txid, layoutVersion);
       synchronized (IPCLoggerChannel.this) {
@@ -488,8 +486,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
   
   @Override
-  public ListenableFuture<Void> finalizeLogSegment(
-      final long startTxId, final long endTxId) {
+  public ListenableFuture<Void> finalizeLogSegment(final long startTxId, final long endTxId) {
     return singleThreadExecutor.submit(() -> {
       throwIfOutOfSync();
       getProxy().finalizeLogSegment(createReqInfo(), startTxId, endTxId);
@@ -526,8 +523,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
-  public ListenableFuture<PrepareRecoveryResponseProto> prepareRecovery(
-      final long segmentTxId) {
+  public ListenableFuture<PrepareRecoveryResponseProto> prepareRecovery(final long segmentTxId) {
     return singleThreadExecutor.submit(() -> {
       if (!hasHttpServerEndPoint()) {
         // force an RPC call, so we know what the HTTP port should be if it
@@ -541,8 +537,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
-  public ListenableFuture<Void> acceptRecovery(
-      final SegmentStateProto log, final URL url) {
+  public ListenableFuture<Void> acceptRecovery(final SegmentStateProto log, final URL url) {
     return singleThreadExecutor.submit(() -> {
       getProxy().acceptRecovery(createReqInfo(), log, url);
       return null;
@@ -672,5 +667,4 @@ public class IPCLoggerChannel implements AsyncLogger {
   private boolean hasHttpServerEndPoint() {
    return httpServerURL != null;
   }
-
 }
