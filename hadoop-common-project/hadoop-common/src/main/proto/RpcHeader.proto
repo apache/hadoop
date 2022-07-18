@@ -91,6 +91,7 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   optional RPCTraceInfoProto traceInfo = 6; // tracing info
   optional RPCCallerContextProto callerContext = 7; // call context
   optional int64 stateId = 8; // The last seen Global State ID
+  optional bytes routerFederatedState = 9; // Alignment context info for use with routers.
 }
 
 
@@ -157,6 +158,11 @@ message RpcResponseHeaderProto {
   optional bytes clientId = 7; // Globally unique client ID
   optional sint32 retryCount = 8 [default = -1];
   optional int64 stateId = 9; // The last written Global State ID
+  optional bytes routerFederatedState = 10; // Alignment context info for use with routers.
+}
+
+message RouterFederatedStateProto {
+  map<string, int64> namespaceStateIds = 1; // Last seen state IDs for multiple namespaces.
 }
 
 message RpcSaslProto {
