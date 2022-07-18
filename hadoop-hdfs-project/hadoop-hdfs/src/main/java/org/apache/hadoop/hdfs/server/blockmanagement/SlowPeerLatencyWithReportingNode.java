@@ -38,13 +38,31 @@ final class SlowPeerLatencyWithReportingNode
   @JsonProperty("ReportedLatency")
   private final Double reportedLatency;
 
+  @JsonProperty("MedianLatency")
+  private final Double medianLatency;
+
+  @JsonProperty("MadLatency")
+  private final Double madLatency;
+
+  @JsonProperty("UpperLimitLatency")
+  private final Double upperLimitLatency;
+
   SlowPeerLatencyWithReportingNode(
       @JsonProperty("ReportingNode")
           String reportingNode,
       @JsonProperty("ReportedLatency")
-          Double reportedLatency) {
+          Double reportedLatency,
+      @JsonProperty("MedianLatency")
+          Double medianLatency,
+      @JsonProperty("MadLatency")
+          Double madLatency,
+      @JsonProperty("UpperLimitLatency")
+          Double upperLimitLatency) {
     this.reportingNode = reportingNode;
     this.reportedLatency = reportedLatency;
+    this.medianLatency = medianLatency;
+    this.madLatency = madLatency;
+    this.upperLimitLatency = upperLimitLatency;
   }
 
   public String getReportingNode() {
@@ -53,6 +71,18 @@ final class SlowPeerLatencyWithReportingNode
 
   public Double getReportedLatency() {
     return reportedLatency;
+  }
+
+  public Double getMedianLatency() {
+    return medianLatency;
+  }
+
+  public Double getMadLatency() {
+    return madLatency;
+  }
+
+  public Double getUpperLimitLatency() {
+    return upperLimitLatency;
   }
 
   @Override
@@ -75,6 +105,9 @@ final class SlowPeerLatencyWithReportingNode
     return new EqualsBuilder()
         .append(reportingNode, that.reportingNode)
         .append(reportedLatency, that.reportedLatency)
+        .append(medianLatency, that.medianLatency)
+        .append(madLatency, that.madLatency)
+        .append(upperLimitLatency, that.upperLimitLatency)
         .isEquals();
   }
 
@@ -83,6 +116,9 @@ final class SlowPeerLatencyWithReportingNode
     return new HashCodeBuilder(17, 37)
         .append(reportingNode)
         .append(reportedLatency)
+        .append(medianLatency)
+        .append(madLatency)
+        .append(upperLimitLatency)
         .toHashCode();
   }
 }

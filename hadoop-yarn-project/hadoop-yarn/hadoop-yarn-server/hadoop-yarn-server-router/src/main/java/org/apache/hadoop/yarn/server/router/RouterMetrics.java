@@ -75,6 +75,18 @@ public final class RouterMetrics {
   private MutableGaugeInt numListReservationsFailedRetrieved;
   @Metric("# of getResourceTypeInfo failed to be retrieved")
   private MutableGaugeInt numGetResourceTypeInfo;
+  @Metric("# of failApplicationAttempt failed to be retrieved")
+  private MutableGaugeInt numFailAppAttemptFailedRetrieved;
+  @Metric("# of updateApplicationPriority failed to be retrieved")
+  private MutableGaugeInt numUpdateAppPriorityFailedRetrieved;
+  @Metric("# of updateApplicationPriority failed to be retrieved")
+  private MutableGaugeInt numUpdateAppTimeoutsFailedRetrieved;
+  @Metric("# of signalToContainer failed to be retrieved")
+  private MutableGaugeInt numSignalToContainerFailedRetrieved;
+  @Metric("# of getQueueInfo failed to be retrieved")
+  private MutableGaugeInt numGetQueueInfoFailedRetrieved;
+  @Metric("# of moveApplicationAcrossQueues failed to be retrieved")
+  private MutableGaugeInt numMoveApplicationAcrossQueuesFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -114,6 +126,18 @@ public final class RouterMetrics {
   private MutableRate totalSucceededListReservationsRetrieved;
   @Metric("Total number of successful Retrieved getResourceTypeInfo and latency(ms)")
   private MutableRate totalSucceededGetResourceTypeInfoRetrieved;
+  @Metric("Total number of successful Retrieved failApplicationAttempt and latency(ms)")
+  private MutableRate totalSucceededFailAppAttemptRetrieved;
+  @Metric("Total number of successful Retrieved updateApplicationPriority and latency(ms)")
+  private MutableRate totalSucceededUpdateAppPriorityRetrieved;
+  @Metric("Total number of successful Retrieved updateApplicationTimeouts and latency(ms)")
+  private MutableRate totalSucceededUpdateAppTimeoutsRetrieved;
+  @Metric("Total number of successful Retrieved signalToContainer and latency(ms)")
+  private MutableRate totalSucceededSignalToContainerRetrieved;
+  @Metric("Total number of successful Retrieved getQueueInfo and latency(ms)")
+  private MutableRate totalSucceededGetQueueInfoRetrieved;
+  @Metric("Total number of successful Retrieved moveApplicationAcrossQueues and latency(ms)")
+  private MutableRate totalSucceededMoveApplicationAcrossQueuesRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -135,8 +159,14 @@ public final class RouterMetrics {
   private MutableQuantiles getContainerLatency;
   private MutableQuantiles listReservationsLatency;
   private MutableQuantiles listResourceTypeInfoLatency;
+  private MutableQuantiles failAppAttemptLatency;
+  private MutableQuantiles updateAppPriorityLatency;
+  private MutableQuantiles updateAppTimeoutsLatency;
+  private MutableQuantiles signalToContainerLatency;
+  private MutableQuantiles getQueueInfoLatency;
+  private MutableQuantiles moveApplicationAcrossQueuesLatency;
 
-  private static volatile RouterMetrics INSTANCE = null;
+  private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
 
   private RouterMetrics() {
@@ -201,25 +231,49 @@ public final class RouterMetrics {
     listResourceTypeInfoLatency =
         registry.newQuantiles("getResourceTypeInfoLatency",
             "latency of get resource type info", "ops", "latency", 10);
+
+    failAppAttemptLatency =
+        registry.newQuantiles("failApplicationAttemptLatency",
+            "latency of fail application attempt", "ops", "latency", 10);
+
+    updateAppPriorityLatency =
+        registry.newQuantiles("updateApplicationPriorityLatency",
+            "latency of update application priority", "ops", "latency", 10);
+
+    updateAppTimeoutsLatency =
+        registry.newQuantiles("updateApplicationTimeoutsLatency",
+            "latency of update application timeouts", "ops", "latency", 10);
+
+    signalToContainerLatency =
+        registry.newQuantiles("signalToContainerLatency",
+            "latency of signal to container timeouts", "ops", "latency", 10);
+
+    getQueueInfoLatency =
+        registry.newQuantiles("getQueueInfoLatency",
+            "latency of get queue info timeouts", "ops", "latency", 10);
+
+    moveApplicationAcrossQueuesLatency =
+        registry.newQuantiles("moveApplicationAcrossQueuesLatency",
+            "latency of move application across queues timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
     if (!isInitialized.get()) {
       synchronized (RouterMetrics.class) {
-        if (INSTANCE == null) {
-          INSTANCE = DefaultMetricsSystem.instance().register("RouterMetrics",
+        if (instance == null) {
+          instance = DefaultMetricsSystem.instance().register("RouterMetrics",
               "Metrics for the Yarn Router", new RouterMetrics());
           isInitialized.set(true);
         }
       }
     }
-    return INSTANCE;
+    return instance;
   }
 
   @VisibleForTesting
   synchronized static void destroy() {
     isInitialized.set(false);
-    INSTANCE = null;
+    instance = null;
   }
 
   @VisibleForTesting
@@ -308,6 +362,36 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededFailAppAttemptRetrieved() {
+    return totalSucceededFailAppAttemptRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededUpdateAppPriorityRetrieved() {
+    return totalSucceededUpdateAppPriorityRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededUpdateAppTimeoutsRetrieved() {
+    return totalSucceededUpdateAppTimeoutsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededSignalToContainerRetrieved() {
+    return totalSucceededSignalToContainerRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetQueueInfoRetrieved() {
+    return totalSucceededGetQueueInfoRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededMoveApplicationAcrossQueuesRetrieved() {
+    return totalSucceededMoveApplicationAcrossQueuesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -390,6 +474,36 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededGetResourceTypeInfoRetrieved() {
     return totalSucceededGetResourceTypeInfoRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededFailAppAttemptRetrieved() {
+    return totalSucceededFailAppAttemptRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededUpdateAppPriorityRetrieved() {
+    return totalSucceededUpdateAppPriorityRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededUpdateAppTimeoutsRetrieved() {
+    return totalSucceededUpdateAppTimeoutsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededSignalToContainerRetrieved() {
+    return totalSucceededSignalToContainerRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetQueueInfoRetrieved() {
+    return totalSucceededGetQueueInfoRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededMoveApplicationAcrossQueuesRetrieved() {
+    return totalSucceededMoveApplicationAcrossQueuesRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -477,6 +591,34 @@ public final class RouterMetrics {
     return numGetResourceTypeInfo.value();
   }
 
+  @VisibleForTesting
+  public int getFailApplicationAttemptFailedRetrieved() {
+    return numFailAppAttemptFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getUpdateApplicationPriorityFailedRetrieved() {
+    return numUpdateAppPriorityFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getUpdateApplicationTimeoutsFailedRetrieved() {
+    return numUpdateAppTimeoutsFailedRetrieved.value();
+  }
+
+  @VisibleForTesting
+  public int getSignalToContainerFailedRetrieved() {
+    return numSignalToContainerFailedRetrieved.value();
+  }
+
+  public int getQueueInfoFailedRetrieved() {
+    return numGetQueueInfoFailedRetrieved.value();
+  }
+
+  public int getMoveApplicationAcrossQueuesFailedRetrieved() {
+    return numMoveApplicationAcrossQueuesFailedRetrieved.value();
+  }
+
   public void succeededAppsCreated(long duration) {
     totalSucceededAppsCreated.add(duration);
     getNewApplicationLatency.add(duration);
@@ -562,6 +704,36 @@ public final class RouterMetrics {
     listResourceTypeInfoLatency.add(duration);
   }
 
+  public void succeededFailAppAttemptRetrieved(long duration) {
+    totalSucceededFailAppAttemptRetrieved.add(duration);
+    failAppAttemptLatency.add(duration);
+  }
+
+  public void succeededUpdateAppPriorityRetrieved(long duration) {
+    totalSucceededUpdateAppPriorityRetrieved.add(duration);
+    updateAppPriorityLatency.add(duration);
+  }
+
+  public void succeededUpdateAppTimeoutsRetrieved(long duration) {
+    totalSucceededUpdateAppTimeoutsRetrieved.add(duration);
+    updateAppTimeoutsLatency.add(duration);
+  }
+
+  public void succeededSignalToContainerRetrieved(long duration) {
+    totalSucceededSignalToContainerRetrieved.add(duration);
+    signalToContainerLatency.add(duration);
+  }
+
+  public void succeededGetQueueInfoRetrieved(long duration) {
+    totalSucceededGetQueueInfoRetrieved.add(duration);
+    getQueueInfoLatency.add(duration);
+  }
+
+  public void succeededMoveApplicationAcrossQueuesRetrieved(long duration) {
+    totalSucceededMoveApplicationAcrossQueuesRetrieved.add(duration);
+    moveApplicationAcrossQueuesLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -628,5 +800,29 @@ public final class RouterMetrics {
 
   public void incrResourceTypeInfoFailedRetrieved() {
     numGetResourceTypeInfo.incr();
+  }
+
+  public void incrFailAppAttemptFailedRetrieved() {
+    numFailAppAttemptFailedRetrieved.incr();
+  }
+
+  public void incrUpdateAppPriorityFailedRetrieved() {
+    numUpdateAppPriorityFailedRetrieved.incr();
+  }
+
+  public void incrUpdateApplicationTimeoutsRetrieved() {
+    numUpdateAppTimeoutsFailedRetrieved.incr();
+  }
+
+  public void incrSignalToContainerFailedRetrieved() {
+    numSignalToContainerFailedRetrieved.incr();
+  }
+
+  public void incrGetQueueInfoFailedRetrieved() {
+    numGetQueueInfoFailedRetrieved.incr();
+  }
+
+  public void incrMoveApplicationAcrossQueuesFailedRetrieved() {
+    numMoveApplicationAcrossQueuesFailedRetrieved.incr();
   }
 }

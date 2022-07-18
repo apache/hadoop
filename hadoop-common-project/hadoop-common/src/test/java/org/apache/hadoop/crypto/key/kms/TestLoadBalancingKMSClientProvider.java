@@ -39,6 +39,8 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -65,7 +67,6 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.util.Sets;
 
 public class TestLoadBalancingKMSClientProvider {
 
@@ -86,8 +87,8 @@ public class TestLoadBalancingKMSClientProvider {
     KMSClientProvider[] providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(1, providers.length);
-    assertEquals(Sets.newHashSet("http://host1:9600/kms/foo/v1/"),
-        Sets.newHashSet(providers[0].getKMSUrl()));
+    assertEquals(new HashSet<>(Collections.singleton("http://host1:9600/kms/foo/v1/")),
+        new HashSet<>(Collections.singleton(providers[0].getKMSUrl())));
 
     kp = new KMSClientProvider.Factory().createProvider(new URI(
         "kms://http@host1;host2;host3:9600/kms/foo"), conf);
@@ -95,12 +96,12 @@ public class TestLoadBalancingKMSClientProvider {
     providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(3, providers.length);
-    assertEquals(Sets.newHashSet("http://host1:9600/kms/foo/v1/",
+    assertEquals(new HashSet<>(Arrays.asList("http://host1:9600/kms/foo/v1/",
         "http://host2:9600/kms/foo/v1/",
-        "http://host3:9600/kms/foo/v1/"),
-        Sets.newHashSet(providers[0].getKMSUrl(),
+        "http://host3:9600/kms/foo/v1/")),
+        new HashSet<>(Arrays.asList(providers[0].getKMSUrl(),
             providers[1].getKMSUrl(),
-            providers[2].getKMSUrl()));
+            providers[2].getKMSUrl())));
 
     kp = new KMSClientProvider.Factory().createProvider(new URI(
         "kms://http@host1;host2;host3:9600/kms/foo"), conf);
@@ -108,12 +109,12 @@ public class TestLoadBalancingKMSClientProvider {
     providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(3, providers.length);
-    assertEquals(Sets.newHashSet("http://host1:9600/kms/foo/v1/",
+    assertEquals(new HashSet<>(Arrays.asList("http://host1:9600/kms/foo/v1/",
         "http://host2:9600/kms/foo/v1/",
-        "http://host3:9600/kms/foo/v1/"),
-        Sets.newHashSet(providers[0].getKMSUrl(),
+        "http://host3:9600/kms/foo/v1/")),
+        new HashSet<>(Arrays.asList(providers[0].getKMSUrl(),
             providers[1].getKMSUrl(),
-            providers[2].getKMSUrl()));
+            providers[2].getKMSUrl())));
   }
 
   @Test

@@ -510,15 +510,19 @@ extends AbstractDelegationTokenIdentifier>
       throws InvalidToken {
     assert Thread.holdsLock(this);
     DelegationTokenInformation info = getTokenInfo(identifier);
+    String err;
     if (info == null) {
-      throw new InvalidToken("token " + formatTokenId(identifier)
-          + " can't be found in cache");
+      err = "Token for real user: " + identifier.getRealUser() + ", can't be found in cache";
+      LOG.warn("{}, Token={}", err, formatTokenId(identifier));
+      throw new InvalidToken(err);
     }
     long now = Time.now();
     if (info.getRenewDate() < now) {
-      throw new InvalidToken("token " + formatTokenId(identifier) + " is " +
-          "expired, current time: " + Time.formatTime(now) +
-          " expected renewal time: " + Time.formatTime(info.getRenewDate()));
+      err = "Token " + identifier.getRealUser() + " has expired, current time: "
+          + Time.formatTime(now) + " expected renewal time: " + Time
+          .formatTime(info.getRenewDate());
+      LOG.info("{}, Token={}", err, formatTokenId(identifier));
+      throw new InvalidToken(err);
     }
     return info;
   }
@@ -712,7 +716,7 @@ extends AbstractDelegationTokenIdentifier>
   /** Remove expired delegation tokens from cache */
   private void removeExpiredToken() throws IOException {
     long now = Time.now();
-    Set<TokenIdent> expiredTokens = new HashSet<TokenIdent>();
+    Set<TokenIdent> expiredTokens = new HashSet<>();
     synchronized (this) {
       Iterator<Map.Entry<TokenIdent, DelegationTokenInformation>> i =
           currentTokens.entrySet().iterator();

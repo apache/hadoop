@@ -1086,7 +1086,7 @@ public class NetworkTopology {
     String rackname = node.getNetworkLocation();
     Set<String> nodes = rackMap.get(rackname);
     if (nodes == null) {
-      nodes = new HashSet<String>();
+      nodes = new HashSet<>();
     }
     if (!decommissionNodes.contains(node.getName())) {
       nodes.add(node.getName());

@@ -1716,7 +1716,7 @@ public class Client implements AutoCloseable {
     private String saslQop; // here for testing
     private final Configuration conf; // used to get the expected kerberos principal name
     
-    ConnectionId(InetSocketAddress address, Class<?> protocol, 
+    public ConnectionId(InetSocketAddress address, Class<?> protocol,
                  UserGroupInformation ticket, int rpcTimeout,
                  RetryPolicy connectionRetryPolicy, Configuration conf) {
       this.protocol = protocol;
@@ -1760,7 +1760,7 @@ public class Client implements AutoCloseable {
       return ticket;
     }
     
-    private int getRpcTimeout() {
+    int getRpcTimeout() {
       return rpcTimeout;
     }
     
@@ -1793,6 +1793,10 @@ public class Client implements AutoCloseable {
     
     int getPingInterval() {
       return pingInterval;
+    }
+
+    RetryPolicy getRetryPolicy() {
+      return connectionRetryPolicy;
     }
     
     @VisibleForTesting
