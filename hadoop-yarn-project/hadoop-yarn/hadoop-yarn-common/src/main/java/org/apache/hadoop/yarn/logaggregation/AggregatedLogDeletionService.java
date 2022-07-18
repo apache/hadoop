@@ -59,7 +59,7 @@ public class AggregatedLogDeletionService extends AbstractService {
   
   private Timer timer = null;
   private long checkIntervalMsecs;
-  private List<LogDeletionTask> tasks;
+  private List<LogDeletionTask> tasks = new ArrayList<>();
   
   public static class LogDeletionTask extends TimerTask {
     private Configuration conf;

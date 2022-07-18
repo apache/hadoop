@@ -194,7 +194,7 @@ public class TestRouterHandlersFairness {
 
   private void invokeConcurrent(ClientProtocol routerProto, String clientName)
       throws IOException {
-    routerProto.renewLease(clientName);
+    routerProto.renewLease(clientName, null);
   }
 
   private int getTotalRejectedPermits(RouterContext routerContext) {
