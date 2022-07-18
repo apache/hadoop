@@ -80,7 +80,7 @@ public class OfflineImageViewerPB {
       + "    delimiter. The default delimiter is \\t, though this may be\n"
       + "    changed via the -delimiter argument.\n"
       + "    -sp print storage policy, used by delimiter only.\n"
-      + "    -ec print erasure coding policy policy, used by delimiter only.\n"
+      + "    -ec print erasure coding policy, used by delimiter only.\n"
       + "  * DetectCorruption: Detect potential corruption of the image by\n"
       + "    selectively loading parts of it and actively searching for\n"
       + "    inconsistencies. Outputs a summary of the found corruptions\n"
@@ -233,8 +233,8 @@ public class OfflineImageViewerPB {
         boolean printECPolicy = cmd.hasOption("ec");
         try (PBImageDelimitedTextWriter writer =
             new PBImageDelimitedTextWriter(out, delimiter,
-                tempPath, printStoragePolicy, threads, outputFile,
-                conf, printECPolicy)) {
+                tempPath, printStoragePolicy, printECPolicy, threads,
+                outputFile, conf)) {
           writer.visit(inputFile);
         }
         break;
