@@ -231,6 +231,33 @@ public class JobHistoryUtils {
   }
   
   /**
+   * Gets the configured permissions for the user files in the
+   * both need full permissions, this is enforced by this method.
+   * @param conf The configuration object
+   * @return FsPermission of the user file
+   */
+  public static FsPermission
+        getConfiguredHistoryIntermediateUserDoneFilePermissions(
+            Configuration conf) {
+    String userDoneDirPermissions = conf.get(
+        JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_FILE_PERMISSIONS);
+    if (userDoneDirPermissions == null) {
+      return new FsPermission(
+          JHAdminConfig.DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_FILE_PERMISSIONS);
+    }
+    FsPermission permission = new FsPermission(userDoneDirPermissions);
+
+    permission = new FsPermission(FsAction.READ_WRITE, FsAction.READ_WRITE,
+        permission.getOtherAction().and(FsAction.READ_WRITE), permission.getStickyBit());
+    LOG.warn("Unsupported permission configured in " +
+        JHAdminConfig.DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_FILE_PERMISSIONS +
+        ", the user and the group permission must be 6 (rw-). " +
+        "The permission was set to " + permission.toString());
+
+    return permission;
+  }
+
+  /**
    * Gets the configured directory prefix for Done history files.
    * @param conf the configuration object
    * @return the done history directory

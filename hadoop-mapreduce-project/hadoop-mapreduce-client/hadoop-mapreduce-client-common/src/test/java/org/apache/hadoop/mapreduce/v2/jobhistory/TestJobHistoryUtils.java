@@ -36,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils.getConfiguredHistoryIntermediateUserDoneDirPermissions;
+import static org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils.getConfiguredHistoryIntermediateUserDoneFilePermissions;
 
 
 public class TestJobHistoryUtils {
@@ -162,6 +163,21 @@ public class TestJobHistoryUtils {
           entry.getKey());
       Assert.assertEquals(entry.getValue(),
           getConfiguredHistoryIntermediateUserDoneDirPermissions(conf));
+    }
+  }
+    @Test
+  public void testGetConfiguredHistoryIntermediateUserDoneFilePermissions() {
+    Configuration conf = new Configuration();
+    Map<String, FsPermission> parameters = ImmutableMap.of(
+      "777", new FsPermission(0666),
+      "665", new FsPermission(0664),
+      "111", new FsPermission(0660)
+    );
+    for (Map.Entry<String, FsPermission> entry : parameters.entrySet()) {
+      conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_FILE_PERMISSIONS,
+          entry.getKey());
+      Assert.assertEquals(entry.getValue(),
+          getConfiguredHistoryIntermediateUserDoneFilePermissions(conf));
     }
   }
 }

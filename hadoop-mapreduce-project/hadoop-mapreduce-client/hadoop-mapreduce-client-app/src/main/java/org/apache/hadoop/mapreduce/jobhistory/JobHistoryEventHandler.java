@@ -1481,7 +1481,7 @@ public class JobHistoryEventHandler extends AbstractService
       summaryFileOut.writeUTF(mi.getJobSummary().getJobSummaryString());
       summaryFileOut.close();
       doneDirFS.setPermission(qualifiedSummaryDoneFile, new FsPermission(
-          JobHistoryUtils.getConfiguredHistoryIntermediateUserDoneDirPermissions(getConfig())));
+          JobHistoryUtils.getConfiguredHistoryIntermediateUserDoneFilePermissions(getConfig())));
     } catch (IOException e) {
       LOG.info("Unable to write out JobSummaryInfo to ["
           + qualifiedSummaryDoneFile + "]", e);
