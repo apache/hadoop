@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
-import static org.apache.hadoop.fs.s3a.Constants.STREAM_READ_REMOTE_BLOCK_READ;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 
 /**
