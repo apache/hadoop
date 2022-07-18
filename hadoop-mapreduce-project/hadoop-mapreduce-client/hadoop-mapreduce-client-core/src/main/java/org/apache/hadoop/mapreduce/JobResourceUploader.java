@@ -783,9 +783,9 @@ class JobResourceUploader {
   void copyJar(Path originalJarPath, Path submitJarFile,
       short replication) throws IOException {
     jtFs.copyFromLocalFile(originalJarPath, submitJarFile);
+    jtFs.setReplication(submitJarFile, replication);
     jtFs.setPermission(submitJarFile, new FsPermission(
         JobSubmissionFiles.JOB_FILE_PERMISSION));
-    jtFs.setReplication(submitJarFile, replication);
   }
 
   private void addLog4jToDistributedCache(Job job, Path jobSubmitDir)
