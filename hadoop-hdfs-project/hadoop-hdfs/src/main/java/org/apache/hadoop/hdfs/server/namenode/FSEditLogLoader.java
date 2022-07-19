@@ -90,6 +90,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetStoragePolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SwapBlockListOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TruncateOp;
@@ -1045,6 +1046,14 @@ public class FSEditLogLoader {
       RemoveErasureCodingPolicyOp removeOp = (RemoveErasureCodingPolicyOp) op;
       fsNamesys.getErasureCodingPolicyManager().removePolicy(
           removeOp.getEcPolicy());
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    case OP_SWAP_BLOCK_LIST:
+      SwapBlockListOp swapOp = (SwapBlockListOp) op;
+      FSDirSwapBlockListOp.swapBlockListForEditLog(fsDir, swapOp.src,
+          swapOp.dst, swapOp.timestamp);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }

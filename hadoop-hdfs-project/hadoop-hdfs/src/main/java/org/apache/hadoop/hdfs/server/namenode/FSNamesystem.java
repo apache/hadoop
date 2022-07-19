@@ -112,7 +112,7 @@ import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
-import org.apache.hadoop.hdfs.server.namenode.SwapBlockListOp.SwapBlockListResult;
+import org.apache.hadoop.hdfs.server.namenode.FSDirSwapBlockListOp.SwapBlockListResult;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
@@ -135,7 +135,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Files;
-import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -8507,7 +8506,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param dst destination file.
    * @throws IOException on Error.
    */
-  boolean swapBlockList(final String src, final String dst, long genTimestamp)
+  boolean swapBlockList(final String src, final String dst, long genTimestamp,
+                        boolean logRetryCache)
       throws IOException {
     final String operationName = "swapBlockList";
     checkOperation(OperationCategory.WRITE);
@@ -8518,7 +8518,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot swap block list." + src + ", " + dst);
-        res = SwapBlockListOp.swapBlocks(dir, pc, src, dst, genTimestamp);
+        res = FSDirSwapBlockListOp.swapBlocks(dir, pc, src, dst, genTimestamp,
+            logRetryCache);
       } finally {
         writeUnlock(operationName);
       }
