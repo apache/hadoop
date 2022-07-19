@@ -18,7 +18,13 @@
 package org.apache.hadoop.io.compress;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,6 +32,9 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor;
+import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -187,6 +196,56 @@ public class TestCodecPool {
     assertEquals(10, decompressors.size());
     for (Decompressor decompressor : decompressors) {
       CodecPool.returnDecompressor(decompressor);
+    }
+  }
+
+  @Test(timeout = 10000)
+  public void testDoNotPoolCompressorNotUseableAfterReturn() throws IOException {
+
+    final GzipCodec gzipCodec = new GzipCodec();
+    gzipCodec.setConf(new Configuration());
+
+    // BuiltInGzipCompressor is an explicit example of a Compressor with the @DoNotPool annotation
+    final Compressor compressor = new BuiltInGzipCompressor(new Configuration());
+    CodecPool.returnCompressor(compressor);
+
+    try (CompressionOutputStream outputStream =
+                 gzipCodec.createOutputStream(new ByteArrayOutputStream(), compressor)) {
+      outputStream.write(1);
+      fail("Compressor from Codec with @DoNotPool should not be useable after returning to CodecPool");
+    } catch (NullPointerException exception) {
+      Assert.assertEquals("Deflater has been closed", exception.getMessage());
+    }
+  }
+
+  @Test(timeout = 10000)
+  public void testDoNotPoolDecompressorNotUseableAfterReturn() throws IOException {
+
+    final GzipCodec gzipCodec = new GzipCodec();
+    gzipCodec.setConf(new Configuration());
+
+    final Random random = new Random();
+    final byte[] bytes = new byte[1024];
+    random.nextBytes(bytes);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try (OutputStream outputStream = gzipCodec.createOutputStream(baos)) {
+      outputStream.write(bytes);
+    }
+
+    final byte[] gzipBytes = baos.toByteArray();
+    final ByteArrayInputStream bais = new ByteArrayInputStream(gzipBytes);
+
+    // BuiltInGzipDecompressor is an explicit example of a Decompressor with the @DoNotPool annotation
+    final Decompressor decompressor = new BuiltInGzipDecompressor();
+    CodecPool.returnDecompressor(decompressor);
+
+    try (CompressionInputStream inputStream =
+                 gzipCodec.createInputStream(bais, decompressor)) {
+      inputStream.read();
+      fail("Decompressor from Codec with @DoNotPool should not be useable after returning to CodecPool");
+    } catch (NullPointerException exception) {
+      Assert.assertEquals("Inflater has been closed", exception.getMessage());
     }
   }
 }
