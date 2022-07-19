@@ -288,7 +288,7 @@ public interface S3ClientFactory {
      */
     public S3ClientCreationParameters withPath(
         final URI value) {
-      pathUri = value;C
+      pathUri = value;
       return this;
     }
   }
