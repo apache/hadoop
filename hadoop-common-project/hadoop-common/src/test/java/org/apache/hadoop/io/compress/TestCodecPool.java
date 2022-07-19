@@ -17,29 +17,22 @@
  */
 package org.apache.hadoop.io.compress;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
-import org.junit.Assert;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.*;
+
+import static org.junit.Assert.assertEquals;
 
 public class TestCodecPool {
   private final String LEASE_COUNT_ERR =
@@ -200,7 +193,7 @@ public class TestCodecPool {
   }
 
   @Test(timeout = 10000)
-  public void testDoNotPoolCompressorNotUseableAfterReturn() throws IOException {
+  public void testDoNotPoolCompressorNotUseableAfterReturn() throws Exception {
 
     final GzipCodec gzipCodec = new GzipCodec();
     gzipCodec.setConf(new Configuration());
@@ -209,17 +202,16 @@ public class TestCodecPool {
     final Compressor compressor = new BuiltInGzipCompressor(new Configuration());
     CodecPool.returnCompressor(compressor);
 
-    try (CompressionOutputStream outputStream =
-                 gzipCodec.createOutputStream(new ByteArrayOutputStream(), compressor)) {
-      outputStream.write(1);
-      fail("Compressor from Codec with @DoNotPool should not be useable after returning to CodecPool");
-    } catch (NullPointerException exception) {
-      Assert.assertEquals("Deflater has been closed", exception.getMessage());
-    }
+    final CompressionOutputStream outputStream = gzipCodec.createOutputStream(new ByteArrayOutputStream(), compressor);
+    LambdaTestUtils.intercept(
+            NullPointerException.class,
+            "Deflater has been closed",
+            "Compressor from Codec with @DoNotPool should not be useable after returning to CodecPool",
+            () -> outputStream.write(1));
   }
 
   @Test(timeout = 10000)
-  public void testDoNotPoolDecompressorNotUseableAfterReturn() throws IOException {
+  public void testDoNotPoolDecompressorNotUseableAfterReturn() throws Exception {
 
     final GzipCodec gzipCodec = new GzipCodec();
     gzipCodec.setConf(new Configuration());
@@ -240,12 +232,11 @@ public class TestCodecPool {
     final Decompressor decompressor = new BuiltInGzipDecompressor();
     CodecPool.returnDecompressor(decompressor);
 
-    try (CompressionInputStream inputStream =
-                 gzipCodec.createInputStream(bais, decompressor)) {
-      inputStream.read();
-      fail("Decompressor from Codec with @DoNotPool should not be useable after returning to CodecPool");
-    } catch (NullPointerException exception) {
-      Assert.assertEquals("Inflater has been closed", exception.getMessage());
-    }
+    final CompressionInputStream inputStream = gzipCodec.createInputStream(bais, decompressor);
+    LambdaTestUtils.intercept(
+            NullPointerException.class,
+            "Inflater has been closed",
+            "Decompressor from Codec with @DoNotPool should not be useable after returning to CodecPool",
+            () -> inputStream.read());
   }
 }
