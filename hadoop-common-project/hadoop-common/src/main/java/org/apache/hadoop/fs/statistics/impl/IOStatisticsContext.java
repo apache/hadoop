@@ -31,34 +31,34 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  * <p>
  * The {@link #snapshot()} call creates a snapshot of the statistics;
  * <p>
- * The {@link #reset()} call resets the statistics in the current thread so
+ * The {@link #reset()} call resets the statistics in the context so
  * that later snapshots will get the incremental data.
  */
 public interface IOStatisticsContext extends IOStatisticsSource {
 
   /**
-   * Get the IOStatisticsAggregator for the current thread.
+   * Get the IOStatisticsAggregator for the context.
    *
-   * @return return the aggregator for current thread.
+   * @return return the aggregator for the context.
    */
   IOStatisticsAggregator getAggregator();
 
   /**
-   * Capture the snapshot of current thread's IOStatistics.
+   * Capture the snapshot of the context's IOStatistics.
    *
-   * @return IOStatisticsSnapshot for current thread.
+   * @return IOStatisticsSnapshot for the context.
    */
   IOStatisticsSnapshot snapshot();
 
   /**
-   * Reset the current thread's IOStatistics.
+   * Reset the context's IOStatistics.
    */
   void reset();
 
   /**
-   * Get the current thread's IOStatisticsContext.
+   * Get the context's IOStatisticsContext.
    *
-   * @return instance of IOStatisticsContext for the current thread.
+   * @return instance of IOStatisticsContext for the context.
    */
   static IOStatisticsContext getCurrentIOStatisticsContext() {
     return IOStatisticsContextIntegration.getCurrentIOStatisticsContext();

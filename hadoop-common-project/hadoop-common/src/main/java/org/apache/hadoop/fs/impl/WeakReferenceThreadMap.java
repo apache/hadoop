@@ -53,6 +53,8 @@ public class WeakReferenceThreadMap<V> extends WeakReferenceMap<Long, V> {
 
     // if the same object is already in the map, just return it.
     WeakReference<V> ref = lookup(id);
+    // Reference value could be set to null. Thus, ref.get() could return
+    // null. Should be handled accordingly while using the returned value.
     if (ref != null && ref.get() == newVal) {
       return ref.get();
     }

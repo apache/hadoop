@@ -31,19 +31,19 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATIS
 import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATISTICS_ENABLED_DEFAULT;
 
 /**
- * Implementing the IOStatisticsContext.
+ * A Utility class for IOStatisticsContext, which helps in creating and
+ * getting the current active context. Static methods in this class allows to
+ * get the current context to start aggregating the IOStatistics.
  *
- * A Context defined for IOStatistics collection per thread which captures
- * each worker thread's work in FS streams and stores it in the form of
- * IOStatisticsSnapshot if thread level aggregation is enabled else returning
- * an instance of EmptyIOStatisticsStore for the FS. An active instance of
- * the IOStatisticsContext can be used to collect the statistics.
+ * Static initializer is used to work out if the feature to collect
+ * thread-level IOStatistics is enabled or not and the corresponding
+ * implementation class is called for it.
  *
- * For the current thread the IOStatisticsSnapshot can be used as a way to
- * move the IOStatistics data between applications using the Serializable
- * nature of the class.
+ * Weak Reference thread map to be used to keep track of different context's
+ * to avoid long-lived memory leakages as these references would be cleaned
+ * up at GC.
  */
-public class IOStatisticsContextIntegration {
+public final class IOStatisticsContextIntegration {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(IOStatisticsContextIntegration.class);
@@ -71,7 +71,12 @@ public class IOStatisticsContextIntegration {
   }
 
   /**
-   * Creating a new IOStatisticsContext instance for a FS to be used. If
+   * Private constructor for a utility class to be used in IOStatisticsContext.
+   */
+  private IOStatisticsContextIntegration() {}
+
+  /**
+   * Creating a new IOStatisticsContext instance for a FS to be used.
    * @param key Thread ID that represents which thread the context belongs to.
    * @return an instance of IOStatisticsContext.
    */

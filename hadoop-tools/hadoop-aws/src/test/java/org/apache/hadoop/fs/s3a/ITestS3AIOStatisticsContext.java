@@ -165,13 +165,13 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     byte[] writeDataFirst = new byte[BYTES_BIG];
     byte[] writeDataSecond = new byte[BYTES_SMALL];
 
-    final ExecutorService executor =
+    final ExecutorService executorService =
         HadoopExecutors.newFixedThreadPool(SMALL_THREADS);
     CountDownLatch latch = new CountDownLatch(SMALL_THREADS);
 
     try {
       for (int i = 0; i < SMALL_THREADS; i++) {
-        executor.submit(() -> {
+        executorService.submit(() -> {
           try {
             // get the thread context and reset
             IOStatisticsContext context =
@@ -201,7 +201,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
       // wait for tasks to finish.
       latch.await();
     } finally {
-      executor.shutdown();
+      executorService.shutdown();
     }
 
     // Check if an Excp or ASE was caught while the test threads were running.
@@ -402,8 +402,6 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
         1);
 
   }
-
-
 
   /**
    * Simulating doing some work in a separate thread.

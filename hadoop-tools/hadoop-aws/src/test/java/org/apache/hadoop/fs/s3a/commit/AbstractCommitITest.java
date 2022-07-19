@@ -71,7 +71,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
       LoggerFactory.getLogger(AbstractCommitITest.class);
 
   /**
-   * Job statistics accrued across all test cases
+   * Job statistics accrued across all test cases.
    */
   private static final IOStatisticsSnapshot JOB_STATISTICS =
       IOStatisticsSupport.snapshotIOStatistics();

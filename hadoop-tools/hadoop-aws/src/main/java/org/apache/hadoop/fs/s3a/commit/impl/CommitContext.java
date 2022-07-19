@@ -368,8 +368,8 @@ public final class CommitContext implements Closeable {
   }
 
   /**
-   * IOStatistics context of the created thread
-   * @return the IOStatistics
+   * IOStatistics context of the created thread.
+   * @return the IOStatistics.
    */
   public IOStatisticsContext getIOStatisticsContext() {
     return ioStatisticsContext;
