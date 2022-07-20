@@ -51,6 +51,7 @@ message CredentialsProto {
 
 message GetDelegationTokenRequestProto {
   required string renewer = 1;
+  optional string clusterId = 2 [default = ""];
 }
 
 message GetDelegationTokenResponseProto {
