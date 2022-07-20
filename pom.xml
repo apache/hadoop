@@ -125,20 +125,20 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   </properties>
 
   <modules>
-<!--    <module>hadoop-project</module>-->
-<!--    <module>hadoop-project-dist</module>-->
-<!--    <module>hadoop-assemblies</module>-->
-<!--    <module>hadoop-maven-plugins</module>-->
+    <module>hadoop-project</module>
+    <module>hadoop-project-dist</module>
+    <module>hadoop-assemblies</module>
+    <module>hadoop-maven-plugins</module>
     <module>hadoop-common-project</module>
-<!--    <module>hadoop-hdfs-project</module>-->
-<!--    <module>hadoop-yarn-project</module>-->
-<!--    <module>hadoop-mapreduce-project</module>-->
-<!--    <module>hadoop-tools</module>-->
-<!--    <module>hadoop-dist</module>-->
-<!--    <module>hadoop-minicluster</module>-->
-<!--    <module>hadoop-client-modules</module>-->
-<!--    <module>hadoop-build-tools</module>-->
-<!--    <module>hadoop-cloud-storage-project</module>-->
+    <module>hadoop-hdfs-project</module>
+    <module>hadoop-yarn-project</module>
+    <module>hadoop-mapreduce-project</module>
+    <module>hadoop-tools</module>
+    <module>hadoop-dist</module>
+    <module>hadoop-minicluster</module>
+    <module>hadoop-client-modules</module>
+    <module>hadoop-build-tools</module>
+    <module>hadoop-cloud-storage-project</module>
   </modules>
 
   <build>
@@ -603,9 +603,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>${maven-javadoc-plugin.version}</version>
         <inherited>false</inherited>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
         <reportSets>
           <reportSet>
             <id>aggregate</id>

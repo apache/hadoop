@@ -17,26 +17,22 @@
  */
 package org.apache.hadoop.io.compress;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor;
+import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
-import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor;
-import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.*;
+
+import static org.junit.Assert.assertEquals;
 
 public class TestCodecPool {
   private final String LEASE_COUNT_ERR =
