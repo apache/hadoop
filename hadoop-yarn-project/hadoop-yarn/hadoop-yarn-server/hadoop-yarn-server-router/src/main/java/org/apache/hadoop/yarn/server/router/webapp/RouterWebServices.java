@@ -20,10 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,8 +46,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -89,7 +84,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
-import org.apache.hadoop.yarn.server.router.rmadmin.RMAdminRequestInterceptor;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
@@ -139,9 +133,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
     int maxCacheSize =
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
             YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
-    this.userPipelineMap = Collections.synchronizedMap(
-        new LRUCacheHashMap<String, RequestInterceptorChainWrapper>(
-            maxCacheSize, true));
+    this.userPipelineMap = Collections.synchronizedMap(new LRUCacheHashMap<>(maxCacheSize, true));
   }
 
   private void init() {
@@ -193,7 +185,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
     ClientMethod remoteMethod = null;
     try {
       remoteMethod = new ClientMethod("setNextInterceptor",
-          new Class[]{RMAdminRequestInterceptor.class}, new Object[]{null});
+          new Class[]{RESTRequestInterceptor.class}, new Object[]{null});
 
       pipeline = RouterServerUtil.createRequestInterceptorChain(conf,
           YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
@@ -215,7 +207,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   /**
    * Initializes the request intercepter pipeline for the specified user.
    *
-   * @param user
+   * @param user specified user.
    */
   private RequestInterceptorChainWrapper initializePipeline(String user) {
     synchronized (this.userPipelineMap) {
@@ -303,7 +295,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @GET
   @Path(RMWSConsts.CLUSTER_USER_INFO)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-          MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public ClusterUserInfo getClusterUserInfo(@Context HttpServletRequest hsr) {
     init();
@@ -799,10 +791,12 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Override
   public Response listReservation(
       @QueryParam(RMWSConsts.QUEUE) @DefaultValue(DEFAULT_QUEUE) String queue,
-      @QueryParam(RMWSConsts.RESERVATION_ID) @DefaultValue(DEFAULT_RESERVATION_ID) String reservationId,
+      @QueryParam(RMWSConsts.RESERVATION_ID)
+      @DefaultValue(DEFAULT_RESERVATION_ID) String reservationId,
       @QueryParam(RMWSConsts.START_TIME) @DefaultValue(DEFAULT_START_TIME) long startTime,
       @QueryParam(RMWSConsts.END_TIME) @DefaultValue(DEFAULT_END_TIME) long endTime,
-      @QueryParam(RMWSConsts.INCLUDE_RESOURCE) @DefaultValue(DEFAULT_INCLUDE_RESOURCE) boolean includeResourceAllocations,
+      @QueryParam(RMWSConsts.INCLUDE_RESOURCE)
+      @DefaultValue(DEFAULT_INCLUDE_RESOURCE) boolean includeResourceAllocations,
       @Context HttpServletRequest hsr) throws Exception {
     init();
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);

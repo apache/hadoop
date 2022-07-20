@@ -21,10 +21,7 @@ package org.apache.hadoop.yarn.server.router.rmadmin;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -35,8 +32,6 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -72,7 +67,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
-import org.apache.hadoop.yarn.server.router.clientrm.ClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
@@ -125,8 +119,7 @@ public class RouterRMAdminService extends AbstractService
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
             YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
     this.userPipelineMap = Collections.synchronizedMap(
-        new LRUCacheHashMap<String, RequestInterceptorChainWrapper>(
-            maxCacheSize, true));
+         new LRUCacheHashMap<>(maxCacheSize, true));
 
     Configuration serverConf = new Configuration(conf);
 
@@ -143,14 +136,13 @@ public class RouterRMAdminService extends AbstractService
     }
 
     this.server.start();
-    LOG.info("Router RMAdminService listening on address: "
-        + this.server.getListenerAddress());
+    LOG.info("Router RMAdminService listening on address: {}", this.server.getListenerAddress());
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    LOG.info("Stopping Router RMAdminService");
+    LOG.info("Stopping Router RMAdminService.");
     if (this.server != null) {
       this.server.stop();
     }

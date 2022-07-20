@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.router;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -29,12 +27,9 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
-import org.apache.hadoop.yarn.server.router.clientrm.ClientRequestInterceptor;
-import org.apache.hadoop.yarn.server.router.rmadmin.RMAdminRequestInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -90,15 +85,15 @@ public final class RouterServerUtil {
       try {
         Class<?> interceptorClass = conf.getClassByName(className);
         if (clazz.isAssignableFrom(interceptorClass)) {
-          R interceptorInstance = (R) ReflectionUtils.newInstance(interceptorClass, conf);
+          Object interceptorInstance = ReflectionUtils.newInstance(interceptorClass, conf);
           if (pipeline == null) {
-            pipeline = interceptorInstance;
-            current = interceptorInstance;
+            pipeline = clazz.cast(interceptorInstance);
+            current = clazz.cast(interceptorInstance);
             continue;
           } else {
             Method method = clazz.getMethod(request.getMethodName(), request.getTypes());
             method.invoke(current, interceptorInstance);
-            current = interceptorInstance;
+            current = clazz.cast(interceptorInstance);
           }
         } else {
           LOG.error("Class: {} not instance of {}.", className, clazz.getCanonicalName());
@@ -116,7 +111,7 @@ public final class RouterServerUtil {
   private static List<String> getInterceptorClassNames(Configuration conf,
       String pipeLineClass, String interceptorClass) {
     String configuredInterceptorClassNames = conf.get(pipeLineClass, interceptorClass);
-    List<String> interceptorClassNames = new ArrayList<String>();
+    List<String> interceptorClassNames = new ArrayList<>();
     Collection<String> tempList =
         StringUtils.getStringCollection(configuredInterceptorClassNames);
     for (String item : tempList) {
