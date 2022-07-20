@@ -162,7 +162,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
 
   /**
    * Compute HMAC of the identifier using the secret key and return the 
-   * output as password
+   * output as password.
    * @param identifier the bytes of the identifier
    * @param key the secret key
    * @return the bytes of the generated password
@@ -180,7 +180,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
   }
   
   /**
-   * Convert the byte[] to a secret key
+   * Convert the byte[] to a secret key.
    * @param key the byte[] to create a secret key from
    * @return the secret key
    */

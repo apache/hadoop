@@ -23,12 +23,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1562,5 +1557,16 @@ public class FederationClientInterceptor
     String errorMsg =
         String.format("Can't Found applicationId = %s in any sub clusters", applicationId);
     throw new YarnException(errorMsg);
+  }
+
+  private boolean isAllowedDelegationTokenOp() throws IOException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
+          UserGroupInformation.AuthenticationMethod.KERBEROS_SSL,
+          UserGroupInformation.AuthenticationMethod.CERTIFICATE)
+          .contains(UserGroupInformation.getCurrentUser().getRealAuthenticationMethod());
+    } else {
+      return Boolean.TRUE;
+    }
   }
 }

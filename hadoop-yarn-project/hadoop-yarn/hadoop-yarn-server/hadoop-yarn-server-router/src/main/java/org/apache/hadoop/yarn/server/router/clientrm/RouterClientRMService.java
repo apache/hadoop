@@ -35,6 +35,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
@@ -110,6 +111,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.router.security.DelegationTokenFetcher;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.router.security.ZKDelegationTokenFetcher;
 import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
@@ -135,6 +139,8 @@ public class RouterClientRMService extends AbstractService
 
   private Server server;
   private InetSocketAddress listenerEndpoint;
+  private RouterDelegationTokenSecretManager routerDTSecretManager;
+  private DelegationTokenFetcher tokenFetcher;
 
   // For each user we store an interceptors' pipeline.
   // For performance issue we use LRU cache to keep in memory the newest ones
@@ -146,11 +152,30 @@ public class RouterClientRMService extends AbstractService
   }
 
   @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    long secretKeyInterval = conf.getLong(YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY,
+        YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
+    long tokenMaxLifetime = conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+    long tokenRenewInterval = conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+    this.routerDTSecretManager = new RouterDelegationTokenSecretManager(secretKeyInterval,
+        tokenMaxLifetime, tokenRenewInterval, 3600000);
+    ZKCuratorManager zkManager = new ZKCuratorManager(conf);
+    zkManager.start();
+    this.tokenFetcher = new ZKDelegationTokenFetcher(conf, zkManager, routerDTSecretManager);
+    super.serviceInit(conf);
+  }
+
+  @Override
   protected void serviceStart() throws Exception {
     LOG.info("Starting Router ClientRMService");
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     UserGroupInformation.setConfiguration(conf);
+
+    this.tokenFetcher.start();
+    this.routerDTSecretManager.startThreads();
 
     this.listenerEndpoint =
         conf.getSocketAddr(YarnConfiguration.ROUTER_BIND_HOST,
@@ -161,9 +186,7 @@ public class RouterClientRMService extends AbstractService
     int maxCacheSize =
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
             YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
-    this.userPipelineMap = Collections.synchronizedMap(
-        new LRUCacheHashMap<String, RequestInterceptorChainWrapper>(
-            maxCacheSize, true));
+    this.userPipelineMap = Collections.synchronizedMap(new LRUCacheHashMap<>(maxCacheSize, true));
 
     Configuration serverConf = new Configuration(conf);
 
@@ -172,7 +195,7 @@ public class RouterClientRMService extends AbstractService
             YarnConfiguration.DEFAULT_RM_CLIENT_THREAD_COUNT);
 
     this.server = rpc.getServer(ApplicationClientProtocol.class, this,
-        listenerEndpoint, serverConf, null, numWorkerThreads);
+        listenerEndpoint, serverConf, routerDTSecretManager, numWorkerThreads);
 
     // Enable service authorization?
     if (conf.getBoolean(
@@ -181,8 +204,7 @@ public class RouterClientRMService extends AbstractService
     }
 
     this.server.start();
-    LOG.info("Router ClientRMService listening on address: "
-        + this.server.getListenerAddress());
+    LOG.info("Router ClientRMService listening on address: {}.", this.server.getListenerAddress());
     super.serviceStart();
   }
 

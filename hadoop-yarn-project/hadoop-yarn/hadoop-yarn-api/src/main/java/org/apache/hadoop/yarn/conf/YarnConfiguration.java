@@ -4107,6 +4107,10 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT =
       TimeUnit.SECONDS.toMillis(30);
 
+  public static final String ROUTER_KEYTAB = ROUTER_PREFIX + "keytab";
+
+  public static final String ROUTER_PRINCIPAL = ROUTER_PREFIX + "principal";
+
   ////////////////////////////////
   // CSI Volume configs
   ////////////////////////////////

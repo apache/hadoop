@@ -104,9 +104,11 @@ public abstract class AbstractClientRequestInterceptor
   private void setupUser(String userName) {
 
     try {
-      // Do not create a proxy user if user name matches the user name on
+      // Do not create a proxy user if userName matches the userName on
       // current UGI
-      if (userName.equalsIgnoreCase(
+      if (UserGroupInformation.isSecurityEnabled()) {
+        user = UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
+      } else if (userName.equalsIgnoreCase(
           UserGroupInformation.getCurrentUser().getUserName())) {
         user = UserGroupInformation.getCurrentUser();
       } else {
