@@ -48,9 +48,13 @@ public final class AbfsClientThrottlingIntercept {
   private static boolean isAutoThrottlingEnabled = false;
   private String accountName = "";
 
+  private synchronized static void setIsAutoThrottlingEnabled(boolean autoThrottlingEnabled) {
+    isAutoThrottlingEnabled = autoThrottlingEnabled;
+  }
+
   // Hide default constructor
   public AbfsClientThrottlingIntercept(String accountName) {
-    isAutoThrottlingEnabled = true;
+    setIsAutoThrottlingEnabled(true);
     LOG.debug("Client-side throttling is enabled for the ABFS file system.");
     this.readThrottler = new AbfsClientThrottlingAnalyzer("read");
     this.writeThrottler = new AbfsClientThrottlingAnalyzer("write");

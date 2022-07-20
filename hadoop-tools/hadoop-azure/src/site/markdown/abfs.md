@@ -767,6 +767,18 @@ Hflush() being the only documented API that can provide persistent data
 transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
 
+### <a name="100continueconfigoptions"></a> Hundred Continue Options
+
+`fs.azure.account.expect.header.enabled`: This configuration parameter is used
+to specify
+whether you wish to send a expect 100 continue header with each append request
+or not. It is configured to true by default.
+
+`fs.azure.account.singleton.enabled`: This config is used to specify whether you
+want to enable throttling at account level or not. Otherwise a single throttling
+class level instance is created. It is configured to true by default. We need to
+configure it to false if we want account level throttling.
+
 ### <a name="hnscheckconfigoptions"></a> HNS Check Options
 Config `fs.azure.account.hns.enabled` provides an option to specify whether
  the storage account is HNS enabled or not. In case the config is not provided,
