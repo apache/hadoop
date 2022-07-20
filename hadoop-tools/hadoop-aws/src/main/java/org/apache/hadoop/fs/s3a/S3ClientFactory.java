@@ -276,7 +276,7 @@ public interface S3ClientFactory {
      * added in HADOOP-18330
      * @return path URI
      */
-    public URI getPath() {
+    public URI getPathUri() {
       return pathUri;
     }
 
@@ -286,7 +286,7 @@ public interface S3ClientFactory {
      * @param value new value
      * @return the builder
      */
-    public S3ClientCreationParameters withPath(
+    public S3ClientCreationParameters withPathUri(
         final URI value) {
       pathUri = value;
       return this;
