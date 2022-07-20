@@ -57,6 +57,11 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SEQFILE_COMP
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SEQFILE_COMPRESS_BLOCKSIZE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSUM_ERRORS_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSUM_ERRORS_KEY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /** 
  * <code>SequenceFile</code>s are flat files consisting of binary key/value 
@@ -1948,7 +1953,14 @@ public class SequenceFile {
      */
     protected FSDataInputStream openFile(FileSystem fs, Path file,
         int bufferSize, long length) throws IOException {
-      return fs.open(file, bufferSize);
+      FutureDataInputStreamBuilder builder = fs.openFile(file)
+          .opt(FS_OPTION_OPENFILE_READ_POLICY,
+              FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
+          .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, bufferSize);
+      if (length >= 0) {
+        builder.opt(FS_OPTION_OPENFILE_LENGTH, length);
+      }
+      return awaitFuture(builder.build());
     }
     
     /**

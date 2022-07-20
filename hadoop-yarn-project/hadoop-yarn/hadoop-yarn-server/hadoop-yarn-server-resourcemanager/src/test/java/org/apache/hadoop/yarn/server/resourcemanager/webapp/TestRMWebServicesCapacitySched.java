@@ -77,42 +77,37 @@ import static org.junit.Assert.assertEquals;
 
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
-  protected static MockRM rm;
+  private MockRM rm;
 
-  private static class WebServletModule extends ServletModule {
+  public static class WebServletModule extends ServletModule {
+    private final MockRM rm;
+
+    WebServletModule(MockRM rm) {
+      this.rm = rm;
+    }
+
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
-      CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(
-          new Configuration(false));
-      setupQueueConfiguration(csConf);
-      YarnConfiguration conf = new YarnConfiguration(csConf);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-      conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-          YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
-      rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
     }
   }
 
   public TestRMWebServicesCapacitySched() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
+    super(createWebAppDescriptor());
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    rm = createMockRM(new CapacitySchedulerConfiguration(
+        new Configuration(false)));
     GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+        Guice.createInjector(new WebServletModule(rm)));
   }
 
   public static void setupQueueConfiguration(
@@ -388,5 +383,23 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       e.printStackTrace();
       Assert.fail("overwrite should not fail " + e.getMessage());
     }
+  }
+
+  public static WebAppDescriptor createWebAppDescriptor() {
+    return new WebAppDescriptor.Builder(
+        TestRMWebServicesCapacitySched.class.getPackage().getName())
+        .contextListenerClass(GuiceServletConfig.class)
+        .filterClass(com.google.inject.servlet.GuiceFilter.class)
+        .contextPath("jersey-guice-filter").servletPath("/").build();
+  }
+
+  public static MockRM createMockRM(CapacitySchedulerConfiguration csConf) {
+    setupQueueConfiguration(csConf);
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    return new MockRM(conf);
   }
 }

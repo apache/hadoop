@@ -63,15 +63,14 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.7.7</avro.version>
+    <avro.version>1.9.2</avro.version>
 
     <!-- jersey version -->
-    <jersey.version>1.19</jersey.version>
+    <jersey.version>1.19.4</jersey.version>
 
     <!-- jackson versions -->
-    <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.13.0</jackson2.version>
-    <jackson2.databind.version>2.13.0</jackson2.databind.version>
+    <jackson2.version>2.13.2</jackson2.version>
+    <jackson2.databind.version>2.13.2.2</jackson2.databind.version>
 
     <!-- javax ws rs api version -->
     <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
@@ -109,7 +108,7 @@
     <guava.version>27.0-jre</guava.version>
     <guice.version>4.2.3</guice.version>
 
-    <bouncycastle.version>1.60</bouncycastle.version>
+    <bouncycastle.version>1.68</bouncycastle.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0-M21</apacheds.version>
@@ -382,6 +381,13 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-core</artifactId>
         <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-core</artifactId>
+        <version>${hadoop.version}</version>
+        <type>test-jar</type>
       </dependency>
 
       <dependency>
@@ -858,6 +864,12 @@
         <groupId>com.sun.jersey</groupId>
         <artifactId>jersey-core</artifactId>
         <version>${jersey.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.sun.jersey</groupId>
@@ -865,29 +877,21 @@
         <version>${jersey.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.sun.jersey</groupId>
+        <groupId>com.github.pjfanning</groupId>
         <artifactId>jersey-json</artifactId>
-        <version>${jersey.version}</version>
+        <version>1.20</version>
         <exclusions>
           <exclusion>
-            <groupId>stax</groupId>
-            <artifactId>stax-api</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-core-asl</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-mapper-asl</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-jaxrs</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-xc</artifactId>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-json-provider</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1170,26 +1174,6 @@
         <version>${woodstox.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-mapper-asl</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-core-asl</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-jaxrs</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-xc</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
         <version>${jackson2.version}</version>
@@ -1467,6 +1451,11 @@
         <groupId>${leveldbjni.group}</groupId>
         <artifactId>leveldbjni-all</artifactId>
         <version>1.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.fusesource.hawtjni</groupId>
+        <artifactId>hawtjni-runtime</artifactId>
+        <version>1.11</version>
       </dependency>
 
       <dependency>
@@ -1783,6 +1772,12 @@
         <groupId>org.xerial.snappy</groupId>
         <artifactId>snappy-java</artifactId>
         <version>${snappy-java.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.lz4</groupId>
@@ -2101,27 +2096,6 @@
                 </replacements>
               </configuration>
             </execution>
-            <execution>
-              <id>replace-guava</id>
-              <phase>process-sources</phase>
-              <goals>
-                <goal>replace</goal>
-              </goals>
-              <configuration>
-                <skip>false</skip><!--This will run for all modules-->
-                <basedir>${basedir}</basedir>
-                <includes>
-                  <include>src/main/java/**/*.java</include>
-                  <include>src/test/java/**/*.java</include>
-                </includes>
-                <replacements>
-                  <replacement>
-                    <token>([^\.])com.google.common</token>
-                    <value>$1${hadoop-thirdparty-shaded-guava-prefix}</value>
-                  </replacement>
-                </replacements>
-              </configuration>
-            </execution>
           </executions>
         </plugin>
       </plugins>
@@ -2241,16 +2215,16 @@
                     <!-- for JDK 8 support -->
                     <include>cglib:cglib:3.2.0</include>
                     <include>com.google.inject:guice:4.0</include>
-                    <include>com.sun.jersey:jersey-core:1.19</include>
-                    <include>com.sun.jersey:jersey-servlet:1.19</include>
-                    <include>com.sun.jersey:jersey-json:1.19</include>
-                    <include>com.sun.jersey:jersey-server:1.19</include>
-                    <include>com.sun.jersey:jersey-client:1.19</include>
-                    <include>com.sun.jersey:jersey-grizzly2:1.19</include>
-                    <include>com.sun.jersey:jersey-grizzly2-servlet:1.19</include>
-                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-core:1.19</include>
-                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-grizzly2:1.19</include>
-                    <include>com.sun.jersey.contribs:jersey-guice:1.19</include>
+                    <include>com.sun.jersey:jersey-core:1.19.4</include>
+                    <include>com.sun.jersey:jersey-servlet:1.19.4</include>
+                    <include>com.github.pjfanning:jersey-json:1.20</include>
+                    <include>com.sun.jersey:jersey-server:1.19.4</include>
+                    <include>com.sun.jersey:jersey-client:1.19.4</include>
+                    <include>com.sun.jersey:jersey-grizzly2:1.19.4</include>
+                    <include>com.sun.jersey:jersey-grizzly2-servlet:1.19.4</include>
+                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-core:1.19.4</include>
+                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-grizzly2:1.19.4</include>
+                    <include>com.sun.jersey.contribs:jersey-guice:1.19.4</include>
                     <include>org.ow2.asm:asm:5.0.0</include>
                   </includes>
                 </bannedDependencies>
@@ -2513,5 +2487,6 @@
   </profiles>
 
   <repositories>
+
   </repositories>
 </project>

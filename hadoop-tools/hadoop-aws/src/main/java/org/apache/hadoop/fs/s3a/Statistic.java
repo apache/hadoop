@@ -55,6 +55,10 @@ public enum Statistic {
       StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
       "HEAD request.",
       TYPE_DURATION),
+  ACTION_FILE_OPENED(
+      StoreStatisticNames.ACTION_FILE_OPENED,
+      "File opened.",
+      TYPE_DURATION),
   ACTION_HTTP_GET_REQUEST(
       StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
       "GET request.",
@@ -174,6 +178,10 @@ public enum Statistic {
   INVOCATION_OPEN(
       StoreStatisticNames.OP_OPEN,
       "Calls of open()",
+      TYPE_COUNTER),
+  INVOCATION_OPENFILE(
+      StoreStatisticNames.OP_OPENFILE,
+      "Calls of openFile()",
       TYPE_COUNTER),
   INVOCATION_RENAME(
       StoreStatisticNames.OP_RENAME,
@@ -296,6 +304,15 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_OPERATIONS,
       "Count of read() operations in an input stream",
       TYPE_COUNTER),
+  STREAM_READ_REMOTE_STREAM_ABORTED(
+      StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
+      "Duration of aborting a remote stream during stream IO",
+      TYPE_DURATION),
+  STREAM_READ_REMOTE_STREAM_CLOSED(
+      StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
+      "Duration of closing a remote stream during stream IO",
+      TYPE_DURATION),
+
   STREAM_READ_OPERATIONS_INCOMPLETE(
       StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
       "Count of incomplete read() operations in an input stream",

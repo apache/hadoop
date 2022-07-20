@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeLifelineProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
+import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -308,6 +309,10 @@ class BPServiceActor implements Runnable {
     // First phase of the handshake with NN - get the namespace
     // info.
     NamespaceInfo nsInfo = retrieveNamespaceInfo();
+
+    // init block pool lock when init.
+    dn.getDataSetLockManager().addLock(LockLevel.BLOCK_POOl,
+        nsInfo.getBlockPoolID());
 
     // Verify that this matches the other NN in this HA pair.
     // This also initializes our block pool in the DN if we are

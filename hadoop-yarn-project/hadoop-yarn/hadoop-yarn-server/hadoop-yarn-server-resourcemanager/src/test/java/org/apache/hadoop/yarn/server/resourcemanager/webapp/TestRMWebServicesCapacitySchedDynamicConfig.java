@@ -19,10 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -34,67 +31,28 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.junit.Test;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.assertJsonResponse;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createMockRM;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createWebAppDescriptor;
 
 public class TestRMWebServicesCapacitySchedDynamicConfig extends
     JerseyTestBase {
-  private static final int GB = 1024;
-  private static MockRM rm;
+  private MockRM rm;
 
   private CapacitySchedulerQueueManager autoQueueHandler;
 
-  private static class WebServletModule extends ServletModule {
-    private final Configuration conf;
-
-    WebServletModule(Configuration conf) {
-      this.conf = conf;
-    }
-
-    @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-      conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
-          YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
-      rm = new MockRM(conf);
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-    }
-  }
-
-  private void initResourceManager(Configuration conf) throws IOException {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule(conf)));
-    rm.start();
-    //Need to call reinitialize as
-    //MutableCSConfigurationProvider with InMemoryConfigurationStore
-    //somehow does not load the queues properly and falls back to default config.
-    //Therefore CS will think there's only the default queue there.
-    ((CapacityScheduler) rm.getResourceScheduler()).reinitialize(conf,
-        rm.getRMContext(), true);
-  }
-
   public TestRMWebServicesCapacitySchedDynamicConfig() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
+    super(createWebAppDescriptor());
   }
 
   @Test
@@ -204,14 +162,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     createQueue("root.auto2");
     createQueue("root.auto3");
     createQueue("root.autoParent1.auto4");
+    createQueue("root.autoParent2.auto5");
+    createQueue("root.parent.autoParent3.auto6");
 
-    /*
-     *                         root   default  test1  test2  autoParent1  auto1  auto2  auto3  auto4
-     * weight:                  1        10      4     6         1          1      1     1      1
-     * normalizedWeight:        1        0.41    0.16  0.25      1          0.04   0.04  0.04   0.04
-     * autoCreationEligibility: flexible off     off   off     flexible     off    off   off    off
-     * queueType:               parent   leaf    leaf  leaf    parent       leaf   leaf  leaf   leaf
-     */
     assertJsonResponse(sendRequest(),
         "webapp/scheduler-response-WeightModeWithAutoCreatedQueues-After.json");
   }
@@ -269,6 +222,10 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       conf.put("yarn.scheduler.capacity.root.managed.state", "RUNNING");
       conf.put("yarn.scheduler.capacity.root.managed." +
           "auto-create-child-queue.enabled", "true");
+      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_submit_applications",
+          "user");
+      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_administer_queue",
+          "admin");
       return createConfiguration(conf);
     }
 
@@ -298,17 +255,45 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
     private static Configuration createWeightConfigInternal(boolean enableAqc) {
       Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2, parent");
       conf.put("yarn.scheduler.capacity.root.capacity", "1w");
       conf.put("yarn.scheduler.capacity.root.default.capacity", "10w");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity", "4w");
-      conf.put("yarn.scheduler.capacity.root.test2.capacity", "6w");
+      conf.put("yarn.scheduler.capacity.root.test1.capacity", "5w");
+      conf.put("yarn.scheduler.capacity.root.test2.capacity", "10w");
+      conf.put("yarn.scheduler.capacity.root.parent.capacity", "20w");
       conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
       conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
 
       if (enableAqc) {
-        conf.put("yarn.scheduler.capacity.root.auto-queue-creation-v2.enabled",
-            "true");
+        final String root = "yarn.scheduler.capacity.root.";
+        conf.put(root +  "auto-queue-creation-v2.enabled", "true");
+
+        conf.put(root + "auto-queue-creation-v2.parent-template.acl_submit_applications",
+            "parentUser1");
+        conf.put(root + "auto-queue-creation-v2.parent-template.acl_administer_queue",
+            "parentAdmin1");
+
+        conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+            "user1");
+        conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+            "admin1");
+
+        conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+            "wildUser1");
+        conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+            "wildAdmin1");
+
+
+        conf.put(root + "parent.auto-queue-creation-v2.enabled", "true");
+        conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_submit_applications",
+            "parentUser2");
+        conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_administer_queue",
+            "parentAdmin2");
+
+        conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+            "wildUser2");
+        conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+            "wildAdmin2");
       }
       return createConfiguration(conf);
     }
@@ -326,5 +311,18 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
       return config;
     }
+  }
+
+  private void initResourceManager(Configuration conf) throws IOException {
+    rm = createMockRM(new CapacitySchedulerConfiguration(conf));
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new TestRMWebServicesCapacitySched.WebServletModule(rm)));
+    rm.start();
+    //Need to call reinitialize as
+    //MutableCSConfigurationProvider with InMemoryConfigurationStore
+    //somehow does not load the queues properly and falls back to default config.
+    //Therefore CS will think there's only the default queue there.
+    ((CapacityScheduler) rm.getResourceScheduler()).reinitialize(conf,
+        rm.getRMContext(), true);
   }
 }

@@ -566,6 +566,17 @@
 </property>
 
 <property>
+   <name>dfs.namenode.ip-proxy-users</name>
+   <value></value>
+   <description>A comma separated list of user names that are allowed by the
+     NameNode to specify a different client IP address in the caller context.
+     This is used by Router-Based Federation (RBF) to provide the actual client's
+     IP address to the NameNode, which is critical to preserve data locality when
+     using RBF. If you are using RBF, add the user that runs the routers.
+   </description>
+</property>
+
+<property>
   <name>dfs.namenode.acls.enabled</name>
   <value>true</value>
   <description>
@@ -1640,7 +1651,7 @@
   <name>dfs.block.scanner.volume.bytes.per.second</name>
   <value>1048576</value>
   <description>
-        If this is 0, the DataNode's block scanner will be disabled.  If this
+        If this is configured less than or equal to zero, the DataNode's block scanner will be disabled.  If this
         is positive, this is the number of bytes per second that the DataNode's
         block scanner will try to scan from each volume.
   </description>
@@ -4120,6 +4131,14 @@
   </description>
 </property>
 <property>
+  <name>dfs.namenode.get-blocks.check.operation</name>
+  <value>true</value>
+  <description>
+    Set false to disable checkOperation and getBlocks for Balancer
+    will route to Standby NameNode for HA mode setup.
+  </description>
+</property>
+<property>
   <name>dfs.balancer.dispatcherThreads</name>
   <value>200</value>
   <description>
@@ -4701,6 +4720,24 @@
       Specifies the maximum amount of bandwidth that the data transfering can utilize for writing block or pipeline
       recovery when
       BlockConstructionStage is PIPELINE_SETUP_APPEND_RECOVERY or PIPELINE_SETUP_STREAMING_RECOVERY.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.ec.reconstruct.read.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the EC reconstruction can utilize for reading.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.ec.reconstruct.write.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the EC reconstruction can utilize for writing.
       When the bandwidth value is zero, there is no limit.
     </description>
   </property>
@@ -5489,6 +5526,14 @@
 </property>
 
 <property>
+  <name>dfs.storage.policy.satisfier.move.task.retry.max.attempts</name>
+  <value>3</value>
+  <description>
+    Max retries for moving task to satisfy the block storage policy.
+  </description>
+</property>
+
+<property>
   <name>dfs.storage.policy.satisfier.datanode.cache.refresh.interval.ms</name>
   <value>300000</value>
   <description>
@@ -6100,12 +6145,21 @@
   </property>
 
   <property>
-    <name>dfs.namenode.block.deletion.increment</name>
-    <value>1000</value>
+    <name>dfs.namenode.block.deletion.lock.threshold.ms</name>
+    <value>50</value>
     <description>
-      The number of block deletion increment.
-      This setting will control the block increment deletion rate to
-      ensure that other waiters on the lock can get in.
+      The limit of single time lock holding duration for the block asynchronous
+      deletion thread.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.block.deletion.unlock.interval.ms</name>
+    <value>10</value>
+    <description>
+      The sleep interval for yield lock.
+      When the single time lock holding duration of the block asynchronous deletion
+      thread exceeds limit, sleeping to yield lock.
     </description>
   </property>
 

@@ -31,7 +31,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
@@ -183,20 +185,20 @@ public class TestDFSAdmin {
   }
 
   private void getReconfigurableProperties(String nodeType, String address,
-      final List<String> outs, final List<String> errs) throws IOException {
+      final List<String> outs, final List<String> errs) throws IOException, InterruptedException {
     reconfigurationOutErrFormatter("getReconfigurableProperties", nodeType,
         address, outs, errs);
   }
 
   private void getReconfigurationStatus(String nodeType, String address,
-      final List<String> outs, final List<String> errs) throws IOException {
+      final List<String> outs, final List<String> errs) throws IOException, InterruptedException {
     reconfigurationOutErrFormatter("getReconfigurationStatus", nodeType,
         address, outs, errs);
   }
 
   private void reconfigurationOutErrFormatter(String methodName,
       String nodeType, String address, final List<String> outs,
-      final List<String> errs) throws IOException {
+      final List<String> errs) throws IOException, InterruptedException {
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream outStream = new PrintStream(bufOut);
     ByteArrayOutputStream bufErr = new ByteArrayOutputStream();
@@ -209,9 +211,9 @@ public class TestDFSAdmin {
           outStream,
           errStream);
     } else if (methodName.equals("getReconfigurationStatus")) {
-      admin.getReconfigurationStatus(nodeType, address, outStream, errStream);
+      admin.getReconfigurationStatusUtil(nodeType, address, outStream, errStream);
     } else if (methodName.equals("startReconfiguration")) {
-      admin.startReconfiguration(nodeType, address, outStream, errStream);
+      admin.startReconfigurationUtil(nodeType, address, outStream, errStream);
     }
 
     scanIntoList(bufOut, outs);
@@ -332,13 +334,13 @@ public class TestDFSAdmin {
   }
 
   @Test(timeout = 30000)
-  public void testDataNodeGetReconfigurableProperties() throws IOException {
+  public void testDataNodeGetReconfigurableProperties() throws IOException, InterruptedException {
     final int port = datanode.getIpcPort();
     final String address = "localhost:" + port;
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("datanode", address, outs, errs);
-    assertEquals(16, outs.size());
+    assertEquals(19, outs.size());
     assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, outs.get(1));
   }
 
@@ -428,20 +430,23 @@ public class TestDFSAdmin {
   }
 
   @Test(timeout = 30000)
-  public void testNameNodeGetReconfigurableProperties() throws IOException {
+  public void testNameNodeGetReconfigurableProperties() throws IOException, InterruptedException {
     final String address = namenode.getHostAndPort();
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(16, outs.size());
-    assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(1));
-    assertEquals(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, outs.get(2));
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(3));
-    assertEquals(DFS_IMAGE_PARALLEL_LOAD_KEY, outs.get(4));
-    assertEquals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, outs.get(5));
-    assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY, outs.get(6));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(7));
-    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(8));
+    assertEquals(18, outs.size());
+    assertTrue(outs.get(0).contains("Reconfigurable properties:"));
+    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY, outs.get(1));
+    assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(2));
+    assertEquals(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, outs.get(3));
+    assertEquals(DFS_DATANODE_PEER_STATS_ENABLED_KEY, outs.get(4));
+    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(5));
+    assertEquals(DFS_IMAGE_PARALLEL_LOAD_KEY, outs.get(6));
+    assertEquals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, outs.get(7));
+    assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY, outs.get(8));
+    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(9));
+    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(10));
     assertEquals(errs.size(), 0);
   }
 
@@ -455,7 +460,7 @@ public class TestDFSAdmin {
         errs.clear();
         try {
           getReconfigurationStatus(nodeType, address, outs, errs);
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
           LOG.error(String.format(
               "call getReconfigurationStatus on %s[%s] failed.", nodeType,
               address), e);
@@ -1164,4 +1169,50 @@ public class TestDFSAdmin {
       }
     });
   }
+
+  @Test
+  public void testAllDatanodesReconfig()
+      throws IOException, InterruptedException, TimeoutException {
+    ReconfigurationUtil reconfigurationUtil = mock(ReconfigurationUtil.class);
+    cluster.getDataNodes().get(0).setReconfigurationUtil(reconfigurationUtil);
+    cluster.getDataNodes().get(1).setReconfigurationUtil(reconfigurationUtil);
+
+    List<ReconfigurationUtil.PropertyChange> changes = new ArrayList<>();
+    changes.add(new ReconfigurationUtil.PropertyChange(
+        DFS_DATANODE_PEER_STATS_ENABLED_KEY, "true",
+        datanode.getConf().get(DFS_DATANODE_PEER_STATS_ENABLED_KEY)));
+    when(reconfigurationUtil.parseChangedProperties(any(Configuration.class),
+        any(Configuration.class))).thenReturn(changes);
+
+    assertEquals(0, admin.startReconfiguration("datanode", "livenodes"));
+    final List<String> outsForStartReconf = new ArrayList<>();
+    final List<String> errsForStartReconf = new ArrayList<>();
+    reconfigurationOutErrFormatter("startReconfiguration", "datanode",
+        "livenodes", outsForStartReconf, errsForStartReconf);
+    assertEquals(3, outsForStartReconf.size());
+    assertEquals(0, errsForStartReconf.size());
+    assertTrue(outsForStartReconf.get(0).startsWith("Started reconfiguration task on node"));
+    assertTrue(outsForStartReconf.get(1).startsWith("Started reconfiguration task on node"));
+    assertEquals("Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.",
+        outsForStartReconf.get(2));
+
+    Thread.sleep(1000);
+    final List<String> outs = new ArrayList<>();
+    final List<String> errs = new ArrayList<>();
+    awaitReconfigurationFinished("datanode", "livenodes", outs, errs);
+    assertEquals(9, outs.size());
+    assertEquals(0, errs.size());
+    LOG.info("dfsadmin -status -livenodes output:");
+    outs.forEach(s -> LOG.info("{}", s));
+    assertTrue(outs.get(0).startsWith("Reconfiguring status for node"));
+    assertEquals("SUCCESS: Changed property dfs.datanode.peer.stats.enabled", outs.get(2));
+    assertEquals("\tFrom: \"false\"", outs.get(3));
+    assertEquals("\tTo: \"true\"", outs.get(4));
+    assertEquals("SUCCESS: Changed property dfs.datanode.peer.stats.enabled", outs.get(5));
+    assertEquals("\tFrom: \"false\"", outs.get(6));
+    assertEquals("\tTo: \"true\"", outs.get(7));
+    assertEquals("Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.",
+        outs.get(8));
+  }
+
 }

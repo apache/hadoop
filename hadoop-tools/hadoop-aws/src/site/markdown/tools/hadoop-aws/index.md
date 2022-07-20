@@ -1018,6 +1018,14 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
+  <name>fs.s3a.input.async.drain.threshold</name>
+  <value>64K</value>
+  <description>Bytes to read ahead during a seek() before closing and
+  re-opening the S3 HTTP connection. This option will be overridden if
+  any call to setReadahead() is made to an open stream.</description>
+</property>
+
+<property>
   <name>fs.s3a.list.version</name>
   <value>2</value>
   <description>Select which version of the S3 SDK's List Objects API to use.
@@ -1632,6 +1640,25 @@ Before using Access Points make sure you're not impacted by the following:
 `s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
 considering endpoints, if you have any custom signers that use the host endpoint property make
 sure to update them if needed;
+
+## <a name="requester_pays"></a>Requester Pays buckets
+
+S3A supports buckets with
+[Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html)
+enabled. When a bucket is configured with requester pays, the requester must cover
+the per-request cost.
+
+For requests to be successful, the S3 client must acknowledge that they will pay
+for these requests by setting a request flag, usually a header, on each request.
+
+To enable this feature within S3A, configure the `fs.s3a.requester.pays.enabled` property.
+
+```xml
+<property>
+    <name>fs.s3a.requester.pays.enabled</name>
+    <value>true</value>
+</property>
+```
 
 ## <a name="upload"></a>How S3A writes data to S3
 

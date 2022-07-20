@@ -299,6 +299,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `FSN(Read/Write)Lock`*OperationName*`NanosAvgTime` | Average time of holding the lock by operations in nanoseconds |
 | `FSN(Read/Write)LockOverallNanosNumOps`  | Total number of acquiring lock by all operations |
 | `FSN(Read/Write)LockOverallNanosAvgTime` | Average time of holding the lock by all operations in nanoseconds |
+| `PendingSPSPaths` | The number of paths to be processed by storage policy satisfier |
 
 JournalNode
 -----------
@@ -480,6 +481,8 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `PacketsSlowWriteToMirror` | Total number of packets whose write to other Datanodes in the pipeline takes more than a certain time (300ms by default) |
 | `PacketsSlowWriteToDisk` | Total number of packets whose write to disk takes more than a certain time (300ms by default) |
 | `PacketsSlowWriteToOsCache` | Total number of packets whose write to os cache takes more than a certain time (300ms by default) |
+| `slowFlushOrSyncCount` | Total number of packets whose sync/flush takes more than a certain time (300ms by default) |
+| `slowAckToUpstreamCount` | Total number of packets whose upstream ack takes more than a certain time (300ms by default) |
 
 FsVolume
 --------

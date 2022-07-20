@@ -69,6 +69,19 @@ template <class T> std::unique_ptr<T> PassRecursivePath() {
   return hdfs_tool;
 }
 
+template <class T> std::unique_ptr<T> PassFOptAndAPath() {
+  constexpr auto argc = 3;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-f");
+  static std::string arg2("a/b/c");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassFOptAndAPath<T>, {arg1, arg2});
+  return hdfs_tool;
+}
+
 template <class T> std::unique_ptr<T> CallHelp() {
   constexpr auto argc = 2;
   static std::string exe("hdfs_tool_name");
@@ -118,7 +131,7 @@ template <class T> std::unique_ptr<T> PassNOptAndAPath() {
   static char *argv[] = {exe.data(), arg1.data(), arg2.data(), arg3.data()};
 
   auto hdfs_tool = std::make_unique<T>(argc, argv);
-  hdfs_tool->SetExpectations(PassNOptAndAPath<T>, {arg2, arg3});
+  hdfs_tool->SetExpectations(PassNOptAndAPath<T>, {arg1, arg2, arg3});
   return hdfs_tool;
 }
 
@@ -226,6 +239,18 @@ template <class T> std::unique_ptr<T> PassMOpt() {
   return hdfs_tool;
 }
 
+template <class T> std::unique_ptr<T> PassFOpt() {
+  constexpr auto argc = 2;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-f");
+
+  static char *argv[] = {exe.data(), arg1.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassFOpt<T>, {arg1});
+  return hdfs_tool;
+}
+
 template <class T> std::unique_ptr<T> PassPOptAndPath() {
   constexpr auto argc = 3;
   static std::string exe("hdfs_tool_name");
@@ -268,6 +293,36 @@ template <class T> std::unique_ptr<T> PassMPOptsPermissionsAndAPath() {
   auto hdfs_tool = std::make_unique<T>(argc, argv);
   hdfs_tool->SetExpectations(PassMPOptsPermissionsAndAPath<T>,
                              {arg1, arg2, arg3, arg4});
+  return hdfs_tool;
+}
+
+template <class T> std::unique_ptr<T> PassNStrMNumAndAPath() {
+  constexpr auto argc = 6;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-n");
+  static std::string arg2("some_str");
+  static std::string arg3("-m");
+  static std::string arg4("757");
+  static std::string arg5("some/path");
+
+  static char *argv[] = {exe.data(),  arg1.data(), arg2.data(),
+                         arg3.data(), arg4.data(), arg5.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassNStrMNumAndAPath<T>,
+                             {arg1, arg2, arg3, arg4, arg5});
+  return hdfs_tool;
+}
+
+template <class T> std::unique_ptr<T> PassNOpt() {
+  constexpr auto argc = 2;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-n");
+
+  static char *argv[] = {exe.data(), arg1.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassNOpt<T>, {arg1});
   return hdfs_tool;
 }
 

@@ -26,14 +26,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,13 +37,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -69,13 +62,10 @@ import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatemen
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
-import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
-import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
-import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.test.LambdaTestUtils.eval;
 
 /**
@@ -111,20 +101,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   private static final Statement STATEMENT_ALL_BUCKET_READ_ACCESS
       = statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS);
-
-  /** Many threads for scale performance: {@value}. */
-  public static final int EXECUTOR_THREAD_COUNT = 64;
-
-  /**
-   * For submitting work.
-   */
-  private static final ListeningExecutorService EXECUTOR =
-      MoreExecutors.listeningDecorator(
-          BlockingThreadPoolExecutorService.newInstance(
-              EXECUTOR_THREAD_COUNT,
-              EXECUTOR_THREAD_COUNT * 2,
-              30, TimeUnit.SECONDS,
-              "test-operations"));
 
 
   /**
@@ -740,87 +716,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           (status) -> files.add(status.getPath()));
     }
     return files;
-  }
-
-  /**
-   * Write the text to a file asynchronously. Logs the operation duration.
-   * @param fs filesystem
-   * @param path path
-   * @return future to the patch created.
-   */
-  private static CompletableFuture<Path> put(FileSystem fs,
-      Path path, String text) {
-    return submit(EXECUTOR, () -> {
-      try (DurationInfo ignore =
-               new DurationInfo(LOG, false, "Creating %s", path)) {
-        createFile(fs, path, true, text.getBytes(Charsets.UTF_8));
-        return path;
-      }
-    });
-  }
-
-  /**
-   * Build a set of files in a directory tree.
-   * @param fs filesystem
-   * @param destDir destination
-   * @param depth file depth
-   * @param fileCount number of files to create.
-   * @param dirCount number of dirs to create at each level
-   * @return the list of files created.
-   */
-  public static List<Path> createFiles(final FileSystem fs,
-      final Path destDir,
-      final int depth,
-      final int fileCount,
-      final int dirCount) throws IOException {
-    return createDirsAndFiles(fs, destDir, depth, fileCount, dirCount,
-        new ArrayList<Path>(fileCount),
-        new ArrayList<Path>(dirCount));
-  }
-
-  /**
-   * Build a set of files in a directory tree.
-   * @param fs filesystem
-   * @param destDir destination
-   * @param depth file depth
-   * @param fileCount number of files to create.
-   * @param dirCount number of dirs to create at each level
-   * @param paths [out] list of file paths created
-   * @param dirs [out] list of directory paths created.
-   * @return the list of files created.
-   */
-  public static List<Path> createDirsAndFiles(final FileSystem fs,
-      final Path destDir,
-      final int depth,
-      final int fileCount,
-      final int dirCount,
-      final List<Path> paths,
-      final List<Path> dirs) throws IOException {
-    buildPaths(paths, dirs, destDir, depth, fileCount, dirCount);
-    List<CompletableFuture<Path>> futures = new ArrayList<>(paths.size()
-        + dirs.size());
-
-    // create directories. With dir marker retention, that adds more entries
-    // to cause deletion issues
-    try (DurationInfo ignore =
-             new DurationInfo(LOG, "Creating %d directories", dirs.size())) {
-      for (Path path : dirs) {
-        futures.add(submit(EXECUTOR, () ->{
-          fs.mkdirs(path);
-          return path;
-        }));
-      }
-      waitForCompletion(futures);
-    }
-
-    try (DurationInfo ignore =
-            new DurationInfo(LOG, "Creating %d files", paths.size())) {
-      for (Path path : paths) {
-        futures.add(put(fs, path, path.getName()));
-      }
-      waitForCompletion(futures);
-      return paths;
-    }
   }
 
   /**

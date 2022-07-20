@@ -478,7 +478,8 @@ public class WebHdfsFileSystem extends FileSystem
     return f.isAbsolute()? f: new Path(workingDir, f);
   }
 
-  static Map<?, ?> jsonParse(final HttpURLConnection c,
+  @VisibleForTesting
+  public static Map<?, ?> jsonParse(final HttpURLConnection c,
       final boolean useErrorStream) throws IOException {
     if (c.getContentLength() == 0) {
       return null;

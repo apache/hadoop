@@ -28,6 +28,7 @@
 
 #include "bad_datanode_tracker.h"
 #include "ClientNamenodeProtocol.pb.h"
+#include "x-platform/types.h"
 
 #include <memory>
 #include <mutex>

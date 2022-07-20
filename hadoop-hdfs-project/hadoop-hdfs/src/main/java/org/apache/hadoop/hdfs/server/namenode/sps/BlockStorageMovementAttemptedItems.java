@@ -301,6 +301,16 @@ public class BlockStorageMovementAttemptedItems {
     }
   }
 
+  @VisibleForTesting
+  public List<AttemptedItemInfo> getStorageMovementAttemptedItems() {
+    return storageMovementAttemptedItems;
+  }
+
+  @VisibleForTesting
+  public BlockingQueue<Block> getMovementFinishedBlocks() {
+    return movementFinishedBlocks;
+  }
+
   public void clearQueues() {
     movementFinishedBlocks.clear();
     synchronized (storageMovementAttemptedItems) {

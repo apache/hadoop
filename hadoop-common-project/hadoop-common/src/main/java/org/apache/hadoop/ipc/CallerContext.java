@@ -43,6 +43,11 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_C
 @InterfaceStability.Evolving
 public final class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
+
+  // field names
+  public static final String CLIENT_IP_STR = "clientIp";
+  public static final String CLIENT_PORT_STR = "clientPort";
+
   /** The caller context.
    *
    * It will be truncated if it exceeds the maximum allowed length in
@@ -116,7 +121,7 @@ public final class CallerContext {
 
   /** The caller context builder. */
   public static final class Builder {
-    private static final String KEY_VALUE_SEPARATOR = ":";
+    public static final String KEY_VALUE_SEPARATOR = ":";
     /**
      * The illegal separators include '\t', '\n', '='.
      * User should not set illegal separator.

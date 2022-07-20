@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit.files;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
@@ -128,10 +129,7 @@ public class PendingSet extends PersistentCommitData
    */
   public static PendingSet load(FileSystem fs, Path path)
       throws IOException {
-    LOG.debug("Reading pending commits in file {}", path);
-    PendingSet instance = serializer().load(fs, path);
-    instance.validate();
-    return instance;
+    return load(fs, path, null);
   }
 
   /**
@@ -144,7 +142,25 @@ public class PendingSet extends PersistentCommitData
    */
   public static PendingSet load(FileSystem fs, FileStatus status)
       throws IOException {
-    return load(fs, status.getPath());
+    return load(fs, status.getPath(), status);
+  }
+
+  /**
+   * Load an instance from a file, then validate it.
+   * @param fs filesystem
+   * @param path path
+   * @param status status of file to load
+   * @return the loaded instance
+   * @throws IOException IO failure
+   * @throws ValidationFailure if the data is invalid
+   */
+  public static PendingSet load(FileSystem fs, Path path,
+      @Nullable FileStatus status)
+      throws IOException {
+    LOG.debug("Reading pending commits in file {}", path);
+    PendingSet instance = serializer().load(fs, path, status);
+    instance.validate();
+    return instance;
   }
 
   /**

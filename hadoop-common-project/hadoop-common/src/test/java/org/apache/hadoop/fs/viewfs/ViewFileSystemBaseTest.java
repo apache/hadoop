@@ -69,7 +69,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 
 import org.junit.After;
@@ -458,6 +458,148 @@ abstract public class ViewFileSystemBaseTest {
         fileSystemTestHelper.getTestRootPath(fsView2, "/data/fooBar"));
     ContractTestUtils
         .assertIsFile(fsTarget, new Path(targetTestRoot, "data/fooBar"));
+  }
+
+
+  // rename across nested mount points that point to same target also fail
+  @Test
+  public void testRenameAcrossNestedMountPointSameTarget() throws IOException {
+    setUpNestedMountPoint();
+    fileSystemTestHelper.createFile(fsView, "/user/foo");
+    try {
+      // Nested mount points point to the same target should fail
+      // /user -> /user
+      // /user/userA -> /user
+      // Rename strategy: SAME_MOUNTPOINT
+      fsView.rename(new Path("/user/foo"), new Path("/user/userA/foo"));
+      ContractTestUtils.fail("IOException is not thrown on rename operation");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
+  }
+
+
+  // rename across nested mount points fail if the mount link targets are different
+  // even if the targets are part of the same target FS
+  @Test
+  public void testRenameAcrossMountPointDifferentTarget() throws IOException {
+    setUpNestedMountPoint();
+    fileSystemTestHelper.createFile(fsView, "/data/foo");
+    // /data -> /data
+    // /data/dataA -> /dataA
+    // Rename strategy: SAME_MOUNTPOINT
+    try {
+      fsView.rename(new Path("/data/foo"), new Path("/data/dataA/fooBar"));
+      ContractTestUtils.fail("IOException is not thrown on rename operation");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
+  }
+
+  // RenameStrategy SAME_TARGET_URI_ACROSS_MOUNTPOINT enabled
+  // to rename across nested mount points that point to same target URI
+  @Test
+  public void testRenameAcrossNestedMountPointSameTargetUriAcrossMountPoint() throws IOException {
+    setUpNestedMountPoint();
+    //  /user/foo -> /user
+    // /user/userA/fooBarBar -> /user
+    // Rename strategy: SAME_TARGET_URI_ACROSS_MOUNTPOINT
+    Configuration conf2 = new Configuration(conf);
+    conf2.set(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+        ViewFileSystem.RenameStrategy.SAME_TARGET_URI_ACROSS_MOUNTPOINT
+            .toString());
+    FileSystem fsView2 = FileSystem.newInstance(FsConstants.VIEWFS_URI, conf2);
+    fileSystemTestHelper.createFile(fsView2, "/user/foo");
+    fsView2.rename(new Path("/user/foo"), new Path("/user/userA/fooBarBar"));
+    ContractTestUtils.assertPathDoesNotExist(fsView2, "src should not exist after rename",
+        new Path("/user/foo"));
+    ContractTestUtils.assertPathDoesNotExist(fsTarget, "src should not exist after rename",
+        new Path(targetTestRoot, "user/foo"));
+    ContractTestUtils.assertIsFile(fsView2, fileSystemTestHelper.getTestRootPath(fsView2, "/user/userA/fooBarBar"));
+    ContractTestUtils.assertIsFile(fsTarget, new Path(targetTestRoot, "user/fooBarBar"));
+  }
+
+  // RenameStrategy SAME_FILESYSTEM_ACROSS_MOUNTPOINT enabled
+  // to rename across mount points where the mount link targets are different
+  // but are part of the same target FS
+  @Test
+  public void testRenameAcrossNestedMountPointSameFileSystemAcrossMountPoint() throws IOException {
+    setUpNestedMountPoint();
+    // /data/foo -> /data
+    // /data/dataA/fooBar -> /dataA
+    // Rename strategy: SAME_FILESYSTEM_ACROSS_MOUNTPOINT
+    Configuration conf2 = new Configuration(conf);
+    conf2.set(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+        ViewFileSystem.RenameStrategy.SAME_FILESYSTEM_ACROSS_MOUNTPOINT
+            .toString());
+    FileSystem fsView2 = FileSystem.newInstance(FsConstants.VIEWFS_URI, conf2);
+    fileSystemTestHelper.createFile(fsView2, "/data/foo");
+    fsView2.rename(new Path("/data/foo"), new Path("/data/dataB/fooBar"));
+    ContractTestUtils
+        .assertPathDoesNotExist(fsView2, "src should not exist after rename",
+            new Path("/data/foo"));
+    ContractTestUtils
+        .assertPathDoesNotExist(fsTarget, "src should not exist after rename",
+            new Path(targetTestRoot, "data/foo"));
+    ContractTestUtils.assertIsFile(fsView2,
+        fileSystemTestHelper.getTestRootPath(fsView2, "/user/fooBar"));
+    ContractTestUtils
+        .assertIsFile(fsTarget, new Path(targetTestRoot, "user/fooBar"));
+  }
+
+  @Test
+  public void testOperationsThroughNestedMountPointsInternal()
+      throws IOException {
+    setUpNestedMountPoint();
+    // Create file with nested mount point
+    fileSystemTestHelper.createFile(fsView, "/user/userB/foo");
+    Assert.assertTrue("Created file should be type file",
+        fsView.getFileStatus(new Path("/user/userB/foo")).isFile());
+    Assert.assertTrue("Target of created file should be type file",
+        fsTarget.getFileStatus(new Path(targetTestRoot,"userB/foo")).isFile());
+
+    // Delete the created file with nested mount point
+    Assert.assertTrue("Delete should succeed",
+        fsView.delete(new Path("/user/userB/foo"), false));
+    Assert.assertFalse("File should not exist after delete",
+        fsView.exists(new Path("/user/userB/foo")));
+    Assert.assertFalse("Target File should not exist after delete",
+        fsTarget.exists(new Path(targetTestRoot,"userB/foo")));
+
+    // Create file with a 2 component dirs with nested mount point
+    fileSystemTestHelper.createFile(fsView, "/internalDir/linkToDir2/linkToDir2/foo");
+    Assert.assertTrue("Created file should be type file",
+        fsView.getFileStatus(new Path("/internalDir/linkToDir2/linkToDir2/foo")).isFile());
+    Assert.assertTrue("Target of created file should be type file",
+        fsTarget.getFileStatus(new Path(targetTestRoot,"linkToDir2/foo")).isFile());
+
+    // Delete the created file with nested mount point
+    Assert.assertTrue("Delete should succeed",
+        fsView.delete(new Path("/internalDir/linkToDir2/linkToDir2/foo"), false));
+    Assert.assertFalse("File should not exist after delete",
+        fsView.exists(new Path("/internalDir/linkToDir2/linkToDir2/foo")));
+    Assert.assertFalse("Target File should not exist after delete",
+        fsTarget.exists(new Path(targetTestRoot,"linkToDir2/foo")));
+  }
+
+  private void setUpNestedMountPoint() throws IOException {
+    // Enable nested mount point, ViewFilesystem should support both non-nested and nested mount points
+    ConfigUtil.setIsNestedMountPointSupported(conf, true);
+    ConfigUtil.addLink(conf, "/user/userA",
+        new Path(targetTestRoot, "user").toUri());
+    ConfigUtil.addLink(conf, "/user/userB",
+        new Path(targetTestRoot, "userB").toUri());
+    ConfigUtil.addLink(conf, "/data/dataA",
+        new Path(targetTestRoot, "dataA").toUri());
+    ConfigUtil.addLink(conf, "/data/dataB",
+        new Path(targetTestRoot, "user").toUri());
+    ConfigUtil.addLink(conf, "/internalDir/linkToDir2/linkToDir2",
+        new Path(targetTestRoot,"linkToDir2").toUri());
+    fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
   }
 
   static protected boolean SupportsBlocks = false; //  local fs use 1 block
@@ -1104,35 +1246,46 @@ abstract public class ViewFileSystemBaseTest {
     Assert.assertTrue("", fsView.getTrashRoots(true).size() > 0);
   }
 
+  // Default implementation of getTrashRoot for a fallback FS mounted at root:
+  // e.g., fallbackFS.uri.getPath = '/'
+  Path getTrashRootInFallBackFS() throws IOException {
+    return new Path(fsTarget.getHomeDirectory().toUri().getPath(),
+        TRASH_PREFIX);
+  }
+
   /**
-   * Test the localized trash root for getTrashRoot.
+   * Test TRASH_FORCE_INSIDE_MOUNT_POINT feature for getTrashRoot.
    */
   @Test
-  public void testTrashRootLocalizedTrash() throws IOException {
+  public void testTrashRootForceInsideMountPoint() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     Configuration conf2 = new Configuration(conf);
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
     ConfigUtil.addLinkFallback(conf2, targetTestRoot.toUri());
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
 
-    // Case 1: path p not in the default FS.
-    // Return a trash root within the mount point.
+    // Case 1: path p in the /data mount point.
+    // Return a trash root within the /data mount point.
     Path dataTestPath = new Path("/data/dir/file");
-    Path dataTrashRoot = new Path(targetTestRoot,
-        "data/" + TRASH_PREFIX + "/" + ugi.getShortUserName());
+    Path dataTrashRoot = fsView2.makeQualified(
+        new Path("/data/" + TRASH_PREFIX + "/" + ugi.getShortUserName()));
     Assert.assertEquals(dataTrashRoot, fsView2.getTrashRoot(dataTestPath));
 
-    // Case 2: path p not found in mount table, fall back to the default FS
-    // Return a trash root in user home dir
+    // Case 2: path p not found in mount table.
+    // Return a trash root in fallback FS.
     Path nonExistentPath = new Path("/nonExistentDir/nonExistentFile");
-    Path userTrashRoot = new Path(fsTarget.getHomeDirectory(), TRASH_PREFIX);
-    Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(nonExistentPath));
+    Path expectedTrash =
+        fsView2.makeQualified(getTrashRootInFallBackFS());
+    Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(nonExistentPath));
 
-    // Case 3: turn off the CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH flag.
+    // Case 3: turn off the CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT flag.
     // Return a trash root in user home dir.
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, false);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, false);
     fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Assert.assertEquals(userTrashRoot, fsView2.getTrashRoot(dataTestPath));
+    Path targetFSUserHomeTrashRoot = fsTarget.makeQualified(
+        new Path(fsTarget.getHomeDirectory(), TRASH_PREFIX));
+    Assert.assertEquals(targetFSUserHomeTrashRoot,
+        fsView2.getTrashRoot(dataTestPath));
 
     // Case 4: viewFS without fallback. Expect exception for a nonExistent path
     conf2 = new Configuration(conf);
@@ -1141,30 +1294,14 @@ abstract public class ViewFileSystemBaseTest {
       fsView2.getTrashRoot(nonExistentPath);
     } catch (NotInMountpointException ignored) {
     }
-
-    // Case 5: path p is in the same mount point as targetFS.getTrashRoot().
-    // Return targetFS.getTrashRoot()
-    // Use a new Configuration object, so that we can start with an empty
-    // mount table. This would avoid a conflict between the /user link in
-    // setupMountPoints() and homeDir we will need to setup for this test.
-    // default homeDir for hdfs is /user/.
-    Configuration conf3 = ViewFileSystemTestSetup.createConfig();
-    Path homeDir = fsTarget.getHomeDirectory();
-    String homeParentDir = homeDir.getParent().toUri().getPath();
-    conf3.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
-    ConfigUtil.addLink(conf3, homeParentDir,
-        new Path(targetTestRoot, homeParentDir).toUri());
-    Path homeTestPath = new Path(homeDir.toUri().getPath(), "testuser/file");
-    FileSystem fsView3 = FileSystem.get(FsConstants.VIEWFS_URI, conf3);
-    Assert.assertEquals(userTrashRoot, fsView3.getTrashRoot(homeTestPath));
   }
 
   /**
    * A mocked FileSystem which returns a deep trash dir.
    */
-  static class MockTrashRootFS extends MockFileSystem {
+  static class DeepTrashRootMockFS extends MockFileSystem {
     public static final Path TRASH =
-        new Path("/mnt/very/deep/deep/trash/dir/.Trash");
+        new Path("/vol/very/deep/deep/trash/dir/.Trash");
 
     @Override
     public Path getTrashRoot(Path path) {
@@ -1173,28 +1310,31 @@ abstract public class ViewFileSystemBaseTest {
   }
 
   /**
-   * Test a trash root that is inside a mount point for getTrashRoot
+   * Test getTrashRoot that is very deep inside a mount point.
    */
   @Test
   public void testTrashRootDeepTrashDir() throws IOException {
 
     Configuration conf2 = ViewFileSystemTestSetup.createConfig();
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
-    conf2.setClass("fs.mocktrashfs.impl", MockTrashRootFS.class,
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
+    conf2.setClass("fs.mocktrashfs.impl", DeepTrashRootMockFS.class,
         FileSystem.class);
-    ConfigUtil.addLink(conf2, "/mnt", URI.create("mocktrashfs://mnt/path"));
-    Path testPath = new Path(MockTrashRootFS.TRASH, "projs/proj");
+    ConfigUtil.addLink(conf2, "/mnt/datavol1",
+        URI.create("mocktrashfs://localhost/vol"));
+    Path testPath = new Path("/mnt/datavol1/projs/proj");
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
-    Assert.assertEquals(MockTrashRootFS.TRASH, fsView2.getTrashRoot(testPath));
+    Path expectedTrash = fsView2.makeQualified(
+        new Path("/mnt/datavol1/very/deep/deep/trash/dir/.Trash"));
+    Assert.assertEquals(expectedTrash, fsView2.getTrashRoot(testPath));
   }
 
   /**
-   * Test localized trash roots in getTrashRoots() for all users.
+   * Test getTrashRoots() for all users.
    */
   @Test
   public void testTrashRootsAllUsers() throws IOException {
     Configuration conf2 = new Configuration(conf);
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
 
     // Case 1: verify correct trash roots from fsView and fsView2
@@ -1230,17 +1370,27 @@ abstract public class ViewFileSystemBaseTest {
     FileSystem fsView4 = FileSystem.get(FsConstants.VIEWFS_URI, conf4);
     int trashRootsNum4 = fsView4.getTrashRoots(true).size();
     Assert.assertEquals(afterTrashRootsNum2 + 2, trashRootsNum4);
+
+    // Case 4: test trash roots in fallback FS
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user10"));
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user11"));
+    fsTarget.mkdirs(new Path(targetTestRoot, ".Trash/user12"));
+    Configuration conf5 = new Configuration(conf2);
+    ConfigUtil.addLinkFallback(conf5, targetTestRoot.toUri());
+    FileSystem fsView5 = FileSystem.get(FsConstants.VIEWFS_URI, conf5);
+    int trashRootsNum5 = fsView5.getTrashRoots(true).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 3, trashRootsNum5);
   }
 
   /**
-   * Test localized trash roots in getTrashRoots() for current user.
+   * Test getTrashRoots() for current user.
    */
   @Test
   public void testTrashRootsCurrentUser() throws IOException {
     String currentUser =
         UserGroupInformation.getCurrentUser().getShortUserName();
     Configuration conf2 = new Configuration(conf);
-    conf2.setBoolean(CONFIG_VIEWFS_MOUNT_POINT_LOCAL_TRASH, true);
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
     FileSystem fsView2 = FileSystem.get(FsConstants.VIEWFS_URI, conf2);
 
     int beforeTrashRootNum = fsView.getTrashRoots(false).size();
@@ -1256,6 +1406,14 @@ abstract public class ViewFileSystemBaseTest {
     int afterTrashRootsNum2 = fsView2.getTrashRoots(false).size();
     Assert.assertEquals(beforeTrashRootNum, afterTrashRootsNum);
     Assert.assertEquals(beforeTrashRootNum2 + 2, afterTrashRootsNum2);
+
+    // Test trash roots in fallback FS
+    Configuration conf3 = new Configuration(conf2);
+    fsTarget.mkdirs(new Path(targetTestRoot, TRASH_PREFIX + "/" + currentUser));
+    ConfigUtil.addLinkFallback(conf3, targetTestRoot.toUri());
+    FileSystem fsView3 = FileSystem.get(FsConstants.VIEWFS_URI, conf3);
+    int trashRootsNum3 = fsView3.getTrashRoots(false).size();
+    Assert.assertEquals(afterTrashRootsNum2 + 1, trashRootsNum3);
   }
 
   @Test(expected = NotInMountpointException.class)
@@ -1670,5 +1828,23 @@ abstract public class ViewFileSystemBaseTest {
     // Initialized FileSystem instances will not be removed from cache as
     // viewfs inner cache is disabled
     assertEquals(cacheSize + 1, TestFileUtil.getCacheSize());
+  }
+
+  @Test
+  public void testInvalidMountPoints() throws Exception {
+    final String clusterName = "cluster" + new Random().nextInt();
+    Configuration config = new Configuration(conf);
+    config.set(ConfigUtil.getConfigViewFsPrefix(clusterName) + "." +
+        Constants.CONFIG_VIEWFS_LINK + "." + "/invalidPath",
+        "othermockfs:|mockauth/mockpath");
+
+    try {
+      FileSystem viewFs = FileSystem.get(
+          new URI("viewfs://" + clusterName + "/"), config);
+      fail("FileSystem should not initialize. Should fail with IOException");
+    } catch (IOException ex) {
+      assertTrue("Should get URISyntax Exception",
+          ex.getMessage().startsWith("URISyntax exception"));
+    }
   }
 }
