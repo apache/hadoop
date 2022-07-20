@@ -39,6 +39,7 @@ import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -104,10 +105,11 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
   @Test
   public void testReadLargeFileFully() throws Throwable {
     describe("read a large file fully, uses S3CachingInputStream");
+    IOStatistics ioStats;
     openFS();
 
     try (FSDataInputStream in = largeFileFS.open(largeFile)) {
-      IOStatistics ioStats = in.getIOStatistics();
+      ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[S_1M * 10];
       long bytesRead = 0;
@@ -115,20 +117,29 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
       while (bytesRead < largeFileSize) {
         in.readFully(buffer, 0, (int) Math.min(buffer.length, largeFileSize - bytesRead));
         bytesRead += buffer.length;
+        // Blocks are fully read, no blocks should be cached
+        verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE,
+            0);
       }
 
+      // Assert that first block is read synchronously, following blocks are prefetched
+      verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
+          numBlocks - 1);
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, numBlocks);
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, numBlocks);
     }
+    // Verify that once stream is closed, all memory is freed
+    verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
   }
 
   @Test
   public void testRandomReadLargeFile() throws Throwable {
     describe("random read on a large file, uses S3CachingInputStream");
+    IOStatistics ioStats;
     openFS();
 
     try (FSDataInputStream in = largeFileFS.open(largeFile)) {
-      IOStatistics ioStats = in.getIOStatistics();
+      ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[blockSize];
 
@@ -141,7 +152,13 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 2);
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, 2);
+      verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS, 1);
+      // block 0 is cached when we seek to block 1, block 1 is cached as it is being prefetched
+      // when we seek out of block 0, see cancelPrefetches()
+      verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE, 2);
     }
+    verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
+    verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
   }
 
   @Test
@@ -163,6 +180,9 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
       verifyStatisticCounterValue(ioStats, StoreStatisticNames.ACTION_HTTP_GET_REQUEST, 1);
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_OPENED, 1);
+      verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS, 0);
+      // The buffer pool is not used
+      verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
     }
   }
 

@@ -394,6 +394,12 @@ public final class StreamStatisticNames {
       = "stream_read_prefetch_operations";
 
   /**
+   * Total number of failed prefetching operations.
+   */
+  public static final String STREAM_READ_FAILED_PREFETCH_OPERATIONS
+      = "stream_read_failed_prefetch_operations";
+
+  /**
    * Total number of block in disk cache.
    */
   public static final String STREAM_READ_BLOCKS_IN_FILE_CACHE
@@ -413,19 +419,19 @@ public final class StreamStatisticNames {
 
   /**
    * count/duration of reading a remote block.
-   * IO.
+   *
    * Value: {@value}.
    */
   public static final String STREAM_READ_REMOTE_BLOCK_READ
       = "stream_read_block_read";
 
   /**
-   * count/duration of acquiring a buffer and reading to it
-   * IO.
+   * count/duration of acquiring a buffer and reading to it.
+   *
    * Value: {@value}.
    */
   public static final String STREAM_READ_BLOCK_ACQUIRE_AND_READ
-      = "stream_read_block_read";
+      = "stream_read_block_acquire_read";
 
   private StreamStatisticNames() {
   }

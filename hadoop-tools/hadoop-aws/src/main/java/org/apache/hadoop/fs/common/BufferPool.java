@@ -244,15 +244,15 @@ public class BufferPool implements Closeable {
       }
     }
 
-    int currentPoolSize = this.pool.numCreated();
+    int currentPoolSize = pool.numCreated();
 
-    this.pool.close();
-    this.pool = null;
+    pool.close();
+    pool = null;
 
-    this.allocated.clear();
-    this.allocated = null;
+    allocated.clear();
+    allocated = null;
 
-    this.prefetchingStatistics.memoryFreed(currentPoolSize * bufferSize);
+    prefetchingStatistics.memoryFreed(currentPoolSize * bufferSize);
   }
 
   // For debugging purposes.

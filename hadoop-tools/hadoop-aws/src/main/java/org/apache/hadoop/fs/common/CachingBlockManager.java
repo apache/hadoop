@@ -289,7 +289,7 @@ public abstract class CachingBlockManager extends BlockManager {
 
   private void prefetch(BufferData data, Instant taskQueuedStartTime) throws IOException {
     synchronized (data) {
-      this.prefetchingStatistics.executorAcquired(
+      prefetchingStatistics.executorAcquired(
           Duration.between(taskQueuedStartTime, Instant.now()));
       this.readBlock(
           data,
@@ -328,7 +328,7 @@ public abstract class CachingBlockManager extends BlockManager {
         }
 
         if (isPrefetch) {
-          this.prefetchingStatistics.prefetchOperationStarted();
+          prefetchingStatistics.prefetchOperationStarted();
           op = this.ops.prefetch(data.getBlockNumber());
         } else {
           op = this.ops.getRead(data.getBlockNumber());
@@ -341,14 +341,16 @@ public abstract class CachingBlockManager extends BlockManager {
         this.read(buffer, offset, size);
         buffer.flip();
         data.setReady(expectedState);
-
         if(isPrefetch) {
-          this.prefetchingStatistics.prefetchOperationCompleted();
+          prefetchingStatistics.prefetchOperationCompleted(true);
         }
       } catch (Exception e) {
         String message = String.format("error during readBlock(%s)", data.getBlockNumber());
         LOG.error(message, e);
         this.numReadErrors.incrementAndGet();
+        if(isPrefetch) {
+          prefetchingStatistics.prefetchOperationCompleted(false);
+        }
         data.setDone();
         throw e;
       } finally {
@@ -446,7 +448,7 @@ public abstract class CachingBlockManager extends BlockManager {
 
   private void addToCacheAndRelease(BufferData data, Future<Void> blockFuture,
       Instant taskQueuedStartTime) {
-    this.prefetchingStatistics.executorAcquired(
+    prefetchingStatistics.executorAcquired(
         Duration.between(taskQueuedStartTime, Instant.now()));
 
     if (this.closed) {

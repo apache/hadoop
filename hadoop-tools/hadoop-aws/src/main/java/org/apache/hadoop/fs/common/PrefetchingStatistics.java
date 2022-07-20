@@ -31,7 +31,7 @@ public interface PrefetchingStatistics extends IOStatisticsSource {
 
   void blockRemovedFromFileCache();
 
-  void prefetchOperationCompleted();
+  void prefetchOperationCompleted(boolean prefetchSucceeded);
 
   void executorAcquired(Duration timeInQueue);
 
