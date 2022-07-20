@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.RemoteIterators;
@@ -257,9 +258,9 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
         ObjectMetadata om = fs.newObjectMetadata(0L);
         PutObjectRequest put = requestFactory
             .newPutObjectRequest(fs.pathToKey(file), om,
-                new FailingInputStream());
+                null, new FailingInputStream());
         futures.add(submit(executorService, () ->
-            writeOperationHelper.putObject(put)));
+            writeOperationHelper.putObject(put, PutObjectOptions.keepingDirs())));
       }
       LOG.info("Waiting for PUTs to complete");
       waitForCompletion(futures);

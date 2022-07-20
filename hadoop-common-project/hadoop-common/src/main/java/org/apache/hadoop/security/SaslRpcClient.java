@@ -351,9 +351,9 @@ public class SaslRpcClient {
   /**
    * Do client side SASL authentication with server via the given IpcStreams.
    *
-   * @param ipcStreams
+   * @param ipcStreams ipcStreams.
    * @return AuthMethod used to negotiate the connection
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public AuthMethod saslConnect(IpcStreams ipcStreams) throws IOException {
     // redefined if/when a SASL negotiation starts, can be queried if the
@@ -521,7 +521,7 @@ public class SaslRpcClient {
    * 
    * @param in - InputStream used to make the connection
    * @return InputStream that may be using SASL unwrap
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public InputStream getInputStream(InputStream in) throws IOException {
     if (useWrap()) {
@@ -537,7 +537,7 @@ public class SaslRpcClient {
    * 
    * @param out - OutputStream used to make the connection
    * @return OutputStream that may be using wrapping
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public OutputStream getOutputStream(OutputStream out) throws IOException {
     if (useWrap()) {
@@ -638,7 +638,11 @@ public class SaslRpcClient {
     }
   }
 
-  /** Release resources used by wrapped saslClient */
+  /**
+   * Release resources used by wrapped saslClient.
+   * @throws SaslException if authentication or generating response fails,
+   *                       or SASL protocol mixup
+   */
   public void dispose() throws SaslException {
     if (saslClient != null) {
       saslClient.dispose();

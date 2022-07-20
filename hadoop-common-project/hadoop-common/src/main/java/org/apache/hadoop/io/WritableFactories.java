@@ -35,17 +35,31 @@ public class WritableFactories {
 
   private WritableFactories() {}                  // singleton
 
-  /** Define a factory for a class. */
+  /**
+   * Define a factory for a class.
+   * @param c input c.
+   * @param factory input factory.
+   */
   public static void setFactory(Class c, WritableFactory factory) {
     CLASS_TO_FACTORY.put(c, factory);
   }
 
-  /** Define a factory for a class. */
+  /**
+   * Define a factory for a class.
+   * @param c input c.
+   * @return a factory for a class.
+   */
   public static WritableFactory getFactory(Class c) {
     return CLASS_TO_FACTORY.get(c);
   }
 
-  /** Create a new instance of a class with a defined factory. */
+  /**
+   * Create a new instance of a class with a defined factory.
+   *
+   * @param c input c.
+   * @param conf input configuration.
+   * @return a new instance of a class with a defined factory.
+   */
   public static Writable newInstance(Class<? extends Writable> c, Configuration conf) {
     WritableFactory factory = WritableFactories.getFactory(c);
     if (factory != null) {
@@ -59,7 +73,11 @@ public class WritableFactories {
     }
   }
   
-  /** Create a new instance of a class with a defined factory. */
+  /**
+   * Create a new instance of a class with a defined factory.
+   * @param c input c.
+   * @return a new instance of a class with a defined factory.
+   */
   public static Writable newInstance(Class<? extends Writable> c) {
     return newInstance(c, null);
   }

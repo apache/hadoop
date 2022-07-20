@@ -43,9 +43,9 @@ public class HHXORErasureDecodingStep extends HHErasureCodingStep {
 
   /**
    * The constructor with all the necessary info.
-   * @param inputBlocks
+   * @param inputBlocks inputBlocks.
    * @param erasedIndexes the indexes of erased blocks in inputBlocks array
-   * @param outputBlocks
+   * @param outputBlocks outputBlocks.
    * @param rawDecoder underlying RS decoder for hitchhiker decoding
    * @param rawEncoder underlying XOR encoder for hitchhiker decoding
    */

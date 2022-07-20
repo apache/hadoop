@@ -201,6 +201,10 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     return remain;
   }
 
+  public float getAbsCapacity() {
+    return absCapacity;
+  }
+
   public Resource getGuaranteed() {
     if(!effMinRes.equals(Resources.none())) {
       return Resources.clone(effMinRes);

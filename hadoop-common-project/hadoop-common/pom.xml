@@ -1171,6 +1171,16 @@
               </execution>
              </executions>
           </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <sourceFileExcludes>
+                <sourceFileExclude>**/FSProtos.java</sourceFileExclude>
+              </sourceFileExcludes>
+              <excludePackageNames>*.proto:*.tracing:*.protobuf</excludePackageNames>
+            </configuration>
+          </plugin>
         </plugins>
       </build>
     </profile>

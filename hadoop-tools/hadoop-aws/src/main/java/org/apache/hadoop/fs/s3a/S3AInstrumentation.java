@@ -1308,8 +1308,18 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     incrementCounter(STREAM_WRITE_EXCEPTIONS,
         source.lookupCounterValue(
             StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
+
     // merge in all the IOStatistics
-    this.getIOStatistics().aggregate(source.getIOStatistics());
+    final IOStatisticsStore sourceIOStatistics = source.getIOStatistics();
+    this.getIOStatistics().aggregate(sourceIOStatistics);
+
+    // propagate any extra values into the FS-level stats.
+    incrementMutableCounter(OBJECT_PUT_REQUESTS.getSymbol(),
+        sourceIOStatistics.counters().get(OBJECT_PUT_REQUESTS.getSymbol()));
+    incrementMutableCounter(
+        COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
+        sourceIOStatistics.counters().get(COMMITTER_MAGIC_MARKER_PUT.getSymbol()));
+
   }
 
   /**
@@ -1366,9 +1376,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
           .withDurationTracking(
               ACTION_EXECUTOR_ACQUIRED,
+              COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
               INVOCATION_ABORT.getSymbol(),
+              MULTIPART_UPLOAD_COMPLETED.getSymbol(),
               OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(),
-              MULTIPART_UPLOAD_COMPLETED.getSymbol())
+              OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
+              OBJECT_PUT_REQUESTS.getSymbol())
           .build();
       setIOStatistics(st);
       // these are extracted to avoid lookups on heavily used counters.
@@ -1630,6 +1643,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               COMMITTER_TASKS_SUCCEEDED.getSymbol())
           .withDurationTracking(
               COMMITTER_COMMIT_JOB.getSymbol(),
+              COMMITTER_LOAD_SINGLE_PENDING_FILE.getSymbol(),
               COMMITTER_MATERIALIZE_FILE.getSymbol(),
               COMMITTER_STAGE_FILE_UPLOAD.getSymbol())
           .build();

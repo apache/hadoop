@@ -73,8 +73,8 @@ public class Stat extends Shell {
   }
 
   /**
-   * Whether Stat is supported on the current platform
-   * @return
+   * Whether Stat is supported on the current platform.
+   * @return if is available true, not false.
    */
   public static boolean isAvailable() {
     if (Shell.LINUX || Shell.FREEBSD || Shell.MAC) {

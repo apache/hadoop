@@ -51,6 +51,11 @@ public class CrcComposer {
   /**
    * Returns a CrcComposer which will collapse all ingested CRCs into a single
    * value.
+   *
+   * @param type type.
+   * @param bytesPerCrcHint bytesPerCrcHint.
+   * @throws IOException raised on errors performing I/O.
+   * @return a CrcComposer which will collapse all ingested CRCs into a single value.
    */
   public static CrcComposer newCrcComposer(
       DataChecksum.Type type, long bytesPerCrcHint)
@@ -67,6 +72,13 @@ public class CrcComposer {
    * final digest, each corresponding to 10 underlying data bytes. Using
    * a stripeLength greater than the total underlying data size is equivalent
    * to using a non-striped CrcComposer.
+   *
+   * @param type type.
+   * @param bytesPerCrcHint bytesPerCrcHint.
+   * @param stripeLength stripeLength.
+   * @return a CrcComposer which will collapse CRCs for every combined.
+   * underlying data size which aligns with the specified stripe boundary.
+   * @throws IOException raised on errors performing I/O.
    */
   public static CrcComposer newStripedCrcComposer(
       DataChecksum.Type type, long bytesPerCrcHint, long stripeLength)
@@ -102,7 +114,11 @@ public class CrcComposer {
    * each CRC expected to correspond to exactly {@code bytesPerCrc} underlying
    * data bytes.
    *
+   * @param crcBuffer crcBuffer.
+   * @param offset offset.
    * @param length must be a multiple of the expected byte-size of a CRC.
+   * @param bytesPerCrc bytesPerCrc.
+   * @throws IOException raised on errors performing I/O.
    */
   public void update(
       byte[] crcBuffer, int offset, int length, long bytesPerCrc)
@@ -125,6 +141,11 @@ public class CrcComposer {
    * Composes {@code numChecksumsToRead} additional CRCs into the current digest
    * out of {@code checksumIn}, with each CRC expected to correspond to exactly
    * {@code bytesPerCrc} underlying data bytes.
+   *
+   * @param checksumIn checksumIn.
+   * @param numChecksumsToRead numChecksumsToRead.
+   * @param bytesPerCrc bytesPerCrc.
+   * @throws IOException raised on errors performing I/O.
    */
   public void update(
       DataInputStream checksumIn, long numChecksumsToRead, long bytesPerCrc)
@@ -138,6 +159,10 @@ public class CrcComposer {
   /**
    * Updates with a single additional CRC which corresponds to an underlying
    * data size of {@code bytesPerCrc}.
+   *
+   * @param crcB crcB.
+   * @param bytesPerCrc bytesPerCrc.
+   * @throws IOException raised on errors performing I/O.
    */
   public void update(int crcB, long bytesPerCrc) throws IOException {
     if (curCompositeCrc == 0) {
@@ -173,6 +198,8 @@ public class CrcComposer {
    * total sum bytesPerCrc divided by stripeLength. If the sum of bytesPerCrc
    * is not a multiple of stripeLength, then the last CRC in the array
    * corresponds to totalLength % stripeLength underlying data bytes.
+   *
+   * @return byte representation of composed CRCs.
    */
   public byte[] digest() {
     if (curPositionInStripe > 0) {
