@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
+#include "reader/block_reader.h"
+#include "fs/filehandle.h"
+
 #include "common/libhdfs_events_impl.h"
 #include "common/util.h"
 #include "fs/filesystem.h"
-#include "fs/filehandle.h"
 #include "fs/bad_datanode_tracker.h"
-#include "reader/block_reader.h"
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <gmock/gmock-spec-builders.h>
-#include <gmock/gmock-generated-actions.h>
 
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/error.hpp>

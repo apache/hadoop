@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-#include "filesystem.h"
-
 #include "filehandle.h"
+#include "filesystem.h"
 #include "common/namenode_info.h"
 
 #include <functional>
 #include <limits>
 #include <future>
 #include <tuple>
-#include <pwd.h>
+#include <iostream>
 
 #include <boost/asio/ip/tcp.hpp>
 

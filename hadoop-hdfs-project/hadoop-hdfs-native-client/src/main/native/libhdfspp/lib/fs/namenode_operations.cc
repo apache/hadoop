@@ -26,7 +26,6 @@
 #include <future>
 #include <tuple>
 #include <iostream>
-#include <pwd.h>
 #include <utility>
 
 #define FMT_THIS_ADDR "this=" << (void*)this
