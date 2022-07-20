@@ -215,7 +215,7 @@ public class TestRouterClientRejectOverload {
             routerClient = new DFSClient(address, conf);
             String clientName = routerClient.getClientName();
             ClientProtocol routerProto = routerClient.getNamenode();
-            routerProto.renewLease(clientName);
+            routerProto.renewLease(clientName, null);
           } catch (RemoteException re) {
             IOException ioe = re.unwrapRemoteException();
             assertTrue("Wrong exception: " + ioe,
@@ -390,7 +390,7 @@ public class TestRouterClientRejectOverload {
               cluster.getRouterClientConf());
           String clientName = routerClient.getClientName();
           ClientProtocol routerProto = routerClient.getNamenode();
-          routerProto.renewLease(clientName);
+          routerProto.renewLease(clientName, null);
         } catch (Exception e) {
           fail("Client request failed: " + e);
         } finally {

@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,10 +33,11 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles;
 
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
@@ -54,6 +55,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AHugeMagicCommits.class);
+  private static final int COMMITTER_THREADS = 64;
 
   private Path magicDir;
   private Path jobDir;
@@ -123,16 +125,16 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     Path destDir = getHugefile().getParent();
     assertPathExists("Magic dir", new Path(destDir, CommitConstants.MAGIC));
     String destDirKey = fs.pathToKey(destDir);
-    List<String> uploads = listMultipartUploads(fs, destDirKey);
 
-    assertEquals("Pending uploads: "
-        + uploads.stream()
-        .collect(Collectors.joining("\n")), 1, uploads.size());
+    Assertions.assertThat(listMultipartUploads(fs, destDirKey))
+        .describedAs("Pending uploads")
+        .hasSize(1);
     assertNotNull("jobDir", jobDir);
-    Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
-        results = operations.loadSinglePendingCommits(jobDir, false);
-    try(CommitOperations.CommitContext commitContext
-            = operations.initiateCommitOperation(jobDir)) {
+    try(CommitContext commitContext
+            = operations.createCommitContextForTesting(jobDir, null, COMMITTER_THREADS)) {
+      Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
+          results = operations.loadSinglePendingCommits(jobDir, false, commitContext
+      );
       for (SinglePendingCommit singlePendingCommit :
           results.getKey().getCommits()) {
         commitContext.commitOrFail(singlePendingCommit);
@@ -140,10 +142,9 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     }
     timer.end("time to commit %s", pendingDataFile);
     // upload is no longer pending
-    uploads = listMultipartUploads(fs, destDirKey);
-    assertEquals("Pending uploads"
-            + uploads.stream().collect(Collectors.joining("\n")),
-        0, operations.listPendingUploadsUnderPath(destDir).size());
+    Assertions.assertThat(operations.listPendingUploadsUnderPath(destDir))
+        .describedAs("Pending uploads undedr path")
+        .isEmpty();
     // at this point, the huge file exists, so the normal assertions
     // on that file must be valid. Verify.
     super.test_030_postCreationAssertions();

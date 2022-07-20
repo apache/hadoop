@@ -27,6 +27,7 @@ import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.io.compress.SplittableCompressionCodec.READ_MODE;
 
 
@@ -152,6 +153,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
   * This method reports the processed bytes so far. Please note that this
   * statistic is only updated on block boundaries and only when the stream is
   * initiated in BYBLOCK mode.
+  * @return ProcessedByteCount.
   */
   public long getProcessedByteCount() {
     return reportedBytesReadFromCompressedStream;
@@ -209,7 +211,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
    * @param marker The bit pattern to be found in the stream
    * @param markerBitLength No of bits in the marker
    * @return true if the marker was found otherwise false
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @throws IllegalArgumentException if marketBitLength is greater than 63
    */
   public boolean skipToNextMarker(long marker, int markerBitLength)
@@ -282,7 +284,8 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
   * the magic. Thus callers have to skip the first two bytes. Otherwise this
   * constructor will throw an exception.
   * </p>
-  *
+  * @param in in.
+  * @param readMode READ_MODE.
   * @throws IOException
   *             if the stream content is malformed or an I/O error occurs.
   * @throws NullPointerException
@@ -310,11 +313,22 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
   }
     } else if (readMode == READ_MODE.BYBLOCK) {
       this.currentState = STATE.NO_PROCESS_STATE;
-      skipResult = this.skipToNextMarker(CBZip2InputStream.BLOCK_DELIMITER,DELIMITER_BIT_LENGTH);
+      skipResult = skipToNextBlockMarker();
       if(!skipDecompression){
         changeStateToProcessABlock();
       }
     }
+  }
+
+  /**
+   * Skips bytes in the stream until the start marker of a block is reached
+   * or end of stream is reached. Used for testing purposes to identify the
+   * start offsets of blocks.
+   */
+  @VisibleForTesting
+  boolean skipToNextBlockMarker() throws IOException {
+    return skipToNextMarker(
+        CBZip2InputStream.BLOCK_DELIMITER, DELIMITER_BIT_LENGTH);
   }
 
   /**
@@ -326,7 +340,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
    *
    * @return long Number of bytes between current stream position and the
    * next BZip2 block start marker.
- * @throws IOException
+ * @throws IOException raised on errors performing I/O.
    *
    */
   public static long numberOfBytesTillNextMarker(final InputStream in) throws IOException{
@@ -426,7 +440,7 @@ public class CBZip2InputStream extends InputStream implements BZip2Constants {
       //report 'end of block' or 'end of stream'
       result = b;
 
-      skipResult = this.skipToNextMarker(CBZip2InputStream.BLOCK_DELIMITER, DELIMITER_BIT_LENGTH);
+      skipResult = skipToNextBlockMarker();
 
       changeStateToProcessABlock();
     }

@@ -35,7 +35,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -1648,40 +1647,45 @@ public class DFSAdmin extends FsShell {
    * @throws IOException If an error while getting datanode report
    */
   public int printTopology() throws IOException {
-      DistributedFileSystem dfs = getDFS();
-      final DatanodeInfo[] report = dfs.getDataNodeStats();
+    DistributedFileSystem dfs = getDFS();
+    final DatanodeInfo[] report = dfs.getDataNodeStats();
 
-      // Build a map of rack -> nodes from the datanode report
-      HashMap<String, TreeSet<String> > tree = new HashMap<String, TreeSet<String>>();
-      for(DatanodeInfo dni : report) {
-        String location = dni.getNetworkLocation();
-        String name = dni.getName();
+    // Build a map of rack -> nodes from the datanode report
+    Map<String, HashMap<String, String>> map = new HashMap<>();
+    for(DatanodeInfo dni : report) {
+      String location = dni.getNetworkLocation();
+      String name = dni.getName();
+      String dnState = dni.getAdminState().toString();
         
-        if(!tree.containsKey(location)) {
-          tree.put(location, new TreeSet<String>());
-        }
-        
-        tree.get(location).add(name);
+      if(!map.containsKey(location)) {
+        map.put(location, new HashMap<>());
       }
-      
-      // Sort the racks (and nodes) alphabetically, display in order
-      ArrayList<String> racks = new ArrayList<String>(tree.keySet());
-      Collections.sort(racks);
-      
-      for(String r : racks) {
-        System.out.println("Rack: " + r);
-        TreeSet<String> nodes = tree.get(r);
 
-        for(String n : nodes) {
-          System.out.print("   " + n);
-          String hostname = NetUtils.getHostNameOfIP(n);
-          if(hostname != null)
-            System.out.print(" (" + hostname + ")");
-          System.out.println();
+      Map<String, String> node = map.get(location);
+      node.put(name, dnState);
+    }
+      
+    // Sort the racks (and nodes) alphabetically, display in order
+    List<String> racks = new ArrayList<>(map.keySet());
+    Collections.sort(racks);
+      
+    for(String r : racks) {
+      System.out.println("Rack: " + r);
+      Map<String, String> nodes = map.get(r);
+
+      for(Map.Entry<String, String> entry : nodes.entrySet()) {
+        String n = entry.getKey();
+        System.out.print("   " + n);
+        String hostname = NetUtils.getHostNameOfIP(n);
+        if(hostname != null) {
+          System.out.print(" (" + hostname + ")");
         }
-
+        System.out.print(" " + entry.getValue());
         System.out.println();
       }
+
+      System.out.println();
+    }
     return 0;
   }
   

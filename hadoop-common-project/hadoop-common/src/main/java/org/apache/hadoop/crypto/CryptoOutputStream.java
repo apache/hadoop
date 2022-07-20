@@ -146,7 +146,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
    * @param b the data.
    * @param off the start offset in the data.
    * @param len the number of bytes to write.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public synchronized void write(byte[] b, int off, int len) throws IOException {
