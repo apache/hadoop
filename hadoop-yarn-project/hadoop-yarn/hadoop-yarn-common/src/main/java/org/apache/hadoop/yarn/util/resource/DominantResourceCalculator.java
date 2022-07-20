@@ -643,6 +643,22 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   @Override
+  public boolean isAnyRequestedResourceZeroOrNegative(Resource available, Resource resource) {
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation resourceInformation = available.getResourceInformation(
+          i);
+      if (resourceInformation.getValue() != 0L) {
+        ResourceInformation ri2 = resource.getResourceInformation(i);
+        if (ri2.getValue() <= 0L) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @Override
   public boolean isAnyMajorResourceAboveZero(Resource resource) {
     int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
