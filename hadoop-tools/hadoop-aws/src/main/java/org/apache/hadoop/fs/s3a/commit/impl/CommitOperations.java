@@ -62,7 +62,7 @@ import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Preconditions;

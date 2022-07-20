@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsContext;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.io.IOUtils;

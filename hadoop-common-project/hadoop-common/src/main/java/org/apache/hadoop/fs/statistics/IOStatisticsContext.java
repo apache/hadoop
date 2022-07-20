@@ -16,11 +16,9 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.statistics.impl;
+package org.apache.hadoop.fs.statistics;
 
-import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
-import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration;
 
 /**
  * An interface defined to capture thread-level IOStatistics by using per

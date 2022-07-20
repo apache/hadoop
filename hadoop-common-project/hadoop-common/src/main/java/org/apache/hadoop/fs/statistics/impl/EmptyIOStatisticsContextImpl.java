@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 
 /**
