@@ -44,6 +44,11 @@ public final class IOStatisticsContextImpl implements IOStatisticsContext {
   /**
    * Thread ID.
    */
+  private final long threadId;
+
+  /**
+   * Unique ID.
+   */
   private final long id;
 
   /**
@@ -53,9 +58,11 @@ public final class IOStatisticsContextImpl implements IOStatisticsContext {
 
   /**
    * Constructor.
-   * @param id Thread ID.
+   * @param threadId thread ID
+   * @param id instance ID.
    */
-  public IOStatisticsContextImpl(final long id) {
+  public IOStatisticsContextImpl(final long threadId, final long id) {
+    this.threadId = threadId;
     this.id = id;
   }
 
@@ -63,6 +70,7 @@ public final class IOStatisticsContextImpl implements IOStatisticsContext {
   public String toString() {
     return "IOStatisticsContextImpl{" +
         "id=" + id +
+        ", threadId=" + threadId +
         ", ioStatistics=" + ioStatistics +
         '}';
   }
@@ -102,11 +110,19 @@ public final class IOStatisticsContextImpl implements IOStatisticsContext {
   }
 
   /**
-   * Thread ID this context was created with.
-   * @return thread ID.
+   * ID of this context.
+   * @return ID.
    */
-  public long getId() {
+  @Override
+  public long getID() {
     return id;
   }
 
+  /**
+   * Get the thread ID.
+   * @return thread ID.
+   */
+  public long getThreadID() {
+    return threadId;
+  }
 }

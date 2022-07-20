@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +50,15 @@ public final class IOStatisticsContextIntegration {
   private static final Logger LOG =
       LoggerFactory.getLogger(IOStatisticsContextIntegration.class);
 
+  /**
+   * Is thread-level IO Statistics enabled?
+   */
   private static final boolean IS_THREAD_IOSTATS_ENABLED;
+
+  /**
+   * ID for next instance to create.
+   */
+  public static final AtomicLong INSTANCE_ID = new AtomicLong(1);
 
   /**
    * Active IOStatistics Context containing different worker thread's
@@ -82,7 +91,7 @@ public final class IOStatisticsContextIntegration {
    * @return an instance of IOStatisticsContext.
    */
   private static IOStatisticsContext createNewInstance(Long key) {
-    return new IOStatisticsContextImpl(key);
+    return new IOStatisticsContextImpl(key, INSTANCE_ID.getAndIncrement());
   }
 
   /**

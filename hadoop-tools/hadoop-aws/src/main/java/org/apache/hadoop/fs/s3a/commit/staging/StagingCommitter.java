@@ -674,6 +674,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
             .stopOnFailure()
             .suppressExceptions(false)
             .executeWith(commitContext.getOuterSubmitter())
+            .withIOStatisticsContext(commitContext.getIOStatisticsContext())
             .run(stat -> {
               Path path = stat.getPath();
               File localFile = new File(path.toUri().getPath());
@@ -694,6 +695,13 @@ public class StagingCommitter extends AbstractS3ACommitter {
 
         for (SinglePendingCommit commit : commits) {
           pendingCommits.add(commit);
+        }
+
+        // maybe add in the IOStatistics the thread
+        if (commitContext.isCollectIOStatistics()) {
+          pendingCommits.getIOStatistics().aggregate(
+              commitContext.getIOStatisticsContext()
+              .getIOStatistics());
         }
 
         // save the data

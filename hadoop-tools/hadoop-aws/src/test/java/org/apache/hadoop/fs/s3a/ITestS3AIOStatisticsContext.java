@@ -222,9 +222,12 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     long threadIdForTest = Thread.currentThread().getId();
     IOStatisticsContext context =
         getAndResetThreadStatisticsContext();
-    Assertions.assertThat(((IOStatisticsContextImpl)context).getId())
+    Assertions.assertThat(((IOStatisticsContextImpl)context).getThreadID())
         .describedAs("Thread ID of %s", context)
         .isEqualTo(threadIdForTest);
+    Assertions.assertThat(((IOStatisticsContextImpl)context).getID())
+        .describedAs("ID of %s", context)
+        .isGreaterThan(0);
 
     // Write in the Junit thread.
     try (FSDataOutputStream out = fs.create(path)) {

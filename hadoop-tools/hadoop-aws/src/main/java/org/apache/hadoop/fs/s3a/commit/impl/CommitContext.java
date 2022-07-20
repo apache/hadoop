@@ -49,6 +49,8 @@ import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY_SECONDS;
 import static org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.THREAD_PREFIX;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS_DEFAULT;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.THREAD_KEEP_ALIVE_TIME;
 
 /**
@@ -125,6 +127,18 @@ public final class CommitContext implements Closeable {
    */
   private final int committerThreads;
 
+  /**
+   * Should IOStatistics be collected by the committer?
+   */
+  private final boolean collectIOStatistics;
+
+  /**
+   * IOStatisticsContext to switch to in all threads
+   * taking part in the commit operation.
+   * This ensures that the IOStatistics collected in the
+   * worker threads will be aggregated into the total statistics
+   * of the thread calling the committer commit/abort methods.
+   */
   private final IOStatisticsContext ioStatisticsContext;
 
   /**
@@ -143,6 +157,9 @@ public final class CommitContext implements Closeable {
     this.jobContext = jobContext;
     this.conf = jobContext.getConfiguration();
     this.jobId = jobContext.getJobID().toString();
+    this.collectIOStatistics = conf.getBoolean(
+        S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS,
+        S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS_DEFAULT);
     this.ioStatisticsContext = Objects.requireNonNull(ioStatisticsContext);
     this.auditContextUpdater = new AuditContextUpdater(jobContext);
     this.auditContextUpdater.updateCurrentAuditContext();
@@ -169,6 +186,7 @@ public final class CommitContext implements Closeable {
     this.jobContext = null;
     this.conf = conf;
     this.jobId = jobId;
+    this.collectIOStatistics = false;
     this.ioStatisticsContext = Objects.requireNonNull(ioStatisticsContext);
     this.auditContextUpdater = new AuditContextUpdater(jobId);
     this.auditContextUpdater.updateCurrentAuditContext();
@@ -368,6 +386,14 @@ public final class CommitContext implements Closeable {
   }
 
   /**
+   * Collecting thread level IO statistics?
+   * @return true if thread level IO stats should be collected.
+   */
+  public boolean isCollectIOStatistics() {
+    return collectIOStatistics;
+  }
+
+  /**
    * IOStatistics context of the created thread.
    * @return the IOStatistics.
    */
@@ -381,6 +407,20 @@ public final class CommitContext implements Closeable {
    */
   public void switchToIOStatisticsContext() {
     IOStatisticsContext.setThreadIOStatisticsContext(ioStatisticsContext);
+  }
+
+  /**
+   * Reset the IOStatistics context if statistics are being
+   * collected.
+   * Logs at info.
+   */
+  public void maybeResetIOStatisticsContext() {
+    if (collectIOStatistics) {
+
+      LOG.info("Resetting IO statistics context {}",
+          ioStatisticsContext.getID());
+      ioStatisticsContext.reset();
+    }
   }
 
   /**

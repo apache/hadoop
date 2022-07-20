@@ -289,9 +289,9 @@ public class CommitOperations extends AbstractStoreOperation
         //. stopOnFailure()
         .suppressExceptions(false)
         .executeWith(commitContext.getOuterSubmitter())
+        .withIOStatisticsContext(commitContext.getIOStatisticsContext())
         .run(status -> {
           Path path = status.getPath();
-          commitContext.switchToIOStatisticsContext();
           try {
             // load the file
             SinglePendingCommit singleCommit = trackDuration(statistics,
@@ -654,7 +654,6 @@ public class CommitOperations extends AbstractStoreOperation
         committerThreads,
         ioStatisticsContext);
   }
-
 
   /**
    * Create a stub commit context for tests.

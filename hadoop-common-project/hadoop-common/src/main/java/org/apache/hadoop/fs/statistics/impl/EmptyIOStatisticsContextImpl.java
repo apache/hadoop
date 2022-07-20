@@ -60,6 +60,18 @@ final class EmptyIOStatisticsContextImpl implements IOStatisticsContext {
   public void reset() {}
 
   /**
+   * The ID is always 0.
+   * As the real context implementation counter starts at 1,
+   * we are guaranteed to have unique IDs even between them and
+   * the empty context.
+   * @return 0
+   */
+  @Override
+  public long getID() {
+    return 0;
+  }
+
+  /**
    * Get the single instance.
    * @return an instance.
    */

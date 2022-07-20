@@ -102,7 +102,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         FS_S3A_COMMITTER_NAME,
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE,
         FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
-        FAST_UPLOAD_BUFFER);
+        FAST_UPLOAD_BUFFER,
+        S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS);
 
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, DEFAULT_MAGIC_COMMITTER_ENABLED);
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
@@ -110,6 +111,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     conf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_ARRAY);
     // and bind the report dir
     conf.set(OPT_SUMMARY_REPORT_DIR, reportDir.toURI().toString());
+    conf.setBoolean(S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS, true);
     return conf;
   }
 

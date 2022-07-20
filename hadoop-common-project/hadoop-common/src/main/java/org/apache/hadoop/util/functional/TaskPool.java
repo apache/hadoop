@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromIterable;
@@ -135,6 +136,15 @@ public final class TaskPool {
     private Task<I, ?> abortTask = null;
     private boolean stopAbortsOnFailure = false;
     private int sleepInterval = SLEEP_INTERVAL_AWAITING_COMPLETION;
+
+    /**
+     * IOStatisticsContext to switch to in all threads
+     * taking part in the commit operation.
+     * This ensures that the IOStatistics collected in the
+     * worker threads will be aggregated into the total statistics
+     * of the thread calling the committer commit/abort methods.
+     */
+    private IOStatisticsContext ioStatisticsContext = null;
 
     /**
      * Create the builder.
@@ -242,8 +252,18 @@ public final class TaskPool {
      * @param value new value
      * @return the builder
      */
-    public Builder sleepInterval(final int value) {
+    public Builder<I> sleepInterval(final int value) {
       sleepInterval = value;
+      return this;
+    }
+
+    /**
+     * Set the IO statistics context.
+     * @param value new value
+     * @return the builder
+     */
+    public Builder<I> withIOStatisticsContext(final IOStatisticsContext value) {
+      ioStatisticsContext = value;
       return this;
     }
 
@@ -284,6 +304,9 @@ public final class TaskPool {
       List<I> succeeded = new ArrayList<>();
       List<Exception> exceptions = new ArrayList<>();
 
+      if (ioStatisticsContext != null) {
+        IOStatisticsContext.setThreadIOStatisticsContext(ioStatisticsContext);
+      }
       RemoteIterator<I> iterator = items;
       boolean threw = true;
       try {
@@ -388,7 +411,10 @@ public final class TaskPool {
           // submit a task for each item that will either run or abort the task
           futures.add(service.submit(() -> {
             if (!(stopOnFailure && taskFailed.get())) {
-              // run the task
+              // prepare and run the task
+              if (ioStatisticsContext != null) {
+                IOStatisticsContext.setThreadIOStatisticsContext(ioStatisticsContext);
+              }
               boolean threw = true;
               try {
                 LOG.debug("Executing task");

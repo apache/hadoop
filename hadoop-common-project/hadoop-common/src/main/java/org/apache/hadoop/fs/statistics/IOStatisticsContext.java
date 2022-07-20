@@ -49,6 +49,14 @@ public interface IOStatisticsContext extends IOStatisticsSource {
   IOStatisticsSnapshot snapshot();
 
   /**
+   * Get a unique ID for this context, for logging
+   * purposes.
+   *
+   * @return an ID unique for all contexts in this process.
+   */
+  long getID();
+
+  /**
    * Reset the context's IOStatistics.
    */
   void reset();
