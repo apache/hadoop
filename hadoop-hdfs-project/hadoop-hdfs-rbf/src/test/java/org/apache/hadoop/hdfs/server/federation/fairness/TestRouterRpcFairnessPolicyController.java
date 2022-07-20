@@ -23,10 +23,12 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX;
@@ -81,6 +83,29 @@ public class TestRouterRpcFairnessPolicyController {
     assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns1"));
     assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns2"));
     assertFalse(routerRpcFairnessPolicyController.acquirePermit(CONCURRENT_NS));
+  }
+
+  @Test
+  public void testAcquireTimeout() {
+    Configuration conf = createConf(40);
+    conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns1", 30);
+    conf.setLong(DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_KEY, 100);
+    RouterRpcFairnessPolicyController routerRpcFairnessPolicyController =
+        FederationUtil.newFairnessPolicyController(conf);
+
+    // ns1 should have 30 permits allocated
+    for (int i = 0; i < 30; i++) {
+      assertTrue(routerRpcFairnessPolicyController.acquirePermit("ns1"));
+    }
+    long acquireBeginTime = Time.monotonicNow();
+    assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns1"));
+    long acquireEndTime = Time.monotonicNow();
+
+    long acquireTime = acquireEndTime - acquireBeginTime;
+
+    // There are some other operations, so acquireTime should more than 100ms.
+    assertTrue(acquireTime > 100);
+    assertTrue(acquireTime < 100 + 50);
   }
 
   @Test

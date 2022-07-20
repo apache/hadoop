@@ -29,6 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_KEY;
+
 /**
  * Base fairness policy that implements @RouterRpcFairnessPolicyController.
  * Internally a map of nameservice to Semaphore is used to control permits.
@@ -42,15 +45,22 @@ public class AbstractRouterRpcFairnessPolicyController
   /** Hash table to hold semaphore for each configured name service. */
   private Map<String, Semaphore> permits;
 
+  private long acquireTimeout = DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT;
+
   public void init(Configuration conf) {
     this.permits = new HashMap<>();
+    long timeout = conf.getLong(DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_KEY,
+        DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT);
+    if (timeout >= 0) {
+      acquireTimeout = timeout;
+    }
   }
 
   @Override
   public boolean acquirePermit(String nsId) {
     try {
       LOG.debug("Taking lock for nameservice {}", nsId);
-      return this.permits.get(nsId).tryAcquire(1, TimeUnit.SECONDS);
+      return this.permits.get(nsId).tryAcquire(acquireTimeout, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
       LOG.debug("Cannot get a permit for nameservice {}", nsId);
     }

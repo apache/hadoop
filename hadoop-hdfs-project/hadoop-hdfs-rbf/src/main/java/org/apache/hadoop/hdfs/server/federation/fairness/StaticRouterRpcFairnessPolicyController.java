@@ -86,7 +86,7 @@ public class StaticRouterRpcFairnessPolicyController extends
     // Assign remaining handlers equally to remaining name services and
     // general pool if applicable.
     if (!unassignedNS.isEmpty()) {
-      LOG.info("Unassigned ns {}", unassignedNS.toString());
+      LOG.info("Unassigned ns {}", unassignedNS);
       int handlersPerNS = handlerCount / unassignedNS.size();
       LOG.info("Handlers available per ns {}", handlersPerNS);
       for (String nsId : unassignedNS) {
@@ -109,16 +109,15 @@ public class StaticRouterRpcFairnessPolicyController extends
   }
 
   private static void logAssignment(String nsId, int count) {
-    LOG.info("Assigned {} handlers to nsId {} ",
-        count, nsId);
+    LOG.info("Assigned {} handlers to nsId {} ", count, nsId);
   }
 
-  private void validateHandlersCount(Configuration conf, int handlerCount,
-                                     Set<String> allConfiguredNS) {
+  private void validateHandlersCount(Configuration conf,
+      int handlerCount, Set<String> allConfiguredNS) {
     int totalDedicatedHandlers = 0;
     for (String nsId : allConfiguredNS) {
       int dedicatedHandlers =
-              conf.getInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + nsId, 0);
+          conf.getInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + nsId, 0);
       if (dedicatedHandlers > 0) {
         // Total handlers should not be less than sum of dedicated handlers.
         totalDedicatedHandlers += dedicatedHandlers;
