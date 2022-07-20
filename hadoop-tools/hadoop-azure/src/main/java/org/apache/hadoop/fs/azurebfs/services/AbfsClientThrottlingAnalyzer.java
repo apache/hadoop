@@ -256,7 +256,7 @@ class AbfsClientThrottlingAnalyzer {
   /**
    * Stores Abfs operation metrics during each analysis period.
    */
-  class AbfsOperationMetrics {
+  private class AbfsOperationMetrics {
     private AtomicLong bytesFailed;
     private AtomicLong bytesSuccessful;
     private AtomicLong operationsFailed;
