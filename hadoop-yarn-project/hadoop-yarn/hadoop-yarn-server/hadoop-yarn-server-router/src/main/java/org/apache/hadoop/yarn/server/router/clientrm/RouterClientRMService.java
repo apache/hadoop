@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -110,6 +111,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
@@ -147,7 +149,7 @@ public class RouterClientRMService extends AbstractService
 
   @Override
   protected void serviceStart() throws Exception {
-    LOG.info("Starting Router ClientRMService");
+    LOG.info("Starting Router ClientRMService.");
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     UserGroupInformation.setConfiguration(conf);
@@ -161,9 +163,7 @@ public class RouterClientRMService extends AbstractService
     int maxCacheSize =
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
             YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
-    this.userPipelineMap = Collections.synchronizedMap(
-        new LRUCacheHashMap<String, RequestInterceptorChainWrapper>(
-            maxCacheSize, true));
+    this.userPipelineMap = Collections.synchronizedMap(new LRUCacheHashMap<>(maxCacheSize, true));
 
     Configuration serverConf = new Configuration(conf);
 
@@ -181,14 +181,13 @@ public class RouterClientRMService extends AbstractService
     }
 
     this.server.start();
-    LOG.info("Router ClientRMService listening on address: "
-        + this.server.getListenerAddress());
+    LOG.info("Router ClientRMService listening on address: {}.", this.server.getListenerAddress());
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    LOG.info("Stopping Router ClientRMService");
+    LOG.info("Stopping Router ClientRMService.");
     if (this.server != null) {
       this.server.stop();
     }
@@ -199,27 +198,6 @@ public class RouterClientRMService extends AbstractService
   @VisibleForTesting
   public Server getServer() {
     return this.server;
-  }
-
-  /**
-   * Returns the comma separated intercepter class names from the configuration.
-   *
-   * @param conf
-   * @return the intercepter class names as an instance of ArrayList
-   */
-  private List<String> getInterceptorClassNames(Configuration conf) {
-    String configuredInterceptorClassNames =
-        conf.get(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
-            YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_INTERCEPTOR_CLASS);
-
-    List<String> interceptorClassNames = new ArrayList<String>();
-    Collection<String> tempList =
-        StringUtils.getStringCollection(configuredInterceptorClassNames);
-    for (String item : tempList) {
-      interceptorClassNames.add(item.trim());
-    }
-
-    return interceptorClassNames;
   }
 
   @Override
@@ -507,42 +485,25 @@ public class RouterClientRMService extends AbstractService
   @VisibleForTesting
   protected ClientRequestInterceptor createRequestInterceptorChain() {
     Configuration conf = getConfig();
-
-    List<String> interceptorClassNames = getInterceptorClassNames(conf);
-
     ClientRequestInterceptor pipeline = null;
-    ClientRequestInterceptor current = null;
-    for (String interceptorClassName : interceptorClassNames) {
-      try {
-        Class<?> interceptorClass = conf.getClassByName(interceptorClassName);
-        if (ClientRequestInterceptor.class.isAssignableFrom(interceptorClass)) {
-          ClientRequestInterceptor interceptorInstance =
-              (ClientRequestInterceptor) ReflectionUtils
-                  .newInstance(interceptorClass, conf);
-          if (pipeline == null) {
-            pipeline = interceptorInstance;
-            current = interceptorInstance;
-            continue;
-          } else {
-            current.setNextInterceptor(interceptorInstance);
-            current = interceptorInstance;
-          }
-        } else {
-          throw new YarnRuntimeException(
-              "Class: " + interceptorClassName + " not instance of "
-                  + ClientRequestInterceptor.class.getCanonicalName());
-        }
-      } catch (ClassNotFoundException e) {
-        throw new YarnRuntimeException(
-            "Could not instantiate ApplicationClientRequestInterceptor: "
-                + interceptorClassName,
-            e);
-      }
-    }
+    ClientMethod remoteMethod = null;
+    try {
+      remoteMethod = new ClientMethod("setNextInterceptor",
+           new Class[]{ClientRequestInterceptor.class}, new Object[]{null});
 
-    if (pipeline == null) {
-      throw new YarnRuntimeException(
-          "RequestInterceptor pipeline is not configured in the system");
+      pipeline = RouterServerUtil.createRequestInterceptorChain(conf,
+              YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
+              YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_INTERCEPTOR_CLASS,
+              remoteMethod, ClientRequestInterceptor.class);
+
+      if (pipeline == null) {
+        throw new YarnRuntimeException(
+            "RequestInterceptor pipeline is not configured in the system.");
+      }
+    } catch (IOException | InvocationTargetException | NoSuchMethodException | RuntimeException
+         | IllegalAccessException ex) {
+      throw new YarnRuntimeException("RequestInterceptor pipeline is not configured in the system.",
+          ex);
     }
     return pipeline;
   }
@@ -566,14 +527,14 @@ public class RouterClientRMService extends AbstractService
         // We should init the pipeline instance after it is created and then
         // add to the map, to ensure thread safe.
         LOG.info("Initializing request processing pipeline for application "
-            + "for the user: {}", user);
+            + "for the user: {}.", user);
 
         ClientRequestInterceptor interceptorChain =
             this.createRequestInterceptorChain();
         interceptorChain.init(user);
         chainWrapper.init(interceptorChain);
       } catch (Exception e) {
-        LOG.error("Init ClientRequestInterceptor error for user: " + user, e);
+        LOG.error("Init ClientRequestInterceptor error for user: {}.", user, e);
         throw e;
       }
 

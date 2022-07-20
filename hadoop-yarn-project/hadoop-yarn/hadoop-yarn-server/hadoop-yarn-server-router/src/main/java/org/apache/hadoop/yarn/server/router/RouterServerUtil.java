@@ -18,12 +18,28 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
+import org.apache.hadoop.yarn.server.router.clientrm.ClientRequestInterceptor;
+import org.apache.hadoop.yarn.server.router.rmadmin.RMAdminRequestInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Common utility methods used by the Router server.
@@ -58,6 +74,55 @@ public final class RouterServerUtil {
       LOG.error(errMsg);
       throw new YarnException(errMsg);
     }
+  }
+
+  public static <R> R createRequestInterceptorChain(Configuration conf, String pipeLineClassName,
+      String interceptorClassName, ClientMethod request, Class<R> clazz)
+      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+
+    List<String> interceptorClassNames = getInterceptorClassNames(conf,
+        pipeLineClassName, interceptorClassName);
+
+    R pipeline = null;
+    R current = null;
+
+    for (String className : interceptorClassNames) {
+      try {
+        Class<?> interceptorClass = conf.getClassByName(className);
+        if (clazz.isAssignableFrom(interceptorClass)) {
+          R interceptorInstance = (R) ReflectionUtils.newInstance(interceptorClass, conf);
+          if (pipeline == null) {
+            pipeline = interceptorInstance;
+            current = interceptorInstance;
+            continue;
+          } else {
+            Method method = clazz.getMethod(request.getMethodName(), request.getTypes());
+            method.invoke(current, interceptorInstance);
+            current = interceptorInstance;
+          }
+        } else {
+          LOG.error("Class: {} not instance of {}.", className, clazz.getCanonicalName());
+          throw new YarnRuntimeException("Class: " + className + " not instance of "
+              + clazz.getCanonicalName());
+        }
+      } catch (ClassNotFoundException e) {
+        throw new YarnRuntimeException("Could not instantiate RequestInterceptor: " + className, e);
+      }
+    }
+
+    return pipeline;
+  }
+
+  private static List<String> getInterceptorClassNames(Configuration conf,
+      String pipeLineClass, String interceptorClass) {
+    String configuredInterceptorClassNames = conf.get(pipeLineClass, interceptorClass);
+    List<String> interceptorClassNames = new ArrayList<String>();
+    Collection<String> tempList =
+        StringUtils.getStringCollection(configuredInterceptorClassNames);
+    for (String item : tempList) {
+      interceptorClassNames.add(item.trim());
+    }
+    return interceptorClassNames;
   }
 
 }

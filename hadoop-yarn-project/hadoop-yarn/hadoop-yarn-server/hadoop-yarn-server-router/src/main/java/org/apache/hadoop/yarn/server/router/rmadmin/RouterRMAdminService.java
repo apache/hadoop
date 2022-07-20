@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -69,6 +70,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
+import org.apache.hadoop.yarn.server.router.clientrm.ClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
@@ -164,27 +168,6 @@ public class RouterRMAdminService extends AbstractService
     return this.server;
   }
 
-  /**
-   * Returns the comma separated intercepter class names from the configuration.
-   *
-   * @param conf
-   * @return the intercepter class names as an instance of ArrayList
-   */
-  private List<String> getInterceptorClassNames(Configuration conf) {
-    String configuredInterceptorClassNames =
-        conf.get(YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
-            YarnConfiguration.DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS);
-
-    List<String> interceptorClassNames = new ArrayList<String>();
-    Collection<String> tempList =
-        StringUtils.getStringCollection(configuredInterceptorClassNames);
-    for (String item : tempList) {
-      interceptorClassNames.add(item.trim());
-    }
-
-    return interceptorClassNames;
-  }
-
   @VisibleForTesting
   protected RequestInterceptorChainWrapper getInterceptorChain()
       throws IOException {
@@ -215,43 +198,24 @@ public class RouterRMAdminService extends AbstractService
   @VisibleForTesting
   protected RMAdminRequestInterceptor createRequestInterceptorChain() {
     Configuration conf = getConfig();
-
-    List<String> interceptorClassNames = getInterceptorClassNames(conf);
-
     RMAdminRequestInterceptor pipeline = null;
-    RMAdminRequestInterceptor current = null;
-    for (String interceptorClassName : interceptorClassNames) {
-      try {
-        Class<?> interceptorClass = conf.getClassByName(interceptorClassName);
-        if (RMAdminRequestInterceptor.class
-            .isAssignableFrom(interceptorClass)) {
-          RMAdminRequestInterceptor interceptorInstance =
-              (RMAdminRequestInterceptor) ReflectionUtils
-                  .newInstance(interceptorClass, conf);
-          if (pipeline == null) {
-            pipeline = interceptorInstance;
-            current = interceptorInstance;
-            continue;
-          } else {
-            current.setNextInterceptor(interceptorInstance);
-            current = interceptorInstance;
-          }
-        } else {
-          throw new YarnRuntimeException(
-              "Class: " + interceptorClassName + " not instance of "
-                  + RMAdminRequestInterceptor.class.getCanonicalName());
-        }
-      } catch (ClassNotFoundException e) {
-        throw new YarnRuntimeException(
-            "Could not instantiate RMAdminRequestInterceptor: "
-                + interceptorClassName,
-            e);
-      }
-    }
+    ClientMethod remoteMethod = null;
+    try {
+      remoteMethod = new ClientMethod("setNextInterceptor",
+              new Class[]{RMAdminRequestInterceptor.class}, new Object[]{null});
 
-    if (pipeline == null) {
-      throw new YarnRuntimeException(
-          "RequestInterceptor pipeline is not configured in the system");
+      pipeline = RouterServerUtil.createRequestInterceptorChain(conf,
+          YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
+          YarnConfiguration.DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS,
+          remoteMethod, RMAdminRequestInterceptor.class);
+
+      if (pipeline == null) {
+        throw new YarnRuntimeException(
+            "RequestInterceptor pipeline is not configured in the system.");
+      }
+    } catch (IOException | InvocationTargetException | NoSuchMethodException | RuntimeException
+             | IllegalAccessException ex) {
+      throw new YarnRuntimeException("Create RequestInterceptor Chain error.", ex);
     }
     return pipeline;
   }
@@ -274,14 +238,14 @@ public class RouterRMAdminService extends AbstractService
       try {
         // We should init the pipeline instance after it is created and then
         // add to the map, to ensure thread safe.
-        LOG.info("Initializing request processing pipeline for user: {}", user);
+        LOG.info("Initializing request processing pipeline for user: {}.", user);
 
         RMAdminRequestInterceptor interceptorChain =
             this.createRequestInterceptorChain();
         interceptorChain.init(user);
         chainWrapper.init(interceptorChain);
       } catch (Exception e) {
-        LOG.error("Init RMAdminRequestInterceptor error for user: " + user, e);
+        LOG.error("Init RMAdminRequestInterceptor error for user: {}.", user, e);
         throw e;
       }
 

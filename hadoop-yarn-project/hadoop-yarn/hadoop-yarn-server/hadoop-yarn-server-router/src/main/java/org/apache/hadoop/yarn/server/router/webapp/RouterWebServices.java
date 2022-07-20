@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -86,6 +87,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
+import org.apache.hadoop.yarn.server.router.rmadmin.RMAdminRequestInterceptor;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
@@ -140,27 +144,6 @@ public class RouterWebServices implements RMWebServiceProtocol {
             maxCacheSize, true));
   }
 
-  /**
-   * Returns the comma separated intercepter class names from the configuration.
-   *
-   * @param conf
-   * @return the intercepter class names as an instance of ArrayList
-   */
-  private List<String> getInterceptorClassNames(Configuration config) {
-    String configuredInterceptorClassNames =
-        config.get(YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
-            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_INTERCEPTOR_CLASS);
-
-    List<String> interceptorClassNames = new ArrayList<String>();
-    Collection<String> tempList =
-        StringUtils.getStringCollection(configuredInterceptorClassNames);
-    for (String item : tempList) {
-      interceptorClassNames.add(item.trim());
-    }
-
-    return interceptorClassNames;
-  }
-
   private void init() {
     // clear content type
     response.setContentType(null);
@@ -206,43 +189,26 @@ public class RouterWebServices implements RMWebServiceProtocol {
    */
   @VisibleForTesting
   protected RESTRequestInterceptor createRequestInterceptorChain() {
-
-    List<String> interceptorClassNames = getInterceptorClassNames(conf);
-
     RESTRequestInterceptor pipeline = null;
-    RESTRequestInterceptor current = null;
-    for (String interceptorClassName : interceptorClassNames) {
-      try {
-        Class<?> interceptorClass = conf.getClassByName(interceptorClassName);
-        if (RESTRequestInterceptor.class.isAssignableFrom(interceptorClass)) {
-          RESTRequestInterceptor interceptorInstance =
-              (RESTRequestInterceptor) ReflectionUtils
-                  .newInstance(interceptorClass, conf);
-          if (pipeline == null) {
-            pipeline = interceptorInstance;
-            current = interceptorInstance;
-            continue;
-          } else {
-            current.setNextInterceptor(interceptorInstance);
-            current = interceptorInstance;
-          }
-        } else {
-          throw new YarnRuntimeException(
-              "Class: " + interceptorClassName + " not instance of "
-                  + RESTRequestInterceptor.class.getCanonicalName());
-        }
-      } catch (ClassNotFoundException e) {
+    ClientMethod remoteMethod = null;
+    try {
+      remoteMethod = new ClientMethod("setNextInterceptor",
+          new Class[]{RMAdminRequestInterceptor.class}, new Object[]{null});
+
+      pipeline = RouterServerUtil.createRequestInterceptorChain(conf,
+          YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_INTERCEPTOR_CLASS,
+          remoteMethod, RESTRequestInterceptor.class);
+
+      if (pipeline == null) {
         throw new YarnRuntimeException(
-            "Could not instantiate RESTRequestInterceptor: "
-                + interceptorClassName,
-            e);
+            "RequestInterceptor pipeline is not configured in the system.");
       }
+    } catch (IOException | InvocationTargetException | NoSuchMethodException | RuntimeException
+         | IllegalAccessException ex) {
+      throw new YarnRuntimeException("Create RequestInterceptor Chain error.", ex);
     }
 
-    if (pipeline == null) {
-      throw new YarnRuntimeException(
-          "RequestInterceptor pipeline is not configured in the system");
-    }
     return pipeline;
   }
 
@@ -264,14 +230,14 @@ public class RouterWebServices implements RMWebServiceProtocol {
       try {
         // We should init the pipeline instance after it is created and then
         // add to the map, to ensure thread safe.
-        LOG.info("Initializing request processing pipeline for user: {}", user);
+        LOG.info("Initializing request processing pipeline for user: {}.", user);
 
         RESTRequestInterceptor interceptorChain =
             this.createRequestInterceptorChain();
         interceptorChain.init(user);
         chainWrapper.init(interceptorChain);
       } catch (Exception e) {
-        LOG.error("Init RESTRequestInterceptor error for user: " + user, e);
+        LOG.error("Init RESTRequestInterceptor error for user: {}", user, e);
         throw e;
       }
 
