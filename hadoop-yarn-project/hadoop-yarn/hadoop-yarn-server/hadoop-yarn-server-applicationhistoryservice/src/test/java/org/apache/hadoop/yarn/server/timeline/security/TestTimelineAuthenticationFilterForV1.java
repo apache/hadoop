@@ -95,8 +95,8 @@ public class TestTimelineAuthenticationFilterForV1 {
   private static Configuration conf;
   private static boolean withSsl;
 
-  public void initTestTimelineAuthenticationFilterForV1(boolean withSsl) {
-    TestTimelineAuthenticationFilterForV1.withSsl = withSsl;
+  public void initTestTimelineAuthenticationFilterForV1(boolean isSslEnabled) {
+    TestTimelineAuthenticationFilterForV1.withSsl = isSslEnabled;
   }
 
   @BeforeAll
@@ -186,8 +186,8 @@ public class TestTimelineAuthenticationFilterForV1 {
 
   @MethodSource("withSsl")
   @ParameterizedTest
-  void testPutTimelineEntities(boolean withSsl) throws Exception {
-    initTestTimelineAuthenticationFilterForV1(withSsl);
+  void testPutTimelineEntities(boolean isSslEnabled) throws Exception {
+    initTestTimelineAuthenticationFilterForV1(isSslEnabled);
     KerberosTestUtils.doAs(PRINCIPAL, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -215,8 +215,8 @@ public class TestTimelineAuthenticationFilterForV1 {
 
   @MethodSource("withSsl")
   @ParameterizedTest
-  void testPutDomains(boolean withSsl) throws Exception {
-    initTestTimelineAuthenticationFilterForV1(withSsl);
+  void testPutDomains(boolean isSslEnabled) throws Exception {
+    initTestTimelineAuthenticationFilterForV1(isSslEnabled);
     KerberosTestUtils.doAs(PRINCIPAL, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -239,8 +239,8 @@ public class TestTimelineAuthenticationFilterForV1 {
 
   @MethodSource("withSsl")
   @ParameterizedTest
-  void testDelegationTokenOperations(boolean withSsl) throws Exception {
-    initTestTimelineAuthenticationFilterForV1(withSsl);
+  void testDelegationTokenOperations(boolean isSslEnabled) throws Exception {
+    initTestTimelineAuthenticationFilterForV1(isSslEnabled);
     TimelineClient httpUserClient =
         KerberosTestUtils.doAs(PRINCIPAL,
             new Callable<TimelineClient>() {
@@ -265,7 +265,8 @@ public class TestTimelineAuthenticationFilterForV1 {
     TimelineDelegationTokenIdentifier tDT = token.decodeIdentifier();
     assertNotNull(tDT,
         "Delegation token identifier should not be null");
-    assertEquals(new Text(HTTP_USER), tDT.getOwner(), "Owner of delegation token identifier does not match");
+    assertEquals(new Text(HTTP_USER), tDT.getOwner(),
+        "Owner of delegation token identifier does not match");
 
     // Renew token
     assertFalse(token.getService().toString().isEmpty(),
@@ -313,8 +314,10 @@ public class TestTimelineAuthenticationFilterForV1 {
     tDT = token.decodeIdentifier();
     assertNotNull(tDT,
         "Delegation token identifier should not be null");
-    assertEquals(new Text(FOO_USER), tDT.getOwner(), "Owner of delegation token is not the expected");
-    assertEquals(new Text(HTTP_USER), tDT.getRealUser(), "Real user of delegation token is not the expected");
+    assertEquals(new Text(FOO_USER), tDT.getOwner(),
+        "Owner of delegation token is not the expected");
+    assertEquals(new Text(HTTP_USER), tDT.getRealUser(),
+        "Real user of delegation token is not the expected");
 
     // Renew token as the renewer
     final Token<TimelineDelegationTokenIdentifier> tokenToRenew = token;

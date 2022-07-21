@@ -196,8 +196,6 @@ public class TestAHSWebServices extends JerseyTestBase {
     }
   }
 
-  private int round;
-
   public TestAHSWebServices() {
     super(new WebAppDescriptor.Builder(
         "org.apache.hadoop.yarn.server.applicationhistoryservice.webapp")
@@ -571,7 +569,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @ParameterizedTest
   @Timeout(10000)
   void testContainerLogsForFinishedApps(int round) throws Exception {
-    
     String fileName = "syslog";
     String user = "user1";
     NodeId nodeId = NodeId.newInstance("test host", 100);
@@ -581,7 +578,6 @@ public class TestAHSWebServices extends JerseyTestBase {
         appId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
     ContainerId containerId100 = ContainerId.newContainerId(appAttemptId, 100);
-
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
         rootLogDir, appId, Collections.singletonMap(containerId1,
             "Hello." + containerId1),
@@ -601,7 +597,6 @@ public class TestAHSWebServices extends JerseyTestBase {
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1));
-
     // Do the same test with new API
     r = resource();
     response = r.path("ws").path("v1")
@@ -612,7 +607,6 @@ public class TestAHSWebServices extends JerseyTestBase {
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1));
-
     // test whether we can find container log from remote diretory if
     // the containerInfo for this container could not be fetched from AHS.
     r = resource();
@@ -624,7 +618,6 @@ public class TestAHSWebServices extends JerseyTestBase {
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId100));
-
     // Do the same test with new API
     r = resource();
     response = r.path("ws").path("v1")
@@ -635,14 +628,12 @@ public class TestAHSWebServices extends JerseyTestBase {
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId100));
-
     // create an application which can not be found from AHS
     ApplicationId appId100 = ApplicationId.newInstance(0, 100);
     ApplicationAttemptId appAttemptId100 = ApplicationAttemptId.newInstance(
         appId100, 1);
     ContainerId containerId1ForApp100 = ContainerId.newContainerId(
         appAttemptId100, 1);
-
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
         rootLogDir, appId100,
         Collections.singletonMap(containerId1ForApp100,
@@ -662,7 +653,6 @@ public class TestAHSWebServices extends JerseyTestBase {
         "End of LogType:syslog".length() + 50) + "\n\n";
     int tailTextSize = "\nEnd of LogType:syslog\n".getBytes().length
         + tailEndSeparator.getBytes().length;
-
     String logMessage = "Hello." + containerId1ForApp100;
     int fileContentSize = logMessage.getBytes().length;
     // specify how many bytes we should get from logs
@@ -683,7 +673,6 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals(new String(responseText.getBytes(),
             (fullTextSize - fileContentSize - tailTextSize), 5),
         new String(logMessage.getBytes(), 0, 5));
-
     // specify how many bytes we should get from logs
     // if we specify a negative number, it would get the last n bytes from
     // container log
@@ -702,7 +691,6 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals(new String(responseText.getBytes(),
             (fullTextSize - fileContentSize - tailTextSize), 5),
         new String(logMessage.getBytes(), fileContentSize - 5, 5));
-
     // specify the bytes which is larger than the actual file size,
     // we would get the full logs
     r = resource();

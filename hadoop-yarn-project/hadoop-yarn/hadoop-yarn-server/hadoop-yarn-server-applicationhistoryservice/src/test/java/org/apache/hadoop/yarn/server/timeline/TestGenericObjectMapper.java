@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.timeline;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -39,11 +38,11 @@ public class TestGenericObjectMapper {
   void testEncoding() {
     testEncoding(Long.MAX_VALUE);
     testEncoding(Long.MIN_VALUE);
-    testEncoding(0l);
-    testEncoding(128l);
-    testEncoding(256l);
-    testEncoding(512l);
-    testEncoding(-256l);
+    testEncoding(0L);
+    testEncoding(128L);
+    testEncoding(256L);
+    testEncoding(512L);
+    testEncoding(-256L);
   }
 
   private static void testEncoding(long l) {
@@ -82,13 +81,13 @@ public class TestGenericObjectMapper {
         GenericObjectMapper.write((long) Integer.MAX_VALUE)));
     assertEquals(Integer.MIN_VALUE, GenericObjectMapper.read(
         GenericObjectMapper.write((long) Integer.MIN_VALUE)));
-    verify((long) Integer.MAX_VALUE + 1l);
-    verify((long) Integer.MIN_VALUE - 1l);
+    verify((long) Integer.MAX_VALUE + 1L);
+    verify((long) Integer.MIN_VALUE - 1L);
 
     verify(Long.MAX_VALUE);
     verify(Long.MIN_VALUE);
 
-    assertEquals(42, GenericObjectMapper.read(GenericObjectMapper.write(42l)));
+    assertEquals(42, GenericObjectMapper.read(GenericObjectMapper.write(42L)));
     verify(42);
     verify(1.23);
     verify("abc");

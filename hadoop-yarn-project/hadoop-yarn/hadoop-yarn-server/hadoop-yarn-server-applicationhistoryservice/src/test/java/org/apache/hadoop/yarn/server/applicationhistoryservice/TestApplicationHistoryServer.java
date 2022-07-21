@@ -216,7 +216,8 @@ public class TestApplicationHistoryServer {
     } finally {
       historyServer.stop();
     }
-    assertEquals(diskFileStr, connFileStr, "Web file contents should be the same as on disk contents");
+    assertEquals(diskFileStr, connFileStr,
+        "Web file contents should be the same as on disk contents");
   }
   private String readInputStream(InputStream input) throws Exception {
     ByteArrayOutputStream data = new ByteArrayOutputStream();
