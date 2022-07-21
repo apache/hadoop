@@ -724,10 +724,10 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.fairness.acquire.timeout</name>
+    <name>dfs.federation.router.fairness.acquire.timeout.ms</name>
     <value>1000</value>
     <description>
-      The timeout value of acquiring permit for RouterRpcFairnessPolicyController.
+      The maximum time, in milliseconds, to wait for a permit.
     </description>
   </property>
 

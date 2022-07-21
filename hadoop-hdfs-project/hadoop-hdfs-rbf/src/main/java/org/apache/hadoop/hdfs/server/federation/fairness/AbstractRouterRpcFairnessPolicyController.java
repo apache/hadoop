@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_MS;
 
 /**
  * Base fairness policy that implements @RouterRpcFairnessPolicyController.
@@ -45,14 +45,14 @@ public class AbstractRouterRpcFairnessPolicyController
   /** Hash table to hold semaphore for each configured name service. */
   private Map<String, Semaphore> permits;
 
-  private long acquireTimeout = DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT;
+  private long acquireTimeoutMs = DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT;
 
   public void init(Configuration conf) {
     this.permits = new HashMap<>();
-    long timeout = conf.getLong(DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_KEY,
-        DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT);
-    if (timeout >= 0) {
-      acquireTimeout = timeout;
+    long timeoutMs = conf.getTimeDuration(DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_MS,
+        DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
+    if (timeoutMs >= 0) {
+      acquireTimeoutMs = timeoutMs;
     }
   }
 
@@ -60,7 +60,7 @@ public class AbstractRouterRpcFairnessPolicyController
   public boolean acquirePermit(String nsId) {
     try {
       LOG.debug("Taking lock for nameservice {}", nsId);
-      return this.permits.get(nsId).tryAcquire(acquireTimeout, TimeUnit.MILLISECONDS);
+      return this.permits.get(nsId).tryAcquire(acquireTimeoutMs, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
       LOG.debug("Cannot get a permit for nameservice {}", nsId);
     }
@@ -92,15 +92,13 @@ public class AbstractRouterRpcFairnessPolicyController
   @Override
   public String getAvailableHandlerOnPerNs() {
     JSONObject json = new JSONObject();
-    for (Map.Entry<String, Semaphore> entry : permits.entrySet()) {
+    permits.forEach((k, v) -> {
       try {
-        String nsId = entry.getKey();
-        int availableHandler = entry.getValue().availablePermits();
-        json.put(nsId, availableHandler);
+        json.put(k, v.availablePermits());
       } catch (JSONException e) {
-        LOG.warn("Cannot put {} into JSONObject", entry.getKey(), e);
+        LOG.warn("Cannot put {} into JSONObject", k, e);
       }
-    }
+    });
     return json.toString();
   }
 }
