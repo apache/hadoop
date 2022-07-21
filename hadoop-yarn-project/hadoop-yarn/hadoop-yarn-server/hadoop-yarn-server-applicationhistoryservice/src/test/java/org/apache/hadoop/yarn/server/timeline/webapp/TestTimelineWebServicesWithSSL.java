@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -38,10 +42,9 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistor
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -58,7 +61,7 @@ public class TestTimelineWebServicesWithSSL {
   private static TimelineStore store;
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupServer() throws Exception {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -84,7 +87,7 @@ public class TestTimelineWebServicesWithSSL {
     store = timelineServer.getTimelineStore();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownServer() throws Exception {
     if (timelineServer != null) {
       timelineServer.stop();
@@ -92,7 +95,7 @@ public class TestTimelineWebServicesWithSSL {
   }
 
   @Test
-  public void testPutEntities() throws Exception {
+  void testPutEntities() throws Exception {
     TestTimelineClient client = new TestTimelineClient();
     try {
       client.init(conf);
@@ -107,16 +110,16 @@ public class TestTimelineWebServicesWithSSL {
       expectedEntity.addEvent(event);
 
       TimelinePutResponse response = client.putEntities(expectedEntity);
-      Assert.assertEquals(0, response.getErrors().size());
-      Assert.assertTrue(client.resp.toString().contains("https"));
+      assertEquals(0, response.getErrors().size());
+      assertTrue(client.resp.toString().contains("https"));
 
       TimelineEntity actualEntity = store.getEntity(
           expectedEntity.getEntityId(), expectedEntity.getEntityType(),
           EnumSet.allOf(Field.class));
-      Assert.assertNotNull(actualEntity);
-      Assert.assertEquals(
+      assertNotNull(actualEntity);
+      assertEquals(
           expectedEntity.getEntityId(), actualEntity.getEntityId());
-      Assert.assertEquals(
+      assertEquals(
           expectedEntity.getEntityType(), actualEntity.getEntityType());
     } finally {
       client.stop();
