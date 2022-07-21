@@ -783,6 +783,8 @@ class JobResourceUploader {
   void copyJar(Path originalJarPath, Path submitJarFile,
       short replication) throws IOException {
     jtFs.copyFromLocalFile(originalJarPath, submitJarFile);
+    // The operation of setReplication requires certain permissions
+    // so we need to make sure it has enough permissions
     jtFs.setPermission(submitJarFile, new FsPermission(
         JobSubmissionFiles.JOB_FILE_PERMISSION));
     jtFs.setReplication(submitJarFile, replication);
