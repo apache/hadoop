@@ -246,7 +246,6 @@ public class TestLeaseRecovery2 {
     FSDataOutputStream stm = dfs.create(filepath, true, BUF_SIZE,
       REPLICATION_NUM, BLOCK_SIZE);
     assertTrue(dfs.dfs.exists(filestr));
-
     AppendTestUtil.LOG.info("size=" + size);
     stm.write(buffer, 0, size);
 

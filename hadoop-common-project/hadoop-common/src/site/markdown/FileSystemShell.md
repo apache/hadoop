@@ -113,7 +113,7 @@ chown
 
 Usage: `hadoop fs -chown [-R] [OWNER][:[GROUP]] URI [URI ]`
 
-Change the owner of files. The user must be a super-user. Additional information is in the [Permissions Guide](../hadoop-hdfs/HdfsPermissionsGuide.html).
+Change the owner of files. The user must be the owner of files, or else a super-user. Additional information is in the [Permissions Guide](../hadoop-hdfs/HdfsPermissionsGuide.html).
 
 Options
 
