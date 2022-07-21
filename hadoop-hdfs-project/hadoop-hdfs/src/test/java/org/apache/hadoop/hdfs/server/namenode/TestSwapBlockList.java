@@ -18,24 +18,26 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.*;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile.HeaderFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * Test SwapBlockListOp working.
@@ -57,6 +59,9 @@ public class TestSwapBlockList {
   private final Path subDir2 = new Path(rootDir, "dir2");
   private final Path file4 = new Path(subDir2, "file4");
 
+  private final Path subDir3 = new Path(rootDir, "dir3");
+  private final Path file5 = new Path(subDir3, "file5");
+
   private Configuration conf;
   private MiniDFSCluster cluster;
   private FSNamesystem fsn;
@@ -69,7 +74,7 @@ public class TestSwapBlockList {
     conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, 2);
     cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(REPLICATION)
+        .numDataNodes(9)
         .build();
     cluster.waitActive();
 
@@ -79,12 +84,18 @@ public class TestSwapBlockList {
     hdfs = cluster.getFileSystem();
 
     hdfs.mkdirs(subDir2);
+    hdfs.mkdirs(subDir3);
 
     DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, SEED);
     DFSTestUtil.createFile(hdfs, file2, 1024, REPLICATION, SEED);
     DFSTestUtil.createFile(hdfs, file3, 1024, REPLICATION, SEED);
     DFSTestUtil.createFile(hdfs, file4, 1024, REPLICATION, SEED);
-
+    fsn.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName(), false);
+    hdfs.getClient().setErasureCodingPolicy(subDir3.toString(),
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+    DFSTestUtil.createStripedFile(cluster, file5, null,
+          4, 4, false);
   }
 
   @After
@@ -101,19 +112,19 @@ public class TestSwapBlockList {
     LambdaTestUtils.intercept(FileNotFoundException.class,
         "/TestSwapBlockList/dir1/fileXYZ", () -> fsn.swapBlockList(
             "/TestSwapBlockList/dir1/fileXYZ", "/TestSwapBlockList/dir1/dir11" +
-                "/file3", 0L));
+                "/file3", 0L, false));
 
     // Destination file not found.
     LambdaTestUtils.intercept(FileNotFoundException.class,
         "/TestSwapBlockList/dir1/dir11/fileXYZ",
         () -> fsn.swapBlockList("/TestSwapBlockList/dir1/file1",
-            "/TestSwapBlockList/dir1/dir11/fileXYZ", 0L));
+            "/TestSwapBlockList/dir1/dir11/fileXYZ", 0L, false));
 
     // Source is Directory, not a file.
     LambdaTestUtils.intercept(IOException.class,
         "/TestSwapBlockList/dir1 is not a file.",
         () -> fsn.swapBlockList("/TestSwapBlockList/dir1",
-            "/TestSwapBlockList/dir1/dir11/file3", 0L));
+            "/TestSwapBlockList/dir1/dir11/file3", 0L, false));
 
     String sourceFile = "/TestSwapBlockList/dir1/file1";
     String dstFile1 = "/TestSwapBlockList/dir1/dir11/file3";
@@ -124,14 +135,14 @@ public class TestSwapBlockList {
     dstInodeFile.toUnderConstruction("TestClient", "TestClientMachine");
     LambdaTestUtils.intercept(IOException.class,
         dstFile1 + " is under construction.",
-        () -> fsn.swapBlockList(sourceFile, dstFile1, 0L));
+        () -> fsn.swapBlockList(sourceFile, dstFile1, 0L, false));
 
     // Check if parent directory is in snapshot.
     SnapshotTestHelper.createSnapshot(hdfs, subDir2, "s0");
     String dstFile2 = "/TestSwapBlockList/dir2/file4";
     LambdaTestUtils.intercept(IOException.class,
         dstFile2 + " is in a snapshot directory",
-        () -> fsn.swapBlockList(sourceFile, dstFile2, 0L));
+        () -> fsn.swapBlockList(sourceFile, dstFile2, 0L, false));
 
     // Check if gen timestamp validation works.
     String dstFile3 = "/TestSwapBlockList/dir1/file2";
@@ -141,7 +152,7 @@ public class TestSwapBlockList {
     dstInodeFile.getLastBlock().setGenerationStamp(genStamp + 1);
     LambdaTestUtils.intercept(IOException.class,
         dstFile3 + " has last block with different gen timestamp.",
-        () -> fsn.swapBlockList(sourceFile, dstFile3, genStamp));
+        () -> fsn.swapBlockList(sourceFile, dstFile3, genStamp, false));
   }
 
   @Test
@@ -163,7 +174,7 @@ public class TestSwapBlockList {
     long dstHeader = dstInodeFile.getHeaderLong();
 
     fsn.swapBlockList(sourceFile, dstFile,
-        dstInodeFile.getLastBlock().getGenerationStamp());
+        dstInodeFile.getLastBlock().getGenerationStamp(), false);
     assertBlockListEquality(dstBlockLocationsBeforeSwap,
         srcInodeFile.getBlocks(), srcInodeFile.getId());
     assertBlockListEquality(srcBlockLocationsBeforeSwap,
@@ -215,6 +226,113 @@ public class TestSwapBlockList {
         HeaderFormat.getBlockLayoutPolicy(srcInodeFile.getHeaderLong()));
     assertEquals(HeaderFormat.getBlockLayoutPolicy(dstHeader),
         HeaderFormat.getBlockLayoutPolicy(dstInodeFile.getHeaderLong()));
+  }
+
+  @Test
+  public void testSwapBlockListEditLog() throws Exception{
+    // start a cluster
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
+          .build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      FSNamesystem fns = cluster.getNamesystem();
+      FSDirectory fsd = fns.getFSDirectory();
+      ErasureCodingPolicy testECPolicy = StripedFileTestUtil.getDefaultECPolicy();
+      fns.enableErasureCodingPolicy(testECPolicy.getName(), false);
+
+      final Path rootDir = new Path("/" + getClass().getSimpleName());
+      Path srcRepDir =  new Path (rootDir,"dir_replica");
+      Path dstECDir =  new Path (rootDir,"dir_ec");
+      Path srcFile = new Path(srcRepDir, "file_1");
+      Path dstFile = new Path(dstECDir, "file_2");
+
+      fs.mkdirs(srcRepDir);
+      fs.mkdirs(dstECDir);
+
+      fs.getClient().setErasureCodingPolicy(dstECDir.toString(),
+          testECPolicy.getName());
+
+      DFSTestUtil.createFile(fs, srcFile, 1024, (short) 3, 1);
+
+      DFSTestUtil.createStripedFile(cluster, dstFile, null,
+          4, 4, false, testECPolicy);
+
+      INodeFile srcInodeFile =
+          (INodeFile) fsd.resolvePath(fsd.getPermissionChecker(),
+              srcFile.toString(), FSDirectory.DirOp.WRITE).getLastINode();
+      INodeFile dstInodeFile =
+          (INodeFile) fsd.resolvePath(fsd.getPermissionChecker(),
+              dstFile.toString(), FSDirectory.DirOp.WRITE).getLastINode();
+
+      BlockInfo[] srcBlockLocationsBeforeSwap = srcInodeFile.getBlocks();
+      long srcHeader = srcInodeFile.getHeaderLong();
+
+      BlockInfo[] dstBlockLocationsBeforeSwap = dstInodeFile.getBlocks();
+      long dstHeader = dstInodeFile.getHeaderLong();
+
+      // swapBlockList srcRepFile dstECFile
+      fns.swapBlockList(srcFile.toString(), dstFile.toString(),
+          dstInodeFile.getLastBlock().getGenerationStamp(), false);
+
+      // Assert Block Id
+      assertBlockListEquality(dstBlockLocationsBeforeSwap,
+          srcInodeFile.getBlocks(), srcInodeFile.getId());
+      assertBlockListEquality(srcBlockLocationsBeforeSwap,
+          dstInodeFile.getBlocks(), dstInodeFile.getId());
+
+      // Assert Block Layout
+      assertEquals(HeaderFormat.getBlockLayoutPolicy(srcHeader),
+          HeaderFormat.getBlockLayoutPolicy(dstInodeFile.getHeaderLong()));
+      assertEquals(HeaderFormat.getBlockLayoutPolicy(dstHeader),
+          HeaderFormat.getBlockLayoutPolicy(srcInodeFile.getHeaderLong()));
+
+      // Assert Storage policy
+      assertEquals(HeaderFormat.getStoragePolicyID(srcHeader),
+          HeaderFormat.getStoragePolicyID(dstInodeFile.getHeaderLong()));
+      assertEquals(HeaderFormat.getStoragePolicyID(dstHeader),
+          HeaderFormat.getStoragePolicyID(srcInodeFile.getHeaderLong()));
+
+      //After the namenode restarts if the block by loaded is the same as above
+      //(new block size and timestamp) it means that we have successfully
+      //applied the edit log to the fsimage.
+      cluster.restartNameNodes();
+      cluster.waitActive();
+      fns = cluster.getNamesystem();
+
+      INodeFile srcInodeLoaded = (INodeFile)fns.getFSDirectory()
+          .getINode(srcFile.toString());
+
+      INodeFile dstInodeLoaded = (INodeFile)fns.getFSDirectory()
+          .getINode(dstFile.toString());
+
+      // Assert Block Id
+      assertBlockListEquality(dstBlockLocationsBeforeSwap,
+          srcInodeLoaded.getBlocks(), srcInodeLoaded.getId());
+      assertBlockListEquality(srcBlockLocationsBeforeSwap,
+          dstInodeLoaded.getBlocks(), dstInodeLoaded.getId());
+
+      // Assert Block Layout
+      assertEquals(HeaderFormat.getBlockLayoutPolicy(srcHeader),
+          HeaderFormat.getBlockLayoutPolicy(dstInodeLoaded.getHeaderLong()));
+      assertEquals(HeaderFormat.getBlockLayoutPolicy(dstHeader),
+          HeaderFormat.getBlockLayoutPolicy(srcInodeLoaded.getHeaderLong()));
+
+      // Assert Storage policy
+      assertEquals(HeaderFormat.getStoragePolicyID(srcHeader),
+          HeaderFormat.getStoragePolicyID(dstInodeLoaded.getHeaderLong()));
+      assertEquals(HeaderFormat.getStoragePolicyID(dstHeader),
+          HeaderFormat.getStoragePolicyID(srcInodeLoaded.getHeaderLong()));
+
+      cluster.shutdown();
+      cluster = null;
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   private void assertBlockListEquality(BlockInfo[] expected,
