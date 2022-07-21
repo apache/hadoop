@@ -26,7 +26,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,8 +71,7 @@ public final class RouterServerUtil {
   }
 
   public static <R> R createRequestInterceptorChain(Configuration conf, String pipeLineClassName,
-      String interceptorClassName, ClientMethod request, Class<R> clazz)
-      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+      String interceptorClassName, Class<R> clazz) {
 
     List<String> interceptorClassNames = getInterceptorClassNames(conf,
         pipeLineClassName, interceptorClassName);
@@ -91,7 +89,7 @@ public final class RouterServerUtil {
             current = clazz.cast(interceptorInstance);
             continue;
           } else {
-            Method method = clazz.getMethod(request.getMethodName(), request.getTypes());
+            Method method = clazz.getMethod("setNextInterceptor", clazz);
             method.invoke(current, interceptorInstance);
             current = clazz.cast(interceptorInstance);
           }
@@ -101,8 +99,28 @@ public final class RouterServerUtil {
               + clazz.getCanonicalName());
         }
       } catch (ClassNotFoundException e) {
+        LOG.error("Could not instantiate RequestInterceptor: {}", className, e);
         throw new YarnRuntimeException("Could not instantiate RequestInterceptor: " + className, e);
+      } catch (InvocationTargetException e) {
+        LOG.error("RequestInterceptor {} call setNextInterceptor error.", className, e);
+        throw new YarnRuntimeException("RequestInterceptor " + className
+            + " call setNextInterceptor error.", e);
+      } catch (NoSuchMethodException e) {
+        LOG.error("RequestInterceptor {} does not contain the method setNextInterceptor.",
+            className);
+        throw new YarnRuntimeException("RequestInterceptor " + className +
+            " does not contain the method setNextInterceptor.", e);
+      } catch (IllegalAccessException e) {
+        LOG.error("RequestInterceptor {} call the method setNextInterceptor " +
+            "does not have access.", className);
+        throw new YarnRuntimeException("RequestInterceptor "
+            + className + " call the method setNextInterceptor does not have access.", e);
       }
+    }
+
+    if (pipeline == null) {
+      throw new YarnRuntimeException(
+          "RequestInterceptor pipeline is not configured in the system.");
     }
 
     return pipeline;

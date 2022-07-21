@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -83,7 +82,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
@@ -181,27 +179,14 @@ public class RouterWebServices implements RMWebServiceProtocol {
    */
   @VisibleForTesting
   protected RESTRequestInterceptor createRequestInterceptorChain() {
-    RESTRequestInterceptor pipeline = null;
-    ClientMethod remoteMethod = null;
     try {
-      remoteMethod = new ClientMethod("setNextInterceptor",
-          new Class[]{RESTRequestInterceptor.class}, new Object[]{null});
-
-      pipeline = RouterServerUtil.createRequestInterceptorChain(conf,
+      return RouterServerUtil.createRequestInterceptorChain(conf,
           YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_INTERCEPTOR_CLASS,
-          remoteMethod, RESTRequestInterceptor.class);
-
-      if (pipeline == null) {
-        throw new YarnRuntimeException(
-            "RequestInterceptor pipeline is not configured in the system.");
-      }
-    } catch (IOException | InvocationTargetException | NoSuchMethodException | RuntimeException
-         | IllegalAccessException ex) {
+          RESTRequestInterceptor.class);
+    } catch (YarnRuntimeException ex) {
       throw new YarnRuntimeException("Create RequestInterceptor Chain error.", ex);
     }
-
-    return pipeline;
   }
 
   /**

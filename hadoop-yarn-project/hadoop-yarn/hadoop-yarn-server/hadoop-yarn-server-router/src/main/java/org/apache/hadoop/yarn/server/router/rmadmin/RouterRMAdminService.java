@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Map;
@@ -66,7 +65,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResp
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
@@ -190,26 +188,14 @@ public class RouterRMAdminService extends AbstractService
   @VisibleForTesting
   protected RMAdminRequestInterceptor createRequestInterceptorChain() {
     Configuration conf = getConfig();
-    RMAdminRequestInterceptor pipeline = null;
-    ClientMethod remoteMethod = null;
     try {
-      remoteMethod = new ClientMethod("setNextInterceptor",
-              new Class[]{RMAdminRequestInterceptor.class}, new Object[]{null});
-
-      pipeline = RouterServerUtil.createRequestInterceptorChain(conf,
+      return RouterServerUtil.createRequestInterceptorChain(conf,
           YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
           YarnConfiguration.DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS,
-          remoteMethod, RMAdminRequestInterceptor.class);
-
-      if (pipeline == null) {
-        throw new YarnRuntimeException(
-            "RequestInterceptor pipeline is not configured in the system.");
-      }
-    } catch (IOException | InvocationTargetException | NoSuchMethodException | RuntimeException
-             | IllegalAccessException ex) {
+          RMAdminRequestInterceptor.class);
+    } catch (YarnRuntimeException ex) {
       throw new YarnRuntimeException("Create RequestInterceptor Chain error.", ex);
     }
-    return pipeline;
   }
 
   /**
