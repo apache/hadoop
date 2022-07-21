@@ -207,7 +207,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testInvalidApp(int round) {
-    
     ApplicationId appId = ApplicationId.newInstance(0, MAX_APPS + 1);
     WebResource r = resource();
     ClientResponse response =
@@ -223,7 +222,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testInvalidAttempt(int round) {
-    
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, MAX_APPS + 1);
@@ -246,7 +244,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testInvalidContainer(int round) throws Exception {
-    
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
@@ -272,7 +269,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testInvalidUri(int round) throws JSONException, Exception {
-    
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -293,7 +289,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testInvalidUri2(int round) throws JSONException, Exception {
-    
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -311,7 +306,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testInvalidAccept(int round) throws JSONException, Exception {
-    
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -332,7 +326,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testAbout(int round) throws Exception {
-    
     WebResource r = resource();
     ClientResponse response = r
         .path("ws").path("v1").path("applicationhistory").path("about")
@@ -363,7 +356,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testAppsQuery(int round) throws Exception {
-    
     WebResource r = resource();
     ClientResponse response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
@@ -383,7 +375,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testQueueQuery(int round) throws Exception {
-    
     WebResource r = resource();
     ClientResponse response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
@@ -406,7 +397,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testSingleApp(int round) throws Exception {
-    
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     WebResource r = resource();
     ClientResponse response =
@@ -440,7 +430,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testMultipleAttempts(int round) throws Exception {
-    
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     WebResource r = resource();
     ClientResponse response =
@@ -465,7 +454,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testSingleAttempt(int round) throws Exception {
-    
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
@@ -498,7 +486,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testMultipleContainers(int round) throws Exception {
-    
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
@@ -526,7 +513,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testSingleContainer(int round) throws Exception {
-    
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
@@ -720,7 +706,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @ParameterizedTest
   @Timeout(10000)
   void testContainerLogsForRunningApps(int round) throws Exception {
-    
     String fileName = "syslog";
     String user = "user1";
     ApplicationId appId = ApplicationId.newInstance(
@@ -849,7 +834,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @ParameterizedTest
   @Timeout(10000)
   void testContainerLogsMetaForRunningApps(int round) throws Exception {
-    
     String user = "user1";
     ApplicationId appId = ApplicationId.newInstance(
         1234, 1);
@@ -957,7 +941,6 @@ public class TestAHSWebServices extends JerseyTestBase {
   @ParameterizedTest
   @Timeout(10000)
   void testContainerLogsMetaForFinishedApps(int round) throws Exception {
-    
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);

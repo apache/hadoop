@@ -223,7 +223,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertNotNull(entity1);
     assertEquals("id_1", entity1.getEntityId());
     assertEquals("type_1", entity1.getEntityType());
-    assertEquals(123l, entity1.getStartTime().longValue());
+    assertEquals(123L, entity1.getStartTime().longValue());
     assertEquals(2, entity1.getEvents().size());
     assertEquals(4, entity1.getPrimaryFilters().size());
     assertEquals(4, entity1.getOtherInfo().size());
@@ -231,7 +231,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertNotNull(entity2);
     assertEquals("id_2", entity2.getEntityId());
     assertEquals("type_1", entity2.getEntityType());
-    assertEquals(123l, entity2.getStartTime().longValue());
+    assertEquals(123L, entity2.getStartTime().longValue());
     assertEquals(2, entity2.getEvents().size());
     assertEquals(4, entity2.getPrimaryFilters().size());
     assertEquals(4, entity2.getOtherInfo().size());
@@ -239,7 +239,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertNotNull(entity2);
     assertEquals("id_6", entity3.getEntityId());
     assertEquals("type_1", entity3.getEntityType());
-    assertEquals(61l, entity3.getStartTime().longValue());
+    assertEquals(61L, entity3.getStartTime().longValue());
     assertEquals(0, entity3.getEvents().size());
     assertEquals(4, entity3.getPrimaryFilters().size());
     assertEquals(4, entity3.getOtherInfo().size());
@@ -332,7 +332,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("primaryFilter",
-        "long:" + Long.toString((long) Integer.MAX_VALUE + 1l))
+        "long:" + Long.toString((long) Integer.MAX_VALUE + 1L))
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
@@ -367,7 +367,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertNotNull(entity);
     assertEquals("id_1", entity.getEntityId());
     assertEquals("type_1", entity.getEntityType());
-    assertEquals(123l, entity.getStartTime().longValue());
+    assertEquals(123L, entity.getStartTime().longValue());
     assertEquals(2, entity.getEvents().size());
     assertEquals(4, entity.getPrimaryFilters().size());
     assertEquals(4, entity.getOtherInfo().size());
@@ -386,7 +386,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertNotNull(entity);
     assertEquals("id_1", entity.getEntityId());
     assertEquals("type_1", entity.getEntityType());
-    assertEquals(123l, entity.getStartTime().longValue());
+    assertEquals(123L, entity.getStartTime().longValue());
     assertEquals(2, entity.getEvents().size());
     assertEquals(0, entity.getPrimaryFilters().size());
     assertEquals(4, entity.getOtherInfo().size());
@@ -406,7 +406,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertNotNull(entity);
     assertEquals("id_1", entity.getEntityId());
     assertEquals("type_1", entity.getEntityType());
-    assertEquals(123l, entity.getStartTime().longValue());
+    assertEquals(123L, entity.getStartTime().longValue());
     assertEquals(1, entity.getEvents().size());
     assertEquals(4, entity.getPrimaryFilters().size());
     assertEquals(0, entity.getOtherInfo().size());
@@ -428,11 +428,11 @@ public class TestTimelineWebServices extends JerseyTestBase {
     TimelineEvents.EventsOfOneEntity partEvents = events.getAllEvents().get(0);
     assertEquals(2, partEvents.getEvents().size());
     TimelineEvent event1 = partEvents.getEvents().get(0);
-    assertEquals(456l, event1.getTimestamp());
+    assertEquals(456L, event1.getTimestamp());
     assertEquals("end_event", event1.getEventType());
     assertEquals(1, event1.getEventInfo().size());
     TimelineEvent event2 = partEvents.getEvents().get(1);
-    assertEquals(123l, event2.getTimestamp());
+    assertEquals(123L, event2.getTimestamp());
     assertEquals("start_event", event2.getEventType());
     assertEquals(0, event2.getEventInfo().size());
   }

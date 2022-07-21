@@ -101,7 +101,7 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
         aclsManager.setAdminACLsManager(adminACLsManager);
     try {
       TimelineEntities entities = dataManaer.getEntities(
-          "ACL_ENTITY_TYPE_1", null, null, null, null, null, null, 1l, null,
+          "ACL_ENTITY_TYPE_1", null, null, null, null, null, null, 1L, null,
           UserGroupInformation.createUserForTesting("owner_1", new String[]{"group1"}));
       assertEquals(1, entities.getEntities().size());
       assertEquals("ACL_ENTITY_ID_11",
