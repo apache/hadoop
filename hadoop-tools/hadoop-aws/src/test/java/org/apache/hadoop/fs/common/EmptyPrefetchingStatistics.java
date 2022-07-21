@@ -38,7 +38,7 @@ public final class EmptyPrefetchingStatistics implements PrefetchingStatistics {
   }
 
   @Override
-  public void prefetchOperationCompleted(boolean prefetchSucceeded) {
+  public void prefetchOperationCompleted() {
 
   }
 

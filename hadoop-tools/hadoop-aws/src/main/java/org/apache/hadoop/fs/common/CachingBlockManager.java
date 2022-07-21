@@ -343,17 +343,12 @@ public abstract class CachingBlockManager extends BlockManager {
         data.setReady(expectedState);
 
         if (isPrefetch) {
-          prefetchingStatistics.prefetchOperationCompleted(true);
+          prefetchingStatistics.prefetchOperationCompleted();
         }
       } catch (Exception e) {
         String message = String.format("error during readBlock(%s)", data.getBlockNumber());
         LOG.error(message, e);
         this.numReadErrors.incrementAndGet();
-
-        if (isPrefetch) {
-          prefetchingStatistics.prefetchOperationCompleted(false);
-        }
-
         data.setDone();
         throw e;
       } finally {

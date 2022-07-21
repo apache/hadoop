@@ -25,17 +25,41 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 public interface PrefetchingStatistics extends IOStatisticsSource {
 
+  /**
+   * A prefetch operation has started.
+   */
   void prefetchOperationStarted();
 
+  /**
+   * A block has been saved to the file cache.
+   */
   void blockAddedToFileCache();
 
+  /**
+   * A block has been removed from the file cache.
+   */
   void blockRemovedFromFileCache();
 
-  void prefetchOperationCompleted(boolean prefetchSucceeded);
+  /**
+   * A prefetch operation has completed.
+   */
+  void prefetchOperationCompleted();
 
+  /**
+   * An executor has been acquired, either for prefetching or caching.
+   * @param timeInQueue time taken to acquire an executor.
+   */
   void executorAcquired(Duration timeInQueue);
 
+  /**
+   * A new buffer has been added to the buffer pool.
+   * @param size size of the new buffer
+   */
   void memoryAllocated(int size);
 
+  /**
+   * Previously allocated memory has been freed.
+   * @param size size of memory freed.
+   */
   void memoryFreed(int size);
 }

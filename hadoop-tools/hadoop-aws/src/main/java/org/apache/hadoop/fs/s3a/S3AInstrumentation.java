@@ -1332,12 +1332,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     @Override
-    public void prefetchOperationCompleted(boolean prefetchSucceeded) {
+    public void prefetchOperationCompleted() {
       incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, -1);
-
-      if(!prefetchSucceeded) {
-        failedPrefetchReadOperations.incrementAndGet();
-      }
     }
 
     @Override

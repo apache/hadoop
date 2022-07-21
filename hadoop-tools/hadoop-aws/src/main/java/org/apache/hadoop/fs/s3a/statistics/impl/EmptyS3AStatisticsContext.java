@@ -214,7 +214,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void prefetchOperationCompleted(boolean prefetchSucceeded) {
+    public void prefetchOperationCompleted() {
 
     }
 
