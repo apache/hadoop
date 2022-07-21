@@ -40,7 +40,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
   public void testArgChecks() throws Exception {
     // Should not throw.
     BlockCache cache =
-        new SingleFilePerBlockCache(new EmptyPrefetchingStatistics());
+        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance());
 
     ByteBuffer buffer = ByteBuffer.allocate(16);
 

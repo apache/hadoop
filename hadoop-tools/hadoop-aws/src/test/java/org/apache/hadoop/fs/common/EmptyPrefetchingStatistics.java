@@ -21,10 +21,25 @@ package org.apache.hadoop.fs.common;
 
 import java.time.Duration;
 
-public final class EmptyPrefetchingStatistics implements PrefetchingStatistics {
-  @Override
-  public void prefetchOperationStarted() {
+import org.apache.hadoop.fs.statistics.DurationTracker;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
+
+ public final class EmptyPrefetchingStatistics implements PrefetchingStatistics {
+
+   private static final EmptyPrefetchingStatistics emptyPrefetchingStatistics =
+       new EmptyPrefetchingStatistics();
+
+   private EmptyPrefetchingStatistics() {
+   }
+
+   public static EmptyPrefetchingStatistics getInstance() {
+     return emptyPrefetchingStatistics;
+   }
+
+  @Override
+  public DurationTracker prefetchOperationStarted() {
+    return stubDurationTracker();
   }
 
   @Override

@@ -394,12 +394,6 @@ public final class StreamStatisticNames {
       = "stream_read_prefetch_operations";
 
   /**
-   * Total number of failed prefetching operations.
-   */
-  public static final String STREAM_READ_FAILED_PREFETCH_OPERATIONS
-      = "stream_read_failed_prefetch_operations";
-
-  /**
    * Total number of block in disk cache.
    */
   public static final String STREAM_READ_BLOCKS_IN_FILE_CACHE

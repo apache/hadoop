@@ -209,8 +209,8 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void prefetchOperationStarted() {
-
+    public DurationTracker prefetchOperationStarted() {
+      return stubDurationTracker();
     }
 
     @Override

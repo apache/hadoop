@@ -803,8 +803,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong readOperations;
     private final AtomicLong readFullyOperations;
     private final AtomicLong seekOperations;
-    private final AtomicLong prefetchReadOperations;
-    private final AtomicLong failedPrefetchReadOperations;
 
     /** Bytes read by the application and any when draining streams . */
     private final AtomicLong totalBytesRead;
@@ -838,9 +836,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
               StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
               StreamStatisticNames.STREAM_READ_UNBUFFERED,
-              StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
-              StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
-              StreamStatisticNames.STREAM_READ_FAILED_PREFETCH_OPERATIONS)
+              StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
               STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
               STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
@@ -851,6 +847,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StoreStatisticNames.ACTION_FILE_OPENED,
               StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
               StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
+              StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
               StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ,
               StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ)
           .build();
@@ -889,10 +886,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
       totalBytesRead = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_TOTAL_BYTES);
-      prefetchReadOperations =
-          st.getCounterReference(StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS);
-      failedPrefetchReadOperations =
-          st.getCounterReference(StreamStatisticNames.STREAM_READ_FAILED_PREFETCH_OPERATIONS);
       setIOStatistics(st);
       // create initial snapshot of merged statistics
       mergedStats = snapshotIOStatistics(st);
@@ -1316,9 +1309,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     @Override
-    public void prefetchOperationStarted() {
+    public DurationTracker prefetchOperationStarted() {
       incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, 1);
-      prefetchReadOperations.incrementAndGet();
+      return trackDuration(StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS);
     }
 
     @Override

@@ -33,6 +33,8 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.statistics.DurationTracker;
+
 import static java.util.Objects.requireNonNull;
 
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -307,6 +309,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     BlockOperations.Operation op = null;
+    DurationTracker tracker = null;
 
     synchronized (data) {
       try {
@@ -328,7 +331,7 @@ public abstract class CachingBlockManager extends BlockManager {
         }
 
         if (isPrefetch) {
-          prefetchingStatistics.prefetchOperationStarted();
+          tracker = prefetchingStatistics.prefetchOperationStarted();
           op = this.ops.prefetch(data.getBlockNumber());
         } else {
           op = this.ops.getRead(data.getBlockNumber());
@@ -341,19 +344,25 @@ public abstract class CachingBlockManager extends BlockManager {
         this.read(buffer, offset, size);
         buffer.flip();
         data.setReady(expectedState);
-
-        if (isPrefetch) {
-          prefetchingStatistics.prefetchOperationCompleted();
-        }
       } catch (Exception e) {
         String message = String.format("error during readBlock(%s)", data.getBlockNumber());
         LOG.error(message, e);
+
+        if(isPrefetch) {
+          tracker.failed();
+        }
+
         this.numReadErrors.incrementAndGet();
         data.setDone();
         throw e;
       } finally {
         if (op != null) {
           this.ops.end(op);
+        }
+
+        if (isPrefetch) {
+          prefetchingStatistics.prefetchOperationCompleted();
+          tracker.close();
         }
       }
     }

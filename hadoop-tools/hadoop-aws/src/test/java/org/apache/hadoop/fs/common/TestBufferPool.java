@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.common;
 
 import org.junit.Test;
 
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
@@ -37,30 +38,32 @@ public class TestBufferPool extends AbstractHadoopTestBase {
 
   @Test
   public void testArgChecks() throws Exception {
+    S3AInputStreamStatistics s3AInputStreamStatistics =
+        new EmptyS3AStatisticsContext().newInputStreamStatistics();
+
     // Should not throw.
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE,
-        EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, s3AInputStreamStatistics);
 
     // Verify it throws correctly.
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'size' must be a positive integer",
-        () -> new BufferPool(0, 10, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
+        () -> new BufferPool(0, 10, s3AInputStreamStatistics));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'size' must be a positive integer",
-        () -> new BufferPool(-1, 10, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
+        () -> new BufferPool(-1, 10, s3AInputStreamStatistics));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'bufferSize' must be a positive integer",
-        () -> new BufferPool(10, 0, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
+        () -> new BufferPool(10, 0, s3AInputStreamStatistics));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'bufferSize' must be a positive integer",
-        () -> new BufferPool(1, -10, EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS));
+        () -> new BufferPool(1, -10, s3AInputStreamStatistics));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,

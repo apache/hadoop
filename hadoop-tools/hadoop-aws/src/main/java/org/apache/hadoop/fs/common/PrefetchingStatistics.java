@@ -21,14 +21,16 @@ package org.apache.hadoop.fs.common;
 
 import java.time.Duration;
 
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 public interface PrefetchingStatistics extends IOStatisticsSource {
 
   /**
    * A prefetch operation has started.
+   * @return duration tracker
    */
-  void prefetchOperationStarted();
+  DurationTracker prefetchOperationStarted();
 
   /**
    * A block has been saved to the file cache.
