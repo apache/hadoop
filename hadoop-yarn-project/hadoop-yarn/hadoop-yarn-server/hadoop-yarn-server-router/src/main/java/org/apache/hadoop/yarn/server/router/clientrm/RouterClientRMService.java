@@ -509,8 +509,8 @@ public class RouterClientRMService extends AbstractService
       try {
         // We should init the pipeline instance after it is created and then
         // add to the map, to ensure thread safe.
-        LOG.info("Initializing request processing pipeline for application "
-            + "for the user: {}.", user);
+        LOG.info("Initializing request processing pipeline for application for the user: {}.",
+            user);
 
         ClientRequestInterceptor interceptorChain =
             this.createRequestInterceptorChain();

@@ -102,7 +102,7 @@ public class RouterRMAdminService extends AbstractService
 
   @Override
   protected void serviceStart() throws Exception {
-    LOG.info("Starting Router RMAdmin Service");
+    LOG.info("Starting Router RMAdmin Service.");
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     UserGroupInformation.setConfiguration(conf);
@@ -116,8 +116,7 @@ public class RouterRMAdminService extends AbstractService
     int maxCacheSize =
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
             YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
-    this.userPipelineMap = Collections.synchronizedMap(
-         new LRUCacheHashMap<>(maxCacheSize, true));
+    this.userPipelineMap = Collections.synchronizedMap(new LRUCacheHashMap<>(maxCacheSize, true));
 
     Configuration serverConf = new Configuration(conf);
 
@@ -134,7 +133,7 @@ public class RouterRMAdminService extends AbstractService
     }
 
     this.server.start();
-    LOG.info("Router RMAdminService listening on address: {}", this.server.getListenerAddress());
+    LOG.info("Router RMAdminService listening on address: {}.", this.server.getListenerAddress());
     super.serviceStart();
   }
 
