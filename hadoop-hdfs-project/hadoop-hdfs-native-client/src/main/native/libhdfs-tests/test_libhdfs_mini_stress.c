@@ -36,6 +36,7 @@
 #ifndef WIN32
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <pwd.h>
 #endif
 
 #define TO_STR_HELPER(X) #X

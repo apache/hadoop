@@ -28,6 +28,10 @@
 #include <iostream>
 #include <utility>
 
+#ifndef WIN32
+#include <pwd.h>
+#endif
+
 #define FMT_THIS_ADDR "this=" << (void*)this
 
 using boost::asio::ip::tcp;

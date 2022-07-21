@@ -30,6 +30,10 @@
 
 #include "x-platform/syscall.h"
 
+#ifndef WIN32
+#include <pwd.h>
+#endif
+
 #define FMT_THIS_ADDR "this=" << (void*)this
 
 namespace hdfs {

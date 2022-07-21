@@ -27,6 +27,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <gmock/gmock-spec-builders.h>
+#include <gmock/gmock-generated-actions.h>
 
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/error.hpp>
