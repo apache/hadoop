@@ -73,7 +73,7 @@ public interface IOStatisticsContext extends IOStatisticsSource {
   /**
    * Set the IOStatisticsContext for the current thread.
    * @param statisticsContext IOStatistics context instance for the
-   * current thread.
+   * current thread. If null, the context is reset.
    */
   static void setThreadIOStatisticsContext(
       IOStatisticsContext statisticsContext) {

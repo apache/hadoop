@@ -289,7 +289,6 @@ public class CommitOperations extends AbstractStoreOperation
         //. stopOnFailure()
         .suppressExceptions(false)
         .executeWith(commitContext.getOuterSubmitter())
-        .withIOStatisticsContext(commitContext.getIOStatisticsContext())
         .run(status -> {
           Path path = status.getPath();
           try {

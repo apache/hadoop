@@ -605,9 +605,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         stopVectoredIOOperations.set(true);
         // close or abort the stream; blocking
         awaitFuture(closeStream("close() operation", false, true));
-        // Collect ThreadLevel IOStats
-        mergeThreadIOStatistics(streamStatistics.getIOStatistics());
-        LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
         // end the client+audit span.
         client.close();
         // this is actually a no-op
@@ -615,6 +612,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       } finally {
         // merge the statistics back into the FS statistics.
         streamStatistics.close();
+        // Collect ThreadLevel IOStats
+        mergeThreadIOStatistics(streamStatistics.getIOStatistics());
       }
     }
   }

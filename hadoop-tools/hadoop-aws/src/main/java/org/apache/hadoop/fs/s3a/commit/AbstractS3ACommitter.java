@@ -757,7 +757,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
               commitContext.abortSingleCommit(commit))
           .abortWith(commitContext::abortSingleCommit)
           .revertWith(commitContext::revertCommit)
-          .withIOStatisticsContext(commitContext.getIOStatisticsContext())
           .run(commit -> {
             commitContext.commitOrFail(commit);
             activeCommit.uploadCommitted(
@@ -792,7 +791,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
           commitContext.getPendingSetSerializer());
       TaskPool.foreach(pendingSet.getCommits())
           .suppressExceptions(true)
-          .withIOStatisticsContext(commitContext.getIOStatisticsContext())
           .run(commitContext::revertCommit);
     }
   }
@@ -825,7 +823,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
           commitContext.getPendingSetSerializer());
       FileSystem fs = getDestFS();
       TaskPool.foreach(pendingSet.getCommits())
-          .withIOStatisticsContext(commitContext.getIOStatisticsContext())
           .executeWith(commitContext.getInnerSubmitter())
           .suppressExceptions(suppressExceptions)
           .run(commit -> {

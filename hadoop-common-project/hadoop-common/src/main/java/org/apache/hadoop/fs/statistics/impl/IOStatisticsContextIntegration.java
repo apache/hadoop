@@ -116,13 +116,17 @@ public final class IOStatisticsContextIntegration {
   /**
    * Set the IOStatisticsContext for the current thread.
    * @param statisticsContext IOStatistics context instance for the
-   * current thread.
+   * current thread. If null, the context is reset.
    */
   public static void setThreadIOStatisticsContext(
       IOStatisticsContext statisticsContext) {
-    if (IS_THREAD_IOSTATS_ENABLED &&
-        ACTIVE_IOSTATS_CONTEXT.getForCurrentThread() != statisticsContext) {
-      ACTIVE_IOSTATS_CONTEXT.setForCurrentThread(statisticsContext);
+    if (IS_THREAD_IOSTATS_ENABLED) {
+      if (statisticsContext == null) {
+        ACTIVE_IOSTATS_CONTEXT.removeForCurrentThread();
+      }
+      if (ACTIVE_IOSTATS_CONTEXT.getForCurrentThread() != statisticsContext) {
+        ACTIVE_IOSTATS_CONTEXT.setForCurrentThread(statisticsContext);
+      }
     }
   }
 

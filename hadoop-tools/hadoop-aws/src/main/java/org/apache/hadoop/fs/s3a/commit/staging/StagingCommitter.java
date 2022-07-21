@@ -674,7 +674,6 @@ public class StagingCommitter extends AbstractS3ACommitter {
             .stopOnFailure()
             .suppressExceptions(false)
             .executeWith(commitContext.getOuterSubmitter())
-            .withIOStatisticsContext(commitContext.getIOStatisticsContext())
             .run(stat -> {
               Path path = stat.getPath();
               File localFile = new File(path.toUri().getPath());
