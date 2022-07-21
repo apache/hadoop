@@ -8510,6 +8510,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                         boolean logRetryCache)
       throws IOException {
     final String operationName = "swapBlockList";
+    requireEffectiveLayoutVersionForFeature(Feature.SWAP_BLOCK_LIST);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     SwapBlockListResult res = null;
