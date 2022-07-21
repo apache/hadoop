@@ -50,6 +50,11 @@ public class RouterDelegationTokenSecretManager
   }
 
   @Override
+  protected void removeStoredMasterKey(DelegationKey key) {
+    super.removeStoredMasterKey(key);
+  }
+
+  @Override
   public synchronized void addPersistedDelegationToken(
       RMDelegationTokenIdentifier identifier, long renewDate) throws IOException {
     int keyId = identifier.getMasterKeyId();

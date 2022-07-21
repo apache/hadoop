@@ -32,15 +32,19 @@ public abstract class DelegationTokenFetcher {
     this.secretManager = secretManager;
   }
 
-  protected void updateToken(RMDelegationTokenIdentifier identifier, long renewDate) throws IOException {
+  protected void updateToken(RMDelegationTokenIdentifier identifier, long renewDate)
+      throws IOException {
     secretManager.addPersistedDelegationToken(identifier, renewDate);
   }
 
-  protected void removeToken(Token<RMDelegationTokenIdentifier> token, String user) throws IOException {
+  protected void removeToken(Token<RMDelegationTokenIdentifier> token, String user)
+      throws IOException {
     secretManager.cancelToken(token, user);
   }
 
   protected void updateMasterKey(DelegationKey key) throws IOException {
     secretManager.addKey(key);
   }
+
+
 }

@@ -147,6 +147,8 @@ public class RouterClientRMService extends AbstractService
   // and remove the oldest used ones.
   private Map<String, RequestInterceptorChainWrapper> userPipelineMap;
 
+  private ZKCuratorManager zkManager;
+
   public RouterClientRMService() {
     super(RouterClientRMService.class.getName());
   }
@@ -161,7 +163,7 @@ public class RouterClientRMService extends AbstractService
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
     this.routerDTSecretManager = new RouterDelegationTokenSecretManager(secretKeyInterval,
         tokenMaxLifetime, tokenRenewInterval, 3600000);
-    ZKCuratorManager zkManager = new ZKCuratorManager(conf);
+    zkManager = new ZKCuratorManager(conf);
     zkManager.start();
     this.tokenFetcher = new ZKDelegationTokenFetcher(conf, zkManager, routerDTSecretManager);
     super.serviceInit(conf);

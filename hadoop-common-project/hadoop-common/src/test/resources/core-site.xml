@@ -60,4 +60,11 @@
   <name>nfs3.mountd.port</name>
   <value>4272</value>
 </property>
+
+<property>
+  <name>hadoop.zk.address</name>
+  <value>127.0.0.1:2181</value>
+  <description>Host:Port of the ZooKeeper server to be used.
+  </description>
+</property>
 </configuration>

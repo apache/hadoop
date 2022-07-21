@@ -21,9 +21,12 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 public class RouterDelegationKey extends DelegationKey {
   private String clusterId;
-
   public RouterDelegationKey(String subClusterId, DelegationKey key) {
     super(key.getKeyId(), key.getExpiryDate(), key.getEncodedKey());
     this.clusterId = subClusterId;
+  }
+
+  public String getClusterId() {
+    return clusterId;
   }
 }

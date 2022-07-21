@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.router.security;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.recipes.cache.CuratorCache;
+import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -34,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.IOException;
 
 public class ZKDelegationTokenFetcher extends DelegationTokenFetcher {
 
@@ -53,7 +51,7 @@ public class ZKDelegationTokenFetcher extends DelegationTokenFetcher {
   private String rootPath;
 
   public ZKDelegationTokenFetcher(Configuration conf, ZKCuratorManager zkcuratorManager,
-      RouterDelegationTokenSecretManager secretManager) throws Exception {
+      RouterDelegationTokenSecretManager secretManager) {
     super(secretManager);
     this.zkManager = zkcuratorManager;
     this.rootPath = conf.get("yarn.resourcemanager.zk-state-store.rootpath", "/federation");
@@ -61,33 +59,25 @@ public class ZKDelegationTokenFetcher extends DelegationTokenFetcher {
 
   @Override
   public void start() throws Exception {
-    PathChildrenCache subClusterCache =
-        new PathChildrenCache(zkManager.getCurator(), rootPath, true);
-    subClusterCache.start(PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
-    subClusterCache.getListenable().addListener(new PathChildrenCacheListener() {
-      @Override
-      public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) {
-        switch (event.getType()) {
-          case CHILD_ADDED:
-          case CHILD_UPDATED:
-          case CHILD_REMOVED:
-          default:
-            break;
-        }
-      }
-    });
-
-    for (ChildData data : subClusterCache.getCurrentData()) {
-      processSubCluster(data.getPath(), data.getData());
-    }
+    CuratorCache curatorCache = CuratorCache.build(zkManager.getCurator(), rootPath);
+    curatorCache.start();
+    CuratorCacheListener listener = CuratorCacheListener.builder()
+        .forInitialized(() -> LOG.info("Cache initialized."))
+        .build();
+    curatorCache.listenable().addListener(listener);
+    curatorCache.stream().forEach(data -> processSubCluster(data.getPath()));
   }
 
-  private void processSubCluster(String path, byte[] data) throws Exception {
+  private void processSubCluster(String path) {
     LOG.info("Monitor SubCluster path: {}.", path);
     rootPath = path + "/" + ROOT_ZNODE_NAME + "/" + RM_DT_SECRET_MANAGER_ROOT;
-    zkManager.createRootDirRecursively(rootPath);
-    monitorMasterKey(rootPath + "/" + RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME);
-    monitorDelegationToken(rootPath + "/" + RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
+    try {
+      zkManager.createRootDirRecursively(rootPath);
+      monitorMasterKey(rootPath + "/" + RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME);
+      monitorDelegationToken(rootPath + "/" + RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void monitorDelegationToken(String path) throws Exception {
@@ -95,32 +85,17 @@ public class ZKDelegationTokenFetcher extends DelegationTokenFetcher {
       zkManager.create(path);
     }
     LOG.info("Monitor DelegationToken path: {}.", path);
-    PathChildrenCache delegationTokenCache =
-        new PathChildrenCache(zkManager.getCurator(), path, true);
-    delegationTokenCache.start(PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
+    CuratorCache curatorCache = CuratorCache.build(zkManager.getCurator(), path);
+    curatorCache.start();
+    CuratorCacheListener listener =
+        CuratorCacheListener.builder().
+        forCreatesAndChanges((oldNode, node) ->
+            processDTNode(node.getPath(), node.getData(), true)).
+        forDeletes(node ->
+            processDTNode(node.getPath(), node.getData(), true)).build();
 
-    PathChildrenCacheListener listener = new PathChildrenCacheListener() {
-      @Override
-      public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
-          throws Exception {
-        LOG.info("Path: {}, Type: {}.", event.getData().getPath(), event.getType());
-        switch (event.getType()) {
-          case CHILD_ADDED:
-          case CHILD_UPDATED:
-            processDTNode(event.getData().getPath(), event.getData().getData(), true);
-            break;
-          case CHILD_REMOVED:
-            processDTNode(event.getData().getPath(), event.getData().getData(), false);
-            break;
-          default:
-            break;
-        }
-      }
-    };
-    delegationTokenCache.getListenable().addListener(listener);
-    for (ChildData data : delegationTokenCache.getCurrentData()) {
-      processDTNode(data.getPath(), data.getData(), true);
-    }
+    curatorCache.listenable().addListener(listener);
+    curatorCache.stream().forEach(data -> processDTNode(data.getPath(), data.getData(), true));
   }
 
   private void monitorMasterKey(String path) throws Exception {
@@ -128,27 +103,18 @@ public class ZKDelegationTokenFetcher extends DelegationTokenFetcher {
       zkManager.create(path);
     }
     LOG.info("Monitor MasterKey path: {}.", path);
-    PathChildrenCache masterKeyCache = new PathChildrenCache(zkManager.getCurator(), path, true);
-    masterKeyCache.start(PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
-    PathChildrenCacheListener listener = (client, event) -> {
-      LOG.info("Path: {}, Type: {}.", event.getData().getPath(), event.getType());
-      switch (event.getType()) {
-      case CHILD_ADDED:
-      case CHILD_UPDATED:
-        processKeyNode(event.getData().getPath(), event.getData().getData(), true);
-        break;
-      case CHILD_REMOVED:
-      default:
-        break;
-      }
-    };
-    masterKeyCache.getListenable().addListener(listener);
-    for (ChildData data : masterKeyCache.getCurrentData()) {
-      processKeyNode(data.getPath(), data.getData(), true);
-    }
+    CuratorCache masterKeyCache = CuratorCache.build(zkManager.getCurator(), path);
+    masterKeyCache.start();
+    CuratorCacheListener listener =
+        CuratorCacheListener.builder().
+        forCreatesAndChanges((oldNode, node) ->
+        processKeyNode(node.getPath(), node.getData(), true)).build();
+    masterKeyCache.listenable().addListener(listener);
+    masterKeyCache.stream().forEach(data ->
+        processDTNode(data.getPath(), data.getData(), true));
   }
 
-  private void processKeyNode(String path, byte[] data, boolean isUpdate) throws Exception {
+  private void processKeyNode(String path, byte[] data, boolean isUpdate) {
     if (!getChildName(path).startsWith(DELEGATION_KEY_PREFIX)) {
       LOG.info("Path: {} is not start with {}.", path, DELEGATION_KEY_PREFIX);
       return;
@@ -169,11 +135,13 @@ public class ZKDelegationTokenFetcher extends DelegationTokenFetcher {
                 key.getKeyId(), key.getExpiryDate());
           }
         }
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
     }
   }
 
-  private void processDTNode(String path, byte[] data, boolean isUpdate) throws Exception {
+  private void processDTNode(String path, byte[] data, boolean isUpdate)  {
     if (!getChildName(path).startsWith(DELEGATION_TOKEN_PREFIX)) {
       LOG.info("Path: {} is not start with {}.", path, DELEGATION_TOKEN_PREFIX);
       return;
@@ -199,13 +167,16 @@ public class ZKDelegationTokenFetcher extends DelegationTokenFetcher {
                 identifier, renewDate);
           }
         } else {
-          Token fakeToken = new Token(identifier.getBytes(), null, null, null);
+          Token<RMDelegationTokenIdentifier> fakeToken =
+              new Token<>(identifier.getBytes(), null, null, null);
           removeToken(fakeToken, identifier.getUser().getUserName());
           if (LOG.isInfoEnabled()) {
             LOG.info("Removed RMDelegationTokenIdentifier: {}, renewDate: {}.",
                 identifier, renewDate);
           }
         }
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
     }
   }
