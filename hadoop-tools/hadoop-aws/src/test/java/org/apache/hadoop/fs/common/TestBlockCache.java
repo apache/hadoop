@@ -59,7 +59,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
   @Test
   public void testPutAndGet() throws Exception {
     BlockCache cache =
-        new SingleFilePerBlockCache(EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+        new SingleFilePerBlockCache(new EmptyS3AStatisticsContext().newInputStreamStatistics());
 
     ByteBuffer buffer1 = ByteBuffer.allocate(BUFFER_SIZE);
     for (byte i = 0; i < BUFFER_SIZE; i++) {

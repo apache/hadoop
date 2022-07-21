@@ -39,6 +39,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.common.BlockCache;
 import org.apache.hadoop.fs.common.BlockData;
+import org.apache.hadoop.fs.common.EmptyPrefetchingStatistics;
 import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.common.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.common.Validate;
@@ -284,7 +285,7 @@ public final class Fakes {
     private final int writeDelay;
 
     public TestS3FilePerBlockCache(int readDelay, int writeDelay) {
-      super(EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+      super(new EmptyS3AStatisticsContext().newInputStreamStatistics());
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
       this.writeDelay = writeDelay;
@@ -339,7 +340,7 @@ public final class Fakes {
         BlockData blockData,
         int bufferPoolSize) {
       super(futurePool, reader, blockData, bufferPoolSize,
-          EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+          new EmptyS3AStatisticsContext().newInputStreamStatistics());
     }
 
     @Override

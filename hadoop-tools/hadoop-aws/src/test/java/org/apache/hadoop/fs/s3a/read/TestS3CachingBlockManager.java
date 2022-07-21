@@ -44,7 +44,7 @@ public class TestS3CachingBlockManager extends AbstractHadoopTestBase {
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
   private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
   private final S3AInputStreamStatistics streamStatistics =
-      EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS;
+      new EmptyS3AStatisticsContext().newInputStreamStatistics();
 
   private final BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
 

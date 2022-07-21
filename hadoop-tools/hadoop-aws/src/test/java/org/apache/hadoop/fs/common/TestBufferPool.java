@@ -34,13 +34,11 @@ public class TestBufferPool extends AbstractHadoopTestBase {
 
   private static final int POOL_SIZE = 2;
   private static final int BUFFER_SIZE = 10;
-
+  private final S3AInputStreamStatistics s3AInputStreamStatistics =
+      new EmptyS3AStatisticsContext().newInputStreamStatistics();
 
   @Test
   public void testArgChecks() throws Exception {
-    S3AInputStreamStatistics s3AInputStreamStatistics =
-        new EmptyS3AStatisticsContext().newInputStreamStatistics();
-
     // Should not throw.
     BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, s3AInputStreamStatistics);
 
@@ -87,8 +85,7 @@ public class TestBufferPool extends AbstractHadoopTestBase {
 
   @Test
   public void testGetAndRelease() {
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE,
-        EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, s3AInputStreamStatistics);
     assertInitialState(pool, POOL_SIZE);
 
     int count = 0;
@@ -135,8 +132,7 @@ public class TestBufferPool extends AbstractHadoopTestBase {
   private void testReleaseHelper(BufferData.State stateBeforeRelease, boolean expectThrow)
       throws Exception {
 
-    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE,
-        EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS);
+    BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, s3AInputStreamStatistics);
     assertInitialState(pool, POOL_SIZE);
 
     BufferData data = this.acquire(pool, 1);

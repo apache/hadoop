@@ -27,14 +27,14 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTr
 
  public final class EmptyPrefetchingStatistics implements PrefetchingStatistics {
 
-   private static final EmptyPrefetchingStatistics emptyPrefetchingStatistics =
+   private static final EmptyPrefetchingStatistics EMPTY_PREFETCHING_STATISTICS =
        new EmptyPrefetchingStatistics();
 
    private EmptyPrefetchingStatistics() {
    }
 
    public static EmptyPrefetchingStatistics getInstance() {
-     return emptyPrefetchingStatistics;
+     return EMPTY_PREFETCHING_STATISTICS;
    }
 
   @Override
