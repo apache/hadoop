@@ -415,9 +415,10 @@ public class TestDFSIO implements Tool {
     public Closeable getIOStream(String name) throws IOException {
       // create file
       Path filePath = new Path(getDataDir(getConf()), name);
-      OutputStream out = fs.create(filePath, true, bufferSize);
+      FileSystem targetFs = filePath.getFileSystem(getConf());
+      OutputStream out = targetFs.create(filePath, true, bufferSize);
       if (blockStoragePolicy != null) {
-        fs.setStoragePolicy(filePath, blockStoragePolicy);
+        targetFs.setStoragePolicy(filePath, blockStoragePolicy);
       }
       if(compressionCodec != null)
         out = compressionCodec.createOutputStream(out);
@@ -462,18 +463,31 @@ public class TestDFSIO implements Tool {
           Path outputDir) throws IOException {
     JobConf job = new JobConf(config, TestDFSIO.class);
 
-    FileInputFormat.setInputPaths(job, getControlDir(config));
+    setInputPaths(job,getControlDir(config));
     job.setInputFormat(SequenceFileInputFormat.class);
 
     job.setMapperClass(mapperClass);
     job.setReducerClass(AccumulatingReducer.class);
 
-    FileOutputFormat.setOutputPath(job, outputDir);
+    job.set(org.apache.hadoop.mapreduce.lib.output.
+            FileOutputFormat.OUTDIR, outputDir.toString());
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
     job.setNumReduceTasks(1);
     job.setSpeculativeExecution(false);
     JobClient.runJob(job);
+  }
+
+  public static void setInputPaths(JobConf conf, Path... inputPaths) {
+    Path path = inputPaths[0];
+    StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
+    for(int i = 1; i < inputPaths.length;i++) {
+      str.append(StringUtils.COMMA_STR);
+      path = inputPaths[i];
+      str.append(StringUtils.escapeString(path.toString()));
+    }
+    conf.set(org.apache.hadoop.mapreduce.lib.input.
+            FileInputFormat.INPUT_DIR, str.toString());
   }
 
   /**
@@ -489,8 +503,10 @@ public class TestDFSIO implements Tool {
     @Override // IOMapperBase
     public Closeable getIOStream(String name) throws IOException {
       // open file for append
+      Path targetPath = new Path(getDataDir(getConf()), name);
+      FileSystem targetFs = targetPath.getFileSystem(getConf());
       OutputStream out =
-          fs.append(new Path(getDataDir(getConf()), name), bufferSize);
+              targetFs.append(targetPath, bufferSize);
       if(compressionCodec != null)
         out = compressionCodec.createOutputStream(out);
       LOG.info("out = " + out.getClass().getName());
@@ -536,7 +552,9 @@ public class TestDFSIO implements Tool {
     @Override // IOMapperBase
     public Closeable getIOStream(String name) throws IOException {
       // open file
-      InputStream in = fs.open(new Path(getDataDir(getConf()), name));
+      Path targetPath = new Path(getDataDir(getConf()), name);
+      FileSystem targetFs = targetPath.getFileSystem(getConf());
+      InputStream in = targetFs.open(targetPath);
       if(compressionCodec != null)
         in = compressionCodec.createInputStream(in);
       LOG.info("in = " + in.getClass().getName());
@@ -600,8 +618,9 @@ public class TestDFSIO implements Tool {
     @Override // IOMapperBase
     public Closeable getIOStream(String name) throws IOException {
       Path filePath = new Path(getDataDir(getConf()), name);
-      this.fileSize = fs.getFileStatus(filePath).getLen();
-      InputStream in = fs.open(filePath);
+      FileSystem targetFs = filePath.getFileSystem(getConf());
+      this.fileSize = targetFs.getFileStatus(filePath).getLen();
+      InputStream in = targetFs.open(filePath);
       if(compressionCodec != null)
         in = new FSDataInputStream(compressionCodec.createInputStream(in));
       LOG.info("in = " + in.getClass().getName());
@@ -668,18 +687,21 @@ public class TestDFSIO implements Tool {
     @Override // IOMapperBase
     public Closeable getIOStream(String name) throws IOException {
       filePath = new Path(getDataDir(getConf()), name);
-      fileSize = fs.getFileStatus(filePath).getLen();
+      FileSystem targetFs = filePath.getFileSystem(getConf());
+      fileSize = targetFs.getFileStatus(filePath).getLen();
       return null;
     }
 
     @Override // IOMapperBase
-    public Long doIO(Reporter reporter, 
-                       String name, 
-                       long newLength // in bytes
-                     ) throws IOException {
-      boolean isClosed = fs.truncate(filePath, newLength);
-      reporter.setStatus("truncating " + name + " to newLength " + 
-          newLength  + " ::host = " + hostName);
+    public Long doIO(Reporter reporter,
+                     String name,
+                     long newLength // in bytes
+    ) throws IOException {
+      filePath = new Path(getDataDir(getConf()), name);
+      FileSystem targetFs = filePath.getFileSystem(getConf());
+      boolean isClosed = targetFs.truncate(filePath, newLength);
+      reporter.setStatus("truncating " + name + " to newLength " +
+              newLength  + " ::host = " + hostName);
       for(int i = 0; !isClosed; i++) {
         try {
           Thread.sleep(DELAY);
@@ -839,7 +861,8 @@ public class TestDFSIO implements Tool {
 
     config.setInt("test.io.file.buffer.size", bufferSize);
     config.setLong("test.io.skip.size", skipSize);
-    FileSystem fs = FileSystem.get(config);
+    Path path = new Path(getBaseDir(config));
+    FileSystem fs = path.getFileSystem(config);
 
     if (erasureCodePolicyName != null) {
       if (!checkErasureCodePolicy(erasureCodePolicyName, fs, testType)) {
@@ -1107,3 +1130,4 @@ public class TestDFSIO implements Tool {
     fs.delete(new Path(getBaseDir(config)), true);
   }
 }
+
