@@ -348,7 +348,7 @@ public abstract class CachingBlockManager extends BlockManager {
         String message = String.format("error during readBlock(%s)", data.getBlockNumber());
         LOG.error(message, e);
 
-        if(isPrefetch) {
+        if (isPrefetch && tracker != null) {
           tracker.failed();
         }
 
@@ -362,7 +362,9 @@ public abstract class CachingBlockManager extends BlockManager {
 
         if (isPrefetch) {
           prefetchingStatistics.prefetchOperationCompleted();
-          tracker.close();
+          if (tracker != null) {
+            tracker.close();
+          }
         }
       }
     }
