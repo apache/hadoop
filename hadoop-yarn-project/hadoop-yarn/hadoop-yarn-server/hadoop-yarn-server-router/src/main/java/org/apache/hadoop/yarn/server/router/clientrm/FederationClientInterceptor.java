@@ -1011,7 +1011,7 @@ public class FederationClientInterceptor
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getLabelsToNodes",
-         new Class[] {GetLabelsToNodesRequest.class}, new Object[] {request});
+        new Class[] {GetLabelsToNodesRequest.class}, new Object[] {request});
     Collection<GetLabelsToNodesResponse> labelNodes;
     try {
       labelNodes = invokeAppClientProtocolMethod(true, remoteMethod,
@@ -1036,7 +1036,7 @@ public class FederationClientInterceptor
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels",
-         new Class[] {GetClusterNodeLabelsRequest.class}, new Object[] {request});
+        new Class[] {GetClusterNodeLabelsRequest.class}, new Object[] {request});
     Collection<GetClusterNodeLabelsResponse> nodeLabels;
     try {
       nodeLabels = invokeAppClientProtocolMethod(true, remoteMethod,

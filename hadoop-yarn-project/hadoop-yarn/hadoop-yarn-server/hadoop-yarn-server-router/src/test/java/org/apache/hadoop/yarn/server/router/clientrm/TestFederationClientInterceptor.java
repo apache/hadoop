@@ -82,6 +82,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1232,5 +1234,20 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response3);
     Assert.assertEquals(4096, response3.getResource().getMemorySize());
     Assert.assertEquals(4, response3.getResource().getVirtualCores());
+  }
+
+  @Test
+  public void testGetAttributesToNodes() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get AttributesToNodes request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getAttributesToNodes request " +
+        "or nodeAttributes.", () -> interceptor.getAttributesToNodes(null));
+
+    // normal request
+    GetAttributesToNodesResponse response =
+        interceptor.getAttributesToNodes(GetAttributesToNodesRequest.newInstance());
+
+    Assert.assertNotNull(response);
   }
 }
