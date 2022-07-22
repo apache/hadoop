@@ -90,6 +90,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsLocatedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -191,7 +192,7 @@ public class AzureBlobFileSystem extends FileSystem
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
             .build();
 
-    this.abfsStore = new AzureBlobFileSystemStore(systemStoreBuilder);
+    this.abfsStore = getAzureBlobFileSystemStore(systemStoreBuilder);
     LOG.trace("AzureBlobFileSystemStore init complete");
 
     final AbfsConfiguration abfsConfiguration = abfsStore
@@ -791,6 +792,11 @@ public class AzureBlobFileSystem extends FileSystem
             + "/" + abfsStore.getUser()));
   }
 
+  protected AzureBlobFileSystemStore getAzureBlobFileSystemStore(AzureBlobFileSystemStoreBuilder
+      systemStoreBuilder) throws IOException{
+    return new AzureBlobFileSystemStore(systemStoreBuilder);
+  }
+
   /**
    * Return an array containing hostnames, offset and size of
    * portions of the given file. For ABFS we'll just lie and give
@@ -802,7 +808,6 @@ public class AzureBlobFileSystem extends FileSystem
     if (file == null) {
       return null;
     }
-
     if ((start < 0) || (len < 0)) {
       throw new IllegalArgumentException("Invalid start or len parameter");
     }
