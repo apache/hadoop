@@ -153,7 +153,7 @@ public class TestRouterRPCClientRetries {
 
     DFSClient client = nnContext1.getClient();
     // Renew lease for the DFS client, it will succeed.
-    routerProtocol.renewLease(client.getClientName());
+    routerProtocol.renewLease(client.getClientName(), null);
 
     // Verify the retry times, it will retry one time for ns0.
     FederationRPCMetrics rpcMetrics = routerContext.getRouter()

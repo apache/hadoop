@@ -744,11 +744,15 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
 
   @Override
-  public void renewLease(String clientName) throws IOException {
-    RenewLeaseRequestProto req = RenewLeaseRequestProto.newBuilder()
-        .setClientName(clientName).build();
+  public void renewLease(String clientName, List<String> namespaces)
+      throws IOException {
+    RenewLeaseRequestProto.Builder builder = RenewLeaseRequestProto
+        .newBuilder().setClientName(clientName);
+    if (namespaces != null && !namespaces.isEmpty()) {
+      builder.addAllNamespaces(namespaces);
+    }
     try {
-      rpcProxy.renewLease(null, req);
+      rpcProxy.renewLease(null, builder.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
