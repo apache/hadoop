@@ -195,7 +195,8 @@ public class FederationClientInterceptor
     }
 
     numSubmitRetries =
-        conf.getInt(YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
+        conf.getInt(
+        YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY);
 
     clientRMProxies = new ConcurrentHashMap<>();

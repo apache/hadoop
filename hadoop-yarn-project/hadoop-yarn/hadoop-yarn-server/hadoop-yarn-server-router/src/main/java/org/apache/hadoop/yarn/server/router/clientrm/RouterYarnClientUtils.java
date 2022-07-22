@@ -483,16 +483,13 @@ public final class RouterYarnClientUtils {
    */
   public static GetAttributesToNodesResponse mergeAttributesToNodesResponse(
       Collection<GetAttributesToNodesResponse> responses) {
-    GetAttributesToNodesResponse attributesToNodesResponse =
-        GetAttributesToNodesResponse.newInstance(new HashMap<>());
     Map<NodeAttributeKey, List<NodeToAttributeValue>> nodeAttributeMap = new HashMap<>();
     for (GetAttributesToNodesResponse response : responses) {
       if (response != null && response.getAttributesToNodes() != null) {
         nodeAttributeMap.putAll(response.getAttributesToNodes());
       }
     }
-    attributesToNodesResponse.setAttributeToNodes(nodeAttributeMap);
-    return attributesToNodesResponse;
+    return GetAttributesToNodesResponse.newInstance(nodeAttributeMap);
   }
 
   /**
@@ -503,16 +500,13 @@ public final class RouterYarnClientUtils {
    */
   public static GetClusterNodeAttributesResponse mergeClusterNodeAttributesResponse(
       Collection<GetClusterNodeAttributesResponse> responses) {
-    GetClusterNodeAttributesResponse attributesResponse =
-        GetClusterNodeAttributesResponse.newInstance(new HashSet<>());
     Set<NodeAttributeInfo> nodeAttributeInfo = new HashSet<>();
     for (GetClusterNodeAttributesResponse response : responses) {
       if (response != null && response.getNodeAttributes() != null) {
         nodeAttributeInfo.addAll(response.getNodeAttributes());
       }
     }
-    attributesResponse.setNodeAttributes(nodeAttributeInfo);
-    return attributesResponse;
+    return GetClusterNodeAttributesResponse.newInstance(nodeAttributeInfo);
   }
 
   /**
@@ -523,16 +517,13 @@ public final class RouterYarnClientUtils {
    */
   public static GetNodesToAttributesResponse mergeNodesToAttributesResponse(
       Collection<GetNodesToAttributesResponse> responses) {
-    GetNodesToAttributesResponse attributesResponse =
-        GetNodesToAttributesResponse.newInstance(new HashMap<>());
     Map<String, Set<NodeAttribute>> attributesMap = new HashMap<>();
     for (GetNodesToAttributesResponse response : responses) {
       if (response != null && response.getNodeToAttributes() != null) {
         attributesMap.putAll(response.getNodeToAttributes());
       }
     }
-    attributesResponse.setNodeToAttributes(attributesMap);
-    return attributesResponse;
+    return GetNodesToAttributesResponse.newInstance(attributesMap);
   }
 }
 

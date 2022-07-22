@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -659,8 +660,12 @@ public class TestRouterYarnClientUtils {
     Assert.assertEquals(2, response.getAttributesToNodes().size());
 
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs = response.getAttributesToNodes();
-    Assert.assertTrue(findHostnameAndValInMapping("node2", "docker0",
-        attrs.get(docker.getAttributeKey())));
+
+    NodeAttributeKey gpuKey = gpu.getAttributeKey();
+    Assert.assertEquals(attributeValue1.toString(), attrs.get(gpuKey).get(0).toString());
+
+    NodeAttributeKey dockerKey = docker.getAttributeKey();
+    Assert.assertEquals(attributeValue2.toString(), attrs.get(dockerKey).get(0).toString());
   }
 
   @Test
@@ -698,19 +703,53 @@ public class TestRouterYarnClientUtils {
 
     Set<NodeAttributeInfo> nodeAttributeInfos = response.getNodeAttributes();
     Assert.assertEquals(2, nodeAttributeInfos.size());
-
-    Object[] objectArr = nodeAttributeInfos.toArray();
-    Assert.assertEquals("rm.yarn.io/GPU(STRING)", objectArr[0].toString());
-    Assert.assertEquals("rm.yarn.io/CPU(STRING)", objectArr[1].toString());
+    Assert.assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo1));
+    Assert.assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo2));
   }
 
-  private boolean findHostnameAndValInMapping(String hostname, String attrVal,
-      List<NodeToAttributeValue> mappingVals) {
-    for (NodeToAttributeValue value : mappingVals) {
-      if (value.getHostname().equals(hostname)) {
-        return attrVal.equals(value.getAttributeValue());
-      }
-    }
-    return false;
+  @Test
+  public void testMergeNodesToAttributesResponse() {
+    // normal response1
+    NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
+        NodeAttributeType.STRING, "nvida");
+    NodeAttribute os = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "OS",
+        NodeAttributeType.STRING, "windows64");
+    NodeAttribute dist = NodeAttribute.newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "VERSION",
+        NodeAttributeType.STRING, "3_0_2");
+    Map<String, Set<NodeAttribute>> node1Map = new HashMap<>();
+    node1Map.put("node1", ImmutableSet.of(gpu, os, dist));
+    GetNodesToAttributesResponse response1 = GetNodesToAttributesResponse.newInstance(node1Map);
+
+    // normal response2
+    NodeAttribute docker = NodeAttribute.newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "DOCKER",
+        NodeAttributeType.STRING, "docker0");
+    Map<String, Set<NodeAttribute>> node2Map = new HashMap<>();
+    node2Map.put("node2", ImmutableSet.of(docker));
+    GetNodesToAttributesResponse response2 = GetNodesToAttributesResponse.newInstance(node2Map);
+
+    // empty response3
+    GetNodesToAttributesResponse response3 = GetNodesToAttributesResponse.newInstance(new HashMap<>());
+
+    // null response4
+    GetNodesToAttributesResponse response4 = null;
+
+    List<GetNodesToAttributesResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+    responses.add(response4);
+
+    GetNodesToAttributesResponse response =
+        RouterYarnClientUtils.mergeNodesToAttributesResponse(responses);
+
+    Assert.assertNotNull(response);
+
+    Map<String, Set<NodeAttribute>> hostToAttrs = response.getNodeToAttributes();
+    Assert.assertNotNull(hostToAttrs);
+    Assert.assertEquals(2, hostToAttrs.size());
+    Assert.assertTrue(hostToAttrs.get("node1").contains(dist));
+    Assert.assertTrue(hostToAttrs.get("node1").contains(gpu));
+    Assert.assertTrue(hostToAttrs.get("node1").contains(os));
+    Assert.assertTrue(hostToAttrs.get("node2").contains(docker));
   }
 }
