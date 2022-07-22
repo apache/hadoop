@@ -87,6 +87,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numGetQueueInfoFailedRetrieved;
   @Metric("# of moveApplicationAcrossQueues failed to be retrieved")
   private MutableGaugeInt numMoveApplicationAcrossQueuesFailedRetrieved;
+  @Metric("# of getResourceProfiles failed to be retrieved")
+  private MutableGaugeInt numGetResourceProfilesFailedRetrieved;
+  @Metric("# of getResourceProfile failed to be retrieved")
+  private MutableGaugeInt numGetResourceProfileFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -138,6 +142,11 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetQueueInfoRetrieved;
   @Metric("Total number of successful Retrieved moveApplicationAcrossQueues and latency(ms)")
   private MutableRate totalSucceededMoveApplicationAcrossQueuesRetrieved;
+  @Metric("Total number of successful Retrieved getResourceProfiles and latency(ms)")
+  private MutableRate totalSucceededGetResourceProfilesRetrieved;
+
+  @Metric("Total number of successful Retrieved getResourceProfile and latency(ms)")
+  private MutableRate totalSucceededGetResourceProfileRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -165,6 +174,8 @@ public final class RouterMetrics {
   private MutableQuantiles signalToContainerLatency;
   private MutableQuantiles getQueueInfoLatency;
   private MutableQuantiles moveApplicationAcrossQueuesLatency;
+  private MutableQuantiles getResourceProfilesLatency;
+  private MutableQuantiles getResourceProfileLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -255,6 +266,14 @@ public final class RouterMetrics {
     moveApplicationAcrossQueuesLatency =
         registry.newQuantiles("moveApplicationAcrossQueuesLatency",
             "latency of move application across queues timeouts", "ops", "latency", 10);
+
+    getResourceProfilesLatency =
+        registry.newQuantiles("getResourceProfilesLatency",
+            "latency of get resource profiles timeouts", "ops", "latency", 10);
+
+    getResourceProfileLatency =
+        registry.newQuantiles("getResourceProfileLatency",
+            "latency of get resource profile timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -392,6 +411,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetResourceProfilesRetrieved() {
+    return totalSucceededGetResourceProfilesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetResourceProfileRetrieved() {
+    return totalSucceededGetResourceProfileRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -507,6 +536,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetResourceProfilesRetrieved() {
+    return totalSucceededGetResourceProfilesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetResourceProfileRetrieved() {
+    return totalSucceededGetResourceProfileRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -617,6 +656,14 @@ public final class RouterMetrics {
 
   public int getMoveApplicationAcrossQueuesFailedRetrieved() {
     return numMoveApplicationAcrossQueuesFailedRetrieved.value();
+  }
+
+  public int getResourceProfilesFailedRetrieved() {
+    return numGetResourceProfilesFailedRetrieved.value();
+  }
+
+  public int getResourceProfileFailedRetrieved() {
+    return numGetResourceProfileFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -734,6 +781,16 @@ public final class RouterMetrics {
     moveApplicationAcrossQueuesLatency.add(duration);
   }
 
+  public void succeededGetResourceProfilesRetrieved(long duration) {
+    totalSucceededGetResourceProfilesRetrieved.add(duration);
+    getResourceProfilesLatency.add(duration);
+  }
+
+  public void succeededGetResourceProfileRetrieved(long duration) {
+    totalSucceededGetResourceProfileRetrieved.add(duration);
+    getResourceProfileLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -824,5 +881,13 @@ public final class RouterMetrics {
 
   public void incrMoveApplicationAcrossQueuesFailedRetrieved() {
     numMoveApplicationAcrossQueuesFailedRetrieved.incr();
+  }
+
+  public void incrGetResourceProfilesFailedRetrieved() {
+    numGetResourceProfilesFailedRetrieved.incr();
+  }
+
+  public void incrGetResourceProfileFailedRetrieved() {
+    numGetResourceProfileFailedRetrieved.incr();
   }
 }

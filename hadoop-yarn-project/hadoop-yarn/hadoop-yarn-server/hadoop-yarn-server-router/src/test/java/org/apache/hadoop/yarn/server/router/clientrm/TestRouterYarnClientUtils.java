@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -538,5 +540,74 @@ public class TestRouterYarnClientUtils {
         RouterYarnClientUtils.mergeResourceTypes(responses);
     Assert.assertTrue(CollectionUtils.isEqualCollection(expectedResponse,
         response.getResourceTypeInfo()));
+  }
+
+  @Test
+  public void testMergeResourceProfiles() {
+    // normal response1
+    Map<String, Resource> profiles = new HashMap<>();
+    Resource resource1 = Resource.newInstance(1024, 1);
+    GetAllResourceProfilesResponse response1 = GetAllResourceProfilesResponse.newInstance();
+    profiles.put("maximum", resource1);
+    response1.setResourceProfiles(profiles);
+
+    // normal response2
+    profiles = new HashMap<>();
+    Resource resource2 = Resource.newInstance(2048, 2);
+    GetAllResourceProfilesResponse response2 = GetAllResourceProfilesResponse.newInstance();
+    profiles.put("maximum", resource2);
+    response2.setResourceProfiles(profiles);
+
+    // empty response
+    GetAllResourceProfilesResponse response3 = GetAllResourceProfilesResponse.newInstance();
+
+    // null response
+    GetAllResourceProfilesResponse response4 = null;
+
+    List<GetAllResourceProfilesResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+    responses.add(response4);
+
+    GetAllResourceProfilesResponse response =
+        RouterYarnClientUtils.mergeClusterResourceProfilesResponse(responses);
+    Resource resource = response.getResourceProfiles().get("maximum");
+    Assert.assertEquals(3, resource.getVirtualCores());
+    Assert.assertEquals(3072, resource.getMemorySize());
+  }
+
+  @Test
+  public void testMergeResourceProfile() {
+    // normal response1
+    Resource resource1 = Resource.newInstance(1024, 1);
+    GetResourceProfileResponse response1 =
+        Records.newRecord(GetResourceProfileResponse.class);
+    response1.setResource(resource1);
+
+    // normal response2
+    Resource resource2 = Resource.newInstance(2048, 2);
+    GetResourceProfileResponse response2 =
+        Records.newRecord(GetResourceProfileResponse.class);
+    response2.setResource(resource2);
+
+    // empty response
+    GetResourceProfileResponse response3 =
+        Records.newRecord(GetResourceProfileResponse.class);
+
+    // null response
+    GetResourceProfileResponse response4 = null;
+
+    List<GetResourceProfileResponse> responses = new ArrayList<>();
+    responses.add(response1);
+    responses.add(response2);
+    responses.add(response3);
+    responses.add(response4);
+
+    GetResourceProfileResponse response =
+        RouterYarnClientUtils.mergeClusterResourceProfileResponse(responses);
+    Resource resource = response.getResource();
+    Assert.assertEquals(3, resource.getVirtualCores());
+    Assert.assertEquals(3072, resource.getMemorySize());
   }
 }
