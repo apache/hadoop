@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -38,13 +41,12 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistor
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+
+import net.jodah.failsafe.RetryPolicy;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
 
 public class TestTimelineWebServicesWithSSL {
 
@@ -126,15 +128,14 @@ public class TestTimelineWebServicesWithSSL {
 
   private static class TestTimelineClient extends TimelineClientImpl {
 
-    private ClientResponse resp;
+    private Response resp;
 
     @Override
-    protected TimelineWriter createTimelineWriter(Configuration conf,
-        UserGroupInformation authUgi, Client client, URI resURI)
-            throws IOException {
-      return new DirectTimelineWriter(authUgi, client, resURI) {
+    protected TimelineWriter createTimelineWriter(Configuration conf, UserGroupInformation authUgi,
+        Client client, URI resURI, RetryPolicy<Object> retryPolicy) throws IOException {
+      return new DirectTimelineWriter(authUgi, client, resURI, retryPolicy) {
         @Override
-        public ClientResponse doPostingObject(Object obj, String path) {
+        public Response doPostingObject(Object obj, String path) {
           resp = super.doPostingObject(obj, path);
           return resp;
         }

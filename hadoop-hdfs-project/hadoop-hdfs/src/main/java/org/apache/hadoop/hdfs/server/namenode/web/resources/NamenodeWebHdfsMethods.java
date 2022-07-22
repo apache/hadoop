@@ -54,6 +54,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.QuotaUsage;
@@ -100,7 +101,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.*;
@@ -119,11 +119,9 @@ import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import com.sun.jersey.spi.container.ResourceFilters;
 
 /** Web-hdfs NameNode implementation. */
 @Path("")
-@ResourceFilters(ParamFilter.class)
 public class NamenodeWebHdfsMethods {
   public static final Logger LOG =
       LoggerFactory.getLogger(NamenodeWebHdfsMethods.class);
@@ -463,12 +461,12 @@ public class NamenodeWebHdfsMethods {
 
   /** Handle HTTP PUT request for the root. */
   @PUT
-  @Path("/")
   @Consumes({"*/*"})
   @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response putRoot(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
@@ -538,7 +536,7 @@ public class NamenodeWebHdfsMethods {
       @DefaultValue(StorageTypeParam.DEFAULT)
       final StorageTypeParam storageType
   ) throws IOException, InterruptedException {
-    return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
+    return put(ugi, uriInfo, delegation, username, doAsUser, op, destination,
         owner, group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         createParent, delegationTokenArgument, aclPermission, xattrName,
@@ -567,13 +565,13 @@ public class NamenodeWebHdfsMethods {
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response put(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
           final UserParam username,
       @QueryParam(DoAsParam.NAME) @DefaultValue(DoAsParam.DEFAULT)
           final DoAsParam doAsUser,
-      @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(PutOpParam.NAME) @DefaultValue(PutOpParam.DEFAULT)
           final PutOpParam op,
       @QueryParam(DestinationParam.NAME) @DefaultValue(DestinationParam.DEFAULT)
@@ -636,6 +634,7 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StorageTypeParam.NAME) @DefaultValue(StorageTypeParam.DEFAULT)
           final StorageTypeParam storageType
       ) throws IOException, InterruptedException {
+    final UriFsPathParam path = new UriFsPathParam(uriInfo.getPath());
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
         group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
@@ -889,7 +888,6 @@ public class NamenodeWebHdfsMethods {
 
   /** Handle HTTP POST request for the root. */
   @POST
-  @Path("/")
   @Consumes({"*/*"})
   @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
@@ -1019,11 +1017,11 @@ public class NamenodeWebHdfsMethods {
 
   /** Handle HTTP GET request for the root. */
   @GET
-  @Path("/")
   @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response getRoot(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
@@ -1065,7 +1063,7 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
           final StartAfterParam startAfter
       ) throws IOException, InterruptedException {
-    return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
+    return get(ugi, uriInfo, delegation, username, doAsUser, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
         fsAction, snapshotName, oldSnapshotName,
         snapshotDiffStartPath, snapshotDiffIndex,
@@ -1080,13 +1078,13 @@ public class NamenodeWebHdfsMethods {
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response get(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
           final UserParam username,
       @QueryParam(DoAsParam.NAME) @DefaultValue(DoAsParam.DEFAULT)
           final DoAsParam doAsUser,
-      @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(GetOpParam.NAME) @DefaultValue(GetOpParam.DEFAULT)
           final GetOpParam op,
       @QueryParam(OffsetParam.NAME) @DefaultValue(OffsetParam.DEFAULT)
@@ -1122,7 +1120,7 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
           final StartAfterParam startAfter
       ) throws IOException, InterruptedException {
-
+    final UriFsPathParam path = new UriFsPathParam(uriInfo.getPath());
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
         snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter);
@@ -1524,10 +1522,10 @@ public class NamenodeWebHdfsMethods {
 
   /** Handle HTTP DELETE request for the root. */
   @DELETE
-  @Path("/")
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response deleteRoot(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
@@ -1541,7 +1539,7 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
           final SnapshotNameParam snapshotName
       ) throws IOException, InterruptedException {
-    return delete(ugi, delegation, username, doAsUser, ROOT, op, recursive,
+    return delete(ugi, uriInfo, delegation, username, doAsUser, op, recursive,
         snapshotName);
   }
 
@@ -1551,13 +1549,13 @@ public class NamenodeWebHdfsMethods {
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response delete(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
           final UserParam username,
       @QueryParam(DoAsParam.NAME) @DefaultValue(DoAsParam.DEFAULT)
           final DoAsParam doAsUser,
-      @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(DeleteOpParam.NAME) @DefaultValue(DeleteOpParam.DEFAULT)
           final DeleteOpParam op,
       @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
@@ -1565,7 +1563,7 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
           final SnapshotNameParam snapshotName
       ) throws IOException, InterruptedException {
-
+    final UriFsPathParam path = new UriFsPathParam(uriInfo.getPath());
     init(ugi, delegation, username, doAsUser, path, op, recursive, snapshotName);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {

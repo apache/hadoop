@@ -38,15 +38,13 @@ import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -60,6 +58,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -206,8 +207,8 @@ public class TestLogsCLI {
             + "esto\":{}}]";
     JSONArray obj = new JSONArray(appInfoEntity);
 
-    ClientResponse response = mock(ClientResponse.class);
-    doReturn(obj).when(response).getEntity(JSONArray.class);
+    Response response = mock(Response.class);
+    doReturn(obj).when(response).readEntity(JSONArray.class);
 
     doReturn(response).when(cli)
         .getClientResponseFromTimelineReader(any(Configuration.class),
@@ -820,56 +821,6 @@ public class TestLogsCLI {
     fs.delete(new Path(rootLogDir), true);
   }
 
-  @Test
-  public void testCheckRetryCount() throws Exception {
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-
-    NodeId nodeId = NodeId.newInstance("localhost", 1234);
-    ApplicationId appId = ApplicationId.newInstance(0, 1);
-    ApplicationAttemptId appAttemptId = ApplicationAttemptId
-        .newInstance(appId, 1);
-
-    // Create a mock ApplicationAttempt Report
-    ApplicationAttemptReport mockAttemptReport = mock(
-        ApplicationAttemptReport.class);
-    doReturn(appAttemptId).when(mockAttemptReport).getApplicationAttemptId();
-    List<ApplicationAttemptReport> attemptReports = Arrays.asList(
-        mockAttemptReport);
-
-    // Create one mock containerReport
-    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
-    ContainerReport mockContainerReport1 = mock(ContainerReport.class);
-    doReturn(containerId1).when(mockContainerReport1).getContainerId();
-    doReturn(nodeId).when(mockContainerReport1).getAssignedNode();
-    doReturn("http://localhost:2345").when(mockContainerReport1)
-        .getNodeHttpAddress();
-    doReturn(ContainerState.RUNNING).when(mockContainerReport1)
-        .getContainerState();
-    List<ContainerReport> containerReports = Arrays.asList(
-        mockContainerReport1);
-    // Mock the YarnClient, and it would report the previous created
-    // mockAttemptReport and previous two created mockContainerReports
-    YarnClient mockYarnClient = createMockYarnClient(
-        YarnApplicationState.RUNNING, ugi.getShortUserName(), true,
-        attemptReports, containerReports);
-    doReturn(mockContainerReport1).when(mockYarnClient).getContainerReport(
-        any(ContainerId.class));
-    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
-    cli.setConf(new YarnConfiguration());
-    try {
-      cli.run(new String[] {"-containerId",
-          containerId1.toString(), "-client_max_retries", "5"});
-      Assert.fail("Exception expected! "
-          + "NodeManager should be off to run this test. ");
-    } catch (RuntimeException ce) {
-      Assert.assertTrue(
-          "Handler exception for reason other than retry: " + ce.getMessage(),
-          ce.getMessage().contains("Connection retries limit exceeded"));
-      Assert.assertTrue("Retry filter didn't perform any retries! ", cli
-           .connectionRetry.getRetired());
-    }
-  }
-
   @Test (timeout = 5000)
   public void testGetRunningContainerLogs() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -939,9 +890,9 @@ public class TestLogsCLI {
       logsSet.add(fileName);
       doReturn(logsSet).when(cli).getMatchedContainerLogFiles(
           any(ContainerLogsRequest.class), anyBoolean(), anyBoolean());
-      ClientResponse mockReponse = mock(ClientResponse.class);
-      doReturn(Status.OK).when(mockReponse).getStatusInfo();
-      doReturn(fis).when(mockReponse).getEntityInputStream();
+      Response mockReponse = mock(Response.class);
+      doReturn(Response.Status.OK).when(mockReponse).getStatusInfo();
+      doReturn(fis).when(mockReponse).readEntity(InputStream.class);
       doReturn(mockReponse).when(cli).getResponseFromNMWebService(
           any(Configuration.class),
           any(Client.class),

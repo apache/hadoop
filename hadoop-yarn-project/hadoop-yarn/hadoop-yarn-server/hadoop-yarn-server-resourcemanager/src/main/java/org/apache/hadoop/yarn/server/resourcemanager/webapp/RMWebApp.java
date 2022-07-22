@@ -22,6 +22,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
 import java.net.InetSocketAddress;
 
+import javax.servlet.Filter;
+
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +35,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
-
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
 /**
  * The RM webapp
@@ -82,7 +82,7 @@ public class RMWebApp extends WebApp implements YarnWebParams {
   }
 
   @Override
-  protected Class<? extends GuiceContainer> getWebAppFilterClass() {
+  protected Class<? extends Filter> getWebAppFilterClass() {
     return RMWebAppFilter.class;
   }
 

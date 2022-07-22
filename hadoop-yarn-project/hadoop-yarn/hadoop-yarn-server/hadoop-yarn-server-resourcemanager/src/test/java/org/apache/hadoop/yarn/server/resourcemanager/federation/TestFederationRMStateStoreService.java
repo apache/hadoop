@@ -36,14 +36,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONUnmarshaller;
 
 /**
  * Unit tests for FederationStateStoreService.
@@ -60,22 +60,12 @@ public class TestFederationRMStateStoreService {
   private Configuration conf;
   private FederationStateStore stateStore;
   private long lastHearbeatTS = 0;
-  private JSONJAXBContext jc;
-  private JSONUnmarshaller unmarshaller;
+
+  private static final ObjectReader READER = new ObjectMapper().readerFor(ClusterMetricsInfo.class);
 
   @Before
   public void setUp() throws IOException, YarnException, JAXBException {
     conf = new YarnConfiguration();
-    jc = new JSONJAXBContext(
-        JSONConfiguration.mapped().rootUnwrapping(false).build(),
-        ClusterMetricsInfo.class);
-    unmarshaller = jc.createJSONUnmarshaller();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    unmarshaller = null;
-    jc = null;
   }
 
   @Test
@@ -148,9 +138,8 @@ public class TestFederationRMStateStoreService {
   }
 
   private void checkClusterMetricsInfo(String capability, int numNodes)
-      throws JAXBException {
-    ClusterMetricsInfo clusterMetricsInfo = unmarshaller.unmarshalFromJSON(
-        new StringReader(capability), ClusterMetricsInfo.class);
+      throws JsonProcessingException {
+    ClusterMetricsInfo clusterMetricsInfo = READER.readValue(capability);
     Assert.assertEquals(numNodes, clusterMetricsInfo.getTotalNodes());
   }
 

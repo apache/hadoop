@@ -46,9 +46,9 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -59,10 +59,6 @@ import org.xml.sax.InputSource;
 import com.google.inject.Guice;
 import com.google.inject.Singleton;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Test the app master web service Rest API for getting task attempts, a
@@ -70,7 +66,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  *
  * /ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/state
  */
-public class TestAMWebServicesAttempt extends JerseyTestBase {
+public class TestAMWebServicesAttempt extends JerseyTest {
 
   private static Configuration conf = new Configuration();
   private static AppContext appContext;

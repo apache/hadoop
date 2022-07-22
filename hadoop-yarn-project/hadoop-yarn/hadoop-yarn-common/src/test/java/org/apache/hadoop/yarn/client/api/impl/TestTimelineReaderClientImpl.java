@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityT
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.sun.jersey.api.client.ClientResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -38,6 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -145,27 +145,27 @@ public class TestTimelineReaderClientImpl {
 
   private class MockTimelineReaderClient extends TimelineReaderClientImpl {
     @Override
-    protected ClientResponse doGetUri(URI base, String path,
+    protected Response doGetUri(URI base, String path,
         MultivaluedMap<String, String> params) throws IOException {
-      ClientResponse mockClientResponse = mock(ClientResponse.class);
+      Response mockClientResponse = mock(Response.class);
       if (path.contains(YARN_CONTAINER.toString()) && !params.containsKey("infofilters")) {
-        when(mockClientResponse.getEntity(TimelineEntity.class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity.class)).thenReturn(
             createTimelineEntity("mockContainer1"));
-        when(mockClientResponse.getEntity(TimelineEntity[].class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity[].class)).thenReturn(
             createTimelineEntities("mockContainer1", "mockContainer2"));
       } else if (path.contains(YARN_CONTAINER.toString()) && params.containsKey("infofilters")) {
         Assert.assertEquals(encodeValue(appAttemptInfoFilter), params.get("infofilters").get(0));
-        when(mockClientResponse.getEntity(TimelineEntity[].class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity[].class)).thenReturn(
             createTimelineEntities("mockContainer3", "mockContainer4"));
       } else if (path.contains(YARN_APPLICATION_ATTEMPT.toString())) {
-        when(mockClientResponse.getEntity(TimelineEntity.class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity.class)).thenReturn(
             createTimelineEntity("mockAppAttempt1"));
-        when(mockClientResponse.getEntity(TimelineEntity[].class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity[].class)).thenReturn(
             createTimelineEntities("mockAppAttempt1", "mockAppAttempt2"));
       } else {
-        when(mockClientResponse.getEntity(TimelineEntity.class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity.class)).thenReturn(
             createTimelineEntity("mockApp1"));
-        when(mockClientResponse.getEntity(TimelineEntity[].class)).thenReturn(
+        when(mockClientResponse.readEntity(TimelineEntity[].class)).thenReturn(
             createTimelineEntities("mockApp1", "mockApp2"));
       }
 

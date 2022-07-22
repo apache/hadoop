@@ -19,14 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Guice;
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -51,11 +46,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -63,7 +58,11 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
@@ -76,7 +75,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class TestRMWebServicesApps extends JerseyTestBase {
+public class TestRMWebServicesApps extends JerseyTest {
 
   private static MockRM rm;
 
@@ -105,7 +104,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
   }
 
@@ -133,11 +132,6 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   }
 
   public TestRMWebServicesApps() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
@@ -181,13 +175,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             .build();
     RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("apps").accept(MediaType.APPLICATION_XML)
-        .get(ClientResponse.class);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("apps").request(MediaType.APPLICATION_XML)
+        .get(Response.class);
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -215,13 +209,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     am1.allocate("*", 4096, 1, new ArrayList<>());
     amNodeManager.nodeHeartbeat(true);
 
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("apps").accept(MediaType.APPLICATION_XML)
-        .get(ClientResponse.class);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("apps").request(MediaType.APPLICATION_XML)
+        .get(Response.class);
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -255,14 +249,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submit(rm, data);
 
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("apps").accept(MediaType.APPLICATION_XML)
-        .get(ClientResponse.class);
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("apps").request(MediaType.APPLICATION_XML)
+        .get(Response.class);
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -282,13 +276,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
   public void testAppsHelper(String path, RMApp app, String media,
       boolean hasResourceReq) throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path(path).accept(media).get(ClientResponse.class);
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path(path).request(media).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -304,15 +298,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps")
         .queryParam("state", YarnApplicationState.ACCEPTED.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -332,15 +326,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
     amNodeManager.nodeHeartbeat(true);
 
-    WebResource r = resource();
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
-    params.add("states", YarnApplicationState.ACCEPTED.toString());
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("apps").queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("states", YarnApplicationState.ACCEPTED.toString())
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -349,16 +341,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("state not equal to ACCEPTED", "ACCEPTED", array
         .getJSONObject(0).getString("state"));
 
-    r = resource();
-    params = new MultivaluedMapImpl();
-    params.add("states", YarnApplicationState.ACCEPTED.toString());
-    params.add("states", YarnApplicationState.KILLED.toString());
-    response = r.path("ws").path("v1").path("cluster")
-        .path("apps").queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    r = target();
+    response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("states", YarnApplicationState.ACCEPTED.toString())
+        .queryParam("states", YarnApplicationState.KILLED.toString())
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -383,15 +373,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
     amNodeManager.nodeHeartbeat(true);
 
-    WebResource r = resource();
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
-    params.add("states", YarnApplicationState.ACCEPTED.toString());
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("apps").queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("states", YarnApplicationState.ACCEPTED.toString())
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -400,16 +388,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("state not equal to ACCEPTED", "ACCEPTED", array
         .getJSONObject(0).getString("state"));
 
-    r = resource();
-    params = new MultivaluedMapImpl();
-    params.add("states", YarnApplicationState.ACCEPTED.toString() + ","
-        + YarnApplicationState.KILLED.toString());
-    response = r.path("ws").path("v1").path("cluster")
-        .path("apps").queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    r = target();
+    response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("states", YarnApplicationState.ACCEPTED + "," + YarnApplicationState.KILLED)
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -430,15 +415,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps")
         .queryParam("states", YarnApplicationState.RUNNING.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     assertEquals("apps is not empty",
         new JSONObject().toString(), json.get("apps").toString());
@@ -451,15 +436,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps")
         .queryParam("state", YarnApplicationState.RUNNING.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     assertEquals("apps is not empty",
         new JSONObject().toString(), json.get("apps").toString());
@@ -472,19 +457,19 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
     try {
       r.path("ws").path("v1").path("cluster").path("apps")
           .queryParam("states", "INVALID_test")
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(JSONObject.class);
       fail("should have thrown exception on invalid state query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
+    } catch (WebApplicationException ue) {
+      Response response = ue.getResponse();
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
@@ -510,19 +495,19 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
     try {
       r.path("ws").path("v1").path("cluster").path("apps")
           .queryParam("state", "INVALID_test")
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(JSONObject.class);
       fail("should have thrown exception on invalid state query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
+    } catch (WebApplicationException ue) {
+      Response response = ue.getResponse();
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
@@ -548,15 +533,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("finalStatus",
                     FinalApplicationStatus.UNDEFINED.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     System.out.println(json.toString());
     JSONObject apps = json.getJSONObject("apps");
@@ -573,14 +558,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("finalStatus", FinalApplicationStatus.KILLED.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     assertEquals("apps is not null",
         new JSONObject().toString(), json.get("apps").toString());
@@ -593,19 +578,19 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
     try {
       r.path("ws").path("v1").path("cluster").path("apps")
           .queryParam("finalStatus", "INVALID_test")
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(JSONObject.class);
       fail("should have thrown exception on invalid state query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
+    } catch (WebApplicationException ue) {
+      Response response = ue.getResponse();
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
@@ -634,18 +619,18 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
 
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
-    ClientResponse response = r
+    WebTarget r = target();
+    Response response = r
         .path("ws")
         .path("v1")
         .path("cluster")
         .path("apps")
         .queryParam("user",
             UserGroupInformation.getCurrentUser().getShortUserName())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
 
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
@@ -663,14 +648,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
 
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("queue", "default")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -690,16 +675,16 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     finishApp(amNodeManager, app1);
     finishApp(amNodeManager, app2);
 
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps")
         .queryParam("queue", "default")
         .queryParam("state", YarnApplicationState.FINISHED.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -725,16 +710,16 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
     finishApp(amNodeManager, finishedApp);
 
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps")
         .queryParam("queue", "default")
         .queryParam("state", YarnApplicationState.FINISHED.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -761,15 +746,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
     finishApp(amNodeManager, finishedApp);
 
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps")
         .queryParam("queue", "default")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -793,13 +778,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("limit", "2")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -817,13 +802,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("startedTimeBegin", String.valueOf(start))
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -841,13 +826,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     long start = System.currentTimeMillis();
     Thread.sleep(1);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("startedTimeBegin", String.valueOf(start))
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -865,13 +850,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("startedTimeEnd", String.valueOf(end))
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     assertEquals("apps is not empty",
         new JSONObject().toString(), json.get("apps").toString());
@@ -889,14 +874,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     long end = System.currentTimeMillis();
     Thread.sleep(1);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("startedTimeBegin", String.valueOf(start))
         .queryParam("startedTimeEnd", String.valueOf(end))
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -917,13 +902,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
 
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("finishedTimeBegin", String.valueOf(start))
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -955,13 +940,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     long end = System.currentTimeMillis();
 
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("finishedTimeEnd", String.valueOf(end))
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -985,14 +970,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     long end = System.currentTimeMillis();
 
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("finishedTimeBegin", String.valueOf(start))
         .queryParam("finishedTimeEnd", String.valueOf(end))
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1036,13 +1021,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             .withAppType("NON-YARN")
             .build());
 
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("applicationTypes", "MAPREDUCE")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1051,15 +1036,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("MAPREDUCE",
         array.getJSONObject(0).getString("applicationType"));
 
-    r = resource();
+    r = target();
     response =
         r.path("ws").path("v1").path("cluster").path("apps")
             .queryParam("applicationTypes", "YARN")
             .queryParam("applicationTypes", "MAPREDUCE")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1072,14 +1057,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             && array.getJSONObject(0).getString("applicationType")
             .equals("MAPREDUCE")));
 
-    r = resource();
+    r = target();
     response =
         r.path("ws").path("v1").path("cluster").path("apps")
             .queryParam("applicationTypes", "YARN,NON-YARN")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1092,43 +1077,43 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             && array.getJSONObject(0).getString("applicationType")
             .equals("NON-YARN")));
 
-    r = resource();
+    r = target();
     response = r.path("ws").path("v1").path("cluster")
         .path("apps").queryParam("applicationTypes", "")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
     array = apps.getJSONArray("app");
     assertEquals("incorrect number of elements", 3, array.length());
 
-    r = resource();
+    r = target();
     response =
         r.path("ws").path("v1").path("cluster").path("apps")
             .queryParam("applicationTypes", "YARN,NON-YARN")
             .queryParam("applicationTypes", "MAPREDUCE")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
     array = apps.getJSONArray("app");
     assertEquals("incorrect number of elements", 3, array.length());
 
-    r = resource();
+    r = target();
     response =
         r.path("ws").path("v1").path("cluster").path("apps")
             .queryParam("applicationTypes", "YARN")
             .queryParam("applicationTypes", "")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1137,14 +1122,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("YARN",
         array.getJSONObject(0).getString("applicationType"));
 
-    r = resource();
+    r = target();
     response =
         r.path("ws").path("v1").path("cluster").path("apps")
             .queryParam("applicationTypes", ",,, ,, YARN ,, ,")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1153,28 +1138,28 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("YARN",
         array.getJSONObject(0).getString("applicationType"));
 
-    r = resource();
+    r = target();
     response =
         r.path("ws").path("v1").path("cluster").path("apps")
             .queryParam("applicationTypes", ",,, ,,  ,, ,")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
     array = apps.getJSONArray("app");
     assertEquals("incorrect number of elements", 3, array.length());
 
-    r = resource();
+    r = target();
     response =
         r.path("ws").path("v1").path("cluster").path("apps")
             .queryParam("applicationTypes", "YARN, ,NON-YARN, ,,")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1187,15 +1172,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             && array.getJSONObject(0).getString("applicationType")
             .equals("NON-YARN")));
 
-    r = resource();
+    r = target();
     response =
         r.path("ws").path("v1").path("cluster").path("apps")
             .queryParam("applicationTypes", " YARN, ,  ,,,")
             .queryParam("applicationTypes", "MAPREDUCE , ,, ,")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1219,14 +1204,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
       MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
       amNodeManager.nodeHeartbeat(true);
-      WebResource r = resource();
-      ClientResponse response = r.path("ws").path("v1").path("cluster")
+      WebTarget r = target();
+      Response response = r.path("ws").path("v1").path("cluster")
           .path("apps").queryParam("deSelects", "INVALIED_deSelectsParam")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
@@ -1252,18 +1237,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
-    params.add("deSelects",
-        DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString());
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("apps").queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    Response response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("deSelects", DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString())
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+        response.getMediaType().toString());
 
-    JSONObject json = response.getEntity(JSONObject.class);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1273,16 +1255,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertTrue("resource requests shouldn't exist",
         !app.has("resourceRequests"));
 
-    params.clear();
-    params.add("deSelects",
-        DeSelectFields.DeSelectType.AM_NODE_LABEL_EXPRESSION.toString());
-    response =
-        r.path("ws").path("v1").path("cluster").path("apps").queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("deSelects", DeSelectFields.DeSelectType.AM_NODE_LABEL_EXPRESSION.toString())
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+        response.getMediaType().toString());
 
-    json = response.getEntity(JSONObject.class);
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1292,15 +1271,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertTrue("AMNodeLabelExpression shouldn't exist",
         !app.has("amNodeLabelExpression"));
 
-    params.clear();
-    params.add("deSelects", DeSelectFields.DeSelectType.TIMEOUTS.toString());
-    response =
-        r.path("ws").path("v1").path("cluster").path("apps").queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("deSelects", DeSelectFields.DeSelectType.TIMEOUTS.toString())
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+        response.getMediaType().toString());
 
-    json = response.getEntity(JSONObject.class);
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1310,16 +1287,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertTrue("Timeouts shouldn't exist", !app.has("timeouts"));
     rm.stop();
 
-    params.clear();
-    params.add("deSelects",
-        DeSelectFields.DeSelectType.APP_NODE_LABEL_EXPRESSION.toString());
-    response =
-        r.path("ws").path("v1").path("cluster").path("apps").queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("deSelects", DeSelectFields.DeSelectType.APP_NODE_LABEL_EXPRESSION.toString())
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+        response.getMediaType().toString());
 
-    json = response.getEntity(JSONObject.class);
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1330,16 +1304,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         !app.has("appNodeLabelExpression"));
     rm.stop();
 
-    params.clear();
-    params
-        .add("deSelects", DeSelectFields.DeSelectType.RESOURCE_INFO.toString());
-    response =
-        r.path("ws").path("v1").path("cluster").path("apps").queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = r.path("ws").path("v1").path("cluster").path("apps")
+        .queryParam("deSelects", DeSelectFields.DeSelectType.RESOURCE_INFO.toString())
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+        response.getMediaType().toString());
 
-    json = response.getEntity(JSONObject.class);
+    json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -1397,13 +1368,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
               .build());
 
       // zero type, zero state
-      WebResource r = resource();
-      ClientResponse response = r.path("ws").path("v1").path("cluster")
+      WebTarget r = target();
+      Response response = r.path("ws").path("v1").path("cluster")
           .path("appstatistics")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject appsStatInfo = json.getJSONObject("appStatInfo");
       assertEquals("incorrect number of elements", 1, appsStatInfo.length());
@@ -1423,14 +1394,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       }
 
       // zero type, one state
-      r = resource();
+      r = target();
       response = r.path("ws").path("v1").path("cluster")
           .path("appstatistics")
           .queryParam("states", YarnApplicationState.ACCEPTED.toString())
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       appsStatInfo = json.getJSONObject("appStatInfo");
       assertEquals("incorrect number of elements", 1, appsStatInfo.length());
@@ -1441,14 +1412,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       assertEquals("2", statItems.getJSONObject(0).getString("count"));
 
       // one type, zero state
-      r = resource();
+      r = target();
       response = r.path("ws").path("v1").path("cluster")
           .path("appstatistics")
           .queryParam("applicationTypes", "MAPREDUCE")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       appsStatInfo = json.getJSONObject("appStatInfo");
       assertEquals("incorrect number of elements", 1, appsStatInfo.length());
@@ -1468,15 +1439,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       }
 
       // two types, zero state
-      r = resource();
+      r = target();
       response = r.path("ws").path("v1").path("cluster")
           .path("appstatistics")
           .queryParam("applicationTypes", "MAPREDUCE,OTHER")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject exception = json.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
@@ -1491,16 +1462,16 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           "org.apache.hadoop.yarn.webapp.BadRequestException", className);
 
       // one type, two states
-      r = resource();
+      r = target();
       response = r.path("ws").path("v1").path("cluster")
           .path("appstatistics")
           .queryParam("states", YarnApplicationState.FINISHED.toString()
               + "," + YarnApplicationState.ACCEPTED.toString())
           .queryParam("applicationTypes", "MAPREDUCE")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       appsStatInfo = json.getJSONObject("appStatInfo");
       assertEquals("incorrect number of elements", 1, appsStatInfo.length());
@@ -1518,14 +1489,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       assertEquals("1", statItem2.getString("count"));
 
       // invalid state
-      r = resource();
+      r = target();
       response = r.path("ws").path("v1").path("cluster")
           .path("appstatistics").queryParam("states", "wrong_state")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       exception = json.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
@@ -1571,12 +1542,12 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     amNodeManager.nodeHeartbeat(true);
 
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").path(app1.getApplicationId().toString())
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_XML).get(Response.class);
 
-    AppInfo appInfo = response.getEntity(AppInfo.class);
+    AppInfo appInfo = response.readEntity(AppInfo.class);
 
     // Check only a few values; all are validated in testSingleApp.
     assertEquals(app1.getApplicationId().toString(), appInfo.getAppId());
@@ -1615,20 +1586,20 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
     try {
       r.path("ws").path("v1").path("cluster").path("apps")
-          .path("application_invalid_12").accept(MediaType.APPLICATION_JSON)
+          .path("application_invalid_12").request(MediaType.APPLICATION_JSON)
           .get(JSONObject.class);
       fail("should have thrown exception on invalid appid");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
+    } catch (WebApplicationException ue) {
+      Response response = ue.getResponse();
 
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
@@ -1659,21 +1630,21 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             .build();
     MockRMAppSubmitter.submit(rm, data);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
+    WebTarget r = target();
 
     try {
       r.path("ws").path("v1").path("cluster").path("apps")
-          .path("application_00000_0099").accept(MediaType.APPLICATION_JSON)
+          .path("application_00000_0099").request(MediaType.APPLICATION_JSON)
           .get(JSONObject.class);
       fail("should have thrown exception on invalid appid");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
+    } catch (WebApplicationException ue) {
+      Response response = ue.getResponse();
 
       assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
+          response.getMediaType().toString());
 
-      JSONObject msg = response.getEntity(JSONObject.class);
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
@@ -1693,12 +1664,12 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
   public void testSingleAppsHelper(String path, RMApp app, String media)
       throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("apps").path(path).accept(media).get(ClientResponse.class);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("apps").path(path).request(media).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
 
     assertEquals("incorrect number of elements", 1, json.length());
     verifyAppInfo(json.getJSONObject("app"), app, false);
@@ -1715,13 +1686,13 @@ public class TestRMWebServicesApps extends JerseyTestBase {
             .build();
     RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     amNodeManager.nodeHeartbeat(true);
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps").path(app1.getApplicationId().toString())
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_XML).get(Response.class);
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
 
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
@@ -2018,15 +1989,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     amNodeManager.nodeHeartbeat(true);
     finishApp(amNodeManager, finishedApp2);
 
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps")
         .queryParam("queue", "default")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -2087,15 +2058,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     amNodeManager.nodeHeartbeat(true);
     finishApp(amNodeManager, finishedApp2);
 
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
+    Response response = r.path("ws").path("v1").path("cluster")
         .path("apps")
         .queryParam("queue", "root.default")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());

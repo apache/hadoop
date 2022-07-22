@@ -20,10 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.apache.hadoop.yarn.webapp.WebAppException;
+
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;

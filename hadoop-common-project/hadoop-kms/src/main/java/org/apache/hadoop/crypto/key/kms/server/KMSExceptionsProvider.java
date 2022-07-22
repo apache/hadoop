@@ -19,13 +19,12 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import com.sun.jersey.api.container.ContainerException;
-
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.HttpExceptionUtils;
+import org.glassfish.jersey.server.ContainerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

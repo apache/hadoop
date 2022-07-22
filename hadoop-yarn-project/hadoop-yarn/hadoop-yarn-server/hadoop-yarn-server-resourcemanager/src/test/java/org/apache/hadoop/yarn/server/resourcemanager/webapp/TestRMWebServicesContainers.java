@@ -22,7 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
@@ -40,22 +42,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.eclipse.jetty.server.Response;
+
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Testing containers REST API.
  */
-public class TestRMWebServicesContainers extends JerseyTestBase {
+public class TestRMWebServicesContainers extends JerseyTest {
 
   private static MockRM rm;
   private static String userName;
@@ -69,40 +69,30 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
       try {
         userName = UserGroupInformation.getCurrentUser().getShortUserName();
       } catch (IOException ioe) {
-        throw new RuntimeException("Unable to get current user name "
-            + ioe.getMessage(), ioe);
+        throw new RuntimeException("Unable to get current user name " + ioe.getMessage(), ioe);
       }
       Configuration conf = new Configuration();
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
-          ResourceScheduler.class);
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class, ResourceScheduler.class);
       conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-      filter("/*").through(TestRMWebServicesAppsModification
-          .TestRMCustomAuthFilter.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
+      filter("/*").through(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
     }
   }
 
   static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+    GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule()));
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+    GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesContainers() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
@@ -112,61 +102,48 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
     RMApp app = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder.createWithMemory(1024, rm).build());
     nm.nodeHeartbeat(true);
-    MockRM
-        .waitForState(app.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
+    MockRM.waitForState(app.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
     rm.sendAMLaunched(app.getCurrentAppAttempt().getAppAttemptId());
-    WebResource r = resource();
+    WebTarget target = target();
 
     // test error command
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("containers").path(
-            app.getCurrentAppAttempt().getMasterContainer().getId().toString())
-            .path("signal")
-            .path("not-exist-signal")
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    Response response = target.path("ws").path("v1").path("cluster").path("containers")
+        .path(app.getCurrentAppAttempt().getMasterContainer().getId().toString()).path("signal")
+        .path("not-exist-signal").queryParam("user.name", userName)
+        .request(MediaType.APPLICATION_JSON).post(null, Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    assertEquals(Response.SC_BAD_REQUEST, response.getStatus());
-    assertTrue(response.getEntity(String.class)
-        .contains("Invalid command: NOT-EXIST-SIGNAL"));
+        response.getMediaType().toString());
+    assertEquals(Response.Status.BAD_REQUEST, response.getStatusInfo());
+    assertTrue(response.readEntity(String.class).contains("Invalid command: NOT-EXIST-SIGNAL"));
 
     // test error containerId
     response =
-        r.path("ws").path("v1").path("cluster").path("containers").path("XXX")
-            .path("signal")
+        target.path("ws").path("v1").path("cluster").path("containers").path("XXX").path("signal")
             .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
+            .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON)
+            .post(null, Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    assertEquals(Response.SC_INTERNAL_SERVER_ERROR, response.getStatus());
-    assertTrue(
-        response.getEntity(String.class).contains("Invalid ContainerId"));
+        response.getMediaType().toString());
+    assertEquals(Response.Status.INTERNAL_SERVER_ERROR, response.getStatusInfo());
+    assertTrue(response.readEntity(String.class).contains("Invalid ContainerId"));
 
     // test correct signal by owner
-    response =
-        r.path("ws").path("v1").path("cluster").path("containers").path(
-            app.getCurrentAppAttempt().getMasterContainer().getId().toString())
-            .path("signal")
-            .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("containers")
+        .path(app.getCurrentAppAttempt().getMasterContainer().getId().toString()).path("signal")
+        .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name()).queryParam("user.name", userName)
+        .request(MediaType.APPLICATION_JSON).post(null, Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    assertEquals(Response.SC_OK, response.getStatus());
+        response.getMediaType().toString());
+    assertEquals(Response.Status.OK, response.getStatusInfo());
 
     // test correct signal by admin
-    response =
-        r.path("ws").path("v1").path("cluster").path("containers").path(
-            app.getCurrentAppAttempt().getMasterContainer().getId().toString())
-            .path("signal")
-            .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
-            .queryParam("user.name", "admin")
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("containers")
+        .path(app.getCurrentAppAttempt().getMasterContainer().getId().toString()).path("signal")
+        .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name()).queryParam("user.name", "admin")
+        .request(MediaType.APPLICATION_JSON).post(null, Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    assertEquals(Response.SC_OK, response.getStatus());
+        response.getMediaType().toString());
+    assertEquals(Response.Status.OK, response.getStatusInfo());
 
     rm.stop();
   }

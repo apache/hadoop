@@ -19,10 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Guice;
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 import java.io.BufferedReader;
 import java.io.FileWriter;
@@ -36,6 +35,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -59,9 +59,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -75,7 +75,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.junit.Assert.assertEquals;
 
-public class TestRMWebServicesCapacitySched extends JerseyTestBase {
+public class TestRMWebServicesCapacitySched extends JerseyTest {
 
   private MockRM rm;
 
@@ -92,12 +92,11 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
   }
 
   public TestRMWebServicesCapacitySched() {
-    super(createWebAppDescriptor());
   }
 
   @Before
@@ -167,32 +166,31 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   @Test
   public void testClusterScheduler() throws Exception {
-    ClientResponse response = resource().path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+    Response response = target().path("ws").path("v1").path("cluster").path("scheduler")
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertJsonResponse(response, "webapp/scheduler-response.json");
   }
 
   @Test
   public void testClusterSchedulerSlash() throws Exception {
-    ClientResponse response = resource().path("ws").path("v1").path("cluster")
-        .path("scheduler/").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+    Response response = target().path("ws").path("v1").path("cluster")
+        .path("scheduler/").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
     assertJsonResponse(response, "webapp/scheduler-response.json");
   }
 
   @Test
   public void testClusterSchedulerDefault() throws Exception {
-    ClientResponse response = resource().path("ws").path("v1").path("cluster")
-        .path("scheduler").get(ClientResponse.class);
+    Response response = target().path("ws").path("v1").path("cluster")
+        .path("scheduler").request().get(Response.class);
     assertJsonResponse(response, "webapp/scheduler-response.json");
   }
 
   @Test
   public void testClusterSchedulerXML() throws Exception {
-    ClientResponse response = resource().path("ws").path("v1").path("cluster")
-        .path("scheduler/").accept(MediaType.APPLICATION_XML)
-        .get(ClientResponse.class);
+    Response response = target().path("ws").path("v1").path("cluster")
+        .path("scheduler/").request(MediaType.APPLICATION_XML)
+        .get(Response.class);
     assertXmlResponse(response, "webapp/scheduler-response.xml");
   }
 
@@ -221,8 +219,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       MockRMAppSubmitter.submit(rm, data);
 
       //Get the XML from ws/v1/cluster/scheduler
-      ClientResponse response = resource().path("ws/v1/cluster/scheduler")
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      Response response = target().path("ws/v1/cluster/scheduler")
+          .request(MediaType.APPLICATION_XML).get(Response.class);
       assertXmlResponse(response, "webapp/scheduler-response-PerUserResources.xml");
     } finally {
       rm.stop();
@@ -242,8 +240,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     rm.start();
     try {
       //Get the XML from ws/v1/cluster/scheduler
-      ClientResponse response = resource().path("ws/v1/cluster/scheduler")
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      Response response = target().path("ws/v1/cluster/scheduler")
+          .request(MediaType.APPLICATION_XML).get(Response.class);
       assertXmlResponse(response, "webapp/scheduler-response-NodeLabelDefaultAPI.xml");
     } finally {
       rm.stop();
@@ -275,9 +273,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       MockRMAppSubmitter.submit(rm, data);
 
       //Get JSON
-      ClientResponse response = resource().path("ws").path("v1").path("cluster")
-          .path("scheduler/").accept(MediaType.APPLICATION_JSON)
-          .get(ClientResponse.class);
+      Response response = target().path("ws").path("v1").path("cluster")
+          .path("scheduler/").request(MediaType.APPLICATION_JSON)
+          .get(Response.class);
       assertJsonResponse(response, "webapp/scheduler-response-PerUserResources.json");
     } finally {
       rm.stop();
@@ -293,16 +291,16 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     assertEquals("<memory:10, vCores:1>", res.toString());
   }
 
-  public static void assertXmlType(ClientResponse response) {
+  public static void assertXmlType(Response response) {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+        response.getMediaType().toString());
   }
 
-  public static void assertXmlResponse(ClientResponse response,
+  public static void assertXmlResponse(Response response,
                                        String expectedResourceFilename) throws
       Exception {
     assertXmlType(response);
-    Document document = loadDocument(response.getEntity(String.class));
+    Document document = loadDocument(response.readEntity(String.class));
     String actual = serializeDocument(document).trim();
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(getResourceAsString(expectedResourceFilename), actual);
@@ -327,19 +325,19 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     return builder.parse(is);
   }
 
-  public static void assertJsonResponse(ClientResponse response,
+  public static void assertJsonResponse(Response response,
                                         String expectedResourceFilename) throws
       JSONException, IOException {
     assertJsonType(response);
-    JSONObject json = response.getEntity(JSONObject.class);
+    JSONObject json = response.readEntity(JSONObject.class);
     String actual = json.toString(2);
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(getResourceAsString(expectedResourceFilename), actual);
   }
 
-  public static void assertJsonType(ClientResponse response) {
+  public static void assertJsonType(Response response) {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+        response.getMediaType().toString());
   }
 
   public static InputStream getResourceAsStream(String configFilename) {
@@ -383,14 +381,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       e.printStackTrace();
       Assert.fail("overwrite should not fail " + e.getMessage());
     }
-  }
-
-  public static WebAppDescriptor createWebAppDescriptor() {
-    return new WebAppDescriptor.Builder(
-        TestRMWebServicesCapacitySched.class.getPackage().getName())
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build();
   }
 
   public static MockRM createMockRM(CapacitySchedulerConfiguration csConf) {

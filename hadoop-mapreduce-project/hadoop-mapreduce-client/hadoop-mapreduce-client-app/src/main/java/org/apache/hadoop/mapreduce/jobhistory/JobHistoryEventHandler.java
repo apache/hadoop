@@ -31,6 +31,8 @@ import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import javax.ws.rs.ProcessingException;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -80,7 +82,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.client.ClientHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1141,7 +1142,7 @@ public class JobHistoryEventHandler extends AbstractService
                   + error.getErrorCode());
         }
       }
-    } catch (YarnException | IOException | ClientHandlerException ex) {
+    } catch (YarnException | IOException | ProcessingException ex) {
       LOG.error("Error putting entity " + tEntity.getEntityId() + " to Timeline"
           + "Server", ex);
     }

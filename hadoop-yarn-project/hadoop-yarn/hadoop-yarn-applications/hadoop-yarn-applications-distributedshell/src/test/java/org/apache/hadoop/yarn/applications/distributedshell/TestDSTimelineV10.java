@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import net.jodah.failsafe.RetryPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -521,10 +522,10 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, com.sun.jersey.api.client.Client client,
-          URI resURI) throws IOException {
+          UserGroupInformation authUgi, javax.ws.rs.client.Client client,
+          URI resURI, RetryPolicy<Object> retryPolicy) throws IOException {
         TimelineWriter timelineWriter =
-            new DirectTimelineWriter(authUgi, client, resURI);
+            new DirectTimelineWriter(authUgi, client, resURI, retryPolicy);
         spyTimelineWriterRef.set(spy(timelineWriter));
         return spyTimelineWriterRef.get();
       }

@@ -29,7 +29,10 @@ import java.net.URI;
 import java.net.URL;
 import java.util.List;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -37,16 +40,10 @@ import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
-import org.junit.Assert;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
+import org.junit.Assert;
 
 /**
  * Test Base for TimelineReaderServer HBase tests.
@@ -109,19 +106,21 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
   }
 
   protected Client createClient() {
-    ClientConfig cfg = new DefaultClientConfig();
-    cfg.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    return new Client(
-        new URLConnectionClientHandler(new DummyURLConnectionFactory()), cfg);
+    ClientConfig cfg = new ClientConfig();
+    cfg.register(YarnJacksonJaxbJsonProvider.class);
+    cfg.connectorProvider(
+        new HttpUrlConnectorProvider().connectionFactory(new DummyURLConnectionFactory()));
+    return ClientBuilder.newClient(cfg);
   }
 
-  protected ClientResponse getResponse(Client client, URI uri)
+  protected Response getResponse(Client client, URI uri)
       throws Exception {
-    ClientResponse resp =
-        client.resource(uri).accept(MediaType.APPLICATION_JSON)
-            .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    if (resp == null || resp.getStatusInfo()
-        .getStatusCode() != ClientResponse.Status.OK.getStatusCode()) {
+    Response resp = client.target(uri)
+        .request(MediaType.APPLICATION_JSON)
+        .accept(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    if (resp == null || resp.getStatus()
+        .getStatusCode() != Response.Status.OK.getStatusCode()) {
       String msg = "";
       if (resp != null) {
         msg = String.valueOf(resp.getStatusInfo().getStatusCode());
@@ -154,10 +153,10 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
   }
 
   protected static class DummyURLConnectionFactory
-      implements HttpURLConnectionFactory {
+      implements HttpUrlConnectorProvider.ConnectionFactory {
 
     @Override
-    public HttpURLConnection getHttpURLConnection(final URL url)
+    public HttpURLConnection getConnection(final URL url)
         throws IOException {
       try {
         return (HttpURLConnection) url.openConnection();

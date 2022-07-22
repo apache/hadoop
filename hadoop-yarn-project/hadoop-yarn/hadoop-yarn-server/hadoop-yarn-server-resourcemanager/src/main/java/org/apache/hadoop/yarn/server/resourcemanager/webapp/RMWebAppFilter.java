@@ -30,8 +30,12 @@ import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.servlet.Filter;
 import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -53,10 +57,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Injector;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
 @Singleton
-public class RMWebAppFilter extends GuiceContainer {
+public class RMWebAppFilter implements Filter {
   private static final Logger LOG =
       LoggerFactory.getLogger(RMWebAppFilter.class);
 
@@ -79,7 +82,6 @@ public class RMWebAppFilter extends GuiceContainer {
 
   @Inject
   public RMWebAppFilter(Injector injector, Configuration conf) {
-    super(injector);
     this.injector=injector;
     InetSocketAddress sock = YarnConfiguration.useHttps(conf)
         ? conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
@@ -103,9 +105,15 @@ public class RMWebAppFilter extends GuiceContainer {
   }
 
   @Override
-  public void doFilter(HttpServletRequest request,
-      HttpServletResponse response, FilterChain chain) throws IOException,
-      ServletException {
+  public void init(FilterConfig filterConfig) throws ServletException {
+
+  }
+
+  @Override
+  public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse,
+      FilterChain chain) throws IOException, ServletException {
+    HttpServletRequest request = (HttpServletRequest) servletRequest;
+    HttpServletResponse response = (HttpServletResponse) servletResponse;
     response.setCharacterEncoding("UTF-8");
     String htmlEscapedUri = HtmlQuoting.quoteHtmlChars(request.getRequestURI());
 
@@ -176,7 +184,12 @@ public class RMWebAppFilter extends GuiceContainer {
       }
     }
 
-    super.doFilter(request, response, chain);
+    chain.doFilter(request, response);
+  }
+
+  @Override
+  public void destroy() {
+
   }
 
   private String ahsRedirectPath(String uri, RMWebApp rmWebApp) {

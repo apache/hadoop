@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
-import com.sun.jersey.api.client.WebResource;
 import org.apache.hadoop.http.JettyUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 
 import java.util.function.Consumer;
@@ -33,7 +33,7 @@ import static org.junit.Assert.*;
 /**
  * This class hides the implementation details of how to verify the structure of
  * JSON responses. Tests should only provide the path of the
- * {@link WebResource}, the response from the resource and
+ * {@link WebTarget}, the response from the resource and
  * the verifier Consumer to
  * {@link JsonCustomResourceTypeTestcase#verify(Consumer)}. An instance of
  * {@link JSONObject} will be passed to that consumer to be able to
@@ -43,11 +43,11 @@ public class JsonCustomResourceTypeTestcase {
   private static final Logger LOG =
       LoggerFactory.getLogger(JsonCustomResourceTypeTestcase.class);
 
-  private final WebResource path;
+  private final WebTarget path;
   private final BufferedClientResponse response;
   private final JSONObject parsedResponse;
 
-  public JsonCustomResourceTypeTestcase(WebResource path,
+  public JsonCustomResourceTypeTestcase(WebTarget path,
                                         BufferedClientResponse response) {
     this.path = path;
     verifyStatus(response);

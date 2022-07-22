@@ -19,13 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Guice;
-import com.sun.jersey.api.client.ClientResponse;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,22 +37,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createMockRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createWebAppDescriptor;
 
-public class TestRMWebServicesCapacitySchedDynamicConfig extends
-    JerseyTestBase {
+public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTest {
   private MockRM rm;
 
   private CapacitySchedulerQueueManager autoQueueHandler;
 
   public TestRMWebServicesCapacitySchedDynamicConfig() {
-    super(createWebAppDescriptor());
   }
 
   @Test
@@ -180,10 +178,10 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     autoQueueHandler.createQueue(new QueuePath(queuePath));
   }
 
-  private ClientResponse sendRequest() {
-    return resource().path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+  private Response sendRequest() {
+    return target().path("ws").path("v1").path("cluster")
+        .path("scheduler").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
   }
 
   private static class CSConfigGenerator {

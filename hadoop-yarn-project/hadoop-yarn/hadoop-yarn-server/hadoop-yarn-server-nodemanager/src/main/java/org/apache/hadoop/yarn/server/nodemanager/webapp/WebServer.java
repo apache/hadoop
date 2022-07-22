@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import javax.servlet.Filter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -182,7 +182,7 @@ public class WebServer extends AbstractService {
     }
 
     @Override
-    protected Class<? extends GuiceContainer> getWebAppFilterClass() {
+    protected Class<? extends Filter> getWebAppFilterClass() {
       return NMWebAppFilter.class;
     }
   }

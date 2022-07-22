@@ -18,12 +18,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Guice;
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -46,14 +43,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.Resourc
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -85,18 +86,13 @@ import static org.junit.Assert.assertTrue;
  * Tests for scheduler/app activities when multi-nodes enabled.
  */
 public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
-    extends JerseyTestBase {
+    extends JerseyTest {
 
   private static MockRM rm;
   private static CapacitySchedulerConfiguration csConf;
   private static YarnConfiguration conf;
 
   public TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   private static class WebServletModule extends ServletModule {
@@ -130,7 +126,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       conf.setLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 30000);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
   }
 
@@ -184,12 +180,12 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
               1)), null);
 
       //Trigger recording for multi-nodes without params
-      WebResource r = resource();
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      WebTarget r = target();
+      Response response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/activities").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
+          response.getMediaType().toString());
       //Trigger scheduling for this app
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
       RMNode rmNode = rm.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -198,11 +194,11 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       //Check scheduler activities, it should contain one allocation and
       // final allocation state is ALLOCATED
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          "scheduler/activities").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
 
@@ -227,12 +223,12 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
 
     try {
       //Trigger recording for multi-nodes without params
-      WebResource r = resource();
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      WebTarget r = target();
+      Response response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/activities").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
+          response.getMediaType().toString());
       //Trigger scheduling for this app
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
       RMNode rmNode = rm.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -241,11 +237,11 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       //Check scheduler activities, it should contain one allocation and
       // final allocation state is SKIPPED
       response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/activities").accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          "scheduler/activities").request(
+          MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
       JSONObject allocation = getFirstSubNodeFromJson(json,
@@ -279,10 +275,10 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
               1)), null);
 
       //Trigger recording for this app
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap<String, Object> params = new MultivaluedHashMap<>();
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getJSONObject(FN_APP_ACT_ROOT).getString(FN_ACT_DIAGNOSTIC));
@@ -351,13 +347,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
               .build());
       MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
 
-      WebResource r = resource();
-      ClientResponse response =
+      WebTarget r = target();
+      Response response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+              .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("waiting for next allocation",
           json.getJSONObject(FN_SCHEDULER_ACT_ROOT).getString("diagnostic"));
 
@@ -368,10 +364,10 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
 
       response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+              .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      json = response.readEntity(JSONObject.class);
 
       //Check app activities
       verifyNumberOfAllocations(json, 1);
@@ -428,10 +424,10 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
               .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap<String, Object> params = new MultivaluedHashMap<>();
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getJSONObject(FN_APP_ACT_ROOT).getString(FN_ACT_DIAGNOSTIC));
@@ -507,9 +503,9 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
               .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(RMWSConsts.SCHEDULER_ACTIVITIES);
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap<String, Object> params = new MultivaluedHashMap<>();
 
       /*
        * test non-exist groupBy
@@ -593,10 +589,10 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
               .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget r = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
               app1.getApplicationId().toString()));
-      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      MultivaluedMap<String, Object> params = new MultivaluedHashMap<>();
 
       /*
        * test non-exist groupBy

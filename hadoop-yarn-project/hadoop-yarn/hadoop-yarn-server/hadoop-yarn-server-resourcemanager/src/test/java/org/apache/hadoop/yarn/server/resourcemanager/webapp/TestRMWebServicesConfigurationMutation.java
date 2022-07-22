@@ -19,12 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Guice;
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -41,7 +38,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
@@ -49,13 +45,19 @@ import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import java.io.File;
@@ -77,7 +79,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 /**
  * Test scheduler configuration mutation via REST API.
  */
-public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
+public class TestRMWebServicesConfigurationMutation extends JerseyTest {
   private static final Logger LOG = LoggerFactory
           .getLogger(TestRMWebServicesConfigurationMutation.class);
 
@@ -130,7 +132,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
       }
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
       filter("/*").through(TestRMWebServicesAppsModification
           .TestRMCustomAuthFilter.class);
     }
@@ -176,23 +178,16 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   public TestRMWebServicesConfigurationMutation() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   private CapacitySchedulerConfiguration getSchedulerConf()
       throws JSONException {
-    WebResource r = resource();
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster")
-            .queryParam("user.name", userName).path("scheduler-conf")
-            .accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+    WebTarget target = target();
+    Response response =
+        target.path("ws").path("v1").path("cluster").queryParam("user.name", userName)
+            .path("scheduler-conf").request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
-    JSONObject json = response.getEntity(JSONObject.class);
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONArray items = (JSONArray) json.get("property");
     CapacitySchedulerConfiguration parsedConf =
         new CapacitySchedulerConfiguration();
@@ -232,36 +227,33 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(stoppedInfo);
 
     // Add a queue root.formattest to the existing three queues
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(updateInfo,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class);
+    WebTarget target = target();
+    Response response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     newConf = getSchedulerConf();
     assertNotNull(newConf);
     assertEquals(5, newConf.getQueues("root").length);
 
     // Format the scheduler config and validate root.formattest is not present
-    response = r.path("ws").path("v1").path("cluster")
-        .queryParam("user.name", userName)
-        .path(RMWSConsts.FORMAT_SCHEDULER_CONF)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").queryParam("user.name", userName)
+        .path(RMWSConsts.FORMAT_SCHEDULER_CONF).request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     newConf = getSchedulerConf();
     assertEquals(4, newConf.getQueues("root").length);
   }
 
   private long getConfigVersion() throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .queryParam("user.name", userName)
-        .path(RMWSConsts.SCHEDULER_CONF_VERSION)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget target = target();
+    Response response =
+        target.path("ws").path("v1").path("cluster").queryParam("user.name", userName)
+            .path(RMWSConsts.SCHEDULER_CONF_VERSION).request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
-    JSONObject json = response.getEntity(JSONObject.class);
+    JSONObject json = response.readEntity(JSONObject.class);
     return Long.parseLong(json.get("versionID").toString());
   }
 
@@ -278,9 +270,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertNotNull(orgConf);
     assertEquals(4, orgConf.getQueues("root").length);
 
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     // Add parent queue root.d with two children d1 and d2.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
@@ -300,13 +292,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getAddQueueInfo().add(d1);
     updateInfo.getAddQueueInfo().add(d2);
     updateInfo.getAddQueueInfo().add(d);
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -325,9 +314,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testAddWithUpdate() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     // Add root.d with capacity 25, reducing root.b capacity from 75 to 50.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
@@ -339,13 +328,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     QueueConfigInfo b = new QueueConfigInfo("root.b", bCapacity);
     updateInfo.getAddQueueInfo().add(d);
     updateInfo.getUpdateQueueInfo().add(b);
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -357,8 +343,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testUnsetParentQueueOrderingPolicy() throws Exception {
-    WebResource r = resource();
-    ClientResponse response;
+    WebTarget target = target();
+    Response response;
 
     // Update ordering policy of Leaf Queue root.b to fair
     SchedConfUpdateInfo updateInfo1 = new SchedConfUpdateInfo();
@@ -367,12 +353,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         "fair");
     QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.b", updateParam);
     updateInfo1.getUpdateQueueInfo().add(aUpdateInfo);
-    response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(updateInfo1,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo1, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
@@ -388,12 +372,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     capacity.put(CapacitySchedulerConfiguration.CAPACITY, "100");
     QueueConfigInfo b1 = new QueueConfigInfo("root.b.b1", capacity);
     updateInfo2.getAddQueueInfo().add(b1);
-    response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(updateInfo2,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo2, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     // Validate unset ordering policy of root.b after converted to
     // Parent Queue
@@ -408,8 +390,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testUnsetLeafQueueOrderingPolicy() throws Exception {
-    WebResource r = resource();
-    ClientResponse response;
+    WebTarget target = target();
+    Response response;
 
     // Update ordering policy of Parent Queue root.c to priority-utilization
     SchedConfUpdateInfo updateInfo1 = new SchedConfUpdateInfo();
@@ -418,12 +400,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         "priority-utilization");
     QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.c", updateParam);
     updateInfo1.getUpdateQueueInfo().add(aUpdateInfo);
-    response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(updateInfo1,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo1, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
@@ -436,12 +416,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     // Remove root.c.c1 which makes root.c a Leaf Queue
     SchedConfUpdateInfo updateInfo2 = new SchedConfUpdateInfo();
     updateInfo2.getRemoveQueueInfo().add("root.c.c1");
-    response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(updateInfo2,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo2, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
     // Validate unset ordering policy of root.c after converted to
@@ -456,21 +434,18 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveQueue() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     stopQueue("root.a.a2");
     // Remove root.a.a2
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add("root.a.a2");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -483,9 +458,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testStopWithRemoveQueue() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     // Set state of queues to STOPPED.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
@@ -497,12 +472,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(stoppedInfo);
 
     updateInfo.getRemoveQueueInfo().add("root.a.a2");
-    response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(updateInfo,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -513,9 +486,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveQueueWhichHasQueueMapping() throws Exception {
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response;
+    Response response;
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     // Validate Queue 'mappedqueue' exists before deletion
@@ -532,10 +505,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     // Remove queue 'mappedqueue' using update scheduler-conf
     updateInfo.getRemoveQueueInfo().add("root.mappedqueue");
     response = r.path("ws").path("v1").path("cluster").path("scheduler-conf")
-        .queryParam("user.name", userName).accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo, SchedConfUpdateInfo.class),
-            MediaType.APPLICATION_JSON).put(ClientResponse.class);
-    String responseText = response.getEntity(String.class);
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(YarnWebServiceUtils.toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
+    String responseText = response.readEntity(String.class);
 
     // Queue 'mappedqueue' deletion will fail as there is queue mapping present
     assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
@@ -553,8 +526,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testStopWithConvertLeafToParentQueue() throws Exception {
-    WebResource r = resource();
-    ClientResponse response;
+    WebTarget target = target();
+    Response response;
 
     // Set state of queues to STOPPED.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
@@ -570,12 +543,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     QueueConfigInfo b1 = new QueueConfigInfo("root.b.b1", b1Capacity);
     updateInfo.getAddQueueInfo().add(b1);
 
-    response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(updateInfo,
-            SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -586,21 +557,18 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveParentQueue() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     stopQueue("root.c", "root.c.c1");
     // Remove root.c (parent queue)
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add("root.c");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -611,9 +579,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveParentQueueWithCapacity() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     stopQueue("root.a", "root.a.a1", "root.a.a2");
     // Remove root.a (parent queue) with capacity 25
@@ -625,13 +593,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     bCapacity.put(CapacitySchedulerConfiguration.CAPACITY, "100");
     QueueConfigInfo b = new QueueConfigInfo("root.b", bCapacity);
     updateInfo.getUpdateQueueInfo().add(b);
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -643,9 +608,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testRemoveMultipleQueues() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     stopQueue("root.b", "root.c", "root.c.c1");
     // Remove root.b and root.c
@@ -657,13 +622,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     aCapacity.put(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY, "100");
     QueueConfigInfo configInfo = new QueueConfigInfo("root.a", aCapacity);
     updateInfo.getUpdateQueueInfo().add(configInfo);
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -672,9 +634,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   private void stopQueue(String... queuePaths) throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     // Set state of queues to STOPPED.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
@@ -685,13 +647,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
       QueueConfigInfo stoppedInfo = new QueueConfigInfo(queue, stoppedParam);
       updateInfo.getUpdateQueueInfo().add(stoppedInfo);
     }
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
@@ -702,9 +661,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testUpdateQueue() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     // Update config value.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
@@ -720,13 +679,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         cs.getConfiguration()
             .getMaximumApplicationMasterResourcePerQueuePercent("root.a"),
         0.001f);
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     LOG.debug("Response headers: " + response.getHeaders());
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf = cs.getConfiguration();
@@ -739,13 +695,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     aUpdateInfo = new QueueConfigInfo("root.a", updateParam);
     updateInfo.getUpdateQueueInfo().clear();
     updateInfo.getUpdateQueueInfo().add(aUpdateInfo);
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     newCSConf = cs.getConfiguration();
     assertEquals(CapacitySchedulerConfiguration
@@ -756,9 +709,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testUpdateQueueCapacity() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     // Update root.a and root.b capacity to 50.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
@@ -769,13 +722,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(aUpdateInfo);
     updateInfo.getUpdateQueueInfo().add(bUpdateInfo);
 
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
@@ -785,22 +735,19 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testGlobalConfChange() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
 
-    ClientResponse response;
+    Response response;
 
     // Set maximum-applications to 30000.
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getGlobalParams().put(CapacitySchedulerConfiguration.PREFIX +
         "maximum-applications", "30000");
 
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
@@ -809,13 +756,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getGlobalParams().put(CapacitySchedulerConfiguration.PREFIX +
         "maximum-applications", null);
     // Unset maximum-applications. Should be set to default.
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+    response = target.path("ws").path("v1").path("cluster").path("scheduler-conf")
+        .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).put(
+            Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
@@ -826,35 +770,33 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testNodeLabelRemovalResidualConfigsAreCleared() throws Exception {
-    WebResource r = resource();
-    ClientResponse response;
+    WebTarget target = target();
+    Response response;
 
     // 1. Create Node Label: label1
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo(LABEL_1));
-    WebResource addNodeLabelsResource = r.path("ws").path("v1").path("cluster")
-        .path("add-node-labels");
-    WebResource getNodeLabelsResource = r.path("ws").path("v1").path("cluster")
-        .path("get-node-labels");
-    WebResource removeNodeLabelsResource = r.path("ws").path("v1").path("cluster")
-        .path("remove-node-labels");
-    WebResource schedulerConfResource = r.path("ws").path("v1").path("cluster")
-        .path(RMWSConsts.SCHEDULER_CONF);
+    WebTarget addNodeLabelsResource =
+        target.path("ws").path("v1").path("cluster").path("add-node-labels");
+    WebTarget getNodeLabelsResource =
+        target.path("ws").path("v1").path("cluster").path("get-node-labels");
+    WebTarget removeNodeLabelsResource =
+        target.path("ws").path("v1").path("cluster").path("remove-node-labels");
+    WebTarget schedulerConfResource =
+        target.path("ws").path("v1").path("cluster").path(RMWSConsts.SCHEDULER_CONF);
     response =
-        addNodeLabelsResource.queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(logAndReturnJson(addNodeLabelsResource,
-                    toJson(nodeLabelsInfo, NodeLabelsInfo.class)),
-                MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+        addNodeLabelsResource.queryParam("user.name", userName).request(MediaType.APPLICATION_JSON)
+            .post(Entity.entity(logAndReturnJson(addNodeLabelsResource,
+                    toJson(nodeLabelsInfo, NodeLabelsInfo.class)), MediaType.APPLICATION_JSON),
+                Response.class);
 
     // 2. Verify new Node Label
     response =
-        getNodeLabelsResource.queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        getNodeLabelsResource.queryParam("user.name", userName).request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
+        response.getMediaType().toString());
+    nodeLabelsInfo = response.readEntity(NodeLabelsInfo.class);
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
     for (NodeLabelInfo nl : nodeLabelsInfo.getNodeLabelsInfo()) {
       assertEquals(LABEL_1, nl.getName());
@@ -875,12 +817,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(rootAUpdateInfo);
 
     response =
-        schedulerConfResource
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
-                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+        schedulerConfResource.queryParam("user.name", userName).request(MediaType.APPLICATION_JSON)
+            .put(Entity.entity(logAndReturnJson(schedulerConfResource,
+                    toJson(updateInfo, SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON),
+                Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -924,12 +864,10 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(rootA_A2UpdateInfo);
 
     response =
-        schedulerConfResource
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
-                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+        schedulerConfResource.queryParam("user.name", userName).request(MediaType.APPLICATION_JSON)
+            .put(Entity.entity(logAndReturnJson(schedulerConfResource,
+                    toJson(updateInfo, SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON),
+                Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
     assertEquals(100.0, cs.getConfiguration().getLabeledQueueCapacity(ROOT, LABEL_1), 0.001f);
@@ -977,34 +915,27 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(rootA_A2UpdateInfo);
 
     response =
-        schedulerConfResource
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
-                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
-            .put(ClientResponse.class);
+        schedulerConfResource.queryParam("user.name", userName).request(MediaType.APPLICATION_JSON)
+            .put(Entity.entity(logAndReturnJson(schedulerConfResource,
+                    toJson(updateInfo, SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON),
+                Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     assertEquals(Sets.newHashSet("*"),
         cs.getConfiguration().getAccessibleNodeLabels(ROOT.getFullPath()));
     assertNull(cs.getConfiguration().getAccessibleNodeLabels(ROOT_A.getFullPath()));
 
     //6. Remove node label 'label1'
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
-    params.add("labels", LABEL_1);
     response =
-        removeNodeLabelsResource
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+        removeNodeLabelsResource.queryParam("user.name", userName).queryParam("labels", LABEL_1)
+            .request(MediaType.APPLICATION_JSON).post(null, Response.class);
 
     // Verify
     response =
-        getNodeLabelsResource.queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        getNodeLabelsResource.queryParam("user.name", userName).request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
+        response.getMediaType().toString());
+    nodeLabelsInfo = response.readEntity(NodeLabelsInfo.class);
     assertEquals(0, nodeLabelsInfo.getNodeLabels().size());
 
     //6. Check residual configs
@@ -1025,7 +956,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
             queuePath.getFullPath(), label) + type);
   }
 
-  private Object logAndReturnJson(WebResource ws, String json) {
+  private Object logAndReturnJson(WebTarget ws, String json) {
     LOG.info("Sending to web resource: {}, json: {}", ws, json);
     return json;
   }
@@ -1040,7 +971,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testValidateWithClusterMaxAllocation() throws Exception {
-    WebResource r = resource();
+    WebTarget target = target();
     int clusterMax = YarnConfiguration.
         DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB * 2;
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -1053,14 +984,11 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     QueueConfigInfo aUpdateInfo = new QueueConfigInfo("root.a", updateParam);
     updateInfo.getUpdateQueueInfo().add(aUpdateInfo);
 
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster")
-            .path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    Response response =
+        target.path("ws").path("v1").path("cluster").path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
+            .queryParam("user.name", userName).request(MediaType.APPLICATION_JSON).post(
+                Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+                    MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
 

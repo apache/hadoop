@@ -19,11 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler;
 
 import com.google.inject.Guice;
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -40,15 +38,18 @@ import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProv
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Element;
+
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,7 @@ import static org.junit.Assert.assertEquals;
  * {@link CustomResourceTypesConfigurationProvider}
  */
 public class TestRMWebServicesFairSchedulerCustomResourceTypes
-    extends JerseyTestBase {
+    extends JerseyTest {
   private static MockRM rm;
   private static YarnConfiguration conf;
 
@@ -79,7 +80,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
       initResourceTypes(conf);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
 
     private void initResourceTypes(YarnConfiguration conf) {
@@ -112,11 +113,6 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
   }
 
   public TestRMWebServicesFairSchedulerCustomResourceTypes() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
@@ -131,10 +127,10 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
         queueManager.getLeafQueue("root.q.subqueue1", false);
     incrementUsedResourcesOnQueue(subqueue1, 33L);
 
-    WebResource path =
-        resource().path("ws").path("v1").path("cluster").path("scheduler");
-    ClientResponse response =
-        path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget path =
+        target().path("ws").path("v1").path("cluster").path("scheduler");
+    Response response =
+        path.request(MediaType.APPLICATION_JSON).get(Response.class);
 
     verifyJsonResponse(path, response,
             CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
@@ -152,10 +148,10 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
         queueManager.getLeafQueue("root.q.subqueue1", false);
     incrementUsedResourcesOnQueue(subqueue1, 33L);
 
-    WebResource path =
-        resource().path("ws").path("v1").path("cluster").path("scheduler");
-    ClientResponse response =
-        path.accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+    WebTarget path =
+        target().path("ws").path("v1").path("cluster").path("scheduler");
+    Response response =
+        path.request(MediaType.APPLICATION_XML).get(Response.class);
 
     verifyXmlResponse(path, response,
         CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
@@ -176,10 +172,10 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
         queueManager.getLeafQueue("root.q.subqueue1", false);
     incrementUsedResourcesOnQueue(subqueue1, 33L);
 
-    WebResource path =
-        resource().path("ws").path("v1").path("cluster").path("scheduler");
-    ClientResponse response =
-        path.accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+    WebTarget path =
+        target().path("ws").path("v1").path("cluster").path("scheduler");
+    Response response =
+        path.request(MediaType.APPLICATION_XML).get(Response.class);
 
     verifyXmlResponse(path, response,
         CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
@@ -200,16 +196,16 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
         queueManager.getLeafQueue("root.q.subqueue1", false);
     incrementUsedResourcesOnQueue(subqueue1, 33L);
 
-    WebResource path =
-        resource().path("ws").path("v1").path("cluster").path("scheduler");
-    ClientResponse response =
-        path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget path =
+        target().path("ws").path("v1").path("cluster").path("scheduler");
+    Response response =
+        path.request(MediaType.APPLICATION_JSON).get(Response.class);
 
     verifyJsonResponse(path, response,
         CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
   }
 
-  private void verifyJsonResponse(WebResource path, ClientResponse response,
+  private void verifyJsonResponse(WebTarget path, Response response,
       List<String> customResourceTypes) {
     JsonCustomResourceTypeTestcase testCase =
         new JsonCustomResourceTypeTestcase(path,
@@ -232,7 +228,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
     });
   }
 
-  private void verifyXmlResponse(WebResource path, ClientResponse response,
+  private void verifyXmlResponse(WebTarget path, Response response,
           List<String> customResourceTypes) {
     XmlCustomResourceTypeTestCase testCase = new XmlCustomResourceTypeTestCase(
         path, new BufferedClientResponse(response));

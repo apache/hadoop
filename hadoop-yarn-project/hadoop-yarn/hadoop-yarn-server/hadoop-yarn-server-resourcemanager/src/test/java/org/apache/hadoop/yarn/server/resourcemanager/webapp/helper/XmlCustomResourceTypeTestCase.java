@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
-import com.sun.jersey.api.client.WebResource;
 import org.apache.hadoop.http.JettyUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
@@ -27,6 +26,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -42,7 +42,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * This class hides the implementation details of how to verify the structure of
  * XML responses. Tests should only provide the path of the
- * {@link WebResource}, the response from the resource and
+ * {@link WebTarget}, the response from the resource and
  * the verifier Consumer to
  * {@link XmlCustomResourceTypeTestCase#verify(Consumer)}. An instance of
  * {@link JSONObject} will be passed to that consumer to be able to
@@ -52,11 +52,11 @@ public class XmlCustomResourceTypeTestCase {
   private static final Logger LOG =
       LoggerFactory.getLogger(XmlCustomResourceTypeTestCase.class);
 
-  private WebResource path;
+  private WebTarget path;
   private BufferedClientResponse response;
   private Document parsedResponse;
 
-  public XmlCustomResourceTypeTestCase(WebResource path,
+  public XmlCustomResourceTypeTestCase(WebTarget path,
                                        BufferedClientResponse response) {
     this.path = path;
     verifyStatus(response);

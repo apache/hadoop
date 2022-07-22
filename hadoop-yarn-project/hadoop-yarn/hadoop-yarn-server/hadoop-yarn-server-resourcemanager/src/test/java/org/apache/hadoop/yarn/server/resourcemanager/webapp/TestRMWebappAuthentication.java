@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -51,8 +52,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import com.sun.jersey.api.client.ClientResponse.Status;
 
 /* Just a simple test class to ensure that the RM handles the static web user
  * correctly for secure and un-secure modes

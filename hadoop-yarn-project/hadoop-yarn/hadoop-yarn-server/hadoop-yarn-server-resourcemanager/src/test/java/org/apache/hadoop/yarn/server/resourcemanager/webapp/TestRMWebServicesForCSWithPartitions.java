@@ -35,7 +35,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -63,11 +65,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
+
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,12 +84,8 @@ import org.xml.sax.InputSource;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
-public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
+public class TestRMWebServicesForCSWithPartitions extends JerseyTest {
   private static final String DEFAULT_PARTITION = "";
   private static final String CAPACITIES = "capacities";
   private static final String RESOURCE_USAGES_BY_PARTITION =
@@ -128,9 +129,9 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         Assert.fail();
       }
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
-  };
+  }
 
   static {
     GuiceServletConfig.setInjector(
@@ -206,58 +207,53 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   }
 
   public TestRMWebServicesForCSWithPartitions() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
   public void testSchedulerPartitions() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = target();
+    Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
   }
 
   @Test
   public void testSchedulerPartitionsSlash() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = target();
+    Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler/")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
 
   }
 
   @Test
   public void testSchedulerPartitionsDefault() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler").get(ClientResponse.class);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler").request().get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
   }
 
   @Test
   public void testSchedulerPartitionsXML() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = target();
+    Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler")
-            .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+            .request(MediaType.APPLICATION_XML).get(Response.class);
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -295,7 +291,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
               .capability(Resources.createResource(2048)).numContainers(1)
               .build()), null);
 
-      WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+      WebTarget sr = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
           .path(RMWSConsts.SCHEDULER_ACTIVITIES);
       ActivitiesTestUtils.requestWebResource(sr, null);
 

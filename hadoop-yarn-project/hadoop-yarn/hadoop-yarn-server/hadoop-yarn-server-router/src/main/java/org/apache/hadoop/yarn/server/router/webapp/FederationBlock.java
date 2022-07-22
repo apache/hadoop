@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -39,16 +38,17 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.inject.Inject;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONUnmarshaller;
 
 class FederationBlock extends HtmlBlock {
 
   private static final long BYTES_IN_MB = 1024 * 1024;
 
   private final Router router;
+
+  private static final ObjectReader MAPPER = new ObjectMapper().readerFor(ClusterMetricsInfo.class);
 
   @Inject
   FederationBlock(ViewContext ctx, Router router) {
@@ -162,12 +162,7 @@ class FederationBlock extends HtmlBlock {
   private static ClusterMetricsInfo getClusterMetricsInfo(String capability) {
     ClusterMetricsInfo clusterMetrics = null;
     try {
-      JSONJAXBContext jc = new JSONJAXBContext(
-          JSONConfiguration.mapped().rootUnwrapping(false).build(),
-          ClusterMetricsInfo.class);
-      JSONUnmarshaller unmarshaller = jc.createJSONUnmarshaller();
-      clusterMetrics = unmarshaller.unmarshalFromJSON(
-          new StringReader(capability), ClusterMetricsInfo.class);
+      clusterMetrics = MAPPER.readValue(capability);
     } catch (Exception e) {
       LOG.error("Cannot parse SubCluster info", e);
     }

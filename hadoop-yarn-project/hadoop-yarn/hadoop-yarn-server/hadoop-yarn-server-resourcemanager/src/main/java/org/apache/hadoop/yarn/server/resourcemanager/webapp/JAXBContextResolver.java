@@ -20,8 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
 
 import java.util.*;
 
@@ -116,13 +115,9 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     final Class[] finalRootUnwrappedTypes = finalRootUnwrappedTypesList
         .toArray(new Class[finalRootUnwrappedTypesList.size()]);
 
-    this.typesContextMap = new HashMap<Class, JAXBContext>();
-    context =
-        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(false)
-          .build(), finalcTypes);
-    unWrappedRootContext =
-        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(true)
-          .build(), finalRootUnwrappedTypes);
+    this.typesContextMap = new HashMap<>();
+    context = new JettisonJaxbContext(finalcTypes);
+    unWrappedRootContext = new JettisonJaxbContext(finalRootUnwrappedTypes);
     for (Class type : finalcTypes) {
       typesContextMap.put(type, context);
     }

@@ -39,6 +39,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -221,8 +223,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 @Singleton
 @Path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -235,7 +235,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   private static RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
   private final Configuration conf;
-  private @Context HttpServletResponse response;
+
+  @Context
+  private HttpServletResponse response;
 
   // -------Default values of QueryParams for RMWebServiceProtocol--------
 

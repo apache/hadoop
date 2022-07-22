@@ -19,11 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Guice;
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -43,16 +41,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomReso
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
@@ -65,7 +65,7 @@ import static org.junit.Assert.assertEquals;
  * This test verifies that custom resource types are correctly serialized to XML
  * and JSON when HTTP GET request is sent to the resource: ws/v1/cluster/apps.
  */
-public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
+public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTest {
 
   private static MockRM rm;
   private static final int CONTAINER_MB = 1024;
@@ -84,7 +84,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
       initResourceTypes(conf);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
 
     private void initResourceTypes(Configuration conf) {
@@ -107,11 +107,6 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   }
 
   public TestRMWebServicesAppsCustomResourceTypes() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
@@ -128,10 +123,9 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     am1.allocate("*", 2048, 1, new ArrayList<>());
     amNodeManager.nodeHeartbeat(true);
 
-    WebResource r = resource();
-    WebResource path = r.path("ws").path("v1").path("cluster").path("apps");
-    ClientResponse response =
-        path.accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+    WebTarget r = target();
+    WebTarget path = r.path("ws").path("v1").path("cluster").path("apps");
+    Response response = path.request(MediaType.APPLICATION_XML).get(Response.class);
 
     XmlCustomResourceTypeTestCase testCase =
             new XmlCustomResourceTypeTestCase(path,
@@ -164,10 +158,9 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     am1.allocate("*", 2048, 1, new ArrayList<>());
     amNodeManager.nodeHeartbeat(true);
 
-    WebResource r = resource();
-    WebResource path = r.path("ws").path("v1").path("cluster").path("apps");
-    ClientResponse response =
-        path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget r = target();
+    WebTarget path = r.path("ws").path("v1").path("cluster").path("apps");
+    Response response = path.request(MediaType.APPLICATION_JSON).get(Response.class);
 
     JsonCustomResourceTypeTestcase testCase =
         new JsonCustomResourceTypeTestcase(path,

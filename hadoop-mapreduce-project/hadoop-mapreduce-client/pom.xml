@@ -75,6 +75,10 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
@@ -156,11 +160,6 @@
       <groupId>commons-collections</groupId>
       <artifactId>commons-collections</artifactId>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey.jersey-test-framework</groupId>
-      <artifactId>jersey-test-framework-grizzly2</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
  
