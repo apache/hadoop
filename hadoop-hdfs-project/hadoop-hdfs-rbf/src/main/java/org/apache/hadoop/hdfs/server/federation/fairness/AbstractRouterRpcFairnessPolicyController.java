@@ -29,8 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_MS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_MS_DEFAULT;
 
 /**
  * Base fairness policy that implements @RouterRpcFairnessPolicyController.
@@ -45,12 +45,12 @@ public class AbstractRouterRpcFairnessPolicyController
   /** Hash table to hold semaphore for each configured name service. */
   private Map<String, Semaphore> permits;
 
-  private long acquireTimeoutMs = DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT;
+  private long acquireTimeoutMs = DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_MS_DEFAULT;
 
   public void init(Configuration conf) {
     this.permits = new HashMap<>();
-    long timeoutMs = conf.getTimeDuration(DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_MS,
-        DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
+    long timeoutMs = conf.getTimeDuration(DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT,
+        DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
     if (timeoutMs >= 0) {
       acquireTimeoutMs = timeoutMs;
     }
