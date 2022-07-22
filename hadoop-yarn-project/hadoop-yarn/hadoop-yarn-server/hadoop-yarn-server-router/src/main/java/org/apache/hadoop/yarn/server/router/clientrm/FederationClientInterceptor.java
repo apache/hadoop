@@ -1448,13 +1448,50 @@ public class FederationClientInterceptor
   @Override
   public GetAllResourceProfilesResponse getResourceProfiles(
       GetAllResourceProfilesRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      routerMetrics.incrGetResourceProfilesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getResourceProfiles request.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getResourceProfiles",
+        new Class[] {GetAllResourceProfilesRequest.class}, new Object[] {request});
+    Collection<GetAllResourceProfilesResponse> resourceProfiles = null;
+    try {
+      resourceProfiles = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetAllResourceProfilesResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrGetResourceProfilesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get resource profiles due to exception.",
+          ex);
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetResourceProfilesRetrieved(stopTime - startTime);
+    return RouterYarnClientUtils.mergeClusterResourceProfilesResponse(resourceProfiles);
   }
 
   @Override
   public GetResourceProfileResponse getResourceProfile(
       GetResourceProfileRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getProfileName() == null) {
+      routerMetrics.incrGetResourceProfileFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getResourceProfile request or profileName.",
+          null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getResourceProfile",
+        new Class[] {GetResourceProfileRequest.class}, new Object[] {request});
+    Collection<GetResourceProfileResponse> resourceProfile = null;
+    try {
+      resourceProfile = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetResourceProfileResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrGetResourceProfileFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get resource profile due to exception.",
+          ex);
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetResourceProfileRetrieved(stopTime - startTime);
+    return RouterYarnClientUtils.mergeClusterResourceProfileResponse(resourceProfile);
   }
 
   @Override

@@ -291,8 +291,10 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteLocation createLocation = null;
     try {
       createLocation = rpcServer.getCreateLocation(src, locations);
-      return rpcClient.invokeSingle(createLocation, method,
+      HdfsFileStatus status = rpcClient.invokeSingle(createLocation, method,
           HdfsFileStatus.class);
+      status.setNamespace(createLocation.getNameserviceId());
+      return status;
     } catch (IOException ioe) {
       final List<RemoteLocation> newLocations = checkFaultTolerantRetry(
           method, src, ioe, createLocation, locations);
@@ -377,8 +379,11 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("append",
         new Class<?>[] {String.class, String.class, EnumSetWritable.class},
         new RemoteParam(), clientName, flag);
-    return rpcClient.invokeSequential(
-        locations, method, LastBlockWithStatus.class, null);
+    RemoteResult result = rpcClient.invokeSequential(
+        method, locations, LastBlockWithStatus.class, null);
+    LastBlockWithStatus lbws = (LastBlockWithStatus) result.getResult();
+    lbws.getFileStatus().setNamespace(result.getLocation().getNameserviceId());
+    return lbws;
   }
 
   @Override
@@ -759,14 +764,49 @@ public class RouterClientProtocol implements ClientProtocol {
     }
   }
 
+  private Map<String, FederationNamespaceInfo> getAvailableNamespaces()
+      throws IOException {
+    Map<String, FederationNamespaceInfo> allAvailableNamespaces =
+        new HashMap<>();
+    namenodeResolver.getNamespaces().forEach(
+        k -> allAvailableNamespaces.put(k.getNameserviceId(), k));
+    return allAvailableNamespaces;
+  }
+
+  /**
+   * Try to get a list of FederationNamespaceInfo for renewLease RPC.
+   */
+  private List<FederationNamespaceInfo> getRenewLeaseNSs(List<String> namespaces)
+      throws IOException {
+    if (namespaces == null || namespaces.isEmpty()) {
+      return new ArrayList<>(namenodeResolver.getNamespaces());
+    }
+    List<FederationNamespaceInfo> result = new ArrayList<>();
+    Map<String, FederationNamespaceInfo> allAvailableNamespaces =
+        getAvailableNamespaces();
+    for (String namespace : namespaces) {
+      if (!allAvailableNamespaces.containsKey(namespace)) {
+        return new ArrayList<>(namenodeResolver.getNamespaces());
+      } else {
+        result.add(allAvailableNamespaces.get(namespace));
+      }
+    }
+    return result;
+  }
+
   @Override
-  public void renewLease(String clientName) throws IOException {
+  public void renewLease(String clientName, List<String> namespaces)
+      throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     RemoteMethod method = new RemoteMethod("renewLease",
-        new Class<?>[] {String.class}, clientName);
-    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    rpcClient.invokeConcurrent(nss, method, false, false);
+        new Class<?>[] {String.class, List.class}, clientName, null);
+    List<FederationNamespaceInfo> nss = getRenewLeaseNSs(namespaces);
+    if (nss.size() == 1) {
+      rpcClient.invokeSingle(nss.get(0).getNameserviceId(), method);
+    } else {
+      rpcClient.invokeConcurrent(nss, method, false, false);
+    }
   }
 
   @Override
