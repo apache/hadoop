@@ -204,12 +204,16 @@ public class AzureBlobFileSystem extends FileSystem
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
-      if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
-        try {
-          this.createFileSystem(tracingContext);
-        } catch (AzureBlobFileSystemException ex) {
-          checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
+      try {
+        if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
+          try {
+            this.createFileSystem(tracingContext);
+          } catch (AzureBlobFileSystemException ex) {
+            checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
+          }
         }
+      } catch (AzureBlobFileSystemException ex) {
+        checkException(null, ex);
       }
     }
 
@@ -1327,13 +1331,17 @@ public class AzureBlobFileSystem extends FileSystem
                 : null));
   }
 
-  private FileStatus tryGetFileStatus(final Path f, TracingContext tracingContext) {
+  private FileStatus tryGetFileStatus(final Path f, TracingContext tracingContext) throws IOException {
     try {
       return getFileStatus(f, tracingContext);
     } catch (IOException ex) {
-      LOG.debug("File not found {}", f);
-      statIncrement(ERROR_IGNORED);
-      return null;
+      if (ex instanceof FileNotFoundException) {
+        LOG.debug("File not found {}", f);
+        statIncrement(ERROR_IGNORED);
+        return null;
+      } else {
+        throw ex;
+      }
     }
   }
 
