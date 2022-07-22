@@ -175,7 +175,6 @@ public class FederationClientInterceptor
     federationFacade = FederationStateStoreFacade.getInstance();
     rand = new Random(System.currentTimeMillis());
 
-
     int numThreads = getConf().getInt(
         YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
         YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE);
@@ -197,10 +196,9 @@ public class FederationClientInterceptor
 
     numSubmitRetries =
         conf.getInt(YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
-            YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY);
+        YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY);
 
-    clientRMProxies =
-        new ConcurrentHashMap<SubClusterId, ApplicationClientProtocol>();
+    clientRMProxies = new ConcurrentHashMap<>();
     routerMetrics = RouterMetrics.getMetrics();
 
     returnPartialReport = conf.getBoolean(
@@ -227,19 +225,17 @@ public class FederationClientInterceptor
     ApplicationClientProtocol clientRMProxy = null;
     try {
       boolean serviceAuthEnabled = getConf().getBoolean(
-              CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+          CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
       UserGroupInformation realUser = user;
       if (serviceAuthEnabled) {
-        realUser = UserGroupInformation.createProxyUser(
-                user.getShortUserName(), UserGroupInformation.getLoginUser());
+        realUser = UserGroupInformation.createProxyUser(user.getShortUserName(),
+            UserGroupInformation.getLoginUser());
       }
       clientRMProxy = FederationProxyProviderUtil.createRMProxy(getConf(),
           ApplicationClientProtocol.class, subClusterId, realUser);
     } catch (Exception e) {
       RouterServerUtil.logAndThrowException(
-          "Unable to create the interface to reach the SubCluster "
-              + subClusterId,
-          e);
+          "Unable to create the interface to reach the SubCluster " + subClusterId, e);
     }
 
     clientRMProxies.put(subClusterId, clientRMProxy);
@@ -287,8 +283,7 @@ public class FederationClientInterceptor
 
     for (int i = 0; i < numSubmitRetries; ++i) {
       SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
-      LOG.debug(
-          "getNewApplication try #{} on SubCluster {}", i, subClusterId);
+      LOG.debug("getNewApplication try #{} on SubCluster {}", i, subClusterId);
       ApplicationClientProtocol clientRMProxy =
           getClientRMProxyForSubCluster(subClusterId);
       GetNewApplicationResponse response = null;
@@ -410,7 +405,7 @@ public class FederationClientInterceptor
     ApplicationId applicationId =
         request.getApplicationSubmissionContext().getApplicationId();
 
-    List<SubClusterId> blacklist = new ArrayList<SubClusterId>();
+    List<SubClusterId> blacklist = new ArrayList<>();
 
     for (int i = 0; i < numSubmitRetries; ++i) {
 
@@ -561,8 +556,8 @@ public class FederationClientInterceptor
     }
 
     if (response == null) {
-      LOG.error("No response when attempting to kill the application "
-          + applicationId + " to SubCluster " + subClusterId.getId());
+      LOG.error("No response when attempting to kill the application {} to SubCluster {}.",
+          applicationId, subClusterId.getId());
     }
 
     long stopTime = clock.getTime();
@@ -1528,20 +1523,75 @@ public class FederationClientInterceptor
   @Override
   public GetAttributesToNodesResponse getAttributesToNodes(
       GetAttributesToNodesRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getNodeAttributes() == null) {
+      routerMetrics.incrGetAttributesToNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getAttributesToNodes request " +
+          "or nodeAttributes.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getAttributesToNodes",
+        new Class[] {GetAttributesToNodesRequest.class}, new Object[] {request});
+    Collection<GetAttributesToNodesResponse> attributesToNodesResponses = null;
+    try {
+      attributesToNodesResponses = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetAttributesToNodesResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrGetAttributesToNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get attributes to nodes due to exception.",
+          ex);
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetAttributesToNodesRetrieved(stopTime - startTime);
+    return RouterYarnClientUtils.mergeAttributesToNodesResponse(attributesToNodesResponses);
   }
 
   @Override
   public GetClusterNodeAttributesResponse getClusterNodeAttributes(
-      GetClusterNodeAttributesRequest request)
-      throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+      GetClusterNodeAttributesRequest request) throws YarnException, IOException {
+    if (request == null) {
+      routerMetrics.incrGetClusterNodeAttributesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getClusterNodeAttributes request.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getClusterNodeAttributes",
+        new Class[] {GetClusterNodeAttributesRequest.class}, new Object[] {request});
+    Collection<GetClusterNodeAttributesResponse> clusterNodeAttributesResponses = null;
+    try {
+      clusterNodeAttributesResponses = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetClusterNodeAttributesResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrGetClusterNodeAttributesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get cluster node attributes due " +
+          " to exception.", ex);
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetClusterNodeAttributesRetrieved(stopTime - startTime);
+    return RouterYarnClientUtils.mergeClusterNodeAttributesResponse(clusterNodeAttributesResponses);
   }
 
   @Override
   public GetNodesToAttributesResponse getNodesToAttributes(
       GetNodesToAttributesRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getHostNames() == null) {
+      routerMetrics.incrGetNodesToAttributesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getNodesToAttributes request or " +
+          "hostNames.", null);
+    }
+    long startTime = clock.getTime();
+    ClientMethod remoteMethod = new ClientMethod("getNodesToAttributes",
+        new Class[] {GetNodesToAttributesRequest.class}, new Object[] {request});
+    Collection<GetNodesToAttributesResponse> nodesToAttributesResponses = null;
+    try {
+      nodesToAttributesResponses = invokeAppClientProtocolMethod(true, remoteMethod,
+          GetNodesToAttributesResponse.class);
+    } catch (Exception ex) {
+      routerMetrics.incrGetNodesToAttributesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Unable to get nodes to attributes due " +
+          " to exception.", ex);
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetNodesToAttributesRetrieved(stopTime - startTime);
+    return RouterYarnClientUtils.mergeNodesToAttributesResponse(nodesToAttributesResponses);
   }
 
   protected SubClusterId getApplicationHomeSubCluster(
