@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Map;
