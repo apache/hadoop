@@ -19,9 +19,9 @@
 #ifndef LIB_COMMON_LOGGING_H_
 #define LIB_COMMON_LOGGING_H_
 
-#include <boost/asio/ip/tcp.hpp>
-
 #include "hdfspp/log.h"
+
+#include <boost/asio/ip/tcp.hpp>
 
 #include <sstream>
 #include <mutex>
