@@ -1172,7 +1172,28 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    NodeToLabelsInfo nodeToLabelsInfo = new NodeToLabelsInfo();
+    Map<SubClusterId, SubClusterInfo> subClustersActive;
+    try {
+      subClustersActive = getActiveSubclusters();
+    } catch (NotFoundException e) {
+      LOG.error("Get all active sub cluster(s) error.", e);
+      return nodeToLabelsInfo;
+    }
+
+    try {
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getNodeToLabels", argsClasses, args);
+      Map<SubClusterInfo, NodeToLabelsInfo> nodeToLabelsInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodeToLabelsInfo.class);
+      nodeToLabelsInfo = RouterWebServiceUtil.mergeNodeToLabels(nodeToLabelsInfoMap.values());
+    } catch (Exception e) {
+      LOG.error("Failed to return GetNodeToLabels.",  e);
+    }
+
+    return nodeToLabelsInfo;
   }
 
   @Override

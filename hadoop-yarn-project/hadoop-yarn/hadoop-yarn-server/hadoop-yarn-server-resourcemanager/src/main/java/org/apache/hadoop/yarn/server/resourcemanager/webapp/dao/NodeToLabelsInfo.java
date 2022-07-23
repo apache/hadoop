@@ -38,4 +38,8 @@ public class NodeToLabelsInfo {
   public HashMap<String, NodeLabelsInfo> getNodeToLabels() {
     return nodeToLabels;
   }
+
+  public void setNodeToLabels(HashMap<String, NodeLabelsInfo> nodeToLabels) {
+    this.nodeToLabels = nodeToLabels;
+  }
 }

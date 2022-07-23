@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.http.HttpServletRequest;
@@ -42,16 +43,7 @@ import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -278,5 +270,29 @@ public class MockDefaultRequestInterceptorREST
     containers.add(container);
 
     return containers;
+  }
+
+  @Override
+  public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr) throws IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    String cpuLabel = "CPU";
+    HashSet<String> cpuLabels = new HashSet<>();
+    cpuLabels.add(cpuLabel);
+
+    String gpuLabel = "GPU";
+    HashSet<String> gpuLabels = new HashSet<>();
+    gpuLabels.add(gpuLabel);
+
+    NodeLabelsInfo cpuNode = new NodeLabelsInfo(cpuLabels);
+    NodeLabelsInfo gpuNode = new NodeLabelsInfo(gpuLabels);
+
+    NodeToLabelsInfo info = new NodeToLabelsInfo();
+    HashMap<String, NodeLabelsInfo> nodeLabels = new HashMap<>();
+    nodeLabels.put("node1", cpuNode);
+    nodeLabels.put("node2", gpuNode);
+    info.setNodeToLabels(nodeLabels);
+    return info;
   }
 }

@@ -30,6 +30,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +45,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -50,6 +53,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -293,8 +298,8 @@ public final class RouterWebServiceUtil {
       boolean returnPartialResult) {
     AppsInfo allApps = new AppsInfo();
 
-    Map<String, AppInfo> federationAM = new HashMap<String, AppInfo>();
-    Map<String, AppInfo> federationUAMSum = new HashMap<String, AppInfo>();
+    Map<String, AppInfo> federationAM = new HashMap<>();
+    Map<String, AppInfo> federationUAMSum = new HashMap<>();
     for (AppInfo a : appsInfo) {
       // Check if this AppInfo is an AM
       if (a.getAMHostHttpAddress() != null) {
@@ -332,7 +337,7 @@ public final class RouterWebServiceUtil {
       }
     }
 
-    allApps.addAll(new ArrayList<AppInfo>(federationAM.values()));
+    allApps.addAll(new ArrayList<>(federationAM.values()));
     return allApps;
   }
 
@@ -419,7 +424,7 @@ public final class RouterWebServiceUtil {
         nodesMap.put(node.getNodeId(), node);
       }
     }
-    nodesInfo.addAll(new ArrayList<NodeInfo>(nodesMap.values()));
+    nodesInfo.addAll(new ArrayList<>(nodesMap.values()));
     return nodesInfo;
   }
 
@@ -509,4 +514,27 @@ public final class RouterWebServiceUtil {
     return header;
   }
 
+  public static NodeToLabelsInfo mergeNodeToLabels(Collection<NodeToLabelsInfo> nodeToLabelsInfos) {
+    NodeToLabelsInfo result = new NodeToLabelsInfo();
+    HashMap<String, NodeLabelsInfo> nodeToLabels = new HashMap<>();
+
+    nodeToLabelsInfos.stream().forEach(nodeToLabelsInfo ->{
+      for (Map.Entry<String, NodeLabelsInfo> item : nodeToLabelsInfo.getNodeToLabels().entrySet()) {
+        if (nodeToLabels.containsKey(item.getKey())) {
+          NodeLabelsInfo a = nodeToLabels.get(item.getKey());
+          NodeLabelsInfo b = item.getValue();
+
+          HashSet<NodeLabel> hashSet = new HashSet<>();
+          hashSet.addAll(a.getNodeLabels());
+          hashSet.addAll(b.getNodeLabels());
+          nodeToLabels.put(item.getKey(), new NodeLabelsInfo(hashSet));
+        } else {
+          nodeToLabels.put(item.getKey(), item.getValue());
+        }
+      }
+    });
+
+    result.setNodeToLabels(nodeToLabels);
+    return result;
+  }
 }
