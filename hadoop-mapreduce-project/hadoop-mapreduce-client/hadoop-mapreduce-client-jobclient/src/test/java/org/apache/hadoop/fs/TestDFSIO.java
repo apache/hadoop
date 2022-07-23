@@ -29,10 +29,13 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.StringTokenizer;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -479,15 +482,9 @@ public class TestDFSIO implements Tool {
   }
 
   public static void setInputPaths(JobConf conf, Path... inputPaths) {
-    Path path = inputPaths[0];
-    StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
-    for(int i = 1; i < inputPaths.length;i++) {
-      str.append(StringUtils.COMMA_STR);
-      path = inputPaths[i];
-      str.append(StringUtils.escapeString(path.toString()));
-    }
+    String commaSeparatedPathStr = Arrays.stream(inputPaths).map(Path::toString).map(i->StringUtils.escapeString(i)).collect(Collectors.joining(","));
     conf.set(org.apache.hadoop.mapreduce.lib.input.
-            FileInputFormat.INPUT_DIR, str.toString());
+            FileInputFormat.INPUT_DIR, commaSeparatedPathStr);
   }
 
   /**
