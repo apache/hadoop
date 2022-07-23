@@ -101,9 +101,7 @@ public class TestRouterRpcFairnessPolicyController {
     }
     long acquireBeginTimeMs = Time.monotonicNow();
     assertFalse(routerRpcFairnessPolicyController.acquirePermit("ns1"));
-    long acquireEndTimeMs = Time.monotonicNow();
-
-    long acquireTimeMs = acquireEndTimeMs - acquireBeginTimeMs;
+    long acquireTimeMs = Time.monotonicNow() - acquireBeginTimeMs;
 
     // There are some other operations, so acquireTimeMs >= 100ms.
     assertTrue(acquireTimeMs >= 100);

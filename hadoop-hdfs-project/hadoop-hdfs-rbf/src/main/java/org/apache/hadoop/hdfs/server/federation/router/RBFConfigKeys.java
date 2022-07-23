@@ -356,7 +356,7 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_FAIRNESS_PREFIX + "handler.count.";
   public static final String DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT =
       FEDERATION_ROUTER_FAIRNESS_PREFIX + "acquire.timeout";
-  public static final long   DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_MS_DEFAULT =
+  public static final long   DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT =
       TimeUnit.SECONDS.toMillis(1);
 
   // HDFS Router Federation Rename.
