@@ -150,7 +150,7 @@ include_directories (
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libhdfs-tests/
 )
 
-add_library(hdfspp_test_shim_static STATIC $<TARGET_OBJECTS:x_platform_obj> hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs.cc)
+add_library(hdfspp_test_shim_static STATIC $<TARGET_OBJECTS:x_platform_obj> hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc)
 add_dependencies(hdfspp_test_shim_static proto)
 
 add_library(hdfspp_test_static STATIC $<TARGET_OBJECTS:x_platform_obj> ${LIBHDFSPP_BINDING_C}/hdfs.cc)

@@ -24,9 +24,11 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -47,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -160,7 +163,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
@@ -187,7 +190,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -259,7 +262,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -286,7 +289,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     AppState appState = new AppState("KILLED");
 
     Response response =
@@ -317,7 +320,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   public void testForceKillApplicationEmptyRequest()
       throws YarnException, IOException, InterruptedException {
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
@@ -341,7 +344,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -478,7 +481,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -505,7 +508,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     AppState response = interceptor.getAppState(null, appId.toString());
 
@@ -560,4 +563,46 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
             SubClusterRegisterRequest.newInstance(subClusterInfo));
   }
 
+  @Test
+  public void testGetContainers()
+      throws YarnException, IOException, InterruptedException {
+
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context =
+        new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Submit the application we want the report later
+    Response response = interceptor.submitApplication(context, null);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
+
+    ContainersInfo responseGet = interceptor.getContainers(
+        null, null, appId.toString(), appAttempt.toString());
+
+    Assert.assertEquals(4, responseGet.getContainers().size());
+  }
+
+  @Test
+  public void testGetContainersNotExists() {
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ContainersInfo response = interceptor.getContainers(null, null, appId.toString(), null);
+    Assert.assertTrue(response.getContainers().isEmpty());
+  }
+
+  @Test
+  public void testGetContainersWrongFormat() {
+    ContainersInfo response = interceptor.getContainers(null, null, "Application_wrong_id", null);
+
+    Assert.assertNotNull(response);
+    Assert.assertTrue(response.getContainers().isEmpty());
+
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    response = interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id");
+
+    Assert.assertTrue(response.getContainers().isEmpty());
+  }
 }
