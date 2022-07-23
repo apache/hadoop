@@ -626,7 +626,8 @@ public class TestRouterYarnClientUtils {
         NodeAttributeType.STRING, "nvidia");
     Map<NodeAttributeKey, List<NodeToAttributeValue>> map1 = new HashMap<>();
     List<NodeToAttributeValue> lists1 = new ArrayList<>();
-    NodeToAttributeValue attributeValue1 = NodeToAttributeValue.newInstance("node1", gpu.getAttributeValue());
+    NodeToAttributeValue attributeValue1 =
+        NodeToAttributeValue.newInstance("node1", gpu.getAttributeValue());
     lists1.add(attributeValue1);
     map1.put(gpu.getAttributeKey(), lists1);
     GetAttributesToNodesResponse response1 = GetAttributesToNodesResponse.newInstance(map1);
@@ -636,13 +637,15 @@ public class TestRouterYarnClientUtils {
         NodeAttributeType.STRING, "docker0");
     Map<NodeAttributeKey, List<NodeToAttributeValue>> map2 = new HashMap<>();
     List<NodeToAttributeValue> lists2 = new ArrayList<>();
-    NodeToAttributeValue attributeValue2 = NodeToAttributeValue.newInstance("node2", docker.getAttributeValue());
+    NodeToAttributeValue attributeValue2 =
+        NodeToAttributeValue.newInstance("node2", docker.getAttributeValue());
     lists2.add(attributeValue2);
     map2.put(docker.getAttributeKey(), lists2);
     GetAttributesToNodesResponse response2 = GetAttributesToNodesResponse.newInstance(map2);
 
     // empty response3
-    GetAttributesToNodesResponse response3 = GetAttributesToNodesResponse.newInstance(new HashMap<>());
+    GetAttributesToNodesResponse response3 =
+        GetAttributesToNodesResponse.newInstance(new HashMap<>());
 
     // null response4
     GetAttributesToNodesResponse response4 = null;
@@ -672,20 +675,25 @@ public class TestRouterYarnClientUtils {
   public void testMergeClusterNodeAttributesResponse() {
     // normal response1
     NodeAttributeInfo nodeAttributeInfo1 =
-        NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("GPU"), NodeAttributeType.STRING);
+        NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("GPU"),
+        NodeAttributeType.STRING);
     Set<NodeAttributeInfo> attributes1 = new HashSet<>();
     attributes1.add(nodeAttributeInfo1);
-    GetClusterNodeAttributesResponse response1 = GetClusterNodeAttributesResponse.newInstance(attributes1);
+    GetClusterNodeAttributesResponse response1 =
+        GetClusterNodeAttributesResponse.newInstance(attributes1);
 
     // normal response2
     NodeAttributeInfo nodeAttributeInfo2 =
-        NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("CPU"), NodeAttributeType.STRING);
+        NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("CPU"),
+        NodeAttributeType.STRING);
     Set<NodeAttributeInfo> attributes2 = new HashSet<>();
     attributes2.add(nodeAttributeInfo2);
-    GetClusterNodeAttributesResponse response2 = GetClusterNodeAttributesResponse.newInstance(attributes2);
+    GetClusterNodeAttributesResponse response2 =
+        GetClusterNodeAttributesResponse.newInstance(attributes2);
 
     // empty response3
-    GetClusterNodeAttributesResponse response3 = GetClusterNodeAttributesResponse.newInstance(new HashSet<>());
+    GetClusterNodeAttributesResponse response3 =
+        GetClusterNodeAttributesResponse.newInstance(new HashSet<>());
 
     // null response4
     GetClusterNodeAttributesResponse response4 = null;
@@ -728,7 +736,8 @@ public class TestRouterYarnClientUtils {
     GetNodesToAttributesResponse response2 = GetNodesToAttributesResponse.newInstance(node2Map);
 
     // empty response3
-    GetNodesToAttributesResponse response3 = GetNodesToAttributesResponse.newInstance(new HashMap<>());
+    GetNodesToAttributesResponse response3 =
+        GetNodesToAttributesResponse.newInstance(new HashMap<>());
 
     // null response4
     GetNodesToAttributesResponse response4 = null;
