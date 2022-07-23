@@ -1,5 +1,4 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-
 <!--
    Licensed to the Apache Software Foundation (ASF) under one or more
    contributor license agreements.  See the NOTICE file distributed with
@@ -16,7 +15,6 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -48,19 +46,16 @@
     <ClCompile Include="src\org\apache\hadoop\util\NativeCodeLoader.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4hc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Compressor.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Decompressor.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\org\apache\hadoop\security\JniBasedUnixGroupsMappingWin.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\zlib\ZlibCompressor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\zlib\ZlibDecompressor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\yarn\server\nodemanager\windows_secure_container_executor.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -84,6 +79,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\org_apache_hadoop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib_ZlibCompressor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib_ZlibDecompressor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\org\apache\hadoop\yarn\server\nodemanager\windows_secure_container_executor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
