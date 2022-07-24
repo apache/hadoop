@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
@@ -157,10 +156,8 @@ public class TestObserverNode {
           assertSentTo(2);
           return fileStatus;
         }, 0, TimeUnit.SECONDS);
-
-   Thread.sleep(1000);
-
-   observerEditlogTailer.doTailEdits();
+    Thread.sleep(1000);
+    observerEditlogTailer.doTailEdits();
     FileStatus fileStatus = scheduledFuture.get(1000, TimeUnit.MILLISECONDS);
     assertNotNull(fileStatus);
 
