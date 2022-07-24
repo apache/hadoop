@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.http.HttpServletRequest;
@@ -289,9 +290,8 @@ public class MockDefaultRequestInterceptorREST
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
-
-    NodeLabelsInfo cpuNode = new NodeLabelsInfo(Sets.newHashSet("CPU"));
-    NodeLabelsInfo gpuNode = new NodeLabelsInfo(Sets.newHashSet("GPU"));
+    NodeLabelsInfo cpuNode = new NodeLabelsInfo(Collections.singleton("CPU"));
+    NodeLabelsInfo gpuNode = new NodeLabelsInfo(Collections.singleton("GPU"));
 
     NodeToLabelsInfo info = new NodeToLabelsInfo();
     HashMap<String, NodeLabelsInfo> nodeLabels = new HashMap<>();
