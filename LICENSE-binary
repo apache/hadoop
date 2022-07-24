@@ -208,7 +208,7 @@ License Version 2.0:
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
-ch.qos.reload4j:reload4j:1.2.18.3
+ch.qos.reload4j:reload4j:1.2.22
 com.aliyun:aliyun-java-sdk-core:3.4.0
 com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
