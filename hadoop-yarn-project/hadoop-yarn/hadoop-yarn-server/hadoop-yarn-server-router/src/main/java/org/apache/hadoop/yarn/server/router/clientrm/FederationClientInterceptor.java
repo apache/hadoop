@@ -790,8 +790,7 @@ public class FederationClientInterceptor
         clusterNodes.put(subClusterId, response);
       } catch (Exception ex) {
         routerMetrics.incrClusterNodesFailedRetrieved();
-        LOG.error("Unable to get cluster nodes due to exception.", ex);
-        throw ex;
+        RouterServerUtil.logAndThrowException("Unable to get cluster nodes due to exception.", ex);
       }
     }
     long stopTime = clock.getTime();
@@ -836,14 +835,13 @@ public class FederationClientInterceptor
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getQueueUserAcls",
         new Class[] {GetQueueUserAclsInfoRequest.class}, new Object[] {request});
-    Collection<GetQueueUserAclsInfoResponse> queueUserAcls;
+    Collection<GetQueueUserAclsInfoResponse> queueUserAcls = null;
     try {
       queueUserAcls = invokeAppClientProtocolMethod(true, remoteMethod,
           GetQueueUserAclsInfoResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrQueueUserAclsFailedRetrieved();
-      LOG.error("Unable to get queue user Acls due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException("Unable to get queue user Acls due to exception.", ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetQueueUserAclsRetrieved(stopTime - startTime);
@@ -917,14 +915,14 @@ public class FederationClientInterceptor
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("listReservations",
         new Class[] {ReservationListRequest.class}, new Object[] {request});
-    Collection<ReservationListResponse> listResponses;
+    Collection<ReservationListResponse> listResponses = null;
     try {
       listResponses = invokeAppClientProtocolMethod(true, remoteMethod,
           ReservationListResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrListReservationsFailedRetrieved();
-      LOG.error("Unable to list reservations node due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException(
+          "Unable to list reservations node due to exception.", ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededListReservationsRetrieved(stopTime - startTime);
@@ -972,14 +970,13 @@ public class FederationClientInterceptor
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getNodeToLabels",
          new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
-    Collection<GetNodesToLabelsResponse> clusterNodes;
+    Collection<GetNodesToLabelsResponse> clusterNodes = null;
     try {
       clusterNodes = invokeAppClientProtocolMethod(true, remoteMethod,
           GetNodesToLabelsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
-      LOG.error("Unable to get label node due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException("Unable to get node label due to exception.", ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
@@ -997,14 +994,13 @@ public class FederationClientInterceptor
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getLabelsToNodes",
          new Class[] {GetLabelsToNodesRequest.class}, new Object[] {request});
-    Collection<GetLabelsToNodesResponse> labelNodes;
+    Collection<GetLabelsToNodesResponse> labelNodes = null;
     try {
       labelNodes = invokeAppClientProtocolMethod(true, remoteMethod,
           GetLabelsToNodesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      LOG.error("Unable to get label node due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException("Unable to get label node due to exception.", ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
@@ -1022,14 +1018,14 @@ public class FederationClientInterceptor
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels",
          new Class[] {GetClusterNodeLabelsRequest.class}, new Object[] {request});
-    Collection<GetClusterNodeLabelsResponse> nodeLabels;
+    Collection<GetClusterNodeLabelsResponse> nodeLabels = null;
     try {
       nodeLabels = invokeAppClientProtocolMethod(true, remoteMethod,
           GetClusterNodeLabelsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
-      LOG.error("Unable to get cluster nodeLabels due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException("Unable to get cluster nodeLabels due to exception.",
+          ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
@@ -1082,15 +1078,15 @@ public class FederationClientInterceptor
     ApplicationClientProtocol clientRMProxy =
         getClientRMProxyForSubCluster(subClusterId);
 
-    GetApplicationAttemptReportResponse response;
+    GetApplicationAttemptReportResponse response = null;
     try {
       response = clientRMProxy.getApplicationAttemptReport(request);
     } catch (Exception e) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
-      LOG.error("Unable to get the applicationAttempt report for {} "
-          + "to SubCluster {}, error = {}.",
-          request.getApplicationAttemptId(), subClusterId.getId(), e);
-      throw e;
+      String msg = String.format(
+          "Unable to get the applicationAttempt report for %s to SubCluster %s.",
+          request.getApplicationAttemptId(), subClusterId.getId());
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     if (response == null) {
@@ -1314,8 +1310,7 @@ public class FederationClientInterceptor
     } catch (YarnException e) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
       RouterServerUtil.logAndThrowException("Application " +
-              request.getApplicationId() +
-              " does not exist in FederationStateStore.", e);
+          request.getApplicationId() + " does not exist in FederationStateStore.", e);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
