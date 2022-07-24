@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Implements the {@link ClientRequestInterceptor} interface and provides common
  * functionality which can can be used and/or extended by other concrete
- * intercepter classes.
+ * interceptor classes.
  *
  */
 public abstract class AbstractClientRequestInterceptor
