@@ -2053,6 +2053,8 @@ public class TestRouterRpc {
     final String logOutput = auditlog.getOutput();
     assertTrue(logOutput.contains("callerContext=clientIp:"));
     assertTrue(logOutput.contains(",clientContext"));
+    assertTrue(logOutput.contains(",clientId"));
+    assertTrue(logOutput.contains(",clientCallId"));
     assertTrue(verifyFileExists(routerFS, dirPath));
   }
 
@@ -2101,6 +2103,41 @@ public class TestRouterRpc {
     // set by client.
     assertFalse(auditLog.getOutput().contains("clientIp:1.1.1.1"));
     assertFalse(auditLog.getOutput().contains("clientPort:1234"));
+  }
+
+  @Test
+  public void testAddClientIdAndCallIdToCallerContext() throws IOException {
+    GenericTestUtils.LogCapturer auditLog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+
+    // 1. ClientId and ClientCallId are not set on the client.
+    // Set client context.
+    CallerContext.setCurrent(
+        new CallerContext.Builder("clientContext").build());
+
+    // Create a directory via the router.
+    String dirPath = "/test";
+    routerProtocol.mkdirs(dirPath, new FsPermission("755"), false);
+
+    // The audit log should contains "clientId:" and "clientCallId:".
+    assertTrue(auditLog.getOutput().contains("clientId:"));
+    assertTrue(auditLog.getOutput().contains("clientCallId:"));
+    assertTrue(verifyFileExists(routerFS, dirPath));
+    auditLog.clearOutput();
+
+    // 2. ClientId and ClientCallId are set on the client.
+    // Reset client context.
+    CallerContext.setCurrent(
+        new CallerContext.Builder(
+            "clientContext,clientId:mockClientId,clientCallId:4321").build());
+
+    // Create a directory via the router.
+    routerProtocol.getFileInfo(dirPath);
+
+    // The audit log should not contain the original clientId and clientCallId
+    // set by client.
+    assertFalse(auditLog.getOutput().contains("clientId:mockClientId"));
+    assertFalse(auditLog.getOutput().contains("clientCallId:4321"));
   }
 
   @Test

@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 
 /**
  * Extends the RequestInterceptor class and provides common functionality which
- * can be used and/or extended by other concrete intercepter classes.
+ * can be used and/or extended by other concrete interceptor classes.
  */
 public abstract class AbstractRESTRequestInterceptor
     implements RESTRequestInterceptor {

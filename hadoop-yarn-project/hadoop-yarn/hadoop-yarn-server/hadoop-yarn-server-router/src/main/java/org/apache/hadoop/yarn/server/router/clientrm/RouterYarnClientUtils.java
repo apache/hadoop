@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -46,8 +48,10 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -416,6 +420,53 @@ public final class RouterYarnClientUtils {
     }
     queueResponse.setQueueInfo(queueInfo);
     return queueResponse;
+  }
+
+  /**
+   * Merges a list of GetAllResourceProfilesResponse.
+   *
+   * @param responses a list of GetAllResourceProfilesResponse to merge.
+   * @return the merged GetAllResourceProfilesResponse.
+   */
+  public static GetAllResourceProfilesResponse mergeClusterResourceProfilesResponse(
+      Collection<GetAllResourceProfilesResponse> responses) {
+    GetAllResourceProfilesResponse profilesResponse =
+        Records.newRecord(GetAllResourceProfilesResponse.class);
+    Map<String, Resource> profilesMap = new HashMap<>();
+    for (GetAllResourceProfilesResponse response : responses) {
+      if (response != null && response.getResourceProfiles() != null) {
+        for (Map.Entry<String, Resource> entry : response.getResourceProfiles().entrySet()) {
+          String key = entry.getKey();
+          Resource r1 = profilesMap.getOrDefault(key, null);
+          Resource r2 = entry.getValue();
+          Resource rAdd = r1 == null ? r2 : Resources.add(r1, r2);
+          profilesMap.put(key, rAdd);
+        }
+      }
+    }
+    profilesResponse.setResourceProfiles(profilesMap);
+    return profilesResponse;
+  }
+
+  /**
+   * Merges a list of GetResourceProfileResponse.
+   *
+   * @param responses a list of GetResourceProfileResponse to merge.
+   * @return the merged GetResourceProfileResponse.
+   */
+  public static GetResourceProfileResponse mergeClusterResourceProfileResponse(
+      Collection<GetResourceProfileResponse> responses) {
+    GetResourceProfileResponse profileResponse =
+        Records.newRecord(GetResourceProfileResponse.class);
+    Resource resource = Resource.newInstance(0, 0);
+    for (GetResourceProfileResponse response : responses) {
+      if (response != null && response.getResource() != null) {
+        Resource responseResource = response.getResource();
+        resource = Resources.add(resource, responseResource);
+      }
+    }
+    profileResponse.setResource(resource);
+    return profileResponse;
   }
 }
 

@@ -461,9 +461,9 @@ public class RouterClientRMService extends AbstractService
   }
 
   /**
-   * Gets the Request intercepter chains for all the users.
+   * Gets the Request interceptor chains for all the users.
    *
-   * @return the request intercepter chains.
+   * @return the request interceptor chains.
    */
   @VisibleForTesting
   protected Map<String, RequestInterceptorChainWrapper> getPipelines() {
@@ -471,10 +471,10 @@ public class RouterClientRMService extends AbstractService
   }
 
   /**
-   * This method creates and returns reference of the first intercepter in the
-   * chain of request intercepter instances.
+   * This method creates and returns reference of the first interceptor in the
+   * chain of request interceptor instances.
    *
-   * @return the reference of the first intercepter in the chain
+   * @return the reference of the first interceptor in the chain
    */
   @VisibleForTesting
   protected ClientRequestInterceptor createRequestInterceptorChain() {
@@ -491,7 +491,7 @@ public class RouterClientRMService extends AbstractService
   }
 
   /**
-   * Initializes the request intercepter pipeline for the specified application.
+   * Initializes the request interceptor pipeline for the specified application.
    *
    * @param user
    */
@@ -543,9 +543,9 @@ public class RouterClientRMService extends AbstractService
     }
 
     /**
-     * Gets the root request intercepter.
+     * Gets the root request interceptor.
      *
-     * @return the root request intercepter
+     * @return the root request interceptor
      */
     public synchronized ClientRequestInterceptor getRootInterceptor() {
       return rootInterceptor;

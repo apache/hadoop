@@ -78,7 +78,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * messages from client to the cluster resource manager. It listens
  * {@code ResourceManagerAdministrationProtocol} messages from the client and
  * creates a request intercepting pipeline instance for each client. The
- * pipeline is a chain of intercepter instances that can inspect and modify the
+ * pipeline is a chain of interceptor instances that can inspect and modify the
  * request/response as needed. The main difference with AMRMProxyService is the
  * protocol they implement.
  */
@@ -169,9 +169,9 @@ public class RouterRMAdminService extends AbstractService
   }
 
   /**
-   * Gets the Request intercepter chains for all the users.
+   * Gets the Request interceptor chains for all the users.
    *
-   * @return the request intercepter chains.
+   * @return the request interceptor chains.
    */
   @VisibleForTesting
   protected Map<String, RequestInterceptorChainWrapper> getPipelines() {
@@ -179,10 +179,10 @@ public class RouterRMAdminService extends AbstractService
   }
 
   /**
-   * This method creates and returns reference of the first intercepter in the
-   * chain of request intercepter instances.
+   * This method creates and returns reference of the first interceptor in the
+   * chain of request interceptor instances.
    *
-   * @return the reference of the first intercepter in the chain
+   * @return the reference of the first interceptor in the chain
    */
   @VisibleForTesting
   protected RMAdminRequestInterceptor createRequestInterceptorChain() {
@@ -198,7 +198,7 @@ public class RouterRMAdminService extends AbstractService
   }
 
   /**
-   * Initializes the request intercepter pipeline for the specified user.
+   * Initializes the request interceptor pipeline for the specified user.
    *
    * @param user
    */
@@ -249,9 +249,9 @@ public class RouterRMAdminService extends AbstractService
     }
 
     /**
-     * Gets the root request intercepter.
+     * Gets the root request interceptor.
      *
-     * @return the root request intercepter
+     * @return the root request interceptor
      */
     public synchronized RMAdminRequestInterceptor getRootInterceptor() {
       return rootInterceptor;
