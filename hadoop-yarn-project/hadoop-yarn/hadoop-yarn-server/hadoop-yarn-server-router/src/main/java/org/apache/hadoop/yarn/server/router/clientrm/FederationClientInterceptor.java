@@ -194,8 +194,7 @@ public class FederationClientInterceptor
       LOG.error(e.getMessage());
     }
 
-    numSubmitRetries =
-        conf.getInt(
+    numSubmitRetries = conf.getInt(
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY);
 
