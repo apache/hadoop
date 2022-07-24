@@ -669,14 +669,13 @@ public class FederationClientInterceptor
         federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getApplications",
         new Class[] {GetApplicationsRequest.class}, new Object[] {request});
-    Map<SubClusterId, GetApplicationsResponse> applications;
+    Map<SubClusterId, GetApplicationsResponse> applications = null;
     try {
       applications = invokeConcurrent(subclusters.keySet(), remoteMethod,
           GetApplicationsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
-      LOG.error("Unable to get applications due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException("Unable to get applications due to exception.", ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
@@ -687,23 +686,23 @@ public class FederationClientInterceptor
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
+    if (request == null) {
+      routerMetrics.incrGetClusterMetricsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing getClusterMetrics request.", null);
+    }
     long startTime = clock.getTime();
-    Map<SubClusterId, SubClusterInfo> subclusters =
+    Map<SubClusterId, SubClusterInfo> subClusters =
         federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
-    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics;
-
+    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics = null;
     try {
-      clusterMetrics = invokeConcurrent(subclusters.keySet(), remoteMethod,
+      clusterMetrics = invokeConcurrent(subClusters.keySet(), remoteMethod,
           GetClusterMetricsResponse.class);
-
     } catch (Exception ex) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      LOG.error("Unable to get cluster metrics due to exception.", ex);
-      throw ex;
+      RouterServerUtil.logAndThrowException("Unable to get cluster metrics due to exception.", ex);
     }
-
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterMetricsRetrieved(stopTime - startTime);
     return RouterYarnClientUtils.merge(clusterMetrics.values());
