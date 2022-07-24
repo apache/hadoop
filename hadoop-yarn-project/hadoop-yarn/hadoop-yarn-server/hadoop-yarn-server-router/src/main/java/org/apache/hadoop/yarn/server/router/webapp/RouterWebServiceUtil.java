@@ -522,19 +522,19 @@ public final class RouterWebServiceUtil {
     HashMap<String, NodeLabelsInfo> nodeToLabels = new HashMap<>();
     Collection<NodeToLabelsInfo> nodeToLabelsInfos = nodeToLabelsInfoMap.values();
 
-    nodeToLabelsInfos.stream().forEach(nodeToLabelsInfo ->{
+    nodeToLabelsInfos.stream().forEach(nodeToLabelsInfo -> {
       for (Map.Entry<String, NodeLabelsInfo> item : nodeToLabelsInfo.getNodeToLabels().entrySet()) {
-        if (nodeToLabels.containsKey(item.getKey())) {
-          NodeLabelsInfo a = nodeToLabels.get(item.getKey());
-          NodeLabelsInfo b = item.getValue();
-
-          HashSet<NodeLabel> hashSet = new HashSet<>();
-          hashSet.addAll(a.getNodeLabels());
-          hashSet.addAll(b.getNodeLabels());
-          nodeToLabels.put(item.getKey(), new NodeLabelsInfo(hashSet));
-        } else {
-          nodeToLabels.put(item.getKey(), item.getValue());
+        String key = item.getKey();
+        NodeLabelsInfo itemValue = item.getValue();
+        NodeLabelsInfo nodeToLabelsValue = nodeToLabels.getOrDefault(item.getKey(), null);
+        HashSet<NodeLabel> hashSet = new HashSet<>();
+        if (itemValue != null) {
+          hashSet.addAll(itemValue.getNodeLabels());
         }
+        if (nodeToLabelsValue != null) {
+          hashSet.addAll(nodeToLabelsValue.getNodeLabels());
+        }
+        nodeToLabels.put(key, new NodeLabelsInfo(hashSet));
       }
     });
 
