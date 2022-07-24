@@ -89,7 +89,7 @@ public final class RouterWebServiceUtil {
   /**
    * Creates and performs a REST call to a specific WebService.
    *
-   * @param webApp the address of the remote webap
+   * @param webApp the address of the remote webapp
    * @param hsr the servlet request
    * @param returnType the return type of the REST call
    * @param <T> Type of return object.
@@ -176,7 +176,7 @@ public final class RouterWebServiceUtil {
 
   /**
    * Performs an invocation of a REST call on a remote RMWebService.
-   * @param webApp the address of the remote webap
+   * @param webApp the address of the remote webapp
    * @param path  to add to the webapp address
    * @param method the HTTP method of the REST call
    * @param additionalPath the servlet request path
@@ -286,7 +286,7 @@ public final class RouterWebServiceUtil {
 
   /**
    * Merges a list of AppInfo grouping by ApplicationId. Our current policy is
-   * to merge the application reports from the reacheable SubClusters. Via
+   * to merge the application reports from the reachable SubClusters. Via
    * configuration parameter, we decide whether to return applications for which
    * the primary AM is missing or to omit them.
    *
@@ -500,7 +500,7 @@ public final class RouterWebServiceUtil {
   protected static <T> String getMediaTypeFromHttpServletRequest(
       HttpServletRequest request, final Class<T> returnType) {
     if (request == null) {
-      // By default we return XML for REST call without HttpServletRequest
+      // By default, we return XML for REST call without HttpServletRequest
       return MediaType.APPLICATION_XML;
     }
     // TODO
@@ -509,7 +509,7 @@ public final class RouterWebServiceUtil {
     }
     String header = request.getHeader(HttpHeaders.ACCEPT);
     if (header == null || header.equals("*")) {
-      // By default we return JSON
+      // By default, we return JSON
       return MediaType.APPLICATION_JSON;
     }
     return header;
