@@ -351,8 +351,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testForceKillApplicationNotExists()
       throws YarnException, IOException, InterruptedException {
-    LOG.info("Test FederationClientInterceptor: "
-        + "Force Kill Application - Not Exists");
+    LOG.info("Test FederationClientInterceptor: Force Kill Application - Not Exists");
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -363,7 +362,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       Assert.fail();
     } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().equals(
-          "Application " + appId + " does not exist in FederationStateStore"));
+          "Application " + appId + " does not exist in FederationStateStore."));
     }
   }
 
@@ -439,7 +438,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       Assert.fail();
     } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().equals(
-          "Application " + appId + " does not exist in FederationStateStore"));
+          "Application " + appId + " does not exist in FederationStateStore."));
     }
   }
 
