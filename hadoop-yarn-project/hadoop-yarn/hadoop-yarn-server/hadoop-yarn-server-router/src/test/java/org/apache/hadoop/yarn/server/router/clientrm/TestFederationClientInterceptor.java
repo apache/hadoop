@@ -152,7 +152,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     interceptor.setConf(this.getConf());
     interceptor.init(user);
 
-    subClusters = new ArrayList<SubClusterId>();
+    subClusters = new ArrayList<>();
 
     try {
       for (int i = 0; i < NUM_SUBCLUSTER; i++) {
@@ -201,8 +201,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    * ApplicationId has to belong to one of the SubCluster in the cluster.
    */
   @Test
-  public void testGetNewApplication()
-      throws YarnException, IOException, InterruptedException {
+  public void testGetNewApplication() throws YarnException, IOException {
     LOG.info("Test FederationClientInterceptor: Get New Application");
 
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
