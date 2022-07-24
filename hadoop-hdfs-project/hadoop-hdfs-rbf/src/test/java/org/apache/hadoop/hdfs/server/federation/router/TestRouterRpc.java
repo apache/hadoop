@@ -2148,12 +2148,11 @@ public class TestRouterRpc {
 
   @Test
   public void testDisableNodeUsageInRBFMetrics() throws JSONException {
-    Router router = cluster.getRandomRouter().getRouter();
-    RBFMetrics rbfMetrics = router.getMetrics();
-    FederationRPCMetrics federationRPCMetrics = router.getRpcServer().getRPCMetrics();
+    RBFMetrics rbfMetrics = router.getRouter().getMetrics();
+    FederationRPCMetrics federationRPCMetrics = router.getRouter().getRpcServer().getRPCMetrics();
 
     long proxyOpBefore = federationRPCMetrics.getProxyOps();
-    String nodeUsageEnable = router.getMetrics().getNodeUsage();
+    String nodeUsageEnable = router.getRouter().getMetrics().getNodeUsage();
     assertNotNull(nodeUsageEnable);
     long proxyOpAfterWithEnable = federationRPCMetrics.getProxyOps();
     assertEquals(proxyOpBefore + 2, proxyOpAfterWithEnable);

@@ -557,8 +557,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       DatanodeInfo[] live = null;
       if (this.enableGetDNUsage) {
         RouterRpcServer rpcServer = this.router.getRpcServer();
-        live = rpcServer.getDatanodeReport(
-            DatanodeReportType.LIVE, false, timeOut);;
+        live = rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
       } else {
         LOG.debug("Getting node usage is disabled.");
       }
