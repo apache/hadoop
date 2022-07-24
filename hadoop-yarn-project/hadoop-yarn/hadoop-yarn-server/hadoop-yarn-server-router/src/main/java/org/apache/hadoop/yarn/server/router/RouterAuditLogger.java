@@ -46,6 +46,8 @@ public class RouterAuditLogger {
     public static final String SUBMIT_NEW_APP = "Submit New App";
     public static final String FORCE_KILL_APP = "Force Kill App";
     public static final String GET_APP_REPORT = "Get Application Report";
+    public static final String TARGET_CLIENT_RM_SERVICE = "RouterClientRMService";
+    public static final String UNKNOWN = "UNKNOWN";
   }
 
   /**

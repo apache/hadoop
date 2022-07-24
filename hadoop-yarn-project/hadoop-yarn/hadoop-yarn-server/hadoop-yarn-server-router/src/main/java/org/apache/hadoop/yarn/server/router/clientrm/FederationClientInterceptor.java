@@ -137,6 +137,13 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NEW_APP;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APP_REPORT;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.FORCE_KILL_APP;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.TARGET_CLIENT_RM_SERVICE;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UNKNOWN;
+
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
  * implementation for federation of YARN RM and scaling an application across
@@ -277,9 +284,8 @@ public class FederationClientInterceptor
     if(request == null) {
       routerMetrics.incrAppsFailedCreated();
       String errMsg = "Missing getNewApplication request.";
-      RouterAuditLogger.logFailure(user.getShortUserName(),
-          RouterAuditLogger.AuditConstants.GET_NEW_APP, "UNKNOWN",
-          "RouterClientRMService", errMsg);
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, errMsg);
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
@@ -291,7 +297,7 @@ public class FederationClientInterceptor
 
     for (int i = 0; i < numSubmitRetries; ++i) {
       SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
-      LOG.info("getNewApplication try #{} on SubCluster {}", i, subClusterId);
+      LOG.info("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
       ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
       response = null;
       try {
@@ -304,18 +310,16 @@ public class FederationClientInterceptor
       if (response != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
-        RouterAuditLogger.logSuccess(user.getShortUserName(),
-            RouterAuditLogger.AuditConstants.GET_NEW_APP,
-            "RouterClientRMService", response.getApplicationId());
+        RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_APP,
+            TARGET_CLIENT_RM_SERVICE, response.getApplicationId());
         return response;
       }
     }
 
     routerMetrics.incrAppsFailedCreated();
     String errMsg = "Failed to create a new application.";
-    RouterAuditLogger.logFailure(user.getShortUserName(),
-        RouterAuditLogger.AuditConstants.GET_NEW_APP, "UNKNOWN",
-        "RouterClientRMService", errMsg);
+    RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, errMsg);
     RouterServerUtil.logAndThrowException(errMsg, null);
     return response;
   }
@@ -394,11 +398,12 @@ public class FederationClientInterceptor
       routerMetrics.incrAppsFailedSubmitted();
       String errMsg =
           "Missing submitApplication request or applicationSubmissionContext information.";
-      RouterAuditLogger.logFailure(user.getShortUserName(),
-          RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
-          "RouterClientRMService", errMsg);
+      RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, errMsg);
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
+
+    SubmitApplicationResponse response = null;
 
     long startTime = clock.getTime();
 
@@ -429,9 +434,8 @@ public class FederationClientInterceptor
           String message =
               String.format("Unable to insert the ApplicationId %s into the FederationStateStore.",
               applicationId);
-          RouterAuditLogger.logFailure(user.getShortUserName(),
-              RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
-              "RouterClientRMService", message, applicationId, subClusterId);
+          RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+              TARGET_CLIENT_RM_SERVICE, message, applicationId, subClusterId);
           RouterServerUtil.logAndThrowException(message, e);
         }
       } else {
@@ -450,9 +454,8 @@ public class FederationClientInterceptor
                 applicationId, subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
-            RouterAuditLogger.logFailure(user.getShortUserName(),
-                RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
-                "RouterClientRMService", message, applicationId, subClusterId);
+            RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+                TARGET_CLIENT_RM_SERVICE, message, applicationId, subClusterId);
             RouterServerUtil.logAndThrowException(message, e);
           }
         }
@@ -461,7 +464,6 @@ public class FederationClientInterceptor
       ApplicationClientProtocol clientRMProxy =
           getClientRMProxyForSubCluster(subClusterId);
 
-      SubmitApplicationResponse response = null;
       try {
         response = clientRMProxy.submitApplication(request);
       } catch (Exception e) {
@@ -475,9 +477,8 @@ public class FederationClientInterceptor
             applicationId, subClusterId);
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
-        RouterAuditLogger.logSuccess(user.getShortUserName(),
-            RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP,
-            "RouterClientRMService", applicationId, subClusterId);
+        RouterAuditLogger.logSuccess(user.getShortUserName(), SUBMIT_NEW_APP,
+            TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
         return response;
       } else {
         // Empty response from the ResourceManager.
@@ -487,12 +488,12 @@ public class FederationClientInterceptor
     }
 
     routerMetrics.incrAppsFailedSubmitted();
-    String errMsg = String.format("Application %s with appId %s failed to be submitted.",
+    String msg = String.format("Application %s with appId %s failed to be submitted.",
         request.getApplicationSubmissionContext().getApplicationName(), applicationId);
-    RouterAuditLogger.logFailure(user.getShortUserName(),
-        RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP, "UNKNOWN",
-        "RouterClientRMService", errMsg, applicationId);
-    throw new YarnException(errMsg);
+    RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, msg, applicationId);
+    RouterServerUtil.logAndThrowException(msg, null);
+    return response;
   }
 
   /**
@@ -515,16 +516,16 @@ public class FederationClientInterceptor
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) throws YarnException, IOException {
 
-    long startTime = clock.getTime();
-
     if (request == null || request.getApplicationId() == null) {
       routerMetrics.incrAppsFailedKilled();
-      String message = "Missing forceKillApplication request or ApplicationId.";
-      RouterAuditLogger.logFailure(user.getShortUserName(),
-          RouterAuditLogger.AuditConstants.FORCE_KILL_APP, "UNKNOWN",
-          "RouterClientRMService", message);
-      throw new YarnException(message);
+      String msg = "Missing forceKillApplication request or ApplicationId.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), FORCE_KILL_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
+
+    long startTime = clock.getTime();
+
     ApplicationId applicationId = request.getApplicationId();
     SubClusterId subClusterId = null;
 
@@ -533,12 +534,11 @@ public class FederationClientInterceptor
           .getApplicationHomeSubCluster(request.getApplicationId());
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedKilled();
-      String msg = "Application " + applicationId
-          + " does not exist in FederationStateStore";
-      RouterAuditLogger.logFailure(user.getShortUserName(),
-          RouterAuditLogger.AuditConstants.FORCE_KILL_APP, "UNKNOWN",
-          "RouterClientRMService", msg, applicationId);
-      throw new YarnException(msg, e);
+      String msg =
+          String.format("Application %s does not exist in FederationStateStore.", applicationId);
+      RouterAuditLogger.logFailure(user.getShortUserName(), FORCE_KILL_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg, applicationId);
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     ApplicationClientProtocol clientRMProxy =
@@ -550,23 +550,21 @@ public class FederationClientInterceptor
       response = clientRMProxy.forceKillApplication(request);
     } catch (Exception e) {
       routerMetrics.incrAppsFailedKilled();
-      RouterAuditLogger.logFailure(user.getShortUserName(),
-          RouterAuditLogger.AuditConstants.FORCE_KILL_APP, "UNKNOWN",
-          "RouterClientRMService", "Unable to kill the application report",
-          applicationId, subClusterId);
-      throw e;
+      String msg = "Unable to kill the application report.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), FORCE_KILL_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg, applicationId, subClusterId);
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     if (response == null) {
-      LOG.error("No response when attempting to kill the application "
-          + applicationId + " to SubCluster " + subClusterId.getId());
+      LOG.error("No response when attempting to kill the application {} to SubCluster {}.",
+          applicationId, subClusterId.getId());
     }
 
     long stopTime = clock.getTime();
     routerMetrics.succeededAppsKilled(stopTime - startTime);
-    RouterAuditLogger.logSuccess(user.getShortUserName(),
-        RouterAuditLogger.AuditConstants.FORCE_KILL_APP,
-        "RouterClientRMService", applicationId);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), FORCE_KILL_APP,
+        TARGET_CLIENT_RM_SERVICE, applicationId);
     return response;
   }
 
@@ -590,18 +588,15 @@ public class FederationClientInterceptor
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnException, IOException {
 
-    long startTime = clock.getTime();
-
     if (request == null || request.getApplicationId() == null) {
       routerMetrics.incrAppsFailedRetrieved();
-      String errMsg =
-          "Missing getApplicationReport request or applicationId information.";
-      RouterAuditLogger.logFailure(user.getShortUserName(),
-          RouterAuditLogger.AuditConstants.GET_APP_REPORT, "UNKNOWN",
-          "RouterClientRMService", errMsg);
-      throw new YarnException(errMsg);
+      String errMsg = "Missing getApplicationReport request or applicationId information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, errMsg);
+      RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
+    long startTime = clock.getTime();
     SubClusterId subClusterId = null;
 
     try {
@@ -609,29 +604,26 @@ public class FederationClientInterceptor
           .getApplicationHomeSubCluster(request.getApplicationId());
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedRetrieved();
-      String errMsg = "Application " + request.getApplicationId()
-          + " does not exist in FederationStateStore";
-      RouterAuditLogger.logFailure(user.getShortUserName(),
-          RouterAuditLogger.AuditConstants.GET_APP_REPORT, "UNKNOWN",
-          "RouterClientRMService", errMsg, request.getApplicationId());
-      throw new YarnException(errMsg, e);
+      String errMsg = String.format("Application %s does not exist in FederationStateStore.",
+          request.getApplicationId());
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, errMsg, request.getApplicationId());
+      RouterServerUtil.logAndThrowException(errMsg, e);
     }
 
     ApplicationClientProtocol clientRMProxy =
         getClientRMProxyForSubCluster(subClusterId);
-
     GetApplicationReportResponse response = null;
+
     try {
       response = clientRMProxy.getApplicationReport(request);
     } catch (Exception e) {
       routerMetrics.incrAppsFailedRetrieved();
-      String errMsg = "Unable to get the application report for " + request
-          .getApplicationId() + "to SubCluster " + subClusterId.getId();
-      RouterAuditLogger.logFailure(user.getShortUserName(),
-          RouterAuditLogger.AuditConstants.GET_APP_REPORT, "UNKNOWN",
-          "RouterClientRMService", errMsg, request.getApplicationId(),
-          subClusterId);
-      throw e;
+      String errMsg = String.format("Unable to get the application report for %s to SubCluster %s.",
+          request.getApplicationId(), subClusterId.getId());
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, errMsg, request.getApplicationId(), subClusterId);
+      RouterServerUtil.logAndThrowException(errMsg, e);
     }
 
     if (response == null) {
@@ -639,12 +631,10 @@ public class FederationClientInterceptor
           + "the application {} to SubCluster {}.",
           request.getApplicationId(), subClusterId.getId());
     }
-
     long stopTime = clock.getTime();
     routerMetrics.succeededAppsRetrieved(stopTime - startTime);
-    RouterAuditLogger.logSuccess(user.getShortUserName(),
-        RouterAuditLogger.AuditConstants.GET_APP_REPORT,
-        "RouterClientRMService", request.getApplicationId());
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APP_REPORT,
+        TARGET_CLIENT_RM_SERVICE, request.getApplicationId());
     return response;
   }
 
@@ -672,9 +662,7 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing getApplications request.",
-          null);
+      RouterServerUtil.logAndThrowException("Missing getApplications request.", null);
     }
     long startTime = clock.getTime();
     Map<SubClusterId, SubClusterInfo> subclusters =
@@ -682,11 +670,9 @@ public class FederationClientInterceptor
     ClientMethod remoteMethod = new ClientMethod("getApplications",
         new Class[] {GetApplicationsRequest.class}, new Object[] {request});
     Map<SubClusterId, GetApplicationsResponse> applications;
-
     try {
       applications = invokeConcurrent(subclusters.keySet(), remoteMethod,
           GetApplicationsResponse.class);
-
     } catch (Exception ex) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
       LOG.error("Unable to get applications due to exception.", ex);
@@ -695,8 +681,7 @@ public class FederationClientInterceptor
     long stopTime = clock.getTime();
     routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
     // Merge the Application Reports
-    return RouterYarnClientUtils.mergeApplications(applications.values(),
-        returnPartialReport);
+    return RouterYarnClientUtils.mergeApplications(applications.values(), returnPartialReport);
   }
 
   @Override
