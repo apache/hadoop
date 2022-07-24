@@ -141,7 +141,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
  * implementation for federation of YARN RM and scaling an application across
  * multiple YARN SubClusters. All the federation specific implementation is
- * encapsulated in this class. This is always the last intercepter in the chain.
+ * encapsulated in this class. This is always the last interceptor in the chain.
  */
 public class FederationClientInterceptor
     extends AbstractClientRequestInterceptor {
@@ -657,7 +657,7 @@ public class FederationClientInterceptor
    * Router: the Client will timeout and resubmit the request.
    *
    * ResourceManager: the Router calls each Yarn RM in parallel. In case a
-   * Yarn RM fails, a single call will timeout. However the Router will
+   * Yarn RM fails, a single call will timeout. However, the Router will
    * merge the ApplicationReports it got, and provides a partial list to
    * the client.
    *

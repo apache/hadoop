@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -32,6 +33,12 @@ import javax.ws.rs.core.Response.Status;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -45,6 +52,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -230,5 +239,44 @@ public class MockDefaultRequestInterceptorREST
 
   public void setRunning(boolean runningMode) {
     this.isRunning = runningMode;
+  }
+
+  @Override
+  public ContainersInfo getContainers(HttpServletRequest req, HttpServletResponse res,
+      String appId, String appAttemptId) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    // We avoid to check if the Application exists in the system because we need
+    // to validate that each subCluster returns 1 container.
+    ContainersInfo containers = new ContainersInfo();
+
+    int subClusterId = Integer.valueOf(getSubClusterId().getId());
+
+    ContainerId containerId = ContainerId.newContainerId(
+        ApplicationAttemptId.fromString(appAttemptId), subClusterId);
+    Resource allocatedResource =
+        Resource.newInstance(subClusterId, subClusterId);
+
+    NodeId assignedNode = NodeId.newInstance("Node", subClusterId);
+    Priority priority = Priority.newInstance(subClusterId);
+    long creationTime = subClusterId;
+    long finishTime = subClusterId;
+    String diagnosticInfo = "Diagnostic " + subClusterId;
+    String logUrl = "Log " + subClusterId;
+    int containerExitStatus = subClusterId;
+    ContainerState containerState = ContainerState.COMPLETE;
+    String nodeHttpAddress = "HttpAddress " + subClusterId;
+
+    ContainerReport containerReport = ContainerReport.newInstance(
+        containerId, allocatedResource, assignedNode, priority,
+        creationTime, finishTime, diagnosticInfo, logUrl,
+        containerExitStatus, containerState, nodeHttpAddress);
+
+    ContainerInfo container = new ContainerInfo(containerReport);
+    containers.add(container);
+
+    return containers;
   }
 }

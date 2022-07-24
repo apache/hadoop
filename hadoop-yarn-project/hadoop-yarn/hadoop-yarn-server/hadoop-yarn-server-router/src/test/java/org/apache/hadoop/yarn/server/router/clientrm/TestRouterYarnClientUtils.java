@@ -432,7 +432,7 @@ public class TestRouterYarnClientUtils {
     GetQueueUserAclsInfoResponse response3 = Records.newRecord(
         GetQueueUserAclsInfoResponse.class);
 
-    // null responce
+    // null response
     GetQueueUserAclsInfoResponse response4 = null;
 
     List<GetQueueUserAclsInfoResponse> responses = new ArrayList<>();
