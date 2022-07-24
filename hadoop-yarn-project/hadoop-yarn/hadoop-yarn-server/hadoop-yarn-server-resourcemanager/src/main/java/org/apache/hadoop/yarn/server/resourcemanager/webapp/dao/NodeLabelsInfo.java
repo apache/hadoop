@@ -32,8 +32,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 public class NodeLabelsInfo {
 
   @XmlElement(name = "nodeLabelInfo")
-  private ArrayList<NodeLabelInfo> nodeLabelsInfo =
-      new ArrayList<>();
+  private ArrayList<NodeLabelInfo> nodeLabelsInfo = new ArrayList<>();
 
   public NodeLabelsInfo() {
     // JAXB needs this

@@ -47,6 +47,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
@@ -514,9 +515,12 @@ public final class RouterWebServiceUtil {
     return header;
   }
 
-  public static NodeToLabelsInfo mergeNodeToLabels(Collection<NodeToLabelsInfo> nodeToLabelsInfos) {
+  public static NodeToLabelsInfo mergeNodeToLabels(
+      Map<SubClusterInfo, NodeToLabelsInfo> nodeToLabelsInfoMap) {
+
     NodeToLabelsInfo result = new NodeToLabelsInfo();
     HashMap<String, NodeLabelsInfo> nodeToLabels = new HashMap<>();
+    Collection<NodeToLabelsInfo> nodeToLabelsInfos = nodeToLabelsInfoMap.values();
 
     nodeToLabelsInfos.stream().forEach(nodeToLabelsInfo ->{
       for (Map.Entry<String, NodeLabelsInfo> item : nodeToLabelsInfo.getNodeToLabels().entrySet()) {
