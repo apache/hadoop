@@ -283,7 +283,7 @@ public class EditLogTailer {
   }
   
   @VisibleForTesting
-  FSEditLog getEditLog() {
+  public FSEditLog getEditLog() {
     return editLog;
   }
   
@@ -311,7 +311,7 @@ public class EditLogTailer {
                 startTime - lastLoadTimeMs);
             // It is already under the name system lock and the checkpointer
             // thread is already stopped. No need to acquire any other lock.
-            editsTailed = doTailEdits();
+            editsTailed = doTailEdits(false);
           } catch (InterruptedException e) {
             throw new IOException(e);
           } finally {
@@ -326,6 +326,10 @@ public class EditLogTailer {
   
   @VisibleForTesting
   public long doTailEdits() throws IOException, InterruptedException {
+    return doTailEdits(true);
+  }
+
+  private long doTailEdits(boolean onlyDurableTxns) throws IOException, InterruptedException {
     Collection<EditLogInputStream> streams;
     FSImage image = namesystem.getFSImage();
 
@@ -334,7 +338,7 @@ public class EditLogTailer {
     long startTime = timer.monotonicNow();
     try {
       streams = editLog.selectInputStreams(lastTxnId + 1, 0,
-          null, inProgressOk, true);
+          null, inProgressOk, onlyDurableTxns);
     } catch (IOException ioe) {
       // This is acceptable. If we try to tail edits in the middle of an edits
       // log roll, i.e. the last one has been finalized but the new inprogress

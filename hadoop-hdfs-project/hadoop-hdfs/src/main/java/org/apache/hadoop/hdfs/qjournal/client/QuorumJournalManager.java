@@ -134,8 +134,7 @@ public class QuorumJournalManager implements JournalManager {
 
   }
 
-  
-  QuorumJournalManager(Configuration conf,
+  public QuorumJournalManager(Configuration conf,
       URI uri, NamespaceInfo nsInfo, String nameServiceId,
       AsyncLogger.Factory loggerFactory) throws IOException {
     Preconditions.checkArgument(conf != null, "must be configured");
@@ -661,7 +660,7 @@ public class QuorumJournalManager implements JournalManager {
   }
 
   @VisibleForTesting
-  AsyncLoggerSet getLoggerSetForTests() {
+  public AsyncLoggerSet getLoggerSetForTests() {
     return loggers;
   }
 

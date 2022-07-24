@@ -46,7 +46,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Listenable
  * implementation.</li>
  * </ul>
  */
-interface AsyncLogger {
+public interface AsyncLogger {
   
   interface Factory {
     AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
