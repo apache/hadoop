@@ -18,9 +18,10 @@
 #ifndef LIBHDFSPP_LIB_CONNECTION_DATANODECONNECTION_H_
 #define LIBHDFSPP_LIB_CONNECTION_DATANODECONNECTION_H_
 
+#include "ClientNamenodeProtocol.pb.h"
+
 #include "hdfspp/ioservice.h"
 #include "common/async_stream.h"
-#include "ClientNamenodeProtocol.pb.h"
 #include "common/libhdfs_events_impl.h"
 #include "common/logging.h"
 #include "common/util.h"

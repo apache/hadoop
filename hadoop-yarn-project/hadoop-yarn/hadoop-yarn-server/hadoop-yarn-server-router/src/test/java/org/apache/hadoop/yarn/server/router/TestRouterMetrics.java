@@ -428,6 +428,16 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed moveApplicationAcrossQueuesFailed call");
       metrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
     }
+
+    public void getResourceProfilesFailed() {
+      LOG.info("Mocked: failed getResourceProfilesFailed call");
+      metrics.incrGetResourceProfilesFailedRetrieved();
+    }
+
+    public void getResourceProfileFailed() {
+      LOG.info("Mocked: failed getResourceProfileFailed call");
+      metrics.incrGetResourceProfileFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -552,6 +562,16 @@ public class TestRouterMetrics {
     public void moveApplicationAcrossQueuesRetrieved(long duration) {
       LOG.info("Mocked: successful moveApplicationAcrossQueues call with duration {}", duration);
       metrics.succeededMoveApplicationAcrossQueuesRetrieved(duration);
+    }
+
+    public void getResourceProfilesRetrieved(long duration) {
+      LOG.info("Mocked: successful getResourceProfiles call with duration {}", duration);
+      metrics.succeededGetResourceProfilesRetrieved(duration);
+    }
+
+    public void getResourceProfileRetrieved(long duration) {
+      LOG.info("Mocked: successful getResourceProfile call with duration {}", duration);
+      metrics.succeededGetResourceProfileRetrieved(duration);
     }
   }
 
@@ -905,4 +925,49 @@ public class TestRouterMetrics {
         metrics.getMoveApplicationAcrossQueuesFailedRetrieved());
   }
 
+  @Test
+  public void testSucceededGetResourceProfilesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetResourceProfilesRetrieved();
+    goodSubCluster.getResourceProfilesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetResourceProfilesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetResourceProfilesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getResourceProfilesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetResourceProfilesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetResourceProfilesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetResourceProfilesRetrievedFailed() {
+    long totalBadBefore = metrics.getResourceProfilesFailedRetrieved();
+    badSubCluster.getResourceProfilesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getResourceProfilesFailedRetrieved());
+  }
+
+  @Test
+  public void testSucceededGetResourceProfileRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetResourceProfileRetrieved();
+    goodSubCluster.getResourceProfileRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetResourceProfileRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetResourceProfileRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getResourceProfileRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetResourceProfileRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetResourceProfileRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetResourceProfileRetrievedFailed() {
+    long totalBadBefore = metrics.getResourceProfileFailedRetrieved();
+    badSubCluster.getResourceProfileFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getResourceProfileFailedRetrieved());
+  }
 }
