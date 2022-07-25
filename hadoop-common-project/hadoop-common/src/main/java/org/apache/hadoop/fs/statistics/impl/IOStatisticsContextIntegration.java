@@ -53,7 +53,7 @@ public final class IOStatisticsContextIntegration {
   /**
    * Is thread-level IO Statistics enabled?
    */
-  private static boolean IS_THREAD_IOSTATS_ENABLED;
+  private static boolean isThreadIOStatsEnabled;
 
   /**
    * ID for next instance to create.
@@ -75,7 +75,7 @@ public final class IOStatisticsContextIntegration {
   static {
     // Work out if the current context has thread level IOStatistics enabled.
     final Configuration configuration = new Configuration();
-    IS_THREAD_IOSTATS_ENABLED =
+    isThreadIOStatsEnabled =
         configuration.getBoolean(THREAD_LEVEL_IOSTATISTICS_ENABLED,
             THREAD_LEVEL_IOSTATISTICS_ENABLED_DEFAULT);
   }
@@ -108,7 +108,7 @@ public final class IOStatisticsContextIntegration {
    * @return instance of IOStatisticsContext.
    */
   public static IOStatisticsContext getCurrentIOStatisticsContext() {
-    return IS_THREAD_IOSTATS_ENABLED
+    return isThreadIOStatsEnabled
         ? ACTIVE_IOSTATS_CONTEXT.getForCurrentThread()
         : EmptyIOStatisticsContextImpl.getInstance();
   }
@@ -120,7 +120,7 @@ public final class IOStatisticsContextIntegration {
    */
   public static void setThreadIOStatisticsContext(
       IOStatisticsContext statisticsContext) {
-    if (IS_THREAD_IOSTATS_ENABLED) {
+    if (isThreadIOStatsEnabled) {
       if (statisticsContext == null) {
         ACTIVE_IOSTATS_CONTEXT.removeForCurrentThread();
       }
@@ -140,7 +140,7 @@ public final class IOStatisticsContextIntegration {
   public static IOStatisticsContext getThreadSpecificIOStatisticsContext(long testThreadId) {
     LOG.debug("IOStatsContext thread ID required: {}", testThreadId);
 
-    if (!IS_THREAD_IOSTATS_ENABLED) {
+    if (!isThreadIOStatsEnabled) {
       return null;
     }
     // lookup the weakRef IOStatisticsContext for the thread ID in the
@@ -159,6 +159,9 @@ public final class IOStatisticsContextIntegration {
    */
   @VisibleForTesting
   public static void enableIOStatisticsContext() {
-    IS_THREAD_IOSTATS_ENABLED = true;
+    if (!isThreadIOStatsEnabled) {
+      LOG.info("Enabling Thread IOStatistics..");
+      isThreadIOStatsEnabled = true;
+    }
   }
 }

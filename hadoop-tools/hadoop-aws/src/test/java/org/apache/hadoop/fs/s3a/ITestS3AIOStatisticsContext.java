@@ -47,7 +47,9 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration.enableIOStatisticsContext;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration.getCurrentIOStatisticsContext;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration.getThreadSpecificIOStatisticsContext;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration.setThreadIOStatisticsContext;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
@@ -289,6 +291,28 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
 
     assertThreadStatisticsForThread(threadIdForTest, BYTES_BIG + BYTES_SMALL);
 
+  }
+
+  /**
+   * Test to verify if setting the current IOStatisticsContext removes the
+   * current context and creates a new instance of it.
+   */
+  @Test
+  public void testSettingNullIOStatisticsContext() {
+    IOStatisticsContext ioStatisticsContextBefore =
+        getCurrentIOStatisticsContext();
+    // Set the current IOStatisticsContext to null, which should remove the
+    // context and set a new one.
+    setThreadIOStatisticsContext(null);
+    // Get the context again after setting.
+    IOStatisticsContext ioStatisticsContextAfter =
+        getCurrentIOStatisticsContext();
+    //Verify the context ID after setting to null is different than the previous
+    // one.
+    Assertions.assertThat(ioStatisticsContextBefore.getID())
+        .describedAs("A new IOStaticsContext should be set after setting the "
+            + "current to null")
+        .isNotEqualTo(ioStatisticsContextAfter.getID());
   }
 
   /**
