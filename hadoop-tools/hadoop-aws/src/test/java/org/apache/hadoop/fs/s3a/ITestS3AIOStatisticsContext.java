@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
@@ -38,14 +39,14 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 import org.apache.hadoop.util.functional.TaskPool;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATISTICS_ENABLED;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration.enableIOStatisticsContext;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration.getThreadSpecificIOStatisticsContext;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
@@ -57,15 +58,14 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private static final int SMALL_THREADS = 2;
   private static final int BYTES_BIG = 100;
   private static final int BYTES_SMALL = 50;
-
+  private static final String[] IOSTATISTICS_CONTEXT_CAPABILITY =
+      new String[] { StreamCapabilities.IOSTATISTICS_CONTEXT };
   private ExecutorService executor;
 
   @Override
   protected Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
-    removeBaseAndBucketOverrides(configuration,
-        THREAD_LEVEL_IOSTATISTICS_ENABLED);
-    configuration.setBoolean(THREAD_LEVEL_IOSTATISTICS_ENABLED, true);
+    enableIOStatisticsContext();
     return configuration;
   }
 
@@ -100,6 +100,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     CountDownLatch latch = new CountDownLatch(SMALL_THREADS);
 
     try {
+
       for (int i = 0; i < SMALL_THREADS; i++) {
         executor.submit(() -> {
           try {
@@ -107,6 +108,9 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
             IOStatisticsContext context =
                 getAndResetThreadStatisticsContext();
             try (FSDataInputStream in = fs.open(path)) {
+              // Assert the InputStream's stream capability to support
+              // IOStatisticsContext.
+              assertCapabilities(in, IOSTATISTICS_CONTEXT_CAPABILITY, null);
               in.seek(50);
               in.read(readDataFirst);
             }
@@ -177,6 +181,9 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
             IOStatisticsContext context =
                 getAndResetThreadStatisticsContext();
             try (FSDataOutputStream out = fs.create(path)) {
+              // Assert the OutputStream's stream capability to support
+              // IOStatisticsContext.
+              assertCapabilities(out, IOSTATISTICS_CONTEXT_CAPABILITY, null);
               out.write(writeDataFirst);
             }
             assertContextBytesWrite(context, BYTES_BIG);

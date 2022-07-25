@@ -1351,6 +1351,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.UNBUFFER:
     case StreamCapabilities.VECTOREDIO:
+    case StreamCapabilities.IOSTATISTICS_CONTEXT:
       return true;
     default:
       return false;

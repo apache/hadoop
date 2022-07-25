@@ -465,7 +465,6 @@ public final class TaskPool {
         // mark as a task failure so all submitted tasks will halt/abort
         taskFailed.set(true);
       }
-        
       // let the above tasks complete (or abort)
       waitFor(futures, sleepInterval);
       int futureCount = futures.size();

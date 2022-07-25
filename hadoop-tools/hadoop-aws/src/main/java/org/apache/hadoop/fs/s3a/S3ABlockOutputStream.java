@@ -679,6 +679,10 @@ class S3ABlockOutputStream extends OutputStream implements
     case StreamCapabilities.ABORTABLE_STREAM:
       return true;
 
+      // IOStatistics context support for thread-level IOStatistics.
+    case StreamCapabilities.IOSTATISTICS_CONTEXT:
+      return true;
+
     default:
       return false;
     }

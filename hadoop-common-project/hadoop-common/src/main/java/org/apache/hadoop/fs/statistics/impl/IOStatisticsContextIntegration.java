@@ -53,7 +53,7 @@ public final class IOStatisticsContextIntegration {
   /**
    * Is thread-level IO Statistics enabled?
    */
-  private static final boolean IS_THREAD_IOSTATS_ENABLED;
+  private static boolean IS_THREAD_IOSTATS_ENABLED;
 
   /**
    * ID for next instance to create.
@@ -151,5 +151,14 @@ public final class IOStatisticsContextIntegration {
       return ioStatisticsSnapshotWeakReference.get();
     }
     return null;
+  }
+
+  /**
+   * A method to enable IOStatisticsContext to override if set otherwise in
+   * the configurations for tests.
+   */
+  @VisibleForTesting
+  public static void enableIOStatisticsContext() {
+    IS_THREAD_IOSTATS_ENABLED = true;
   }
 }
