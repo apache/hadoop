@@ -1172,7 +1172,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
-    NodeToLabelsInfo nodeToLabelsInfo;
     try {
       Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
       final HttpServletRequest hsrCopy = clone(hsr);
@@ -1181,12 +1180,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ClientMethod remoteMethod = new ClientMethod("getNodeToLabels", argsClasses, args);
       Map<SubClusterInfo, NodeToLabelsInfo> nodeToLabelsInfoMap =
           invokeConcurrent(subClustersActive.values(), remoteMethod, NodeToLabelsInfo.class);
-      nodeToLabelsInfo = RouterWebServiceUtil.mergeNodeToLabels(nodeToLabelsInfoMap);
+      return RouterWebServiceUtil.mergeNodeToLabels(nodeToLabelsInfoMap);
     } catch (NotFoundException e) {
       LOG.error("Get all active sub cluster(s) error.", e);
       throw new IOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      LOG.error("getNodeToLabels error.", e);
+      throw new IOException("getNodeToLabels error.", e);
     }
-    return nodeToLabelsInfo;
   }
 
   @Override
@@ -1409,7 +1410,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   private <R> Map<SubClusterInfo, R> invokeConcurrent(Collection<SubClusterInfo> clusterIds,
-      ClientMethod request, Class<R> clazz) {
+      ClientMethod request, Class<R> clazz) throws YarnException {
 
     Map<SubClusterInfo, R> results = new HashMap<>();
 
@@ -1427,9 +1428,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           R ret = clazz.cast(retObj);
           return ret;
         } catch (Exception e) {
-          LOG.error("SubCluster {} failed to call {} method.", info.getSubClusterId(),
-              request.getMethodName(), e);
-          return null;
+          String msg = String.format("SubCluster %s failed to call %s method.",
+              info.getSubClusterId(), request.getMethodName());
+          LOG.error(msg, e);
+          throw new YarnRuntimeException(msg, e);
         }
       });
     }
@@ -1442,7 +1444,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           results.put(clusterId, response);
         }
       } catch (Throwable e) {
-        LOG.warn("SubCluster {} failed to {} report.", clusterId, request.getMethodName(), e);
+        String msg = String.format("SubCluster %s failed to %s report.",
+            clusterId, request.getMethodName());
+        LOG.warn(msg, e);
+        throw new YarnRuntimeException(msg, e);
       }
     });
     return results;
