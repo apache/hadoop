@@ -6446,4 +6446,22 @@
       frequently than this time, the client will give up waiting.
     </description>
   </property>
+
+  <property>
+    <name>dfs.estimated.txns.per.second</name>
+    <value>10000</value>
+    <description>
+      Estimated number of journal transactions a typical NameNode can execute per second. The number is used to estimate
+      how long a client's RPC request will wait in the call queue before the Observer catches up with its state id.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.estimated.server.time.multiplier</name>
+    <value>0.8f</value>
+    <description>
+      The client wait time on an RPC request is composed of the server execution time plus the communication time.
+      This is an expected fraction of the total wait time spent on server execution.
+    </description>
+  </property>
 </configuration>
