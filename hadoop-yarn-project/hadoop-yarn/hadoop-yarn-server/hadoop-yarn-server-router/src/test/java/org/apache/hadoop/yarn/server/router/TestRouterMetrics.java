@@ -438,6 +438,21 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getResourceProfileFailed call");
       metrics.incrGetResourceProfileFailedRetrieved();
     }
+
+    public void getAttributesToNodesFailed() {
+      LOG.info("Mocked: failed getAttributesToNodesFailed call");
+      metrics.incrGetAttributesToNodesFailedRetrieved();
+    }
+
+    public void getClusterNodeAttributesFailed() {
+      LOG.info("Mocked: failed getClusterNodeAttributesFailed call");
+      metrics.incrGetClusterNodeAttributesFailedRetrieved();
+    }
+
+    public void getNodesToAttributesFailed() {
+      LOG.info("Mocked: failed getNodesToAttributesFailed call");
+      metrics.incrGetNodesToAttributesFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -572,6 +587,21 @@ public class TestRouterMetrics {
     public void getResourceProfileRetrieved(long duration) {
       LOG.info("Mocked: successful getResourceProfile call with duration {}", duration);
       metrics.succeededGetResourceProfileRetrieved(duration);
+    }
+
+    public void getAttributesToNodesRetrieved(long duration) {
+      LOG.info("Mocked: successful getAttributesToNodes call with duration {}", duration);
+      metrics.succeededGetAttributesToNodesRetrieved(duration);
+    }
+
+    public void getClusterNodeAttributesRetrieved(long duration) {
+      LOG.info("Mocked: successful getClusterNodeAttributes call with duration {}", duration);
+      metrics.succeededGetClusterNodeAttributesRetrieved(duration);
+    }
+
+    public void getNodesToAttributesRetrieved(long duration) {
+      LOG.info("Mocked: successful getNodesToAttributes call with duration {}", duration);
+      metrics.succeededGetNodesToAttributesRetrieved(duration);
     }
   }
 
@@ -969,5 +999,74 @@ public class TestRouterMetrics {
     badSubCluster.getResourceProfileFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getResourceProfileFailedRetrieved());
+  }
+
+  @Test
+  public void testSucceededGetAttributesToNodesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetAttributesToNodesRetrieved();
+    goodSubCluster.getAttributesToNodesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetAttributesToNodesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetAttributesToNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getAttributesToNodesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetAttributesToNodesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetAttributesToNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetAttributesToNodesRetrievedFailed() {
+    long totalBadBefore = metrics.getAttributesToNodesFailedRetrieved();
+    badSubCluster.getAttributesToNodesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getAttributesToNodesFailedRetrieved());
+  }
+
+  @Test
+  public void testGetClusterNodeAttributesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetClusterNodeAttributesRetrieved();
+    goodSubCluster.getClusterNodeAttributesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetClusterNodeAttributesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetClusterNodeAttributesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getClusterNodeAttributesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetClusterNodeAttributesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetClusterNodeAttributesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetClusterNodeAttributesRetrievedFailed() {
+    long totalBadBefore = metrics.getClusterNodeAttributesFailedRetrieved();
+    badSubCluster.getClusterNodeAttributesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getClusterNodeAttributesFailedRetrieved());
+  }
+
+  @Test
+  public void testGetNodesToAttributesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetNodesToAttributesRetrieved();
+    goodSubCluster.getNodesToAttributesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetNodesToAttributesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetNodesToAttributesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getNodesToAttributesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetNodesToAttributesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetNodesToAttributesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetNodesToAttributesRetrievedFailed() {
+    long totalBadBefore = metrics.getNodesToAttributesFailedRetrieved();
+    badSubCluster.getNodesToAttributesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getNodesToAttributesFailedRetrieved());
   }
 }
