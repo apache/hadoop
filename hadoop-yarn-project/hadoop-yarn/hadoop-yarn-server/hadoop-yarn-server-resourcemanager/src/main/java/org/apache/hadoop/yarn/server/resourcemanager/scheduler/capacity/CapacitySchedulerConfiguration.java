@@ -455,6 +455,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public CapacitySchedulerConfiguration(Configuration configuration) {
     this(configuration, true);
   }
+  public CapacitySchedulerConfiguration(CapacitySchedulerConfiguration configuration) {
+    this((Configuration) configuration);
+    this.configurationProperties = configuration.configurationProperties;
+  }
+  public CapacitySchedulerConfiguration(CapacitySchedulerConfiguration configuration,
+      boolean useLocalConfigurationProvider) {
+    this((Configuration) configuration, useLocalConfigurationProvider);
+    this.configurationProperties = configuration.configurationProperties;
+  }
 
   public CapacitySchedulerConfiguration(Configuration configuration,
       boolean useLocalConfigurationProvider) {
