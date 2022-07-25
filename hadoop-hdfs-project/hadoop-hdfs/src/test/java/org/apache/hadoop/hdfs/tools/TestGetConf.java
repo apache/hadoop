@@ -484,10 +484,10 @@ public class TestGetConf {
     conf.clear();
   }
 
-  /*
-   ** Test for unknown journal node host exception.
+  /**
+   * Test handling of unresolvable journal node hosts.  They are still configured assuming that
+   * they will be resolvable in the future.
   */
-  @Test(expected = UnknownHostException.class, timeout = 10000)
   public void testUnknownJournalNodeHost()
       throws URISyntaxException, IOException {
     String journalsBaseUri = "qjournal://jn1:8020;jn2:8020;jn3:8020";

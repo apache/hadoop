@@ -38,6 +38,8 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
@@ -192,7 +194,8 @@ public class TestQJMWithFaults {
   }
   
   /**
-   * Expect {@link UnknownHostException} if a hostname can't be resolved.
+   * Expect an unresolved address if a hostname can't be resolved, but allowing the QJM to be
+   * configured.
    */
   @Test
   public void testUnresolvableHostName() throws Exception {

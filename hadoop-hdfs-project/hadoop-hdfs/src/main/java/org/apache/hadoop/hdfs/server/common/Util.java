@@ -406,9 +406,8 @@ public final class Util {
       } else {
         InetSocketAddress isa = NetUtils.createSocketAddr(
             addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
-        if (isa.isUnresolved()) {
-          throw new UnknownHostException(addr);
-        }
+        // The resulting address may be unresolved, but that will be corrected within Client once the
+        // server becomes available.
         addrs.add(isa);
       }
     }
