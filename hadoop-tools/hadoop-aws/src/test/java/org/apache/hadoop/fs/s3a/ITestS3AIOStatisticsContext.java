@@ -61,7 +61,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
   private static final int BYTES_BIG = 100;
   private static final int BYTES_SMALL = 50;
   private static final String[] IOSTATISTICS_CONTEXT_CAPABILITY =
-      new String[] { StreamCapabilities.IOSTATISTICS_CONTEXT };
+      new String[] {StreamCapabilities.IOSTATISTICS_CONTEXT};
   private ExecutorService executor;
 
   @Override
