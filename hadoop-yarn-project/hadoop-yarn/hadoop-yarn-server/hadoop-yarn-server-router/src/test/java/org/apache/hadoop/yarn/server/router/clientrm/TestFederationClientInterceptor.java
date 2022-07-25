@@ -1258,16 +1258,16 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         interceptor.getAttributesToNodes(GetAttributesToNodesRequest.newInstance());
 
     Assert.assertNotNull(response);
-    Map<NodeAttributeKey, List<NodeToAttributeValue>> attributesToNodes = response.getAttributesToNodes();
-    Assert.assertNotNull(attributesToNodes);
-    Assert.assertEquals(4, attributesToNodes.size());
+    Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs = response.getAttributesToNodes();
+    Assert.assertNotNull(attrs);
+    Assert.assertEquals(4, attrs.size());
 
     NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
         NodeAttributeType.STRING, "nvidia");
     NodeToAttributeValue attributeValue1 =
         NodeToAttributeValue.newInstance("0-host1", gpu.getAttributeValue());
     NodeAttributeKey gpuKey = gpu.getAttributeKey();
-    Assert.assertTrue(attributesToNodes.get(gpuKey).contains(attributeValue1));
+    Assert.assertTrue(attrs.get(gpuKey).contains(attributeValue1));
   }
 
   @Test
@@ -1303,7 +1303,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     LOG.info("Test FederationClientInterceptor : Get NodesToAttributes request.");
 
     // null request
-    LambdaTestUtils.intercept(YarnException.class, "Missing getNodesToAttributes request or hostNames.",
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getNodesToAttributes request or hostNames.",
         () -> interceptor.getNodesToAttributes(null));
 
     // normal request

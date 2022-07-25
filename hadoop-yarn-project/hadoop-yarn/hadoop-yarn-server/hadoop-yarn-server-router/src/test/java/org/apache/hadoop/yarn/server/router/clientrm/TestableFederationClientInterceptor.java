@@ -89,7 +89,7 @@ public class TestableFederationClientInterceptor
         }
         mockRMs.put(subClusterId, mockRM);
       }
-      initNodeAttributes(subClusterId,mockRM);
+      initNodeAttributes(subClusterId, mockRM);
       return mockRM.getClientRMService();
     }
   }
