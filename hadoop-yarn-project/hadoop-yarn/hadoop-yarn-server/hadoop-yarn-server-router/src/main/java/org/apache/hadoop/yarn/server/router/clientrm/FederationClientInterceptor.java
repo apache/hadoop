@@ -695,17 +695,17 @@ public class FederationClientInterceptor
     Map<SubClusterId, SubClusterInfo> subClusters = federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
-    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics = null;
+    Collection<GetClusterMetricsResponse> clusterMetrics = null;
     try {
-      Set keySet = subClusters.keySet();
-      clusterMetrics = invokeConcurrent(keySet, remoteMethod, GetClusterMetricsResponse.class);
+      clusterMetrics = invokeAppClientProtocolMethod(
+          true, remoteMethod, GetClusterMetricsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to get cluster metrics due to exception.", ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterMetricsRetrieved(stopTime - startTime);
-    return RouterYarnClientUtils.merge(clusterMetrics.values());
+    return RouterYarnClientUtils.merge(clusterMetrics);
   }
 
   <R> Map<SubClusterId, R> invokeConcurrent(ArrayList<SubClusterId> clusterIds,

@@ -585,8 +585,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   }
 
   /**
-   * This test validates the correctness of
-   * GetApplicationsResponse in case the
+   * This test validates the correctness of GetApplicationsResponse in case the
    * application exists in the cluster.
    */
   @Test
@@ -609,8 +608,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   }
 
   /**
-   * This test validates
-   * the correctness of GetApplicationsResponse in case of
+   * This test validates the correctness of GetApplicationsResponse in case of
    * empty request.
    */
   @Test
@@ -621,8 +619,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   }
 
   /**
-   * This test validates
-   * the correctness of GetApplicationsResponse in case applications
+   * This test validates the correctness of GetApplicationsResponse in case applications
    * with given type does not exist.
    */
   @Test
@@ -647,14 +644,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   }
 
   /**
-   * This test validates
-   * the correctness of GetApplicationsResponse in case applications
+   * This test validates the correctness of GetApplicationsResponse in case applications
    * with given YarnApplicationState does not exist.
    */
   @Test
   public void testGetApplicationsApplicationStateNotExists() throws Exception {
-    LOG.info("Test FederationClientInterceptor:" +
-        " Application with state does not exist");
+    LOG.info("Test FederationClientInterceptor: Application with state does not exist.");
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -672,8 +667,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetApplicationsRequest requestGet =
         GetApplicationsRequest.newInstance(applicationStates);
 
-    GetApplicationsResponse responseGet =
-        interceptor.getApplications(requestGet);
+    GetApplicationsResponse responseGet = interceptor.getApplications(requestGet);
 
     Assert.assertNotNull(responseGet);
     Assert.assertTrue(responseGet.getApplicationList().isEmpty());
@@ -735,7 +729,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     LambdaTestUtils.intercept(YarnException.class, "Missing getQueueUserAcls request.",
         () -> interceptor.getQueueUserAcls(null));
 
-    // noraml request
+    // normal request
     GetQueueUserAclsInfoResponse response = interceptor.getQueueUserAcls(
         GetQueueUserAclsInfoRequest.newInstance());
 
