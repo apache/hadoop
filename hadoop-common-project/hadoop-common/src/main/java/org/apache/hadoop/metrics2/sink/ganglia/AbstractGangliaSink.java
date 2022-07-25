@@ -133,8 +133,10 @@ public abstract class AbstractGangliaSink implements MetricsSink {
     }
 
     // load the gannglia servers from properties
-    metricsServers = Servers.parse(conf.getString(SERVERS_PROPERTY),
-        DEFAULT_PORT);
+    List<String> serversFromConf = conf.getList(String.class, SERVERS_PROPERTY);
+    metricsServers =
+        Servers.parse(serversFromConf.size() > 0 ? String.join(",", serversFromConf) : null,
+            DEFAULT_PORT);
     multicastEnabled = conf.getBoolean(MULTICAST_ENABLED_PROPERTY,
             DEFAULT_MULTICAST_ENABLED);
     multicastTtl = conf.getInt(MULTICAST_TTL_PROPERTY, DEFAULT_MULTICAST_TTL);
