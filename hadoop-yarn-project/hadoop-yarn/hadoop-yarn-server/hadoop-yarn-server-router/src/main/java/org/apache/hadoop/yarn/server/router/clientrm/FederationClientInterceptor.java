@@ -32,7 +32,6 @@ import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Set;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -692,7 +691,6 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException("Missing getClusterMetrics request.", null);
     }
     long startTime = clock.getTime();
-    Map<SubClusterId, SubClusterInfo> subClusters = federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
     Collection<GetClusterMetricsResponse> clusterMetrics = null;
