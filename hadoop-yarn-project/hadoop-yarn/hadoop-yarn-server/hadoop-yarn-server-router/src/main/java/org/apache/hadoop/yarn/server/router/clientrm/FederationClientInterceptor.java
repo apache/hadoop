@@ -32,6 +32,7 @@ import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -252,7 +253,7 @@ public class FederationClientInterceptor
 
   private SubClusterId getRandomActiveSubCluster(
       Map<SubClusterId, SubClusterInfo> activeSubClusters) throws YarnException {
-    if (activeSubClusters == null || activeSubClusters.size() < 1) {
+    if (activeSubClusters.isEmpty()) {
       RouterServerUtil.logAndThrowException(
           FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
     }
@@ -281,7 +282,7 @@ public class FederationClientInterceptor
   public GetNewApplicationResponse getNewApplication(
       GetNewApplicationRequest request) throws YarnException, IOException {
 
-    if(request == null) {
+    if (request == null) {
       routerMetrics.incrAppsFailedCreated();
       String errMsg = "Missing getNewApplication request.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
@@ -691,14 +692,13 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException("Missing getClusterMetrics request.", null);
     }
     long startTime = clock.getTime();
-    Map<SubClusterId, SubClusterInfo> subClusters =
-        federationFacade.getSubClusters(true);
+    Map<SubClusterId, SubClusterInfo> subClusters = federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
     Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics = null;
     try {
-      clusterMetrics = invokeConcurrent(subClusters.keySet(), remoteMethod,
-          GetClusterMetricsResponse.class);
+      Set keySet = subClusters.keySet();
+      clusterMetrics = invokeConcurrent(keySet, remoteMethod, GetClusterMetricsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to get cluster metrics due to exception.", ex);

@@ -145,8 +145,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore,
-        getConf());
+    FederationStateStoreFacade.getInstance().reinitialize(stateStore, getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
     interceptor.setConf(this.getConf());
@@ -186,7 +185,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // chain
     conf.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
         mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass
-            + "," + TestableFederationClientInterceptor.class.getName());
+        + "," + TestableFederationClientInterceptor.class.getName());
 
     conf.set(YarnConfiguration.FEDERATION_POLICY_MANAGER,
         UniformBroadcastPolicyManager.class.getName());
@@ -202,15 +201,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testGetNewApplication() throws YarnException, IOException {
-    LOG.info("Test FederationClientInterceptor: Get New Application");
+    LOG.info("Test FederationClientInterceptor: Get New Application.");
 
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
     GetNewApplicationResponse response = interceptor.getNewApplication(request);
 
     Assert.assertNotNull(response);
     Assert.assertNotNull(response.getApplicationId());
-    Assert.assertTrue(response.getApplicationId()
-        .getClusterTimestamp() == ResourceManager.getClusterTimeStamp());
+    Assert.assertEquals(response.getApplicationId().getClusterTimestamp(),
+        ResourceManager.getClusterTimeStamp());
   }
 
   /**
@@ -220,10 +219,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testSubmitApplication()
       throws YarnException, IOException {
-    LOG.info("Test FederationClientInterceptor: Submit Application");
+    LOG.info("Test FederationClientInterceptor: Submit Application.");
 
-    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
-        1);
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
 
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -237,14 +235,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   private SubmitApplicationRequest mockSubmitApplicationRequest(
       ApplicationId appId) {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
-    ApplicationSubmissionContext context = ApplicationSubmissionContext
-        .newInstance(appId, MockApps.newAppName(), "default",
-            Priority.newInstance(APP_PRIORITY_ZERO), amContainerSpec, false, false, -1,
-            Resources.createResource(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
-            "MockApp");
-    SubmitApplicationRequest request = SubmitApplicationRequest
-        .newInstance(context);
+    ApplicationSubmissionContext context = ApplicationSubmissionContext.newInstance(
+        appId, MockApps.newAppName(), "default",
+        Priority.newInstance(APP_PRIORITY_ZERO), amContainerSpec, false, false, -1,
+        Resources.createResource(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
+        "MockApp");
+    SubmitApplicationRequest request = SubmitApplicationRequest.newInstance(context);
     return request;
   }
 
@@ -292,17 +288,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       interceptor.submitApplication(null);
       Assert.fail();
     } catch (YarnException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("Missing submitApplication request or "
-              + "applicationSubmissionContext information."));
+      Assert.assertTrue(e.getMessage().startsWith("Missing submitApplication request or "
+          + "applicationSubmissionContext information."));
     }
     try {
       interceptor.submitApplication(SubmitApplicationRequest.newInstance(null));
       Assert.fail();
     } catch (YarnException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("Missing submitApplication request or "
-              + "applicationSubmissionContext information."));
+      Assert.assertTrue(e.getMessage().startsWith("Missing submitApplication request or "
+          + "applicationSubmissionContext information."));
     }
     try {
       ApplicationSubmissionContext context = ApplicationSubmissionContext
@@ -312,9 +306,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       interceptor.submitApplication(request);
       Assert.fail();
     } catch (YarnException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("Missing submitApplication request or "
-              + "applicationSubmissionContext information."));
+      Assert.assertTrue(e.getMessage().startsWith("Missing submitApplication request or "
+          + "applicationSubmissionContext information."));
     }
   }
 
@@ -325,7 +318,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testForceKillApplication()
       throws YarnException, IOException, InterruptedException {
-    LOG.info("Test FederationClientInterceptor: Force Kill Application");
+    LOG.info("Test FederationClientInterceptor: Force Kill Application.");
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -337,10 +330,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response);
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
-    KillApplicationRequest requestKill =
-        KillApplicationRequest.newInstance(appId);
-    KillApplicationResponse responseKill =
-        interceptor.forceKillApplication(requestKill);
+    KillApplicationRequest requestKill = KillApplicationRequest.newInstance(appId);
+    KillApplicationResponse responseKill = interceptor.forceKillApplication(requestKill);
     Assert.assertNotNull(responseKill);
   }
 
@@ -361,8 +352,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       interceptor.forceKillApplication(requestKill);
       Assert.fail();
     } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().equals(
-          "Application " + appId + " does not exist in FederationStateStore."));
+      Assert.assertEquals("Application " + appId + " does not exist in FederationStateStore.",
+          e.getMessage());
     }
   }
 
@@ -372,19 +363,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testForceKillApplicationEmptyRequest()
-      throws YarnException, IOException, InterruptedException {
-    LOG.info(
-        "Test FederationClientInterceptor: Force Kill Application - Empty");
+      throws Exception {
+    LOG.info("Test FederationClientInterceptor: Force Kill Application - Empty.");
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing forceKillApplication request or ApplicationId.",
+        () -> interceptor.forceKillApplication(null));
+
     try {
-      interceptor.forceKillApplication(null);
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().startsWith(
-          "Missing forceKillApplication request or ApplicationId."));
-    }
-    try {
-      interceptor
-          .forceKillApplication(KillApplicationRequest.newInstance(null));
+      interceptor.forceKillApplication(KillApplicationRequest.newInstance(null));
       Assert.fail();
     } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().startsWith(
@@ -427,18 +414,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetApplicationNotExists()
       throws YarnException, IOException, InterruptedException {
-    LOG.info(
-        "Test ApplicationClientProtocol: Get Application Report - Not Exists");
-    ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
-    GetApplicationReportRequest requestGet =
-        GetApplicationReportRequest.newInstance(appId);
+    LOG.info("Test ApplicationClientProtocol: Get Application Report - Not Exists.");
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    GetApplicationReportRequest requestGet = GetApplicationReportRequest.newInstance(appId);
     try {
       interceptor.getApplicationReport(requestGet);
       Assert.fail();
     } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().equals(
-          "Application " + appId + " does not exist in FederationStateStore."));
+      Assert.assertEquals("Application " + appId + " does not exist in FederationStateStore.",
+          e.getMessage());
     }
   }
 
@@ -580,7 +564,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testGetClusterMetricsRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor : Get Cluster Metrics request");
+    LOG.info("Test FederationClientInterceptor : Get Cluster Metrics request.");
+
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getClusterMetrics request.",
         () -> interceptor.getClusterMetrics(null));
@@ -594,10 +579,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class},
         new Object[] {GetClusterMetricsRequest.newInstance()});
-    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics =interceptor.
-        invokeConcurrent(new ArrayList<>(), remoteMethod,
-            GetClusterMetricsResponse.class);
-    Assert.assertEquals(true, clusterMetrics.isEmpty());
+    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics = interceptor.
+        invokeConcurrent(new ArrayList<>(), remoteMethod, GetClusterMetricsResponse.class);
+    Assert.assertTrue(clusterMetrics.isEmpty());
   }
 
   /**
@@ -609,8 +593,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   public void testGetApplicationsResponse()
       throws YarnException, IOException, InterruptedException {
     LOG.info("Test FederationClientInterceptor: Get Applications Response");
-    ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -619,11 +602,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     Set<String> appTypes = Collections.singleton("MockApp");
-    GetApplicationsRequest requestGet =
-        GetApplicationsRequest.newInstance(appTypes);
-
-    GetApplicationsResponse responseGet =
-        interceptor.getApplications(requestGet);
+    GetApplicationsRequest requestGet = GetApplicationsRequest.newInstance(appTypes);
+    GetApplicationsResponse responseGet = interceptor.getApplications(requestGet);
 
     Assert.assertNotNull(responseGet);
   }
@@ -636,8 +616,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetApplicationsNullRequest() throws Exception {
     LOG.info("Test FederationClientInterceptor: Get Applications request");
-    LambdaTestUtils.intercept(YarnException.class,
-        "Missing getApplications request.",
+    LambdaTestUtils.intercept(YarnException.class, "Missing getApplications request.",
         () -> interceptor.getApplications(null));
   }
 
@@ -648,11 +627,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testGetApplicationsApplicationTypeNotExists() throws Exception{
-    LOG.info("Test FederationClientInterceptor: Application with type does "
-        + "not exist");
+    LOG.info("Test FederationClientInterceptor: Application with type does not exist.");
 
-    ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -662,11 +639,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     Set<String> appTypes = Collections.singleton("SPARK");
 
-    GetApplicationsRequest requestGet =
-        GetApplicationsRequest.newInstance(appTypes);
-
-    GetApplicationsResponse responseGet =
-        interceptor.getApplications(requestGet);
+    GetApplicationsRequest requestGet = GetApplicationsRequest.newInstance(appTypes);
+    GetApplicationsResponse responseGet = interceptor.getApplications(requestGet);
 
     Assert.assertNotNull(responseGet);
     Assert.assertTrue(responseGet.getApplicationList().isEmpty());
@@ -707,7 +681,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testGetClusterNodesRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor : Get Cluster Nodeds request");
+    LOG.info("Test FederationClientInterceptor : Get Cluster Nodes request");
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getClusterNodes request.",
         () -> interceptor.getClusterNodes(null));
@@ -1096,7 +1070,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         RMAppAttemptState.SCHEDULED);
     MockNM nm = interceptor.getMockNMs().get(subClusterId);
     nm.nodeHeartbeat(true);
-    mockRM.waitForState(rmApp.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
+    MockRM.waitForState(rmApp.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
     mockRM.sendAMLaunched(rmApp.getCurrentAppAttempt().getAppAttemptId());
 
     ContainerId containerId = rmApp.getCurrentAppAttempt().getMasterContainer().getId();
@@ -1134,10 +1108,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     mockRM.waitForState(appId, RMAppState.ACCEPTED);
     RMApp rmApp = mockRM.getRMContext().getRMApps().get(appId);
     mockRM.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
-            RMAppAttemptState.SCHEDULED);
+          RMAppAttemptState.SCHEDULED);
     MockNM nm = interceptor.getMockNMs().get(subClusterId);
     nm.nodeHeartbeat(true);
-    mockRM.waitForState(rmApp.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
+    MockRM.waitForState(rmApp.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
     mockRM.sendAMLaunched(rmApp.getCurrentAppAttempt().getAppAttemptId());
 
     MoveApplicationAcrossQueuesRequest acrossQueuesRequest =
