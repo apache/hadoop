@@ -599,7 +599,7 @@ public class RetryPolicies {
     private RetryPolicy defaultPolicy;
     private Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap;
 
-    public OtherThanRemoteAndSaslExceptionDependentRetry(RetryPolicy defaultPolicy,
+    OtherThanRemoteAndSaslExceptionDependentRetry(RetryPolicy defaultPolicy,
         Map<Class<? extends Exception>,
         RetryPolicy> exceptionToPolicyMap) {
       this.defaultPolicy = defaultPolicy;
@@ -610,10 +610,8 @@ public class RetryPolicies {
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isIdempotentOrAtMostOnce) throws Exception {
       RetryPolicy policy = null;
-      // ignore Remote Exception
-      if (e instanceof RemoteException || isSaslFailure(e)) {
-        // do nothing
-      } else {
+      // ignore RemoteException and SaslException
+      if (!(e instanceof RemoteException || isSaslFailure(e))) {
         policy = exceptionToPolicyMap.get(e.getClass());
       }
       if (policy == null) {
