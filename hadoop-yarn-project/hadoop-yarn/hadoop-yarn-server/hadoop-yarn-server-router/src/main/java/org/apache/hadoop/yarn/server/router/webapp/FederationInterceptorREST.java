@@ -282,7 +282,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .entity(e.getLocalizedMessage()).build();
     }
 
-    List<SubClusterId> blacklist = new ArrayList<SubClusterId>();
+    List<SubClusterId> blacklist = new ArrayList<>();
 
     for (int i = 0; i < numSubmitRetries; ++i) {
 
@@ -295,7 +295,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             .entity(e.getLocalizedMessage()).build();
       }
 
-      LOG.debug("getNewApplication try #{} on SubCluster {}", i, subClusterId);
+      LOG.debug("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
 
       DefaultRequestInterceptorREST interceptor =
           getOrCreateInterceptorForSubCluster(subClusterId,
@@ -304,7 +304,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       try {
         response = interceptor.createNewApplication(hsr);
       } catch (Exception e) {
-        LOG.warn("Unable to create a new ApplicationId in SubCluster {}",
+        LOG.warn("Unable to create a new ApplicationId in SubCluster {}.",
             subClusterId.getId(), e);
       }
 
@@ -424,7 +424,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .build();
     }
 
-    List<SubClusterId> blacklist = new ArrayList<SubClusterId>();
+    List<SubClusterId> blacklist = new ArrayList<>();
 
     for (int i = 0; i < numSubmitRetries; ++i) {
 
@@ -441,7 +441,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             .entity(e.getLocalizedMessage())
             .build();
       }
-      LOG.info("submitApplication appId {} try #{} on SubCluster {}",
+      LOG.info("submitApplication appId {} try #{} on SubCluster {}.",
           applicationId, i, subClusterId);
 
       ApplicationHomeSubCluster appHomeSubCluster =
@@ -482,7 +482,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
                 .build();
           }
           if (subClusterId == subClusterIdInStateStore) {
-            LOG.info("Application {} already submitted on SubCluster {}",
+            LOG.info("Application {} already submitted on SubCluster {}.",
                 applicationId, subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
@@ -712,8 +712,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
           if (rmApps == null) {
             routerMetrics.incrMultipleAppsFailedRetrieved();
-            LOG.error("Subcluster {} failed to return appReport.",
-                info.getSubClusterId());
+            LOG.error("Subcluster {} failed to return appReport.", info.getSubClusterId());
             return null;
           }
           return rmApps;
@@ -873,8 +872,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
                   subclusterId, subcluster.getRMWebServiceAddress());
           return interceptor.getNode(nodeId);
         } catch (Exception e) {
-          LOG.error("Subcluster {} failed to return nodeInfo.",
-              subclusterId);
+          LOG.error("Subcluster {} failed to return nodeInfo.", subclusterId, e);
           return null;
         }
       });
@@ -958,7 +956,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       subClustersActive = getActiveSubclusters();
     } catch (Exception e) {
-      LOG.error("Cannot get nodes: {}", e.getMessage());
+      LOG.error("Cannot get nodes: {}", e.getMessage(), e);
       return new NodesInfo();
     }
 
@@ -977,8 +975,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             NodesInfo nodesInfo = interceptor.getNodes(states);
             return nodesInfo;
           } catch (Exception e) {
-            LOG.error("Subcluster {} failed to return nodesInfo.",
-                info.getSubClusterId());
+            LOG.error("Subcluster {} failed to return nodesInfo.", info.getSubClusterId(), e);
             return null;
           }
         }
