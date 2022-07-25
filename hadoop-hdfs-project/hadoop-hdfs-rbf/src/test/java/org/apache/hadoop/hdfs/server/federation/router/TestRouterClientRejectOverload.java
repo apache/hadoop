@@ -206,33 +206,29 @@ public class TestRouterClientRejectOverload {
     for (int i = 0; i < numOps; i++) {
       // Stagger the operations a little (50ms)
       final int sleepTime = i * 50;
-      Future<?> future = exec.submit(new Runnable() {
-        @Override
-        public void run() {
-          DFSClient routerClient = null;
-          try {
-            Thread.sleep(sleepTime);
-            routerClient = new DFSClient(address, conf);
-            String clientName = routerClient.getClientName();
-            ClientProtocol routerProto = routerClient.getNamenode();
-            routerProto.renewLease(clientName);
-          } catch (RemoteException re) {
-            IOException ioe = re.unwrapRemoteException();
-            assertTrue("Wrong exception: " + ioe,
-                ioe instanceof StandbyException);
-            assertExceptionContains("is overloaded", ioe);
-            overloadException.incrementAndGet();
-          } catch (IOException e) {
-            fail("Unexpected exception: " + e);
-          } catch (InterruptedException e) {
-            fail("Cannot sleep: " + e);
-          } finally {
-            if (routerClient != null) {
-              try {
-                routerClient.close();
-              } catch (IOException e) {
-                LOG.error("Cannot close the client");
-              }
+      Future<?> future = exec.submit(() -> {
+        DFSClient routerClient = null;
+        try {
+          Thread.sleep(sleepTime);
+          routerClient = new DFSClient(address, conf);
+          String clientName = routerClient.getClientName();
+          ClientProtocol routerProto = routerClient.getNamenode();
+          routerProto.renewLease(clientName, null);
+        } catch (RemoteException re) {
+          IOException ioe = re.unwrapRemoteException();
+          assertTrue("Wrong exception: " + ioe, ioe instanceof StandbyException);
+          assertExceptionContains("is overloaded", ioe);
+          overloadException.incrementAndGet();
+        } catch (IOException e) {
+          fail("Unexpected exception: " + e);
+        } catch (InterruptedException e) {
+          fail("Cannot sleep: " + e);
+        } finally {
+          if (routerClient != null) {
+            try {
+              routerClient.close();
+            } catch (IOException e) {
+              LOG.error("Cannot close the client");
             }
           }
         }
@@ -390,7 +386,7 @@ public class TestRouterClientRejectOverload {
               cluster.getRouterClientConf());
           String clientName = routerClient.getClientName();
           ClientProtocol routerProto = routerClient.getNamenode();
-          routerProto.renewLease(clientName);
+          routerProto.renewLease(clientName, null);
         } catch (Exception e) {
           fail("Client request failed: " + e);
         } finally {
