@@ -17,7 +17,7 @@
   * under the License.
   */
 
-package org.apache.hadoop.fs.common;
+ package org.apache.hadoop.fs.common;
 
 import java.time.Duration;
 
@@ -25,50 +25,52 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
 
- public final class EmptyPrefetchingStatistics implements PrefetchingStatistics {
+public final class EmptyPrefetchingStatistics implements PrefetchingStatistics {
 
-   private static final EmptyPrefetchingStatistics EMPTY_PREFETCHING_STATISTICS =
-       new EmptyPrefetchingStatistics();
+  private static final EmptyPrefetchingStatistics EMPTY_PREFETCHING_STATISTICS =
+      new EmptyPrefetchingStatistics();
 
-   private EmptyPrefetchingStatistics() {
-   }
+  private EmptyPrefetchingStatistics() {
+  }
 
-   public static EmptyPrefetchingStatistics getInstance() {
-     return EMPTY_PREFETCHING_STATISTICS;
-   }
+  public static EmptyPrefetchingStatistics getInstance() {
+    return EMPTY_PREFETCHING_STATISTICS;
+  }
 
-   @Override
-   public DurationTracker prefetchOperationStarted() {
-     return stubDurationTracker();
-   }
+  @Override
+  public DurationTracker prefetchOperationStarted() {
+    return stubDurationTracker();
+  }
 
-   @Override
-   public void blockAddedToFileCache() {
+  @Override
+  public void blockAddedToFileCache() {
 
-   }
+  }
 
-   @Override
-   public void blockRemovedFromFileCache() {
+  @Override
+  public void blockRemovedFromFileCache() {
 
-   }
+  }
 
-   @Override
-   public void prefetchOperationCompleted() {
+  @Override
+  public void prefetchOperationCompleted() {
 
-   }
+  }
 
-   @Override
-   public void executorAcquired(Duration timeInQueue) {
+  @Override
+  public void executorAcquired(Duration timeInQueue) {
 
-   }
+  }
 
-   @Override
-   public void memoryAllocated(int size) {
+  @Override
+  public void memoryAllocated(int size) {
 
-   }
+  }
 
-   @Override
-   public void memoryFreed(int size) {
+  @Override
+  public void memoryFreed(int size) {
 
-   }
- }
+  }
+
+}
+
