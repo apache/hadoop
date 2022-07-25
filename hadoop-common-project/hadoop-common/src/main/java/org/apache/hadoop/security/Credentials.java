@@ -222,9 +222,8 @@ public class Credentials implements Writable {
    * @throws IOException  raised on errors performing I/O.
    * @return Credentials.
    */
-  public static Credentials readTokenStorageFile(Path filename,
-                                                 Configuration conf)
-  throws IOException {
+  public static Credentials readTokenStorageFile(Path filename, Configuration conf)
+        throws IOException {
     FSDataInputStream in = null;
     Credentials credentials = new Credentials();
     try {
@@ -472,6 +471,23 @@ public class Credentials implements Writable {
       if (!tokenMap.containsKey(key) || overwrite) {
         addToken(key, token.getValue());
       }
+    }
+  }
+
+  /**
+   * Update the token map to synchronize between HA pair servers
+   */
+  public void synchTokens(Token<? extends TokenIdentifier> token) {
+    for(Map.Entry<Text, Token<?>> entry: tokenMap.entrySet()){
+      LOG.debug("synching token.to_s");
+      tokenMap.forEach((key, value) -> LOG.debug("Before: " + key + ":" + value));
+      if (entry.getValue().getKind().equals(token.getKind())){
+        LOG.debug("matched " + entry.getValue().getKind());
+        Token<? extends TokenIdentifier> clone = new Token<>(token.getIdentifier(),
+            token.getPassword(), token.getKind(), entry.getValue().getService());
+        tokenMap.put(entry.getKey(), clone);
+      }
+      tokenMap.forEach((key, value) -> LOG.debug("After: " + key + ":" + value));
     }
   }
 }

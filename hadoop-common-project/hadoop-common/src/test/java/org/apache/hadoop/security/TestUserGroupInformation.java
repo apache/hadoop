@@ -19,6 +19,7 @@ package org.apache.hadoop.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -54,16 +55,21 @@ import javax.security.auth.login.LoginContext;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -110,6 +116,11 @@ public class TestUserGroupInformation {
   // Rollover interval of percentile metrics (in seconds)
   private static final int PERCENTILES_INTERVAL = 1;
   private static Configuration conf;
+
+  private static FileContext localFS = null;
+  private static final File testDir = new File("target",
+      TestUserGroupInformation.class.getName() + "-tmpDir").getAbsoluteFile();
+
   
   /**
    * UGI should not use the default security conf, else it will collide
@@ -135,7 +146,8 @@ public class TestUserGroupInformation {
 
   /** configure ugi */
   @BeforeClass
-  public static void setup() {
+  public static void setup() throws
+      FileNotFoundException, IllegalArgumentException, IOException {
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
     // doesn't matter what it is, but getGroups needs it set...
@@ -143,10 +155,16 @@ public class TestUserGroupInformation {
     // that finds winutils.exe
     String home = System.getenv("HADOOP_HOME");
     System.setProperty("hadoop.home.dir", (home != null ? home : "."));
+
+    localFS = FileContext.getLocalFSFileContext();
+    localFS.delete(new Path(testDir.getAbsolutePath()), true);
+    testDir.mkdir();
   }
   
   @Before
-  public void setupUgi() {
+  public void setupUgi() throws Exception {
+    Map<String, String> newEnv = new HashMap<String, String>();
+    setNewEnvironmentHack(newEnv);
     conf = new Configuration();
     UserGroupInformation.reset();
     UserGroupInformation.setConfiguration(conf);
@@ -1362,5 +1380,106 @@ public class TestUserGroupInformation {
 
     // Cleanup
     System.clearProperty(CommonConfigurationKeysPublic.HADOOP_TOKENS);
+  }
+
+  /**
+   * This test checks we can load a delegation token off disk.
+   */
+  @Test
+  public void testTokenRead() throws Exception {
+    // Simulate a credentials file
+    Credentials credentials = new Credentials();
+
+    Text serviceName = new Text("service1");
+    TestTokenIdentifier tokenId = new TestTokenIdentifier();
+    Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(
+            tokenId.getBytes(), "password".getBytes(),
+            tokenId.getKind(), serviceName);
+    credentials.addToken(new Text("regular-token"), token);
+
+    Path tokenFilePath = new Path(testDir.getAbsolutePath(), "tokens-file");
+    credentials.writeTokenStorageFile(tokenFilePath, conf);
+
+    Map<String, String> newEnv = new HashMap<String, String>();
+    newEnv.put(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION, tokenFilePath
+        .toUri().getPath());
+    setNewEnvironmentHack(newEnv);
+
+    // Set login-user to null as null is the reason why token-file is read by UGI.
+    UserGroupInformation.setLoginUser(null);
+    UserGroupInformation.setConfiguration(conf); // pick up changed auth
+
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    Collection<Token<? extends TokenIdentifier>> tokens = ugi.getCredentials().getAllTokens();
+    assertEquals(1, tokens.size());
+    Token tok = (Token)tokens.toArray()[0];
+    String tokenStr = token.encodeToUrlString();
+    assertEquals(tok.encodeToUrlString(), tokenStr);
+  }
+
+  /**
+   * This test checks we can reload a delegation token off disk.
+   */
+  @Test
+  public void testTokenReload() throws Exception {
+    Text serviceName = new Text("service1");
+
+    // Write initial tokenfile
+    testTokenRead();
+
+    // Write out a replacement tokenfile
+    Credentials credentials = new Credentials();
+    TestTokenIdentifier tokenId = new TestTokenIdentifier();
+    Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(
+            tokenId.getBytes(), "new-password".getBytes(),
+            tokenId.getKind(), serviceName);
+    credentials.addToken(new Text("regular-token"), token);
+
+    Path tokenFilePath = new Path(testDir.getAbsolutePath(), "tokens-file");
+    credentials.writeTokenStorageFile(tokenFilePath, conf);
+
+    // Relogin and verify tokens
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    ugi.reloginFromDelegationTokens();
+
+    Collection<Token<? extends TokenIdentifier>> tokens = ugi.getCredentials().getAllTokens();
+    assertEquals(1, tokens.size());
+    Token tok = (Token)tokens.toArray()[0];
+    String tokenStr = token.encodeToUrlString();
+    assertEquals(tok.encodeToUrlString(), tokenStr);
+  }
+
+  // A dirty hack to modify the env of the current JVM itself - Dirty, but
+  // should be okay for testing. (Taken from TestMRAppMaster.java)
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  private static void setNewEnvironmentHack(Map<String, String> newenv)
+      throws Exception {
+    try {
+      Class<?> cl = Class.forName("java.lang.ProcessEnvironment");
+      Field field = cl.getDeclaredField("theEnvironment");
+      field.setAccessible(true);
+      Map<String, String> env = (Map<String, String>) field.get(null);
+      env.clear();
+      env.putAll(newenv);
+      Field ciField = cl.getDeclaredField("theCaseInsensitiveEnvironment");
+      ciField.setAccessible(true);
+      Map<String, String> cienv = (Map<String, String>) ciField.get(null);
+      cienv.clear();
+      cienv.putAll(newenv);
+    } catch (NoSuchFieldException e) {
+      Class[] classes = Collections.class.getDeclaredClasses();
+      Map<String, String> env = System.getenv();
+      for (Class cl : classes) {
+        if ("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
+          Field field = cl.getDeclaredField("m");
+          field.setAccessible(true);
+          Object obj = field.get(env);
+          Map<String, String> map = (Map<String, String>) obj;
+          map.clear();
+          map.putAll(newenv);
+        }
+      }
+    }
   }
 }

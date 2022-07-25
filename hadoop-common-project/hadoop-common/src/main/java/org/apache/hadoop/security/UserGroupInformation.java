@@ -87,6 +87,7 @@ import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 
@@ -186,12 +187,25 @@ public class UserGroupInformation {
       return null;
     }
 
+    private void addDelegationTokensToSubject() throws LoginException {
+      try {
+        Credentials creds = DelegationTokenUtil.readDelegationTokens(conf);
+        if (creds != null) {
+          subject.getPrivateCredentials().add(creds);
+        }
+      } catch (IOException e) {
+        throw new LoginException("Failed to load token file from " +
+                HADOOP_TOKEN_FILE_LOCATION);
+      }
+    }
+
     @Override
     public boolean commit() throws LoginException {
       LOG.debug("hadoop login commit");
       // if we already have a user, we are done.
       if (!subject.getPrincipals(User.class).isEmpty()) {
         LOG.debug("Using existing subject: {}", subject.getPrincipals());
+        addDelegationTokensToSubject();
         return true;
       }
       Principal user = getCanonicalUser(KerberosPrincipal.class);
@@ -229,6 +243,7 @@ public class UserGroupInformation {
         LOG.debug("User entry: \"{}\"", userEntry);
 
         subject.getPrincipals().add(userEntry);
+        addDelegationTokensToSubject();
         return true;
       }
       throw new LoginException("Failed to find user in name " + subject);
@@ -743,11 +758,12 @@ public class UserGroupInformation {
           LOG.debug("Reading credentials from location {}",
               tokenFile.getCanonicalPath());
           if (tokenFile.exists() && tokenFile.isFile()) {
-            Credentials cred = Credentials.readTokenStorageFile(
-                tokenFile, conf);
-            LOG.debug("Loaded {} tokens from {}", cred.numberOfTokens(),
-                tokenFile.getCanonicalPath());
-            loginUser.addCredentials(cred);
+            Credentials cred = DelegationTokenUtil.readDelegationTokens(conf);
+            if (cred != null ) {
+              LOG.debug("Loaded {} tokens from {}", cred.numberOfTokens(),
+                  tokenFile.getCanonicalPath());
+              loginUser.addCredentials(cred);
+            }
           } else {
             LOG.info("Token file {} does not exist",
                 tokenFile.getCanonicalPath());
@@ -853,6 +869,59 @@ public class UserGroupInformation {
     long end = tgt.getEndTime().getTime();
     return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
   }
+
+  /**
+   * Re-Login a user in from delegation tokens
+   * method assumes that login had happened already.
+   * The Subject field of this UserGroupInformation object is updated to have
+   * the new credentials.
+   * @throws IOException
+   * @throws IOException on a failure
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public synchronized void reloginFromDelegationTokens() throws IOException {
+
+    if (!isFromDelegationToken()) {
+      throw new IOException("User has not logged on using delegation token");
+    }
+
+    synchronized(UserGroupInformation.class){
+      Credentials cred = DelegationTokenUtil.readDelegationTokens(conf);
+      if (cred != null ) {
+        addCredentials(cred);
+      }
+
+      for (Token<? extends TokenIdentifier> token: cred.getAllTokens()) {
+        for ( Credentials currentCreds : subject.getPrivateCredentials(Credentials.class)) {
+          currentCreds.synchTokens(token);
+        }
+      }
+    }
+  }
+
+  public boolean isFromDelegationToken () {
+    return !isFromKeytab() && getTGT() == null && !subject.getPrivateCredentials(Credentials.class).isEmpty();
+  }
+
+  public Collection<AbstractDelegationTokenIdentifier> getAllDelegationTokens(Credentials cred) {
+    cred.getAllTokens();
+    List<AbstractDelegationTokenIdentifier> delegToks = new ArrayList<>();
+
+    for(Token<? extends TokenIdentifier> t: getCredentials().getAllTokens()) {
+      try {
+        TokenIdentifier identifier = t.decodeIdentifier();
+        if (identifier == null || !AbstractDelegationTokenIdentifier.class.isAssignableFrom(identifier.getClass())) {
+          continue;
+        }
+        delegToks.add((AbstractDelegationTokenIdentifier) identifier);
+      } catch (IOException e) {
+        LOG.warn("Error decoding token identifier of kind  " + t.getKind(), e);
+      }
+    }
+    return delegToks;
+  }
+
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
