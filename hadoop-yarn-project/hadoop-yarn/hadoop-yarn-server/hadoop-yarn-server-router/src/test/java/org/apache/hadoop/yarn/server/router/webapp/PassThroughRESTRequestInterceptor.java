@@ -62,8 +62,8 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 
 /**
- * Mock intercepter that does not do anything other than forwarding it to the
- * next intercepter in the chain.
+ * Mock interceptor that does not do anything other than forwarding it to the
+ * next interceptor in the chain.
  */
 public class PassThroughRESTRequestInterceptor
     extends AbstractRESTRequestInterceptor {

@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 /**
  * Implements the {@link RMAdminRequestInterceptor} interface and provides
  * common functionality which can can be used and/or extended by other concrete
- * intercepter classes.
+ * interceptor classes.
  *
  */
 public abstract class AbstractRMAdminRequestInterceptor

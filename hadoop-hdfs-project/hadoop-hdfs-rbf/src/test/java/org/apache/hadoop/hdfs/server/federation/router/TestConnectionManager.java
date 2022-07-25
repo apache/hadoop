@@ -144,7 +144,7 @@ public class TestConnectionManager {
     connectionCreator.setDaemon(true);
     connectionCreator.start();
     // Wait to make sure async thread is scheduled and picks
-    GenericTestUtils.waitFor(()->queue.isEmpty(), 50, 5000);
+    GenericTestUtils.waitFor(queue::isEmpty, 50, 5000);
     // At this point connection creation task should be definitely picked up.
     assertTrue(queue.isEmpty());
     // At this point connection thread should still be alive.
