@@ -82,6 +82,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -96,6 +102,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
+import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -1198,5 +1209,82 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response3);
     Assert.assertEquals(4096, response3.getResource().getMemorySize());
     Assert.assertEquals(4, response3.getResource().getVirtualCores());
+  }
+
+  @Test
+  public void testGetAttributesToNodes() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get AttributesToNodes request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getAttributesToNodes request " +
+        "or nodeAttributes.", () -> interceptor.getAttributesToNodes(null));
+
+    // normal request
+    GetAttributesToNodesResponse response =
+        interceptor.getAttributesToNodes(GetAttributesToNodesRequest.newInstance());
+
+    Assert.assertNotNull(response);
+    Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs = response.getAttributesToNodes();
+    Assert.assertNotNull(attrs);
+    Assert.assertEquals(4, attrs.size());
+
+    NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
+        NodeAttributeType.STRING, "nvidia");
+    NodeToAttributeValue attributeValue1 =
+        NodeToAttributeValue.newInstance("0-host1", gpu.getAttributeValue());
+    NodeAttributeKey gpuKey = gpu.getAttributeKey();
+    Assert.assertTrue(attrs.get(gpuKey).contains(attributeValue1));
+  }
+
+  @Test
+  public void testClusterNodeAttributes() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get ClusterNodeAttributes request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class, "Missing getClusterNodeAttributes request.",
+        () -> interceptor.getClusterNodeAttributes(null));
+
+    // normal request
+    GetClusterNodeAttributesResponse response =
+        interceptor.getClusterNodeAttributes(GetClusterNodeAttributesRequest.newInstance());
+
+    Assert.assertNotNull(response);
+    Set<NodeAttributeInfo> nodeAttributeInfos = response.getNodeAttributes();
+    Assert.assertNotNull(nodeAttributeInfos);
+    Assert.assertEquals(4, nodeAttributeInfos.size());
+
+    NodeAttributeInfo nodeAttributeInfo1 =
+        NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("GPU"),
+        NodeAttributeType.STRING);
+    Assert.assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo1));
+
+    NodeAttributeInfo nodeAttributeInfo2 =
+        NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("OS"),
+        NodeAttributeType.STRING);
+    Assert.assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo2));
+  }
+
+  @Test
+  public void testNodesToAttributes() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get NodesToAttributes request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getNodesToAttributes request or hostNames.",
+        () -> interceptor.getNodesToAttributes(null));
+
+    // normal request
+    Set<String> hostNames = Collections.singleton("0-host1");
+    GetNodesToAttributesResponse response =
+        interceptor.getNodesToAttributes(GetNodesToAttributesRequest.newInstance(hostNames));
+    Assert.assertNotNull(response);
+
+    Map<String, Set<NodeAttribute>> nodeAttributeMap = response.getNodeToAttributes();
+    Assert.assertNotNull(nodeAttributeMap);
+    Assert.assertEquals(1, nodeAttributeMap.size());
+
+    NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
+        NodeAttributeType.STRING, "nvida");
+    Assert.assertTrue(nodeAttributeMap.get("0-host1").contains(gpu));
   }
 }

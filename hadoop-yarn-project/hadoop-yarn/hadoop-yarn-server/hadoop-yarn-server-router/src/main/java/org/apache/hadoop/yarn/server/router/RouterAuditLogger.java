@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
 
 /**
  * Manages Router audit logs.
@@ -113,6 +116,7 @@ public class RouterAuditLogger {
       String operation, String target) {
     StringBuilder b = new StringBuilder();
     start(Keys.USER, user, b);
+    addRemoteIP(b);
     add(Keys.OPERATION, operation, b);
     add(Keys.TARGET, target, b);
     add(Keys.RESULT, AuditConstants.SUCCESS, b);
@@ -218,6 +222,7 @@ public class RouterAuditLogger {
       String operation, String target, String description, String perm) {
     StringBuilder b = new StringBuilder();
     start(Keys.USER, user, b);
+    addRemoteIP(b);
     add(Keys.OPERATION, operation, b);
     add(Keys.TARGET, target, b);
     add(Keys.RESULT, AuditConstants.FAILURE, b);
@@ -241,5 +246,16 @@ public class RouterAuditLogger {
   static void add(Keys key, String value, StringBuilder b) {
     b.append(AuditConstants.PAIR_SEPARATOR).append(key.name())
         .append(AuditConstants.KEY_VAL_SEPARATOR).append(value);
+  }
+
+  /**
+   * A helper api to add remote IP address.
+   */
+  static void addRemoteIP(StringBuilder b) {
+    InetAddress ip = Server.getRemoteIp();
+    // ip address can be null for testcases
+    if (ip != null) {
+      add(Keys.IP, ip.getHostAddress(), b);
+    }
   }
 }
