@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.CachingBlockManager;
 import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 /**
  * Provides access to S3 file one block at a time.
@@ -48,6 +49,7 @@ public class S3CachingBlockManager extends CachingBlockManager {
    * @param reader reader that reads from S3 file.
    * @param blockData information about each block of the S3 file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
+   * @param streamStatistics statistics for this stream.
    *
    * @throws IllegalArgumentException if reader is null.
    */
@@ -55,8 +57,9 @@ public class S3CachingBlockManager extends CachingBlockManager {
       ExecutorServiceFuturePool futurePool,
       S3Reader reader,
       BlockData blockData,
-      int bufferPoolSize) {
-    super(futurePool, blockData, bufferPoolSize);
+      int bufferPoolSize,
+      S3AInputStreamStatistics streamStatistics) {
+    super(futurePool, blockData, bufferPoolSize, streamStatistics);
 
     Validate.checkNotNull(reader, "reader");
 

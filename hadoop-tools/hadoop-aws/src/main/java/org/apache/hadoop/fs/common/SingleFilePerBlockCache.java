@@ -42,6 +42,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Provides functionality necessary for caching blocks of data read from FileSystem.
  * Each cache block is stored on the local disk as a separate file.
@@ -57,6 +59,8 @@ public class SingleFilePerBlockCache implements BlockCache {
   private int numGets = 0;
 
   private boolean closed;
+
+  private final PrefetchingStatistics prefetchingStatistics;
 
   // Cache entry.
   // Each block is stored as a separate file.
@@ -81,7 +85,13 @@ public class SingleFilePerBlockCache implements BlockCache {
     }
   }
 
-  public SingleFilePerBlockCache() {
+  /**
+   * Constructs an instance of a {@code SingleFilePerBlockCache}.
+   *
+   * @param prefetchingStatistics statistics for this stream.
+   */
+  public SingleFilePerBlockCache(PrefetchingStatistics prefetchingStatistics) {
+    this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
   }
 
   /**
@@ -184,6 +194,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     }
 
     this.writeFile(blockFilePath, buffer);
+    this.prefetchingStatistics.blockAddedToFileCache();
     long checksum = BufferData.getChecksum(buffer);
     Entry entry = new Entry(blockNumber, blockFilePath, buffer.limit(), checksum);
     this.blocks.put(blockNumber, entry);
@@ -221,6 +232,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     for (Entry entry : this.blocks.values()) {
       try {
         Files.deleteIfExists(entry.path);
+        this.prefetchingStatistics.blockRemovedFromFileCache();
         numFilesDeleted++;
       } catch (IOException e) {
         // Ignore while closing so that we can delete as many cache files as possible.

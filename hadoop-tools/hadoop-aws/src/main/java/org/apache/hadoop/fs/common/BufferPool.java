@@ -31,6 +31,8 @@ import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Manages a fixed pool of {@code ByteBuffer} instances.
  *
@@ -56,26 +58,32 @@ public class BufferPool implements Closeable {
   // Allows associating metadata to each buffer in the pool.
   private Map<BufferData, ByteBuffer> allocated;
 
+  private PrefetchingStatistics prefetchingStatistics;
+
   /**
    * Initializes a new instance of the {@code BufferPool} class.
    *
    * @param size number of buffer in this pool.
    * @param bufferSize size in bytes of each buffer.
+   * @param prefetchingStatistics statistics for this stream.
    *
    * @throws IllegalArgumentException if size is zero or negative.
    * @throws IllegalArgumentException if bufferSize is zero or negative.
    */
-  public BufferPool(int size, int bufferSize) {
+  public BufferPool(int size, int bufferSize, PrefetchingStatistics prefetchingStatistics) {
     Validate.checkPositiveInteger(size, "size");
     Validate.checkPositiveInteger(bufferSize, "bufferSize");
 
     this.size = size;
     this.bufferSize = bufferSize;
     this.allocated = new IdentityHashMap<BufferData, ByteBuffer>();
+    this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
     this.pool = new BoundedResourcePool<ByteBuffer>(size) {
         @Override
         public ByteBuffer createNew() {
-          return ByteBuffer.allocate(bufferSize);
+          ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+          prefetchingStatistics.memoryAllocated(bufferSize);
+          return buffer;
         }
       };
   }
@@ -236,11 +244,15 @@ public class BufferPool implements Closeable {
       }
     }
 
-    this.pool.close();
-    this.pool = null;
+    int currentPoolSize = pool.numCreated();
 
-    this.allocated.clear();
-    this.allocated = null;
+    pool.close();
+    pool = null;
+
+    allocated.clear();
+    allocated = null;
+
+    prefetchingStatistics.memoryFreed(currentPoolSize * bufferSize);
   }
 
   // For debugging purposes.

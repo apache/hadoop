@@ -33,6 +33,9 @@ import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
+
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
  * Prefetched blocks are cached to local disk if a seek away from the
@@ -120,8 +123,10 @@ public class S3CachingInputStream extends S3InputStream {
 
   @Override
   public void close() throws IOException {
-    super.close();
+    // Close the BlockManager first, cancelling active prefetches,
+    // deleting cached files and freeing memory used by buffer pool.
     this.blockManager.close();
+    super.close();
     LOG.info("closed: {}", this.getName());
   }
 
@@ -171,7 +176,10 @@ public class S3CachingInputStream extends S3InputStream {
       }
     }
 
-    BufferData data = this.blockManager.get(toBlockNumber);
+    BufferData data = invokeTrackingDuration(
+        this.getS3AStreamStatistics().trackDuration(STREAM_READ_BLOCK_ACQUIRE_AND_READ),
+        () -> this.blockManager.get(toBlockNumber));
+
     this.getFilePosition().setData(data, startOffset, readPos);
     return true;
   }
@@ -193,6 +201,7 @@ public class S3CachingInputStream extends S3InputStream {
       S3Reader reader,
       BlockData blockData,
       int bufferPoolSize) {
-    return new S3CachingBlockManager(futurePool, reader, blockData, bufferPoolSize);
+    return new S3CachingBlockManager(futurePool, reader, blockData, bufferPoolSize,
+        this.getS3AStreamStatistics());
   }
 }
