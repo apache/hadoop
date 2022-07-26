@@ -181,15 +181,20 @@ public class RetryPolicies {
   }
 
   /**
-   * A retry policy for exceptions other than RemoteException.
+   * <p>
+   * A retry policy where RemoteException and SaslException are not retried, other individual
+   * exception types can have RetryPolicy overrides, and any other exception type without an
+   * override is not retried.
+   * </p>
+   *
    * @param defaultPolicy defaultPolicy.
    * @param exceptionToPolicyMap exceptionToPolicyMap.
    * @return RetryPolicy.
    */
-  public static final RetryPolicy retryOtherThanRemoteException(
+  public static final RetryPolicy retryOtherThanRemoteAndSaslException(
       RetryPolicy defaultPolicy,
       Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap) {
-    return new OtherThanRemoteExceptionDependentRetry(defaultPolicy,
+    return new OtherThanRemoteAndSaslExceptionDependentRetry(defaultPolicy,
         exceptionToPolicyMap);
   }
 
@@ -589,12 +594,12 @@ public class RetryPolicies {
     }
   }
 
-  static class OtherThanRemoteExceptionDependentRetry implements RetryPolicy {
+  static class OtherThanRemoteAndSaslExceptionDependentRetry implements RetryPolicy {
 
     private RetryPolicy defaultPolicy;
     private Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap;
 
-    public OtherThanRemoteExceptionDependentRetry(RetryPolicy defaultPolicy,
+    OtherThanRemoteAndSaslExceptionDependentRetry(RetryPolicy defaultPolicy,
         Map<Class<? extends Exception>,
         RetryPolicy> exceptionToPolicyMap) {
       this.defaultPolicy = defaultPolicy;
@@ -605,10 +610,8 @@ public class RetryPolicies {
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isIdempotentOrAtMostOnce) throws Exception {
       RetryPolicy policy = null;
-      // ignore Remote Exception
-      if (e instanceof RemoteException) {
-        // do nothing
-      } else {
+      // ignore RemoteException and SaslException
+      if (!(e instanceof RemoteException || isSaslFailure(e))) {
         policy = exceptionToPolicyMap.get(e.getClass());
       }
       if (policy == null) {
