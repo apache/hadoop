@@ -412,7 +412,7 @@ public class FSDownload implements Callable<Path> {
         resource.getType(), resource.getPattern());
 
     final Path destinationTmp = new Path(destDirPath + "_tmp");
-    createDir(destinationTmp, cachePerms);
+    createDir(destinationTmp, new FsPermission(0777));
     Path dFinal =
         files.makeQualified(new Path(destinationTmp, sCopy.getName()));
     try {

@@ -452,7 +452,7 @@ public class TestFSDownload {
         FileStatus status = files.getFileStatus(localized.getParent());
         FsPermission perm = status.getPermission();
         assertEquals("Cache directory permissions are incorrect",
-            new FsPermission((short)0755), perm);
+            new FsPermission((short)0777), perm);
 
         status = files.getFileStatus(localized);
         perm = status.getPermission();
