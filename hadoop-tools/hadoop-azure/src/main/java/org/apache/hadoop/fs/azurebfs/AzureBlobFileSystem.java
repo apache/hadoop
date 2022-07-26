@@ -751,10 +751,10 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   private String getStreamMetrics(ArrayList<Double> avgInputStreamMetrics) {
-    String inputStreamMetric = " #%SRFR=" + String.format("%.3f",
+    String inputStreamMetric = " #SRFR=" + String.format("%.3f",
         avgInputStreamMetrics.get(0))
-        + " #%DOFS=" + String.format("%.3f", avgInputStreamMetrics.get(1))
-        + " #%FL=" + String.format("%.3f", avgInputStreamMetrics.get(2));
+        + " #DOFS=" + String.format("%.3f", avgInputStreamMetrics.get(1))
+        + " #FL=" + String.format("%.3f", avgInputStreamMetrics.get(2));
     return inputStreamMetric + " ";
   }
 

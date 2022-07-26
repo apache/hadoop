@@ -251,7 +251,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         this.inputStreamMetrics.getFileLength().set(contentLength);
       }
       if (!firstRead && collectMetricsForNextRead){
-        this.inputStreamMetrics.getOffsetDiffBetweenFirstAndSecondRead().set(off - offsetOfFirstRead);
+        this.inputStreamMetrics.getOffsetDiffBetweenFirstAndSecondRead().set(Math.abs(nextReadPos - offsetOfFirstRead));
         this.collectMetricsForNextRead = false;
       }
       if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
