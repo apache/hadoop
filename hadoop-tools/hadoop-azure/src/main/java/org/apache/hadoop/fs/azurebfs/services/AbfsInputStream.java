@@ -620,11 +620,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("set nextReadPos to {}", nextReadPos);
   }
 
-  private void updateInputStreamMetrics(long bytesRead) {
-    this.inputStreamMetrics.getSizeReadByFirstRead().set(bytesRead);
-    this.inputStreamMetrics.getFileLength().set(contentLength);
-  }
-
   @Override
   public synchronized long skip(long n) throws IOException {
     if (closed) {
