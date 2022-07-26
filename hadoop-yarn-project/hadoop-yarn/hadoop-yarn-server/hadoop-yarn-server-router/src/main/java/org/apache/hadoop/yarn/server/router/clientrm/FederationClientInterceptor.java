@@ -295,11 +295,9 @@ public class FederationClientInterceptor
 
     for (int i = 0; i < numSubmitRetries; ++i) {
       SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
-      
       LOG.info("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
       ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
       response = null;
-      
       try {
         response = clientRMProxy.getNewApplication(request);
       } catch (Exception e) {
@@ -320,8 +318,7 @@ public class FederationClientInterceptor
     String errMsg = "Failed to create a new application.";
     RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
         TARGET_CLIENT_RM_SERVICE, errMsg);
-    RouterServerUtil.logAndThrowException(errMsg, null);
-    return response;
+    throw new YarnException(errMsg);
   }
 
   /**

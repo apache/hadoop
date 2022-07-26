@@ -292,34 +292,27 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testSubmitApplicationEmptyRequest()
-      throws YarnException, IOException, InterruptedException {
-    LOG.info(
-        "Test FederationClientInterceptor: Submit Application - Empty");
-    try {
-      interceptor.submitApplication(null);
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().startsWith("Missing submitApplication request or "
-          + "applicationSubmissionContext information."));
-    }
-    try {
-      interceptor.submitApplication(SubmitApplicationRequest.newInstance(null));
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().startsWith("Missing submitApplication request or "
-          + "applicationSubmissionContext information."));
-    }
-    try {
-      ApplicationSubmissionContext context = ApplicationSubmissionContext
-          .newInstance(null, "", "", null, null, false, false, -1, null, null);
-      SubmitApplicationRequest request =
-          SubmitApplicationRequest.newInstance(context);
-      interceptor.submitApplication(request);
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().startsWith("Missing submitApplication request or "
-          + "applicationSubmissionContext information."));
-    }
+      throws Exception {
+    LOG.info("Test FederationClientInterceptor: Submit Application - Empty.");
+
+    // null request1
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing submitApplication request or applicationSubmissionContext information.",
+        () -> interceptor.submitApplication(null));
+
+    // null request2
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing submitApplication request or applicationSubmissionContext information.",
+        () -> interceptor.submitApplication(SubmitApplicationRequest.newInstance(null)));
+
+    // null request3
+    ApplicationSubmissionContext context = ApplicationSubmissionContext
+        .newInstance(null, "", "", null, null, false, false, -1, null, null);
+    SubmitApplicationRequest request =
+        SubmitApplicationRequest.newInstance(context);
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing submitApplication request or applicationSubmissionContext information.",
+        () -> interceptor.submitApplication(request));
   }
 
   /**
@@ -351,21 +344,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    * application does not exist in StateStore.
    */
   @Test
-  public void testForceKillApplicationNotExists()
-      throws YarnException, IOException, InterruptedException {
+  public void testForceKillApplicationNotExists() throws Exception {
     LOG.info("Test FederationClientInterceptor: Force Kill Application - Not Exists");
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     KillApplicationRequest requestKill =
         KillApplicationRequest.newInstance(appId);
-    try {
-      interceptor.forceKillApplication(requestKill);
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertEquals("Application " + appId + " does not exist in FederationStateStore.",
-          e.getMessage());
-    }
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Application " + appId + " does not exist in FederationStateStore.",
+         () -> interceptor.forceKillApplication(requestKill));
   }
 
   /**
@@ -377,17 +366,16 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       throws Exception {
     LOG.info("Test FederationClientInterceptor: Force Kill Application - Empty.");
 
+    // null request1
     LambdaTestUtils.intercept(YarnException.class,
         "Missing forceKillApplication request or ApplicationId.",
         () -> interceptor.forceKillApplication(null));
 
-    try {
-      interceptor.forceKillApplication(KillApplicationRequest.newInstance(null));
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().startsWith(
-          "Missing forceKillApplication request or ApplicationId."));
-    }
+    // null request2
+    KillApplicationRequest killRequest = KillApplicationRequest.newInstance(null);
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing forceKillApplication request or ApplicationId.",
+        () -> interceptor.forceKillApplication(killRequest));
   }
 
   /**
@@ -424,17 +412,14 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testGetApplicationNotExists()
-      throws YarnException, IOException, InterruptedException {
+      throws Exception {
     LOG.info("Test ApplicationClientProtocol: Get Application Report - Not Exists.");
+
     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     GetApplicationReportRequest requestGet = GetApplicationReportRequest.newInstance(appId);
-    try {
-      interceptor.getApplicationReport(requestGet);
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertEquals("Application " + appId + " does not exist in FederationStateStore.",
-          e.getMessage());
-    }
+    LambdaTestUtils.intercept(YarnException.class,
+        "Application " + appId + " does not exist in FederationStateStore.",
+        () -> interceptor.getApplicationReport(requestGet));
   }
 
   /**
@@ -443,31 +428,23 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testGetApplicationEmptyRequest()
-      throws YarnException, IOException, InterruptedException {
-    LOG.info(
-        "Test FederationClientInterceptor: Get Application Report - Empty");
-    try {
-      interceptor.getApplicationReport(null);
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("Missing getApplicationReport request or "
-              + "applicationId information."));
-    }
-    try {
-      interceptor
-          .getApplicationReport(GetApplicationReportRequest.newInstance(null));
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("Missing getApplicationReport request or "
-              + "applicationId information."));
-    }
+      throws Exception {
+    LOG.info("Test FederationClientInterceptor: Get Application Report - Empty.");
+
+    // null request1
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getApplicationReport request or applicationId information.",
+        () -> interceptor.getApplicationReport(null));
+
+    // null request2
+    GetApplicationReportRequest reportRequest = GetApplicationReportRequest.newInstance(null);
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getApplicationReport request or applicationId information.",
+        () -> interceptor.getApplicationReport(reportRequest));
   }
 
   /**
-   * This test validates the correctness of
-   * GetApplicationAttemptReport in case the
+   * This test validates the correctness of GetApplicationAttemptReport in case the
    * application exists in the cluster.
    */
   @Test
@@ -511,65 +488,55 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   }
 
   /**
-   * This test validates the correctness of
-   * GetApplicationAttemptReport in case the
+   * This test validates the correctness of GetApplicationAttemptReport in case the
    * application does not exist in StateStore.
    */
   @Test
-  public void testGetApplicationAttemptNotExists()
-          throws Exception {
-    LOG.info(
-            "Test ApplicationClientProtocol: " +
-                    "Get ApplicationAttempt Report - Not Exists");
+  public void testGetApplicationAttemptNotExists() throws Exception {
+    LOG.info("Test FederationClientInterceptor: Get ApplicationAttempt Report - Not Exists.");
+
     ApplicationId appId =
-            ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
     ApplicationAttemptId appAttemptID =
-            ApplicationAttemptId.newInstance(appId, 1);
+        ApplicationAttemptId.newInstance(appId, 1);
     GetApplicationAttemptReportRequest requestGet =
-            GetApplicationAttemptReportRequest.newInstance(appAttemptID);
+        GetApplicationAttemptReportRequest.newInstance(appAttemptID);
 
     LambdaTestUtils.intercept(YarnException.class, "ApplicationAttempt " +
-            appAttemptID + " belongs to Application " +
-            appId + " does not exist in FederationStateStore.",
+        appAttemptID + " belongs to Application " +
+        appId + " does not exist in FederationStateStore.",
         () -> interceptor.getApplicationAttemptReport(requestGet));
   }
 
   /**
-   * This test validates
-   * the correctness of GetApplicationAttemptReport in case of
+   * This test validates the correctness of GetApplicationAttemptReport in case of
    * empty request.
    */
   @Test
   public void testGetApplicationAttemptEmptyRequest()
-          throws Exception {
-    LOG.info("Test FederationClientInterceptor: " +
-                    "Get ApplicationAttempt Report - Empty");
+      throws Exception {
+    LOG.info("Test FederationClientInterceptor: Get ApplicationAttempt Report - Empty.");
 
+    // null request1
     LambdaTestUtils.intercept(YarnException.class,
-            "Missing getApplicationAttemptReport " +
-                    "request or applicationId " +
-                    "or applicationAttemptId information.",
+        "Missing getApplicationAttemptReport request or applicationId " +
+        "or applicationAttemptId information.",
         () -> interceptor.getApplicationAttemptReport(null));
 
+    // null request2
     LambdaTestUtils.intercept(YarnException.class,
-            "Missing getApplicationAttemptReport " +
-                    "request or applicationId " +
-                    "or applicationAttemptId information.",
-        () -> interceptor
-                    .getApplicationAttemptReport(
-                            GetApplicationAttemptReportRequest
-                                    .newInstance(null)));
+        "Missing getApplicationAttemptReport request or applicationId " +
+        "or applicationAttemptId information.",
+        () -> interceptor.getApplicationAttemptReport(
+        GetApplicationAttemptReportRequest.newInstance(null)));
 
+    // null request3
     LambdaTestUtils.intercept(YarnException.class,
-            "Missing getApplicationAttemptReport " +
-                    "request or applicationId " +
-                    "or applicationAttemptId information.",
-        () -> interceptor
-                    .getApplicationAttemptReport(
-                            GetApplicationAttemptReportRequest.newInstance(
-                                    ApplicationAttemptId
-                                            .newInstance(null, 1)
-                            )));
+        "Missing getApplicationAttemptReport request or applicationId " +
+        "or applicationAttemptId information.",
+        () -> interceptor.getApplicationAttemptReport(
+        GetApplicationAttemptReportRequest.newInstance(
+        ApplicationAttemptId.newInstance(null, 1))));
   }
 
 
@@ -602,7 +569,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetApplicationsResponse()
       throws YarnException, IOException, InterruptedException {
-    LOG.info("Test FederationClientInterceptor: Get Applications Response");
+    LOG.info("Test FederationClientInterceptor: Get Applications Response.");
     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
@@ -624,7 +591,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testGetApplicationsNullRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor: Get Applications request");
+    LOG.info("Test FederationClientInterceptor: Get Applications request.");
     LambdaTestUtils.intercept(YarnException.class, "Missing getApplications request.",
         () -> interceptor.getApplications(null));
   }
@@ -686,7 +653,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testGetClusterNodesRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor : Get Cluster Nodes request");
+    LOG.info("Test FederationClientInterceptor : Get Cluster Nodes request.");
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getClusterNodes request.",
         () -> interceptor.getClusterNodes(null));
@@ -698,7 +665,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testGetNodeToLabelsRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor :  Get Node To Labels request");
+    LOG.info("Test FederationClientInterceptor :  Get Node To Labels request.");
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getNodesToLabels request.",
         () -> interceptor.getNodeToLabels(null));
@@ -710,7 +677,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testGetLabelsToNodesRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor :  Get Labels To Node request");
+    LOG.info("Test FederationClientInterceptor :  Get Labels To Node request.");
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getLabelsToNodes request.",
         () -> interceptor.getLabelsToNodes(null));
@@ -722,7 +689,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testClusterNodeLabelsRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor :  Get Cluster NodeLabels request");
+    LOG.info("Test FederationClientInterceptor :  Get Cluster NodeLabels request.");
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getClusterNodeLabels request.",
         () -> interceptor.getClusterNodeLabels(null));
@@ -734,7 +701,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testGetQueueUserAcls() throws Exception {
-    LOG.info("Test FederationClientInterceptor : Get QueueUserAcls request");
+    LOG.info("Test FederationClientInterceptor : Get QueueUserAcls request.");
 
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getQueueUserAcls request.",
@@ -762,7 +729,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testListReservations() throws Exception {
-    LOG.info("Test FederationClientInterceptor :  Get ListReservations request");
+    LOG.info("Test FederationClientInterceptor :  Get ListReservations request.");
 
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing listReservations request.",
@@ -778,7 +745,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testGetContainersRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor : Get Containers request");
+    LOG.info("Test FederationClientInterceptor : Get Containers request.");
 
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getContainers request " +
@@ -894,7 +861,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testGetResourceTypeInfoRequest() throws Exception {
-    LOG.info("Test FederationClientInterceptor :  Get Resource TypeInfo request");
+    LOG.info("Test FederationClientInterceptor :  Get Resource TypeInfo request.");
     // null request
     LambdaTestUtils.intercept(YarnException.class, "Missing getResourceTypeInfo request.",
         () -> interceptor.getResourceTypeInfo(null));
