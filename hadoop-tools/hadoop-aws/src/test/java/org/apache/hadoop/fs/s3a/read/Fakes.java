@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
-import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
@@ -284,6 +283,7 @@ public final class Fakes {
     private final int writeDelay;
 
     public TestS3FilePerBlockCache(int readDelay, int writeDelay) {
+      super(new EmptyS3AStatisticsContext().newInputStreamStatistics());
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
       this.writeDelay = writeDelay;
@@ -337,7 +337,8 @@ public final class Fakes {
         S3Reader reader,
         BlockData blockData,
         int bufferPoolSize) {
-      super(futurePool, reader, blockData, bufferPoolSize);
+      super(futurePool, reader, blockData, bufferPoolSize,
+          new EmptyS3AStatisticsContext().newInputStreamStatistics());
     }
 
     @Override

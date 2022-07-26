@@ -31,6 +31,10 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 
 /**
  * Provides functionality to read S3 file one block at a time.
@@ -47,6 +51,8 @@ public class S3Reader implements Closeable {
   // Set to true by close().
   private volatile boolean closed;
 
+  private final S3AInputStreamStatistics streamStatistics;
+
   /**
    * Constructs an instance of {@link S3Reader}.
    *
@@ -58,6 +64,7 @@ public class S3Reader implements Closeable {
     Validate.checkNotNull(s3File, "s3File");
 
     this.s3File = s3File;
+    this.streamStatistics = this.s3File.getStatistics();
   }
 
   /**
@@ -95,26 +102,24 @@ public class S3Reader implements Closeable {
   private int readOneBlockWithRetries(ByteBuffer buffer, long offset, int size)
       throws IOException {
 
-    this.s3File.getStatistics().readOperationStarted(offset, size);
+    this.streamStatistics.readOperationStarted(offset, size);
     Invoker invoker = this.s3File.getReadInvoker();
 
-    int invokerResponse = invoker.retry(
-        "read", this.s3File.getPath(), true,
-        () -> {
+    int invokerResponse = invoker.retry("read", this.s3File.getPath(), true,
+        trackDurationOfOperation(streamStatistics, STREAM_READ_REMOTE_BLOCK_READ, () -> {
           try {
             this.readOneBlock(buffer, offset, size);
           } catch (EOFException e) {
             // the base implementation swallows EOFs.
             return -1;
           } catch (SocketTimeoutException e) {
-            this.s3File.getStatistics().readException();
             throw e;
           } catch (IOException e) {
             this.s3File.getStatistics().readException();
             throw e;
           }
           return 0;
-        });
+        }));
 
     int numBytesRead = buffer.position();
     buffer.limit(numBytesRead);
