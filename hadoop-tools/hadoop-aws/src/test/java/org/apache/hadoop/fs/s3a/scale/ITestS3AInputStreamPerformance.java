@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
@@ -56,6 +57,8 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getInputStreamStatistics;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMinimum;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMaximumStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;

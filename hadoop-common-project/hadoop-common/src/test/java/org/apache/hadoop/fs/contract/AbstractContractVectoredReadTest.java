@@ -60,9 +60,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   protected static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   protected static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
 
-  private final IntFunction<ByteBuffer> allocate;
+  protected final IntFunction<ByteBuffer> allocate;
 
-  private final WeakReferencedElasticByteBufferPool pool =
+  protected final WeakReferencedElasticByteBufferPool pool =
           new WeakReferencedElasticByteBufferPool();
 
   private final String bufferType;
@@ -379,6 +379,13 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(100, 500));
     fileRanges.add(FileRange.createFileRange(400, 500));
+    return fileRanges;
+  }
+
+  protected List<FileRange> getConsecutiveRanges() {
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(FileRange.createFileRange(100, 500));
+    fileRanges.add(FileRange.createFileRange(600, 500));
     return fileRanges;
   }
 

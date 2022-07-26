@@ -155,34 +155,6 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
   }
 
   /**
-   * Get the input stream statistics of an input stream.
-   * Raises an exception if the inner stream is not an S3A input stream
-   * @param in wrapper
-   * @return the statistics for the inner stream
-   */
-  protected S3AInputStreamStatistics getInputStreamStatistics(
-      FSDataInputStream in) {
-    return getS3AInputStream(in).getS3AStreamStatistics();
-  }
-
-  /**
-   * Get the inner stream of an input stream.
-   * Raises an exception if the inner stream is not an S3A input stream
-   * @param in wrapper
-   * @return the inner stream
-   * @throws AssertionError if the inner stream is of the wrong type
-   */
-  protected S3AInputStream getS3AInputStream(
-      FSDataInputStream in) {
-    InputStream inner = in.getWrappedStream();
-    if (inner instanceof S3AInputStream) {
-      return (S3AInputStream) inner;
-    } else {
-      throw new AssertionError("Not an S3AInputStream: " + inner);
-    }
-  }
-
-  /**
    * Get the gauge value of a statistic from the
    * IOStatistics of the filesystem. Raises an assertion if
    * there is no such gauge.

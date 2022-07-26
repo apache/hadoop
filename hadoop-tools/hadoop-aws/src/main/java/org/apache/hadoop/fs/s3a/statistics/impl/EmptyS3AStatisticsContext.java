@@ -196,6 +196,17 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void readVectoredOperationStarted(int numIncomingRanges,
+                                             int numCombinedRanges) {
+
+    }
+
+    @Override
+    public void readVectoredBytesDiscarded(int discarded) {
+
+    }
+
+    @Override
     public void close() {
 
     }
