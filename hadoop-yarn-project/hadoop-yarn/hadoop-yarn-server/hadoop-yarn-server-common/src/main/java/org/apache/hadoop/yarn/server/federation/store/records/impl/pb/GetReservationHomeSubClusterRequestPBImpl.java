@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetRes
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protocol buffer based implementation of

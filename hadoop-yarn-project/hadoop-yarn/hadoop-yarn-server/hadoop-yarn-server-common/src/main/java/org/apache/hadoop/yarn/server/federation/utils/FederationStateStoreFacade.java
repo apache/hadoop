@@ -421,7 +421,7 @@ public final class FederationStateStoreFacade {
       ReservationHomeSubCluster appHomeSubCluster) throws YarnException {
     AddReservationHomeSubClusterResponse response =
         stateStore.addReservationHomeSubCluster(
-            AddReservationHomeSubClusterRequest.newInstance(appHomeSubCluster));
+        AddReservationHomeSubClusterRequest.newInstance(appHomeSubCluster));
     return response.getHomeSubCluster();
   }
 
@@ -452,7 +452,7 @@ public final class FederationStateStoreFacade {
       throws YarnException {
     GetReservationHomeSubClusterResponse response =
         stateStore.getReservationHomeSubCluster(
-            GetReservationHomeSubClusterRequest.newInstance(reservationId));
+        GetReservationHomeSubClusterRequest.newInstance(reservationId));
     return response.getReservationHomeSubCluster().getHomeSubCluster();
   }
 
@@ -665,18 +665,4 @@ public final class FederationStateStoreFacade {
   protected interface Func<T, TResult> {
     TResult invoke(T input) throws Exception;
   }
-
-  /**
-   * Returns the home {@link SubClusterId} for the specified
-   * {@link ReservationId}.
-   *
-   * @param reservationId the identifier of the reservation
-   * @return the home sub cluster identifier
-   * @throws YarnException if the call to the state store is unsuccessful
-   */
-  public SubClusterId getReservationHomeSubCluster(ReservationId reservationId)
-      throws YarnException {
-    return null;
-  }
-
 }

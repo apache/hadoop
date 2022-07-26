@@ -65,6 +65,16 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
@@ -636,5 +646,35 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private static long getCurrentTime() {
     Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     return cal.getTimeInMillis();
+  }
+
+  @Override
+  public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
+      AddReservationHomeSubClusterRequest request) throws YarnException {
+    return null;
+  }
+
+  @Override
+  public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
+      UpdateReservationHomeSubClusterRequest request) throws YarnException {
+    return null;
+  }
+
+  @Override
+  public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
+      GetReservationHomeSubClusterRequest request) throws YarnException {
+    return null;
+  }
+
+  @Override
+  public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
+      GetReservationsHomeSubClusterRequest request) throws YarnException {
+    return null;
+  }
+
+  @Override
+  public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
+      DeleteReservationHomeSubClusterRequest request) throws YarnException {
+    return null;
   }
 }
