@@ -30,18 +30,18 @@ import java.util.Random;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.junit.Test;
 
 /**
@@ -184,4 +184,48 @@ public abstract class BaseFederationPoliciesTest {
     }
   }
 
+  public String generateClusterMetricsInfo(int id) {
+
+    long mem = 1024 * getRand().nextInt(277 * 100 - 1);
+    // plant a best cluster
+    if (id == 5) {
+      mem = 1024 * 277 * 100;
+    }
+    String clusterMetrics =
+            "{\"clusterMetrics\":{\"appsSubmitted\":65," + "\"appsCompleted\":64,"
+                    + "\"appsPending\":0,\"appsRunning\":0,\"appsFailed\":0,"
+                    + "\"appsKilled\":1,\"reservedMB\":0,\"availableMB\":" + mem + ","
+                    + "\"allocatedMB\":0,\"reservedVirtualCores\":0,"
+                    + "\"availableVirtualCores\":2216,\"allocatedVirtualCores\":0,"
+                    + "\"containersAllocated\":0,\"containersReserved\":0,"
+                    + "\"containersPending\":0,\"totalMB\":28364800,"
+                    + "\"totalVirtualCores\":2216,\"totalNodes\":278,\"lostNodes\":1,"
+                    + "\"unhealthyNodes\":0,\"decommissionedNodes\":0,"
+                    + "\"rebootedNodes\":0,\"activeNodes\":277}}\n";
+
+    return clusterMetrics;
+
+  }
+
+  public FederationStateStoreFacade getMemoryFacade() throws YarnException {
+
+    // setting up a store and its facade (with caching off)
+    FederationStateStoreFacade fedFacade =
+            FederationStateStoreFacade.getInstance();
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, "0");
+    FederationStateStore store = new MemoryFederationStateStore();
+    store.init(conf);
+    fedFacade.reinitialize(store, conf);
+
+    for (SubClusterInfo sinfo : getActiveSubclusters().values()) {
+      store.registerSubCluster(SubClusterRegisterRequest.newInstance(sinfo));
+    }
+
+    return fedFacade;
+  }
+
+  public void setupContext() throws YarnException {
+
+  }
 }
