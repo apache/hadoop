@@ -91,6 +91,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaByStorageTypeO
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetStoragePolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SwapBlockListOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TruncateOp;
@@ -1295,6 +1296,21 @@ public class FSEditLog implements LogsPurgeable {
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
+
+  /**
+   * Add SwapBlockList record to edit log.
+   *
+   */
+  void logSwapBlockList(String src, String dst, long timestamp,
+                        boolean toLogRpcIds) {
+    SwapBlockListOp op = SwapBlockListOp.getInstance(cache.get())
+        .setSource(src)
+        .setDestination(dst)
+        .setTimestamp(timestamp);
+    logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
+
   /**
    * Get all the journals this edit log is currently operating on.
    */

@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
@@ -35,13 +36,14 @@ import org.apache.hadoop.util.Time;
  * of a file header, which is useful for client operations like converting
  * replicated to EC file.
  */
-public final class SwapBlockListOp {
+public final class FSDirSwapBlockListOp {
 
-  private SwapBlockListOp() {
+  private FSDirSwapBlockListOp() {
   }
 
   static SwapBlockListResult swapBlocks(FSDirectory fsd, FSPermissionChecker pc,
-                          String src, String dst, long genTimestamp)
+                          String src, String dst, long genTimestamp,
+                          final boolean logRetryCache)
       throws IOException {
 
     final INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE);
@@ -61,6 +63,8 @@ public final class SwapBlockListOp {
     } finally {
       fsd.writeUnlock();
     }
+    fsd.getEditLog().logSwapBlockList(srcIIP.getPath(), dstIIP.getPath(),
+        genTimestamp, logRetryCache);
     return result;
   }
 
@@ -153,6 +157,25 @@ public final class SwapBlockListOp {
       NameNode.stateChangeLog.warn(errorPrefix + error);
       throw new IOException(error);
     }
+  }
+
+  /**
+   * swapBlockList src to dst.
+   * <br>
+   * Note: This is to be used by {@link org.apache.hadoop.hdfs.server
+   * .namenode.FSEditLogLoader} only.
+   * <br>
+   * @param fsd       FSDirectory
+   * @param src       source path
+   * @param dst       destination path
+   * @param timestamp modification time
+   */
+  static void swapBlockListForEditLog(
+      FSDirectory fsd, String src, String dst, long timestamp)
+      throws IOException {
+    final INodesInPath srcIIP = fsd.getINodesInPath(src, DirOp.WRITE);
+    final INodesInPath dstIIP = fsd.getINodesInPath(dst, DirOp.WRITE);
+    swapBlockList(fsd, srcIIP, dstIIP, timestamp);
   }
 
   static class SwapBlockListResult {

@@ -2674,7 +2674,18 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.swapBlockList: {} and {}", src, dst);
     }
-    return namesystem.swapBlockList(src, dst, maxTimestamp);
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return true;
+    }
+    boolean ret = false;
+    try {
+      ret =
+          namesystem.swapBlockList(src, dst, maxTimestamp, cacheEntry != null);
+    } finally {
+      RetryCache.setState(cacheEntry, ret);
+    }
+    return ret;
   }
 
 }
