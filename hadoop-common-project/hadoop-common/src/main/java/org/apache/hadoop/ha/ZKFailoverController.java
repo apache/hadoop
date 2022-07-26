@@ -185,7 +185,7 @@ public abstract class ZKFailoverController {
         }
       });
     } catch (RuntimeException rte) {
-      throw (Exception)rte;
+      throw (Exception)rte.getCause();
     }
   }
   
