@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.common;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -31,6 +33,12 @@ import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.statistics.DurationTracker;
+
+import static java.util.Objects.requireNonNull;
+
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Provides read access to the underlying file one block at a time.
@@ -69,33 +77,37 @@ public abstract class CachingBlockManager extends BlockManager {
   // Once set to true, any further caching requests will be ignored.
   private final AtomicBoolean cachingDisabled;
 
+  private final PrefetchingStatistics prefetchingStatistics;
+
   /**
    * Constructs an instance of a {@code CachingBlockManager}.
    *
    * @param threadPool asynchronous tasks are performed in this pool.
    * @param blockData information about each block of the underlying file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
+   * @param prefetchingStatistics statistics for this stream.
    *
-   * @throws IllegalArgumentException if futurePool is null.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
       ExecutorService threadPool,
       BlockData blockData,
-      int bufferPoolSize) {
+      int bufferPoolSize,
+      PrefetchingStatistics prefetchingStatistics) {
     super(blockData);
 
-    Validate.checkNotNull(threadPool, "threadPool");
     Validate.checkPositiveInteger(bufferPoolSize, "bufferPoolSize");
 
-    this.threadPool = threadPool;
+    this.threadPool = requireNonNull(threadPool);
     this.bufferPoolSize = bufferPoolSize;
     this.numCachingErrors = new AtomicInteger();
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
+    this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
 
     if (this.getBlockData().getFileSize() > 0) {
-      this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize());
+      this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
+          this.prefetchingStatistics);
       this.cache = this.createCache();
     }
 
@@ -205,7 +217,7 @@ public abstract class CachingBlockManager extends BlockManager {
     // Cancel any prefetches in progress.
     this.cancelPrefetches();
 
-    Io.closeIgnoringIoException(this.cache);
+    cleanupWithLogger(LOG, this.cache);
 
     this.ops.end(op);
     LOG.info(this.ops.getSummary(false));
@@ -248,7 +260,7 @@ public abstract class CachingBlockManager extends BlockManager {
       }
 
       BlockOperations.Operation op = this.ops.requestPrefetch(blockNumber);
-      PrefetchTask prefetchTask = new PrefetchTask(data, this);
+      PrefetchTask prefetchTask = new PrefetchTask(data, this, Instant.now());
       Future<Void> prefetchFuture = this.threadPool.submit(prefetchTask::get);
       data.setPrefetch(prefetchFuture);
       this.ops.end(op);
@@ -278,8 +290,10 @@ public abstract class CachingBlockManager extends BlockManager {
     }
   }
 
-  private void prefetch(BufferData data) throws IOException {
+  private void prefetch(BufferData data, Instant taskQueuedStartTime) throws IOException {
     synchronized (data) {
+      prefetchingStatistics.executorAcquired(
+          Duration.between(taskQueuedStartTime, Instant.now()));
       this.readBlock(
           data,
           true,
@@ -296,6 +310,7 @@ public abstract class CachingBlockManager extends BlockManager {
     }
 
     BlockOperations.Operation op = null;
+    DurationTracker tracker = null;
 
     synchronized (data) {
       try {
@@ -317,6 +332,7 @@ public abstract class CachingBlockManager extends BlockManager {
         }
 
         if (isPrefetch) {
+          tracker = prefetchingStatistics.prefetchOperationStarted();
           op = this.ops.prefetch(data.getBlockNumber());
         } else {
           op = this.ops.getRead(data.getBlockNumber());
@@ -332,12 +348,24 @@ public abstract class CachingBlockManager extends BlockManager {
       } catch (Exception e) {
         String message = String.format("error during readBlock(%s)", data.getBlockNumber());
         LOG.error(message, e);
+
+        if (isPrefetch && tracker != null) {
+          tracker.failed();
+        }
+
         this.numReadErrors.incrementAndGet();
         data.setDone();
         throw e;
       } finally {
         if (op != null) {
           this.ops.end(op);
+        }
+
+        if (isPrefetch) {
+          prefetchingStatistics.prefetchOperationCompleted();
+          if (tracker != null) {
+            tracker.close();
+          }
         }
       }
     }
@@ -349,16 +377,18 @@ public abstract class CachingBlockManager extends BlockManager {
   private static class PrefetchTask implements Supplier<Void> {
     private final BufferData data;
     private final CachingBlockManager blockManager;
+    private final Instant taskQueuedStartTime;
 
-    PrefetchTask(BufferData data, CachingBlockManager blockManager) {
+    PrefetchTask(BufferData data, CachingBlockManager blockManager, Instant taskQueuedStartTime) {
       this.data = data;
       this.blockManager = blockManager;
+      this.taskQueuedStartTime = taskQueuedStartTime;
     }
 
     @Override
     public Void get() {
       try {
-        this.blockManager.prefetch(data);
+        this.blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
         LOG.error("error during prefetch", e);
       }
@@ -419,14 +449,18 @@ public abstract class CachingBlockManager extends BlockManager {
         blockFuture = cf;
       }
 
-      CachePutTask task = new CachePutTask(data, blockFuture, this);
+      CachePutTask task = new CachePutTask(data, blockFuture, this, Instant.now());
       Future<Void> actionFuture = this.threadPool.submit(task::get);
       data.setCaching(actionFuture);
       this.ops.end(op);
     }
   }
 
-  private void addToCacheAndRelease(BufferData data, Future<Void> blockFuture) {
+  private void addToCacheAndRelease(BufferData data, Future<Void> blockFuture,
+      Instant taskQueuedStartTime) {
+    prefetchingStatistics.executorAcquired(
+        Duration.between(taskQueuedStartTime, Instant.now()));
+
     if (this.closed) {
       return;
     }
@@ -492,7 +526,7 @@ public abstract class CachingBlockManager extends BlockManager {
   }
 
   protected BlockCache createCache() {
-    return new SingleFilePerBlockCache();
+    return new SingleFilePerBlockCache(prefetchingStatistics);
   }
 
   protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {
@@ -512,18 +546,22 @@ public abstract class CachingBlockManager extends BlockManager {
     // Block manager that manages this block.
     private final CachingBlockManager blockManager;
 
+    private final Instant taskQueuedStartTime;
+
     CachePutTask(
         BufferData data,
         Future<Void> blockFuture,
-        CachingBlockManager blockManager) {
+        CachingBlockManager blockManager,
+        Instant taskQueuedStartTime) {
       this.data = data;
       this.blockFuture = blockFuture;
       this.blockManager = blockManager;
+      this.taskQueuedStartTime = taskQueuedStartTime;
     }
 
     @Override
     public Void get() {
-      this.blockManager.addToCacheAndRelease(this.data, this.blockFuture);
+      this.blockManager.addToCacheAndRelease(this.data, this.blockFuture, taskQueuedStartTime);
       return null;
     }
   }

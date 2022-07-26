@@ -45,11 +45,13 @@ import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
@@ -130,7 +132,11 @@ public final class Fakes {
         fileStatus,
         threadPool,
         prefetchBlockSize,
-        prefetchBlockCount);
+        prefetchBlockCount)
+        .withChangeDetectionPolicy(
+            ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,
+                ChangeDetectionPolicy.Source.ETag, false))
+        .withInputPolicy(S3AInputPolicy.Normal);
   }
 
   public static URI createUri(String bucket, String key) {
@@ -215,11 +221,13 @@ public final class Fakes {
         prefetchBlockCount);
 
     S3AInputStream.InputStreamCallbacks callbacks = createInputStreamCallbacks(bucket, key);
+    S3AInputStreamStatistics stats =
+        s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics();
 
     if (clazz == TestS3InMemoryInputStream.class) {
-      return new TestS3InMemoryInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks);
+      return new TestS3InMemoryInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
     } else if (clazz == TestS3CachingInputStream.class) {
-      return new TestS3CachingInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks);
+      return new TestS3CachingInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
     }
 
     throw new RuntimeException("Unsupported class: " + clazz);
@@ -257,8 +265,9 @@ public final class Fakes {
     public TestS3InMemoryInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
-        S3AInputStream.InputStreamCallbacks client) {
-      super(context, s3Attributes, client);
+        S3AInputStream.InputStreamCallbacks client,
+        S3AInputStreamStatistics streamStatistics) {
+      super(context, s3Attributes, client, streamStatistics);
     }
 
     @Override
@@ -274,6 +283,7 @@ public final class Fakes {
     private final int writeDelay;
 
     public TestS3FilePerBlockCache(int readDelay, int writeDelay) {
+      super(new EmptyS3AStatisticsContext().newInputStreamStatistics());
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
       this.writeDelay = writeDelay;
@@ -327,7 +337,8 @@ public final class Fakes {
         S3Reader reader,
         BlockData blockData,
         int bufferPoolSize) {
-      super(threadPool, reader, blockData, bufferPoolSize);
+      super(threadPool, reader, blockData, bufferPoolSize,
+          new EmptyS3AStatisticsContext().newInputStreamStatistics());
     }
 
     @Override
@@ -348,8 +359,9 @@ public final class Fakes {
     public TestS3CachingInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
-        S3AInputStream.InputStreamCallbacks client) {
-      super(context, s3Attributes, client);
+        S3AInputStream.InputStreamCallbacks client,
+        S3AInputStreamStatistics streamStatistics) {
+      super(context, s3Attributes, client, streamStatistics);
     }
 
     @Override

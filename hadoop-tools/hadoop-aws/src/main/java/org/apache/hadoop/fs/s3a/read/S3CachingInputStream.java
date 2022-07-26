@@ -31,6 +31,10 @@ import org.apache.hadoop.fs.common.BufferData;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
 
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
@@ -53,6 +57,7 @@ public class S3CachingInputStream extends S3InputStream {
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
+   * @param streamStatistics statistics for this stream.
    *
    * @throws IllegalArgumentException if context is null.
    * @throws IllegalArgumentException if s3Attributes is null.
@@ -61,8 +66,9 @@ public class S3CachingInputStream extends S3InputStream {
   public S3CachingInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client) {
-    super(context, s3Attributes, client);
+      S3AInputStream.InputStreamCallbacks client,
+      S3AInputStreamStatistics streamStatistics) {
+    super(context, s3Attributes, client, streamStatistics);
 
     this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
     int bufferPoolSize = this.numBlocksToPrefetch + 1;
@@ -117,8 +123,10 @@ public class S3CachingInputStream extends S3InputStream {
 
   @Override
   public void close() throws IOException {
-    super.close();
+    // Close the BlockManager first, cancelling active prefetches,
+    // deleting cached files and freeing memory used by buffer pool.
     this.blockManager.close();
+    super.close();
     LOG.info("closed: {}", this.getName());
   }
 
@@ -168,7 +176,10 @@ public class S3CachingInputStream extends S3InputStream {
       }
     }
 
-    BufferData data = this.blockManager.get(toBlockNumber);
+    BufferData data = invokeTrackingDuration(
+        this.getS3AStreamStatistics().trackDuration(STREAM_READ_BLOCK_ACQUIRE_AND_READ),
+        () -> this.blockManager.get(toBlockNumber));
+
     this.getFilePosition().setData(data, startOffset, readPos);
     return true;
   }
@@ -190,6 +201,7 @@ public class S3CachingInputStream extends S3InputStream {
       S3Reader reader,
       BlockData blockData,
       int bufferPoolSize) {
-    return new S3CachingBlockManager(threadPool, reader, blockData, bufferPoolSize);
+    return new S3CachingBlockManager(threadPool, reader, blockData, bufferPoolSize,
+        this.getS3AStreamStatistics());
   }
 }

@@ -44,6 +44,8 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Provides an {@link InputStream} that allows reading from an S3 file.
  */
@@ -96,6 +98,7 @@ public abstract class S3InputStream
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
+   * @param streamStatistics statistics for this stream.
    *
    * @throws IllegalArgumentException if context is null.
    * @throws IllegalArgumentException if s3Attributes is null.
@@ -104,16 +107,13 @@ public abstract class S3InputStream
   public S3InputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client) {
+      S3AInputStream.InputStreamCallbacks client,
+      S3AInputStreamStatistics streamStatistics) {
 
-    Validate.checkNotNull(context, "context");
-    Validate.checkNotNull(s3Attributes, "s3Attributes");
-    Validate.checkNotNull(client, "client");
-
-    this.context = context;
-    this.s3Attributes = s3Attributes;
-    this.client = client;
-    this.streamStatistics = context.getS3AStatisticsContext().newInputStreamStatistics();
+    this.context = requireNonNull(context);
+    this.s3Attributes = requireNonNull(s3Attributes);
+    this.client = requireNonNull(client);
+    this.streamStatistics = requireNonNull(streamStatistics);
     this.ioStatistics = streamStatistics.getIOStatistics();
     this.name = S3File.getPath(s3Attributes);
     this.changeTracker = new ChangeTracker(
