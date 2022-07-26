@@ -278,6 +278,7 @@ public class RawLocalFileSystem extends FileSystem {
       // new capabilities.
       switch (capability.toLowerCase(Locale.ENGLISH)) {
       case StreamCapabilities.IOSTATISTICS:
+      case StreamCapabilities.IOSTATISTICS_CONTEXT:
       case StreamCapabilities.VECTOREDIO:
         return true;
       default:
@@ -485,6 +486,7 @@ public class RawLocalFileSystem extends FileSystem {
       // new capabilities.
       switch (capability.toLowerCase(Locale.ENGLISH)) {
       case StreamCapabilities.IOSTATISTICS:
+      case StreamCapabilities.IOSTATISTICS_CONTEXT:
         return true;
       default:
         return StoreImplementationUtils.isProbeForSyncable(capability);
