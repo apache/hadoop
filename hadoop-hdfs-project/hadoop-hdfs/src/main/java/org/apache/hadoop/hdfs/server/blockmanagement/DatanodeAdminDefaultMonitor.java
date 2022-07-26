@@ -201,7 +201,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         iterkey).iterator();
     final List<DatanodeDescriptor> toRemove = new ArrayList<>();
     final List<DatanodeDescriptor> unhealthyDns = new ArrayList<>();
-    boolean inValidState = false;
+    boolean isValidState = true;
 
     while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
         .isRunning()) {
@@ -266,7 +266,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
               // to track maintenance expiration.
               dnAdmin.setInMaintenance(dn);
             } else {
-              inValidState  = true;
+              isValidState  = false;
               Preconditions.checkState(false,
                   "Node %s is in an invalid state! "
                       + "Invalid state: %s %s blocks are on this dn.",
@@ -290,7 +290,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // an invalid state.
         LOG.warn("DatanodeAdminMonitor caught exception when processing node "
             + "{}.", dn, e);
-        if(!inValidState){
+        if(isValidState){
           getPendingNodes().add(dn);
         } else {
           LOG.warn("Ignoring the node {} which is in invalid state", dn);
