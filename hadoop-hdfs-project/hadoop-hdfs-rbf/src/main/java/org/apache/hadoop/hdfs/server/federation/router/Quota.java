@@ -204,7 +204,8 @@ public class Quota {
    * @return {@code true} if path is a mount entry; {@code false} otherwise.
    */
   private boolean isMountEntry(String path) {
-    return router.getQuotaManager().isMountEntry(path);
+    return router.isQuotaEnabled() &&
+        router.getQuotaManager().isMountEntry(path);
   }
 
   /**
