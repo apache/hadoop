@@ -78,4 +78,14 @@ public class TestGangliaSink {
         int ttl = ((MulticastSocket) socket).getTimeToLive();
         assertEquals("Did not set TTL", 3, ttl);
     }
+
+    @Test
+    public void testMultipleMetricsServers() {
+        SubsetConfiguration conf =
+            new ConfigBuilder().add("test.sink.ganglia.servers", "server1,server2")
+                .subset("test.sink.ganglia");
+        GangliaSink30 gangliaSink = new GangliaSink30();
+        gangliaSink.init(conf);
+        assertEquals(2, gangliaSink.getMetricsServers().size());
+    }
 }
