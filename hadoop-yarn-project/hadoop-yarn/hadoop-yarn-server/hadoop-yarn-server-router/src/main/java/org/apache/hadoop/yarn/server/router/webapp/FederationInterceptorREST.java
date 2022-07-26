@@ -952,56 +952,29 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     NodesInfo nodes = new NodesInfo();
 
-    final Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = getActiveSubclusters();
-    } catch (Exception e) {
-      LOG.error("Cannot get nodes.", e);
-      return new NodesInfo();
-    }
-
-    // Send the requests in parallel
-    CompletionService<NodesInfo> compSvc =
-        new ExecutorCompletionService<NodesInfo>(this.threadpool);
-
-    for (final SubClusterInfo info : subClustersActive.values()) {
-      compSvc.submit(new Callable<NodesInfo>() {
-        @Override
-        public NodesInfo call() {
-          DefaultRequestInterceptorREST interceptor =
-              getOrCreateInterceptorForSubCluster(
-                  info.getSubClusterId(), info.getRMWebServiceAddress());
-          try {
-            NodesInfo nodesInfo = interceptor.getNodes(states);
-            return nodesInfo;
-          } catch (Exception e) {
-            LOG.error("Subcluster {} failed to return nodesInfo.", info.getSubClusterId(), e);
-            return null;
-          }
-        }
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{String.class};
+      Object[] args = new Object[]{states};
+      ClientMethod remoteMethod = new ClientMethod("getNodes", argsClasses, args);
+      Map<SubClusterInfo, NodesInfo> nodesMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodesInfo.class);
+      nodesMap.values().stream().forEach(nodesInfo -> {
+        nodes.addAll(nodesInfo.getNodes());
       });
-    }
 
-    // Collect all the responses in parallel
-
-    for (int i = 0; i < subClustersActive.size(); i++) {
-      try {
-        Future<NodesInfo> future = compSvc.take();
-        NodesInfo nodesResponse = future.get();
-
-        if (nodesResponse != null) {
-          nodes.addAll(nodesResponse.getNodes());
-        }
-      } catch (Throwable e) {
-        LOG.warn("Failed to get nodes report ", e);
-      }
+    } catch (NotFoundException e) {
+      LOG.error("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      LOG.error("getNodes error.", e);
+    } catch (IOException e) {
+      LOG.error("getNodes error.", e);
     }
 
     // Delete duplicate from all the node reports got from all the available
     // YARN RMs. Nodes can be moved from one subclusters to another. In this
     // operation they result LOST/RUNNING in the previous SubCluster and
     // NEW/RUNNING in the new one.
-
     return RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
   }
 
