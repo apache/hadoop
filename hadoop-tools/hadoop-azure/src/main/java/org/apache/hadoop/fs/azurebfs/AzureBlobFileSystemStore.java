@@ -131,7 +131,7 @@ import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
-
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamMetrics;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
@@ -812,6 +812,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withOptimizeFooterRead(abfsConfiguration.optimizeFooterRead())
             .withReadAheadRange(abfsConfiguration.getReadAheadRange())
             .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
+            .withStreamMetrics(new AbfsInputStreamMetrics())
             .withShouldReadBufferSizeAlways(
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())

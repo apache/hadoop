@@ -42,7 +42,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
+import java.util.Set;
+import java.util.LinkedHashSet;
+import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -108,7 +111,7 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
-
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamMetrics;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -157,7 +160,6 @@ public class AzureBlobFileSystem extends FileSystem
 
   /** Rate limiting for operations which use it to throttle their IO. */
   private RateLimiting rateLimiting;
-
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
@@ -683,32 +685,35 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
-    String metric = abfsCounters.getAbfsDriverMetrics().toString();
+    List<AbfsInputStreamMetrics> inputStreamMetricsList = abfsCounters.getAbfsInputStreamMetrics();
+    ArrayList<Double> avgStreamMetrics = new ArrayList<>();
+    String inputStreamMetric = "";
+    if (!inputStreamMetricsList.isEmpty()){
+      avgStreamMetrics = getStreamMetricsAverage(inputStreamMetricsList);
+    }
+    if(avgStreamMetrics.size() > 0) {
+      inputStreamMetric = getStreamMetrics(avgStreamMetrics);
+    }
+    String metric = abfsCounters.getAbfsDriverMetrics().toString() + inputStreamMetric;
     LOG.debug("The metrics collected over this instance are " + metric);
     if (sendMetricsToStore) {
-      if (abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get()
-          > 0) {
+      if (abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get() > 0) {
         try {
           Configuration metricConfig = getConf();
-          String metricAccountKey = metricConfig.get(
-              FS_AZURE_METRIC_ACCOUNT_KEY);
+          String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
           final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
           if (abfsMetricUrl == null) {
             return;
           }
-          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME,
-              metricAccountKey);
-          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
-              "false");
+          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
+          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
           URI metricUri;
           try {
             metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
           } catch (URISyntaxException ex) {
             throw new AssertionError(ex);
           }
-          AzureBlobFileSystem metricFs
-              = (AzureBlobFileSystem) FileSystem.newInstance(metricUri,
-              metricConfig);
+          AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
           metricFs.sendMetric(metric);
         } catch (AzureBlobFileSystemException ex) {
           //do nothing
@@ -729,6 +734,28 @@ public class AzureBlobFileSystem extends FileSystem
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());
     }
+  }
+
+  private ArrayList<Double> getStreamMetricsAverage(List<AbfsInputStreamMetrics> inputStreamMetricsList){
+    ArrayList<Double> avgInputStreamMetrics = new ArrayList<>();
+    avgInputStreamMetrics.add(inputStreamMetricsList.stream()
+          .map(AbfsInputStreamMetrics::getSizeReadByFirstRead).mapToDouble(AtomicLong::get)
+          .average().orElse(0.0));
+    avgInputStreamMetrics.add(inputStreamMetricsList.stream()
+        .map(AbfsInputStreamMetrics::getOffsetDiffBetweenFirstAndSecondRead)
+        .mapToDouble(AtomicLong::get).average().orElse(0.0));
+    avgInputStreamMetrics.add(inputStreamMetricsList.stream()
+        .map(AbfsInputStreamMetrics::getFileLength)
+        .mapToDouble(AtomicLong::get).average().orElse(0.0));
+    return avgInputStreamMetrics;
+  }
+
+  private String getStreamMetrics(ArrayList<Double> avgInputStreamMetrics) {
+    String inputStreamMetric = " #%SRFR=" + String.format("%.3f",
+        avgInputStreamMetrics.get(0))
+        + " #%DOFS=" + String.format("%.3f", avgInputStreamMetrics.get(1))
+        + " #%FL=" + String.format("%.3f", avgInputStreamMetrics.get(2));
+    return inputStreamMetric + " ";
   }
 
   public void sendMetric(String metric) throws AzureBlobFileSystemException {

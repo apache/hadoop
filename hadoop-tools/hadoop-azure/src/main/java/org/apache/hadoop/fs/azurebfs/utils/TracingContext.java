@@ -19,10 +19,10 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.util.UUID;
-
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import java.util.LinkedHashSet;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -62,9 +62,7 @@ public class TracingContext {
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
-
   private String metricResults = EMPTY_STRING;
-
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
