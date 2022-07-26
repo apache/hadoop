@@ -956,7 +956,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       subClustersActive = getActiveSubclusters();
     } catch (Exception e) {
-      LOG.error("Cannot get nodes: {}", e.getMessage(), e);
+      LOG.error("Cannot get nodes.", e);
       return new NodesInfo();
     }
 
