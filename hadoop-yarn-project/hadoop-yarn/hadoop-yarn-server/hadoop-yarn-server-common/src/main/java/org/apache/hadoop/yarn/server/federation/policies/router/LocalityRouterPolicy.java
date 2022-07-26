@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Collections;
 
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
@@ -78,7 +79,7 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
     resolver = policyContext.getFederationSubclusterResolver();
     Map<SubClusterIdInfo, Float> weights =
         getPolicyInfo().getRouterPolicyWeights();
-    enabledSCs = new ArrayList<SubClusterId>();
+    enabledSCs = new ArrayList<>();
     for (Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()) {
       if (entry != null && entry.getValue() > 0) {
         enabledSCs.add(entry.getKey().toId());
@@ -100,8 +101,7 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
     // Fast path for FailForward to WeightedRandomRouterPolicy
     if (rrList == null || rrList.isEmpty() || (rrList.size() == 1
         && ResourceRequest.isAnyLocation(rrList.get(0).getResourceName()))) {
-      return super
-          .getHomeSubcluster(appSubmissionContext, blackListSubClusters);
+      return super.getHomeSubcluster(appSubmissionContext, blackListSubClusters);
     }
 
     if (rrList.size() != 3) {
@@ -109,12 +109,10 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
           "Invalid number of resource requests: " + rrList.size());
     }
 
-    Map<SubClusterId, SubClusterInfo> activeSubClusters =
-        getActiveSubclusters();
-    List<SubClusterId> validSubClusters =
-        new ArrayList<>(activeSubClusters.keySet());
-    FederationPolicyUtils
-        .validateSubClusterAvailability(validSubClusters, blackListSubClusters);
+    Map<SubClusterId, SubClusterInfo> activeSubClusters = getActiveSubclusters();
+    List<SubClusterId> validSubClusters = new ArrayList<>(activeSubClusters.keySet());
+    FederationPolicyUtils.validateSubClusterAvailability(validSubClusters, blackListSubClusters);
+
     if (blackListSubClusters != null) {
       // Remove from the active SubClusters from StateStore the blacklisted ones
       validSubClusters.removeAll(blackListSubClusters);
@@ -128,20 +126,21 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
       ResourceRequest nodeRequest = null;
       ResourceRequest rackRequest = null;
       ResourceRequest anyRequest = null;
+
       for (ResourceRequest rr : rrList) {
         // Handle "node" requests
         try {
           targetId = resolver.getSubClusterForNode(rr.getResourceName());
           nodeRequest = rr;
         } catch (YarnException e) {
-          LOG.error("Cannot resolve node : {}", e.getLocalizedMessage());
+          LOG.error("Cannot resolve node.", e);
         }
         // Handle "rack" requests
         try {
           resolver.getSubClustersForRack(rr.getResourceName());
           rackRequest = rr;
         } catch (YarnException e) {
-          LOG.error("Cannot resolve rack : {}", e.getLocalizedMessage());
+          LOG.error("Cannot resolve rack.", e);
         }
         // Handle "ANY" requests
         if (ResourceRequest.isAnyLocation(rr.getResourceName())) {
@@ -149,24 +148,25 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
           continue;
         }
       }
+
       if (nodeRequest == null) {
-        throw new YarnException("Missing node request");
+        throw new YarnException("Missing node request.");
       }
       if (rackRequest == null) {
-        throw new YarnException("Missing rack request");
+        throw new YarnException("Missing rack request.");
       }
       if (anyRequest == null) {
-        throw new YarnException("Missing any request");
+        throw new YarnException("Missing any request.");
       }
-      LOG.info(
-          "Node request: " + nodeRequest.getResourceName() + ", Rack request: "
-              + rackRequest.getResourceName() + ", Any request: " + anyRequest
-              .getResourceName());
+
+      LOG.info("Node request: {} , Rack request: {} , Any request: {}.",
+          nodeRequest.getResourceName(), rackRequest.getResourceName(),
+          anyRequest.getResourceName());
+
       // Handle "node" requests
       if (validSubClusters.contains(targetId) && enabledSCs
           .contains(targetId)) {
-        LOG.info("Node {} is in SubCluster: {}", nodeRequest.getResourceName(),
-            targetId);
+        LOG.info("Node {} is in SubCluster: {}.", nodeRequest.getResourceName(), targetId);
         return targetId;
       } else {
         throw new YarnException("The node " + nodeRequest.getResourceName()
@@ -174,7 +174,7 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
       }
     } catch (YarnException e) {
       LOG.error("Validating resource requests failed, Falling back to "
-          + "WeightedRandomRouterPolicy placement: " + e.getMessage());
+          + "WeightedRandomRouterPolicy placement.", e);
       // FailForward to WeightedRandomRouterPolicy
       // Overwrite request to use a default ANY
       ResourceRequest amReq = Records.newRecord(ResourceRequest.class);
@@ -183,14 +183,10 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
       amReq.setCapability(appSubmissionContext.getResource());
       amReq.setNumContainers(1);
       amReq.setRelaxLocality(true);
-      amReq.setNodeLabelExpression(
-          appSubmissionContext.getNodeLabelExpression());
-      amReq.setExecutionTypeRequest(
-          ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED));
-      appSubmissionContext
-          .setAMContainerResourceRequests(Collections.singletonList(amReq));
-      return super
-          .getHomeSubcluster(appSubmissionContext, blackListSubClusters);
+      amReq.setNodeLabelExpression(appSubmissionContext.getNodeLabelExpression());
+      amReq.setExecutionTypeRequest(ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED));
+      appSubmissionContext.setAMContainerResourceRequests(Collections.singletonList(amReq));
+      return super.getHomeSubcluster(appSubmissionContext, blackListSubClusters);
     }
   }
 }

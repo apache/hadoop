@@ -18,15 +18,24 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.AbstractConfigurableFederationPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 /**
  * Base abstract class for {@link FederationRouterPolicy} implementations, that
@@ -63,4 +72,71 @@ public abstract class AbstractRouterPolicy extends
     }
   }
 
+  protected abstract SubClusterId chooseSubCluster(String queue,
+      Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException;
+
+  protected Map<SubClusterId, SubClusterInfo> prefilterSubClusters(
+      ReservationId reservationId, Map<SubClusterId, SubClusterInfo> activeSubClusters)
+      throws YarnException {
+
+    // if a reservation exists limit scope to the sub-cluster this
+    // reservation is mapped to
+    if (reservationId != null) {
+
+      // note this might throw YarnException if the reservation is
+      // unknown. This is to be expected, and should be handled by
+      // policy invoker.
+      SubClusterId resSubCluster =
+          getPolicyContext().getFederationStateStoreFacade().
+          getReservationHomeSubCluster(reservationId);
+
+      return Collections.singletonMap(resSubCluster, activeSubClusters.get(resSubCluster));
+    }
+
+    return activeSubClusters;
+  }
+
+  @Override
+  public SubClusterId getHomeSubcluster(ApplicationSubmissionContext appContext,
+      List<SubClusterId> blackLists) throws YarnException {
+
+    // null checks and default-queue behavior
+    validate(appContext);
+
+    // apply filtering based on reservation location and active sub-clusters
+    Map<SubClusterId, SubClusterInfo> filteredSubClusters = prefilterSubClusters(
+        appContext.getReservationID(), getActiveSubclusters());
+
+    FederationPolicyUtils.validateSubClusterAvailability(
+        new ArrayList<>(filteredSubClusters.keySet()), blackLists);
+
+    // remove black SubCluster
+    if (blackLists != null) {
+      blackLists.stream().forEach(blackSubCluster -> filteredSubClusters.remove(blackSubCluster));
+    }
+
+    // pick the chosen subCluster from the active ones
+    return chooseSubCluster(appContext.getQueue(), filteredSubClusters);
+  }
+
+
+  @Override
+  public SubClusterId getReservationHomeSubcluster(ReservationSubmissionRequest request)
+      throws YarnException {
+    if (request == null) {
+      throw new FederationPolicyException(
+          "The ReservationSubmissionRequest cannot be null.");
+    }
+
+    if (request.getQueue() == null) {
+      request.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+    }
+
+    // apply filtering based on reservation location and active sub-clusters
+    Map<SubClusterId, SubClusterInfo> filteredSubClusters = prefilterSubClusters(
+        request.getReservationId(), getActiveSubclusters());
+
+    // pick the chosen subCluster from the active ones
+    return chooseSubCluster(request.getQueue(), filteredSubClusters);
+  }
 }
