@@ -250,7 +250,7 @@ public class FederationClientInterceptor
 
   private SubClusterId getRandomActiveSubCluster(
       Map<SubClusterId, SubClusterInfo> activeSubClusters) throws YarnException {
-    if (activeSubClusters.isEmpty()) {
+    if (activeSubClusters != null && activeSubClusters.isEmpty()) {
       RouterServerUtil.logAndThrowException(
           FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
     }
@@ -291,13 +291,11 @@ public class FederationClientInterceptor
     Map<SubClusterId, SubClusterInfo> subClustersActive =
         federationFacade.getSubClusters(true);
 
-    GetNewApplicationResponse response = null;
-
     for (int i = 0; i < numSubmitRetries; ++i) {
       SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
       LOG.info("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
       ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-      response = null;
+      GetNewApplicationResponse response = null;
       try {
         response = clientRMProxy.getNewApplication(request);
       } catch (Exception e) {
@@ -489,8 +487,7 @@ public class FederationClientInterceptor
         request.getApplicationSubmissionContext().getApplicationName(), applicationId);
     RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
         TARGET_CLIENT_RM_SERVICE, msg, applicationId);
-    RouterServerUtil.logAndThrowException(msg, null);
-    return response;
+    throw new YarnException(msg);
   }
 
   /**
