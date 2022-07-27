@@ -64,4 +64,16 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
   public void testFollowReservation() throws YarnException {
     super.testFollowReservation();
   }
+
+  @Override
+  @Test(expected = FederationPolicyException.class)
+  public void testUpdateReservation() throws YarnException {
+    super.testUpdateReservation();
+  }
+
+  @Override
+  @Test(expected = FederationPolicyException.class)
+  public void testDeleteReservation() throws Exception {
+    super.testDeleteReservation();
+  }
 }

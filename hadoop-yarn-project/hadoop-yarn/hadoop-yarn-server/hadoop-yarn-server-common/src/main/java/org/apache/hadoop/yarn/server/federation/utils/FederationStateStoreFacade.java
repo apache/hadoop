@@ -73,6 +73,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -437,7 +438,6 @@ public final class FederationStateStoreFacade {
       ReservationHomeSubCluster appHomeSubCluster) throws YarnException {
     stateStore.updateReservationHomeSubCluster(
         UpdateReservationHomeSubClusterRequest.newInstance(appHomeSubCluster));
-    return;
   }
 
   /**
@@ -454,6 +454,19 @@ public final class FederationStateStoreFacade {
         stateStore.getReservationHomeSubCluster(
         GetReservationHomeSubClusterRequest.newInstance(reservationId));
     return response.getReservationHomeSubCluster().getHomeSubCluster();
+  }
+
+  /**
+   * Updates the home {@link SubClusterId} for the specified
+   * {@link ReservationId}.
+   *
+   * @param reservationId the identifier of the reservation
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public void deleteReservationHomeSubCluster(
+      ReservationId reservationId) throws YarnException {
+    stateStore.deleteReservationHomeSubCluster(
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId));
   }
 
   /**
@@ -616,7 +629,7 @@ public final class FederationStateStoreFacade {
     private K key;
     private Func<K, V> func;
 
-    public CacheRequest(K key, Func<K, V> func) {
+    CacheRequest(K key, Func<K, V> func) {
       this.key = key;
       this.func = func;
     }
