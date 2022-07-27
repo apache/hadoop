@@ -306,9 +306,10 @@ public class UserGroupInformation {
   private static synchronized void initialize(Configuration conf,
                                               boolean overrideNameRules) {
     authenticationMethod = SecurityUtil.getAuthenticationMethod(conf);
-    long cacheTimeout = conf.getLong(HADOOP_SECURITY_GROUPS_CACHE_SECS, HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
-    if (cacheTimeout <=0 ){
-         throw new IllegalArgumentException("hadoop.security.groups.cache.secs should be larger than 0", new IllegalArgumentException("hadoop.security.groups.cache.secs should be larger than 0"));
+    if (conf.getLong(HADOOP_SECURITY_GROUPS_CACHE_SECS, HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000 <= 0){
+        throw new IllegalArgumentException(
+          "hadoop.security.groups.cache.secs should be larger than 0",
+        new IllegalArgumentException("hadoop.security.groups.cache.secs should be larger than 0"));
     }
     if (overrideNameRules || !HadoopKerberosName.hasRulesBeenSet()) {
       try {
