@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.util.Servers;
 import org.apache.hadoop.net.DNS;
@@ -80,7 +79,6 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   private int offset;
   private boolean supportSparseMetrics = SUPPORT_SPARSE_METRICS_DEFAULT;
 
-  @VisibleForTesting
   public List<? extends SocketAddress> getMetricsServers() {
     return metricsServers;
   }
