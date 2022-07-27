@@ -112,7 +112,7 @@ public abstract class AbstractRouterPolicy extends
 
     // remove black SubCluster
     if (blackLists != null) {
-      blackLists.stream().forEach(blackSubCluster -> filteredSubClusters.remove(blackSubCluster));
+      blackLists.forEach(filteredSubClusters::remove);
     }
 
     // pick the chosen subCluster from the active ones

@@ -110,13 +110,13 @@ public class DeleteReservationHomeSubClusterRequestPBImpl
   }
 
   @Override
-  public void setReservationId(ReservationId ReservationId) {
+  public void setReservationId(ReservationId reservationId) {
     maybeInitBuilder();
-    if (ReservationId == null) {
+    if (reservationId == null) {
       builder.clearReservationId();
       return;
     }
-    builder.setReservationId(convertToProtoFormat(ReservationId));
+    builder.setReservationId(convertToProtoFormat(reservationId));
   }
 
   private ReservationId convertFromProtoFormat(ReservationIdProto appId) {

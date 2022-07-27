@@ -72,7 +72,7 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
 
   }
 
-  private String generateClusterMetricsInfo(int id) {
+  public String generateClusterMetricsInfo(int id) {
 
     long mem = 1024 * getRand().nextInt(277 * 100 - 1);
     // plant a best cluster

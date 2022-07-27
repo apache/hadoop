@@ -19,11 +19,8 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;

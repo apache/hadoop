@@ -141,7 +141,7 @@ message DeleteApplicationHomeSubClusterResponseProto {
 // ---- reservations ----
 
 message ReservationHomeSubClusterProto {
-  optional ReservationIdProto Reservation_id = 1;
+  optional ReservationIdProto reservation_id = 1;
   optional SubClusterIdProto home_sub_cluster = 2;
 }
 
@@ -161,7 +161,7 @@ message UpdateReservationHomeSubClusterResponseProto {
 }
 
 message GetReservationHomeSubClusterRequestProto {
-  optional ReservationIdProto Reservation_id = 1;
+  optional ReservationIdProto reservation_id = 1;
 }
 
 message GetReservationHomeSubClusterResponseProto {
@@ -178,7 +178,7 @@ message GetReservationsHomeSubClusterResponseProto {
 
 
 message DeleteReservationHomeSubClusterRequestProto {
-  optional ReservationIdProto Reservation_id = 1;
+  optional ReservationIdProto reservation_id = 1;
 }
 
 message DeleteReservationHomeSubClusterResponseProto {

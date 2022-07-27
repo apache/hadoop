@@ -290,8 +290,7 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public UpdateApplicationHomeSubClusterResponse
-    updateApplicationHomeSubCluster(
+  public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
     return stateStoreClient.updateApplicationHomeSubCluster(request);
   }
@@ -309,8 +308,7 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public DeleteApplicationHomeSubClusterResponse
-    deleteApplicationHomeSubCluster(
+  public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
     return stateStoreClient.deleteApplicationHomeSubCluster(request);
   }
@@ -322,8 +320,7 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public UpdateReservationHomeSubClusterResponse
-    updateReservationHomeSubCluster(
+  public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
     return stateStoreClient.updateReservationHomeSubCluster(request);
   }
@@ -341,8 +338,7 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public DeleteReservationHomeSubClusterResponse
-    deleteReservationHomeSubCluster(
+  public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
     return stateStoreClient.deleteReservationHomeSubCluster(request);
   }

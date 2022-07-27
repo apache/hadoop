@@ -42,7 +42,7 @@ public class ReservationHomeSubClusterPBImpl extends ReservationHomeSubCluster {
   private ReservationHomeSubClusterProto.Builder builder = null;
   private boolean viaProto = false;
 
-  private ReservationId ReservationId = null;
+  private ReservationId reservationId = null;
   private SubClusterId homeSubCluster = null;
 
   public ReservationHomeSubClusterPBImpl() {
@@ -78,8 +78,8 @@ public class ReservationHomeSubClusterPBImpl extends ReservationHomeSubCluster {
   }
 
   private void mergeLocalToBuilder() {
-    if (this.ReservationId != null) {
-      builder.setReservationId(convertToProtoFormat(this.ReservationId));
+    if (this.reservationId != null) {
+      builder.setReservationId(convertToProtoFormat(this.reservationId));
     }
     if (this.homeSubCluster != null) {
       builder.setHomeSubCluster(convertToProtoFormat(this.homeSubCluster));
@@ -113,18 +113,18 @@ public class ReservationHomeSubClusterPBImpl extends ReservationHomeSubCluster {
     if (!p.hasReservationId()) {
       return null;
     }
-    this.ReservationId = convertFromProtoFormat(p.getReservationId());
-    return ReservationId;
+    this.reservationId = convertFromProtoFormat(p.getReservationId());
+    return reservationId;
   }
 
   @Override
-  public void setReservationId(ReservationId ReservationId) {
+  public void setReservationId(ReservationId reservationId) {
     maybeInitBuilder();
-    if (ReservationId == null) {
+    if (reservationId == null) {
       builder.clearReservationId();
       return;
     }
-    this.ReservationId = ReservationId;
+    this.reservationId = reservationId;
   }
 
   @Override

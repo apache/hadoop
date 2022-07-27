@@ -42,7 +42,7 @@ public class GetReservationHomeSubClusterRequestPBImpl
   private GetReservationHomeSubClusterRequestProto.Builder builder = null;
   private boolean viaProto = false;
 
-  private ReservationId ReservationId = null;
+  private ReservationId reservationId = null;
 
   public GetReservationHomeSubClusterRequestPBImpl() {
     builder = GetReservationHomeSubClusterRequestProto.newBuilder();
@@ -78,8 +78,8 @@ public class GetReservationHomeSubClusterRequestPBImpl
   }
 
   private void mergeLocalToBuilder() {
-    if (this.ReservationId != null) {
-      builder.setReservationId(convertToProtoFormat(this.ReservationId));
+    if (this.reservationId != null) {
+      builder.setReservationId(convertToProtoFormat(this.reservationId));
     }
   }
 
@@ -108,25 +108,25 @@ public class GetReservationHomeSubClusterRequestPBImpl
   public ReservationId getReservationId() {
     GetReservationHomeSubClusterRequestProtoOrBuilder p =
         viaProto ? proto : builder;
-    if (ReservationId != null) {
-      return ReservationId;
+    if (reservationId != null) {
+      return reservationId;
     }
 
     if (!p.hasReservationId()) {
       return null;
     }
-    this.ReservationId = convertFromProtoFormat(p.getReservationId());
-    return ReservationId;
+    this.reservationId = convertFromProtoFormat(p.getReservationId());
+    return reservationId;
   }
 
   @Override
-  public void setReservationId(ReservationId ReservationId) {
+  public void setReservationId(ReservationId reservationId) {
     maybeInitBuilder();
-    if (ReservationId == null) {
+    if (reservationId == null) {
       builder.clearReservationId();
       return;
     }
-    this.ReservationId = ReservationId;
+    this.reservationId = reservationId;
   }
 
   private ReservationId convertFromProtoFormat(ReservationIdProto appId) {
