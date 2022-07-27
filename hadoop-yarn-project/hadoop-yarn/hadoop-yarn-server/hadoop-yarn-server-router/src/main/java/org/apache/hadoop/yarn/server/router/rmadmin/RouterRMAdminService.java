@@ -187,14 +187,10 @@ public class RouterRMAdminService extends AbstractService
   @VisibleForTesting
   protected RMAdminRequestInterceptor createRequestInterceptorChain() {
     Configuration conf = getConfig();
-    try {
-      return RouterServerUtil.createRequestInterceptorChain(conf,
-          YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
-          YarnConfiguration.DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS,
-          RMAdminRequestInterceptor.class);
-    } catch (YarnRuntimeException ex) {
-      throw new YarnRuntimeException("Create RequestInterceptor Chain error.", ex);
-    }
+    return RouterServerUtil.createRequestInterceptorChain(conf,
+        YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
+        YarnConfiguration.DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS,
+        RMAdminRequestInterceptor.class);
   }
 
   /**

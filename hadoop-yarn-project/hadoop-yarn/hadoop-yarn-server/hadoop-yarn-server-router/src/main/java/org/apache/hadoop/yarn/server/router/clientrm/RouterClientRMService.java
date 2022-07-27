@@ -479,15 +479,10 @@ public class RouterClientRMService extends AbstractService
   @VisibleForTesting
   protected ClientRequestInterceptor createRequestInterceptorChain() {
     Configuration conf = getConfig();
-    try {
-      return RouterServerUtil.createRequestInterceptorChain(conf,
-              YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
-              YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_INTERCEPTOR_CLASS,
-              ClientRequestInterceptor.class);
-    } catch (YarnRuntimeException ex) {
-      throw new YarnRuntimeException("RequestInterceptor pipeline is not configured in the system.",
-          ex);
-    }
+    return RouterServerUtil.createRequestInterceptorChain(conf,
+        YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
+        YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_INTERCEPTOR_CLASS,
+        ClientRequestInterceptor.class);
   }
 
   /**

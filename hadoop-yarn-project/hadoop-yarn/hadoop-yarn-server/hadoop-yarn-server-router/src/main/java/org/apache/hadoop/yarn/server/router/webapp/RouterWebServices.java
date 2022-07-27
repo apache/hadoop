@@ -179,14 +179,10 @@ public class RouterWebServices implements RMWebServiceProtocol {
    */
   @VisibleForTesting
   protected RESTRequestInterceptor createRequestInterceptorChain() {
-    try {
-      return RouterServerUtil.createRequestInterceptorChain(conf,
-          YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
-          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_INTERCEPTOR_CLASS,
-          RESTRequestInterceptor.class);
-    } catch (YarnRuntimeException ex) {
-      throw new YarnRuntimeException("Create RequestInterceptor Chain error.", ex);
-    }
+    return RouterServerUtil.createRequestInterceptorChain(conf,
+        YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_INTERCEPTOR_CLASS,
+        RESTRequestInterceptor.class);
   }
 
   /**
