@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Collection;
+import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
@@ -518,7 +519,6 @@ public final class RouterWebServiceUtil {
   public static NodeToLabelsInfo mergeNodeToLabels(
       Map<SubClusterInfo, NodeToLabelsInfo> nodeToLabelsInfoMap) {
 
-    NodeToLabelsInfo result = new NodeToLabelsInfo();
     HashMap<String, NodeLabelsInfo> nodeToLabels = new HashMap<>();
     Collection<NodeToLabelsInfo> nodeToLabelsInfos = nodeToLabelsInfoMap.values();
 
@@ -527,7 +527,7 @@ public final class RouterWebServiceUtil {
         String key = item.getKey();
         NodeLabelsInfo itemValue = item.getValue();
         NodeLabelsInfo nodeToLabelsValue = nodeToLabels.getOrDefault(item.getKey(), null);
-        HashSet<NodeLabel> hashSet = new HashSet<>();
+        Set<NodeLabel> hashSet = new HashSet<>();
         if (itemValue != null) {
           hashSet.addAll(itemValue.getNodeLabels());
         }
@@ -538,7 +538,6 @@ public final class RouterWebServiceUtil {
       }
     });
 
-    result.setNodeToLabels(nodeToLabels);
-    return result;
+    return new NodeToLabelsInfo(nodeToLabels);
   }
 }

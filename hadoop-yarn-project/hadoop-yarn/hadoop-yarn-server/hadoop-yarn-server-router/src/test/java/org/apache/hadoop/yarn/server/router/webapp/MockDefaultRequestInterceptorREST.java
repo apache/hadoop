@@ -292,11 +292,9 @@ public class MockDefaultRequestInterceptorREST
     NodeLabelsInfo cpuNode = new NodeLabelsInfo(Collections.singleton("CPU"));
     NodeLabelsInfo gpuNode = new NodeLabelsInfo(Collections.singleton("GPU"));
 
-    NodeToLabelsInfo info = new NodeToLabelsInfo();
     HashMap<String, NodeLabelsInfo> nodeLabels = new HashMap<>();
     nodeLabels.put("node1", cpuNode);
     nodeLabels.put("node2", gpuNode);
-    info.setNodeToLabels(nodeLabels);
-    return info;
+    return new NodeToLabelsInfo(nodeLabels);
   }
 }

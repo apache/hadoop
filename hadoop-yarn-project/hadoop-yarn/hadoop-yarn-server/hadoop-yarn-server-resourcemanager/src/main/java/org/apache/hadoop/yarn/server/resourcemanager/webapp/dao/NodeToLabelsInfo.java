@@ -35,6 +35,12 @@ public class NodeToLabelsInfo {
     // JAXB needs this
   }
 
+  public NodeToLabelsInfo(HashMap<String, NodeLabelsInfo> nodeToLabels) {
+    if (nodeToLabels != null) {
+      this.nodeToLabels.putAll(nodeToLabels);
+    }
+  }
+
   public HashMap<String, NodeLabelsInfo> getNodeToLabels() {
     return nodeToLabels;
   }

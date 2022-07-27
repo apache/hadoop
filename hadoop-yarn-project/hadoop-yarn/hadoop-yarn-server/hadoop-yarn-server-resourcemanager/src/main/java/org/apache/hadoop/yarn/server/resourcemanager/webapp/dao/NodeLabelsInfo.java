@@ -56,11 +56,11 @@ public class NodeLabelsInfo {
     }
   }
 
-  public NodeLabelsInfo(HashSet<NodeLabel> nodeLabels) {
+  public NodeLabelsInfo(Collection<NodeLabel> nodeLabels) {
     this.nodeLabelsInfo = new ArrayList<>();
-    for (NodeLabel label : nodeLabels) {
-      this.nodeLabelsInfo.add(new NodeLabelInfo(label));
-    }
+    nodeLabels.stream().forEach(nodeLabel -> {
+      this.nodeLabelsInfo.add(new NodeLabelInfo(nodeLabel));
+    });
   }
 
   public ArrayList<NodeLabelInfo> getNodeLabelsInfo() {

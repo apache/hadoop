@@ -951,7 +951,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public NodesInfo getNodes(String states) {
 
     NodesInfo nodes = new NodesInfo();
-
     try {
       Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
       Class[] argsClasses = new Class[]{String.class};
@@ -962,13 +961,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       nodesMap.values().stream().forEach(nodesInfo -> {
         nodes.addAll(nodesInfo.getNodes());
       });
-
     } catch (NotFoundException e) {
       LOG.error("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       LOG.error("getNodes error.", e);
     } catch (IOException e) {
-      LOG.error("getNodes error.", e);
+      LOG.error("getNodes error with io error.", e);
     }
 
     // Delete duplicate from all the node reports got from all the available
@@ -1398,10 +1396,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           R ret = clazz.cast(retObj);
           return ret;
         } catch (Exception e) {
-          String msg = String.format("SubCluster %s failed to call %s method.",
-              info.getSubClusterId(), request.getMethodName());
-          LOG.error(msg, e);
-          throw new YarnRuntimeException(msg, e);
+          LOG.error("SubCluster %s failed to call %s method.",
+              info.getSubClusterId(), request.getMethodName(), e);
+          return null;
         }
       });
     }
