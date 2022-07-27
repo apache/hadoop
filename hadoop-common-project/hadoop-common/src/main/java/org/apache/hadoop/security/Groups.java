@@ -108,7 +108,6 @@ public class Groups {
             JniBasedUnixGroupsMappingWithFallback.class,
             GroupMappingServiceProvider.class),
         conf);
-
     cacheTimeout = 
       conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 
           CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
