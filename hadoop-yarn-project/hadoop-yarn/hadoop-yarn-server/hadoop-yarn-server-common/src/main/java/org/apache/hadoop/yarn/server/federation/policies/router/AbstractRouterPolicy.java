@@ -133,8 +133,7 @@ public abstract class AbstractRouterPolicy extends
     }
 
     // apply filtering based on reservation location and active sub-clusters
-    Map<SubClusterId, SubClusterInfo> filteredSubClusters = prefilterSubClusters(
-        request.getReservationId(), getActiveSubclusters());
+    Map<SubClusterId, SubClusterInfo> filteredSubClusters = getActiveSubclusters();
 
     // pick the chosen subCluster from the active ones
     return chooseSubCluster(request.getQueue(), filteredSubClusters);

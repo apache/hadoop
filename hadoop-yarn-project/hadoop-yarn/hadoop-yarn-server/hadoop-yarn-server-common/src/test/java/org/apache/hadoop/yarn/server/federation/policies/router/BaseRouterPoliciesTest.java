@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesT
 import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -151,5 +152,35 @@ public abstract class BaseRouterPoliciesTest
     LambdaTestUtils.intercept(YarnException.class,
         "Reservation " + reservationId + " does not exist",
         () -> policy.getHomeSubcluster(applicationSubmissionContext, new ArrayList<>()));
+  }
+
+  @Test
+  public void testFollowReservation() throws YarnException {
+    ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
+    when(resReq.getQueue()).thenReturn("queue1");
+    when(resReq.getReservationId())
+        .thenReturn(ReservationId.newInstance(System.currentTimeMillis(), 1));
+
+    // first we invoke a reservation placement
+    SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
+        .getReservationHomeSubcluster(resReq);
+
+    // add this to the store
+    this.getFederationPolicyContext().getFederationStateStoreFacade()
+        .addReservationHomeSubCluster(ReservationHomeSubCluster
+        .newInstance(resReq.getReservationId(), chosen));
+
+    // route an application that uses this app
+    ApplicationSubmissionContext applicationSubmissionContext =
+        ApplicationSubmissionContext.newInstance(
+        ApplicationId.newInstance(System.currentTimeMillis(), 1), "app1",
+        "queue1", Priority.newInstance(1), null, false, false, 1, null,
+        null, false);
+    applicationSubmissionContext.setReservationID(resReq.getReservationId());
+    SubClusterId chosen2 = ((FederationRouterPolicy) getPolicy())
+        .getHomeSubcluster(applicationSubmissionContext,new ArrayList<>());
+
+    // application follows reservation
+    Assert.assertEquals(chosen, chosen2);
   }
 }
