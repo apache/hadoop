@@ -105,7 +105,6 @@ public class TestRouterRpcFairnessPolicyController {
 
     // There are some other operations, so acquireTimeMs >= 100ms.
     assertTrue(acquireTimeMs >= 100);
-    assertTrue(acquireTimeMs < 100 + 50);
   }
 
   @Test
