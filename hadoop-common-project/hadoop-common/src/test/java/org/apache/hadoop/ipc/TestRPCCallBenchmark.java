@@ -21,9 +21,26 @@ import static org.junit.Assert.*;
 
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
+import java.util.Collection;
 
+@RunWith(Parameterized.class)
 public class TestRPCCallBenchmark {
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestRPCCallBenchmark(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
 
   @Test(timeout=20000)
   public void testBenchmarkWithProto() throws Exception {
@@ -31,10 +48,11 @@ public class TestRPCCallBenchmark {
         new String[] {
       "--clientThreads", "30",
       "--serverThreads", "30",
-      "--time", "5",
+      "--time", "10",
       "--serverReaderThreads", "4",
       "--messageSize", "1024",
-      "--engine", "protobuf"});
+      "--engine", "protobuf",
+      "--ioImpl", useNetty ? "netty" : "nio"});
     assertEquals(0, rc);
   }
 }

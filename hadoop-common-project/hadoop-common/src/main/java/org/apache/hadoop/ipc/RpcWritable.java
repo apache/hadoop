@@ -37,7 +37,7 @@ import org.apache.hadoop.thirdparty.protobuf.Message;
 @InterfaceAudience.Private
 public abstract class RpcWritable implements Writable {
 
-  static RpcWritable wrap(Object o) {
+  public static RpcWritable wrap(Object o) {
     if (o instanceof RpcWritable) {
       return (RpcWritable)o;
     } else if (o instanceof Message) {

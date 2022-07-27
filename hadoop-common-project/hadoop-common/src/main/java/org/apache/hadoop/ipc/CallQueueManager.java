@@ -209,7 +209,7 @@ public class CallQueueManager<E extends Schedulable>
   }
 
   // This should be only called once per call and cached in the call object
-  int getPriorityLevel(Schedulable e) {
+  public int getPriorityLevel(Schedulable e) {
     return scheduler.getPriorityLevel(e);
   }
 

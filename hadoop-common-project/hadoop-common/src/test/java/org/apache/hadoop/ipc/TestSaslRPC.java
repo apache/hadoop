@@ -23,24 +23,26 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
-import org.apache.hadoop.ipc.Server.Connection;
+import org.apache.hadoop.ipc.netty.server.Connection;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.*;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -55,6 +57,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
+import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.net.InetAddress;
@@ -62,8 +65,10 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.security.Security;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -92,31 +97,45 @@ import static org.junit.Assert.fail;
 /** Unit tests for using Sasl over RPC. */
 @RunWith(Parameterized.class)
 public class TestSaslRPC extends TestRpcBase {
-  @Parameters
+  @Parameterized.Parameters(
+      name="{index}: useNetty={0} qop={1} expectQop={2} resolver={3}")
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<>();
-    for (QualityOfProtection qop : QualityOfProtection.values()) {
-      params.add(new Object[]{ new QualityOfProtection[]{qop},qop, null });
+    for (int i = 0; i < 2; i++) {
+      boolean useNetty = i != 0;
+      for (QualityOfProtection qop : QualityOfProtection.values()) {
+        params.add(new Object[]{useNetty, Arrays.asList(qop), qop, null});
+      }
+      params.add(new Object[]{useNetty, Arrays.asList(
+          QualityOfProtection.PRIVACY, QualityOfProtection.AUTHENTICATION),
+          QualityOfProtection.PRIVACY, null});
+      params.add(new Object[]{useNetty, Arrays.asList(
+          QualityOfProtection.PRIVACY, QualityOfProtection.AUTHENTICATION),
+          QualityOfProtection.AUTHENTICATION,
+          "org.apache.hadoop.ipc.TestSaslRPC$AuthSaslPropertiesResolver"});
     }
-    params.add(new Object[]{ new QualityOfProtection[]{
-        QualityOfProtection.PRIVACY,QualityOfProtection.AUTHENTICATION },
-        QualityOfProtection.PRIVACY, null});
-    params.add(new Object[]{ new QualityOfProtection[]{
-        QualityOfProtection.PRIVACY,QualityOfProtection.AUTHENTICATION },
-        QualityOfProtection.AUTHENTICATION ,
-        "org.apache.hadoop.ipc.TestSaslRPC$AuthSaslPropertiesResolver" });
 
     return params;
   }
+
+  boolean useNetty;
+
+  final String BASEDIR =
+      GenericTestUtils.getTempPath(TestRPC.class.getSimpleName());
+
+  final String KEYSTORES_DIR =
+      new File(BASEDIR).getAbsolutePath();
+
+  String sslConfsDir = null;
 
   QualityOfProtection[] qop;
   QualityOfProtection expectedQop;
   String saslPropertiesResolver ;
   
-  public TestSaslRPC(QualityOfProtection[] qop,
-      QualityOfProtection expectedQop,
-      String saslPropertiesResolver) {
-    this.qop=qop;
+  public TestSaslRPC(boolean useNetty, List<QualityOfProtection> qopList,
+      QualityOfProtection expectedQop,  String saslPropertiesResolver) {
+    this.useNetty = useNetty;
+    this.qop = qopList.toArray(new QualityOfProtection[0]);
     this.expectedQop = expectedQop;
     this.saslPropertiesResolver = saslPropertiesResolver;
   }
@@ -150,12 +169,30 @@ public class TestSaslRPC extends TestRpcBase {
   }    
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     LOG.info("---------------------------------");
-    LOG.info("Testing QOP:"+ getQOPNames(qop));
+    LOG.info("Testing QOP:" + getQOPNames(qop) + " netty=" + useNetty);
     LOG.info("---------------------------------");
 
     conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.IPC_SSL_KEY,
+                    useNetty);
+    // Turn off self-signed certificates
+    conf.setBoolean(CommonConfigurationKeys.IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST,
+        false);
+
+    // SSL Configuration
+    if (useNetty) {
+      File base = new File(BASEDIR);
+      FileUtil.fullyDelete(base);
+      base.mkdirs();
+
+      sslConfsDir = KeyStoreTestUtil.getClasspathDir(TestRPC.class);
+
+      KeyStoreTestUtil.setupSSLConfig(KEYSTORES_DIR, sslConfsDir, conf,
+          true, true, "");
+    }
+
     // the specific tests for kerberos will enable kerberos.  forcing it
     // for all tests will cause tests to fail if the user has a TGT
     conf.set(HADOOP_SECURITY_AUTHENTICATION, SIMPLE.toString());
@@ -331,9 +368,10 @@ public class TestSaslRPC extends TestRpcBase {
         TestRpcService.class, null, 0, null, newConf);
     assertEquals(0, remoteId.getPingInterval());
   }
-  
+
   @Test
   public void testPerConnectionConf() throws Exception {
+    Assume.assumeFalse(useNetty);
     TestTokenSecretManager sm = new TestTokenSecretManager();
     final Server server = setupTestServer(conf, 5, sm);
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();

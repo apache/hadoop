@@ -31,10 +31,10 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.ipc.netty.client.IpcStreams;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
@@ -62,13 +62,34 @@ import org.slf4j.LoggerFactory;
 import javax.net.SocketFactory;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
-import java.io.*;
-import java.net.*;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.concurrent.*;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -77,6 +98,7 @@ import java.util.function.Consumer;
 
 import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
 import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
+import static org.apache.hadoop.ipc.netty.client.IpcStreams.*;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -150,13 +172,7 @@ public class Client implements AutoCloseable {
   private final int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
 
-  /**
-   * Executor on which IPC calls' parameters are sent.
-   * Deferring the sending of parameters to a separate
-   * thread isolates them from thread interruptions in the
-   * calling code.
-   */
-  private final ExecutorService sendParamsExecutor;
+
   private final static ClientExecutorServiceFactory clientExcecutorFactory =
       new ClientExecutorServiceFactory();
 
@@ -437,6 +453,7 @@ public class Client implements AutoCloseable {
     private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
     private final boolean tcpLowLatency; // if T then use low-delay QoS
     private final boolean doPing; //do we need to send ping message
+    private final boolean useNettySSL; // do we need SSL on in the implementation
     private final int pingInterval; // how often sends ping to the server
     private final int soTimeout; // used by ipc ping and rpc timeout
     private byte[] pingRequest; // ping message
@@ -460,6 +477,9 @@ public class Client implements AutoCloseable {
       this.maxResponseLength = remoteId.conf.getInt(
           CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH,
           CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT);
+      this.useNettySSL = remoteId.conf.getBoolean(
+          CommonConfigurationKeys.IPC_SSL_KEY,
+          CommonConfigurationKeys.IPC_SSL_DEFAULT);
       this.rpcTimeout = remoteId.getRpcTimeout();
       this.maxIdleTime = remoteId.getMaxIdleTime();
       this.connectionRetryPolicy = remoteId.connectionRetryPolicy;
@@ -837,7 +857,8 @@ public class Client implements AutoCloseable {
         Random rand = null;
         while (true) {
           setupConnection(ticket);
-          ipcStreams = new IpcStreams(socket, maxResponseLength);
+          ipcStreams = newInstance(socket, maxResponseLength,
+              remoteId.conf);
           writeConnectionHeader(ipcStreams);
           if (authProtocol == AuthProtocol.SASL) {
             try {
@@ -944,14 +965,17 @@ public class Client implements AutoCloseable {
         return;
       }
       // close the current connection
-      try {
-        socket.close();
-      } catch (IOException e) {
-        LOG.warn("Not able to close a socket", e);
-      }
+      IOUtils.cleanupWithLogger(LOG, ipcStreams, socket);
       // set socket to null so that the next call to setupIOstreams
       // can start the process of connect all over again.
       socket = null;
+      // TODO: This change causes TestApplicationClientProtocolOnHA to throw
+      //       a NullPointerException on synchronized(ipcStreams.out). This
+      //       happens because closeConnection is called before the thread that
+      //       handles client.submit finishes. This change was introduced as
+      //       part of the SSL changes. Revisit later for further investigation
+      //       and possibly better handling.
+      // ipcStreams = null;
     }
 
     /* Handle connection failures due to timeout on connect
@@ -1165,11 +1189,8 @@ public class Client implements AutoCloseable {
         return;
       }
 
-      // Serialize the call to be sent. This is done from the actual
-      // caller thread, rather than the sendParamsExecutor thread,
-      
-      // so that if the serialization throws an error, it is reported
-      // properly. This also parallelizes the serialization.
+      // Serialize the call to be sent so that if the serialization throws an
+      // error, it is reported properly.
       //
       // Format of a call on the wire:
       // 0) Length of rest below (1 + 2)
@@ -1186,7 +1207,7 @@ public class Client implements AutoCloseable {
       RpcWritable.wrap(call.rpcRequest).writeTo(buf);
 
       synchronized (sendRpcRequestLock) {
-        Future<?> senderFuture = sendParamsExecutor.submit(new Runnable() {
+        Future<?> senderFuture = ipcStreams.submit(new Runnable() {
           @Override
           public void run() {
             try {
@@ -1377,7 +1398,11 @@ public class Client implements AutoCloseable {
             CommonConfigurationKeys.IPC_CLIENT_BIND_WILDCARD_ADDR_DEFAULT);
 
     this.clientId = ClientId.getClientId();
-    this.sendParamsExecutor = clientExcecutorFactory.refAndGetInstance();
+    // TODO: This call can be moved to the place where getClientExecutor is
+    //       invoked. However this move will change the general behaviour of
+    //       the client, which initializes the factory in the constructor. This
+    //       should be done with additional testing.
+    clientExcecutorFactory.refAndGetInstance();
     this.maxAsyncCalls = conf.getInt(
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY,
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_DEFAULT);
@@ -1899,80 +1924,5 @@ public class Client implements AutoCloseable {
   @Unstable
   public void close() throws Exception {
     stop();
-  }
-
-  /** Manages the input and output streams for an IPC connection.
-   *  Only exposed for use by SaslRpcClient.
-   */
-  @InterfaceAudience.Private
-  public static class IpcStreams implements Closeable, Flushable {
-    private DataInputStream in;
-    public DataOutputStream out;
-    private int maxResponseLength;
-    private boolean firstResponse = true;
-
-    IpcStreams(Socket socket, int maxResponseLength) throws IOException {
-      this.maxResponseLength = maxResponseLength;
-      setInputStream(
-          new BufferedInputStream(NetUtils.getInputStream(socket)));
-      setOutputStream(
-          new BufferedOutputStream(NetUtils.getOutputStream(socket)));
-    }
-
-    void setSaslClient(SaslRpcClient client) throws IOException {
-      // Wrap the input stream in a BufferedInputStream to fill the buffer
-      // before reading its length (HADOOP-14062).
-      setInputStream(new BufferedInputStream(client.getInputStream(in)));
-      setOutputStream(client.getOutputStream(out));
-    }
-
-    private void setInputStream(InputStream is) {
-      this.in = (is instanceof DataInputStream)
-          ? (DataInputStream)is : new DataInputStream(is);
-    }
-
-    private void setOutputStream(OutputStream os) {
-      this.out = (os instanceof DataOutputStream)
-          ? (DataOutputStream)os : new DataOutputStream(os);
-    }
-
-    public ByteBuffer readResponse() throws IOException {
-      int length = in.readInt();
-      if (firstResponse) {
-        firstResponse = false;
-        // pre-rpcv9 exception, almost certainly a version mismatch.
-        if (length == -1) {
-          in.readInt(); // ignore fatal/error status, it's fatal for us.
-          throw new RemoteException(WritableUtils.readString(in),
-                                    WritableUtils.readString(in));
-        }
-      }
-      if (length <= 0) {
-        throw new RpcException(String.format("RPC response has " +
-            "invalid length of %d", length));
-      }
-      if (maxResponseLength > 0 && length > maxResponseLength) {
-        throw new RpcException(String.format("RPC response has a " +
-            "length of %d exceeds maximum data length", length));
-      }
-      ByteBuffer bb = ByteBuffer.allocate(length);
-      in.readFully(bb.array());
-      return bb;
-    }
-
-    public void sendRequest(byte[] buf) throws IOException {
-      out.write(buf);
-    }
-
-    @Override
-    public void flush() throws IOException {
-      out.flush();
-    }
-
-    @Override
-    public void close() {
-      IOUtils.closeStream(out);
-      IOUtils.closeStream(in);
-    }
   }
 }

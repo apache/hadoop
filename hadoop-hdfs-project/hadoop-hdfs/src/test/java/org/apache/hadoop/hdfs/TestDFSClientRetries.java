@@ -110,7 +110,7 @@ public class TestDFSClientRetries {
   final static private int MIN_SLEEP_TIME = 1000;
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDFSClientRetries.class.getName());
-  static private Configuration conf = null;
+  static private Configuration testConf = null;
  
  private static class TestServer extends Server {
     private boolean sleep;
@@ -124,7 +124,7 @@ public class TestDFSClientRetries {
         Class<? extends Writable> paramClass,
         Class<? extends Writable> responseClass)
       throws IOException {
-      super(ADDRESS, 0, paramClass, handlerCount, conf);
+      super(ADDRESS, 0, paramClass, handlerCount, testConf);
       this.sleep = sleep;
       this.responseClass = responseClass;
     }
@@ -162,7 +162,7 @@ public class TestDFSClientRetries {
   
   @Before
   public void setupConf(){
-    conf = new HdfsConfiguration();
+    testConf = new HdfsConfiguration();
   }
   
   /**
@@ -174,16 +174,16 @@ public class TestDFSClientRetries {
                                                   InterruptedException { 
     final int writeTimeout = 100; //milliseconds.
     // set a very short write timeout for datanode, so that tests runs fast.
-    conf.setInt(HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY, writeTimeout);
+    testConf.setInt(HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY, writeTimeout);
     // set a smaller block size
     final int blockSize = 10*1024*1024;
-    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, 1);
+    testConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    testConf.setInt(HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, 1);
     // set a small buffer size
     final int bufferSize = 4096;
-    conf.setInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, bufferSize);
+    testConf.setInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, bufferSize);
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(testConf).numDataNodes(3).build();
     
     try {
       cluster.waitActive();
@@ -227,7 +227,7 @@ public class TestDFSClientRetries {
   { 
     final String exceptionMsg = "Nope, not replicated yet...";
     final int maxRetries = 1; // Allow one retry (total of two calls)
-    conf.setInt(HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, maxRetries);
+    testConf.setInt(HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, maxRetries);
     
     NamenodeProtocols mockNN = mock(NamenodeProtocols.class);
     Answer<Object> answer = new ThrowsException(new IOException()) {
@@ -278,7 +278,7 @@ public class TestDFSClientRetries {
         .create(anyString(), any(), anyString(), any(), anyBoolean(),
             anyShort(), anyLong(), any(), any(), any());
 
-    final DFSClient client = new DFSClient(null, mockNN, conf, null);
+    final DFSClient client = new DFSClient(null, mockNN, testConf, null);
     OutputStream os = client.create("testfile", true);
     os.write(20); // write one random byte
     
@@ -302,16 +302,16 @@ public class TestDFSClientRetries {
     Path file = new Path("/testFile");
 
     // Set short retry timeouts so this test runs faster
-    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
-    conf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 2 * 1000);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    testConf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
+    testConf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 2 * 1000);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(testConf).build();
 
     try {
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       NamenodeProtocols preSpyNN = cluster.getNameNodeRpc();
       NamenodeProtocols spyNN = spy(preSpyNN);
-      DFSClient client = new DFSClient(null, spyNN, conf, null);
+      DFSClient client = new DFSClient(null, spyNN, testConf, null);
       int maxBlockAcquires = client.getConf().getMaxBlockAcquireFailures();
       assertTrue(maxBlockAcquires > 0);
 
@@ -324,7 +324,8 @@ public class TestDFSClientRetries {
       doAnswer(new FailNTimesAnswer(preSpyNN, maxBlockAcquires + 1))
         .when(spyNN).getBlockLocations(anyString(), anyLong(), anyLong());
       try {
-        IOUtils.copyBytes(client.open(file.toString()), new IOUtils.NullOutputStream(), conf,
+        IOUtils.copyBytes(client.open(file.toString()), new IOUtils.NullOutputStream(),
+            testConf,
                           true);
         fail("Didn't get exception");
       } catch (IOException ioe) {
@@ -334,7 +335,8 @@ public class TestDFSClientRetries {
       // If we fail exactly that many times, then it should succeed.
       doAnswer(new FailNTimesAnswer(preSpyNN, maxBlockAcquires))
         .when(spyNN).getBlockLocations(anyString(), anyLong(), anyLong());
-      IOUtils.copyBytes(client.open(file.toString()), new IOUtils.NullOutputStream(), conf,
+      IOUtils.copyBytes(client.open(file.toString()), new IOUtils.NullOutputStream(),
+          testConf,
                         true);
 
       DFSClient.LOG.info("Starting test case for failure reset");
@@ -377,15 +379,15 @@ public class TestDFSClientRetries {
     String file1 = "/testFile1";
     String file2 = "/testFile2";
     // Set short retry timeouts so this test runs faster
-    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
-    conf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 2 * 1000);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    testConf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
+    testConf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 2 * 1000);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(testConf).build();
     try {
       cluster.waitActive();
       NamenodeProtocols spyNN = spy(cluster.getNameNodeRpc());
       Mockito.doThrow(new SocketTimeoutException()).when(spyNN).renewLease(
           Mockito.anyString(), any());
-      DFSClient client = new DFSClient(null, spyNN, conf, null);
+      DFSClient client = new DFSClient(null, spyNN, testConf, null);
       // Get hold of the lease renewer instance used by the client
       final LeaseRenewer leaseRenewer1 = client.getLeaseRenewer();
       leaseRenewer1.setRenewalTime(100);
@@ -430,15 +432,15 @@ public class TestDFSClientRetries {
     final String src = "/testIdempotentAllocateBlock";
     Path file = new Path(src);
 
-    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    testConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(testConf).build();
 
     try {
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       NamenodeProtocols preSpyNN = cluster.getNameNodeRpc();
       NamenodeProtocols spyNN = spy(preSpyNN);
-      DFSClient client = new DFSClient(null, spyNN, conf, null);
+      DFSClient client = new DFSClient(null, spyNN, testConf, null);
 
       
       // Make the call to addBlock() get called twice, as if it were retried
@@ -668,18 +670,18 @@ public class TestDFSClientRetries {
     short replicationFactor = 1;
     long blockSize = 128*1024*1024; // DFS block size
     int bufferSize = 4096;
-    int originalXcievers = conf.getInt(
+    int originalXcievers = testConf.getInt(
       DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
       DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT);
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
+    testConf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
       xcievers);
-    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
+    testConf.setInt(HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
       retries);
-    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, timeWin);
+    testConf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, timeWin);
     // Disable keepalive
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY, 0);
+    testConf.setInt(DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY, 0);
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(replicationFactor).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(testConf).numDataNodes(replicationFactor).build();
     cluster.waitActive();
     
     FileSystem fs = cluster.getFileSystem();
@@ -750,7 +752,7 @@ public class TestDFSClientRetries {
       e.printStackTrace();
       ret = false;
     } finally {
-      conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
+      testConf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
         originalXcievers);
       fs.delete(file1, false);
       cluster.shutdown();
@@ -842,7 +844,7 @@ public class TestDFSClientRetries {
     final int numReplicas = 3;
     final int numDatanodes = numReplicas;
     final MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
+        new MiniDFSCluster.Builder(testConf).numDataNodes(numDatanodes).build();
     try {
       cluster.waitActive();
 
@@ -889,7 +891,7 @@ public class TestDFSClientRetries {
 
     try {
       proxy = DFSUtilClient.createClientDatanodeProtocolProxy(
-          fakeDnId, conf, 500, false, fakeBlock);
+          fakeDnId, testConf, 500, false, fakeBlock);
 
       proxy.getReplicaVisibleLength(new ExtendedBlock("bpid", 1));
       fail ("Did not get expected exception: SocketTimeoutException");
@@ -1233,7 +1235,7 @@ public class TestDFSClientRetries {
   @Test
   public void testDFSClientConfigurationLocateFollowingBlock()
       throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(testConf).build();
     final int initialDelayTestValue = 1000;
     final int maxDelayTestValue = 35000;
     final int retryTestValue = 7;
@@ -1245,7 +1247,7 @@ public class TestDFSClientRetries {
     try {
       cluster.waitActive();
       NamenodeProtocols nn = cluster.getNameNodeRpc();
-      DFSClient client = new DFSClient(null, nn, conf, null);
+      DFSClient client = new DFSClient(null, nn, testConf, null);
       assertEquals(defaultInitialDelay, client.getConf().
           getBlockWriteLocateFollowingInitialDelayMs());
       assertEquals(defaultMaxDelay, client.getConf().
@@ -1253,16 +1255,16 @@ public class TestDFSClientRetries {
       assertEquals(defultRetry, client.getConf().
           getNumBlockWriteLocateFollowingRetry());
 
-      conf.setInt(
+      testConf.setInt(
           HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_MS_KEY,
           initialDelayTestValue);
-      conf.setInt(
+      testConf.setInt(
           HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_MAX_DELAY_MS_KEY,
           maxDelayTestValue);
-      conf.setInt(
+      testConf.setInt(
           HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
           retryTestValue);
-      client = new DFSClient(null, nn, conf, null);
+      client = new DFSClient(null, nn, testConf, null);
       assertEquals(initialDelayTestValue, client.getConf().
           getBlockWriteLocateFollowingInitialDelayMs());
       assertEquals(maxDelayTestValue, client.getConf().
@@ -1288,15 +1290,15 @@ public class TestDFSClientRetries {
     });
     String file1 = "/testFile1";
     // Set short retry timeouts so this test runs faster
-    conf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    testConf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(testConf).build();
     try {
       cluster.waitActive();
       final NamenodeProtocols spyNN = spy(cluster.getNameNodeRpc());
 
       doAnswer(new SleepFixedTimeAnswer(1500, testLatch)).when(spyNN).complete(
           anyString(), anyString(), any(ExtendedBlock.class), anyLong());
-      DFSClient client = new DFSClient(null, spyNN, conf, null);
+      DFSClient client = new DFSClient(null, spyNN, testConf, null);
       // Get hold of the lease renewer instance used by the client
       LeaseRenewer leaseRenewer = client.getLeaseRenewer();
       leaseRenewer.setRenewalTime(100);

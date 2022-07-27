@@ -27,13 +27,14 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.Server.Call;
-import org.apache.hadoop.ipc.Server.Connection;
+import org.apache.hadoop.ipc.netty.server.Connection;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
@@ -47,21 +48,26 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
+import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.MockitoUtil;
 import org.apache.hadoop.test.Whitebox;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 import javax.net.SocketFactory;
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationHandler;
@@ -76,6 +82,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -111,14 +118,75 @@ import static org.mockito.Mockito.verify;
 
 /** Unit tests for RPC. */
 @SuppressWarnings("deprecation")
+@RunWith(Parameterized.class)
 public class TestRPC extends TestRpcBase {
 
   public static final Logger LOG = LoggerFactory.getLogger(TestRPC.class);
 
-  @Before
-  public void setup() {
-    setupConf();
+  final String BASEDIR =
+      GenericTestUtils.getTempPath(TestRPC.class.getSimpleName());
+
+  final String KEYSTORES_DIR =
+      new File(BASEDIR).getAbsolutePath();
+
+  String sslConfsDir = null;
+
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
   }
+
+  private static boolean useNetty;
+  public TestRPC(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
+
+  @Before
+  public void setup() throws Exception {
+    GenericTestUtils.setLogLevel(Client.LOG, Level.DEBUG);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
+    setupConf();
+
+    // Turn SSL on or off
+    conf.setBoolean(CommonConfigurationKeys.IPC_SSL_KEY,
+                    useNetty);
+    // Turn off self-signed certificates
+    conf.setBoolean(CommonConfigurationKeys.IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST,
+              false);
+
+    // SSL Configuration
+    if (useNetty) {
+      File base = new File(BASEDIR);
+      FileUtil.fullyDelete(base);
+      base.mkdirs();
+
+      sslConfsDir = KeyStoreTestUtil.getClasspathDir(TestRPC.class);
+      KeyStoreTestUtil.cleanupSSLConfig(KEYSTORES_DIR, sslConfsDir);
+
+      KeyStoreTestUtil.setupSSLConfig(KEYSTORES_DIR, sslConfsDir, conf,
+          true, true, "");
+    }
+
+    int threadsBefore = countThreads("Socket Reader");
+    assertEquals("Expect no Reader threads running before test",
+        0, threadsBefore);
+  }
+
+ @After
+ public void cleanup() throws Exception {
+   int threadsBefore = countThreads("Socket Reader");
+   assertEquals("Expect no Reader threads running after test",
+     0, threadsBefore);
+
+   // SSL Cleanup
+   if (useNetty) {
+     sslConfsDir = KeyStoreTestUtil.getClasspathDir(TestRPC.class);
+     KeyStoreTestUtil.cleanupSSLConfig(KEYSTORES_DIR, sslConfsDir);
+   }
+ }
 
   int datasize = 1024*100;
   int numThreads = 50;
@@ -360,28 +428,39 @@ public class TestRPC extends TestRpcBase {
   public void testConfRpc() throws IOException {
     Server server = newServerBuilder(conf)
         .setNumHandlers(1).setVerbose(false).build();
+    try {
+      // Just one handler
+      int confQ = conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+      assertEquals(confQ, server.getMaxQueueSize());
 
-    // Just one handler
-    int confQ = conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
-        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
-    assertEquals(confQ, server.getMaxQueueSize());
-
-    int confReaders = conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
-    assertEquals(confReaders, server.getNumReaders());
+      int confReaders = conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
+      assertEquals(confReaders, server.getNumReaders());
+    } finally {
+      stop(server, null);
+    }
 
     server = newServerBuilder(conf)
         .setNumHandlers(1).setnumReaders(3).setQueueSizePerHandler(200)
         .setVerbose(false).build();
 
-    assertEquals(3, server.getNumReaders());
-    assertEquals(200, server.getMaxQueueSize());
+    try {
+      assertEquals(3, server.getNumReaders());
+      assertEquals(200, server.getMaxQueueSize());
+    } finally {
+      stop(server, null);
+    }
 
     server = newServerBuilder(conf).setQueueSizePerHandler(10)
         .setNumHandlers(2).setVerbose(false).build();
-    assertEquals(2 * 10, server.getMaxQueueSize());
+    try {
+      assertEquals(2 * 10, server.getMaxQueueSize());
+    } finally {
+      stop(server, null);
+    }
   }
 
   @Test
@@ -448,6 +527,8 @@ public class TestRPC extends TestRpcBase {
 
   @Test
   public void testSlowRpc() throws IOException, ServiceException {
+    GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
     Server server;
     TestRpcService proxy = null;
 
@@ -598,7 +679,7 @@ public class TestRPC extends TestRpcBase {
 
   @Test
   public void testClientWithoutServer() throws Exception {
-    TestRpcService proxy;
+    TestRpcService proxy = null;
 
     short invalidPort = 20;
     InetSocketAddress invalidAddress = new InetSocketAddress(ADDRESS,
@@ -615,6 +696,8 @@ public class TestRPC extends TestRpcBase {
       if (!(ioe.getCause() instanceof ConnectException)) {
         fail("We should not have reached here");
       }
+    } finally {
+      RPC.stopProxy(proxy);
     }
   }
 
@@ -677,7 +760,7 @@ public class TestRPC extends TestRpcBase {
     server = setupTestServer(conf, 5);
     try {
       InetSocketAddress bindAddr = NetUtils.getConnectAddress(server);
-      assertEquals(InetAddress.getLocalHost(), bindAddr.getAddress());
+      assertEquals(InetAddress.getLoopbackAddress(), bindAddr.getAddress());
     } finally {
       stop(server, null);
     }
@@ -685,7 +768,7 @@ public class TestRPC extends TestRpcBase {
 
   @Test
   public void testAuthorization() throws Exception {
-    Configuration myConf = new Configuration();
+    Configuration myConf = new Configuration(conf);
     myConf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         true);
 
@@ -712,13 +795,11 @@ public class TestRPC extends TestRpcBase {
    * Verify that RPC calls still work ok.
    */
   public void testNoPings() throws Exception {
-    Configuration conf = new Configuration();
-
     conf.setBoolean("ipc.client.ping", false);
-    new TestRPC().testCallsInternal(conf);
+    new TestRPC(useNetty).testCallsInternal(conf);
 
     conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY, 2);
-    new TestRPC().testCallsInternal(conf);
+    new TestRPC(useNetty).testCallsInternal(conf);
   }
 
   /**
@@ -826,33 +907,47 @@ public class TestRPC extends TestRpcBase {
    * Test that server.stop() properly stops all threads
    */
   @Test
-  public void testStopsAllThreads() throws IOException, InterruptedException {
+  public void testStopsAllThreads() throws Exception {
     Server server;
+    TestRpcService proxy = null;
 
-    int threadsBefore = countThreads("Server$Listener$Reader");
+    String threadName = "Server$NioListener$Reader";
+
+    if (useNetty) {
+      threadName = "Server$NettyThreadFactory$1";
+    }
+
+    int threadsBefore = countThreads(threadName);
     assertEquals("Expect no Reader threads running before test",
         0, threadsBefore);
 
     server = setupTestServer(conf, 5);
 
     try {
+      // send requests to spin up the netty threads.
+      int numReaders = server.getNumReaders();
+      for (int i=0; i < numReaders; i++) {
+        proxy = getClient(addr, conf);
+        proxy.ping(null, newEmptyRequest());
+        RPC.stopProxy(proxy);
+      }
       // Wait for at least one reader thread to start
       int threadsRunning = 0;
       long totalSleepTime = 0;
       do {
         totalSleepTime += 10;
         Thread.sleep(10);
-        threadsRunning = countThreads("Server$Listener$Reader");
+        threadsRunning = countThreads(threadName);
       } while (threadsRunning == 0 && totalSleepTime < 5000);
 
       // Validate that at least one thread started (we didn't timeout)
-      threadsRunning = countThreads("Server$Listener$Reader");
+      threadsRunning = countThreads(threadName);
       assertTrue(threadsRunning > 0);
     } finally {
       server.stop();
     }
 
-    int threadsAfter = countThreads("Server$Listener$Reader");
+    int threadsAfter = countThreads(threadName);
     assertEquals("Expect no Reader threads left running after test",
         0, threadsAfter);
   }
@@ -947,7 +1042,7 @@ public class TestRPC extends TestRpcBase {
     try {
       for (int i = 0; i < numConcurrentRPC; i++) {
         final int num = i;
-        final TestRpcService proxy = getClient(addr, conf);
+        TestRpcService proxy = getClient(addr, conf);
         Thread rpcThread = new Thread(new Runnable() {
           @Override
           public void run() {
@@ -968,6 +1063,7 @@ public class TestRPC extends TestRpcBase {
               LOG.error("thread " + num, e);
             } finally {
               latch.countDown();
+              RPC.stopProxy(proxy);
             }
           }
         });
@@ -1472,6 +1568,8 @@ public class TestRPC extends TestRpcBase {
       } catch (ServiceException e) {
         assertTrue(e.getCause() instanceof SocketTimeoutException);
         LOG.info("got expected timeout.", e);
+      } finally {
+        RPC.stopProxy(proxy);
       }
 
       // Test RPC timeout when ipc.client.ping is false.
@@ -1485,6 +1583,8 @@ public class TestRPC extends TestRpcBase {
       } catch (ServiceException e) {
         assertTrue(e.getCause() instanceof SocketTimeoutException);
         LOG.info("got expected timeout.", e);
+      } finally {
+        RPC.stopProxy(proxy);
       }
 
       // Test negative timeout value.
@@ -1496,6 +1596,8 @@ public class TestRPC extends TestRpcBase {
       } catch (ServiceException e) {
         LOG.info("got unexpected exception.", e);
         fail("RPC should not time out.");
+      } finally {
+        RPC.stopProxy(proxy);
       }
 
       // Test RPC timeout greater than ipc.ping.interval.
@@ -1520,6 +1622,8 @@ public class TestRPC extends TestRpcBase {
       } catch (ServiceException e) {
         assertTrue(e.getCause() instanceof SocketTimeoutException);
         LOG.info("got expected timeout.", e);
+      } finally {
+        RPC.stopProxy(proxy);
       }
 
     } finally {
@@ -1813,6 +1917,6 @@ public class TestRPC extends TestRpcBase {
 
 
   public static void main(String[] args) throws Exception {
-    new TestRPC().testCallsInternal(conf);
+    new TestRPC(useNetty).testCallsInternal(conf);
   }
 }

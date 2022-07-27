@@ -49,6 +49,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -80,7 +81,7 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.Call;
-import org.apache.hadoop.ipc.Server.Connection;
+import org.apache.hadoop.ipc.netty.server.Connection;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
@@ -97,6 +98,8 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -111,10 +114,24 @@ import org.slf4j.event.Level;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Unit tests for IPC. */
+@RunWith(Parameterized.class)
 public class TestIPC {
   public static final Logger LOG = LoggerFactory.getLogger(TestIPC.class);
-  
-  private static Configuration conf;
+
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestIPC(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
+
+  private static Configuration testConf;
   final static int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
   /**
@@ -126,10 +143,20 @@ public class TestIPC {
   
   @Before
   public void setupConf() {
-    conf = new Configuration();
-    Client.setPingInterval(conf, PING_INTERVAL);
+    testConf = newConfiguration();
+    Client.setPingInterval(testConf, PING_INTERVAL);
     // tests may enable security, so disable before each test
-    UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation.setConfiguration(testConf);
+  }
+
+  static Configuration newConfiguration() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        CommonConfigurationKeys.IPC_SSL_KEY, useNetty);
+    conf.setBoolean(
+        CommonConfigurationKeys.IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST,
+        useNetty);
+    return conf;
   }
 
   static final Random RANDOM = new Random();
@@ -138,6 +165,7 @@ public class TestIPC {
 
   /** Directory where we can count open file descriptors on Linux */
   private static final File FD_DIR = new File("/proc/self/fd");
+  private static final File FD_DIR_BSD = new File("/dev/fd");
 
   static ConnectionId getConnectionId(InetSocketAddress addr, int rpcTimeout,
       Configuration conf) throws IOException {
@@ -191,13 +219,13 @@ public class TestIPC {
     public TestServer(int handlerCount, boolean sleep,
         Class<? extends Writable> paramClass,
         Class<? extends Writable> responseClass) throws IOException {
-      this(handlerCount, sleep, paramClass, responseClass, conf);
+      this(handlerCount, sleep, paramClass, responseClass, testConf);
     }
 
     public TestServer(int port, int handlerCount, boolean sleep,
         Class<? extends Writable> paramClass,
         Class<? extends Writable> responseClass) throws IOException {
-      this(port, handlerCount, sleep, paramClass, responseClass, conf);
+      this(port, handlerCount, sleep, paramClass, responseClass, testConf);
     }
 
     public TestServer(int handlerCount, boolean sleep,
@@ -257,7 +285,7 @@ public class TestIPC {
       for (int i = 0; i < count; i++) {
         try {
           final long param = RANDOM.nextLong();
-          LongWritable value = call(client, param, server, conf);
+          LongWritable value = call(client, param, server, testConf);
           if (value.get() != param) {
             LOG.error("Call failed!");
             failed = true;
@@ -277,7 +305,7 @@ public class TestIPC {
    * throwing an IOException).
    */
   private static class TestInvocationHandler implements RpcInvocationHandler {
-    private static int retry = 0;
+    private int retry = 0;
     private final Client client;
     private final Server server;
     private final int total;
@@ -299,7 +327,7 @@ public class TestIPC {
     public Object invoke(Object proxy, Method method, Object[] args)
         throws Throwable {
       LongWritable value = call(client, RANDOM.nextLong(),
-          NetUtils.getConnectAddress(server), conf);
+          NetUtils.getConnectAddress(server), testConf);
       return returnValue(value);
     }
 
@@ -346,7 +374,7 @@ public class TestIPC {
 
     Client[] clients = new Client[clientCount];
     for (int i = 0; i < clientCount; i++) {
-      clients[i] = new Client(LongWritable.class, conf);
+      clients[i] = new Client(LongWritable.class, testConf);
     }
     
     SerialCaller[] callers = new SerialCaller[callerCount];
@@ -382,7 +410,7 @@ public class TestIPC {
     }
     server.start();
 
-    Client client = new Client(LongWritable.class, conf);
+    Client client = new Client(LongWritable.class, testConf);
     Set<SerialCaller> calls = new HashSet<>();
     for (InetSocketAddress addr : addrs) {
       calls.add(new SerialCaller(client, addr, 100));
@@ -397,10 +425,10 @@ public class TestIPC {
 	
   @Test(timeout=60000)
   public void testStandAloneClient() throws IOException {
-    Client client = new Client(LongWritable.class, conf);
+    Client client = new Client(LongWritable.class, testConf);
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
     try {
-      call(client, RANDOM.nextLong(), address, conf);
+      call(client, RANDOM.nextLong(), address, testConf);
       fail("Expected an exception to have been thrown");
     } catch (IOException e) {
       String message = e.getMessage();
@@ -508,12 +536,12 @@ public class TestIPC {
 
     // start client
     WRITABLE_FAULTS_ENABLED = true;
-    Client client = new Client(clientResponseClass, conf);
+    Client client = new Client(clientResponseClass, testConf);
     try {
       LongWritable param = clientParamClass.newInstance();
 
       try {
-        call(client, param, addr, 0, conf);
+        call(client, param, addr, 0, testConf);
         fail("Expected an exception to have been thrown");
       } catch (Throwable t) {
         assertExceptionContains(t, "Injected fault");
@@ -523,7 +551,7 @@ public class TestIPC {
       // ie the internal state of the client or server should not be broken
       // by the failed call
       WRITABLE_FAULTS_ENABLED = false;
-      call(client, param, addr, 0, conf);
+      call(client, param, addr, 0, testConf);
       
     } finally {
       client.stop();
@@ -604,7 +632,7 @@ public class TestIPC {
   @Test(timeout=60000)
   public void testIOEOnWriteAfterPingClient() throws Exception {
     // start server
-    Client.setPingInterval(conf, 100);
+    Client.setPingInterval(testConf, 100);
 
     try {
       WRITABLE_FAULTS_SLEEP = 1000;
@@ -633,11 +661,11 @@ public class TestIPC {
   public void testSocketFactoryException() throws IOException {
     SocketFactory mockFactory = mock(SocketFactory.class);
     doThrow(new IOException("Injected fault")).when(mockFactory).createSocket();
-    Client client = new Client(LongWritable.class, conf, mockFactory);
+    Client client = new Client(LongWritable.class, testConf, mockFactory);
     
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
     try {
-      call(client, RANDOM.nextLong(), address, conf);
+      call(client, RANDOM.nextLong(), address, testConf);
       fail("Expected an exception to have been thrown");
     } catch (IOException e) {
       assertTrue(e.getMessage().contains("Injected fault"));
@@ -664,9 +692,13 @@ public class TestIPC {
    */
   @Test(timeout=60000)
   public void testRTEDuringConnectionSetup() throws IOException {
+    // The negative case requires special handling to throw the correct
+    // exception when SSL is enabled. Disabling for now to enable later
+    // after fix for the SSL case.
+    Assume.assumeFalse(useNetty);
     // Set up a socket factory which returns sockets which
     // throw an RTE when setSoTimeout is called.
-    SocketFactory spyFactory = spy(NetUtils.getDefaultSocketFactory(conf));
+    SocketFactory spyFactory = spy(NetUtils.getDefaultSocketFactory(testConf));
     Mockito.doAnswer(new Answer<Socket>() {
       @Override
       public Socket answer(InvocationOnMock invocation) {
@@ -675,13 +707,13 @@ public class TestIPC {
     }).when(spyFactory).createSocket();
       
     Server server = new TestServer(1, true);
-    Client client = new Client(LongWritable.class, conf, spyFactory);
+    Client client = new Client(LongWritable.class, testConf, spyFactory);
     server.start();
     try {
       // Call should fail due to injected exception.
       InetSocketAddress address = NetUtils.getConnectAddress(server);
       try {
-        call(client, RANDOM.nextLong(), address, conf);
+        call(client, RANDOM.nextLong(), address, testConf);
         fail("Expected an exception to have been thrown");
       } catch (Exception e) {
         LOG.info("caught expected exception", e);
@@ -692,7 +724,7 @@ public class TestIPC {
       // (i.e. it should not have cached a half-constructed connection)
   
       Mockito.reset(spyFactory);
-      call(client, RANDOM.nextLong(), address, conf);
+      call(client, RANDOM.nextLong(), address, testConf);
     } finally {
       client.stop();
       server.stop();
@@ -707,18 +739,18 @@ public class TestIPC {
     server.start();
 
     // start client
-    Client client = new Client(LongWritable.class, conf);
+    Client client = new Client(LongWritable.class, testConf);
     // set timeout to be less than MIN_SLEEP_TIME
     try {
       call(client, new LongWritable(RANDOM.nextLong()), addr,
-          MIN_SLEEP_TIME / 2, conf);
+          MIN_SLEEP_TIME / 2, testConf);
       fail("Expected an exception to have been thrown");
     } catch (SocketTimeoutException e) {
       LOG.info("Get a SocketTimeoutException ", e);
     }
     // set timeout to be bigger than 3*ping interval
     call(client, new LongWritable(RANDOM.nextLong()), addr,
-        3 * PING_INTERVAL + MIN_SLEEP_TIME, conf);
+        3 * PING_INTERVAL + MIN_SLEEP_TIME, testConf);
     client.stop();
   }
 
@@ -730,12 +762,12 @@ public class TestIPC {
     //Intentionally do not start server to get a connection timeout
 
     // start client
-    Client.setConnectTimeout(conf, 100);
-    Client client = new Client(LongWritable.class, conf);
+    Client.setConnectTimeout(testConf, 100);
+    Client client = new Client(LongWritable.class, testConf);
     // set the rpc timeout to twice the MIN_SLEEP_TIME
     try {
       call(client, new LongWritable(RANDOM.nextLong()), addr,
-          MIN_SLEEP_TIME * 2, conf);
+          MIN_SLEEP_TIME * 2, testConf);
       fail("Expected an exception to have been thrown");
     } catch (SocketTimeoutException e) {
       LOG.info("Get a SocketTimeoutException ", e);
@@ -754,7 +786,7 @@ public class TestIPC {
     server.start();
 
     // start client
-    Client.setConnectTimeout(conf, 10000);
+    Client.setConnectTimeout(testConf, 10000);
 
     callAndVerify(server, addr, 0, true);
     // Service Class is low to -128 as byte on wire.
@@ -797,8 +829,8 @@ public class TestIPC {
     final InetSocketAddress addr = new InetSocketAddress("host.invalid", 80);
 
     // start client
-    Client.setConnectTimeout(conf, 100);
-    final Client client = new Client(LongWritable.class, conf);
+    Client.setConnectTimeout(testConf, 100);
+    final Client client = new Client(LongWritable.class, testConf);
     // set the rpc timeout to twice the MIN_SLEEP_TIME
     try {
       LambdaTestUtils.intercept(UnknownHostException.class,
@@ -806,7 +838,7 @@ public class TestIPC {
             @Override
             public Void call() throws IOException {
               TestIPC.this.call(client, new LongWritable(RANDOM.nextLong()),
-                  addr, MIN_SLEEP_TIME * 2, conf);
+                  addr, MIN_SLEEP_TIME * 2, testConf);
               return null;
             }
           });
@@ -828,13 +860,13 @@ public class TestIPC {
         "localhost", NetUtils.getConnectAddress(server).getPort());
 
     // start client
-    Client.setConnectTimeout(conf, 100);
-    Client client = new Client(LongWritable.class, conf);
+    Client.setConnectTimeout(testConf, 100);
+    Client client = new Client(LongWritable.class, testConf);
 
     try {
       // Should re-resolve host and succeed
       call(client, new LongWritable(RANDOM.nextLong()), unresolvedAddr,
-          MIN_SLEEP_TIME * 2, conf);
+          MIN_SLEEP_TIME * 2, testConf);
     } finally {
       client.stop();
       server.stop();
@@ -848,6 +880,10 @@ public class TestIPC {
    */
   @Test(timeout=60000)
   public void testIpcWithReaderQueuing() throws Exception {
+    // test not applicable to netty.
+    if (useNetty) {
+      return;
+    }
     // 1 reader, 1 connectionQ slot, 1 callq
     for (int i=0; i < 10; i++) {
       checkBlocking(1, 1, 1);
@@ -865,7 +901,7 @@ public class TestIPC {
   private void checkBlocking(int readers, int readerQ, int callQ) throws Exception {
     int handlers = 1; // makes it easier
     
-    final Configuration conf = new Configuration();
+    final Configuration conf = newConfiguration();
     conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY, readerQ);
 
     // send in enough clients to block up the handlers, callq, and readers
@@ -985,10 +1021,10 @@ public class TestIPC {
     final int killMax = 3;
     final int clients = 1 + killMax*2; // 1 to block, 2 batches to kill
     
-    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, maxIdle);
-    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_IDLETHRESHOLD_KEY, 0);
-    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_KEY, killMax);
-    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_KEY, cleanupInterval);
+    testConf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, maxIdle);
+    testConf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_IDLETHRESHOLD_KEY, 0);
+    testConf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_KEY, killMax);
+    testConf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_KEY, cleanupInterval);
     
     final CyclicBarrier firstCallBarrier = new CyclicBarrier(2);
     final CyclicBarrier callBarrier = new CyclicBarrier(clients);
@@ -1021,7 +1057,7 @@ public class TestIPC {
       // start client
       final CountDownLatch callReturned = new CountDownLatch(clients-1);
       final InetSocketAddress addr = NetUtils.getConnectAddress(server);
-      final Configuration clientConf = new Configuration();
+      final Configuration clientConf = newConfiguration();
       clientConf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 10000);
       for (int i=0; i < clients; i++) {
         threads[i] = new Thread(new Runnable(){
@@ -1090,12 +1126,15 @@ public class TestIPC {
    */
   private static void callAndVerify(Server server, InetSocketAddress addr,
       int serviceClass, boolean noChanged) throws IOException{
-    Client client = new Client(LongWritable.class, conf);
+    Client client = new Client(LongWritable.class, testConf);
 
-    call(client, addr, serviceClass, conf);
+    call(client, addr, serviceClass, testConf);
     Connection connection = server.getConnections()[0];
     int serviceClass2 = connection.getServiceClass();
-    assertFalse(noChanged ^ serviceClass == serviceClass2);
+    assertFalse(
+        "expectChange:" + !noChanged +
+        " client:" + serviceClass + " connection:" + serviceClass2,
+        noChanged ^ serviceClass == serviceClass2);
     client.stop();
   }
   
@@ -1107,12 +1146,12 @@ public class TestIPC {
     server.start();
 
     // start client
-    Client client = new Client(LongWritable.class, conf);
-    call(client, addr, 0, conf);
+    Client client = new Client(LongWritable.class, testConf);
+    call(client, addr, 0, testConf);
     client.stop();
  
     // This call should throw IOException.
-    call(client, addr, 0, conf);
+    call(client, addr, 0, testConf);
   }
 
   /**
@@ -1120,17 +1159,17 @@ public class TestIPC {
    * and stopping IPC servers.
    */
   @Test(timeout=60000)
-  public void testSocketLeak() throws IOException {
-    Assume.assumeTrue(FD_DIR.exists()); // only run on Linux
-
-    long startFds = countOpenFileDescriptors();
+  public void testSocketLeak() throws IOException, InterruptedException {
+    File fdDir =
+        FD_DIR.exists() ? FD_DIR : (FD_DIR_BSD.exists() ? FD_DIR_BSD : null);
+    Assume.assumeTrue(fdDir != null); // only run on Linux & BSD.
+    long startFds = countOpenFileDescriptors(fdDir);
     for (int i = 0; i < 50; i++) {
       Server server = new TestServer(1, true);
       server.start();
       server.stop();
     }
-    long endFds = countOpenFileDescriptors();
-    
+    long endFds = countOpenFileDescriptors(fdDir);
     assertTrue("Leaked " + (endFds - startFds) + " file descriptors",
         endFds - startFds < 20);
   }
@@ -1141,7 +1180,7 @@ public class TestIPC {
    */
   @Test(timeout=30000)
   public void testInterrupted() {
-    Client client = new Client(LongWritable.class, conf);
+    Client client = new Client(LongWritable.class, testConf);
     Client.getClientExecutor().submit(new Runnable() {
       public void run() {
         while(true);
@@ -1160,37 +1199,49 @@ public class TestIPC {
     Thread.interrupted();
   }
 
-  private long countOpenFileDescriptors() {
-    return FD_DIR.list().length;
+  private long countOpenFileDescriptors(File fdDir) {
+    return fdDir.list().length;
   }
 
   @Test(timeout=60000)
   public void testIpcFromHadoop_0_18_13() throws IOException {
+    // These tests pass custom NetworkTraces, that won't clear the SSL
+    // handshake.
+    Assume.assumeFalse(useNetty);
     doIpcVersionTest(NetworkTraces.HADOOP_0_18_3_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_18_3_RPC);
   }
   
   @Test(timeout=60000)
   public void testIpcFromHadoop0_20_3() throws IOException {
+    // These tests pass custom NetworkTraces, that won't clear the SSL
+    // handshake.
+    Assume.assumeFalse(useNetty);
     doIpcVersionTest(NetworkTraces.HADOOP_0_20_3_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_20_3_RPC);
   }
   
   @Test(timeout=60000)
   public void testIpcFromHadoop0_21_0() throws IOException {
+    // These tests pass custom NetworkTraces, that won't clear the SSL
+    // handshake.
+    Assume.assumeFalse(useNetty);
     doIpcVersionTest(NetworkTraces.HADOOP_0_21_0_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_21_0_RPC);
   }
   
   @Test(timeout=60000)
   public void testHttpGetResponse() throws IOException {
+    // Custom Bytes do not clear the SSLHandshake and will need special
+    // handling. Fix in later revisions.
+    Assume.assumeFalse(useNetty);
     doIpcVersionTest("GET / HTTP/1.0\r\n\r\n".getBytes(),
         Server.RECEIVED_HTTP_REQ_RESPONSE.getBytes());
   }
   
   @Test(timeout=60000)
   public void testConnectionRetriesOnSocketTimeoutExceptions() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = newConfiguration();
     // set max retries to 0
     conf.setInt(
       CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
@@ -1219,7 +1270,7 @@ public class TestIPC {
     final CallInfo info = new CallInfo();
 
     // Override client to store the call info and check response
-    final Client client = new Client(LongWritable.class, conf) {
+    final Client client = new Client(LongWritable.class, testConf) {
       @Override
       Call createCall(RpcKind rpcKind, Writable rpcRequest) {
         final Call call = super.createCall(rpcKind, rpcRequest);
@@ -1269,7 +1320,7 @@ public class TestIPC {
    */
   @Test(timeout=60000)
   public void testRetryProxy() throws IOException {
-    final Client client = new Client(LongWritable.class, conf);
+    final Client client = new Client(LongWritable.class, testConf);
     
     final TestServer server = new TestServer(1, false);
     server.callListener = new Runnable() {
@@ -1283,17 +1334,18 @@ public class TestIPC {
     // try more times, so it is easier to find race condition bug
     // 10000 times runs about 6s on a core i7 machine
     final int totalRetry = 10000;
+    TestInvocationHandler handler =
+      new TestInvocationHandler(client, server, totalRetry);
     DummyProtocol proxy = (DummyProtocol) Proxy.newProxyInstance(
         DummyProtocol.class.getClassLoader(),
-        new Class[] { DummyProtocol.class }, new TestInvocationHandler(client,
-            server, totalRetry));
+        new Class[] { DummyProtocol.class }, handler);
     DummyProtocol retryProxy = (DummyProtocol) RetryProxy.create(
         DummyProtocol.class, proxy, RetryPolicies.RETRY_FOREVER);
     
     try {
       server.start();
       retryProxy.dummyRun();
-      Assert.assertEquals(TestInvocationHandler.retry, totalRetry + 1);
+      Assert.assertEquals(handler.retry, totalRetry + 1);
     } finally {
       Client.setCallIdAndRetryCount(0, 0, null);
       client.stop();
@@ -1307,7 +1359,7 @@ public class TestIPC {
    */
   @Test(expected = InvalidToken.class)
   public void testNoRetryOnInvalidToken() throws IOException {
-    final Client client = new Client(LongWritable.class, conf);
+    final Client client = new Client(LongWritable.class, testConf);
     final TestServer server = new TestServer(1, false);
     TestInvalidTokenHandler handler =
         new TestInvalidTokenHandler(client, server);
@@ -1340,7 +1392,7 @@ public class TestIPC {
   @Test(timeout=60000)
   public void testInitialCallRetryCount() throws IOException {
     // Override client to store the call id
-    final Client client = new Client(LongWritable.class, conf);
+    final Client client = new Client(LongWritable.class, testConf);
 
     // Attach a listener that tracks every call ID received by the server.
     final TestServer server = new TestServer(1, false);
@@ -1372,7 +1424,7 @@ public class TestIPC {
   public void testCallRetryCount() throws IOException {
     final int retryCount = 255;
     // Override client to store the call id
-    final Client client = new Client(LongWritable.class, conf);
+    final Client client = new Client(LongWritable.class, testConf);
     Client.setCallIdAndRetryCount(Client.nextCallId(), 255, null);
 
     // Attach a listener that tracks every call ID received by the server.
@@ -1420,7 +1472,7 @@ public class TestIPC {
       }
     };
 
-    Client client = new Client(LongWritable.class, conf);
+    Client client = new Client(LongWritable.class, testConf);
 
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -1454,7 +1506,7 @@ public class TestIPC {
 
   @Test
   public void testMaxConnections() throws Exception {
-    conf.setInt("ipc.server.max.connections", 6);
+    testConf.setInt("ipc.server.max.connections", 6);
     Server server = null;
     Thread connectors[] = new Thread[10];
 
@@ -1470,7 +1522,7 @@ public class TestIPC {
           public void run() {
             Socket sock = null;
             try {
-              sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
+              sock = NetUtils.getDefaultSocketFactory(testConf).createSocket();
               NetUtils.connect(sock, addr, 3000);
               try {
                 Thread.sleep(4000);
@@ -1501,13 +1553,13 @@ public class TestIPC {
       if (server != null) {
         server.stop();
       }
-      conf.setInt("ipc.server.max.connections", 0);
+      testConf.setInt("ipc.server.max.connections", 0);
     }
   }
 
   @Test
   public void testClientGetTimeout() throws IOException {
-    Configuration config = new Configuration();
+    Configuration config = newConfiguration();
     config.setInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY, 0);
     assertThat(Client.getTimeout(config)).isEqualTo(-1);
   }
@@ -1530,7 +1582,7 @@ public class TestIPC {
         throw new ConnectTimeoutException("fake");
       }
     }).when(mockFactory).createSocket();
-    final Client client = new Client(LongWritable.class, conf, mockFactory);
+    final Client client = new Client(LongWritable.class, testConf, mockFactory);
 
     final AtomicBoolean callStarted = new AtomicBoolean(false);
 
@@ -1539,7 +1591,7 @@ public class TestIPC {
       public void run() {
         try {
           callStarted.set(true);
-          call(client, RANDOM.nextLong(), addr, conf);
+          call(client, RANDOM.nextLong(), addr, testConf);
         } catch (IOException ignored) {}
       }
     }).start();
@@ -1574,13 +1626,19 @@ public class TestIPC {
   
   @Test(timeout=4000)
   public void testInsecureVersionMismatch() throws IOException {
+    // A custom header will not work correctly when a SSL Handshake Happens.
+    //Skipping to fix later for the SSL case.
+    Assume.assumeFalse(useNetty);
     checkVersionMismatch();
   }
 
   @Test(timeout=4000)
   public void testSecureVersionMismatch() throws IOException {
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
-    UserGroupInformation.setConfiguration(conf);
+    // A custom header will not work correctly when a SSL Handshake Happens.
+    //Skipping to fix later for the SSL case.
+    Assume.assumeFalse(useNetty);
+    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, testConf);
+    UserGroupInformation.setConfiguration(testConf);
     checkVersionMismatch();
   }
 
@@ -1608,8 +1666,8 @@ public class TestIPC {
       });
 
       try {
-        Client client = new Client(LongWritable.class, conf);
-        call(client, 0, addr, conf);
+        Client client = new Client(LongWritable.class, testConf);
+        call(client, 0, addr, testConf);
       } catch (RemoteException re) {
         Assert.assertEquals(RPC.VersionMismatch.class.getName(),
             re.getClassName());
@@ -1627,14 +1685,14 @@ public class TestIPC {
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();
 
-    conf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH, 0);
-    Client client = new Client(LongWritable.class, conf);
-    call(client, 0, addr, conf);
+    testConf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH, 0);
+    Client client = new Client(LongWritable.class, testConf);
+    call(client, 0, addr, testConf);
 
-    conf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH, 4);
-    client = new Client(LongWritable.class, conf);
+    testConf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH, 4);
+    client = new Client(LongWritable.class, testConf);
     try {
-      call(client, 0, addr, conf);
+      call(client, 0, addr, testConf);
     } catch (IOException ioe) {
       Assert.assertNotNull(ioe);
       Assert.assertEquals(RpcException.class, ioe.getClass());
@@ -1702,12 +1760,12 @@ public class TestIPC {
 
     // do a dummy call and expect it to throw an exception on connect.
     // tests should verify if/how a bind occurred.
-    try (Client client = new Client(LongWritable.class, conf, mockFactory)) {
+    try (Client client = new Client(LongWritable.class, testConf, mockFactory)) {
       final InetSocketAddress sockAddr = new InetSocketAddress(0);
       final LongWritable param = new LongWritable(RANDOM.nextLong());
       final ConnectionId remoteId = new ConnectionId(
           sockAddr, TestBindingProtocol.class, ugi, 0,
-          RetryPolicies.TRY_ONCE_THEN_FAIL, conf);
+          RetryPolicies.TRY_ONCE_THEN_FAIL, testConf);
       client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId, null);
       fail("call didn't throw connect exception");
     } catch (SocketException se) {

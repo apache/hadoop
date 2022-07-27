@@ -30,7 +30,7 @@ public class RpcException extends IOException {
    * 
    * @param messages detailed message.
    */
-  RpcException(final String message) {
+  public RpcException(final String message) {
     super(message);
   }
 

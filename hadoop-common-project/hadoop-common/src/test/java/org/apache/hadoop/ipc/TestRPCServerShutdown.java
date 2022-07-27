@@ -22,11 +22,14 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -40,7 +43,21 @@ import static org.junit.Assert.fail;
 
 /** Split from TestRPC. */
 @SuppressWarnings("deprecation")
+@RunWith(Parameterized.class)
 public class TestRPCServerShutdown extends TestRpcBase {
+
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestRPCServerShutdown(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
 
   public static final Logger LOG =
       LoggerFactory.getLogger(TestRPCServerShutdown.class);
@@ -48,6 +65,11 @@ public class TestRPCServerShutdown extends TestRpcBase {
   @Before
   public void setup() {
     setupConf();
+    conf.setBoolean(CommonConfigurationKeys.IPC_SSL_KEY,
+                    useNetty);
+    conf.setBoolean(
+        CommonConfigurationKeys.IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST,
+        useNetty);
   }
 
   /**

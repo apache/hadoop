@@ -45,7 +45,7 @@ public class TestRpcServerHandoff {
       LoggerFactory.getLogger(TestRpcServerHandoff.class);
 
   private static final String BIND_ADDRESS = "0.0.0.0";
-  private static final Configuration conf = new Configuration();
+  private static final Configuration testConf = new Configuration();
 
 
   public static class ServerForHandoffTest extends Server {
@@ -58,7 +58,7 @@ public class TestRpcServerHandoff {
     private volatile Call deferredCall;
 
     protected ServerForHandoffTest(int handlerCount) throws IOException {
-      super(BIND_ADDRESS, 0, BytesWritable.class, handlerCount, conf);
+      super(BIND_ADDRESS, 0, BytesWritable.class, handlerCount, testConf);
     }
 
     @Override
@@ -108,7 +108,7 @@ public class TestRpcServerHandoff {
       InetSocketAddress serverAddress = NetUtils.getConnectAddress(server);
       byte[] requestBytes = generateRandomBytes(1024);
       ClientCallable clientCallable =
-          new ClientCallable(serverAddress, conf, requestBytes);
+          new ClientCallable(serverAddress, testConf, requestBytes);
 
       FutureTask<Writable> future = new FutureTask<Writable>(clientCallable);
       Thread clientThread = new Thread(future);
@@ -137,7 +137,7 @@ public class TestRpcServerHandoff {
       InetSocketAddress serverAddress = NetUtils.getConnectAddress(server);
       byte[] requestBytes = generateRandomBytes(1024);
       ClientCallable clientCallable =
-          new ClientCallable(serverAddress, conf, requestBytes);
+          new ClientCallable(serverAddress, testConf, requestBytes);
 
       FutureTask<Writable> future = new FutureTask<Writable>(clientCallable);
       Thread clientThread = new Thread(future);
