@@ -354,7 +354,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     LambdaTestUtils.intercept(YarnException.class,
         "Application " + appId + " does not exist in FederationStateStore.",
-         () -> interceptor.forceKillApplication(requestKill));
+        () -> interceptor.forceKillApplication(requestKill));
   }
 
   /**

@@ -250,7 +250,7 @@ public class FederationClientInterceptor
 
   private SubClusterId getRandomActiveSubCluster(
       Map<SubClusterId, SubClusterInfo> activeSubClusters) throws YarnException {
-    if (activeSubClusters != null && activeSubClusters.isEmpty()) {
+    if (activeSubClusters == null || activeSubClusters.isEmpty()) {
       RouterServerUtil.logAndThrowException(
           FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
     }
