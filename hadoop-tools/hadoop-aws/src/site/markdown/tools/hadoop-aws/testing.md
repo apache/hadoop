@@ -1291,7 +1291,7 @@ time bin/hadoop fs -copyFromLocal -t 10  share/hadoop/tools/lib/*aws*jar $BUCKET
 # expect the iostatistics object_list_request value to be O(directories)
 bin/hadoop fs -ls -R $BUCKET/
 
-# expect the iostatistics object_list_request and op_get_content_summary values to be 1 
+# expect the iostatistics object_list_request and op_get_content_summary values to be 1
 bin/hadoop fs -du -h -s $BUCKET/
 
 mkdir tmp
