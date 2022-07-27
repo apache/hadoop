@@ -60,9 +60,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   protected static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   protected static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
 
-  protected final IntFunction<ByteBuffer> allocate;
+  private final IntFunction<ByteBuffer> allocate;
 
-  protected final WeakReferencedElasticByteBufferPool pool =
+  private final WeakReferencedElasticByteBufferPool pool =
           new WeakReferencedElasticByteBufferPool();
 
   private final String bufferType;
@@ -82,6 +82,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   public IntFunction<ByteBuffer> getAllocate() {
     return allocate;
+  }
+
+  public WeakReferencedElasticByteBufferPool getPool() {
+    return pool;
   }
 
   @Override

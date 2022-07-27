@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -191,9 +190,9 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
                     .withFileStatus(fileStatus)
                     .build();
     try (FSDataInputStream in = builder.get()) {
-      in.readVectored(fileRanges, allocate);
+      in.readVectored(fileRanges, getAllocate());
       validateVectoredReadResult(fileRanges, DATASET);
-      returnBuffersToPoolPostRead(fileRanges, pool);
+      returnBuffersToPoolPostRead(fileRanges, getPool());
 
       // audit the io statistics for this stream
       IOStatistics st = in.getIOStatistics();
@@ -275,12 +274,12 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
                     .withFileStatus(fileStatus)
                     .build();
     try (FSDataInputStream in = builder.get()) {
-      in.readVectored(ranges1, allocate);
-      in.readVectored(ranges2, allocate);
+      in.readVectored(ranges1, getAllocate());
+      in.readVectored(ranges2, getAllocate());
       validateVectoredReadResult(ranges1, DATASET);
       validateVectoredReadResult(ranges2, DATASET);
-      returnBuffersToPoolPostRead(ranges1, pool);
-      returnBuffersToPoolPostRead(ranges2, pool);
+      returnBuffersToPoolPostRead(ranges1, getPool());
+      returnBuffersToPoolPostRead(ranges2, getPool());
 
       // audit the io statistics for this stream
       IOStatistics st = in.getIOStatistics();
