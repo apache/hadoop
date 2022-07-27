@@ -269,13 +269,13 @@ public class RouterPolicyFacade {
     if (configuration == null) {
       final String policyKey = YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY;
       LOG.warn("There is no policies configured for queue: {} " +
-          "we fallback to default policy for: {}. ", queue, policyKey);
+          "we fallback to default policy for: {}. ", copyQueue, policyKey);
       copyQueue = YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY;
       try {
         configuration = federationFacade.getPolicyConfiguration(copyQueue);
       } catch (YarnException e) {
         LOG.warn("Cannot retrieve policy configured for the queue: {}, " +
-            "falling back to defaults.", queue, e);
+            "falling back to defaults.", copyQueue, e);
       }
     }
 
@@ -287,9 +287,9 @@ public class RouterPolicyFacade {
 
     // if the configuration has changed since last loaded, reinit the policy
     // based on current configuration
-    if (!cachedConfiguration.containsKey(queue)
-            || !cachedConfiguration.get(queue).equals(configuration)) {
-      singlePolicyReinit(policyMap, cachedConfiguration, queue, configuration);
+    if (!cachedConfiguration.containsKey(copyQueue)
+            || !cachedConfiguration.get(copyQueue).equals(configuration)) {
+      singlePolicyReinit(policyMap, cachedConfiguration, copyQueue, configuration);
     }
 
     return policyMap.get(copyQueue);

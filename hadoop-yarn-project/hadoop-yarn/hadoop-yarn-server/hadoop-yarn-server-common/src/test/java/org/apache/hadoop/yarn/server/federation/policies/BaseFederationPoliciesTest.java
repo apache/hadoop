@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.federation.policies;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -28,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -57,6 +57,9 @@ public abstract class BaseFederationPoliciesTest {
       mock(ApplicationSubmissionContext.class);
   private Random rand = new Random();
   private SubClusterId homeSubCluster;
+
+  private ReservationSubmissionRequest reservationSubmissionRequest =
+      mock(ReservationSubmissionRequest.class);
 
   @Test
   public void testReinitilialize() throws YarnException {
@@ -177,15 +180,14 @@ public abstract class BaseFederationPoliciesTest {
   public void setMockActiveSubclusters(int numSubclusters) {
     for (int i = 1; i <= numSubclusters; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
-      SubClusterInfo sci = mock(SubClusterInfo.class);
-      when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-      when(sci.getSubClusterId()).thenReturn(sc.toId());
+      SubClusterInfo sci = SubClusterInfo.newInstance(sc.toId(),
+          "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+          System.currentTimeMillis(), "something");
       getActiveSubclusters().put(sc.toId(), sci);
     }
   }
 
   public String generateClusterMetricsInfo(int id) {
-
     long mem = 1024 * getRand().nextInt(277 * 100 - 1);
     // plant a best cluster
     if (id == 5) {
@@ -204,7 +206,6 @@ public abstract class BaseFederationPoliciesTest {
                     + "\"rebootedNodes\":0,\"activeNodes\":277}}\n";
 
     return clusterMetrics;
-
   }
 
   public FederationStateStoreFacade getMemoryFacade() throws YarnException {
@@ -225,7 +226,18 @@ public abstract class BaseFederationPoliciesTest {
     return fedFacade;
   }
 
-  public void setupContext() throws YarnException {
+  public ReservationSubmissionRequest getReservationSubmissionRequest() {
+    return reservationSubmissionRequest;
+  }
 
+  public void setReservationSubmissionRequest(ReservationSubmissionRequest reservationSubmissionRequest) {
+    this.reservationSubmissionRequest = reservationSubmissionRequest;
+  }
+
+  public void setupContext() throws YarnException {
+    FederationPolicyInitializationContext context =
+        FederationPoliciesTestUtil.initializePolicyContext2(getPolicy(),
+        getPolicyInfo(), getActiveSubclusters(), getMemoryFacade());
+    this.setFederationPolicyContext(context);
   }
 }

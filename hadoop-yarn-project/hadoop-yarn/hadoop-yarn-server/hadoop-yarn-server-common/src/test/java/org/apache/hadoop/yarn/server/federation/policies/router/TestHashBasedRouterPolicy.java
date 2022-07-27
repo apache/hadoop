@@ -50,8 +50,7 @@ public class TestHashBasedRouterPolicy extends BaseRouterPoliciesTest {
     setMockActiveSubclusters(numSubclusters);
 
     // initialize policy with context
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
+    setupContext();
   }
 
   @Test

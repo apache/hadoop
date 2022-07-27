@@ -23,9 +23,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
+import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -35,6 +41,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.mockito.Mockito.when;
 
 /**
  * Base class for router policies tests, tests for null input cases.
@@ -114,5 +122,34 @@ public abstract class BaseRouterPoliciesTest
             .equals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE));
       }
     }
+  }
+
+   @Test
+   public void testNullReservationContext() throws Exception {
+     FederationRouterPolicy policy =  ((FederationRouterPolicy) getPolicy());
+
+     LambdaTestUtils.intercept(FederationPolicyException.class,
+         "The ReservationSubmissionRequest cannot be null.",
+         () -> policy.getReservationHomeSubcluster(null));
+   }
+
+  @Test
+  public void testUnknownReservation() throws Exception {
+    ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
+    ReservationId reservationId = ReservationId.newInstance(System.currentTimeMillis(), 1);
+    when(resReq.getQueue()).thenReturn("queue1");
+    when(resReq.getReservationId()).thenReturn(reservationId);
+
+    // route an application that uses this app
+    ApplicationSubmissionContext applicationSubmissionContext =
+        ApplicationSubmissionContext.newInstance(
+        ApplicationId.newInstance(System.currentTimeMillis(), 1), "app1",
+        "queue1", Priority.newInstance(1), null, false, false, 1, null, null, false);
+    applicationSubmissionContext.setReservationID(resReq.getReservationId());
+    FederationRouterPolicy policy = (FederationRouterPolicy) getPolicy();
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> policy.getHomeSubcluster(applicationSubmissionContext, new ArrayList<>()));
   }
 }

@@ -46,12 +46,15 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
     Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
 
+    long now = System.currentTimeMillis();
+
     // simulate 20 active subclusters
     for (int i = 0; i < 20; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo(String.format("sc%02d", i));
       SubClusterInfo federationSubClusterInfo =
-          SubClusterInfo.newInstance(sc.toId(), null, null, null, null, -1,
-              SubClusterState.SC_RUNNING, -1, generateClusterMetricsInfo(i));
+          SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82",
+          "dns1:83", now - 1000, SubClusterState.SC_RUNNING, now - 2000,
+          generateClusterMetricsInfo(i));
       getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
       float weight = getRand().nextInt(2);
       if (i == 5) {
@@ -67,9 +70,8 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
 
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
-
+    // initialize policy with context
+    setupContext();
   }
 
   public String generateClusterMetricsInfo(int id) {

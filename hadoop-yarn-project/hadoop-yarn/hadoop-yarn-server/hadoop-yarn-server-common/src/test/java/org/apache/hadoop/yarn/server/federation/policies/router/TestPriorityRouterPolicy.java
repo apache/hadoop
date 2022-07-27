@@ -54,10 +54,11 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
 
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f || i == 5) {
-        SubClusterInfo sci = mock(SubClusterInfo.class);
-        when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-        when(sci.getSubClusterId()).thenReturn(sc.toId());
-        getActiveSubclusters().put(sc.toId(), sci);
+          long now = System.currentTimeMillis();
+          SubClusterInfo federationSubClusterInfo =
+              SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83",
+             now - 1000, SubClusterState.SC_RUNNING, now - 2000, generateClusterMetricsInfo(i));
+          getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
       }
       float weight = getRand().nextFloat();
       if (i == 5) {
@@ -72,9 +73,7 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
     }
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
-
+    setupContext();
   }
 
   @Test
