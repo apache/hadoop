@@ -225,6 +225,12 @@ public interface FSNamesystemMBean {
   int getFsLockQueueLength();
 
   /**
+   * Returns total number of alarms that SubDirectoryItems
+   * of one directory have reached alarm threshold.
+   */
+  public int getMaxDirectoryItemsAlarmNums();
+
+  /**
    * Return total number of Sync Operations on FSEditLog.
    */
   long getTotalSyncCount();
