@@ -21,8 +21,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_S
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_GROUPS_CACHE_SECS;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT;
 import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
@@ -306,11 +304,6 @@ public class UserGroupInformation {
   private static synchronized void initialize(Configuration conf,
                                               boolean overrideNameRules) {
     authenticationMethod = SecurityUtil.getAuthenticationMethod(conf);
-    if (conf.getLong(HADOOP_SECURITY_GROUPS_CACHE_SECS, HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000 <= 0){
-        throw new IllegalArgumentException(
-          "hadoop.security.groups.cache.secs should be larger than 0",
-        new IllegalArgumentException("hadoop.security.groups.cache.secs should be larger than 0"));
-    }
     if (overrideNameRules || !HadoopKerberosName.hasRulesBeenSet()) {
       try {
         HadoopKerberosName.setConfiguration(conf);
