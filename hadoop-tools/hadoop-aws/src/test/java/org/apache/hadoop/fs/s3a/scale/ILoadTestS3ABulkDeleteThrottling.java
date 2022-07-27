@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutorService;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 
-import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.assertj.core.api.Assertions;
@@ -47,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.delegation.Csvout;
@@ -150,7 +150,8 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
         EXPERIMENTAL_AWS_INTERNAL_THROTTLING,
         BULK_DELETE_PAGE_SIZE,
-        USER_AGENT_PREFIX);
+        USER_AGENT_PREFIX,
+        ENABLE_MULTI_DELETE);
     conf.setBoolean(EXPERIMENTAL_AWS_INTERNAL_THROTTLING, throttle);
     conf.setInt(BULK_DELETE_PAGE_SIZE, pageSize);
     conf.set(USER_AGENT_PREFIX,
