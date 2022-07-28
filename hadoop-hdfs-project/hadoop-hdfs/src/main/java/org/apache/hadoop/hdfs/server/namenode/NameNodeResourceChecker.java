@@ -174,6 +174,11 @@ public class NameNodeResourceChecker {
    *         otherwise.
    */
   public boolean hasAvailableDiskSpace() {
+    Preconditions.checkArgument(minimumRedundantVolumes <= volumes.size(), 
+    "The setting for " + DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY + 
+    " is " + minimumRedundantVolumes +
+    " which is less than the total number of existing storage volumes " + volumes.size() + 
+    " and will result in adding resources and still not being able to turn off safe mode.");
     return NameNodeResourcePolicy.areResourcesAvailable(volumes.values(),
         minimumRedundantVolumes);
   }
