@@ -90,6 +90,9 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     Assert.assertEquals(failedRegisterAMRequests, metrics.getFailedRegisterAMRequests());
     Assert.assertEquals(failedFinishAMRequests, metrics.getFailedFinishAMRequests());
     Assert.assertEquals(failedAllocateRequests, metrics.getFailedAllocateRequests());
+    Assert.assertEquals(failedAppRecoveryRequests, metrics.getFailedAppRecoveryRequests());
+    Assert.assertEquals(failedAppStopRequests, metrics.getFailedAppStopRequests());
+    Assert.assertEquals(failedUpdateAMRMTokenRequests, metrics.getFailedUpdateAMRMTokenRequests());
 
     Assert.assertEquals(succeededAppStartRequests,
         metrics.getNumSucceededAppStartRequests());
