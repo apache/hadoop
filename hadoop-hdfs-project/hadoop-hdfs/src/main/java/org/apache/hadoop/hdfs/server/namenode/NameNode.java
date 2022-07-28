@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
 
@@ -492,6 +495,94 @@ public class NameNode extends ReconfigurableBase implements
 
   public static NameNodeMetrics getNameNodeMetrics() {
     return metrics;
+  }
+
+  /**
+   * Try to obtain the actual client info according to the current user.
+   * @param ipProxyUsers Users who can override client infos
+   */
+  private static String clientInfoFromContext(
+      final String[] ipProxyUsers) {
+    if (ipProxyUsers != null) {
+      UserGroupInformation user =
+          UserGroupInformation.getRealUserOrSelf(Server.getRemoteUser());
+      if (user != null &&
+          ArrayUtils.contains(ipProxyUsers, user.getShortUserName())) {
+        CallerContext context = CallerContext.getCurrent();
+        if (context != null && context.isContextValid()) {
+          return context.getContext();
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Try to obtain the value corresponding to the key by parsing the content.
+   * @param content the full content to be parsed.
+   * @param key trying to obtain the value of the key.
+   * @return the value corresponding to the key.
+   */
+  @VisibleForTesting
+  public static String parseSpecialValue(String content, String key) {
+    int posn = content.indexOf(key);
+    if (posn != -1) {
+      posn += key.length();
+      int end = content.indexOf(",", posn);
+      return end == -1 ? content.substring(posn)
+          : content.substring(posn, end);
+    }
+    return null;
+  }
+
+  /**
+   * Try to obtain the actual client's machine according to the current user.
+   * @param ipProxyUsers Users who can override client infos.
+   * @return The actual client's machine.
+   */
+  public static String getClientMachine(final String[] ipProxyUsers) {
+    String cc = clientInfoFromContext(ipProxyUsers);
+    if (cc != null) {
+      // if the rpc has a caller context of "clientIp:1.2.3.4,CLI",
+      // return "1.2.3.4" as the client machine.
+      String key = CallerContext.CLIENT_IP_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      return parseSpecialValue(cc, key);
+    }
+
+    String clientMachine = Server.getRemoteAddress();
+    if (clientMachine == null) { //not a RPC client
+      clientMachine = "";
+    }
+    return clientMachine;
+  }
+
+  /**
+   * Try to obtain the actual client's id and call id
+   * according to the current user.
+   * @param ipProxyUsers Users who can override client infos
+   * @return The actual client's id and call id.
+   */
+  public static Pair<byte[], Integer> getClientIdAndCallId(
+      final String[] ipProxyUsers) {
+    byte[] clientId = Server.getClientId();
+    int callId = Server.getCallId();
+    String cc = clientInfoFromContext(ipProxyUsers);
+    if (cc != null) {
+      String clientIdKey = CallerContext.CLIENT_ID_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      String clientIdStr = parseSpecialValue(cc, clientIdKey);
+      if (clientIdStr != null) {
+        clientId = StringUtils.hexStringToByte(clientIdStr);
+      }
+      String callIdKey = CallerContext.CLIENT_CALL_ID_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      String callIdStr = parseSpecialValue(cc, callIdKey);
+      if (callIdStr != null) {
+        callId = Integer.parseInt(callIdStr);
+      }
+    }
+    return Pair.of(clientId, callId);
   }
 
   /**

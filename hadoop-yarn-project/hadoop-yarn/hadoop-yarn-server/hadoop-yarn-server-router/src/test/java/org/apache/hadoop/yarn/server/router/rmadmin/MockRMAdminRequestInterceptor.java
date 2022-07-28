@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 
 /**
- * This class mocks the RMAmdinRequestInterceptor.
+ * This class mocks the RMAdminRequestInterceptor.
  */
 public class MockRMAdminRequestInterceptor
     extends DefaultRMAdminRequestInterceptor {

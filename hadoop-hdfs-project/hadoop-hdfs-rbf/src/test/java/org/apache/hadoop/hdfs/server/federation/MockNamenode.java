@@ -156,15 +156,12 @@ public class MockNamenode {
     NamespaceInfo nsInfo = new NamespaceInfo(1, this.nsId, this.nsId, 1);
     when(mockNn.versionRequest()).thenReturn(nsInfo);
 
-    when(mockNn.getServiceStatus()).thenAnswer(new Answer<HAServiceStatus>() {
-      @Override
-      public HAServiceStatus answer(InvocationOnMock invocation)
-          throws Throwable {
-        HAServiceStatus haStatus = new HAServiceStatus(getHAServiceState());
-        haStatus.setNotReadyToBecomeActive("");
-        return haStatus;
-      }
-    });
+    when(mockNn.getServiceStatus()).
+        thenAnswer((Answer<HAServiceStatus>) invocation -> {
+          HAServiceStatus haStatus = new HAServiceStatus(getHAServiceState());
+          haStatus.setNotReadyToBecomeActive("");
+          return haStatus;
+        });
   }
 
   /**
