@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -112,6 +113,9 @@ public class AMRMProxyService extends CompositeService implements
   private FederationStateStoreFacade federationFacade;
   private boolean federationEnabled = false;
 
+  private final AtomicInteger allocatedCount;
+  private final AtomicInteger askCount;
+
   /**
    * Creates an instance of the service.
    *
@@ -127,7 +131,8 @@ public class AMRMProxyService extends CompositeService implements
     this.applPipelineMap = new ConcurrentHashMap<>();
 
     this.dispatcher.register(ApplicationEventType.class, new ApplicationEventHandler());
-
+    this.allocatedCount = new AtomicInteger(0);
+    this.askCount = new AtomicInteger(0);
     metrics = AMRMProxyMetrics.getMetrics();
   }
 
@@ -192,13 +197,12 @@ public class AMRMProxyService extends CompositeService implements
 
   @Override
   protected void serviceStop() throws Exception {
-    LOG.info("Stopping AMRMProxyService");
+    LOG.info("Stopping AMRMProxyService, askCount = {}, allocatedCount  = {}.",
+        askCount, allocatedCount);
     if (this.server != null) {
       this.server.stop();
     }
-
     this.secretManager.stop();
-
     super.serviceStop();
   }
 
@@ -209,6 +213,7 @@ public class AMRMProxyService extends CompositeService implements
    */
   public void recover() throws IOException {
     LOG.info("Recovering AMRMProxyService.");
+    this.askCount.incrementAndGet();
 
     RecoveredAMRMProxyState state =
         this.nmContext.getNMStateStore().loadAMRMProxyState();
@@ -217,10 +222,12 @@ public class AMRMProxyService extends CompositeService implements
 
     LOG.info("Recovering {} running applications for AMRMProxy.",
         state.getAppContexts().size());
+
     for (Map.Entry<ApplicationAttemptId, Map<String, byte[]>> entry : state
         .getAppContexts().entrySet()) {
       ApplicationAttemptId attemptId = entry.getKey();
       LOG.info("Recovering app attempt {}.", attemptId);
+      long startTime = clock.getTime();
 
       // Try recover for the running application attempt
       try {
@@ -270,12 +277,14 @@ public class AMRMProxyService extends CompositeService implements
         }
         if (amCred == null) {
           LOG.error("No credentials found for AM container of {}. "
-              + "Yarn registry access might not work", attemptId);
+              + "Yarn registry access might not work.", attemptId);
         }
 
         // Create the interceptor pipeline for the AM
         initializePipeline(attemptId, user, amrmToken, localToken,
             entry.getValue(), true, amCred);
+        long endTime = clock.getTime();
+        this.metrics.succeededRecoverRequests(endTime - startTime);
       } catch (Throwable e) {
         LOG.error("Exception when recovering {}, removing it from NMStateStore and move on.",
             attemptId, e);
@@ -294,6 +303,7 @@ public class AMRMProxyService extends CompositeService implements
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
+    this.askCount.incrementAndGet();
     long startTime = clock.getTime();
     try {
       RequestInterceptorChainWrapper pipeline =
@@ -327,6 +337,7 @@ public class AMRMProxyService extends CompositeService implements
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request) throws YarnException,
       IOException {
+    this.askCount.incrementAndGet();
     long startTime = clock.getTime();
     try {
       RequestInterceptorChainWrapper pipeline =
@@ -373,6 +384,7 @@ public class AMRMProxyService extends CompositeService implements
       this.metrics.succeededAllocateRequests(endTime - startTime);
       LOG.info("Allocate processing finished in {} ms for application {}.",
           endTime - startTime, pipeline.getApplicationAttemptId());
+      this.allocatedCount.incrementAndGet();
       return allocateResponse;
     } catch (Throwable t) {
       this.metrics.incrFailedAllocateRequests();
@@ -390,6 +402,7 @@ public class AMRMProxyService extends CompositeService implements
    */
   public void processApplicationStartRequest(StartContainerRequest request)
       throws IOException, YarnException {
+    this.askCount.incrementAndGet();
     long startTime = clock.getTime();
     try {
       ContainerTokenIdentifier containerTokenIdentifierForKey =
@@ -550,13 +563,17 @@ public class AMRMProxyService extends CompositeService implements
    * @param applicationId application id
    */
   protected void stopApplication(ApplicationId applicationId) {
+    this.askCount.incrementAndGet();
     Preconditions.checkArgument(applicationId != null, "applicationId is null");
     RequestInterceptorChainWrapper pipeline =
         this.applPipelineMap.remove(applicationId);
+    boolean isStopSuccess = true;
+    long startTime = clock.getTime();
 
     if (pipeline == null) {
       LOG.info("No interceptor pipeline for application {},"
           + " likely because its AM is not run in this node.", applicationId);
+      isStopSuccess = false;
     } else {
       // Remove the appAttempt in AMRMTokenSecretManager
       this.secretManager.applicationMasterFinished(pipeline.getApplicationAttemptId());
@@ -566,6 +583,7 @@ public class AMRMProxyService extends CompositeService implements
       } catch (Throwable ex) {
         LOG.warn("Failed to shutdown the request processing pipeline for app: {}.",
             applicationId, ex);
+        isStopSuccess = false;
       }
 
       // Remove the app context from NMSS after the interceptors are shutdown
@@ -576,70 +594,81 @@ public class AMRMProxyService extends CompositeService implements
         } catch (IOException e) {
           LOG.error("Error removing AMRMProxy application context for {}.",
               applicationId, e);
+          isStopSuccess = false;
         }
       }
+    }
+
+    if(isStopSuccess) {
+      long endTime = clock.getTime();
+      this.metrics.succeededAppStopRequests(endTime - startTime);
+    } else {
+      this.metrics.incrFailedAppStopCount();
     }
   }
 
   private void updateAMRMTokens(AMRMTokenIdentifier amrmTokenIdentifier,
       RequestInterceptorChainWrapper pipeline,
       AllocateResponse allocateResponse) {
+
     AMRMProxyApplicationContextImpl context =
-        (AMRMProxyApplicationContextImpl) pipeline.getRootInterceptor()
-            .getApplicationContext();
+        (AMRMProxyApplicationContextImpl) pipeline.getRootInterceptor().getApplicationContext();
 
-    // check to see if the RM has issued a new AMRMToken & accordingly update
-    // the real ARMRMToken in the current context
-    if (allocateResponse.getAMRMToken() != null) {
-      LOG.info("RM rolled master-key for amrm-tokens.");
+    try {
+      long startTime = clock.getTime();
 
-      org.apache.hadoop.yarn.api.records.Token token =
-          allocateResponse.getAMRMToken();
+      // check to see if the RM has issued a new AMRMToken & accordingly update
+      // the real ARMRMToken in the current context
+      if (allocateResponse.getAMRMToken() != null) {
+        LOG.info("RM rolled master-key for amrm-tokens.");
 
-      // Do not propagate this info back to AM
-      allocateResponse.setAMRMToken(null);
+        org.apache.hadoop.yarn.api.records.Token token =
+             allocateResponse.getAMRMToken();
 
-      org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> newToken =
-          ConverterUtils.convertFromYarn(token, (Text) null);
+        // Do not propagate this info back to AM
+        allocateResponse.setAMRMToken(null);
 
-      // Update the AMRMToken in context map, and in NM state store if it is
-      // different
-      if (context.setAMRMToken(newToken)
-          && this.nmContext.getNMStateStore() != null) {
-        try {
+        org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> newToken =
+                ConverterUtils.convertFromYarn(token, (Text) null);
+
+        // Update the AMRMToken in context map, and in NM state store if it is
+        // different
+        if (context.setAMRMToken(newToken)
+                && this.nmContext.getNMStateStore() != null) {
           this.nmContext.getNMStateStore().storeAMRMProxyAppContextEntry(
               context.getApplicationAttemptId(), NMSS_AMRMTOKEN_KEY,
               newToken.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) {
-          LOG.error("Error storing AMRMProxy application context entry for {}.",
-              context.getApplicationAttemptId(), e);
         }
       }
-    }
 
-    // Check if the local AMRMToken is rolled up and update the context and
-    // response accordingly
-    MasterKeyData nextMasterKey =
-        this.secretManager.getNextMasterKeyData();
+      // Check if the local AMRMToken is rolled up and update the context and
+      // response accordingly
+      MasterKeyData nextMasterKey = this.secretManager.getNextMasterKeyData();
 
-    if (nextMasterKey != null
-        && nextMasterKey.getMasterKey().getKeyId() != amrmTokenIdentifier
-            .getKeyId()) {
-      Token<AMRMTokenIdentifier> localToken = context.getLocalAMRMToken();
-      if (nextMasterKey.getMasterKey().getKeyId() != context
-          .getLocalAMRMTokenKeyId()) {
-        LOG.info("The local AMRMToken has been rolled-over."
-            + " Send new local AMRMToken back to application: {}",
-            pipeline.getApplicationId());
-        localToken = this.secretManager.createAndGetAMRMToken(pipeline.getApplicationAttemptId());
-        context.setLocalAMRMToken(localToken);
+      if (nextMasterKey != null
+              && nextMasterKey.getMasterKey().getKeyId() != amrmTokenIdentifier
+              .getKeyId()) {
+        Token<AMRMTokenIdentifier> localToken = context.getLocalAMRMToken();
+        if (nextMasterKey.getMasterKey().getKeyId() != context.getLocalAMRMTokenKeyId()) {
+          LOG.info("The local AMRMToken has been rolled-over."
+              + " Send new local AMRMToken back to application: {}",
+              pipeline.getApplicationId());
+          localToken = this.secretManager.createAndGetAMRMToken(pipeline.getApplicationAttemptId());
+          context.setLocalAMRMToken(localToken);
+        }
+
+        allocateResponse
+            .setAMRMToken(org.apache.hadoop.yarn.api.records.Token
+            .newInstance(localToken.getIdentifier(), localToken
+            .getKind().toString(), localToken.getPassword(),
+            localToken.getService().toString()));
       }
-
-      allocateResponse
-          .setAMRMToken(org.apache.hadoop.yarn.api.records.Token
-          .newInstance(localToken.getIdentifier(), localToken
-          .getKind().toString(), localToken.getPassword(),
-          localToken.getService().toString()));
+      long endTime = clock.getTime();
+      this.metrics.succeededUpdateTokenRequests(endTime - startTime);
+    } catch (IOException e) {
+      LOG.error("Error storing AMRMProxy application context entry for {}.",
+          context.getApplicationAttemptId(), e);
+      this.metrics.incrFailedUpdateAMRMTokenCount();
     }
   }
 
