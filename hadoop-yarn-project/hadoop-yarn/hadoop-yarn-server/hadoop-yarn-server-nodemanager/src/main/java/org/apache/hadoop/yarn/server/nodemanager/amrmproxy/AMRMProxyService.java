@@ -288,7 +288,7 @@ public class AMRMProxyService extends CompositeService implements
       } catch (Throwable e) {
         LOG.error("Exception when recovering {}, removing it from NMStateStore and move on.",
             attemptId, e);
-        this.metrics.incrFailedAppRecoveryCount();
+        this.metrics.incrFailedAppRecoveryRequests();
         this.nmContext.getNMStateStore().removeAMRMProxyAppContext(attemptId);
       }
     }
@@ -603,7 +603,7 @@ public class AMRMProxyService extends CompositeService implements
       long endTime = clock.getTime();
       this.metrics.succeededAppStopRequests(endTime - startTime);
     } else {
-      this.metrics.incrFailedAppStopCount();
+      this.metrics.incrFailedAppStopRequests();
     }
   }
 
@@ -668,7 +668,7 @@ public class AMRMProxyService extends CompositeService implements
     } catch (IOException e) {
       LOG.error("Error storing AMRMProxy application context entry for {}.",
           context.getApplicationAttemptId(), e);
-      this.metrics.incrFailedUpdateAMRMTokenCount();
+      this.metrics.incrFailedUpdateAMRMTokenRequests();
     }
   }
 

@@ -44,11 +44,11 @@ public final class AMRMProxyMetrics {
   @Metric("# of failed allocate requests ")
   private MutableGaugeLong failedAllocateRequests;
   @Metric("# of failed application recoveries")
-  private MutableGaugeLong failedAppRecoveryCount;
+  private MutableGaugeLong failedAppRecoveryRequests;
   @Metric("# of failed application stop")
-  private MutableGaugeLong failedAppStopCount;
+  private MutableGaugeLong failedAppStopRequests;
   @Metric("# of failed update token")
-  private MutableGaugeLong failedUpdateAMRMTokenCount;
+  private MutableGaugeLong failedUpdateAMRMTokenRequests;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Application start request latency(ms)")
@@ -177,6 +177,17 @@ public final class AMRMProxyMetrics {
   }
 
   @VisibleForTesting
+  long getNumSucceededRecoverRequests() {
+    return totalSucceededRecoverRequests.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  long getNumSucceededUpdateAMRMTokenRequests() {
+    return totalSucceededUpdateAMRMTokenRequests.lastStat().numSamples();
+  }
+
+
+  @VisibleForTesting
   double getLatencySucceededAllocateRequests() {
     return totalSucceededAllocateRequests.lastStat().mean();
   }
@@ -184,6 +195,11 @@ public final class AMRMProxyMetrics {
   @VisibleForTesting
   double getLatencySucceededAppStopRequests() {
     return totalSucceededAppStopRequests.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  double getLatencySucceededRecoverRequests() {
+    return totalSucceededRecoverRequests.lastStat().mean();
   }
 
   public void succeededAllocateRequests(long duration) {
@@ -238,27 +254,27 @@ public final class AMRMProxyMetrics {
     failedAllocateRequests.incr();
   }
 
-  long getFailedAppRecoveryCount() {
-    return failedAppRecoveryCount.value();
+  long getFailedAppRecoveryRequests() {
+    return failedAppRecoveryRequests.value();
   }
 
-  public void incrFailedAppRecoveryCount() {
-    failedAppRecoveryCount.incr();
+  public void incrFailedAppRecoveryRequests() {
+    failedAppRecoveryRequests.incr();
   }
 
-  long getFailedAppStopCount() {
-    return failedAppStopCount.value();
+  long getFailedAppStopRequests() {
+    return failedAppStopRequests.value();
   }
 
-  public void incrFailedAppStopCount() {
-    failedAppStopCount.incr();
+  public void incrFailedAppStopRequests() {
+    failedAppStopRequests.incr();
   }
 
-  long getFailedUpdateAMRMTokenCount() {
-    return failedUpdateAMRMTokenCount.value();
+  long getFailedUpdateAMRMTokenRequests() {
+    return failedUpdateAMRMTokenRequests.value();
   }
 
-  public void incrFailedUpdateAMRMTokenCount() {
-    failedUpdateAMRMTokenCount.incr();
+  public void incrFailedUpdateAMRMTokenRequests() {
+    failedUpdateAMRMTokenRequests.incr();
   }
 }
