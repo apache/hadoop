@@ -26,11 +26,17 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.ClientId;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RpcConstants;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RouterFederatedStateProto;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
@@ -84,5 +90,67 @@ public class TestProtoUtil {
         RpcKind.RPC_PROTOCOL_BUFFER, OperationProto.RPC_FINAL_PACKET, 0,
         RpcConstants.INVALID_RETRY_COUNT, uuid);
     assertTrue(Arrays.equals(uuid, header.getClientId().toByteArray()));
+  }
+
+  @Test
+  public void testRpcRouterFederatedState() throws InvalidProtocolBufferException {
+    byte[] uuid = ClientId.getClientId();
+    Map<String, Long> expectedStateIds = new HashMap<String, Long>() {{
+      put("namespace1", 11L );
+      put("namespace2", 22L);
+    }};
+
+    AlignmentContext alignmentContext = new AlignmentContextWithRouterState(expectedStateIds);
+
+    RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
+        RpcKind.RPC_PROTOCOL_BUFFER, OperationProto.RPC_FINAL_PACKET, 0,
+        RpcConstants.INVALID_RETRY_COUNT, uuid, alignmentContext);
+
+    Map<String, Long> stateIdsFromHeader =
+        RouterFederatedStateProto.parseFrom(
+            header.getRouterFederatedState().toByteArray()
+        ).getNamespaceStateIdsMap();
+
+    assertEquals(expectedStateIds, stateIdsFromHeader);
+  }
+
+  private static class AlignmentContextWithRouterState implements AlignmentContext {
+
+    Map<String, Long> routerFederatedState;
+
+    public AlignmentContextWithRouterState(Map<String, Long> namespaceStates) {
+      this.routerFederatedState = namespaceStates;
+    }
+
+    @Override
+    public void updateRequestState(RpcRequestHeaderProto.Builder header) {
+      RouterFederatedStateProto fedState = RouterFederatedStateProto
+          .newBuilder()
+          .putAllNamespaceStateIds(routerFederatedState)
+          .build();
+
+      header.setRouterFederatedState(fedState.toByteString());
+    }
+
+    @Override
+    public void updateResponseState(RpcHeaderProtos.RpcResponseHeaderProto.Builder header) {}
+
+    @Override
+    public void receiveResponseState(RpcHeaderProtos.RpcResponseHeaderProto header) {}
+
+    @Override
+    public long receiveRequestState(RpcRequestHeaderProto header, long threshold) throws IOException {
+      return 0;
+    }
+
+    @Override
+    public long getLastSeenStateId() {
+      return 0;
+    }
+
+    @Override
+    public boolean isCoordinatedCall(String protocolName, String method) {
+      return false;
+    }
   }
 }
