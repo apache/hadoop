@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS;
 
 /** ITest of the low level protocol methods. */
 public class ITestDirectoryCommitProtocol extends ITestStagingCommitProtocol {
@@ -49,6 +50,14 @@ public class ITestDirectoryCommitProtocol extends ITestStagingCommitProtocol {
   @Override
   protected String getCommitterName() {
     return CommitConstants.COMMITTER_NAME_DIRECTORY;
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    // turn off stats collection to verify that it works
+    conf.setBoolean(S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS, false);
+    return  conf;
   }
 
   @Override

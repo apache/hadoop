@@ -215,7 +215,7 @@ com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
-com.amazonaws:aws-java-sdk-bundle:1.11.901
+com.amazonaws:aws-java-sdk-bundle:1.12.262
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.12.7

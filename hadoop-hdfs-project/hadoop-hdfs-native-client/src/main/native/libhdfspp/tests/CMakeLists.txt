@@ -24,8 +24,11 @@ set (LIBHDFS_TESTS_DIR ../../libhdfs-tests)
 set (LIBHDFSPP_SRC_DIR ..)
 set (LIBHDFSPP_LIB_DIR ${LIBHDFSPP_SRC_DIR}/lib)
 set (LIBHDFSPP_BINDING_C ${LIBHDFSPP_LIB_DIR}/bindings/c)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
+
+if (NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
+endif (NOT MSVC)
 
 include_directories(
     ${GENERATED_JAVAH}
@@ -169,10 +172,12 @@ build_libhdfs_test(hdfspp_mini_dfs_smoke hdfspp_test_shim_static ${CMAKE_CURRENT
 link_libhdfs_test (hdfspp_mini_dfs_smoke hdfspp_test_shim_static fs reader rpc proto common connection gmock_main ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} native_mini_dfs ${JAVA_JVM_LIBRARY} ${SASL_LIBRARIES})
 add_libhdfs_test  (hdfspp_mini_dfs_smoke hdfspp_test_shim_static)
 
-build_libhdfs_test(libhdfs_mini_stress_valgrind hdfspp_test_static expect.c test_libhdfs_mini_stress.c ${OS_DIR}/thread.c)
-link_libhdfs_test(libhdfs_mini_stress_valgrind hdfspp_test_static fs reader rpc proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} native_mini_dfs ${JAVA_JVM_LIBRARY} ${SASL_LIBRARIES})
-add_memcheck_test(libhdfs_mini_stress_valgrind_hdfspp_test_static libhdfs_mini_stress_valgrind_hdfspp_test_static)
-set_target_properties(libhdfs_mini_stress_valgrind_hdfspp_test_static PROPERTIES COMPILE_DEFINITIONS "VALGRIND")
+if (NOT MSVC)
+  build_libhdfs_test(libhdfs_mini_stress_valgrind hdfspp_test_static expect.c test_libhdfs_mini_stress.c ${OS_DIR}/thread.c)
+  link_libhdfs_test(libhdfs_mini_stress_valgrind hdfspp_test_static fs reader rpc proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} native_mini_dfs ${JAVA_JVM_LIBRARY} ${SASL_LIBRARIES})
+  add_memcheck_test(libhdfs_mini_stress_valgrind_hdfspp_test_static libhdfs_mini_stress_valgrind_hdfspp_test_static)
+  set_target_properties(libhdfs_mini_stress_valgrind_hdfspp_test_static PROPERTIES COMPILE_DEFINITIONS "VALGRIND")
+endif (NOT MSVC)
 
 build_libhdfs_test(libhdfs_mini_stress hdfspp_test_shim_static expect.c test_libhdfs_mini_stress.c ${OS_DIR}/thread.c)
 link_libhdfs_test(libhdfs_mini_stress hdfspp_test_shim_static fs reader rpc proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} native_mini_dfs ${JAVA_JVM_LIBRARY} ${SASL_LIBRARIES})

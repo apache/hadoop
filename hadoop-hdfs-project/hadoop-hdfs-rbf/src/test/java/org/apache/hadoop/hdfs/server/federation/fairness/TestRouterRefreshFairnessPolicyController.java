@@ -133,9 +133,8 @@ public class TestRouterRefreshFairnessPolicyController {
     // Spawn 100 concurrent refresh requests
     Thread[] threads = new Thread[100];
     for (int i = 0; i < 100; i++) {
-      threads[i] = new Thread(() -> {
-        client.refreshFairnessPolicyController(routerContext.getConf());
-      });
+      threads[i] = new Thread(() ->
+          client.refreshFairnessPolicyController(routerContext.getConf()));
     }
 
     for (Thread thread : threads) {
@@ -182,9 +181,8 @@ public class TestRouterRefreshFairnessPolicyController {
     final int newNs1Permits = 4;
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns0", newNs0Permits);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns1", newNs1Permits);
-    Thread threadRefreshController = new Thread(() -> {
-      client.refreshFairnessPolicyController(routerContext.getConf());
-    });
+    Thread threadRefreshController = new Thread(() -> client.
+        refreshFairnessPolicyController(routerContext.getConf()));
     threadRefreshController.start();
     threadRefreshController.join();
 

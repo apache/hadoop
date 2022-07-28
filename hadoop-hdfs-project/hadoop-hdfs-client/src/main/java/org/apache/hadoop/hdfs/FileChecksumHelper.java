@@ -303,7 +303,8 @@ final class FileChecksumHelper {
       byte[] blockChecksumBytes = blockChecksumBuf.getData();
 
       long sumBlockLengths = 0;
-      for (int i = 0; i < locatedBlocks.size() - 1; ++i) {
+      int i = 0;
+      for (; i < locatedBlocks.size() - 1; ++i) {
         LocatedBlock block = locatedBlocks.get(i);
         // For everything except the last LocatedBlock, we expect getBlockSize()
         // to accurately reflect the number of file bytes digested in the block
@@ -316,19 +317,8 @@ final class FileChecksumHelper {
             "Added blockCrc 0x{} for block index {} of size {}",
             Integer.toString(blockCrc, 16), i, block.getBlockSize());
       }
-
-      // NB: In some cases the located blocks have their block size adjusted
-      // explicitly based on the requested length, but not all cases;
-      // these numbers may or may not reflect actual sizes on disk.
-      long reportedLastBlockSize =
-          blockLocations.getLastLocatedBlock().getBlockSize();
-      long consumedLastBlockLength = reportedLastBlockSize;
-      if (length - sumBlockLengths < reportedLastBlockSize) {
-        LOG.warn(
-            "Last block length {} is less than reportedLastBlockSize {}",
-            length - sumBlockLengths, reportedLastBlockSize);
-        consumedLastBlockLength = length - sumBlockLengths;
-      }
+      LocatedBlock nextBlock = locatedBlocks.get(i);
+      long consumedLastBlockLength = Math.min(length - sumBlockLengths, nextBlock.getBlockSize());
       // NB: blockChecksumBytes.length may be much longer than actual bytes
       // written into the DataOutput.
       int lastBlockCrc = CrcUtil.readInt(
