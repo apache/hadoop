@@ -122,4 +122,23 @@ public class TestConfigurationProperties {
     Assert.assertEquals(0, propsLongPrefix.size());
     Assert.assertEquals(0, propsNonExistingRootPrefix.size());
   }
+
+  @Test
+  public void testWhiteListConstructor() {
+    ConfigurationProperties configurationProperties =
+        new ConfigurationProperties(PROPERTIES, "root.1", "2");
+
+    Map<String, String> props = configurationProperties
+        .getPropertiesWithPrefix("root", true);
+
+    Assert.assertTrue(props.containsKey("root.1.2.3"));
+    Assert.assertEquals("TEST_VALUE_1", props.get("root.1.2.3"));
+    Assert.assertTrue(props.containsKey("root.1.2"));
+    Assert.assertEquals("TEST_VALUE_3", props.get("root.1.2"));
+    Assert.assertTrue(props.containsKey("root.1.2.4.5"));
+    Assert.assertEquals("TEST_VALUE_3_2", props.get("root.1.2.4.5"));
+    Assert.assertTrue(props.containsKey("root.1.2.4"));
+    Assert.assertEquals("TEST_VALUE_3_1", props.get("root.1.2.4"));
+    Assert.assertFalse(props.containsKey("root"));
+  }
 }

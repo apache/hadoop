@@ -61,6 +61,8 @@ public class ConfigurationProperties {
    * A constructor defined in order to conform to the type used by
    * {@code Configuration}. It must only be called by String keys and values.
    * @param props properties to store
+   * @param whiteListPrefix only those properties will be in the nodes
+   *                        which starts with one of the provided prefixes.
    */
   public ConfigurationProperties(Map<String, String> props, String... whiteListPrefix) {
     this(Maps.filterKeys(props, key -> StringUtils.startsWithAny(key, whiteListPrefix)));
@@ -165,9 +167,8 @@ public class ConfigurationProperties {
 
   /**
    * Stores the given properties in the correct node.
-   *
    * @param props properties that need to be stored
-   * @return
+   * @return the built tree of nodes
    */
   private Map<String, PrefixNode> storePropertiesInPrefixNodes(Map<String, String> props) {
     Map<String, PrefixNode> nodes = new HashMap<>();
