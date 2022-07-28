@@ -137,13 +137,13 @@ public class TestRouterHandlersFairness {
         // take the lock for concurrent NS to block fanout calls
         assertTrue(routerContext.getRouter().getRpcServer()
             .getRPCClient().getRouterRpcFairnessPolicyController()
-            .acquirePermit(RouterRpcFairnessConstants.CONCURRENT_NS));
+            .acquirePermit(RouterRpcFairnessConstants.CONCURRENT_NS).isHoldPermit());
       } else {
         for (String ns : cluster.getNameservices()) {
           LOG.info("Taking lock first for ns: {}", ns);
           assertTrue(routerContext.getRouter().getRpcServer()
               .getRPCClient().getRouterRpcFairnessPolicyController()
-              .acquirePermit(ns));
+              .acquirePermit(ns).isHoldPermit());
         }
       }
     }
@@ -156,6 +156,10 @@ public class TestRouterHandlersFairness {
     assertEquals(latestRejectedPermits - originalRejectedPermits,
         overloadException.get());
 
+    Permit permit = new Permit(Permit.PermitType.DEDICATED,
+        routerContext.getRouter().getRpcServer().getRPCClient()
+            .getRouterRpcFairnessPolicyController().getVersion());
+
     if (fairness) {
       assertTrue(overloadException.get() > 0);
       if (isConcurrent) {
@@ -163,12 +167,12 @@ public class TestRouterHandlersFairness {
         // take the lock for concurrent NS to block fanout calls
         routerContext.getRouter().getRpcServer()
             .getRPCClient().getRouterRpcFairnessPolicyController()
-            .releasePermit(RouterRpcFairnessConstants.CONCURRENT_NS);
+            .releasePermit(RouterRpcFairnessConstants.CONCURRENT_NS, permit);
       } else {
         for (String ns : cluster.getNameservices()) {
           routerContext.getRouter().getRpcServer()
               .getRPCClient().getRouterRpcFairnessPolicyController()
-              .releasePermit(ns);
+              .releasePermit(ns, permit);
         }
       }
     } else {

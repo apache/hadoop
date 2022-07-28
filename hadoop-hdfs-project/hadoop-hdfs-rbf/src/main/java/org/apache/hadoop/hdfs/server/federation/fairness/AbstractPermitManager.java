@@ -18,42 +18,21 @@
 
 package org.apache.hadoop.hdfs.server.federation.fairness;
 
-import org.apache.hadoop.conf.Configuration;
-
 /**
- * A pass through fairness policy that implements
- * {@link RouterRpcFairnessPolicyController} and allows any number
- * of handlers to connect to any specific downstream name service.
+ * A class to manage the issuance and recycling of Permits.
  */
-public class NoRouterRpcFairnessPolicyController implements
-    RouterRpcFairnessPolicyController {
+public interface AbstractPermitManager {
+  /**
+   * Request one Permit instance for the NS.
+   */
+  Permit acquirePermit();
 
-  public NoRouterRpcFairnessPolicyController(Configuration conf, int version) {
-      // Dummy constructor.
-  }
+  /**
+   * Release the permit instance for the NS.
+   */
+  void releasePermit(Permit permit);
 
-  @Override
-  public Permit acquirePermit(String nsId) {
-    return Permit.getDontNeedPermit();
-  }
+  void drainPermits();
 
-  @Override
-  public void releasePermit(String nsId, Permit permit) {
-    // Dummy, pass through.
-  }
-
-  @Override
-  public void shutdown() {
-    // Nothing for now.
-  }
-
-  @Override
-  public String getAvailableHandlerOnPerNs(){
-    return "N/A";
-  }
-
-  @Override
-  public int getVersion() {
-    return 0;
-  }
+  int availablePermits();
 }
