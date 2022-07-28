@@ -219,7 +219,7 @@ public class TestGroupsCaching {
 
   @Test
   public void testGroupsCaching() throws Exception {
-    // Disable negative cache.
+    // Disable zero cache.
     conf.setLong(
         CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_NEGATIVE_CACHE_SECS, 0);
     Groups groups = new Groups(conf);
