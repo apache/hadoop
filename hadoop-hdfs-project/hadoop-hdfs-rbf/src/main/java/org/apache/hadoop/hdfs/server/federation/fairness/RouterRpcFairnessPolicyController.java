@@ -67,4 +67,9 @@ public interface RouterRpcFairnessPolicyController {
    * Returns the JSON string of the available handler for each Ns.
    */
   String getAvailableHandlerOnPerNs();
+
+  /**
+   * Returns the JSON string of the max handler count for each ns.
+   */
+  String getPermitCapacityPerNs();
 }

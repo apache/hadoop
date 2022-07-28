@@ -51,4 +51,9 @@ public class NoRouterRpcFairnessPolicyController implements
   public String getAvailableHandlerOnPerNs(){
     return "N/A";
   }
+
+  @Override
+  public String getPermitCapacityPerNs() {
+    return "N/A";
+  }
 }

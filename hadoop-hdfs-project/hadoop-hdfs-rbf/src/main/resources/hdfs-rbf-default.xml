@@ -707,6 +707,24 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.fairness.minimum.handler.count</name>
+    <value>1</value>
+    <description>
+      Minimum number of handlers assigned per nameservice.
+      If any dedicated handler count is smaller than this number,
+      router initialization will fail.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.fairness.policy.controller.dynamic.refresh.interval.seconds</name>
+    <value>600</value>
+    <description>
+      Interval (in seconds) between each handler count resize by DynamicFairnessPolicyController
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.fairness.handler.count.EXAMPLENAMESERVICE</name>
     <value></value>
     <description>
