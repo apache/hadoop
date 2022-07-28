@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.azurebfs;
 import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
-
+import java.util.List;
+import java.util.ArrayList;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
@@ -33,7 +34,7 @@ import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
-
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import java.util.concurrent.atomic.AtomicReference;
@@ -65,6 +66,8 @@ public class AbfsCountersImpl implements AbfsCounters {
   private final IOStatisticsStore ioStatisticsStore;
 
   private AtomicReference<AbfsDriverMetrics> abfsDriverMetrics = null;
+
+  private List<AbfsReadFooterMetrics> readFooterMetricsList;
 
   private static final AbfsStatistic[] STATISTIC_LIST = {
       CALL_CREATE,
@@ -125,6 +128,7 @@ public class AbfsCountersImpl implements AbfsCounters {
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
     abfsDriverMetrics = new AtomicReference<>(new AbfsDriverMetrics());
+    readFooterMetricsList = new ArrayList<>();
   }
 
   /**
@@ -194,6 +198,10 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   public AbfsDriverMetrics getAbfsDriverMetrics() {
     return abfsDriverMetrics.get();
+  }
+
+  public List<AbfsReadFooterMetrics> getAbfsReadFooterMetrics() {
+    return readFooterMetricsList;
   }
 
   /**

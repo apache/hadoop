@@ -200,7 +200,7 @@ public class AbfsDriverMetrics {
         .append(numberOfOtherThrottledRequests)
         .append(" #%RT=")
         .append(String.format("%.3f", percentageOfRequestsThrottled))
-        .append("#NFR")
+        .append(" #NFR=")
         .append(numberOfNetworkFailedRequests)
         .append(" #TRNR=")
         .append(numberOfRequestsSucceededWithoutRetrying)

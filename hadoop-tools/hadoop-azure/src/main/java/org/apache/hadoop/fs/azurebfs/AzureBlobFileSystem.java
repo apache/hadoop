@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -42,7 +43,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
+import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -108,7 +109,7 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
-
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -157,7 +158,6 @@ public class AzureBlobFileSystem extends FileSystem
 
   /** Rate limiting for operations which use it to throttle their IO. */
   private RateLimiting rateLimiting;
-
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
@@ -683,32 +683,49 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
-    String metric = abfsCounters.getAbfsDriverMetrics().toString();
+    List<AbfsReadFooterMetrics> readFooterMetricsList = abfsCounters.getAbfsReadFooterMetrics();
+    List<AbfsReadFooterMetrics> isParquetList = new ArrayList<>();
+    List<AbfsReadFooterMetrics> isNonParquetList = new ArrayList<>();
+    for (AbfsReadFooterMetrics abfsReadFooterMetrics : readFooterMetricsList) {
+      if (abfsReadFooterMetrics.getIsParquetFile()) {
+        isParquetList.add(abfsReadFooterMetrics);
+      } else {
+        isNonParquetList.add(abfsReadFooterMetrics);
+      }
+    }
+    AbfsReadFooterMetrics avgParquetReadFooterMetrics = new AbfsReadFooterMetrics();
+    AbfsReadFooterMetrics avgNonparquetReadFooterMetrics = new AbfsReadFooterMetrics();
+    String readFooterMetric = "";
+    if (!isParquetList.isEmpty()){
+      avgParquetReadFooterMetrics.setParquetFile(true);
+      getParquetReadFooterMetricsAverage(isParquetList, avgParquetReadFooterMetrics);
+      readFooterMetric += getReadFooterMetrics(avgParquetReadFooterMetrics);
+    }
+    if(!isNonParquetList.isEmpty()) {
+      avgNonparquetReadFooterMetrics.setParquetFile(false);
+      getNonParquetReadFooterMetricsAverage(isNonParquetList, avgNonparquetReadFooterMetrics);
+      readFooterMetric += getReadFooterMetrics(avgNonparquetReadFooterMetrics);
+    }
+    String metric = abfsCounters.getAbfsDriverMetrics().toString() + readFooterMetric;
     LOG.debug("The metrics collected over this instance are " + metric);
     if (sendMetricsToStore) {
-      if (abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get()
-          > 0) {
+      if (abfsCounters.getAbfsDriverMetrics().getTotalNumberOfRequests().get() > 0) {
         try {
           Configuration metricConfig = getConf();
-          String metricAccountKey = metricConfig.get(
-              FS_AZURE_METRIC_ACCOUNT_KEY);
+          String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
           final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
           if (abfsMetricUrl == null) {
             return;
           }
-          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME,
-              metricAccountKey);
-          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
-              "false");
+          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
+          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
           URI metricUri;
           try {
             metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
           } catch (URISyntaxException ex) {
             throw new AssertionError(ex);
           }
-          AzureBlobFileSystem metricFs
-              = (AzureBlobFileSystem) FileSystem.newInstance(metricUri,
-              metricConfig);
+          AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
           metricFs.sendMetric(metric);
         } catch (AzureBlobFileSystemException ex) {
           //do nothing
@@ -729,6 +746,62 @@ public class AzureBlobFileSystem extends FileSystem
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());
     }
+  }
+
+  private void getParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isParquetList,
+                                                  AbfsReadFooterMetrics avgParquetReadFooterMetrics){
+    avgParquetReadFooterMetrics.setSizeReadByFirstRead(
+        String.format("%.3f", isParquetList.stream()
+            .map(AbfsReadFooterMetrics::getSizeReadByFirstRead).mapToDouble(
+                Double::parseDouble).average().orElse(0.0)));
+    avgParquetReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(
+        String.format("%.3f", isParquetList.stream()
+            .map(AbfsReadFooterMetrics::getOffsetDiffBetweenFirstAndSecondRead)
+            .mapToDouble(Double::parseDouble).average().orElse(0.0)));
+    avgParquetReadFooterMetrics.setAvgFileLength(isParquetList.stream()
+        .map(AbfsReadFooterMetrics::getFileLength)
+        .mapToDouble(AtomicLong::get).average().orElse(0.0));
+  }
+
+  private void getNonParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isNonParquetList,
+      AbfsReadFooterMetrics avgNonParquetReadFooterMetrics){
+    int size = isNonParquetList.get(0).getSizeReadByFirstRead().split("_").length;
+      double[] store = new double[2*size];
+    for (AbfsReadFooterMetrics abfsReadFooterMetrics : isNonParquetList) {
+      String[] firstReadSize = abfsReadFooterMetrics.getSizeReadByFirstRead().split("_");
+      String[] offDiffFirstSecondRead = abfsReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_");
+      for(int i=0; i<firstReadSize.length; i++){
+        store[i] += Long.parseLong(firstReadSize[i]);
+        store[i+size] += Long.parseLong(offDiffFirstSecondRead[i]);
+      }
+    }
+    StringBuilder firstReadSize = new StringBuilder();
+    StringBuilder offDiffFirstSecondRead = new StringBuilder();
+    firstReadSize.append(String.format("%.3f", store[0] / isNonParquetList.size()));
+    offDiffFirstSecondRead.append(String.format("%.3f", store[size] / isNonParquetList.size()));
+    for(int j=1; j<size; j++) {
+      firstReadSize.append("_").append(String.format("%.3f", store[j] / isNonParquetList.size()));
+      offDiffFirstSecondRead.append("_").append(String.format("%.3f", store[j + size] / isNonParquetList.size()));
+    }
+    avgNonParquetReadFooterMetrics.setSizeReadByFirstRead(firstReadSize.toString());
+    avgNonParquetReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(offDiffFirstSecondRead.toString());
+    avgNonParquetReadFooterMetrics.setAvgFileLength(isNonParquetList.stream()
+        .map(AbfsReadFooterMetrics::getFileLength)
+        .mapToDouble(AtomicLong::get).average().orElse(0.0));
+  }
+
+
+  private String getReadFooterMetrics(AbfsReadFooterMetrics avgReadFooterMetrics) {
+    String readFooterMetric = "";
+    if(avgReadFooterMetrics.getIsParquetFile()){
+      readFooterMetric += "Parquet:";
+    }else{
+      readFooterMetric += "NonParquet:";
+    }
+    readFooterMetric += " #FR=" + avgReadFooterMetrics.getSizeReadByFirstRead()
+        + " #SR=" + avgReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead()
+        + " #FL=" + String.format("%.3f", avgReadFooterMetrics.getAvgFileLength());
+    return readFooterMetric + " ";
   }
 
   public void sendMetric(String metric) throws AzureBlobFileSystemException {

@@ -86,6 +86,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final int readAheadRange;
 
   private boolean firstRead = true;
+  private long offsetOfFirstRead = 0;
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
   private byte[] buffer = null;            // will be initialized on first use
@@ -105,13 +106,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int bCursorBkp;
   private long fCursorBkp;
   private long fCursorAfterLastReadBkp;
-
+  private final AbfsReadFooterMetrics abfsReadFooterMetrics;
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
   private Listener listener;
+  private boolean collectMetricsForNextRead = false;
 
+  private boolean collectStreamMetrics = false;
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
   /**
@@ -145,6 +148,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
+    this.abfsReadFooterMetrics = abfsInputStreamContext.getAbfsReadFooterMetrics();
     this.inputStreamId = createInputStreamId();
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setOperation(FSOperationType.READ);
@@ -239,6 +243,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // go back and read from buffer is fCursor - limit.
       // There maybe case that we read less than requested data.
       long filePosAtStartOfBuffer = fCursor - limit;
+      if (firstRead && nextReadPos >= contentLength - 16 * ONE_KB) {
+        this.collectStreamMetrics = true;
+        this.collectMetricsForNextRead = true;
+        this.offsetOfFirstRead = nextReadPos;
+        this.abfsReadFooterMetrics.setSizeReadByFirstRead(len+"_"+(Math.abs(contentLength - nextReadPos)));
+        this.abfsReadFooterMetrics.getFileLength().set(contentLength);
+      }
+      if (!firstRead && collectMetricsForNextRead){
+        this.abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(len+"_"+(Math.abs(nextReadPos - offsetOfFirstRead)));
+        this.collectMetricsForNextRead = false;
+      }
       if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
         // Determining position in buffer from where data is to be read.
         bCursor = (int) (nextReadPos - filePosAtStartOfBuffer);
@@ -325,7 +340,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       if (firstRead) {
         firstRead = false;
       }
-
       if (bytesRead == -1) {
         return -1;
       }
@@ -696,7 +710,23 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("Closing {}", this);
     closed = true;
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
+    if(this.collectStreamMetrics) {
+      checkIsParquet(abfsReadFooterMetrics);
+      this.client.getAbfsCounters()
+          .getAbfsReadFooterMetrics()
+          .add(abfsReadFooterMetrics);
+    }
     ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
+  }
+
+  private void checkIsParquet(AbfsReadFooterMetrics abfsReadFooterMetrics) {
+    String[] firstReadSize = abfsReadFooterMetrics.getSizeReadByFirstRead().split("_");
+    String[] offDiffFirstSecondRead  = abfsReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_");
+    if((firstReadSize[0].equals(firstReadSize[1])) && (offDiffFirstSecondRead[0].equals(offDiffFirstSecondRead[1]))){
+      abfsReadFooterMetrics.setParquetFile(true);
+      abfsReadFooterMetrics.setSizeReadByFirstRead(firstReadSize[0]);
+      abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(offDiffFirstSecondRead[0]);
+    }
   }
 
   /**
