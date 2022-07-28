@@ -1209,6 +1209,11 @@ public final class Constants {
    */
   public static final String PREFETCH_ENABLED_KEY = "fs.s3a.prefetch.enabled";
 
+  /**
+   * Default option as to whether the prefetching input stream is enabled.
+   */
+  public static final boolean  PREFETCH_ENABLED_DEFAULT = false;
+
   // If the default values are used, each file opened for reading will consume
   // 64 MB of heap space (8 blocks x 8 MB each).
 

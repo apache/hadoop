@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.VectoredIOContext;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
@@ -58,6 +59,8 @@ import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatisticsStore;
 
 /**
  * Provides 'fake' implementations of S3InputStream variants.
@@ -130,6 +133,11 @@ public final class Fakes {
         statistics,
         statisticsContext,
         fileStatus,
+        new VectoredIOContext()
+            .setMinSeekForVectoredReads(1)
+            .setMaxReadSizeForVectoredReads(1)
+            .build(),
+        emptyStatisticsStore(),
         futurePool,
         prefetchBlockSize,
         prefetchBlockCount)
