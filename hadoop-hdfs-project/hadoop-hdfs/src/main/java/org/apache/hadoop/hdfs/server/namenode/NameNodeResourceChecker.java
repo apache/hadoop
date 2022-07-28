@@ -35,6 +35,10 @@ import org.apache.hadoop.hdfs.server.common.Util;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import com.google.common.collect.Collections2;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+
 /**
  * 
  * NameNodeResourceChecker provides a method -
