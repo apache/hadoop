@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.audit.AuditConstants;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -467,8 +468,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    *
    * While the classic committers create a 0-byte file, the S3A committers
    * PUT up a the contents of a {@link SuccessData} file.
-   *
-   * @param context job context
+   * @param commitContext commit context
    * @param pending the pending commits
    *
    * @return the success data, even if the marker wasn't created
@@ -476,7 +476,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * @throws IOException IO failure
    */
   protected SuccessData maybeCreateSuccessMarkerFromCommits(
-      JobContext context,
+      final CommitContext commitContext,
       ActiveCommit pending) throws IOException {
     List<String> filenames = new ArrayList<>(pending.size());
     // The list of committed objects in pending is size limited in
@@ -488,7 +488,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     // and the current statistics
     snapshot.aggregate(getIOStatistics());
 
-    return maybeCreateSuccessMarker(context, filenames, snapshot);
+    // and include the context statistics if enabled
+    if (commitContext.isCollectIOStatistics()) {
+      snapshot.aggregate(commitContext.getIOStatisticsContext()
+              .getIOStatistics());
+    }
+
+    return maybeCreateSuccessMarker(commitContext.getJobContext(), filenames, snapshot);
   }
 
   /**
@@ -729,6 +735,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final FileStatus status) throws IOException {
 
     final Path path = status.getPath();
+    commitContext.switchToIOStatisticsContext();
     try (DurationInfo ignored =
              new DurationInfo(LOG,
                  "Loading and committing files in pendingset %s", path)) {
@@ -775,6 +782,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final FileStatus status) throws IOException {
 
     final Path path = status.getPath();
+    commitContext.switchToIOStatisticsContext();
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, "Committing %s", path)) {
       PendingSet pendingSet = PersistentCommitData.load(
@@ -806,6 +814,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final boolean deleteRemoteFiles) throws IOException {
 
     final Path path = status.getPath();
+    commitContext.switchToIOStatisticsContext();
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, "Aborting %s", path)) {
       PendingSet pendingSet = PersistentCommitData.load(
@@ -832,6 +841,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
 
   /**
    * Start the final job commit/abort commit operations.
+   * If configured to collect statistics,
+   * The IO StatisticsContext is reset.
    * @param context job context
    * @return a commit context through which the operations can be invoked.
    * @throws IOException failure.
@@ -840,14 +851,22 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final JobContext context)
       throws IOException {
 
-    return getCommitOperations().createCommitContext(
+    IOStatisticsContext ioStatisticsContext =
+        IOStatisticsContext.getCurrentIOStatisticsContext();
+    CommitContext commitContext = getCommitOperations().createCommitContext(
         context,
         getOutputPath(),
-        getJobCommitThreadCount(context));
+        getJobCommitThreadCount(context),
+        ioStatisticsContext);
+    commitContext.maybeResetIOStatisticsContext();
+    return commitContext;
   }
+
   /**
    * Start a ask commit/abort commit operations.
    * This may have a different thread count.
+   * If configured to collect statistics,
+   * The IO StatisticsContext is reset.
    * @param context job or task context
    * @return a commit context through which the operations can be invoked.
    * @throws IOException failure.
@@ -856,10 +875,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final JobContext context)
       throws IOException {
 
-    return getCommitOperations().createCommitContext(
+    CommitContext commitContext = getCommitOperations().createCommitContext(
         context,
         getOutputPath(),
-        getTaskCommitThreadCount(context));
+        getTaskCommitThreadCount(context),
+        IOStatisticsContext.getCurrentIOStatisticsContext());
+    commitContext.maybeResetIOStatisticsContext();
+    return commitContext;
   }
 
   /**
@@ -1014,7 +1036,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       stage = "completed";
       jobCompleted(true);
       stage = "marker";
-      successData = maybeCreateSuccessMarkerFromCommits(context, pending);
+      successData = maybeCreateSuccessMarkerFromCommits(commitContext, pending);
       stage = "cleanup";
       cleanup(commitContext, false);
     } catch (IOException e) {
