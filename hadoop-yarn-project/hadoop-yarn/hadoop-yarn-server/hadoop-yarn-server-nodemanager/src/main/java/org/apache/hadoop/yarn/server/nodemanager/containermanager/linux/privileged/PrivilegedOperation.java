@@ -52,7 +52,8 @@ public class PrivilegedOperation {
     ADD_PID_TO_CGROUP(""), //no CLI switch supported yet.
     RUN_DOCKER_CMD("--run-docker"),
     GPU("--module-gpu"),
-    LIST_AS_USER(""); //no CLI switch supported yet.
+    LIST_AS_USER(""), //no CLI switch supported yet.
+    ADD_NUMA_PARAMS(""); // no CLI switch supported yet.
 
     private final String option;
 
