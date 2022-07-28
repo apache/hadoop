@@ -696,6 +696,13 @@ public class StagingCommitter extends AbstractS3ACommitter {
           pendingCommits.add(commit);
         }
 
+        // maybe add in the IOStatistics the thread
+        if (commitContext.isCollectIOStatistics()) {
+          pendingCommits.getIOStatistics().aggregate(
+              commitContext.getIOStatisticsContext()
+              .getIOStatistics());
+        }
+
         // save the data
         // overwrite any existing file, so whichever task attempt
         // committed last wins.
