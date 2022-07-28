@@ -57,7 +57,7 @@ public class TestDatanodeHttpXFrame {
     cluster = createCluster(xFrameEnabled, null);
     HttpURLConnection conn = getConn(cluster);
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertNotNull(xfoHeader);
+    Assert.assertNotNull("X-FRAME-OPTIONS is absent in the header", xfoHeader);
     Assert.assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
         .SAMEORIGIN.toString()));
   }
