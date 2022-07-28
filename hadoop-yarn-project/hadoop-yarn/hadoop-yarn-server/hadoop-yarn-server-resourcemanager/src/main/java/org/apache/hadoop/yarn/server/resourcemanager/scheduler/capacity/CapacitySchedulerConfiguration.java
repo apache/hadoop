@@ -1219,7 +1219,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void reinitializeConfigurationProperties() {
     // Props are always Strings, therefore this cast is safe
     Map<String, String> props = (Map) getProps();
-    configurationProperties = new ConfigurationProperties(props);
+    configurationProperties = new ConfigurationProperties(props, PREFIX);
   }
 
   public void setQueueMaximumAllocationMb(QueuePath queue, int value) {

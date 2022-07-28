@@ -27,6 +27,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.curator.shaded.com.google.common.collect.Maps;
+
 /**
  * A trie storage to preprocess and store configuration properties for optimised
  * retrieval. A node is created for every key part delimited by ".".
@@ -51,8 +54,16 @@ public class ConfigurationProperties {
    * @param props properties to store
    */
   public ConfigurationProperties(Map<String, String> props) {
-    this.nodes = new HashMap<>();
-    storePropertiesInPrefixNodes(props);
+    this.nodes = storePropertiesInPrefixNodes(props);
+  }
+
+  /**
+   * A constructor defined in order to conform to the type used by
+   * {@code Configuration}. It must only be called by String keys and values.
+   * @param props properties to store
+   */
+  public ConfigurationProperties(Map<String, String> props, String... whiteListPrefix) {
+    this(Maps.filterKeys(props, key -> StringUtils.startsWithAny(key, whiteListPrefix)));
   }
 
   /**
@@ -154,9 +165,12 @@ public class ConfigurationProperties {
 
   /**
    * Stores the given properties in the correct node.
+   *
    * @param props properties that need to be stored
+   * @return
    */
-  private void storePropertiesInPrefixNodes(Map<String, String> props) {
+  private Map<String, PrefixNode> storePropertiesInPrefixNodes(Map<String, String> props) {
+    Map<String, PrefixNode> nodes = new HashMap<>();
     for (Map.Entry<String, String> prop : props.entrySet()) {
       List<String> propertyKeyParts = splitPropertyByDelimiter(prop.getKey());
       if (!propertyKeyParts.isEmpty()) {
@@ -167,6 +181,7 @@ public class ConfigurationProperties {
         LOG.warn("Empty configuration property, skipping...");
       }
     }
+    return nodes;
   }
 
   /**
