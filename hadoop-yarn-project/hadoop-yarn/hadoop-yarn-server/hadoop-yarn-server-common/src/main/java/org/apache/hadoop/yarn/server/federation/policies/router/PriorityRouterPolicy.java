@@ -17,13 +17,9 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -31,36 +27,21 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 /**
  * This implements a policy that interprets "weights" as a ordered list of
- * preferences among sub-clusters. Highest weight among active subclusters is
+ * preferences among sub-clusters. Highest weight among active subClusters is
  * chosen.
  */
 public class PriorityRouterPolicy extends AbstractRouterPolicy {
 
   @Override
-  public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blacklist) throws YarnException {
-
-    // null checks and default-queue behavior
-    validate(appSubmissionContext);
-
-    Map<SubClusterId, SubClusterInfo> activeSubclusters =
-        getActiveSubclusters();
-
-    FederationPolicyUtils.validateSubClusterAvailability(
-        new ArrayList<SubClusterId>(activeSubclusters.keySet()), blacklist);
-
+  protected SubClusterId chooseSubCluster(
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
     // This finds the sub-cluster with the highest weight among the
     // currently active ones.
-    Map<SubClusterIdInfo, Float> weights =
-        getPolicyInfo().getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
     SubClusterId chosen = null;
     Float currentBest = Float.MIN_VALUE;
-    for (SubClusterId id : activeSubclusters.keySet()) {
+    for (SubClusterId id : preSelectSubClusters.keySet()) {
       SubClusterIdInfo idInfo = new SubClusterIdInfo(id);
-      if (blacklist != null && blacklist.contains(id)) {
-        continue;
-      }
       if (weights.containsKey(idInfo) && weights.get(idInfo) > currentBest) {
         currentBest = weights.get(idInfo);
         chosen = id;
@@ -68,10 +49,8 @@ public class PriorityRouterPolicy extends AbstractRouterPolicy {
     }
     if (chosen == null) {
       throw new FederationPolicyException(
-          "No Active Subcluster with weight vector greater than zero");
+          "No Active SubCluster with weight vector greater than zero.");
     }
-
     return chosen;
   }
-
 }

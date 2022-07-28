@@ -39,8 +39,7 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
     setMockActiveSubclusters(2);
 
     // initialize policy with context
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
+    setupContext();
 
   }
 
@@ -59,5 +58,4 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
             false, false, 0, Resources.none(), null, false, null, null);
     localPolicy.getHomeSubcluster(applicationSubmissionContext, null);
   }
-
 }

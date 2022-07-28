@@ -35,36 +35,21 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
  * sub-clusters.
  */
 public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
-
   @Override
-  public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blacklist) throws YarnException {
+  protected SubClusterId chooseSubCluster(
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
 
-    // null checks and default-queue behavior
-    validate(appSubmissionContext);
-
-    Map<SubClusterId, SubClusterInfo> activeSubclusters =
-        getActiveSubclusters();
-
-    FederationPolicyUtils.validateSubClusterAvailability(
-        new ArrayList<SubClusterId>(activeSubclusters.keySet()), blacklist);
-
-    // note: we cannot pre-compute the weights, as the set of activeSubcluster
+    // note: we cannot pre-compute the weights, as the set of activeSubCluster
     // changes dynamically (and this would unfairly spread the load to
     // sub-clusters adjacent to an inactive one), hence we need to count/scan
     // the list and based on weight pick the next sub-cluster.
     Map<SubClusterIdInfo, Float> weights =
-        getPolicyInfo().getRouterPolicyWeights();
+            getPolicyInfo().getRouterPolicyWeights();
 
     ArrayList<Float> weightList = new ArrayList<>();
     ArrayList<SubClusterId> scIdList = new ArrayList<>();
     for (Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()) {
-      if (blacklist != null && blacklist.contains(entry.getKey().toId())) {
-        continue;
-      }
-      if (entry.getKey() != null
-          && activeSubclusters.containsKey(entry.getKey().toId())) {
+      if (entry.getKey() != null && preSelectSubClusters.containsKey(entry.getKey().toId())) {
         weightList.add(entry.getValue());
         scIdList.add(entry.getKey().toId());
       }
@@ -73,9 +58,8 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
     int pickedIndex = FederationPolicyUtils.getWeightedRandom(weightList);
     if (pickedIndex == -1) {
       throw new FederationPolicyException(
-          "No positive weight found on active subclusters");
+          "No positive weight found on active subClusters.");
     }
     return scIdList.get(pickedIndex);
   }
-
 }

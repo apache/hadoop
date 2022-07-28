@@ -51,8 +51,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
     configureWeights(20);
 
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
+    setupContext();
   }
 
   public void configureWeights(float numSubClusters) {
@@ -68,10 +67,12 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f) {
-        SubClusterInfo sci = mock(SubClusterInfo.class);
-        when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-        when(sci.getSubClusterId()).thenReturn(sc.toId());
-        getActiveSubclusters().put(sc.toId(), sci);
+        long now = System.currentTimeMillis();
+        SubClusterInfo federationSubClusterInfo =
+            SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82",
+            "dns1:83", now - 1000, SubClusterState.SC_RUNNING, now - 2000,
+            generateClusterMetricsInfo(i));
+        getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
       }
 
       // 80% of the weight is evenly spread, 20% is randomly generated

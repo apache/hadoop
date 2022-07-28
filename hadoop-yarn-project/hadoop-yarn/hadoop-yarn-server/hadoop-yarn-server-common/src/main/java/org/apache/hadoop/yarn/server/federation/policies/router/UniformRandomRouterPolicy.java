@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -59,46 +60,13 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
     setPolicyContext(policyContext);
   }
 
-  /**
-   * Simply picks a random active subCluster to start the AM (this does NOT
-   * depend on the weights in the policy).
-   *
-   * @param appSubmissionContext the {@link ApplicationSubmissionContext} that
-   *          has to be routed to an appropriate subCluster for execution.
-   *
-   * @param blackListSubClusters the list of subClusters as identified by
-   *          {@link SubClusterId} to blackList from the selection of the home
-   *          subCluster.
-   *
-   * @return a randomly chosen subcluster.
-   *
-   * @throws YarnException if there are no active subclusters.
-   */
   @Override
-  public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
-
-    // null checks and default-queue behavior
-    validate(appSubmissionContext);
-
-    Map<SubClusterId, SubClusterInfo> activeSubclusters =
-        getActiveSubclusters();
-
-    List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
-
-    FederationPolicyUtils.validateSubClusterAvailability(list,
-        blackListSubClusters);
-
-    if (blackListSubClusters != null) {
-
-      // Remove from the active SubClusters from StateStore the blacklisted ones
-      for (SubClusterId scId : blackListSubClusters) {
-        list.remove(scId);
-      }
+  protected SubClusterId chooseSubCluster(
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
+    if(preSelectSubClusters == null || preSelectSubClusters.size() == 0) {
+      throw new FederationPolicyException("No available sub-cluster to choose from.");
     }
-
+    List<SubClusterId> list = new ArrayList<>(preSelectSubClusters.keySet());
     return list.get(rand.nextInt(list.size()));
   }
-
 }
