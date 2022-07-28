@@ -34,7 +34,7 @@ import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
-import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamMetrics;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import java.util.concurrent.atomic.AtomicReference;
@@ -67,7 +67,7 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AtomicReference<AbfsDriverMetrics> abfsDriverMetrics = null;
 
-  private List<AbfsInputStreamMetrics> inputStreamMetricsList;
+  private List<AbfsReadFooterMetrics> readFooterMetricsList;
 
   private static final AbfsStatistic[] STATISTIC_LIST = {
       CALL_CREATE,
@@ -128,7 +128,7 @@ public class AbfsCountersImpl implements AbfsCounters {
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
     abfsDriverMetrics = new AtomicReference<>(new AbfsDriverMetrics());
-    inputStreamMetricsList = new ArrayList<>();
+    readFooterMetricsList = new ArrayList<>();
   }
 
   /**
@@ -200,8 +200,8 @@ public class AbfsCountersImpl implements AbfsCounters {
     return abfsDriverMetrics.get();
   }
 
-  public List<AbfsInputStreamMetrics> getAbfsInputStreamMetrics() {
-    return inputStreamMetricsList;
+  public List<AbfsReadFooterMetrics> getAbfsReadFooterMetrics() {
+    return readFooterMetricsList;
   }
 
   /**

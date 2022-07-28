@@ -19,25 +19,46 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public class AbfsInputStreamMetrics {
-  private AtomicLong sizeReadByFirstRead;
-  private AtomicLong offsetDiffBetweenFirstAndSecondRead;
+public class AbfsReadFooterMetrics {
+  private boolean isParquetFile;
+  private String sizeReadByFirstRead;
+  private String offsetDiffBetweenFirstAndSecondRead;
   private AtomicLong fileLength;
 
-  public AbfsInputStreamMetrics() {
-    this.sizeReadByFirstRead = new AtomicLong();
-    this.offsetDiffBetweenFirstAndSecondRead = new AtomicLong();
+  public AbfsReadFooterMetrics() {
     this.fileLength = new AtomicLong();
   }
-  public AtomicLong getSizeReadByFirstRead() {
+
+  public boolean getIsParquetFile() {
+    return isParquetFile;
+  }
+
+  public void setParquetFile(final boolean parquetFile) {
+    isParquetFile = parquetFile;
+  }
+
+  public String getSizeReadByFirstRead() {
     return sizeReadByFirstRead;
   }
 
-  public AtomicLong getOffsetDiffBetweenFirstAndSecondRead() {
+  public void setSizeReadByFirstRead(final String sizeReadByFirstRead) {
+    this.sizeReadByFirstRead = sizeReadByFirstRead;
+  }
+
+  public String getOffsetDiffBetweenFirstAndSecondRead() {
     return offsetDiffBetweenFirstAndSecondRead;
+  }
+
+  public void setOffsetDiffBetweenFirstAndSecondRead(final String offsetDiffBetweenFirstAndSecondRead) {
+    this.offsetDiffBetweenFirstAndSecondRead
+        = offsetDiffBetweenFirstAndSecondRead;
   }
 
   public AtomicLong getFileLength() {
     return fileLength;
+  }
+
+  public void setFileLength(final AtomicLong fileLength) {
+    this.fileLength = fileLength;
   }
 }

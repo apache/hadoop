@@ -77,5 +77,5 @@ public interface AbfsCounters extends IOStatisticsSource, DurationTrackerFactory
 
   AbfsDriverMetrics getAbfsDriverMetrics();
 
-  List<AbfsInputStreamMetrics> getAbfsInputStreamMetrics();
+  List<AbfsReadFooterMetrics> getAbfsReadFooterMetrics();
 }

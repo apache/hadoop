@@ -49,7 +49,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean bufferedPreadDisabled;
 
-  private AbfsInputStreamMetrics abfsInputStreamMetrics;
+  private AbfsReadFooterMetrics abfsReadFooterMetrics;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -86,9 +86,9 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsInputStreamContext withStreamMetrics(
-      final AbfsInputStreamMetrics inputStreamMetrics) {
-    this.abfsInputStreamMetrics = inputStreamMetrics;
+  public AbfsInputStreamContext withReadFooterMetrics(
+      final AbfsReadFooterMetrics abfsReadFooterMetrics) {
+    this.abfsReadFooterMetrics = abfsReadFooterMetrics;
     return this;
   }
 
@@ -156,8 +156,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
   }
-  public AbfsInputStreamMetrics getAbfsInputStreamMetrics() {
-    return abfsInputStreamMetrics;
+  public AbfsReadFooterMetrics getAbfsReadFooterMetrics() {
+    return abfsReadFooterMetrics;
   }
 
   public boolean readSmallFilesCompletely() {
