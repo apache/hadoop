@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -144,16 +145,23 @@ public class TestJobSubmissionFiles {
 
   @Test
   public void testDirPermission() throws Exception {
-      Cluster cluster = mock(Cluster.class);
-      HdfsConfiguration CONF = new HdfsConfiguration();
-      MiniDFSCluster cluster1 = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
-      FileSystem fs = cluster1.getFileSystem();
-      UserGroupInformation user = UserGroupInformation
-        .createUserForTesting(USER_1_SHORT_NAME, GROUP_NAMES);
-      Path stagingPath = new Path(fs.getUri().toString() + "/testDirPermission");
-
-      when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
-      Path res = JobSubmissionFiles.getStagingDir(cluster, CONF, user);
-      assertEquals(new FsPermission(0700),fs.getFileStatus(res).getPermission());
+    Cluster cluster = mock(Cluster.class);
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "700");
+    MiniDFSCluster dfsCluster = null;
+    try {
+        dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+        FileSystem fs = dfsCluster.getFileSystem();
+        UserGroupInformation user = UserGroupInformation
+            .createUserForTesting(USER_1_SHORT_NAME, GROUP_NAMES);
+        Path stagingPath = new Path(fs.getUri().toString() + "/testDirPermission");
+        when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
+        Path res = JobSubmissionFiles.getStagingDir(cluster, conf, user);
+        assertEquals(new FsPermission(0700), fs.getFileStatus(res).getPermission());
+    } finally {
+        if (dfsCluster != null) {
+            dfsCluster.shutdown();
+        }
+    }
   }
 }
