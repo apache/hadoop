@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Collections;
 
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
@@ -133,14 +132,14 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
           targetId = resolver.getSubClusterForNode(rr.getResourceName());
           nodeRequest = rr;
         } catch (YarnException e) {
-          LOG.error("Cannot resolve node.");
+          LOG.error("Cannot resolve node : {}.", rr.getResourceName(), e);
         }
         // Handle "rack" requests
         try {
           resolver.getSubClustersForRack(rr.getResourceName());
           rackRequest = rr;
         } catch (YarnException e) {
-          LOG.error("Cannot resolve rack.");
+          LOG.error("Cannot resolve rack : {}.", rr.getResourceName(), e);
         }
         // Handle "ANY" requests
         if (ResourceRequest.isAnyLocation(rr.getResourceName())) {
@@ -173,8 +172,8 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
             + " is in a blacklist SubCluster or not active. ");
       }
     } catch (YarnException e) {
-      LOG.error("Validating resource requests failed, Falling back to "
-          + "WeightedRandomRouterPolicy placement.", e);
+      LOG.error("Validating resource requests failed, " +
+          "Falling back to WeightedRandomRouterPolicy placement.", e);
       // FailForward to WeightedRandomRouterPolicy
       // Overwrite request to use a default ANY
       ResourceRequest amReq = Records.newRecord(ResourceRequest.class);

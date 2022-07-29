@@ -272,13 +272,12 @@ public class RouterPolicyFacade {
     try {
       configuration = federationFacade.getPolicyConfiguration(copyQueue);
     } catch (YarnException e) {
-      LOG.warn("There is no policy configured for the queue: {}, " +
-          "falling back to defaults.", copyQueue, e);
+      LOG.warn("There is no policy configured for the queue: {}, falling back to defaults.",
+          copyQueue, e);
     }
 
     // If there is no policy configured for this queue, fallback to the baseline
-    // policy that is configured either in the store or via XML config (and
-    // cached)
+    // policy that is configured either in the store or via XML config (and cached)
     if (configuration == null) {
       final String policyKey = YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY;
       LOG.warn("There is no policies configured for queue: {} " +
@@ -287,8 +286,8 @@ public class RouterPolicyFacade {
       try {
         configuration = federationFacade.getPolicyConfiguration(copyQueue);
       } catch (YarnException e) {
-        LOG.warn("Cannot retrieve policy configured for the queue: {}, " +
-            "falling back to defaults.", copyQueue, e);
+        LOG.warn("Cannot retrieve policy configured for the queue: {}, falling back to defaults.",
+            copyQueue, e);
       }
     }
 
@@ -300,8 +299,9 @@ public class RouterPolicyFacade {
 
     // if the configuration has changed since last loaded, reinit the policy
     // based on current configuration
-    if (!cachedConfiguration.containsKey(copyQueue)
-            || !cachedConfiguration.get(copyQueue).equals(configuration)) {
+    SubClusterPolicyConfiguration policyConfiguration =
+        cachedConfiguration.getOrDefault(copyQueue, null);
+    if (policyConfiguration == null || !policyConfiguration.equals(configuration)) {
       singlePolicyReinit(policyMap, cachedConfiguration, copyQueue, configuration);
     }
 

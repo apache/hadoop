@@ -27,20 +27,20 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 /**
  * This implements a policy that interprets "weights" as a ordered list of
- * preferences among sub-clusters. Highest weight among active subClusters is
+ * preferences among sub-clusters. Highest weight among active subclusters is
  * chosen.
  */
 public class PriorityRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
     // This finds the sub-cluster with the highest weight among the
     // currently active ones.
     Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
     SubClusterId chosen = null;
     Float currentBest = Float.MIN_VALUE;
-    for (SubClusterId id : preSelectSubClusters.keySet()) {
+    for (SubClusterId id : preSelectSubclusters.keySet()) {
       SubClusterIdInfo idInfo = new SubClusterIdInfo(id);
       if (weights.containsKey(idInfo) && weights.get(idInfo) > currentBest) {
         currentBest = weights.get(idInfo);
@@ -49,7 +49,7 @@ public class PriorityRouterPolicy extends AbstractRouterPolicy {
     }
     if (chosen == null) {
       throw new FederationPolicyException(
-          "No Active SubCluster with weight vector greater than zero.");
+          "No Active Subcluster with weight vector greater than zero.");
     }
     return chosen;
   }
