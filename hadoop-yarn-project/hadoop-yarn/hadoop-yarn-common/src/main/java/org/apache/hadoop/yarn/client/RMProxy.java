@@ -99,7 +99,8 @@ public class RMProxy<T> {
         ? (YarnConfiguration) configuration
         : new YarnConfiguration(configuration);
     RetryPolicy retryPolicy = createRetryPolicy(conf,
-        (HAUtil.isHAEnabled(conf) || HAUtil.isFederationFailoverEnabled(conf)));
+        (HAUtil.isHAEnabled(conf) || (HAUtil.isFederationEnabled(conf)
+            && HAUtil.isFederationFailoverEnabled(conf))));
     return newProxyInstance(conf, protocol, instance, retryPolicy);
   }
 
@@ -126,7 +127,8 @@ public class RMProxy<T> {
       final Class<T> protocol, RMProxy<T> instance, RetryPolicy retryPolicy)
           throws IOException{
     RMFailoverProxyProvider<T> provider;
-    if (HAUtil.isHAEnabled(conf) || HAUtil.isFederationEnabled(conf)) {
+    if (HAUtil.isHAEnabled(conf) || (HAUtil.isFederationEnabled(conf)
+        && HAUtil.isFederationFailoverEnabled(conf))) {
       provider = instance.createRMFailoverProxyProvider(conf, protocol);
     } else {
       provider = instance.createNonHaRMFailoverProxyProvider(conf, protocol);
