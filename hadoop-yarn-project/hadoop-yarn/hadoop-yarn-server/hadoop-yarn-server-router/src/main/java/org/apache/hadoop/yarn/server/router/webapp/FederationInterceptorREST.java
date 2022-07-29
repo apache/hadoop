@@ -1186,12 +1186,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       });
       return new LabelsToNodesInfo(labelToNodesMap);
     } catch (NotFoundException e) {
-      LOG.error("Get all active sub cluster(s) error.", e);
-      throw new IOException("Get all active sub cluster(s) error.", e);
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
-      LOG.error("getLabelsToNodes error.", e);
-      throw new IOException("getLabelsToNodes error.", e);
+      RouterServerUtil.logAndThrowIOException("getLabelsToNodes error.", e);
     }
+    return null;
   }
 
   @Override
@@ -1221,12 +1220,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       return new NodeLabelsInfo(hashSets);
     } catch (NotFoundException e) {
-      LOG.error("Get all active sub cluster(s) error.", e);
-      throw new IOException("Get all active sub cluster(s) error.", e);
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
-      LOG.error("getClusterNodeLabels error.", e);
-      throw new IOException("getClusterNodeLabels error.", e);
+      RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
     }
+    return null;
   }
 
   @Override
@@ -1256,12 +1254,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       return new NodeLabelsInfo(hashSets);
     } catch (NotFoundException e) {
-      LOG.error("Get all active sub cluster(s) error.", e);
-      throw new IOException("Get all active sub cluster(s) error.", e);
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
-      LOG.error("getClusterNodeLabels error.", e);
-      throw new IOException("getClusterNodeLabels error.", e);
+      RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
     }
+    return null;
   }
 
   @Override
