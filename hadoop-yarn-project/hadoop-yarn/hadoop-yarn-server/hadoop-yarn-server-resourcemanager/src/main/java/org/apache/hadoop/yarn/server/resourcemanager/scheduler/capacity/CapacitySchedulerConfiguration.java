@@ -1222,6 +1222,22 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     configurationProperties = new ConfigurationProperties(props, PREFIX);
   }
 
+  @Override
+  public void set(String name, String value) {
+    super.set(name, value);
+    if (configurationProperties != null) {
+      configurationProperties.set(name, value);
+    }
+  }
+
+  @Override
+  public void unset(String name) {
+    super.unset(name);
+    if (configurationProperties != null) {
+      configurationProperties.unset(name);
+    }
+  }
+
   public void setQueueMaximumAllocationMb(QueuePath queue, int value) {
     String queuePrefix = getQueuePrefix(queue);
     setInt(queuePrefix + MAXIMUM_ALLOCATION_MB, value);

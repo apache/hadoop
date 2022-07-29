@@ -141,4 +141,21 @@ public class TestConfigurationProperties {
     Assert.assertEquals("TEST_VALUE_3_1", props.get("root.1.2.4"));
     Assert.assertFalse(props.containsKey("root"));
   }
+
+  @Test
+  public void testMutation() {
+    ConfigurationProperties configurationProperties = new ConfigurationProperties(PROPERTIES);
+    Map<String, String> props;
+
+    configurationProperties.set("root.1", "TEST_VALUE_3");
+    configurationProperties.set("root.1.2.3", "TEST_VALUE_4");
+    props = configurationProperties.getPropertiesWithPrefix("root", true);
+    Assert.assertEquals("TEST_VALUE_3", props.get("root.1"));
+    Assert.assertEquals("TEST_VALUE_4", props.get("root.1.2.3"));
+
+    configurationProperties.unset("root.1");
+    props = configurationProperties.getPropertiesWithPrefix("root", true);
+    Assert.assertFalse(props.containsKey("root.1"));
+    Assert.assertEquals("TEST_VALUE_4", props.get("root.1.2.3"));
+  }
 }

@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.shaded.com.google.common.collect.Maps;
@@ -54,7 +55,8 @@ public class ConfigurationProperties {
    * @param props properties to store
    */
   public ConfigurationProperties(Map<String, String> props) {
-    this.nodes = storePropertiesInPrefixNodes(props);
+    this.nodes = new HashMap<>();
+    storePropertiesInPrefixNodes(props);
   }
 
   /**
@@ -105,6 +107,23 @@ public class ConfigurationProperties {
         propertyPrefixParts.iterator(), trimPrefix);
 
     return properties;
+  }
+
+  /**
+   * Update or create value in the nodes
+   * @param name name of the property
+   * @param value value of the property
+   */
+  public void set(String name, String value) {
+    getNode(name).ifPresent(node -> node.getValues().put(name, value));
+  }
+
+  /**
+   * Delete value from nodes
+   * @param name name of the property
+   */
+  public void unset(String name) {
+    getNode(name).ifPresent(node -> node.getValues().remove(name));
   }
 
   /**
@@ -168,21 +187,28 @@ public class ConfigurationProperties {
   /**
    * Stores the given properties in the correct node.
    * @param props properties that need to be stored
-   * @return the built tree of nodes
    */
-  private Map<String, PrefixNode> storePropertiesInPrefixNodes(Map<String, String> props) {
-    Map<String, PrefixNode> nodes = new HashMap<>();
+  private void storePropertiesInPrefixNodes(Map<String, String> props) {
     for (Map.Entry<String, String> prop : props.entrySet()) {
-      List<String> propertyKeyParts = splitPropertyByDelimiter(prop.getKey());
-      if (!propertyKeyParts.isEmpty()) {
-        PrefixNode node = findOrCreatePrefixNode(nodes,
-            propertyKeyParts.iterator());
-        node.getValues().put(prop.getKey(), prop.getValue());
-      } else {
-        LOG.warn("Empty configuration property, skipping...");
-      }
+      getNode(prop.getKey()).ifPresent(
+          node -> node.getValues().put(prop.getKey(), prop.getValue()));
     }
-    return nodes;
+  }
+
+  /**
+   * Finds the node that matches the whole key or create it, if it does not exist.
+   * @param name name of the property
+   * @return the found or created node, if the name is empty, than empty optional will return
+   */
+  private Optional<PrefixNode> getNode(String name) {
+    List<String> propertyKeyParts = splitPropertyByDelimiter(name);
+    if (!propertyKeyParts.isEmpty()) {
+      PrefixNode node = findOrCreatePrefixNode(nodes, propertyKeyParts.iterator());
+      return Optional.of(node);
+    } else {
+      LOG.warn("Empty configuration property");
+      return Optional.empty();
+    }
   }
 
   /**
