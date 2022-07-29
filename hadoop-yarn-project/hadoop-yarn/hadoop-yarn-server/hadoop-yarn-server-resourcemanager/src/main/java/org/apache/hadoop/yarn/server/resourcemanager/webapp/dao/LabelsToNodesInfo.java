@@ -31,8 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class LabelsToNodesInfo {
 
-  protected Map<NodeLabelInfo, NodeIDsInfo> labelsToNodes =
-    new HashMap<NodeLabelInfo, NodeIDsInfo>();
+  protected Map<NodeLabelInfo, NodeIDsInfo> labelsToNodes = new HashMap<>();
 
   public LabelsToNodesInfo() {
   } // JAXB needs this

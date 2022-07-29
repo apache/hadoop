@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
@@ -30,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -52,6 +54,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.Assert;
@@ -625,5 +630,72 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(node2Value);
     Assert.assertEquals(1, node2Value.getNodeLabelsName().size());
     Assert.assertEquals("GPU", node2Value.getNodeLabelsName().get(0));
+  }
+
+  @Test
+  public void testGetLabelsToNodes() throws Exception {
+    LabelsToNodesInfo labelsToNodesInfo = interceptor.getLabelsToNodes(null);
+    Map<NodeLabelInfo, NodeIDsInfo> map = labelsToNodesInfo.getLabelsToNodes();
+    Assert.assertNotNull(map);
+    Assert.assertEquals(3, map.size());
+
+    NodeLabel labelX = NodeLabel.newInstance("x", false);
+    NodeLabelInfo nodeLabelInfoX = new NodeLabelInfo(labelX);
+    NodeIDsInfo nodeIDsInfoX = map.get(nodeLabelInfoX);
+    Assert.assertNotNull(nodeIDsInfoX);
+    Assert.assertEquals(2, nodeIDsInfoX.getNodeIDs().size());
+    Resource resourceX =
+        nodeIDsInfoX.getPartitionInfo().getResourceAvailable().getResource();
+    Assert.assertNotNull(resourceX);
+    Assert.assertEquals(4*10, resourceX.getVirtualCores());
+    Assert.assertEquals(4*20*1024, resourceX.getMemorySize());
+
+    NodeLabel labelY = NodeLabel.newInstance("y", false);
+    NodeLabelInfo nodeLabelInfoY = new NodeLabelInfo(labelY);
+    NodeIDsInfo nodeIDsInfoY = map.get(nodeLabelInfoY);
+    Assert.assertNotNull(nodeIDsInfoY);
+    Assert.assertEquals(2, nodeIDsInfoY.getNodeIDs().size());
+    Resource resourceY =
+        nodeIDsInfoY.getPartitionInfo().getResourceAvailable().getResource();
+    Assert.assertNotNull(resourceY);
+    Assert.assertEquals(4*20, resourceY.getVirtualCores());
+    Assert.assertEquals(4*40*1024, resourceY.getMemorySize());
+  }
+
+  @Test
+  public void testGetClusterNodeLabels() throws Exception {
+    NodeLabelsInfo nodeLabelsInfo = interceptor.getClusterNodeLabels(null);
+    Assert.assertNotNull(nodeLabelsInfo);
+    Assert.assertEquals(2, nodeLabelsInfo.getNodeLabelsName().size());
+
+    List<String> nodeLabelsName = nodeLabelsInfo.getNodeLabelsName();
+    Assert.assertNotNull(nodeLabelsName);
+    Assert.assertTrue(nodeLabelsName.contains("cpu"));
+    Assert.assertTrue(nodeLabelsName.contains("gpu"));
+
+    ArrayList<NodeLabelInfo> nodeLabelInfos = nodeLabelsInfo.getNodeLabelsInfo();
+    Assert.assertNotNull(nodeLabelInfos);
+    Assert.assertEquals(2, nodeLabelInfos.size());
+    NodeLabelInfo cpuNodeLabelInfo = new NodeLabelInfo("cpu", false);
+    Assert.assertTrue(nodeLabelInfos.contains(cpuNodeLabelInfo));
+    NodeLabelInfo gpuNodeLabelInfo = new NodeLabelInfo("gpu", false);
+    Assert.assertTrue(nodeLabelInfos.contains(gpuNodeLabelInfo));
+  }
+
+  @Test
+  public void testGetLabelsOnNode() throws Exception {
+    NodeLabelsInfo nodeLabelsInfo = interceptor.getLabelsOnNode(null,"node1");
+    Assert.assertNotNull(nodeLabelsInfo);
+    Assert.assertEquals(2, nodeLabelsInfo.getNodeLabelsName().size());
+
+    List<String> nodeLabelsName = nodeLabelsInfo.getNodeLabelsName();
+    Assert.assertNotNull(nodeLabelsName);
+    Assert.assertTrue(nodeLabelsName.contains("x"));
+    Assert.assertTrue(nodeLabelsName.contains("y"));
+
+    // null request
+    NodeLabelsInfo nodeLabelsInfo2 = interceptor.getLabelsOnNode(null,"node2");
+    Assert.assertNotNull(nodeLabelsInfo2);
+    Assert.assertEquals(0, nodeLabelsInfo2.getNodeLabelsName().size());
   }
 }
