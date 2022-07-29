@@ -42,7 +42,6 @@ public class AutoCreatedQueueTemplate {
       AUTO_QUEUE_CREATION_V2_PREFIX + "parent-template.";
 
   private static final String WILDCARD_QUEUE = "*";
-  private static final int MAX_WILDCARD_LEVEL = 1;
 
   private final Map<String, String> templateProperties = new HashMap<>();
   private final Map<String, String> leafOnlyProperties = new HashMap<>();
@@ -86,7 +85,7 @@ public class AutoCreatedQueueTemplate {
   /**
    * Sets the common template properties and parent specific template
    * properties of a child queue based on its parent template settings.
- * @param conf configuration to set
+   * @param conf configuration to set
    * @param childQueuePath child queue path used for prefixing the properties
    */
   public void setTemplateEntriesForChild(CapacitySchedulerConfiguration conf,
@@ -169,8 +168,8 @@ public class AutoCreatedQueueTemplate {
     // start with the most explicit format (without wildcard)
     int wildcardLevel = 0;
     // root can not be wildcarded
-    // MAX_WILDCARD_LEVEL will be configurable in the future
-    int supportedWildcardLevel = Math.min(queuePathMaxIndex, MAX_WILDCARD_LEVEL);
+    int supportedWildcardLevel = Math.min(queuePathMaxIndex,
+            configuration.getMaximumAutoCreatedQueueDepth(queuePath.getFullPath()));
     // Allow root to have template properties
     if (queuePath.isRoot()) {
       supportedWildcardLevel = 0;
