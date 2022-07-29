@@ -133,14 +133,14 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
           targetId = resolver.getSubClusterForNode(rr.getResourceName());
           nodeRequest = rr;
         } catch (YarnException e) {
-          LOG.error("Cannot resolve node.", e);
+          LOG.error("Cannot resolve node.");
         }
         // Handle "rack" requests
         try {
           resolver.getSubClustersForRack(rr.getResourceName());
           rackRequest = rr;
         } catch (YarnException e) {
-          LOG.error("Cannot resolve rack.", e);
+          LOG.error("Cannot resolve rack.");
         }
         // Handle "ANY" requests
         if (ResourceRequest.isAnyLocation(rr.getResourceName())) {

@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.mockito.Mockito.when;
 
 /**
  * Base class for router policies tests, tests for null input cases.

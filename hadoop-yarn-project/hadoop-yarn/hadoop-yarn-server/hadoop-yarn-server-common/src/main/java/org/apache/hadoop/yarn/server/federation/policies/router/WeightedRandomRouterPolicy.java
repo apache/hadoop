@@ -43,22 +43,21 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
     // changes dynamically (and this would unfairly spread the load to
     // sub-clusters adjacent to an inactive one), hence we need to count/scan
     // the list and based on weight pick the next sub-cluster.
-    Map<SubClusterIdInfo, Float> weights =
-            getPolicyInfo().getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
 
     ArrayList<Float> weightList = new ArrayList<>();
     ArrayList<SubClusterId> scIdList = new ArrayList<>();
     for (Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()) {
-      if (entry.getKey() != null && preSelectSubClusters.containsKey(entry.getKey().toId())) {
+      SubClusterIdInfo key = entry.getKey();
+      if (key != null && preSelectSubClusters.containsKey(key.toId())) {
         weightList.add(entry.getValue());
-        scIdList.add(entry.getKey().toId());
+        scIdList.add(key.toId());
       }
     }
 
     int pickedIndex = FederationPolicyUtils.getWeightedRandom(weightList);
     if (pickedIndex == -1) {
-      throw new FederationPolicyException(
-          "No positive weight found on active subClusters.");
+      throw new FederationPolicyException("No positive weight found on active subclusters");
     }
     return scIdList.get(pickedIndex);
   }

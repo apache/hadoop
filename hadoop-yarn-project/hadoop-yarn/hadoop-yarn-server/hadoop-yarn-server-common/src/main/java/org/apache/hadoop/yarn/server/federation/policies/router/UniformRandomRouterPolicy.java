@@ -63,7 +63,7 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
   @Override
   protected SubClusterId chooseSubCluster(
       String queue, Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
-    if(preSelectSubClusters == null || preSelectSubClusters.size() == 0) {
+    if (preSelectSubClusters == null || preSelectSubClusters.isEmpty()) {
       throw new FederationPolicyException("No available sub-cluster to choose from.");
     }
     List<SubClusterId> list = new ArrayList<>(preSelectSubClusters.keySet());

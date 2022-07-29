@@ -161,8 +161,7 @@ public abstract class AbstractRouterPolicy extends
   public SubClusterId getReservationHomeSubcluster(ReservationSubmissionRequest request)
       throws YarnException {
     if (request == null) {
-      throw new FederationPolicyException(
-          "The ReservationSubmissionRequest cannot be null.");
+      throw new FederationPolicyException("The ReservationSubmissionRequest cannot be null.");
     }
 
     if (request.getQueue() == null) {
