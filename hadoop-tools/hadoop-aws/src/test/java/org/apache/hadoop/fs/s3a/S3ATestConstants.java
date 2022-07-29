@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.s3a;
 
 import java.time.Duration;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
+
 /**
  * Constants for S3A Testing.
  */
@@ -49,6 +52,11 @@ public interface S3ATestConstants {
    * Run the encryption tests?
    */
   String KEY_ENCRYPTION_TESTS = TEST_FS_S3A + "encryption.enabled";
+
+  /**
+   * A property set to true if storage class tests are enabled: {@value }.
+   */
+  String KEY_STORAGE_CLASS_TESTS_ENABLED = TEST_FS_S3A + "create.storage.class.enabled";
 
   /**
    * Tell tests that they are being executed in parallel: {@value}.
@@ -99,14 +107,19 @@ public interface S3ATestConstants {
 
   /**
    * Configuration key for an existing object in a requester pays bucket: {@value}.
-   * If not set, defaults to {@value DEFAULT_REQUESTER_PAYS_FILE}.
+   *
+   * Accessible via
+   * {@link PublicDatasetTestUtils#getRequesterPaysObject(Configuration)}.
    */
   String KEY_REQUESTER_PAYS_FILE = TEST_FS_S3A + "requester.pays.file";
 
   /**
-   * Default path for an S3 object inside a requester pays enabled bucket: {@value}.
+   * Configuration key for an existing bucket with many objects: {@value}.
+   *
+   * This is used for tests depending on buckets with a large number of keys.
    */
-  String DEFAULT_REQUESTER_PAYS_FILE = "s3a://usgs-landsat/collection02/catalog.json";
+  String KEY_BUCKET_WITH_MANY_OBJECTS
+      = TEST_FS_S3A + "bucket-with-many-objects";
 
   /**
    * Name of the property to define the timeout for scale tests: {@value}.
@@ -232,4 +245,10 @@ public interface S3ATestConstants {
    * used.
    */
   int KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN = 94;
+
+  /**
+   * Build directory property.
+   * Value: {@value}.
+   */
+  String PROJECT_BUILD_DIRECTORY_PROPERTY = "project.build.directory";
 }

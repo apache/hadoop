@@ -1351,7 +1351,7 @@ public class TestExternalStoragePolicySatisfier {
    * 4. Set policy and call satisfyStoragePolicy for file.
    * 5. Block should be moved successfully.
    */
-  @Test(timeout = 300000)
+  @Test(timeout = 600000)
   public void testSPSWhenFileHasExcessRedundancyBlocks() throws Exception {
     try {
       config.set(DFSConfigKeys

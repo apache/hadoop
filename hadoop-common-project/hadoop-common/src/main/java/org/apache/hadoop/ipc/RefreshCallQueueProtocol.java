@@ -41,7 +41,7 @@ public interface RefreshCallQueueProtocol {
 
   /**
    * Refresh the callqueue.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Idempotent
   void refreshCallQueue() throws IOException;

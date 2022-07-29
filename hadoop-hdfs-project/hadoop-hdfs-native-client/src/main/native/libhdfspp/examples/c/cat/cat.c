@@ -28,6 +28,7 @@
 #include "hdfspp/hdfs_ext.h"
 #include "uriparser2/uriparser2.h"
 #include "common/util_c.h"
+#include "x-platform/types.h"
 
 #define SCHEME "hdfs"
 #define BUF_SIZE 1048576 //1 MB

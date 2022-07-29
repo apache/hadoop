@@ -340,12 +340,14 @@ public abstract class
 
   /**
    * Get all the keys that are set as mandatory keys.
+   * @return mandatory keys.
    */
   public Set<String> getMandatoryKeys() {
     return Collections.unmodifiableSet(mandatoryKeys);
   }
   /**
    * Get all the keys that are set as optional keys.
+   * @return optional keys.
    */
   public Set<String> getOptionalKeys() {
     return Collections.unmodifiableSet(optionalKeys);

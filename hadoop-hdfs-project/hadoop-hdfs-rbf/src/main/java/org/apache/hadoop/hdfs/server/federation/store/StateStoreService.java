@@ -331,7 +331,7 @@ public class StateStoreService extends CompositeService {
   }
 
   /**
-   * Fetch a unique identifier for this state store instance. Typically it is
+   * Fetch a unique identifier for this state store instance. Typically, it is
    * the address of the router.
    *
    * @return Unique identifier for this store.

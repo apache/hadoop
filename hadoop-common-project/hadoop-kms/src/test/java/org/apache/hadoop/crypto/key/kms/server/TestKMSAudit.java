@@ -24,13 +24,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.ThreadUtil;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
@@ -63,7 +64,7 @@ public class TestKMSAudit {
   }
 
   @Rule
-  public final Timeout testTimeout = new Timeout(180000);
+  public final Timeout testTimeout = new Timeout(180000L, TimeUnit.MILLISECONDS);
 
   @Before
   public void setUp() throws IOException {
@@ -207,8 +208,9 @@ public class TestKMSAudit {
   @Test
   public void testInitAuditLoggers() throws Exception {
     // Default should be the simple logger
-    List<KMSAuditLogger> loggers = (List<KMSAuditLogger>) Whitebox
-        .getInternalState(kmsAudit, "auditLoggers");
+    List<KMSAuditLogger> loggers = (List<KMSAuditLogger>) FieldUtils.
+        getField(KMSAudit.class, "auditLoggers", true).get(kmsAudit);
+
     Assert.assertEquals(1, loggers.size());
     Assert.assertEquals(SimpleKMSAuditLogger.class, loggers.get(0).getClass());
 
@@ -218,8 +220,8 @@ public class TestKMSAudit {
         SimpleKMSAuditLogger.class.getName() + ", "
             + SimpleKMSAuditLogger.class.getName());
     final KMSAudit audit = new KMSAudit(conf);
-    loggers =
-        (List<KMSAuditLogger>) Whitebox.getInternalState(audit, "auditLoggers");
+    loggers = (List<KMSAuditLogger>) FieldUtils.
+        getField(KMSAudit.class, "auditLoggers", true).get(kmsAudit);
     Assert.assertEquals(1, loggers.size());
     Assert.assertEquals(SimpleKMSAuditLogger.class, loggers.get(0).getClass());
 

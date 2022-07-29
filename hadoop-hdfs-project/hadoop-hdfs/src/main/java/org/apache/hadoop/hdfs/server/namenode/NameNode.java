@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
 
@@ -98,6 +101,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.GcTimeMonitor;
 import org.apache.hadoop.util.GcTimeMonitor.Builder;
 import org.apache.hadoop.tracing.Tracer;
+import org.apache.hadoop.util.Timer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,6 +127,10 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT;
@@ -339,7 +348,9 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY,
           DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
           DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY,
-          DFS_BLOCK_INVALIDATE_LIMIT_KEY));
+          DFS_BLOCK_INVALIDATE_LIMIT_KEY,
+          DFS_DATANODE_PEER_STATS_ENABLED_KEY,
+          DFS_DATANODE_MAX_NODES_TO_REPORT_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -395,7 +406,6 @@ public class NameNode extends ReconfigurableBase implements
    */
   @Deprecated
   public static final int DEFAULT_PORT = DFS_NAMENODE_RPC_PORT_DEFAULT;
-  public static final String FS_HDFS_IMPL_KEY = "fs.hdfs.impl";
   public static final Logger LOG =
       LoggerFactory.getLogger(NameNode.class.getName());
   public static final Logger stateChangeLog =
@@ -485,6 +495,94 @@ public class NameNode extends ReconfigurableBase implements
 
   public static NameNodeMetrics getNameNodeMetrics() {
     return metrics;
+  }
+
+  /**
+   * Try to obtain the actual client info according to the current user.
+   * @param ipProxyUsers Users who can override client infos
+   */
+  private static String clientInfoFromContext(
+      final String[] ipProxyUsers) {
+    if (ipProxyUsers != null) {
+      UserGroupInformation user =
+          UserGroupInformation.getRealUserOrSelf(Server.getRemoteUser());
+      if (user != null &&
+          ArrayUtils.contains(ipProxyUsers, user.getShortUserName())) {
+        CallerContext context = CallerContext.getCurrent();
+        if (context != null && context.isContextValid()) {
+          return context.getContext();
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Try to obtain the value corresponding to the key by parsing the content.
+   * @param content the full content to be parsed.
+   * @param key trying to obtain the value of the key.
+   * @return the value corresponding to the key.
+   */
+  @VisibleForTesting
+  public static String parseSpecialValue(String content, String key) {
+    int posn = content.indexOf(key);
+    if (posn != -1) {
+      posn += key.length();
+      int end = content.indexOf(",", posn);
+      return end == -1 ? content.substring(posn)
+          : content.substring(posn, end);
+    }
+    return null;
+  }
+
+  /**
+   * Try to obtain the actual client's machine according to the current user.
+   * @param ipProxyUsers Users who can override client infos.
+   * @return The actual client's machine.
+   */
+  public static String getClientMachine(final String[] ipProxyUsers) {
+    String cc = clientInfoFromContext(ipProxyUsers);
+    if (cc != null) {
+      // if the rpc has a caller context of "clientIp:1.2.3.4,CLI",
+      // return "1.2.3.4" as the client machine.
+      String key = CallerContext.CLIENT_IP_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      return parseSpecialValue(cc, key);
+    }
+
+    String clientMachine = Server.getRemoteAddress();
+    if (clientMachine == null) { //not a RPC client
+      clientMachine = "";
+    }
+    return clientMachine;
+  }
+
+  /**
+   * Try to obtain the actual client's id and call id
+   * according to the current user.
+   * @param ipProxyUsers Users who can override client infos
+   * @return The actual client's id and call id.
+   */
+  public static Pair<byte[], Integer> getClientIdAndCallId(
+      final String[] ipProxyUsers) {
+    byte[] clientId = Server.getClientId();
+    int callId = Server.getCallId();
+    String cc = clientInfoFromContext(ipProxyUsers);
+    if (cc != null) {
+      String clientIdKey = CallerContext.CLIENT_ID_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      String clientIdStr = parseSpecialValue(cc, clientIdKey);
+      if (clientIdStr != null) {
+        clientId = StringUtils.hexStringToByte(clientIdStr);
+      }
+      String callIdKey = CallerContext.CLIENT_CALL_ID_STR +
+          CallerContext.Builder.KEY_VALUE_SEPARATOR;
+      String callIdStr = parseSpecialValue(cc, callIdKey);
+      if (callIdStr != null) {
+        callId = Integer.parseInt(callIdStr);
+      }
+    }
+    return Pair.of(clientId, callId);
   }
 
   /**
@@ -2208,9 +2306,11 @@ public class NameNode extends ReconfigurableBase implements
       return newVal;
     } else if (property.equals(DFS_IMAGE_PARALLEL_LOAD_KEY)) {
       return reconfigureParallelLoad(newVal);
-    } else if (property.equals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY)
-          || (property.equals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY))
-          || (property.equals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY))) {
+    } else if (property.equals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY) || (property.equals(
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY)) || (property.equals(
+        DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY)) || (property.equals(
+        DFS_DATANODE_PEER_STATS_ENABLED_KEY)) || property.equals(
+        DFS_DATANODE_MAX_NODES_TO_REPORT_KEY)) {
       return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
     } else if (property.equals(DFS_BLOCK_INVALIDATE_LIMIT_KEY)) {
       return reconfigureBlockInvalidateLimit(datanodeManager, property, newVal);
@@ -2406,27 +2506,55 @@ public class NameNode extends ReconfigurableBase implements
     namesystem.writeLock();
     String result;
     try {
-      if (property.equals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY)) {
-        boolean enable = (newVal == null ? DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_DEFAULT :
+      switch (property) {
+      case DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY: {
+        boolean enable = (newVal == null ?
+            DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_DEFAULT :
             Boolean.parseBoolean(newVal));
         result = Boolean.toString(enable);
         datanodeManager.setAvoidSlowDataNodesForReadEnabled(enable);
-      } else if (property.equals(
-            DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY)) {
+        break;
+      }
+      case DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY: {
         boolean enable = (newVal == null ?
             DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT :
             Boolean.parseBoolean(newVal));
         result = Boolean.toString(enable);
         bm.setExcludeSlowNodesEnabled(enable);
-      } else if (property.equals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY)) {
+        break;
+      }
+      case DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY: {
         int maxSlowpeerCollectNodes = (newVal == null ?
             DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_DEFAULT :
             Integer.parseInt(newVal));
         result = Integer.toString(maxSlowpeerCollectNodes);
         datanodeManager.setMaxSlowpeerCollectNodes(maxSlowpeerCollectNodes);
-      } else {
-        throw new IllegalArgumentException("Unexpected property " +
-            property + " in reconfigureSlowNodesParameters");
+        break;
+      }
+      case DFS_DATANODE_PEER_STATS_ENABLED_KEY: {
+        Timer timer = new Timer();
+        if (newVal != null && !newVal.equalsIgnoreCase("true") && !newVal.equalsIgnoreCase(
+            "false")) {
+          throw new IllegalArgumentException(newVal + " is not boolean value");
+        }
+        final boolean peerStatsEnabled = newVal == null ?
+            DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT :
+            Boolean.parseBoolean(newVal);
+        result = Boolean.toString(peerStatsEnabled);
+        datanodeManager.initSlowPeerTracker(getConf(), timer, peerStatsEnabled);
+        break;
+      }
+      case DFS_DATANODE_MAX_NODES_TO_REPORT_KEY: {
+        int maxSlowPeersToReport = (newVal == null
+            ? DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT : Integer.parseInt(newVal));
+        result = Integer.toString(maxSlowPeersToReport);
+        datanodeManager.setMaxSlowPeersToReport(maxSlowPeersToReport);
+        break;
+      }
+      default: {
+        throw new IllegalArgumentException(
+            "Unexpected property " + property + " in reconfigureSlowNodesParameters");
+      }
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;

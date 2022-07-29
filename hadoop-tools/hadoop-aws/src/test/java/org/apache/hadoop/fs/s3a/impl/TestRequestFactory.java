@@ -90,7 +90,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     ObjectMetadata md = factory.newObjectMetadata(128);
     Assertions.assertThat(
             factory.newPutObjectRequest(path, md,
-                    new ByteArrayInputStream(new byte[0]))
+                    null, new ByteArrayInputStream(new byte[0]))
                 .getCannedAcl())
         .describedAs("ACL of PUT")
         .isEqualTo(acl);
@@ -98,7 +98,8 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
             .getCannedAccessControlList())
         .describedAs("ACL of COPY")
         .isEqualTo(acl);
-    Assertions.assertThat(factory.newMultipartUploadRequest(path)
+    Assertions.assertThat(factory.newMultipartUploadRequest(path,
+                null)
             .getCannedACL())
         .describedAs("ACL of MPU")
         .isEqualTo(acl);
@@ -172,12 +173,12 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     a(factory.newListObjectsV1Request(path, "/", 1));
     a(factory.newListNextBatchOfObjectsRequest(new ObjectListing()));
     a(factory.newListObjectsV2Request(path, "/", 1));
-    a(factory.newMultipartUploadRequest(path));
+    a(factory.newMultipartUploadRequest(path, null));
     File srcfile = new File("/tmp/a");
     a(factory.newPutObjectRequest(path,
-        factory.newObjectMetadata(-1), srcfile));
+        factory.newObjectMetadata(-1), null, srcfile));
     ByteArrayInputStream stream = new ByteArrayInputStream(new byte[0]);
-    a(factory.newPutObjectRequest(path, md, stream));
+    a(factory.newPutObjectRequest(path, md, null, stream));
     a(factory.newSelectRequest(path));
   }
 

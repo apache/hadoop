@@ -337,13 +337,4 @@ public class QueueCapacities {
       readLock.unlock();
     }
   }
-  
-  public Set<String> getNodePartitionsSet() {
-    readLock.lock();
-    try {
-      return capacitiesMap.keySet();
-    } finally {
-      readLock.unlock();
-    }
-  }
 }

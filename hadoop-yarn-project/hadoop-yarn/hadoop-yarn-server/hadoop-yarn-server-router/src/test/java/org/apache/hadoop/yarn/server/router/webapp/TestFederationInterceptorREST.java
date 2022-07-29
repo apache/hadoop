@@ -21,12 +21,15 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -47,6 +50,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -58,7 +64,7 @@ import org.slf4j.LoggerFactory;
  * use the {@code RouterClientRMService} pipeline test cases for testing the
  * {@code FederationInterceptor} class. The tests for
  * {@code RouterClientRMService} has been written cleverly so that it can be
- * reused to validate different request intercepter chains.
+ * reused to validate different request interceptor chains.
  */
 public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private static final Logger LOG =
@@ -116,8 +122,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     String mockPassThroughInterceptorClass =
         PassThroughRESTRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain is the federation intercepter that calls the mock resource manager.
+    // Create a request interceptor pipeline for testing. The last one in the
+    // chain is the federation interceptor that calls the mock resource manager.
     // The others in the chain will simply forward it to the next one in the
     // chain
     conf.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
@@ -160,7 +166,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
@@ -187,7 +193,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -236,7 +242,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   /**
-   * This test validates the correctness of SubmitApplication in case of of
+   * This test validates the correctness of SubmitApplication in case of
    * application in wrong format.
    */
   @Test
@@ -259,7 +265,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -286,7 +292,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     AppState appState = new AppState("KILLED");
 
     Response response =
@@ -317,7 +323,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   public void testForceKillApplicationEmptyRequest()
       throws YarnException, IOException, InterruptedException {
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
@@ -341,7 +347,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -478,7 +484,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -505,7 +511,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     AppState response = interceptor.getAppState(null, appId.toString());
 
@@ -560,4 +566,64 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
             SubClusterRegisterRequest.newInstance(subClusterInfo));
   }
 
+  @Test
+  public void testGetContainers()
+      throws YarnException, IOException, InterruptedException {
+
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context =
+        new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Submit the application we want the report later
+    Response response = interceptor.submitApplication(context, null);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
+
+    ContainersInfo responseGet = interceptor.getContainers(
+        null, null, appId.toString(), appAttempt.toString());
+
+    Assert.assertEquals(4, responseGet.getContainers().size());
+  }
+
+  @Test
+  public void testGetContainersNotExists() {
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ContainersInfo response = interceptor.getContainers(null, null, appId.toString(), null);
+    Assert.assertTrue(response.getContainers().isEmpty());
+  }
+
+  @Test
+  public void testGetContainersWrongFormat() {
+    ContainersInfo response = interceptor.getContainers(null, null, "Application_wrong_id", null);
+
+    Assert.assertNotNull(response);
+    Assert.assertTrue(response.getContainers().isEmpty());
+
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    response = interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id");
+
+    Assert.assertTrue(response.getContainers().isEmpty());
+  }
+
+  @Test
+  public void testGetNodeToLabels() throws IOException {
+    NodeToLabelsInfo info = interceptor.getNodeToLabels(null);
+    HashMap<String, NodeLabelsInfo> map = info.getNodeToLabels();
+    Assert.assertNotNull(map);
+    Assert.assertEquals(2, map.size());
+
+    NodeLabelsInfo node1Value = map.getOrDefault("node1", null);
+    Assert.assertNotNull(node1Value);
+    Assert.assertEquals(1, node1Value.getNodeLabelsName().size());
+    Assert.assertEquals("CPU", node1Value.getNodeLabelsName().get(0));
+
+    NodeLabelsInfo node2Value = map.getOrDefault("node2", null);
+    Assert.assertNotNull(node2Value);
+    Assert.assertEquals(1, node2Value.getNodeLabelsName().size());
+    Assert.assertEquals("GPU", node2Value.getNodeLabelsName().get(0));
+  }
 }

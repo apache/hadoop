@@ -544,6 +544,18 @@ which address issues. In particular, we encourage testing of Hadoop release
 candidates, as these third-party endpoints get even less testing than the
 S3 endpoint itself.
 
+### Public datasets used in tests
+
+Some tests rely on the presence of existing public datasets available on Amazon S3.
+You may find a number of these in `org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils`.
+
+When testing against an endpoint which is not part of Amazon S3's standard commercial partition
+(`aws`) such as third-party implementations or AWS's China regions, you should replace these
+configurations with an empty space (` `) to disable the tests or an existing path in your object
+store that supports these tests.
+
+An example of this might be the MarkerTools tests which require a bucket with a large number of
+objects or the requester pays tests that require requester pays to be enabled for the bucket.
 
 ### Disabling the encryption tests
 
@@ -559,6 +571,18 @@ can be turned off.
 
 Encryption is only used for those specific test suites with `Encryption` in
 their classname.
+
+### Disabling the storage class tests
+
+When running storage class tests against third party object store that doesn't support
+S3 storage class, these tests might fail. They can be disabled.
+
+```xml
+<property>
+  <name>test.fs.s3a.create.storage.class.enabled</name>
+  <value>false</value>
+</property>
+```
 
 ### Configuring the CSV file read tests**
 
@@ -1132,6 +1156,14 @@ We need a run through of the CLI to see if there have been changes there
 which cause problems, especially whether new log messages have surfaced,
 or whether some packaging change breaks that CLI.
 
+It is always interesting when doing this to enable IOStatistics reporting
+```xml
+<property>
+  <name>fs.iostatistics.logging.level</name>
+  <value>info</value>
+</property>
+```
+
 From the root of the project, create a command line release `mvn package -Pdist -DskipTests -Dmaven.javadoc.skip=true  -DskipShade`;
 
 1. Change into the `hadoop-dist/target/hadoop-x.y.z-SNAPSHOT` dir.
@@ -1251,6 +1283,21 @@ bin/hadoop s3guard markers -clean -verbose $BUCKET
 bin/hadoop s3guard markers -audit -verbose $BUCKET
 
 # ---------------------------------------------------
+# Copy to from local
+# ---------------------------------------------------
+
+time bin/hadoop fs -copyFromLocal -t 10  share/hadoop/tools/lib/*aws*jar $BUCKET/
+
+# expect the iostatistics object_list_request value to be O(directories)
+bin/hadoop fs -ls -R $BUCKET/
+
+# expect the iostatistics object_list_request and op_get_content_summary values to be 1
+bin/hadoop fs -du -h -s $BUCKET/
+
+mkdir tmp
+time bin/hadoop fs -copyToLocal -t 10  $BUCKET/\*aws\* tmp
+
+# ---------------------------------------------------
 # S3 Select on Landsat
 # ---------------------------------------------------
 
@@ -1258,6 +1305,17 @@ export LANDSATGZ=s3a://landsat-pds/scene_list.gz
 
 bin/hadoop s3guard select -header use -compression gzip $LANDSATGZ \
  "SELECT s.entityId,s.cloudCover FROM S3OBJECT s WHERE s.cloudCover < '0.0' LIMIT 100"
+
+
+# ---------------------------------------------------
+# Cloudstore
+# check out and build https://github.com/steveloughran/cloudstore
+# then for these tests, set CLOUDSTORE env var to point to the JAR
+# ---------------------------------------------------
+
+bin/hadoop jar $CLOUDSTORE storediag $BUCKET
+
+time bin/hadoop jar $CLOUDSTORE bandwidth 64M $BUCKET/testfile
 
 ```
 

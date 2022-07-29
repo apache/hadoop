@@ -100,8 +100,8 @@ public class Key implements WritableComparable<Key> {
   }
 
   /**
-   * @param value
-   * @param weight
+   * @param value value.
+   * @param weight weight.
    */
   public void set(byte[] value, double weight) {
     if (value == null) {

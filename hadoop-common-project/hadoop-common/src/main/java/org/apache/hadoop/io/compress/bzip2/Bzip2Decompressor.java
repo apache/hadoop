@@ -50,6 +50,8 @@ public class Bzip2Decompressor implements Decompressor {
 
   /**
    * Creates a new decompressor.
+   * @param conserveMemory conserveMemory.
+   * @param directBufferSize directBufferSize.
    */
   public Bzip2Decompressor(boolean conserveMemory, int directBufferSize) {
     this.conserveMemory = conserveMemory;

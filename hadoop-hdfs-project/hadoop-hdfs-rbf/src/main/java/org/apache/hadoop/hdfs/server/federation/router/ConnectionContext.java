@@ -124,7 +124,7 @@ public class ConnectionContext {
    */
   public synchronized void close(boolean force) {
     if (!force && this.numThreads > 0) {
-      // this is an erroneous case but we have to close the connection
+      // this is an erroneous case, but we have to close the connection
       // anyway since there will be connection leak if we don't do so
       // the connection has been moved out of the pool
       LOG.error("Active connection with {} handlers will be closed",
@@ -132,7 +132,7 @@ public class ConnectionContext {
     }
     this.closed = true;
     Object proxy = this.client.getProxy();
-    // Nobody should be using this anymore so it should close right away
+    // Nobody should be using this anymore, so it should close right away
     RPC.stopProxy(proxy);
   }
 

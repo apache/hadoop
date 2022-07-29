@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -92,6 +93,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -109,7 +111,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
  * Extends the {@code AbstractRESTRequestInterceptor} class and provides an
  * implementation for federation of YARN RM and scaling an application across
  * multiple YARN SubClusters. All the federation specific implementation is
- * encapsulated in this class. This is always the last intercepter in the chain.
+ * encapsulated in this class. This is always the last interceptor in the chain.
  */
 public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
@@ -280,7 +282,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .entity(e.getLocalizedMessage()).build();
     }
 
-    List<SubClusterId> blacklist = new ArrayList<SubClusterId>();
+    List<SubClusterId> blacklist = new ArrayList<>();
 
     for (int i = 0; i < numSubmitRetries; ++i) {
 
@@ -293,7 +295,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             .entity(e.getLocalizedMessage()).build();
       }
 
-      LOG.debug("getNewApplication try #{} on SubCluster {}", i, subClusterId);
+      LOG.debug("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
 
       DefaultRequestInterceptorREST interceptor =
           getOrCreateInterceptorForSubCluster(subClusterId,
@@ -302,7 +304,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       try {
         response = interceptor.createNewApplication(hsr);
       } catch (Exception e) {
-        LOG.warn("Unable to create a new ApplicationId in SubCluster {}",
+        LOG.warn("Unable to create a new ApplicationId in SubCluster {}.",
             subClusterId.getId(), e);
       }
 
@@ -404,7 +406,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (newApp == null || newApp.getApplicationId() == null) {
       routerMetrics.incrAppsFailedSubmitted();
       String errMsg = "Missing ApplicationSubmissionContextInfo or "
-          + "applicationSubmissionContex information.";
+          + "applicationSubmissionContext information.";
       return Response
           .status(Status.BAD_REQUEST)
           .entity(errMsg)
@@ -422,7 +424,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .build();
     }
 
-    List<SubClusterId> blacklist = new ArrayList<SubClusterId>();
+    List<SubClusterId> blacklist = new ArrayList<>();
 
     for (int i = 0; i < numSubmitRetries; ++i) {
 
@@ -439,7 +441,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             .entity(e.getLocalizedMessage())
             .build();
       }
-      LOG.info("submitApplication appId {} try #{} on SubCluster {}",
+      LOG.info("submitApplication appId {} try #{} on SubCluster {}.",
           applicationId, i, subClusterId);
 
       ApplicationHomeSubCluster appHomeSubCluster =
@@ -480,7 +482,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
                 .build();
           }
           if (subClusterId == subClusterIdInStateStore) {
-            LOG.info("Application {} already submitted on SubCluster {}",
+            LOG.info("Application {} already submitted on SubCluster {}.",
                 applicationId, subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
@@ -665,7 +667,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * ResourceManager: the Router calls each YARN RM in parallel by using one
    * thread for each YARN RM. In case a YARN RM fails, a single call will
-   * timeout. However the Router will merge the ApplicationReports it got, and
+   * timeout. However, the Router will merge the ApplicationReports it got, and
    * provides a partial list to the client.
    * <p>
    * State Store: the Router will timeout and it will retry depending on the
@@ -710,8 +712,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
           if (rmApps == null) {
             routerMetrics.incrMultipleAppsFailedRetrieved();
-            LOG.error("Subcluster {} failed to return appReport.",
-                info.getSubClusterId());
+            LOG.error("Subcluster {} failed to return appReport.", info.getSubClusterId());
             return null;
           }
           return rmApps;
@@ -871,8 +872,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
                   subclusterId, subcluster.getRMWebServiceAddress());
           return interceptor.getNode(nodeId);
         } catch (Exception e) {
-          LOG.error("Subcluster {} failed to return nodeInfo.",
-              subclusterId);
+          LOG.error("Subcluster {} failed to return nodeInfo.", subclusterId, e);
           return null;
         }
       });
@@ -940,7 +940,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * ResourceManager: the Router calls each YARN RM in parallel by using one
    * thread for each YARN RM. In case a YARN RM fails, a single call will
-   * timeout. However the Router will use the NodesInfo it got, and provides a
+   * timeout. However, the Router will use the NodesInfo it got, and provides a
    * partial list to the client.
    * <p>
    * State Store: the Router will timeout and it will retry depending on the
@@ -951,58 +951,28 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public NodesInfo getNodes(String states) {
 
     NodesInfo nodes = new NodesInfo();
-
-    final Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = getActiveSubclusters();
-    } catch (Exception e) {
-      LOG.error("Cannot get nodes: {}", e.getMessage());
-      return new NodesInfo();
-    }
-
-    // Send the requests in parallel
-    CompletionService<NodesInfo> compSvc =
-        new ExecutorCompletionService<NodesInfo>(this.threadpool);
-
-    for (final SubClusterInfo info : subClustersActive.values()) {
-      compSvc.submit(new Callable<NodesInfo>() {
-        @Override
-        public NodesInfo call() {
-          DefaultRequestInterceptorREST interceptor =
-              getOrCreateInterceptorForSubCluster(
-                  info.getSubClusterId(), info.getRMWebServiceAddress());
-          try {
-            NodesInfo nodesInfo = interceptor.getNodes(states);
-            return nodesInfo;
-          } catch (Exception e) {
-            LOG.error("Subcluster {} failed to return nodesInfo.",
-                info.getSubClusterId());
-            return null;
-          }
-        }
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{String.class};
+      Object[] args = new Object[]{states};
+      ClientMethod remoteMethod = new ClientMethod("getNodes", argsClasses, args);
+      Map<SubClusterInfo, NodesInfo> nodesMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodesInfo.class);
+      nodesMap.values().stream().forEach(nodesInfo -> {
+        nodes.addAll(nodesInfo.getNodes());
       });
-    }
-
-    // Collect all the responses in parallel
-
-    for (int i = 0; i < subClustersActive.size(); i++) {
-      try {
-        Future<NodesInfo> future = compSvc.take();
-        NodesInfo nodesResponse = future.get();
-
-        if (nodesResponse != null) {
-          nodes.addAll(nodesResponse.getNodes());
-        }
-      } catch (Throwable e) {
-        LOG.warn("Failed to get nodes report ", e);
-      }
+    } catch (NotFoundException e) {
+      LOG.error("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      LOG.error("getNodes error.", e);
+    } catch (IOException e) {
+      LOG.error("getNodes error with io error.", e);
     }
 
     // Delete duplicate from all the node reports got from all the available
     // YARN RMs. Nodes can be moved from one subclusters to another. In this
     // operation they result LOST/RUNNING in the previous SubCluster and
     // NEW/RUNNING in the new one.
-
     return RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
   }
 
@@ -1053,7 +1023,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     // Collect all the responses in parallel
-
     for (int i = 0; i < subClustersActive.size(); i++) {
       try {
         Future<ClusterMetricsInfo> future = compSvc.take();
@@ -1171,7 +1140,22 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getNodeToLabels", argsClasses, args);
+      Map<SubClusterInfo, NodeToLabelsInfo> nodeToLabelsInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodeToLabelsInfo.class);
+      return RouterWebServiceUtil.mergeNodeToLabels(nodeToLabelsInfoMap);
+    } catch (NotFoundException e) {
+      LOG.error("Get all active sub cluster(s) error.", e);
+      throw new IOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      LOG.error("getNodeToLabels error.", e);
+      throw new IOException("getNodeToLabels error.", e);
+    }
   }
 
   @Override
@@ -1336,7 +1320,33 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    throw new NotImplementedException("Code is not implemented");
+
+    ContainersInfo containersInfo = new ContainersInfo();
+
+    Map<SubClusterId, SubClusterInfo> subClustersActive;
+    try {
+      subClustersActive = getActiveSubclusters();
+    } catch (NotFoundException e) {
+      LOG.error("Get all active sub cluster(s) error.", e);
+      return containersInfo;
+    }
+
+    try {
+      Class[] argsClasses = new Class[]{
+          HttpServletRequest.class, HttpServletResponse.class, String.class, String.class};
+      Object[] args = new Object[]{req, res, appId, appAttemptId};
+      ClientMethod remoteMethod = new ClientMethod("getContainers", argsClasses, args);
+      Map<SubClusterInfo, ContainersInfo> containersInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, ContainersInfo.class);
+      if (containersInfoMap != null) {
+        containersInfoMap.values().forEach(containers ->
+            containersInfo.addAll(containers.getContainers()));
+      }
+    } catch (Exception ex) {
+      LOG.error("Failed to return GetContainers.",  ex);
+    }
+
+    return containersInfo;
   }
 
   @Override
@@ -1365,5 +1375,48 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (threadpool != null) {
       threadpool.shutdown();
     }
+  }
+
+  private <R> Map<SubClusterInfo, R> invokeConcurrent(Collection<SubClusterInfo> clusterIds,
+      ClientMethod request, Class<R> clazz) throws YarnException {
+
+    Map<SubClusterInfo, R> results = new HashMap<>();
+
+    // Send the requests in parallel
+    CompletionService<R> compSvc = new ExecutorCompletionService<>(this.threadpool);
+
+    for (final SubClusterInfo info : clusterIds) {
+      compSvc.submit(() -> {
+        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+            info.getSubClusterId(), info.getRMWebServiceAddress());
+        try {
+          Method method = DefaultRequestInterceptorREST.class.
+              getMethod(request.getMethodName(), request.getTypes());
+          Object retObj = method.invoke(interceptor, request.getParams());
+          R ret = clazz.cast(retObj);
+          return ret;
+        } catch (Exception e) {
+          LOG.error("SubCluster %s failed to call %s method.",
+              info.getSubClusterId(), request.getMethodName(), e);
+          return null;
+        }
+      });
+    }
+
+    clusterIds.stream().forEach(clusterId -> {
+      try {
+        Future<R> future = compSvc.take();
+        R response = future.get();
+        if (response != null) {
+          results.put(clusterId, response);
+        }
+      } catch (Throwable e) {
+        String msg = String.format("SubCluster %s failed to %s report.",
+            clusterId, request.getMethodName());
+        LOG.warn(msg, e);
+        throw new YarnRuntimeException(msg, e);
+      }
+    });
+    return results;
   }
 }

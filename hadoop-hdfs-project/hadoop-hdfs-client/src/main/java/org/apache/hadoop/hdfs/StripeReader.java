@@ -119,6 +119,7 @@ abstract class StripeReader {
   protected final int cellSize;
   protected final RawErasureDecoder decoder;
   protected final DFSStripedInputStream dfsStripedInputStream;
+  private long readTo = -1;
 
   protected ECChunk[] decodeInputs;
 
@@ -302,7 +303,7 @@ abstract class StripeReader {
     if (readerInfos[chunkIndex] == null) {
       if (!dfsStripedInputStream.createBlockReader(block,
           alignedStripe.getOffsetInBlock(), targetBlocks,
-          readerInfos, chunkIndex)) {
+          readerInfos, chunkIndex, readTo)) {
         chunk.state = StripingChunk.MISSING;
         return false;
       }
@@ -478,4 +479,9 @@ abstract class StripeReader {
   boolean useDirectBuffer() {
     return decoder.preferDirectBuffer();
   }
+
+  public void setReadTo(long readTo) {
+    this.readTo = readTo;
+  }
+
 }

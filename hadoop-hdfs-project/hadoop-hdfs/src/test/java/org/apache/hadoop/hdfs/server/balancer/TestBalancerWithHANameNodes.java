@@ -202,15 +202,19 @@ public class TestBalancerWithHANameNodes {
     try {
       cluster.waitActive();
       cluster.transitionToActive(0);
+      String standbyNameNode = cluster.getNameNode(1).
+          getNameNodeAddress().getHostString();
       Thread.sleep(500);
       client = NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
           ClientProtocol.class).getProxy();
       doTest(conf);
       // Check getBlocks request to Standby NameNode.
       assertTrue(log.getOutput().contains(
-          "Request #getBlocks to Standby NameNode success."));
+          "Request #getBlocks to Standby NameNode success. remoteAddress: " +
+            standbyNameNode));
       assertTrue(log.getOutput().contains(
-          "Request #getLiveDatanodeStorageReport to Standby NameNode success"));
+          "Request #getLiveDatanodeStorageReport to Standby NameNode success. " +
+            "remoteAddress: " + standbyNameNode));
     } finally {
       cluster.shutdown();
     }
