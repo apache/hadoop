@@ -132,14 +132,14 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
           targetId = resolver.getSubClusterForNode(rr.getResourceName());
           nodeRequest = rr;
         } catch (YarnException e) {
-          LOG.error("Cannot resolve node : {}.", rr.getResourceName(), e);
+          LOG.error("Cannot resolve node : {}.", e.getMessage());
         }
         // Handle "rack" requests
         try {
           resolver.getSubClustersForRack(rr.getResourceName());
           rackRequest = rr;
         } catch (YarnException e) {
-          LOG.error("Cannot resolve rack : {}.", rr.getResourceName(), e);
+          LOG.error("Cannot resolve rack : {}.", e.getMessage());
         }
         // Handle "ANY" requests
         if (ResourceRequest.isAnyLocation(rr.getResourceName())) {
@@ -173,7 +173,7 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
       }
     } catch (YarnException e) {
       LOG.error("Validating resource requests failed, " +
-          "Falling back to WeightedRandomRouterPolicy placement.", e);
+          "Falling back to WeightedRandomRouterPolicy placement : {}.", e.getMessage());
       // FailForward to WeightedRandomRouterPolicy
       // Overwrite request to use a default ANY
       ResourceRequest amReq = Records.newRecord(ResourceRequest.class);

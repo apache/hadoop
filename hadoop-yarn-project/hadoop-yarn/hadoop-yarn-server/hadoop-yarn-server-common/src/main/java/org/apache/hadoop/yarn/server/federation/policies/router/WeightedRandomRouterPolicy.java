@@ -19,10 +19,8 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -37,7 +35,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
   @Override
   protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
 
     // note: we cannot pre-compute the weights, as the set of activeSubCluster
     // changes dynamically (and this would unfairly spread the load to
@@ -49,7 +47,7 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
     ArrayList<SubClusterId> scIdList = new ArrayList<>();
     for (Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()) {
       SubClusterIdInfo key = entry.getKey();
-      if (key != null && preSelectSubClusters.containsKey(key.toId())) {
+      if (key != null && preSelectSubclusters.containsKey(key.toId())) {
         weightList.add(entry.getValue());
         scIdList.add(key.toId());
       }

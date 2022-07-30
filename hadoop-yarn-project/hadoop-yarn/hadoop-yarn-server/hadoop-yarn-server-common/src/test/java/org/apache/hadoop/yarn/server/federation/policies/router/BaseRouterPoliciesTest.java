@@ -118,13 +118,13 @@ public abstract class BaseRouterPoliciesTest
     }
   }
 
-   @Test
-   public void testNullReservationContext() throws Exception {
-     FederationRouterPolicy policy =  ((FederationRouterPolicy) getPolicy());
+  @Test
+  public void testNullReservationContext() throws Exception {
+    FederationRouterPolicy policy =  ((FederationRouterPolicy) getPolicy());
 
-     LambdaTestUtils.intercept(FederationPolicyException.class,
-         "The ReservationSubmissionRequest cannot be null.",
+    LambdaTestUtils.intercept(FederationPolicyException.class,
+        "The ReservationSubmissionRequest cannot be null.",
          () -> policy.getReservationHomeSubcluster(null));
-   }
+  }
 
 }

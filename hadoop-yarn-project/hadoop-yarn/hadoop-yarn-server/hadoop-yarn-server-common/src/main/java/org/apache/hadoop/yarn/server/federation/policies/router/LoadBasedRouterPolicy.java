@@ -62,11 +62,11 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
     Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
     SubClusterIdInfo chosen = null;
     long currBestMem = -1;
-    for (Map.Entry<SubClusterId, SubClusterInfo> entry : preSelectSubClusters.entrySet()) {
+    for (Map.Entry<SubClusterId, SubClusterInfo> entry : preSelectSubclusters.entrySet()) {
       SubClusterIdInfo id = new SubClusterIdInfo(entry.getKey());
       if (weights.containsKey(id) && weights.get(id) > 0) {
         long availableMemory = getAvailableMemory(entry.getValue());
@@ -78,7 +78,7 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
     }
     if (chosen == null) {
       throw new FederationPolicyException(
-          "Zero Active SubCluster with weight 1.");
+          "Zero Active Subcluster with weight 1.");
     }
     return chosen.toId();
   }

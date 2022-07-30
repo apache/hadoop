@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
@@ -26,7 +25,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
-import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,7 +47,7 @@ public class TestUniformRandomRouterPolicy extends BaseRouterPoliciesTest {
           SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82",
           "dns1:83", now - 1000, SubClusterState.SC_RUNNING, now - 2000,
           generateClusterMetricsInfo(i));
-       getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
+      getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
     }
 
     setupContext();

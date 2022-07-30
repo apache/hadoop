@@ -50,9 +50,9 @@ public class HashBasedRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   protected SubClusterId chooseSubCluster(String queue,
-      Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
-    int chosenPosition = Math.abs(queue.hashCode() % preSelectSubClusters.size());
-    List<SubClusterId> list = new ArrayList<>(preSelectSubClusters.keySet());
+      Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+    int chosenPosition = Math.abs(queue.hashCode() % preSelectSubclusters.size());
+    List<SubClusterId> list = new ArrayList<>(preSelectSubclusters.keySet());
     Collections.sort(list);
     return list.get(chosenPosition);
   }

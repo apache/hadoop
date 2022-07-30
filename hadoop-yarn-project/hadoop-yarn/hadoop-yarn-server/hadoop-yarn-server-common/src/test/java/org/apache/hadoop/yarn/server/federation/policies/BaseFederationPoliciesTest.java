@@ -235,7 +235,8 @@ public abstract class BaseFederationPoliciesTest {
     return reservationSubmissionRequest;
   }
 
-  public void setReservationSubmissionRequest(ReservationSubmissionRequest reservationSubmissionRequest) {
+  public void setReservationSubmissionRequest(
+      ReservationSubmissionRequest reservationSubmissionRequest) {
     this.reservationSubmissionRequest = reservationSubmissionRequest;
   }
 

@@ -133,7 +133,7 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
       fail();
     } catch (YarnException ex) {
       Assert.assertTrue(
-          ex.getMessage().contains("Zero Active SubCluster with weight 1."));
+          ex.getMessage().contains("Zero Active Subcluster with weight 1."));
     }
   }
 }

@@ -22,11 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -56,17 +54,16 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
         this.getClass().getCanonicalName());
 
     // note: this overrides AbstractRouterPolicy and ignores the weights
-
     setPolicyContext(policyContext);
   }
 
   @Override
   protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
-    if (preSelectSubClusters == null || preSelectSubClusters.isEmpty()) {
-      throw new FederationPolicyException("No available sub-cluster to choose from.");
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+    if (preSelectSubclusters == null || preSelectSubclusters.isEmpty()) {
+      throw new FederationPolicyException("No available subcluster to choose from.");
     }
-    List<SubClusterId> list = new ArrayList<>(preSelectSubClusters.keySet());
+    List<SubClusterId> list = new ArrayList<>(preSelectSubclusters.keySet());
     return list.get(rand.nextInt(list.size()));
   }
 }
