@@ -381,9 +381,9 @@ public class AMRMProxyService extends CompositeService implements
 
       long endTime = clock.getTime();
       this.metrics.succeededAllocateRequests(endTime - startTime);
-      LOG.info("Allocate processing finished in {} ms for application {}.",
-          endTime - startTime, pipeline.getApplicationAttemptId());
       this.allocatedCount.incrementAndGet();
+      LOG.info("Allocate processing finished in {} ms for application {}. Total Allocated = {}.",
+          endTime - startTime, pipeline.getApplicationAttemptId(), this.allocatedCount.get());
       return allocateResponse;
     } catch (Throwable t) {
       this.metrics.incrFailedAllocateRequests();
