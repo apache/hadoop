@@ -96,6 +96,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "heartbeat.interval";
   public static final long DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(5);
+  public static final String DFS_ROUTER_HEALTH_MONITOR_TIMEOUT =
+      FEDERATION_ROUTER_PREFIX + "health.monitor.timeout";
+  public static final long DFS_ROUTER_HEALTH_MONITOR_TIMEOUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(30);
   public static final String DFS_ROUTER_MONITOR_NAMENODE =
       FEDERATION_ROUTER_PREFIX + "monitor.namenode";
   public static final String DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED =
