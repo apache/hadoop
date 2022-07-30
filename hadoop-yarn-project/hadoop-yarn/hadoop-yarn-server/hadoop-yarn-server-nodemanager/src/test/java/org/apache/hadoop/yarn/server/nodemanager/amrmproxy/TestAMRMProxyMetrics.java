@@ -42,7 +42,7 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     Assert.assertEquals(0, metrics.getFailedRegisterAMRequests());
     Assert.assertEquals(0, metrics.getFailedFinishAMRequests());
     Assert.assertEquals(0, metrics.getFailedAllocateRequests());
-    Assert.assertEquals(0, metrics.getFailedAppRecoveryRequests());
+    Assert.assertEquals(0, metrics.getFailedAppRecoveryCount());
     Assert.assertEquals(0, metrics.getFailedAppStopRequests());
     Assert.assertEquals(0, metrics.getFailedUpdateAMRMTokenRequests());
 
@@ -63,7 +63,7 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     long failedRegisterAMRequests = metrics.getFailedRegisterAMRequests();
     long failedFinishAMRequests = metrics.getFailedFinishAMRequests();
     long failedAllocateRequests = metrics.getFailedAllocateRequests();
-    long failedAppRecoveryRequests = metrics.getFailedAppRecoveryRequests();
+    long failedAppRecoveryRequests = metrics.getFailedAppRecoveryCount();
     long failedAppStopRequests = metrics.getFailedAppStopRequests();
     long failedUpdateAMRMTokenRequests = metrics.getFailedUpdateAMRMTokenRequests();
 
@@ -90,7 +90,7 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     Assert.assertEquals(failedRegisterAMRequests, metrics.getFailedRegisterAMRequests());
     Assert.assertEquals(failedFinishAMRequests, metrics.getFailedFinishAMRequests());
     Assert.assertEquals(failedAllocateRequests, metrics.getFailedAllocateRequests());
-    Assert.assertEquals(failedAppRecoveryRequests, metrics.getFailedAppRecoveryRequests());
+    Assert.assertEquals(failedAppRecoveryRequests, metrics.getFailedAppRecoveryCount());
     Assert.assertEquals(failedAppStopRequests, metrics.getFailedAppStopRequests());
     Assert.assertEquals(failedUpdateAMRMTokenRequests, metrics.getFailedUpdateAMRMTokenRequests());
 

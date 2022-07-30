@@ -198,7 +198,7 @@ public class AMRMProxyService extends CompositeService implements
 
   @Override
   protected void serviceStop() throws Exception {
-    LOG.info("Stopping AMRMProxyService, askCount = {}, allocatedCount  = {}.",
+    LOG.info("Stopping AMRMProxyService, requestCount = {}, allocatedCount  = {}.",
         requestCount, allocatedCount);
     if (this.server != null) {
       this.server.stop();
@@ -248,8 +248,7 @@ public class AMRMProxyService extends CompositeService implements
         }
 
         if (amrmToken == null) {
-          throw new IOException(
-              "No amrmToken found for app attempt " + attemptId);
+          throw new IOException("No amrmToken found for app attempt " + attemptId);
         }
         if (user == null) {
           throw new IOException("No user found for app attempt " + attemptId);
@@ -289,7 +288,7 @@ public class AMRMProxyService extends CompositeService implements
       } catch (Throwable e) {
         LOG.error("Exception when recovering {}, removing it from NMStateStore and move on.",
             attemptId, e);
-        this.metrics.incrFailedAppRecoveryRequests();
+        this.metrics.incrFailedAppRecoveryCount();
         this.nmContext.getNMStateStore().removeAMRMProxyAppContext(attemptId);
       }
     }
@@ -310,8 +309,7 @@ public class AMRMProxyService extends CompositeService implements
       RequestInterceptorChainWrapper pipeline =
           authorizeAndGetInterceptorChain();
 
-      LOG.info("Registering application master. " +
-          "Host: {}, Port: {}, Tracking Url: {}, for application {}.",
+      LOG.info("RegisteringAM Host: {}, Port: {}, Tracking Url: {} for application {}. ",
           request.getHost(), request.getRpcPort(), request.getTrackingUrl(),
           pipeline.getApplicationAttemptId());
 
@@ -520,7 +518,7 @@ public class AMRMProxyService extends CompositeService implements
     // release the lock as soon as possible to prevent other applications from
     // blocking when one application's chain is initializing
     LOG.info("Initializing request processing pipeline for application. "
-        + " ApplicationId:{} for the user: {}.", applicationAttemptId, user);
+        + " ApplicationId: {} for the user: {}.", applicationAttemptId, user);
 
     try {
       RequestInterceptor interceptorChain =
@@ -649,7 +647,8 @@ public class AMRMProxyService extends CompositeService implements
             LOG.info("The local AMRMToken has been rolled-over."
                 + " Send new local AMRMToken back to application: {}",
                 pipeline.getApplicationId());
-            localToken = this.secretManager.createAndGetAMRMToken(pipeline.getApplicationAttemptId());
+            localToken = this.secretManager.createAndGetAMRMToken(
+                pipeline.getApplicationAttemptId());
             context.setLocalAMRMToken(localToken);
           }
 
@@ -842,8 +841,7 @@ public class AMRMProxyService extends CompositeService implements
     @Override
     public void handle(ApplicationEvent event) {
       Application app =
-          AMRMProxyService.this.nmContext.getApplications().get(
-              event.getApplicationID());
+          AMRMProxyService.this.nmContext.getApplications().get(event.getApplicationID());
       if (app != null) {
         switch (event.getType()) {
         case APPLICATION_RESOURCES_CLEANEDUP:
@@ -874,13 +872,13 @@ public class AMRMProxyService extends CompositeService implements
     /**
      * Initializes the wrapper with the specified parameters.
      *
-     * @param initRootInterceptor the root request interceptor
-     * @param initApplicationAttemptIdInit attempt id
+     * @param interceptor the root request interceptor
+     * @param appAttemptId attempt id
      */
-    public synchronized void init(RequestInterceptor initRootInterceptor,
-        ApplicationAttemptId initApplicationAttemptIdInit) {
-      this.rootInterceptor = initRootInterceptor;
-      this.applicationAttemptId = initApplicationAttemptIdInit;
+    public synchronized void init(RequestInterceptor interceptor,
+        ApplicationAttemptId appAttemptId) {
+      rootInterceptor = interceptor;
+      applicationAttemptId = appAttemptId;
     }
 
     /**

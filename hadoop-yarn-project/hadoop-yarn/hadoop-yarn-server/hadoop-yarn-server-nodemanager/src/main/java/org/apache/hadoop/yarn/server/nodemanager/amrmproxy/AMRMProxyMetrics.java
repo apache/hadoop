@@ -44,7 +44,7 @@ public final class AMRMProxyMetrics {
   @Metric("# of failed allocate requests ")
   private MutableGaugeLong failedAllocateRequests;
   @Metric("# of failed application recoveries")
-  private MutableGaugeLong failedAppRecoveryRequests;
+  private MutableGaugeLong failedAppRecoveryCount;
   @Metric("# of failed application stop")
   private MutableGaugeLong failedAppStopRequests;
   @Metric("# of failed update token")
@@ -254,12 +254,12 @@ public final class AMRMProxyMetrics {
     failedAllocateRequests.incr();
   }
 
-  long getFailedAppRecoveryRequests() {
-    return failedAppRecoveryRequests.value();
+  long getFailedAppRecoveryCount() {
+    return failedAppRecoveryCount.value();
   }
 
-  public void incrFailedAppRecoveryRequests() {
-    failedAppRecoveryRequests.incr();
+  public void incrFailedAppRecoveryCount() {
+    failedAppRecoveryCount.incr();
   }
 
   long getFailedAppStopRequests() {

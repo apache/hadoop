@@ -174,7 +174,6 @@
         <module name="EmptyStatement"/>
         <module name="EqualsHashCode"/>
         <module name="HiddenField">
-          <property name="ignoreFormat" value="init"/>
           <property name="ignoreConstructorParameter" value="true"/>
           <property name="ignoreSetter" value="true"/>
         </module>
