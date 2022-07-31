@@ -483,10 +483,11 @@ public class RouterRpcClient {
         final Object proxy = client.getProxy();
 
         ret = invoke(nsId, 0, method, proxy, params);
-        if (failover) {
+        if (failover && namenode.getState().equals(FederationNamenodeServiceState.STANDBY)) {
           // Success on alternate server, update
           InetSocketAddress address = client.getAddress();
           namenodeResolver.updateActiveNamenode(nsId, address);
+          LOG.info("Update ActiveNameNode,nsId = {},rpcAddress = {}.", nsId, rpcAddress);
         }
         if (this.rpcMonitor != null) {
           this.rpcMonitor.proxyOpComplete(true, nsId);
