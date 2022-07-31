@@ -483,7 +483,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   /** Block deletion asynchronous. */
   public static final String DFS_NAMENODE_BLOCK_DELETION_ASYNC_KEY = "dfs.namenode.block.deletion.async";
-  public static final boolean DFS_NAMENODE_BLOCK_DELETION_ASYNC_DEFAULT = false;
+  public static final boolean DFS_NAMENODE_BLOCK_DELETION_ASYNC_DEFAULT = true;
 
   public static final String DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES =
       HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES;
