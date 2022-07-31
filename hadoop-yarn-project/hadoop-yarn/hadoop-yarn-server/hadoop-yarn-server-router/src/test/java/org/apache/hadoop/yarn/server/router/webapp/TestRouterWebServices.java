@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.webapp.RouterWebServices.RequestInterceptorChainWrapper;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
@@ -200,6 +201,12 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
 
     ContainerInfo containerInfo = getContainer(user);
     Assert.assertNotNull(containerInfo);
+
+    Response response19 = updateSchedulerConfiguration(user);
+    Assert.assertNotNull(response19);
+
+    Response response20 = getSchedulerConfiguration(user);
+    Assert.assertNotNull(response20);
   }
 
   /**
