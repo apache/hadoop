@@ -23,6 +23,7 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -40,6 +41,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -133,7 +135,7 @@ public class QueueMetrics implements MetricsSource {
   protected final MetricsRegistry registry;
   protected final String queueName;
   private QueueMetrics parent;
-  private final Queue parentQueue;
+  private Queue parentQueue;
   protected final MetricsSystem metricsSystem;
   protected final Map<String, QueueMetrics> users;
   protected final Configuration conf;
@@ -177,6 +179,7 @@ public class QueueMetrics implements MetricsSource {
     "AggregatePreemptedSeconds.";
   private static final String AGGREGATE_PREEMPTED_SECONDS_METRIC_DESC =
     "Aggregate Preempted Seconds for NAME";
+  protected Set<String> storedPartitionMetrics = Sets.newConcurrentHashSet();
 
   public QueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
@@ -286,7 +289,7 @@ public class QueueMetrics implements MetricsSource {
       metrics =
           new QueueMetrics(metricsSystem, queueName, null, false, conf);
       users.put(userName, metrics);
-      metricsSystem.register(
+      registerMetrics(
           sourceName(queueName).append(",user=").append(userName).toString(),
           "Metrics for user '"+ userName +"' in queue '"+ queueName +"'",
           metrics.tag(QUEUE_INFO, queueName).tag(USER_INFO, userName));
@@ -331,13 +334,14 @@ public class QueueMetrics implements MetricsSource {
       QueueMetrics queueMetrics =
           new PartitionQueueMetrics(metricsSystem, this.queueName, parentQueue,
               this.enableUserMetrics, this.conf, partition);
-      metricsSystem.register(
+      registerMetrics(
           pSourceName(partitionJMXStr).append(qSourceName(this.queueName))
               .toString(),
           "Metrics for queue: " + this.queueName,
           queueMetrics.tag(PARTITION_INFO, partitionJMXStr).tag(QUEUE_INFO,
               this.queueName));
       getQueueMetrics().put(metricName, queueMetrics);
+      registerPartitionMetricsCreation(metricName);
       return queueMetrics;
     } else {
       return metrics;
@@ -374,12 +378,13 @@ public class QueueMetrics implements MetricsSource {
 
       // Register with the MetricsSystems
       if (metricsSystem != null) {
-        metricsSystem.register(pSourceName(partitionJMXStr).toString(),
+        registerMetrics(pSourceName(partitionJMXStr).toString(),
             "Metrics for partition: " + partitionJMXStr,
             (PartitionQueueMetrics) metrics.tag(PARTITION_INFO,
                 partitionJMXStr));
       }
       getQueueMetrics().put(metricName, metrics);
+      registerPartitionMetricsCreation(metricName);
     }
     return metrics;
   }
@@ -1331,5 +1336,38 @@ public class QueueMetrics implements MetricsSource {
 
   public Queue getParentQueue() {
     return parentQueue;
+  }
+
+  protected void registerPartitionMetricsCreation(String metricName) {
+    if (storedPartitionMetrics != null) {
+      storedPartitionMetrics.add(metricName);
+    }
+  }
+
+  public void setParentQueue(Queue parentQueue) {
+    this.parentQueue = parentQueue;
+
+    if (storedPartitionMetrics == null) {
+      return;
+    }
+
+    for (String partitionMetric : storedPartitionMetrics) {
+      QueueMetrics metric = getQueueMetrics().get(partitionMetric);
+
+      if (metric != null && metric.parentQueue != null) {
+        metric.parentQueue = parentQueue;
+      }
+    }
+  }
+
+  protected void registerMetrics(String sourceName, String desc, QueueMetrics metrics) {
+    MetricsSource source = metricsSystem.getSource(sourceName);
+    // Unregister metrics if a source is already present
+    if (source != null) {
+      LOG.info("Unregistering source " + sourceName);
+      metricsSystem.unregisterSource(sourceName);
+    }
+
+    metricsSystem.register(sourceName, desc, metrics);
   }
 }

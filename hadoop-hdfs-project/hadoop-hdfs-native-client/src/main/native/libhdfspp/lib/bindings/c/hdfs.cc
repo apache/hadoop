@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#include "fs/filehandle.h"
+
 #include "hdfspp/hdfspp.h"
 #include "hdfspp/hdfs_ext.h"
 
@@ -23,7 +25,6 @@
 #include "common/configuration_loader.h"
 #include "common/logging.h"
 #include "fs/filesystem.h"
-#include "fs/filehandle.h"
 #include "x-platform/utils.h"
 #include "x-platform/syscall.h"
 

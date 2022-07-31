@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.contract;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -28,7 +29,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.functional.FutureIO;
+
 import org.junit.Assert;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -39,6 +44,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -49,6 +55,9 @@ import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -67,6 +76,11 @@ public class ContractTestUtils extends Assert {
   public static final int DEFAULT_IO_CHUNK_BUFFER_SIZE = 128;
   public static final String IO_CHUNK_MODULUS_SIZE = "io.chunk.modulus.size";
   public static final int DEFAULT_IO_CHUNK_MODULUS_SIZE = 128;
+
+  /**
+   * Timeout in seconds for vectored read operation in tests : {@value}.
+   */
+  public static final int VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS = 5 * 60;
 
   /**
    * Assert that a property in the property set matches the expected value.
@@ -1096,6 +1110,78 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Utility to validate vectored read results.
+   * @param fileRanges input ranges.
+   * @param originalData original data.
+   * @throws IOException any ioe.
+   */
+  public static void validateVectoredReadResult(List<FileRange> fileRanges,
+                                                byte[] originalData)
+          throws IOException, TimeoutException {
+    CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
+    int i = 0;
+    for (FileRange res : fileRanges) {
+      completableFutures[i++] = res.getData();
+    }
+    CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
+    FutureIO.awaitFuture(combinedFuture,
+            VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+            TimeUnit.SECONDS);
+
+    for (FileRange res : fileRanges) {
+      CompletableFuture<ByteBuffer> data = res.getData();
+      ByteBuffer buffer = FutureIO.awaitFuture(data,
+              VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+              TimeUnit.SECONDS);
+      assertDatasetEquals((int) res.getOffset(), "vecRead",
+              buffer, res.getLength(), originalData);
+    }
+  }
+
+  /**
+   * Utility to return buffers back to the pool once all
+   * data has been read for each file range.
+   * @param fileRanges list of file range.
+   * @param pool buffer pool.
+   * @throws IOException any IOE
+   * @throws TimeoutException ideally this should never occur.
+   */
+  public static void returnBuffersToPoolPostRead(List<FileRange> fileRanges,
+                                                 ByteBufferPool pool)
+          throws IOException, TimeoutException {
+    for (FileRange range : fileRanges) {
+      ByteBuffer buffer = FutureIO.awaitFuture(range.getData(),
+              VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+              TimeUnit.SECONDS);
+      pool.putBuffer(buffer);
+    }
+  }
+
+
+  /**
+   * Assert that the data read matches the dataset at the given offset.
+   * This helps verify that the seek process is moving the read pointer
+   * to the correct location in the file.
+   *  @param readOffset the offset in the file where the read began.
+   * @param operation  operation name for the assertion.
+   * @param data       data read in.
+   * @param length     length of data to check.
+   * @param originalData original data.
+   */
+  public static void assertDatasetEquals(
+          final int readOffset,
+          final String operation,
+          final ByteBuffer data,
+          int length, byte[] originalData) {
+    for (int i = 0; i < length; i++) {
+      int o = readOffset + i;
+      assertEquals(operation + " with read offset " + readOffset
+                      + ": data[" + i + "] != DATASET[" + o + "]",
+              originalData[o], data.get());
+    }
+  }
+
+  /**
    * Receives test data from the given input file and checks the size of the
    * data as well as the pattern inside the received data.
    *
@@ -1446,11 +1532,7 @@ public class ContractTestUtils extends Assert {
    */
   public static List<LocatedFileStatus> toList(
       RemoteIterator<LocatedFileStatus> iterator) throws IOException {
-    ArrayList<LocatedFileStatus> list = new ArrayList<>();
-    while (iterator.hasNext()) {
-      list.add(iterator.next());
-    }
-    return list;
+    return RemoteIterators.toList(iterator);
   }
 
   /**
@@ -1464,11 +1546,7 @@ public class ContractTestUtils extends Assert {
    */
   public static <T extends FileStatus> List<T> iteratorToList(
           RemoteIterator<T> iterator) throws IOException {
-    List<T> list = new ArrayList<>();
-    while (iterator.hasNext()) {
-      list.add(iterator.next());
-    }
-    return list;
+    return RemoteIterators.toList(iterator);
   }
 
 
@@ -1642,17 +1720,22 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Read a whole stream; downgrades an IOE to a runtime exception.
+   * Closes the stream afterwards.
    * @param in input
    * @return the number of bytes read.
    * @throws AssertionError on any IOException
    */
   public static long readStream(InputStream in) {
-    long count = 0;
+    try {
+      long count = 0;
 
-    while (read(in) >= 0) {
-      count++;
+      while (read(in) >= 0) {
+        count++;
+      }
+      return count;
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, in);
     }
-    return count;
   }
 
 

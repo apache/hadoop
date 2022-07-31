@@ -473,13 +473,18 @@ public class DistCp extends Configured implements Tool {
     return config;
   }
 
-  private synchronized void cleanup() {
+  /**
+   * Clean the staging folder created by distcp.
+   */
+  protected synchronized void cleanup() {
     try {
       if (metaFolder != null) {
-        if (jobFS != null) {
-          jobFS.delete(metaFolder, true);
+        synchronized (this) {
+          if (jobFS != null) {
+            jobFS.delete(metaFolder, true);
+          }
+          metaFolder = null;
         }
-        metaFolder = null;
       }
     } catch (IOException e) {
       LOG.error("Unable to cleanup meta folder: " + metaFolder, e);

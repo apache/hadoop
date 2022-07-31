@@ -71,7 +71,7 @@ public interface AlignmentContext {
    *        misaligned with the client state.
    *        See implementation for more details.
    * @return state id required for the server to execute the call.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   long receiveRequestState(RpcRequestHeaderProto header, long threshold)
       throws IOException;

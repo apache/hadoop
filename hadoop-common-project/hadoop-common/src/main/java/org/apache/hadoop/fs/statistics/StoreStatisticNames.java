@@ -54,6 +54,9 @@ public final class StoreStatisticNames {
   public static final String OP_CREATE = "op_create";
 
   /** {@value}. */
+  public static final String OP_CREATE_FILE = "op_createfile";
+
+  /** {@value}. */
   public static final String OP_CREATE_NON_RECURSIVE =
       "op_create_non_recursive";
 
@@ -117,6 +120,9 @@ public final class StoreStatisticNames {
 
   /** {@value}. */
   public static final String OP_OPEN = "op_open";
+
+  /** Call to openFile() {@value}. */
+  public static final String OP_OPENFILE = "op_openfile";
 
   /** {@value}. */
   public static final String OP_REMOVE_ACL = "op_remove_acl";
@@ -322,6 +328,12 @@ public final class StoreStatisticNames {
    */
   public static final String ACTION_EXECUTOR_ACQUIRED =
       "action_executor_acquired";
+
+  /**
+   * A file was opened: {@value}.
+   */
+  public static final String ACTION_FILE_OPENED
+      = "action_file_opened";
 
   /**
    * An HTTP HEAD request was made: {@value}.

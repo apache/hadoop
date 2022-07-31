@@ -108,7 +108,7 @@ public class OptionsParser {
             command.hasOption(DistCpOptionSwitch.OVERWRITE.getSwitch()))
         .withAppend(
             command.hasOption(DistCpOptionSwitch.APPEND.getSwitch()))
-        .withCRC(
+        .withSkipCRC(
             command.hasOption(DistCpOptionSwitch.SKIP_CRC.getSwitch()))
         .withBlocking(
             !command.hasOption(DistCpOptionSwitch.BLOCKING.getSwitch()))

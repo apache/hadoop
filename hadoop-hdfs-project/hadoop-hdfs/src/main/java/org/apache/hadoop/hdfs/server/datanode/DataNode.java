@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_JITTER_DEFAULT;
@@ -87,6 +88,9 @@ import static org.apache.hadoop.util.Time.now;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.fs.DU;
+import org.apache.hadoop.fs.GetSpaceUsed;
+import org.apache.hadoop.fs.WindowsGetSpaceUsed;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ReconfigurationProtocolService;
 
 import java.io.BufferedOutputStream;
@@ -349,7 +353,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY,
               DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY,
               FS_DU_INTERVAL_KEY,
-              FS_GETSPACEUSED_JITTER_KEY));
+              FS_GETSPACEUSED_JITTER_KEY,
+              FS_GETSPACEUSED_CLASSNAME));
 
   public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
 
@@ -465,6 +470,9 @@ public class DataNode extends ReconfigurableBase
 
   private long startTime = 0;
 
+  private DataTransferThrottler ecReconstuctReadThrottler;
+  private DataTransferThrottler ecReconstuctWriteThrottler;
+
   /**
    * Creates a dummy DataNode for testing purpose.
    */
@@ -579,6 +587,16 @@ public class DataNode extends ReconfigurableBase
 
     initOOBTimeout();
     this.storageLocationChecker = storageLocationChecker;
+    long ecReconstuctReadBandwidth = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_DEFAULT);
+    long ecReconstuctWriteBandwidth = conf.getLongBytes(
+        DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_DEFAULT);
+    this.ecReconstuctReadThrottler = ecReconstuctReadBandwidth > 0 ?
+        new DataTransferThrottler(100, ecReconstuctReadBandwidth) : null;
+    this.ecReconstuctWriteThrottler = ecReconstuctWriteBandwidth > 0 ?
+        new DataTransferThrottler(100, ecReconstuctWriteBandwidth) : null;
   }
 
   @Override  // ReconfigurableBase
@@ -683,6 +701,7 @@ public class DataNode extends ReconfigurableBase
       return reconfSlowDiskParameters(property, newVal);
     case FS_DU_INTERVAL_KEY:
     case FS_GETSPACEUSED_JITTER_KEY:
+    case FS_GETSPACEUSED_CLASSNAME:
       return reconfDfsUsageParameters(property, newVal);
     default:
       break;
@@ -879,7 +898,7 @@ public class DataNode extends ReconfigurableBase
         for (FsVolumeImpl fsVolume : volumeList) {
           Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
           for (BlockPoolSlice value : blockPoolSlices.values()) {
-            value.updateDfsUsageConfig(interval, null);
+            value.updateDfsUsageConfig(interval, null, null);
           }
         }
       } else if (property.equals(FS_GETSPACEUSED_JITTER_KEY)) {
@@ -891,13 +910,33 @@ public class DataNode extends ReconfigurableBase
         for (FsVolumeImpl fsVolume : volumeList) {
           Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
           for (BlockPoolSlice value : blockPoolSlices.values()) {
-            value.updateDfsUsageConfig(null, jitter);
+            value.updateDfsUsageConfig(null, jitter, null);
+          }
+        }
+      } else if (property.equals(FS_GETSPACEUSED_CLASSNAME)) {
+        Preconditions.checkNotNull(data, "FsDatasetSpi has not been initialized.");
+        Class<? extends GetSpaceUsed> klass;
+        if (newVal == null) {
+          if (Shell.WINDOWS) {
+            klass = DU.class;
+          } else {
+            klass = WindowsGetSpaceUsed.class;
+          }
+        } else {
+          klass = Class.forName(newVal).asSubclass(GetSpaceUsed.class);
+        }
+        result = klass.getName();
+        List<FsVolumeImpl> volumeList = data.getVolumeList();
+        for (FsVolumeImpl fsVolume : volumeList) {
+          Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
+          for (BlockPoolSlice value : blockPoolSlices.values()) {
+            value.updateDfsUsageConfig(null, null, klass);
           }
         }
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
-    } catch (IllegalArgumentException | IOException e) {
+    } catch (IllegalArgumentException | IOException | ClassNotFoundException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     }
   }
@@ -3802,6 +3841,14 @@ public class DataNode extends ReconfigurableBase
 
   public ShortCircuitRegistry getShortCircuitRegistry() {
     return shortCircuitRegistry;
+  }
+
+  public DataTransferThrottler getEcReconstuctReadThrottler() {
+    return ecReconstuctReadThrottler;
+  }
+
+  public DataTransferThrottler getEcReconstuctWriteThrottler() {
+    return ecReconstuctWriteThrottler;
   }
 
   /**

@@ -191,6 +191,8 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong packetsSlowWriteToMirror;
   @Metric MutableCounterLong packetsSlowWriteToDisk;
   @Metric MutableCounterLong packetsSlowWriteToOsCache;
+  @Metric private MutableCounterLong slowFlushOrSyncCount;
+  @Metric private MutableCounterLong slowAckToUpstreamCount;
 
   @Metric("Number of replaceBlock ops between" +
       " storage types on same host with local copy")
@@ -438,6 +440,14 @@ public class DataNodeMetrics {
 
   public void incrVolumeFailures(int size) {
     volumeFailures.incr(size);
+  }
+
+  public void incrSlowFlushOrSyncCount() {
+    slowFlushOrSyncCount.incr();
+  }
+
+  public void incrSlowAckToUpstreamCount() {
+    slowAckToUpstreamCount.incr();
   }
 
   public void incrDatanodeNetworkErrors() {

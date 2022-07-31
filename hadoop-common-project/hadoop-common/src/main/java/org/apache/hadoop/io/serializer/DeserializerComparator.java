@@ -37,7 +37,7 @@ import org.apache.hadoop.io.RawComparator;
  * implementation of {@link RawComparator} that operates directly
  * on byte representations.
  * </p>
- * @param <T>
+ * @param <T> generic type.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving

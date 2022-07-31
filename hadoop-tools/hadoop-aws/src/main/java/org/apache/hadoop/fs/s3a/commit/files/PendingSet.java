@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit.files;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
@@ -62,8 +64,7 @@ import static org.apache.hadoop.fs.s3a.commit.ValidationFailure.verify;
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class PendingSet extends PersistentCommitData
-    implements IOStatisticsSource {
+public class PendingSet extends PersistentCommitData<PendingSet> {
   private static final Logger LOG = LoggerFactory.getLogger(PendingSet.class);
 
   /**
@@ -111,40 +112,30 @@ public class PendingSet extends PersistentCommitData
   }
 
   /**
-   * Get a JSON serializer for this class.
+   * Get a shared JSON serializer for this class.
    * @return a serializer.
    */
   public static JsonSerialization<PendingSet> serializer() {
-    return new JsonSerialization<>(PendingSet.class, false, true);
+    return new JsonSerialization<>(PendingSet.class, false, false);
   }
+
 
   /**
    * Load an instance from a file, then validate it.
    * @param fs filesystem
    * @param path path
-   * @return the loaded instance
-   * @throws IOException IO failure
-   * @throws ValidationFailure if the data is invalid
-   */
-  public static PendingSet load(FileSystem fs, Path path)
-      throws IOException {
-    LOG.debug("Reading pending commits in file {}", path);
-    PendingSet instance = serializer().load(fs, path);
-    instance.validate();
-    return instance;
-  }
-
-  /**
-   * Load an instance from a file, then validate it.
-   * @param fs filesystem
    * @param status status of file to load
    * @return the loaded instance
    * @throws IOException IO failure
    * @throws ValidationFailure if the data is invalid
    */
-  public static PendingSet load(FileSystem fs, FileStatus status)
+  public static PendingSet load(FileSystem fs, Path path,
+      @Nullable FileStatus status)
       throws IOException {
-    return load(fs, status.getPath());
+    LOG.debug("Reading pending commits in file {}", path);
+    PendingSet instance = serializer().load(fs, path, status);
+    instance.validate();
+    return instance;
   }
 
   /**
@@ -195,8 +186,8 @@ public class PendingSet extends PersistentCommitData
   }
 
   @Override
-  public byte[] toBytes() throws IOException {
-    return serializer().toBytes(this);
+  public byte[] toBytes(JsonSerialization<PendingSet> serializer) throws IOException {
+    return serializer.toBytes(this);
   }
 
   /**
@@ -208,9 +199,10 @@ public class PendingSet extends PersistentCommitData
   }
 
   @Override
-  public void save(FileSystem fs, Path path, boolean overwrite)
-      throws IOException {
-    serializer().save(fs, path, this, overwrite);
+  public IOStatistics save(final FileSystem fs,
+      final Path path,
+      final JsonSerialization<PendingSet> serializer) throws IOException {
+    return saveFile(fs, path, this, serializer, true);
   }
 
   /** @return the version marker. */

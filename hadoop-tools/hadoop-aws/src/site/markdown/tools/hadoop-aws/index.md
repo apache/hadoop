@@ -1018,6 +1018,14 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
+  <name>fs.s3a.input.async.drain.threshold</name>
+  <value>64K</value>
+  <description>Bytes to read ahead during a seek() before closing and
+  re-opening the S3 HTTP connection. This option will be overridden if
+  any call to setReadahead() is made to an open stream.</description>
+</property>
+
+<property>
   <name>fs.s3a.list.version</name>
   <value>2</value>
   <description>Select which version of the S3 SDK's List Objects API to use.
@@ -1068,6 +1076,17 @@ options are covered in [Testing](./testing.md).
     Content encoding: gzip, deflate, compress, br, etc.
     This will be set in the "Content-Encoding" header of the object,
     and returned in HTTP HEAD/GET requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.create.storage.class</name>
+  <value></value>
+  <description>
+      Storage class: standard, reduced_redundancy, intelligent_tiering, etc.
+      Specify the storage class for S3A PUT object requests.
+      If not set the storage class will be null
+      and mapped to default standard class on S3.
   </description>
 </property>
 
@@ -1587,7 +1606,7 @@ Accessing data through an access point, is done by using its ARN, as opposed to 
 You can set the Access Point ARN property using the following per bucket configuration property:
 ```xml
 <property>
-    <name>fs.s3a.sample-bucket.accesspoint.arn</name>
+    <name>fs.s3a.bucket.sample-bucket.accesspoint.arn</name>
     <value> {ACCESSPOINT_ARN_HERE} </value>
     <description>Configure S3a traffic to use this AccessPoint</description>
 </property>
@@ -1597,21 +1616,11 @@ This configures access to the `sample-bucket` bucket for S3A, to go through the
 new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
 configured ARN when getting data from S3 instead of your bucket.
 
-You can also use an Access Point name as a path URI such as `s3a://finance-team-access/key`, by
-configuring the `.accesspoint.arn` property as a per-bucket override:
-```xml
-<property>
-    <name>fs.s3a.finance-team-access.accesspoint.arn</name>
-    <value> {ACCESSPOINT_ARN_HERE} </value>
-    <description>Configure S3a traffic to use this AccessPoint</description>
-</property>
-```
-
 The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
 Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
 to known sources of data defined through Access Points. In case there is a need to access a bucket
 directly (without Access Points) then you can use per bucket overrides to disable this setting on a
-bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
+bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
 
 ```xml
 <!-- Require access point only access -->
@@ -1621,7 +1630,7 @@ bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
 </property>
 <!-- Disable it on a per-bucket basis if needed -->
 <property>
-    <name>fs.s3a.example-bucket.accesspoint.required</name>
+    <name>fs.s3a.bucket.example-bucket.accesspoint.required</name>
     <value>false</value>
 </property>
 ```
@@ -1651,6 +1660,26 @@ To enable this feature within S3A, configure the `fs.s3a.requester.pays.enabled`
     <value>true</value>
 </property>
 ```
+
+## <a name="storage_classes"></a>Storage Classes
+
+Amazon S3 offers a range of [Storage Classes](https://aws.amazon.com/s3/storage-classes/)
+that you can choose from based on behavior of your applications. By using the right
+storage class, you can reduce the cost of your bucket.
+
+S3A uses Standard storage class for PUT object requests by default, which is suitable for
+general use cases. To use a specific storage class, set the value in `fs.s3a.create.storage.class` property to
+the storage class you want.
+
+```xml
+<property>
+    <name>fs.s3a.create.storage.class</name>
+    <value>intelligent_tiering</value>
+</property>
+```
+
+Please note that S3A does not support reading from archive storage classes at the moment.
+`AccessDeniedException` with InvalidObjectState will be thrown if you're trying to do so.
 
 ## <a name="upload"></a>How S3A writes data to S3
 

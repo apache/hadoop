@@ -41,3 +41,4 @@ HDFS as these are commonly expected by Hadoop client applications.
 2. [Extending the specification and its tests](extending.html)
 1. [Uploading a file using Multiple Parts](multipartuploader.html)
 1. [IOStatistics](iostatistics.html)
+1. [openFile()](openfile.html).

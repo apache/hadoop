@@ -290,7 +290,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
       // Dump mount table entries information into JSON
       for (MountTable entry : orderedMounts) {
-        // Sumarize destinations
+        // Summarize destinations
         Set<String> nameservices = new LinkedHashSet<>();
         Set<String> paths = new LinkedHashSet<>();
         for (RemoteLocation location : entry.getDestinations()) {
@@ -744,6 +744,12 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   public long getHighestPriorityLowRedundancyECBlocks() {
     return getNameserviceAggregatedLong(
         MembershipStats::getHighestPriorityLowRedundancyECBlocks);
+  }
+
+  @Override
+  public int getPendingSPSPaths() {
+    return getNameserviceAggregatedInt(
+        MembershipStats::getPendingSPSPaths);
   }
 
   @Override

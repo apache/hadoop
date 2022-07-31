@@ -47,7 +47,7 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_ABORTED = "stream_aborted";
 
   /**
-   * Bytes read from an input stream in read() calls.
+   * Bytes read from an input stream in read()/readVectored() calls.
    * Does not include bytes read and then discarded in seek/close etc.
    * These are the bytes returned to the caller.
    * Value: {@value}.
@@ -76,7 +76,7 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_CLOSED = "stream_read_closed";
 
   /**
-   * Total count of times an attempt to close an input stream was made
+   * Total count of times an attempt to close an input stream was made.
    * Value: {@value}.
    */
   public static final String STREAM_READ_CLOSE_OPERATIONS
@@ -111,12 +111,57 @@ public final class StreamStatisticNames {
       "stream_read_operations";
 
   /**
+   * Count of readVectored() operations in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_VECTORED_OPERATIONS =
+          "stream_read_vectored_operations";
+
+  /**
+   * Count of bytes discarded during readVectored() operation
+   * in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_VECTORED_READ_BYTES_DISCARDED =
+          "stream_read_vectored_read_bytes_discarded";
+
+  /**
+   * Count of incoming file ranges during readVectored() operation.
+   * Value: {@value}
+   */
+  public static final String STREAM_READ_VECTORED_INCOMING_RANGES =
+          "stream_read_vectored_incoming_ranges";
+  /**
+   * Count of combined file ranges during readVectored() operation.
+   * Value: {@value}
+   */
+  public static final String STREAM_READ_VECTORED_COMBINED_RANGES =
+          "stream_read_vectored_combined_ranges";
+
+  /**
    * Count of incomplete read() operations in an input stream,
    * that is, when the bytes returned were less than that requested.
    * Value: {@value}.
    */
   public static final String STREAM_READ_OPERATIONS_INCOMPLETE
       = "stream_read_operations_incomplete";
+
+  /**
+   * count/duration of aborting a remote stream during stream IO
+   * IO.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_REMOTE_STREAM_ABORTED
+      = "stream_read_remote_stream_aborted";
+
+  /**
+   * count/duration of closing a remote stream,
+   * possibly including draining the stream to recycle
+   * the HTTP connection.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_REMOTE_STREAM_DRAINED
+      = "stream_read_remote_stream_drain";
 
   /**
    * Count of version mismatches encountered while reading an input stream.

@@ -123,6 +123,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.data.write.bandwidthPerSec";
   // A value of zero indicates no limit
   public static final long DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT = 0;
+  public static final String DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_KEY =
+      "dfs.datanode.ec.reconstruct.read.bandwidthPerSec";
+  public static final long DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_DEFAULT =
+      0; // A value of zero indicates no limit
+  public static final String DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_KEY =
+      "dfs.datanode.ec.reconstruct.write.bandwidthPerSec";
+  public static final long DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_DEFAULT =
+      0; // A value of zero indicates no limit
   @Deprecated
   public static final String  DFS_DATANODE_READAHEAD_BYTES_KEY =
       HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY;
@@ -476,10 +484,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY = "dfs.namenode.startup.delay.block.deletion.sec";
   public static final long    DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT = 0L;
 
-  /** Block deletion increment. */
-  public static final String DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY =
-      "dfs.namenode.block.deletion.increment";
-  public static final int DFS_NAMENODE_BLOCK_DELETION_INCREMENT_DEFAULT = 1000;
+  /** The limit of single lock holding duration.*/
+  public static final String DFS_NAMENODE_BLOCK_DELETION_LOCK_THRESHOLD_MS =
+      "dfs.namenode.block.deletion.lock.threshold.ms";
+  public static final int DFS_NAMENODE_BLOCK_DELETION_LOCK_THRESHOLD_MS_DEFAULT =
+      50;
+  /** The sleep interval for releasing lock.*/
+  public static final String DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS =
+      "dfs.namenode.block.deletion.unlock.interval.ms";
+  public static final int DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS_DEFAULT =
+      10;
 
   /** Block deletion asynchronous. */
   public static final String DFS_NAMENODE_BLOCK_DELETION_ASYNC_KEY = "dfs.namenode.block.deletion.async";
@@ -830,6 +844,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY =
       "dfs.storage.policy.satisfier.retry.max.attempts";
   public static final int DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT =
+      3;
+  public static final String DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_KEY =
+      "dfs.storage.policy.satisfier.move.task.retry.max.attempts";
+  public static final int DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT =
       3;
   public static final String DFS_STORAGE_DEFAULT_POLICY =
       "dfs.storage.default.policy";
@@ -1390,6 +1408,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.journalnode.edits.dir.perm";
   public static final String DFS_JOURNAL_EDITS_DIR_PERMISSION_DEFAULT =
       "700";
+  public static final String  DFS_JOURNALNODE_HANDLER_COUNT_KEY =
+      "dfs.journalnode.handler.count";
+  public static final int     DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT = 5;
+
 
   public static final String  DFS_JOURNALNODE_HTTP_ADDRESS_KEY = "dfs.journalnode.http-address";
   public static final int     DFS_JOURNALNODE_HTTP_PORT_DEFAULT = 8480;

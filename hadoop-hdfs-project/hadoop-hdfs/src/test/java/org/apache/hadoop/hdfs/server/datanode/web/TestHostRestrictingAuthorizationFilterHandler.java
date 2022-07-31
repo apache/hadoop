@@ -48,7 +48,7 @@ public class TestHostRestrictingAuthorizationFilterHandler {
    * Test running in with no ACL rules (restrict all)
    */
   @Test
-  public void testRejectAll() throws Exception {
+  public void testRejectAll() {
     EmbeddedChannel channel = new CustomEmbeddedChannel("127.0.0.1", 1006,
         new HostRestrictingAuthorizationFilterHandler());
     FullHttpRequest httpRequest =
@@ -61,7 +61,7 @@ public class TestHostRestrictingAuthorizationFilterHandler {
     DefaultHttpResponse channelResponse =
         (DefaultHttpResponse) channel.outboundMessages().poll();
     assertNotNull("Expected response to exist.", channelResponse);
-    assertEquals(HttpResponseStatus.FORBIDDEN, channelResponse.getStatus());
+    assertEquals(HttpResponseStatus.FORBIDDEN, channelResponse.status());
     assertFalse(channel.isOpen());
   }
 
@@ -70,7 +70,7 @@ public class TestHostRestrictingAuthorizationFilterHandler {
    * reused
    */
   @Test
-  public void testMultipleAcceptedGETsOneChannel() throws Exception {
+  public void testMultipleAcceptedGETsOneChannel() {
     Configuration conf = new Configuration();
     conf.set(CONFNAME, "*,*,/allowed");
     HostRestrictingAuthorizationFilter filter =
@@ -102,7 +102,7 @@ public class TestHostRestrictingAuthorizationFilterHandler {
    * single filter instance
    */
   @Test
-  public void testMultipleChannels() throws Exception {
+  public void testMultipleChannels() {
     Configuration conf = new Configuration();
     conf.set(CONFNAME, "*,*,/allowed");
     HostRestrictingAuthorizationFilter filter =
@@ -140,7 +140,7 @@ public class TestHostRestrictingAuthorizationFilterHandler {
    * Test accepting a GET request for the file checksum
    */
   @Test
-  public void testAcceptGETFILECHECKSUM() throws Exception {
+  public void testAcceptGETFILECHECKSUM() {
     EmbeddedChannel channel = new CustomEmbeddedChannel("127.0.0.1", 1006,
         new HostRestrictingAuthorizationFilterHandler());
     FullHttpRequest httpRequest =
@@ -158,7 +158,7 @@ public class TestHostRestrictingAuthorizationFilterHandler {
    */
   protected static class CustomEmbeddedChannel extends EmbeddedChannel {
 
-    private InetSocketAddress socketAddress;
+    private final InetSocketAddress socketAddress;
 
     /*
      * A normal @{EmbeddedChannel} constructor which takes the remote client

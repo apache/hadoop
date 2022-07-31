@@ -140,8 +140,21 @@ bool Chmod::HandlePath(const std::string &permissions, const bool recursive,
   /*
    * strtol is reading the value with base 8, NULL because we are reading in
    * just one value.
+   *
+   * The strtol function may result in errors so check for that before
+   * typecasting.
    */
-  auto perm = static_cast<uint16_t>(strtol(permissions.c_str(), nullptr, 8));
+  errno = 0;
+  long result = strtol(permissions.c_str(), nullptr, 8);
+  bool all_0_in_permission = std::all_of(permissions.begin(), permissions.end(),
+                                         [](char c) { return c == '0'; });
+  /*
+   * The errno is set to ERANGE incase the string doesn't fit in long
+   * Also, the result is set to 0, in case conversion is not possible
+   */
+  if ((errno == ERANGE) || (!all_0_in_permission && result == 0))
+    return false;
+  auto perm = static_cast<uint16_t>(result);
   if (!recursive) {
     fs->SetPermission(uri.get_path(), perm, handler);
   } else {

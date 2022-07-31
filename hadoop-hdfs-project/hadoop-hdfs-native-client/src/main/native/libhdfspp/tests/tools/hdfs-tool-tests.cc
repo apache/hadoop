@@ -38,6 +38,9 @@
 #include "hdfs-move-to-local-mock.h"
 #include "hdfs-rename-snapshot-mock.h"
 #include "hdfs-rm-mock.h"
+#include "hdfs-setrep-mock.h"
+#include "hdfs-stat-mock.h"
+#include "hdfs-tail-mock.h"
 #include "hdfs-tool-test-fixtures.h"
 #include "hdfs-tool-tests.h"
 
@@ -156,6 +159,22 @@ INSTANTIATE_TEST_SUITE_P(
                     PassMOptPermissionsAndAPath<hdfs::tools::test::FindMock>,
                     PassNOptAndAPath<hdfs::tools::test::FindMock>));
 
+INSTANTIATE_TEST_SUITE_P(
+    HdfsSetrep, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::SetrepMock>,
+                    PassPermissionsAndAPath<hdfs::tools::test::SetrepMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsStat, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::StatMock>,
+                    PassAPath<hdfs::tools::test::StatMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsTail, HdfsToolBasicTest,
+    testing::Values(PassAPath<hdfs::tools::test::TailMock>,
+                    CallHelp<hdfs::tools::test::TailMock>,
+                    PassFOptAndAPath<hdfs::tools::test::TailMock>));
+
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
@@ -246,6 +265,45 @@ INSTANTIATE_TEST_SUITE_P(
                     PassNOpt<hdfs::tools::test::FindMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsChgrp, HdfsToolNegativeTestThrows,
+    testing::Values(PassNOptAndAPath<hdfs::tools::test::ChgrpMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsSetrep, HdfsToolNegativeTestThrows,
+    testing::Values(
+        Pass3Paths<hdfs::tools::test::SetrepMock>,
+        PassRecursiveOwnerAndAPath<hdfs::tools::test::SetrepMock>,
+        PassRecursive<hdfs::tools::test::SetrepMock>,
+        PassMPOptsPermissionsAndAPath<hdfs::tools::test::SetrepMock>,
+        PassMOpt<hdfs::tools::test::SetrepMock>,
+        PassNOpt<hdfs::tools::test::SetrepMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsStat, HdfsToolNegativeTestThrows,
+    testing::Values(Pass2Paths<hdfs::tools::test::StatMock>,
+                    Pass3Paths<hdfs::tools::test::StatMock>,
+                    PassRecursiveOwnerAndAPath<hdfs::tools::test::StatMock>,
+                    PassRecursive<hdfs::tools::test::StatMock>,
+                    PassRecursivePath<hdfs::tools::test::StatMock>,
+                    PassMPOptsPermissionsAndAPath<hdfs::tools::test::StatMock>,
+                    PassMOpt<hdfs::tools::test::StatMock>,
+                    PassNOpt<hdfs::tools::test::StatMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsTail, HdfsToolNegativeTestThrows,
+    testing::Values(Pass2Paths<hdfs::tools::test::TailMock>,
+                    Pass3Paths<hdfs::tools::test::TailMock>,
+                    PassNOptAndAPath<hdfs::tools::test::TailMock>,
+                    PassRecursiveOwnerAndAPath<hdfs::tools::test::TailMock>,
+                    PassMOpt<hdfs::tools::test::TailMock>,
+                    PassRecursive<hdfs::tools::test::TailMock>,
+                    PassRecursivePath<hdfs::tools::test::TailMock>,
+                    PassNOpt<hdfs::tools::test::TailMock>,
+                    PassOwnerAndAPath<hdfs::tools::test::TailMock>,
+                    PassMPOptsPermissionsAndAPath<hdfs::tools::test::TailMock>,
+                    PassPermissionsAndAPath<hdfs::tools::test::TailMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsRm, HdfsToolNegativeTestNoThrow,
     testing::Values(PassRecursive<hdfs::tools::test::RmMock>));
 
@@ -302,5 +360,9 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(PassAPath<hdfs::tools::test::ChgrpMock>));
 
 INSTANTIATE_TEST_SUITE_P(
-    HdfsChgrp, HdfsToolNegativeTestThrows,
-    testing::Values(PassNOptAndAPath<hdfs::tools::test::ChgrpMock>));
+    HdfsSetrep, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::SetrepMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsTail, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassFOpt<hdfs::tools::test::TailMock>));

@@ -40,8 +40,8 @@ public class HHXORErasureEncodingStep extends HHErasureCodingStep {
   /**
    * The constructor with all the necessary info.
    *
-   * @param inputBlocks
-   * @param outputBlocks
+   * @param inputBlocks inputBlocks.
+   * @param outputBlocks outputBlocks.
    * @param rsRawEncoder  underlying RS encoder for hitchhiker encoding
    * @param xorRawEncoder underlying XOR encoder for hitchhiker encoding
    */
