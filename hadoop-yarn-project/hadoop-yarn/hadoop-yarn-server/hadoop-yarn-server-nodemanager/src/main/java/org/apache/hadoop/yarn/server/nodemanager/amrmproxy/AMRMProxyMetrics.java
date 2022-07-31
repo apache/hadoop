@@ -49,6 +49,11 @@ public final class AMRMProxyMetrics {
   private MutableGaugeLong failedAppStopRequests;
   @Metric("# of failed update token")
   private MutableGaugeLong failedUpdateAMRMTokenRequests;
+  @Metric("# all allocate requests count")
+  private MutableGaugeLong allocateCount;
+  @Metric("# all requests count")
+  private MutableGaugeLong requestCount;
+
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Application start request latency(ms)")
@@ -276,5 +281,21 @@ public final class AMRMProxyMetrics {
 
   public void incrFailedUpdateAMRMTokenRequests() {
     failedUpdateAMRMTokenRequests.incr();
+  }
+
+  public void incrAllocateCount() {
+    allocateCount.incr();
+  }
+
+  public void incrRequestCount() {
+    requestCount.incr();
+  }
+
+  long getAllocateCount() {
+    return allocateCount.value();
+  }
+
+  long getRequestCount() {
+    return requestCount.value();
   }
 }

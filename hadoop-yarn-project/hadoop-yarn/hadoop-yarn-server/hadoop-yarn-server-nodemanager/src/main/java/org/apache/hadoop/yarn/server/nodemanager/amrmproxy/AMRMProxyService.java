@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -114,9 +113,6 @@ public class AMRMProxyService extends CompositeService implements
   private FederationStateStoreFacade federationFacade;
   private boolean federationEnabled = false;
 
-  private final AtomicInteger allocatedCount;
-  private final AtomicInteger requestCount;
-
   /**
    * Creates an instance of the service.
    *
@@ -132,8 +128,6 @@ public class AMRMProxyService extends CompositeService implements
     this.applPipelineMap = new ConcurrentHashMap<>();
 
     this.dispatcher.register(ApplicationEventType.class, new ApplicationEventHandler());
-    this.allocatedCount = new AtomicInteger(0);
-    this.requestCount = new AtomicInteger(0);
     metrics = AMRMProxyMetrics.getMetrics();
   }
 
@@ -198,8 +192,7 @@ public class AMRMProxyService extends CompositeService implements
 
   @Override
   protected void serviceStop() throws Exception {
-    LOG.info("Stopping AMRMProxyService, requestCount = {}, allocatedCount  = {}.",
-        requestCount, allocatedCount);
+    LOG.info("Stopping AMRMProxyService.");
     if (this.server != null) {
       this.server.stop();
     }
@@ -214,7 +207,6 @@ public class AMRMProxyService extends CompositeService implements
    */
   public void recover() throws IOException {
     LOG.info("Recovering AMRMProxyService.");
-    this.requestCount.incrementAndGet();
 
     RecoveredAMRMProxyState state =
         this.nmContext.getNMStateStore().loadAMRMProxyState();
@@ -303,7 +295,7 @@ public class AMRMProxyService extends CompositeService implements
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
-    this.requestCount.incrementAndGet();
+    this.metrics.incrRequestCount();
     long startTime = clock.getTime();
     try {
       RequestInterceptorChainWrapper pipeline =
@@ -336,7 +328,7 @@ public class AMRMProxyService extends CompositeService implements
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request) throws YarnException,
       IOException {
-    this.requestCount.incrementAndGet();
+    this.metrics.incrRequestCount();
     long startTime = clock.getTime();
     try {
       RequestInterceptorChainWrapper pipeline =
@@ -368,6 +360,7 @@ public class AMRMProxyService extends CompositeService implements
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
+    this.metrics.incrAllocateCount();
     long startTime = clock.getTime();
     try {
       AMRMTokenIdentifier amrmTokenIdentifier =
@@ -381,9 +374,8 @@ public class AMRMProxyService extends CompositeService implements
 
       long endTime = clock.getTime();
       this.metrics.succeededAllocateRequests(endTime - startTime);
-      this.allocatedCount.incrementAndGet();
-      LOG.info("Allocate processing finished in {} ms for application {}. Total Allocated = {}.",
-          endTime - startTime, pipeline.getApplicationAttemptId(), this.allocatedCount.get());
+      LOG.info("Allocate processing finished in {} ms for application {}.",
+          endTime - startTime, pipeline.getApplicationAttemptId());
       return allocateResponse;
     } catch (Throwable t) {
       this.metrics.incrFailedAllocateRequests();
@@ -401,7 +393,7 @@ public class AMRMProxyService extends CompositeService implements
    */
   public void processApplicationStartRequest(StartContainerRequest request)
       throws IOException, YarnException {
-    this.requestCount.incrementAndGet();
+    this.metrics.incrRequestCount();
     long startTime = clock.getTime();
     try {
       ContainerTokenIdentifier containerTokenIdentifierForKey =
@@ -559,7 +551,7 @@ public class AMRMProxyService extends CompositeService implements
    * @param applicationId application id
    */
   protected void stopApplication(ApplicationId applicationId) {
-    this.requestCount.incrementAndGet();
+    this.metrics.incrRequestCount();
     Preconditions.checkArgument(applicationId != null, "applicationId is null");
     RequestInterceptorChainWrapper pipeline =
         this.applPipelineMap.remove(applicationId);
