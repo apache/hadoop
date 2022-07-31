@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Collection;
 import java.util.HashSet;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -60,8 +61,8 @@ public class NodeIDsInfo {
     this.partitionInfo = new PartitionInfo(new ResourceInfo(resource));
   }
 
-  public NodeIDsInfo(Set<String> nodeIdsList, PartitionInfo partitionInfo) {
-    this.nodeIDsList.addAll(new ArrayList<>(nodeIdsList));
+  public NodeIDsInfo(Collection<String> nodeIdsList, PartitionInfo partitionInfo) {
+    this.nodeIDsList.addAll(nodeIdsList);
     this.partitionInfo = partitionInfo;
   }
 
@@ -73,6 +74,15 @@ public class NodeIDsInfo {
     return partitionInfo;
   }
 
+  /**
+   * This method will generate a new NodeIDsInfo object based on the two NodeIDsInfo objects.
+   * The information to be combined includes the node list (removed duplicate node)
+   * and partitionInfo object.
+   *
+   * @param left left NodeIDsInfo Object.
+   * @param right right NodeIDsInfo Object.
+   * @return new NodeIDsInfo Object.
+   */
   public static NodeIDsInfo add(NodeIDsInfo left, NodeIDsInfo right) {
     Set<String> nodes = new HashSet<>();
     if (left != null && left.nodeIDsList != null) {

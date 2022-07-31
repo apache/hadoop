@@ -47,8 +47,16 @@ public class PartitionInfo {
     return resourceAvailable;
   }
 
+  /**
+   * This method will generate a new PartitionInfo object based on two PartitionInfo objects.
+   * The combination process is mainly based on the Resources.add method.
+   *
+   * @param left left PartitionInfo Object.
+   * @param right right PartitionInfo Object.
+   * @return new PartitionInfo Object.
+   */
   public static PartitionInfo addTo(PartitionInfo left, PartitionInfo right) {
-    Resource leftResource = null;
+    Resource leftResource = Resource.newInstance(0, 0);
     if (left != null && left.getResourceAvailable() != null) {
       ResourceInfo leftResourceInfo = left.getResourceAvailable();
       leftResource = leftResourceInfo.getResource();
