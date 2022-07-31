@@ -21,10 +21,7 @@ package org.apache.hadoop.metrics2.lib;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.HashSet;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,20 +71,11 @@ public class MutableRatesWithAggregation extends MutableMetric {
     if (protocolCache.contains(protocol)) {
       return;
     }
-
-    List<Class<?>> protocols = new ArrayList<>();
-    protocols.add(protocol);
-    if (protocol.getDeclaredMethods().length == 0) {
-      protocols.addAll(Arrays.asList(protocol.getInterfaces()));
-    }
-
-    for (Class<?> pClass : protocols) {
-      protocolCache.add(pClass);
-      for (Method method : pClass.getDeclaredMethods()) {
-        String name = method.getName();
-        LOG.debug(name);
-        addMetricIfNotExists(name);
-      }
+    protocolCache.add(protocol);
+    for (Method method : protocol.getMethods()) {
+      String name = method.getName();
+      LOG.debug(name);
+      addMetricIfNotExists(name);
     }
   }
 
