@@ -51,6 +51,11 @@ public abstract class AppReportFetcher {
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private boolean isAHSEnabled;
 
+  /**
+   * Create a new Connection to the RM/Application History Server to fetch Application reports.
+   *
+   * @param conf the conf to use to know where the RM is.
+   */
   public AppReportFetcher(Configuration conf) {
     this.conf = conf;
     if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
@@ -101,8 +106,7 @@ public abstract class AppReportFetcher {
    * @throws IOException   connection exception.
    */
   protected FetchedAppReport getApplicationReport(ApplicationClientProtocol applicationsManager,
-                                                  ApplicationId appId)
-      throws YarnException, IOException {
+      ApplicationId appId) throws YarnException, IOException {
     GetApplicationReportRequest request =
         this.recordFactory.newRecordInstance(GetApplicationReportRequest.class);
     request.setApplicationId(appId);
