@@ -475,4 +475,18 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
    * default hadoop temp dir on local system: {@value}.
    */
   public static final String HADOOP_TMP_DIR = "hadoop.tmp.dir";
+
+  /**
+   * Thread-level IOStats Support.
+   * {@value}
+   */
+  public static final String THREAD_LEVEL_IOSTATISTICS_ENABLED =
+      "fs.thread.level.iostatistics.enabled";
+
+  /**
+   * Default value for Thread-level IOStats Support is true.
+   */
+  public static final boolean THREAD_LEVEL_IOSTATISTICS_ENABLED_DEFAULT =
+      true;
+
 }

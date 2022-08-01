@@ -3616,7 +3616,7 @@ public class BlockManager implements BlockStatsMXBean {
       curReplicaDelta =
           (node.isDecommissioned() || node.isDecommissionInProgress()) ? 0 : 1;
       if (logEveryBlock) {
-        blockLog.debug("BLOCK* addStoredBlock: {} is added to {} (size={})",
+        blockLog.info("BLOCK* addStoredBlock: {} is added to {} (size={})",
             node, storedBlock, storedBlock.getNumBytes());
       }
     } else if (result == AddBlockResult.REPLACED) {

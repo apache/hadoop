@@ -291,7 +291,7 @@ public class TestRetryProxy {
 
     UnreliableInterface unreliable = (UnreliableInterface)
         RetryProxy.create(UnreliableInterface.class, unreliableImpl,
-            retryOtherThanRemoteException(TRY_ONCE_THEN_FAIL,
+            retryOtherThanRemoteAndSaslException(TRY_ONCE_THEN_FAIL,
                 exceptionToPolicyMap));
     // should retry with local IOException.
     unreliable.failsOnceWithIOException();

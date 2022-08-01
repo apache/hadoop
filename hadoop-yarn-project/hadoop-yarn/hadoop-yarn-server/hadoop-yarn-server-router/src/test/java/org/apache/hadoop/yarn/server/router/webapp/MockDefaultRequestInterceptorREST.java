@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.http.HttpServletRequest;
@@ -52,6 +54,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -278,5 +282,19 @@ public class MockDefaultRequestInterceptorREST
     containers.add(container);
 
     return containers;
+  }
+
+  @Override
+  public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr) throws IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    NodeLabelsInfo cpuNode = new NodeLabelsInfo(Collections.singleton("CPU"));
+    NodeLabelsInfo gpuNode = new NodeLabelsInfo(Collections.singleton("GPU"));
+
+    HashMap<String, NodeLabelsInfo> nodeLabels = new HashMap<>();
+    nodeLabels.put("node1", cpuNode);
+    nodeLabels.put("node2", gpuNode);
+    return new NodeToLabelsInfo(nodeLabels);
   }
 }
