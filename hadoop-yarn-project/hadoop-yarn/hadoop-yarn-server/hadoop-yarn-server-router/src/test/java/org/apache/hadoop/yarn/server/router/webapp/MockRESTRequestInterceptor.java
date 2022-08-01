@@ -378,12 +378,12 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   @Override
   public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
       HttpServletRequest hsr) throws AuthorizationException, InterruptedException {
-    return null;
+    return Response.status(Status.OK).build();
   }
 
   @Override
   public Response getSchedulerConfiguration(HttpServletRequest hsr)
       throws AuthorizationException {
-    return null;
+    return Response.status(Status.OK).build();
   }
 }
