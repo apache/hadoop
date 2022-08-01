@@ -123,10 +123,6 @@ class JNStorage extends Storage {
     return new File(sd.getCurrentDir(), name);
   }
 
-  File getCurrentDir() {
-    return sd.getCurrentDir();
-  }
-
   /**
    * Directory {@code edits.sync} temporarily holds the log segments
    * downloaded through {@link JournalNodeSyncer} before they are moved to

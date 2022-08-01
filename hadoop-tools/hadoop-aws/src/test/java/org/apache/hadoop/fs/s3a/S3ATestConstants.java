@@ -54,6 +54,11 @@ public interface S3ATestConstants {
   String KEY_ENCRYPTION_TESTS = TEST_FS_S3A + "encryption.enabled";
 
   /**
+   * A property set to true if storage class tests are enabled: {@value }.
+   */
+  String KEY_STORAGE_CLASS_TESTS_ENABLED = TEST_FS_S3A + "create.storage.class.enabled";
+
+  /**
    * Tell tests that they are being executed in parallel: {@value}.
    */
   String KEY_PARALLEL_TEST_EXECUTION = "test.parallel.execution";
@@ -240,4 +245,10 @@ public interface S3ATestConstants {
    * used.
    */
   int KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN = 94;
+
+  /**
+   * Build directory property.
+   * Value: {@value}.
+   */
+  String PROJECT_BUILD_DIRECTORY_PROPERTY = "project.build.directory";
 }

@@ -1790,8 +1790,8 @@ public class DatanodeManager {
   /** Handle heartbeat from datanodes. */
   public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
       StorageReport[] reports, final String blockPoolId,
-      long cacheCapacity, long cacheUsed, int xceiverCount, 
-      int maxTransfers, int failedVolumes,
+      long cacheCapacity, long cacheUsed, int xceiverCount,
+      int xmitsInProgress, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary,
       @Nonnull SlowPeerReports slowPeers,
       @Nonnull SlowDiskReports slowDisks) throws IOException {
@@ -1835,6 +1835,14 @@ public class DatanodeManager {
     int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
     int totalBlocks = totalReplicateBlocks + totalECBlocks;
     if (totalBlocks > 0) {
+      int maxTransfers;
+      if (nodeinfo.isDecommissionInProgress()) {
+        maxTransfers = blockManager.getReplicationStreamsHardLimit()
+            - xmitsInProgress;
+      } else {
+        maxTransfers = blockManager.getMaxReplicationStreams()
+            - xmitsInProgress;
+      }
       int numReplicationTasks = (int) Math.ceil(
           (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
       int numECTasks = (int) Math.ceil(
@@ -1896,14 +1904,14 @@ public class DatanodeManager {
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
 
     if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
-      final Map<String, Double> slowPeersMap = slowPeers.getSlowPeers();
+      final Map<String, OutlierMetrics> slowPeersMap = slowPeers.getSlowPeers();
       if (!slowPeersMap.isEmpty()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("DataNode " + nodeReg + " reported slow peers: " + slowPeersMap);
         }
-        for (Map.Entry<String, Double> slowNodeId : slowPeersMap.entrySet()) {
-          slowPeerTracker.addReport(slowNodeId.getKey(), nodeReg.getIpcAddr(false),
-              slowNodeId.getValue());
+        for (Map.Entry<String, OutlierMetrics> slowNodeEntry : slowPeersMap.entrySet()) {
+          slowPeerTracker.addReport(slowNodeEntry.getKey(), nodeReg.getIpcAddr(false),
+              slowNodeEntry.getValue());
         }
       }
     }
@@ -2248,5 +2256,9 @@ public class DatanodeManager {
   public Map<String, DatanodeDescriptor> getDatanodeMap() {
     return datanodeMap;
   }
-}
 
+  public void setMaxSlowPeersToReport(int maxSlowPeersToReport) {
+    Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
+    slowPeerTracker.setMaxSlowPeersToReport(maxSlowPeersToReport);
+  }
+}

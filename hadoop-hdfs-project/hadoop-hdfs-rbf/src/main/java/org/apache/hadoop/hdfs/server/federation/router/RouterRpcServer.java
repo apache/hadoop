@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -406,7 +405,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
                 .asMap()
                 .keySet()
                 .parallelStream()
-                .forEach((key) -> this.dnCache.refresh(key)),
+                .forEach(this.dnCache::refresh),
             0,
             dnCacheExpire, TimeUnit.MILLISECONDS);
     initRouterFedRename();
@@ -981,8 +980,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   @Override // ClientProtocol
-  public void renewLease(String clientName) throws IOException {
-    clientProto.renewLease(clientName);
+  public void renewLease(String clientName, List<String> namespaces)
+      throws IOException {
+    clientProto.renewLease(clientName, namespaces);
   }
 
   @Override // ClientProtocol
@@ -2061,12 +2061,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     public ListenableFuture<DatanodeInfo[]> reload(
         final DatanodeReportType type, DatanodeInfo[] oldValue)
         throws Exception {
-      return executorService.submit(new Callable<DatanodeInfo[]>() {
-        @Override
-        public DatanodeInfo[] call() throws Exception {
-          return load(type);
-        }
-      });
+      return executorService.submit(() -> load(type));
     }
   }
 }

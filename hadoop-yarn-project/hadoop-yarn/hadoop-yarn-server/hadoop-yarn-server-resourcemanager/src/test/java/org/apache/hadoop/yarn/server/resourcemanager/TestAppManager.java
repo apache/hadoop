@@ -1772,7 +1772,7 @@ public class TestAppManager extends AppManagerTestBase{
       RecordFactory recordFactory) {
     ContainerLaunchContext amContainer = recordFactory.newRecordInstance(
         ContainerLaunchContext.class);
-    amContainer.setApplicationACLs(new HashMap<ApplicationAccessType, String>());;
+    amContainer.setApplicationACLs(new HashMap<ApplicationAccessType, String>());
     return amContainer;
   }
 

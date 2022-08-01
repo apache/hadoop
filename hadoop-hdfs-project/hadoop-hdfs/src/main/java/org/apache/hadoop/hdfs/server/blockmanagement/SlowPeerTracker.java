@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
@@ -79,7 +80,7 @@ public class SlowPeerTracker {
    * Number of nodes to include in JSON report. We will return nodes with
    * the highest number of votes from peers.
    */
-  private final int maxNodesToReport;
+  private volatile int maxNodesToReport;
 
   /**
    * Information about peers that have reported a node as being slow.
@@ -103,9 +104,8 @@ public class SlowPeerTracker {
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS) * 3;
-    this.maxNodesToReport = conf.getInt(
-        DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY,
-        DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT);
+    this.setMaxSlowPeersToReport(conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY,
+        DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT));
   }
 
   /**
@@ -123,9 +123,10 @@ public class SlowPeerTracker {
    *
    * @param slowNode DataNodeId of the peer suspected to be slow.
    * @param reportingNode DataNodeId of the node reporting on its peer.
-   * @param slowNodeLatency Aggregate latency of slownode as reported by the reporting node.
+   * @param slowNodeMetrics Aggregate latency metrics of slownode as reported by the
+   *     reporting node.
    */
-  public void addReport(String slowNode, String reportingNode, Double slowNodeLatency) {
+  public void addReport(String slowNode, String reportingNode, OutlierMetrics slowNodeMetrics) {
     ConcurrentMap<String, LatencyWithLastReportTime> nodeEntries = allReports.get(slowNode);
 
     if (nodeEntries == null) {
@@ -136,7 +137,7 @@ public class SlowPeerTracker {
 
     // Replace the existing entry from this node, if any.
     nodeEntries.put(reportingNode,
-        new LatencyWithLastReportTime(timer.monotonicNow(), slowNodeLatency));
+        new LatencyWithLastReportTime(timer.monotonicNow(), slowNodeMetrics));
   }
 
   /**
@@ -195,8 +196,11 @@ public class SlowPeerTracker {
 
     for (Map.Entry<String, LatencyWithLastReportTime> entry : reports.entrySet()) {
       if (now - entry.getValue().getTime() < reportValidityMs) {
+        OutlierMetrics outlierMetrics = entry.getValue().getLatency();
         validReports.add(
-            new SlowPeerLatencyWithReportingNode(entry.getKey(), entry.getValue().getLatency()));
+            new SlowPeerLatencyWithReportingNode(entry.getKey(), outlierMetrics.getActualLatency(),
+                outlierMetrics.getMedian(), outlierMetrics.getMad(),
+                outlierMetrics.getUpperLimitLatency()));
       }
     }
     return validReports;
@@ -277,11 +281,15 @@ public class SlowPeerTracker {
     return reportValidityMs;
   }
 
+  public synchronized void setMaxSlowPeersToReport(int maxSlowPeersToReport) {
+    this.maxNodesToReport = maxSlowPeersToReport;
+  }
+
   private static class LatencyWithLastReportTime {
     private final Long time;
-    private final Double latency;
+    private final OutlierMetrics latency;
 
-    LatencyWithLastReportTime(Long time, Double latency) {
+    LatencyWithLastReportTime(Long time, OutlierMetrics latency) {
       this.time = time;
       this.latency = latency;
     }
@@ -290,7 +298,7 @@ public class SlowPeerTracker {
       return time;
     }
 
-    public Double getLatency() {
+    public OutlierMetrics getLatency() {
       return latency;
     }
   }

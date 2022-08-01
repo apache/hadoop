@@ -35,14 +35,13 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -71,6 +70,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
@@ -466,6 +466,17 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Skip a test if storage class tests are disabled.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfStorageClassTestsDisabled(
+      Configuration configuration) {
+    if (!configuration.getBoolean(KEY_STORAGE_CLASS_TESTS_ENABLED, true)) {
+      skip("Skipping storage class tests");
+    }
+  }
+
+  /**
    * Create a test path, using the value of
    * {@link S3ATestConstants#TEST_UNIQUE_FORK_ID} if it is set.
    * @param defVal default value
@@ -564,6 +575,19 @@ public final class S3ATestUtils {
     conf.set(DIRECTORY_MARKER_POLICY, directoryRetention);
 
     return conf;
+  }
+
+  /**
+   * build dir.
+   * @return the directory for the project's build, as set by maven,
+   * falling back to pwd + "target" if running from an IDE;
+   */
+  public static File getProjectBuildDir() {
+    String propval = System.getProperty(PROJECT_BUILD_DIRECTORY_PROPERTY);
+    if (StringUtils.isEmpty(propval)) {
+      propval = "target";
+    }
+    return new File(propval).getAbsoluteFile();
   }
 
   /**
@@ -1291,18 +1315,6 @@ public final class S3ATestUtils {
       "yyyy-MM-dd HH:mm:ss");
 
   /**
-   * Skip a test if the FS isn't marked as supporting magic commits.
-   * @param fs filesystem
-   */
-  public static void assumeMagicCommitEnabled(S3AFileSystem fs)
-      throws IOException {
-    assume("Magic commit option disabled on " + fs,
-        fs.hasPathCapability(
-            fs.getWorkingDirectory(),
-            CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
-  }
-
-  /**
    * Probe for the configuration containing a specific credential provider.
    * If the list is empty, there will be no match, even if the named provider
    * is on the default list.
@@ -1445,6 +1457,35 @@ public final class S3ATestUtils {
           .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
           + s3AEncryptionMethod.getMethod()
           + " in " + secrets);
+    }
+  }
+
+
+  /**
+   * Get the input stream statistics of an input stream.
+   * Raises an exception if the inner stream is not an S3A input stream
+   * @param in wrapper
+   * @return the statistics for the inner stream
+   */
+  public static S3AInputStreamStatistics getInputStreamStatistics(
+          FSDataInputStream in) {
+    return getS3AInputStream(in).getS3AStreamStatistics();
+  }
+
+  /**
+   * Get the inner stream of an input stream.
+   * Raises an exception if the inner stream is not an S3A input stream
+   * @param in wrapper
+   * @return the inner stream
+   * @throws AssertionError if the inner stream is of the wrong type
+   */
+  public static S3AInputStream getS3AInputStream(
+          FSDataInputStream in) {
+    InputStream inner = in.getWrappedStream();
+    if (inner instanceof S3AInputStream) {
+      return (S3AInputStream) inner;
+    } else {
+      throw new AssertionError("Not an S3AInputStream: " + inner);
     }
   }
 }

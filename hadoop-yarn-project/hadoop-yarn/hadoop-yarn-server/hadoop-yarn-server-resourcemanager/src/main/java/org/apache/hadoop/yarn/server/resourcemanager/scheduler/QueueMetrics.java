@@ -22,7 +22,6 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,7 +48,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -291,7 +289,7 @@ public class QueueMetrics implements MetricsSource {
       metrics =
           new QueueMetrics(metricsSystem, queueName, null, false, conf);
       users.put(userName, metrics);
-      metricsSystem.register(
+      registerMetrics(
           sourceName(queueName).append(",user=").append(userName).toString(),
           "Metrics for user '"+ userName +"' in queue '"+ queueName +"'",
           metrics.tag(QUEUE_INFO, queueName).tag(USER_INFO, userName));
@@ -336,7 +334,7 @@ public class QueueMetrics implements MetricsSource {
       QueueMetrics queueMetrics =
           new PartitionQueueMetrics(metricsSystem, this.queueName, parentQueue,
               this.enableUserMetrics, this.conf, partition);
-      metricsSystem.register(
+      registerMetrics(
           pSourceName(partitionJMXStr).append(qSourceName(this.queueName))
               .toString(),
           "Metrics for queue: " + this.queueName,
@@ -380,7 +378,7 @@ public class QueueMetrics implements MetricsSource {
 
       // Register with the MetricsSystems
       if (metricsSystem != null) {
-        metricsSystem.register(pSourceName(partitionJMXStr).toString(),
+        registerMetrics(pSourceName(partitionJMXStr).toString(),
             "Metrics for partition: " + partitionJMXStr,
             (PartitionQueueMetrics) metrics.tag(PARTITION_INFO,
                 partitionJMXStr));
@@ -1360,5 +1358,16 @@ public class QueueMetrics implements MetricsSource {
         metric.parentQueue = parentQueue;
       }
     }
+  }
+
+  protected void registerMetrics(String sourceName, String desc, QueueMetrics metrics) {
+    MetricsSource source = metricsSystem.getSource(sourceName);
+    // Unregister metrics if a source is already present
+    if (source != null) {
+      LOG.info("Unregistering source " + sourceName);
+      metricsSystem.unregisterSource(sourceName);
+    }
+
+    metricsSystem.register(sourceName, desc, metrics);
   }
 }

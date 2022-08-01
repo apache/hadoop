@@ -22,5 +22,6 @@ else()
   set(SYSCALL_SRC syscall_linux.cc)
 endif()
 
-add_library(x_platform_obj OBJECT ${SYSCALL_SRC} utils.cc)
-add_library(x_platform_obj_c_api OBJECT $<TARGET_OBJECTS:x_platform_obj> c-api/syscall.cc)
+add_library(x_platform_obj OBJECT ${SYSCALL_SRC} utils.cc dirent.cc)
+add_library(x_platform_obj_c_api OBJECT $<TARGET_OBJECTS:x_platform_obj> c-api/syscall.cc c-api/dirent.cc)
+target_compile_definitions(x_platform_obj_c_api PRIVATE USE_X_PLATFORM_DIRENT)

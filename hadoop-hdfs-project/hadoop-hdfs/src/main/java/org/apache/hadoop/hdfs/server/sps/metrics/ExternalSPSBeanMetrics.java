@@ -95,6 +95,7 @@ public class ExternalSPSBeanMetrics implements ExternalSPSMXBean {
   @VisibleForTesting
   public void updateAttemptedItemsCount() {
     storagePolicySatisfier.getAttemptedItemsMonitor().getStorageMovementAttemptedItems()
-        .add(new StoragePolicySatisfier.AttemptedItemInfo(0, 1, 1, new HashSet<>(), 1));
+        .add(new StoragePolicySatisfier.AttemptedItemInfo(0, 1,
+            1, new HashSet<>(), 1));
   }
 }

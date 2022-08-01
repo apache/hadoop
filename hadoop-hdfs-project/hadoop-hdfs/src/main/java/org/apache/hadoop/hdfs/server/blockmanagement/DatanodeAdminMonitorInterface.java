@@ -32,6 +32,7 @@ public interface DatanodeAdminMonitorInterface extends Runnable {
   int getTrackedNodeCount();
   int getNumNodesChecked();
   Queue<DatanodeDescriptor> getPendingNodes();
+  Queue<DatanodeDescriptor> getCancelledNodes();
 
   void setBlockManager(BlockManager bm);
   void setDatanodeAdminManager(DatanodeAdminManager dnm);

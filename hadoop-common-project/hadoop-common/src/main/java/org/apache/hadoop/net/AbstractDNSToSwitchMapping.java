@@ -115,7 +115,7 @@ public abstract class AbstractDNSToSwitchMapping
     builder.append("Mapping: ").append(toString()).append("\n");
     if (rack != null) {
       builder.append("Map:\n");
-      Set<String> switches = new HashSet<String>();
+      Set<String> switches = new HashSet<>();
       for (Map.Entry<String, String> entry : rack.entrySet()) {
         builder.append("  ")
             .append(entry.getKey())
