@@ -41,6 +41,8 @@ import com.amazonaws.services.s3.model.EncryptionMaterialsProvider;
 import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.amazonaws.util.RuntimeHttpUtils;
+
+import org.apache.hadoop.fs.s3a.adapter.V1V2AwsCredentialProviderAdapter;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
@@ -215,6 +217,9 @@ public class DefaultS3ClientFactory extends Configured
 
     s3ClientBuilder.httpClientBuilder(httpClientBuilder)
         .overrideConfiguration(clientOverrideConfigBuilder.build());
+
+    s3ClientBuilder.credentialsProvider(
+        V1V2AwsCredentialProviderAdapter.adapt(parameters.getCredentialSet()));
 
     return s3ClientBuilder.build();
   }
