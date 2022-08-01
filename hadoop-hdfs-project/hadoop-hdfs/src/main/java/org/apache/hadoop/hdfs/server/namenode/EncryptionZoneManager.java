@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ReencryptionStatus;
-import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -348,8 +347,7 @@ public class EncryptionZoneManager {
    * <p>
    * Called while holding the FSDirectory lock.
    */
-  boolean isInAnEZ(INodesInPath iip) throws UnresolvedLinkException,
-      SnapshotAccessControlException, IOException {
+  boolean isInAnEZ(INodesInPath iip) throws IOException {
     assert dir.hasReadLock();
     return (getEncryptionZoneForPath(iip) != null);
   }

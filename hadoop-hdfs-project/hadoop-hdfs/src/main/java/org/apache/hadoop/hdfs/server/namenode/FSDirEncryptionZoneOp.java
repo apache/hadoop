@@ -35,7 +35,6 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
@@ -43,7 +42,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
-import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ZoneEncryptionInfoProto;
@@ -495,8 +493,7 @@ final class FSDirEncryptionZoneOp {
    * @throws RetryStartFileException if key is inconsistent with current zone
    */
   static FileEncryptionInfo getFileEncryptionInfo(FSDirectory dir,
-      INodesInPath iip, EncryptionKeyInfo ezInfo)
-          throws RetryStartFileException, IOException {
+      INodesInPath iip, EncryptionKeyInfo ezInfo) throws IOException {
     FileEncryptionInfo feInfo = null;
     final EncryptionZone zone = getEZForPath(dir, iip);
     if (zone != null) {
@@ -519,8 +516,7 @@ final class FSDirEncryptionZoneOp {
   }
 
   static boolean isInAnEZ(final FSDirectory fsd, final INodesInPath iip)
-      throws UnresolvedLinkException, SnapshotAccessControlException,
-      IOException {
+      throws IOException {
     if (!fsd.ezManager.hasCreatedEncryptionZone()) {
       return false;
     }

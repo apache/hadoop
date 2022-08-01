@@ -240,11 +240,8 @@ public final class ReencryptionUpdater implements Runnable {
    * considered complete.
    *
    * @param zoneId Id of the zone inode.
-   * @throws IOException
-   * @throws InterruptedException
    */
-  void markZoneSubmissionDone(final long zoneId)
-      throws IOException, InterruptedException {
+  void markZoneSubmissionDone(final long zoneId) {
     final ZoneSubmissionTracker tracker = handler.getTracker(zoneId);
     if (tracker != null && !tracker.getTasks().isEmpty()) {
       tracker.submissionDone = true;
@@ -288,10 +285,9 @@ public final class ReencryptionUpdater implements Runnable {
    * @param zoneNodePath full path of the EZ inode.
    * @param task     the completed task.
    * @throws IOException
-   * @throws InterruptedException
    */
   private void processTaskEntries(final String zoneNodePath,
-      final ReencryptionTask task) throws IOException, InterruptedException {
+      final ReencryptionTask task) throws IOException {
     assert dir.hasWriteLock();
     if (!task.batch.isEmpty() && task.numFailures == 0) {
       LOG.debug(

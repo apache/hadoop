@@ -67,10 +67,9 @@ final class FSDirErasureCodingOp {
    * @param fsn namespace
    * @param ecPolicyName name of EC policy to be checked
    * @return an erasure coding policy if ecPolicyName is valid and enabled
-   * @throws IOException
    */
   static ErasureCodingPolicy getEnabledErasureCodingPolicyByName(
-      final FSNamesystem fsn, final String ecPolicyName) throws IOException {
+      final FSNamesystem fsn, final String ecPolicyName) {
     assert fsn.hasReadLock();
     ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
         .getEnabledPolicyByName(ecPolicyName);
@@ -99,10 +98,9 @@ final class FSDirErasureCodingOp {
    * @param fsn namespace
    * @param ecPolicyName name of EC policy to be checked
    * @return an erasure coding policy if ecPolicyName is valid
-   * @throws IOException
    */
   static ErasureCodingPolicy getErasureCodingPolicyByName(
-      final FSNamesystem fsn, final String ecPolicyName) throws IOException {
+      final FSNamesystem fsn, final String ecPolicyName) {
     assert fsn.hasReadLock();
     ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
         .getErasureCodingPolicyByName(ecPolicyName);
@@ -126,12 +124,11 @@ final class FSDirErasureCodingOp {
    * @return {@link FileStatus}
    * @throws IOException
    * @throws HadoopIllegalArgumentException if the policy is not enabled
-   * @throws AccessControlException if the user does not have write access
    */
   static FileStatus setErasureCodingPolicy(final FSNamesystem fsn,
       final String srcArg, final String ecPolicyName,
       final FSPermissionChecker pc, final boolean logRetryCache)
-      throws IOException, AccessControlException {
+      throws IOException {
     assert fsn.hasWriteLock();
 
     String src = srcArg;
@@ -348,11 +345,9 @@ final class FSDirErasureCodingOp {
    * been set or the policy is REPLICATION
    * @throws IOException
    * @throws FileNotFoundException if the path does not exist.
-   * @throws AccessControlException if no read access
    */
   static ErasureCodingPolicy getErasureCodingPolicy(final FSNamesystem fsn,
-      final String src, FSPermissionChecker pc)
-      throws IOException, AccessControlException {
+      final String src, FSPermissionChecker pc) throws IOException {
     assert fsn.hasReadLock();
 
     if (FSDirectory.isExactReservedName(src)) {
@@ -439,8 +434,7 @@ final class FSDirErasureCodingOp {
    * @param fsn namespace
    * @return {@link java.util.HashMap} array
    */
-  static Map<String, String> getErasureCodingCodecs(final FSNamesystem fsn)
-      throws IOException {
+  static Map<String, String> getErasureCodingCodecs(final FSNamesystem fsn) {
     assert fsn.hasReadLock();
     return CodecRegistry.getInstance().getCodec2CoderCompactMap();
   }
@@ -485,8 +479,7 @@ final class FSDirErasureCodingOp {
     return null;
   }
 
-  private static XAttr getErasureCodingPolicyXAttrForINode(
-      FSNamesystem fsn, INode inode) throws IOException {
+  private static XAttr getErasureCodingPolicyXAttrForINode(FSNamesystem fsn, INode inode) {
     // INode can be null
     if (inode == null) {
       return null;

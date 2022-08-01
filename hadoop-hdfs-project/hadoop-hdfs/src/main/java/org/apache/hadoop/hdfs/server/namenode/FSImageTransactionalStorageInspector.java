@@ -73,7 +73,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
   }
 
   @Override
-  public void inspectDirectory(StorageDirectory sd) throws IOException {
+  public void inspectDirectory(StorageDirectory sd) {
     // Was the directory just formatted?
     if (!sd.getVersionFile().exists()) {
       LOG.info("No version file in " + sd.getRoot());

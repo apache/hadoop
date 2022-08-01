@@ -78,8 +78,7 @@ public class NameNodeHttpServer {
 
   public static void initWebHdfs(Configuration conf, String hostname,
       String httpKeytab,
-      HttpServer2 httpServer2, String jerseyResourcePackage)
-      throws IOException {
+      HttpServer2 httpServer2, String jerseyResourcePackage) {
     // set user pattern based on configuration file
     UserParam.setUserPattern(conf.get(
         HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,

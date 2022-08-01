@@ -405,7 +405,7 @@ public class BootstrapStandby implements Tool, Configurable {
     }
   }
 
-  private boolean checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
+  private boolean checkLayoutVersion(NamespaceInfo nsInfo) {
     return (nsInfo.getLayoutVersion() == HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
   }
 
@@ -453,8 +453,7 @@ public class BootstrapStandby implements Tool, Configurable {
     parseProvidedConfigurations(conf);
   }
 
-  private void parseProvidedConfigurations(Configuration configuration)
-      throws IOException {
+  private void parseProvidedConfigurations(Configuration configuration) {
     // if provided and in-memory aliasmap are enabled,
     // get the aliasmap location.
     boolean providedEnabled = configuration.getBoolean(

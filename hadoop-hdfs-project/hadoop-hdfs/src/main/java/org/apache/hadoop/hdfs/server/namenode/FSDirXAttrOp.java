@@ -410,7 +410,7 @@ public class FSDirXAttrOp {
   }
 
   static XAttr getXAttrByPrefixedName(FSDirectory fsd, INodesInPath iip,
-      String prefixedName) throws IOException {
+      String prefixedName) {
     fsd.readLock();
     try {
       return XAttrStorage.readINodeXAttrByPrefixedName(iip.getLastINode(),
@@ -421,8 +421,7 @@ public class FSDirXAttrOp {
   }
 
   static XAttr unprotectedGetXAttrByPrefixedName(
-      INode inode, int snapshotId, String prefixedName)
-      throws IOException {
+      INode inode, int snapshotId, String prefixedName) {
     return XAttrStorage.readINodeXAttrByPrefixedName(
         inode, snapshotId, prefixedName);
   }

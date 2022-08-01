@@ -184,7 +184,7 @@ public class NameNodeResourceChecker {
    * @return the set of directories whose free space is below the threshold.
    */
   @VisibleForTesting
-  Collection<String> getVolumesLowOnSpace() throws IOException {
+  Collection<String> getVolumesLowOnSpace() {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Going to check the following volumes disk space: " + volumes);
     }

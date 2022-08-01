@@ -811,10 +811,8 @@ public class FSDirectory implements Closeable {
 
   /**
    * Check whether the filepath could be created
-   * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  boolean isValidToCreate(String src, INodesInPath iip)
-      throws SnapshotAccessControlException {
+  boolean isValidToCreate(String src, INodesInPath iip) {
     String srcs = normalizePath(src);
     return srcs.startsWith("/") && !srcs.endsWith("/") &&
         iip.getLastINode() == null;
@@ -1788,7 +1786,7 @@ public class FSDirectory implements Closeable {
     return components;
   }
 
-  INode getINode4DotSnapshot(INodesInPath iip) throws UnresolvedLinkException {
+  INode getINode4DotSnapshot(INodesInPath iip) {
     Preconditions.checkArgument(
         iip.isDotSnapshotDir(), "%s does not end with %s",
         iip.getPath(), HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR);
