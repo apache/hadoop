@@ -185,6 +185,26 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
+  public void ProxyOpPermitRejected(String nsId) {
+    if (metrics != null) {
+      metrics.incrProxyOpPermitRejected();
+      
+    }
+    if (nameserviceRPCMetricsMap != null &&
+        nameserviceRPCMetricsMap.containsKey(nsId)) {
+      nameserviceRPCMetricsMap.get(nsId).incrProxyOpPermitRejected();
+    }
+  }
+
+  @Override
+  public void ProxyOpPermitAccepted(String nsId) {
+    if (nameserviceRPCMetricsMap != null &&
+        nameserviceRPCMetricsMap.containsKey(nsId)) {
+      nameserviceRPCMetricsMap.get(nsId).incrProxyOpPermitAccepted();
+    }
+  }
+
+  @Override
   public void proxyOpFailureClientOverloaded() {
     if (metrics != null) {
       metrics.incrProxyOpFailureClientOverloaded();

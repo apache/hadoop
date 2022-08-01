@@ -49,6 +49,10 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
   private MutableCounterLong proxyOpFailureCommunicate;
   @Metric("Number of operations to hit no namenodes available")
   private MutableCounterLong proxyOpNoNamenodes;
+  @Metric("Number of operations to hit permit limits")
+  private MutableCounterLong proxyOpPermitRejected;
+  @Metric("Number of operations accepted to hit a namenode")
+  private MutableCounterLong proxyOpPermitAccepted;
 
   public NameserviceRPCMetrics(Configuration conf, String nsId) {
     this.nsId = nsId;
@@ -91,6 +95,23 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
     return proxyOpNoNamenodes.value();
   }
 
+  public void incrProxyOpPermitRejected() {
+    proxyOpPermitRejected.incr();
+  }
+
+  @Override
+  public long getProxyOpPermitRejected() {
+    return proxyOpPermitRejected.value();
+  }
+
+  public void incrProxyOpPermitAccepted() {
+    proxyOpPermitAccepted.incr();
+  }
+
+  @Override
+  public long getProxyOpPermitAccepted() {
+    return proxyOpPermitAccepted.value();
+  }
 
   /**
    * Add the time to proxy an operation from the moment the Router sends it to
