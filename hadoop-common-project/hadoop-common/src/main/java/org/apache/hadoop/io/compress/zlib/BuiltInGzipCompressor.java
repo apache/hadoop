@@ -24,6 +24,7 @@ import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.compress.AlreadyClosedException;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.DoNotPool;
 import org.apache.hadoop.util.DataChecksum;
@@ -102,7 +103,15 @@ public class BuiltInGzipCompressor implements Compressor {
 
     if (state == BuiltInGzipDecompressor.GzipStateLabel.INFLATE_STREAM) {
       // now compress it into b[]
-      int deflated = deflater.deflate(b, off, len);
+      int deflated;
+      try {
+        deflated = deflater.deflate(b, off, len);
+      } catch (NullPointerException npe) {
+        if ("Deflater has been closed".equals(npe.getMessage())) {
+          throw new AlreadyClosedException(npe);
+        }
+        throw npe;
+      }
 
       compressedBytesWritten += deflated;
       off += deflated;

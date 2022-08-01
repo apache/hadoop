@@ -207,12 +207,14 @@ public class TestCodecPool {
     final Compressor compressor = new BuiltInGzipCompressor(new Configuration());
     CodecPool.returnCompressor(compressor);
 
-    final CompressionOutputStream outputStream = gzipCodec.createOutputStream(new ByteArrayOutputStream(), compressor);
+    final CompressionOutputStream outputStream =
+            gzipCodec.createOutputStream(new ByteArrayOutputStream(), compressor);
     LambdaTestUtils.intercept(
-            NullPointerException.class,
+            AlreadyClosedException.class,
             "Deflater has been closed",
-            "Compressor from Codec with @DoNotPool should not be useable after returning to CodecPool",
-            () -> outputStream.write(1));
+            "Compressor from Codec with @DoNotPool should not be " +
+                    "useable after returning to CodecPool",
+        () -> outputStream.write(1));
   }
 
   @Test(timeout = 10000)
@@ -233,15 +235,17 @@ public class TestCodecPool {
     final byte[] gzipBytes = baos.toByteArray();
     final ByteArrayInputStream bais = new ByteArrayInputStream(gzipBytes);
 
-    // BuiltInGzipDecompressor is an explicit example of a Decompressor with the @DoNotPool annotation
+    // BuiltInGzipDecompressor is an explicit example of a Decompressor
+    // with the @DoNotPool annotation
     final Decompressor decompressor = new BuiltInGzipDecompressor();
     CodecPool.returnDecompressor(decompressor);
 
     final CompressionInputStream inputStream = gzipCodec.createInputStream(bais, decompressor);
     LambdaTestUtils.intercept(
-            NullPointerException.class,
+            AlreadyClosedException.class,
             "Inflater has been closed",
-            "Decompressor from Codec with @DoNotPool should not be useable after returning to CodecPool",
-            () -> inputStream.read());
+            "Decompressor from Codec with @DoNotPool should not be " +
+                    "useable after returning to CodecPool",
+        () -> inputStream.read());
   }
 }

@@ -23,6 +23,7 @@ import java.util.zip.Checksum;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
+import org.apache.hadoop.io.compress.AlreadyClosedException;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DoNotPool;
 import org.apache.hadoop.util.DataChecksum;
@@ -211,6 +212,11 @@ public class BuiltInGzipDecompressor implements Decompressor {
         numAvailBytes = inflater.inflate(b, off, len);
       } catch (DataFormatException dfe) {
         throw new IOException(dfe.getMessage());
+      } catch (NullPointerException npe) {
+        if ("Inflater has been closed".equals(npe.getMessage())) {
+          throw new AlreadyClosedException(npe);
+        }
+        throw npe;
       }
       crc.update(b, off, numAvailBytes);  // CRC-32 is on _uncompressed_ data
       if (inflater.finished()) {
