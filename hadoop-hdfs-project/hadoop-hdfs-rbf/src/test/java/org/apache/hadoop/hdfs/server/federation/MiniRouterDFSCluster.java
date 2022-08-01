@@ -115,6 +115,7 @@ public class MiniRouterDFSCluster {
 
   /** Nameservices in the federated cluster. */
   private List<String> nameservices;
+  private String defaultNameservice;
   /** Namenodes in the federated cluster. */
   private List<NamenodeContext> namenodes;
   /** Routers in the federated cluster. */
@@ -558,7 +559,7 @@ public class MiniRouterDFSCluster {
     conf.set(DFS_ROUTER_HTTPS_ADDRESS_KEY, "127.0.0.1:0");
     conf.set(DFS_ROUTER_HTTP_BIND_HOST_KEY, "0.0.0.0");
 
-    conf.set(DFS_ROUTER_DEFAULT_NAMESERVICE, nameservices.get(0));
+    conf.set(DFS_ROUTER_DEFAULT_NAMESERVICE, this.defaultNameservice);
     conf.setLong(DFS_ROUTER_HEARTBEAT_INTERVAL_MS, heartbeatInterval);
     conf.setLong(DFS_ROUTER_CACHE_TIME_TO_LIVE_MS, cacheFlushInterval);
 
@@ -627,6 +628,7 @@ public class MiniRouterDFSCluster {
         }
       }
     }
+    this.defaultNameservice = nameservices.get(0);
   }
 
   public void setNumDatanodesPerNameservice(int num) {
@@ -806,6 +808,7 @@ public class MiniRouterDFSCluster {
           .numDataNodes(numDNs)
           .nnTopology(topology)
           .dataNodeConfOverlays(dnConfs)
+          .checkExitOnShutdown(false)
           .storageTypes(storageTypes)
           .racks(racks)
           .build();
@@ -1039,6 +1042,26 @@ public class MiniRouterDFSCluster {
   }
 
   /**
+   * Switch a namenode in a nameservice to be the observer.
+   * @param nsId Nameservice identifier.
+   * @param nnId Namenode identifier.
+   */
+  public void switchToObserver(String nsId, String nnId) {
+    try {
+      int total = cluster.getNumNameNodes();
+      NameNodeInfo[] nns = cluster.getNameNodeInfos();
+      for (int i = 0; i < total; i++) {
+        NameNodeInfo nn = nns[i];
+        if (nn.getNameserviceId().equals(nsId) && nn.getNamenodeId().equals(nnId)) {
+          cluster.transitionToObserver(i);
+        }
+      }
+    } catch (Throwable e) {
+      LOG.error("Cannot transition to active", e);
+    }
+  }
+
+  /**
    * Stop the federated HDFS cluster.
    */
   public void shutdown() {
@@ -1159,5 +1182,29 @@ public class MiniRouterDFSCluster {
     } catch (Exception e) {
       throw new IOException("Cannot wait for the namenodes", e);
     }
+  }
+
+  public FileSystem getFileSystem(String nsId, Configuration overrideConf) throws IOException {
+    Configuration conf = new HdfsConfiguration(false);
+    conf.set(DFS_NAMESERVICES, nsId);
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://" + nsId);
+    if (overrideConf != null) {
+      conf.addResource(overrideConf);
+    }
+    StringBuilder routers = new StringBuilder();
+    for (int i = 0; i < getRouters().size(); i++) {
+      String routerId = "r" + i;
+      routers.append(routerId).append(",");
+      InetSocketAddress rpcAddress = getRouters().get(i).getRouter().getRpcServerAddress();
+      conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY + "." + nsId + "." + routerId,
+          NetUtils.getHostPortString(rpcAddress));
+    }
+    routers.delete(routers.length() - 1, routers.length());
+    conf.set(DFS_HA_NAMENODES_KEY_PREFIX + "." + nsId, routers.toString());
+    return DistributedFileSystem.get(conf);
+  }
+
+  public String getDefaultNameservice() {
+    return defaultNameservice;
   }
 }

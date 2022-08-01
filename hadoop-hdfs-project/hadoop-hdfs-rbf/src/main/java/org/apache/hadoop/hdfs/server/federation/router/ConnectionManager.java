@@ -34,6 +34,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.ClientGSIContext;
+import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.NameServiceStateIdMode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -85,13 +88,15 @@ public class ConnectionManager {
   /** If the connection manager is running. */
   private boolean running = false;
 
+  private NameServiceStateIdMode nsIdMode;
+  private Map<String, AlignmentContext> alignmentContexts;
 
   /**
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
    */
-  public ConnectionManager(Configuration config) {
+  public ConnectionManager(Configuration config, NameServiceStateIdMode mode) {
     this.conf = config;
 
     // Configure minimum, maximum and active connection pools
@@ -125,6 +130,8 @@ public class ConnectionManager {
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS_DEFAULT);
     LOG.info("Cleaning connections every {} seconds",
         TimeUnit.MILLISECONDS.toSeconds(this.connectionCleanupPeriodMs));
+    this.alignmentContexts = new HashMap<>();
+    this.nsIdMode = mode;
   }
 
   /**
@@ -176,7 +183,7 @@ public class ConnectionManager {
    * @throws IOException If the connection cannot be obtained.
    */
   public ConnectionContext getConnection(UserGroupInformation ugi,
-      String nnAddress, Class<?> protocol) throws IOException {
+      String nnAddress, Class<?> protocol, String nsId) throws IOException {
 
     // Check if the manager is shutdown
     if (!this.running) {
@@ -203,9 +210,22 @@ public class ConnectionManager {
       try {
         pool = this.pools.get(connectionId);
         if (pool == null) {
+          if (alignmentContexts != null && !alignmentContexts.containsKey(nsId)) {
+            synchronized (alignmentContexts) {
+              if (!alignmentContexts.containsKey(nsId)) {
+                AlignmentContext context = null;
+                if (nsIdMode.isTransmission()) {
+                  context = new RouterNameNodeSideStateIdContext(nsId);
+                } else if (nsIdMode.isProxy()) {
+                  context = new ClientGSIContext(NameServiceStateIdMode.DISABLE, nsId);
+                }
+                alignmentContexts.put(nsId, context);
+              }
+            }
+          }
           pool = new ConnectionPool(
               this.conf, nnAddress, ugi, this.minSize, this.maxSize,
-              this.minActiveRatio, protocol);
+              this.minActiveRatio, protocol, alignmentContexts.get(nsId));
           this.pools.put(connectionId, pool);
         }
       } finally {

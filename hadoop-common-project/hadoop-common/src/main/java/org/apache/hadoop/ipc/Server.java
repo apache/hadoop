@@ -928,7 +928,7 @@ public abstract class Server {
     private volatile String detailedMetricsName = "";
     final int callId;            // the client's call id
     final int retryCount;        // the retry count of the call
-    long timestampNanos;         // time the call was received
+    private final long timestampNanos;         // time the call was received
     long responseTimestampNanos; // time the call was served
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
     final RPC.RpcKind rpcKind;
@@ -1110,6 +1110,18 @@ public abstract class Server {
 
     public void setDeferredError(Throwable t) {
     }
+
+    public long getTimestampNanos() {
+      return timestampNanos;
+    }
+
+    public int getCallId() {
+      return callId;
+    }
+
+    public byte[] getClientId() {
+      return clientId;
+    }
   }
 
   /** A RPC extended call queued for handling. */
@@ -1190,8 +1202,7 @@ public abstract class Server {
       ResponseParams responseParams = new ResponseParams();
 
       try {
-        value = call(
-            rpcKind, connection.protocolName, rpcRequest, timestampNanos);
+        value = call(rpcKind, connection.protocolName, rpcRequest, getTimestampNanos());
       } catch (Throwable e) {
         populateResponseParamsOnError(e, responseParams);
       }
@@ -2884,11 +2895,10 @@ public abstract class Server {
           protoName = req.getRequestHeader().getDeclaringClassProtocolName();
           if (alignmentContext.isCoordinatedCall(protoName, methodName)) {
             call.markCallCoordinated(true);
-            long stateId;
-            stateId = alignmentContext.receiveRequestState(
-                header, getMaxIdleTime());
-            call.setClientStateId(stateId);
           }
+          long stateId = alignmentContext.receiveRequestState(header, getMaxIdleTime(),
+              call.isCallCoordinated());
+          call.setClientStateId(stateId);
         } catch (IOException ioe) {
           throw new RpcServerException("Processing RPC request caught ", ioe);
         }

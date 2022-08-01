@@ -181,6 +181,18 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "enable";
   public static final boolean DFS_ROUTER_STORE_ENABLE_DEFAULT = true;
 
+  public static final String DFS_ROUTER_NAMESERVICE_STATE_ID_MODE =
+      FEDERATION_ROUTER_PREFIX + "nameservice-state-id.mode";
+  public static final String DFS_ROUTER_NAMESERVICE_STATE_ID_MODE_DEFAULT = "DISABLE";
+
+  public static final String DFS_ROUTER_OBSERVER_AUTO_MSYNC_PERIOD =
+      FEDERATION_ROUTER_PREFIX + "observer.auto-msync-period";
+  public static final long DFS_ROUTER_OBSERVER_AUTO_MSYNC_PERIOD_DEFAULT = 0;
+
+  public static final String DFS_ROUTER_CACHE_STATE_ID_TIMEOUT =
+      FEDERATION_ROUTER_PREFIX + "cache.state.id.timeout";
+  public static final long DFS_ROUTER_CACHE_STATE_ID_TIMEOUT_DEFAULT = 600000;
+
   public static final String FEDERATION_STORE_SERIALIZER_CLASS =
       FEDERATION_STORE_PREFIX + "serializer";
   public static final Class<StateStoreSerializerPBImpl>

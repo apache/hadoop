@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.NameServiceStateIdMode;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
@@ -37,18 +38,28 @@ import java.util.concurrent.atomic.LongAccumulator;
 @InterfaceStability.Evolving
 public class ClientGSIContext implements AlignmentContext {
 
-  private final LongAccumulator lastSeenStateId =
-      new LongAccumulator(Math::max, Long.MIN_VALUE);
+  public final static String DEFAULT_NS = "";
+  private final FederatedNamespaceIds federatedNamespaceIds;
+  private final String nsId;
+
+  public ClientGSIContext(NameServiceStateIdMode mode) {
+    this(mode, DEFAULT_NS);
+  }
+
+  public ClientGSIContext(NameServiceStateIdMode mode, String nsId) {
+    this.federatedNamespaceIds = new FederatedNamespaceIds(mode);
+    this.nsId = nsId;
+  }
+
 
   @Override
   public long getLastSeenStateId() {
-    return lastSeenStateId.get();
+    return federatedNamespaceIds.getNamespaceId(nsId, true).get();
   }
 
   @Override
   public boolean isCoordinatedCall(String protocolName, String method) {
-    throw new UnsupportedOperationException(
-        "Client should not be checking uncoordinated call");
+    throw new UnsupportedOperationException("Client should not be checking uncoordinated call");
   }
 
   /**
@@ -66,7 +77,11 @@ public class ClientGSIContext implements AlignmentContext {
    */
   @Override
   public void receiveResponseState(RpcResponseHeaderProto header) {
-    lastSeenStateId.accumulate(header.getStateId());
+    if (federatedNamespaceIds.isDisable()) {
+      federatedNamespaceIds.updateNameserviceState(this.nsId, header.getStateId());
+    } else {
+      federatedNamespaceIds.updateStateUsingResponseHeader(header);
+    }
   }
 
   /**
@@ -74,7 +89,12 @@ public class ClientGSIContext implements AlignmentContext {
    */
   @Override
   public void updateRequestState(RpcRequestHeaderProto.Builder header) {
-    header.setStateId(lastSeenStateId.longValue());
+    if (federatedNamespaceIds.isDisable()) {
+      header.setStateId(federatedNamespaceIds.getNamespaceId(this.nsId, true).get());
+      header.clearNameserviceStateIdsContext();
+    } else {
+      federatedNamespaceIds.setRequestHeaderState(header);
+    }
   }
 
   /**
@@ -82,8 +102,8 @@ public class ClientGSIContext implements AlignmentContext {
    * Client does not receive RPC requests therefore this does nothing.
    */
   @Override
-  public long receiveRequestState(RpcRequestHeaderProto header, long threshold)
-      throws IOException {
+  public long receiveRequestState(RpcRequestHeaderProto header, long threshold,
+      boolean isCoordinatedCall) throws IOException {
     // Do nothing.
     return 0;
   }

@@ -35,8 +35,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.LongAccumulator;
 
+import org.apache.hadoop.hdfs.NamespaceStateId;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 import org.slf4j.Logger;
@@ -367,9 +367,9 @@ public abstract class HATestUtil {
     ClientGSIContext ac = (ClientGSIContext)(provider.getAlignmentContext());
     Field f = ac.getClass().getDeclaredField("lastSeenStateId");
     f.setAccessible(true);
-    LongAccumulator lastSeenStateId = (LongAccumulator)f.get(ac);
+    NamespaceStateId lastSeenStateId = (NamespaceStateId)f.get(ac);
     long currentStateId = lastSeenStateId.getThenReset();
-    lastSeenStateId.accumulate(stateId);
+    lastSeenStateId.update(stateId);
     return currentStateId;
   }
 

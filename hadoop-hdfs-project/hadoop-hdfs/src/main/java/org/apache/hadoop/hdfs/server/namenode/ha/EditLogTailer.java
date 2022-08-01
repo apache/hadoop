@@ -475,7 +475,8 @@ public class EditLogTailer {
    */
   private class EditLogTailerThread extends Thread {
     private volatile boolean shouldRun = true;
-    
+    private volatile boolean skipForTest = false;
+
     private EditLogTailerThread() {
       super("Edit log tailer");
     }
@@ -483,7 +484,11 @@ public class EditLogTailer {
     private void setShouldRun(boolean shouldRun) {
       this.shouldRun = shouldRun;
     }
-    
+
+    public void setSkipForTest(boolean skip) {
+      this.skipForTest = skip;
+    }
+
     @Override
     public void run() {
       SecurityUtil.doAsLoginUserOrFatal(
@@ -499,6 +504,14 @@ public class EditLogTailer {
     private void doWork() {
       long currentSleepTimeMs = sleepTimeMs;
       while (shouldRun) {
+        if (skipForTest) {
+          try {
+            EditLogTailer.this.sleep(10);
+          } catch (InterruptedException e) {
+            LOG.warn("Edit log tailer interrupted", e);
+          }
+          continue;
+        }
         long editsTailed  = 0;
         try {
           // There's no point in triggering a log roll if the Standby hasn't
@@ -636,5 +649,10 @@ public class EditLogTailer {
       assert cachedActiveProxy != null;
       return cachedActiveProxy;
     }
+  }
+
+  @VisibleForTesting
+  public void setSkipForTest(boolean skip) {
+    tailerThread.setSkipForTest(skip);
   }
 }

@@ -4688,7 +4688,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
   }
-  
+
   @Metric({"TransactionsSinceLastCheckpoint",
       "Number of transactions since last checkpoint"})
   public long getTransactionsSinceLastCheckpoint() {
@@ -4724,7 +4724,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public long getLastWrittenTransactionId() {
     return getEditLog().getLastWrittenTxIdWithoutLock();
   }
-  
+
+  @Metric({"LastAppliedOrWrittenTxId",
+      "Last Transaction ID applied to FSImage"})
+  public long getLastAppliedOrWrittenTxId() {
+    return this.getFSImage().getLastAppliedOrWrittenTxId();
+  }
+
   @Metric({"LastCheckpointTime",
       "Time in milliseconds since the epoch of the last checkpoint"})
   public long getLastCheckpointTime() {

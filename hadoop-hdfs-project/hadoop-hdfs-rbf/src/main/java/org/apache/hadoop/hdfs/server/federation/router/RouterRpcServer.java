@@ -56,6 +56,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.ipc.NameServiceStateIdMode;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -322,6 +323,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     // Create security manager
     this.securityManager = new RouterSecurityManager(this.conf);
 
+    NameServiceStateIdMode mode = NameServiceStateIdMode.valueOf(
+        conf.get(RBFConfigKeys.DFS_ROUTER_NAMESERVICE_STATE_ID_MODE,
+            RBFConfigKeys.DFS_ROUTER_NAMESERVICE_STATE_ID_MODE_DEFAULT));
+
     this.rpcServer = new RPC.Builder(this.conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
         .setInstance(clientNNPbService)
@@ -331,6 +336,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setnumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
+        .setAlignmentContext(mode == NameServiceStateIdMode.TRANSMISSION ?
+            new RouterClientSideStateIdContext() : null)
         .setSecretManager(this.securityManager.getSecretManager())
         .build();
 
@@ -1329,7 +1336,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     clientProto.modifyAclEntries(src, aclSpec);
   }
 
-  @Override // ClienProtocol
+  @Override // ClientProtocol
   public void removeAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
     clientProto.removeAclEntries(src, aclSpec);

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
+
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -41,6 +43,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.FederatedNamespaceIds;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
@@ -84,12 +87,15 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
+import org.apache.hadoop.hdfs.server.federation.router.RouterStateIdCache.UniqueCallID;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.NameServiceStateIdMode;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -115,6 +121,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Module that implements all the RPC calls in {@link ClientProtocol} in the
@@ -159,6 +166,8 @@ public class RouterClientProtocol implements ClientProtocol {
   /** Router security manager to handle token operations. */
   private RouterSecurityManager securityManager = null;
 
+  private NameServiceStateIdMode defaultNsIdMode;
+
   RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     this.rpcServer = rpcServer;
     this.rpcClient = rpcServer.getRPCClient();
@@ -193,6 +202,9 @@ public class RouterClientProtocol implements ClientProtocol {
     this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
     this.securityManager = rpcServer.getRouterSecurityManager();
     this.rbfRename = new RouterFederationRename(rpcServer, conf);
+    this.defaultNsIdMode = NameServiceStateIdMode.valueOf(
+        conf.get(RBFConfigKeys.DFS_ROUTER_NAMESERVICE_STATE_ID_MODE,
+            RBFConfigKeys.DFS_ROUTER_NAMESERVICE_STATE_ID_MODE_DEFAULT));
   }
 
   @Override
@@ -1847,7 +1859,27 @@ public class RouterClientProtocol implements ClientProtocol {
 
   @Override
   public void msync() throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
+    if (defaultNsIdMode.isTransmission()) {
+      Set<FederationNamespaceInfo> nss = getMsyncNames();
+      if (CollectionUtils.isNotEmpty(nss)) {
+        RemoteMethod method = new RemoteMethod("msync");
+        rpcClient.invokeConcurrent(nss, method);
+      }
+    }
+  }
+
+  private Set<FederationNamespaceInfo> getMsyncNames() throws IOException {
+    Server.Call call = Server.getCurCall().get();
+    assert call != null;
+    UniqueCallID suid = new UniqueCallID(call.getClientId(), call.getCallId());
+    FederatedNamespaceIds ids = RouterStateIdCache.get(suid);
+    if (ids != null) {
+      Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+      return nss.stream().filter(ns -> ids.contains(ns.getNameserviceId()))
+          .collect(Collectors.toSet());
+    }
+    return null;
   }
 
   @Override

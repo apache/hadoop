@@ -83,6 +83,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.ipc.NameServiceStateIdMode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -175,7 +176,7 @@ public final class FederationTestUtils {
     GenericTestUtils.waitFor(() -> {
       try {
         List<? extends FederationNamenodeContext> namenodes =
-            resolver.getNamenodesForNameserviceId(nsId);
+            resolver.getNamenodesForNameserviceId(nsId, false);
         if (namenodes != null) {
           for (FederationNamenodeContext namenode : namenodes) {
             // Check if this is the Namenode we are checking
@@ -207,7 +208,7 @@ public final class FederationTestUtils {
     GenericTestUtils.waitFor(() -> {
       try {
         List<? extends FederationNamenodeContext> nns =
-            resolver.getNamenodesForNameserviceId(nsId);
+            resolver.getNamenodesForNameserviceId(nsId, false);
         for (FederationNamenodeContext nn : nns) {
           if (nn.getState().equals(state)) {
             return true;
@@ -377,14 +378,14 @@ public final class FederationTestUtils {
       final RouterRpcServer server) throws IOException {
     RouterRpcClient rpcClient = server.getRPCClient();
     ConnectionManager connectionManager =
-        new ConnectionManager(server.getConfig());
+        new ConnectionManager(server.getConfig(), NameServiceStateIdMode.DISABLE);
     ConnectionManager spyConnectionManager = spy(connectionManager);
     doAnswer(invocation -> {
       LOG.info("Simulating connectionManager throw IOException {}",
           invocation.getMock());
       throw new IOException("Simulate connectionManager throw IOException");
     }).when(spyConnectionManager).getConnection(
-        any(UserGroupInformation.class), any(String.class), any(Class.class));
+        any(UserGroupInformation.class), any(String.class), any(Class.class), any(String.class));
 
     Whitebox.setInternalState(rpcClient, "connectionManager",
         spyConnectionManager);

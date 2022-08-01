@@ -781,4 +781,24 @@
       (delete the source path directly) and skip (skip both trash and deletion).
     </description>
   </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.mode</name>
+    <value>ROUTER</value>
+    <description>
+      Observer read Mode in router.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.auto-msync-period</name>
+    <value>0</value>
+    <description>Observer auto msync period</description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.cache.state.id.timeout</name>
+    <value>600000</value>
+    <description>how long the cache key be alive in TRANSMISSION mode</description>
+  </property>
 </configuration>

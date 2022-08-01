@@ -25,7 +25,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
@@ -48,7 +50,7 @@ class GlobalStateIdContext implements AlignmentContext {
    * RPC request will wait in the call queue before the Observer catches up
    * with its state id.
    */
-  private static final long ESTIMATED_TRANSACTIONS_PER_SECOND = 10000L;
+  private final long estimatedTxnsPerSecond;
 
   /**
    * The client wait time on an RPC request is composed of
@@ -56,7 +58,7 @@ class GlobalStateIdContext implements AlignmentContext {
    * This is an expected fraction of the total wait time spent on
    * server execution.
    */
-  private static final float ESTIMATED_SERVER_TIME_MULTIPLIER = 0.8f;
+  private final float estimatedServerTimeMultiplier;
 
   private final FSNamesystem namesystem;
   private final HashSet<String> coordinatedMethods;
@@ -65,8 +67,13 @@ class GlobalStateIdContext implements AlignmentContext {
    * Server side constructor.
    * @param namesystem server side state provider
    */
-  GlobalStateIdContext(FSNamesystem namesystem) {
+  GlobalStateIdContext(FSNamesystem namesystem, Configuration conf) {
     this.namesystem = namesystem;
+    this.estimatedTxnsPerSecond = conf.getLong(DFSConfigKeys.DFS_ESTIMATED_TXNS_PER_SECOND_KEY,
+        DFSConfigKeys.DFS_ESTIMATED_TXNS_PER_SECOND_DEFAULT);
+    this.estimatedServerTimeMultiplier = conf
+        .getFloat(DFSConfigKeys.DFS_ESTIMATED_SERVER_TIME_MULTIPLIER_KEY,
+            DFSConfigKeys.DFS_ESTIMATED_SERVER_TIME_MULTIPLIER_DEFAULT);
     this.coordinatedMethods = new HashSet<>();
     // For now, only ClientProtocol methods can be coordinated, so only checking
     // against ClientProtocol.
@@ -125,8 +132,11 @@ class GlobalStateIdContext implements AlignmentContext {
    * @throws RetriableException if Observer is too far behind.
    */
   @Override
-  public long receiveRequestState(RpcRequestHeaderProto header,
-      long clientWaitTime) throws IOException {
+  public long receiveRequestState(RpcRequestHeaderProto header, long clientWaitTime,
+                                  boolean isCoordinatedCall) throws IOException {
+    if (!isCoordinatedCall) {
+      return -1;
+    }
     if (!header.hasStateId() &&
         HAServiceState.OBSERVER.equals(namesystem.getState())) {
       // This could happen if client configured with non-observer proxy provider
@@ -151,11 +161,9 @@ class GlobalStateIdContext implements AlignmentContext {
           clientStateId, serverStateId);
       return serverStateId;
     }
-    if (HAServiceState.OBSERVER.equals(namesystem.getState()) &&
-        clientStateId - serverStateId >
-        ESTIMATED_TRANSACTIONS_PER_SECOND
-            * TimeUnit.MILLISECONDS.toSeconds(clientWaitTime)
-            * ESTIMATED_SERVER_TIME_MULTIPLIER) {
+    if (HAServiceState.OBSERVER.equals(namesystem.getState()) && clientStateId - serverStateId >
+        estimatedTxnsPerSecond * TimeUnit.MILLISECONDS.toSeconds(clientWaitTime) *
+            estimatedServerTimeMultiplier) {
       throw new RetriableException(
           "Observer Node is too far behind: serverStateId = "
               + serverStateId + " clientStateId = " + clientStateId);

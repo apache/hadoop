@@ -537,4 +537,8 @@ public interface HdfsClientConfigKeys {
     String  FAILOVER_SLEEPTIME_MAX_KEY = PREFIX + "failover.sleep.max.millis";
     int     FAILOVER_SLEEPTIME_MAX_DEFAULT =  15000;
   }
+
+  public static final String DFS_CLIENT_NAMESERVICE_STATE_ID_MODE =
+      "dfs.client.nameservice-state-id.mode";
+  public static final String DFS_CLIENT_NAMESERVICE_STATE_ID_MODE_DEFAULT = "DISABLE";
 }

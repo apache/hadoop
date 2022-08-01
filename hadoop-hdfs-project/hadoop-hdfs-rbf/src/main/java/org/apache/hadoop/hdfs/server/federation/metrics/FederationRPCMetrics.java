@@ -21,6 +21,7 @@ import static org.apache.hadoop.metrics2.impl.MsInfo.ProcessName;
 import static org.apache.hadoop.metrics2.impl.MsInfo.SessionId;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -49,6 +50,10 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   private MutableRate proxy;
   @Metric("Number of operations the Router proxied to a Namenode")
   private MutableCounterLong proxyOp;
+  @Metric("Number of operations the Router proxied to a Active Namenode")
+  private MutableCounterLong activeProxyOp;
+  @Metric("Number of operations the Router proxied to a Observer Namenode")
+  private MutableCounterLong observerProxyOp;
 
   @Metric("Number of operations to hit a standby NN")
   private MutableCounterLong proxyOpFailureStandby;
@@ -257,8 +262,13 @@ public class FederationRPCMetrics implements FederationRPCMBean {
    * the Namenode until it replied.
    * @param time Proxy time of an operation in nanoseconds.
    */
-  public void addProxyTime(long time) {
+  public void addProxyTime(long time, FederationNamenodeServiceState state) {
     proxy.add(time);
+    if (FederationNamenodeServiceState.ACTIVE == state) {
+      activeProxyOp.incr();
+    } else if (FederationNamenodeServiceState.OBSERVER == state) {
+      observerProxyOp.incr();
+    }
     proxyOp.incr();
   }
 
@@ -270,6 +280,16 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   @Override
   public long getProxyOps() {
     return proxyOp.value();
+  }
+
+  @Override
+  public long getActiveProxyOps() {
+    return activeProxyOp.value();
+  }
+
+  @Override
+  public long getObserverProxyOps() {
+    return observerProxyOp.value();
   }
 
   /**

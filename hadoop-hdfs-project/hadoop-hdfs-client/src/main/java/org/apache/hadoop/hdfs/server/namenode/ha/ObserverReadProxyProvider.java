@@ -41,9 +41,11 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.NameServiceStateIdMode;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.util.Time;
@@ -74,7 +76,7 @@ public class ObserverReadProxyProvider<T>
       ObserverReadProxyProvider.class);
 
   /** Configuration key for {@link #autoMsyncPeriodMs}. */
-  static final String AUTO_MSYNC_PERIOD_KEY_PREFIX =
+  public static final String AUTO_MSYNC_PERIOD_KEY_PREFIX =
       HdfsClientConfigKeys.Failover.PREFIX + "observer.auto-msync-period";
   /** Auto-msync disabled by default. */
   static final long AUTO_MSYNC_PERIOD_DEFAULT = -1;
@@ -83,7 +85,7 @@ public class ObserverReadProxyProvider<T>
   private final AlignmentContext alignmentContext;
 
   /** Configuration key for {@link #observerProbeRetryPeriodMs}. */
-  static final String OBSERVER_PROBE_RETRY_PERIOD_KEY =
+  public static final String OBSERVER_PROBE_RETRY_PERIOD_KEY =
       HdfsClientConfigKeys.Failover.PREFIX + "observer.probe.retry.period";
   /** Observer probe retry period default to 10 min. */
   static final long OBSERVER_PROBE_RETRY_PERIOD_DEFAULT = 60 * 10 * 1000;
@@ -177,7 +179,10 @@ public class ObserverReadProxyProvider<T>
       AbstractNNFailoverProxyProvider<T> failoverProxy) {
     super(conf, uri, xface, factory);
     this.failoverProxy = failoverProxy;
-    this.alignmentContext = new ClientGSIContext();
+    NameServiceStateIdMode mode = RpcClientUtil.toStateIdMode(
+        conf.get(HdfsClientConfigKeys.DFS_CLIENT_NAMESERVICE_STATE_ID_MODE,
+            HdfsClientConfigKeys.DFS_CLIENT_NAMESERVICE_STATE_ID_MODE_DEFAULT));
+    this.alignmentContext = new ClientGSIContext(mode);
     factory.setAlignmentContext(alignmentContext);
     this.lastObserverProbeTime = 0;
 

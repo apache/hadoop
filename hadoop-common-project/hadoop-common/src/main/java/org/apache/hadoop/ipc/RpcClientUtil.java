@@ -30,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureRequestProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureResponseProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolSignatureProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.NameserviceStateIdContextProto.NameServiceStateIdModeProto;
 import org.apache.hadoop.net.NetUtils;
 
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
@@ -237,5 +239,30 @@ public class RpcClientUtil {
     }
     return fullName.substring(secondLastPeriod + 1, lastPeriod) + "#" +
         fullName.substring(lastPeriod + 1);
+  }
+
+  public static NameServiceStateIdMode toStateIdMode(String mode) {
+    return NameServiceStateIdMode.valueOf(mode.toUpperCase());
+  }
+
+  public static NameServiceStateIdMode toStateIdMode(RpcRequestHeaderProto proto) {
+    if (proto.hasNameserviceStateIdsContext()) {
+      return NameServiceStateIdMode.valueOf(proto.getNameserviceStateIdsContext().getMode().name());
+    }
+    return null;
+  }
+
+  public static NameServiceStateIdModeProto toNameServiceStateIdModeProto(
+      NameServiceStateIdMode mode) {
+    switch(mode) {
+    case DISABLE:
+      return NameServiceStateIdModeProto.DISABLE;
+    case TRANSMISSION:
+      return NameServiceStateIdModeProto.TRANSMISSION;
+    case PROXY:
+      return NameServiceStateIdModeProto.PROXY;
+    default:
+      return null;
+    }
   }
 }

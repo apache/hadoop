@@ -1640,6 +1640,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.state.context.enabled";
   public static final boolean DFS_NAMENODE_STATE_CONTEXT_ENABLED_DEFAULT = false;
 
+  public static final String DFS_ESTIMATED_TXNS_PER_SECOND_KEY = "dfs.estimated.txns.per.second";
+  public static final long DFS_ESTIMATED_TXNS_PER_SECOND_DEFAULT = 10000L;
+
+  public static final String DFS_ESTIMATED_SERVER_TIME_MULTIPLIER_KEY =
+      "dfs.estimated.server.time.multiplier";
+  public static final float DFS_ESTIMATED_SERVER_TIME_MULTIPLIER_DEFAULT = 0.8f;
+
   /**
    * whether to protect the subdirectories of directories which
    * set on fs.protected.directories.

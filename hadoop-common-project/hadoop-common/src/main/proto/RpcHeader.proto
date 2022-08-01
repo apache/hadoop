@@ -74,6 +74,21 @@ message RPCCallerContextProto {
   optional bytes signature = 2;
 }
 
+message NameserviceStateIdContextProto {
+  enum NameServiceStateIdModeProto {
+    DISABLE           = 0;          // NameserviceStateIdContextProto will be ignored.
+    TRANSMISSION      = 1;          // NameserviceStateIdContextProto will transparent transmission by router.
+    PROXY             = 2;          // State id is proxy by router, NameserviceStateIdContextProto will be ignore.
+  }
+  required NameServiceStateIdModeProto mode = 1 [default = DISABLE];
+  repeated NameserviceStateIdProto nameserviceStateIds = 2;  // Last seen state IDs for multiple nameservices.
+}
+
+message NameserviceStateIdProto {
+  required string nsId = 1;
+  required int64 stateId = 2;
+}
+
 message RpcRequestHeaderProto { // the header for the RpcRequest
   enum OperationProto {
     RPC_FINAL_PACKET        = 0; // The final RPC Packet
@@ -91,6 +106,7 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   optional RPCTraceInfoProto traceInfo = 6; // tracing info
   optional RPCCallerContextProto callerContext = 7; // call context
   optional int64 stateId = 8; // The last seen Global State ID
+  optional NameserviceStateIdContextProto nameserviceStateIdsContext = 9;
 }
 
 
@@ -157,6 +173,7 @@ message RpcResponseHeaderProto {
   optional bytes clientId = 7; // Globally unique client ID
   optional sint32 retryCount = 8 [default = -1];
   optional int64 stateId = 9; // The last written Global State ID
+  optional NameserviceStateIdContextProto nameserviceStateIdsContext = 10;
 }
 
 message RpcSaslProto {
