@@ -47,7 +47,7 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_ABORTED = "stream_aborted";
 
   /**
-   * Bytes read from an input stream in read() calls.
+   * Bytes read from an input stream in read()/readVectored() calls.
    * Does not include bytes read and then discarded in seek/close etc.
    * These are the bytes returned to the caller.
    * Value: {@value}.
@@ -109,6 +109,34 @@ public final class StreamStatisticNames {
    */
   public static final String STREAM_READ_OPERATIONS =
       "stream_read_operations";
+
+  /**
+   * Count of readVectored() operations in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_VECTORED_OPERATIONS =
+          "stream_read_vectored_operations";
+
+  /**
+   * Count of bytes discarded during readVectored() operation
+   * in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_VECTORED_READ_BYTES_DISCARDED =
+          "stream_read_vectored_read_bytes_discarded";
+
+  /**
+   * Count of incoming file ranges during readVectored() operation.
+   * Value: {@value}
+   */
+  public static final String STREAM_READ_VECTORED_INCOMING_RANGES =
+          "stream_read_vectored_incoming_ranges";
+  /**
+   * Count of combined file ranges during readVectored() operation.
+   * Value: {@value}
+   */
+  public static final String STREAM_READ_VECTORED_COMBINED_RANGES =
+          "stream_read_vectored_combined_ranges";
 
   /**
    * Count of incomplete read() operations in an input stream,

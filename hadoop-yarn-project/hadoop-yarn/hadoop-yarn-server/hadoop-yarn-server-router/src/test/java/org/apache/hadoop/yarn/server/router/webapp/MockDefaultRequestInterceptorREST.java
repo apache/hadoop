@@ -20,8 +20,13 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.http.HttpServletRequest;
@@ -31,6 +36,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -39,9 +46,13 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
@@ -52,6 +63,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -278,5 +291,76 @@ public class MockDefaultRequestInterceptorREST
     containers.add(container);
 
     return containers;
+  }
+
+  @Override
+  public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr) throws IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    NodeLabelsInfo cpuNode = new NodeLabelsInfo(Collections.singleton("CPU"));
+    NodeLabelsInfo gpuNode = new NodeLabelsInfo(Collections.singleton("GPU"));
+
+    HashMap<String, NodeLabelsInfo> nodeLabels = new HashMap<>();
+    nodeLabels.put("node1", cpuNode);
+    nodeLabels.put("node2", gpuNode);
+    return new NodeToLabelsInfo(nodeLabels);
+  }
+
+  @Override
+  public LabelsToNodesInfo getLabelsToNodes(Set<String> labels) throws IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    Map<NodeLabelInfo, NodeIDsInfo> labelsToNodes = new HashMap<>();
+
+    NodeLabel labelX = NodeLabel.newInstance("x", false);
+    NodeLabelInfo nodeLabelInfoX = new NodeLabelInfo(labelX);
+    ArrayList<String> hostsX = new ArrayList<>(Arrays.asList("host1A", "host1B"));
+    Resource resourceX = Resource.newInstance(20*1024, 10);
+    NodeIDsInfo nodeIDsInfoX = new NodeIDsInfo(hostsX, resourceX);
+    labelsToNodes.put(nodeLabelInfoX, nodeIDsInfoX);
+
+    NodeLabel labelY = NodeLabel.newInstance("y", false);
+    NodeLabelInfo nodeLabelInfoY = new NodeLabelInfo(labelY);
+    ArrayList<String> hostsY = new ArrayList<>(Arrays.asList("host2A", "host2B"));
+    Resource resourceY = Resource.newInstance(40*1024, 20);
+    NodeIDsInfo nodeIDsInfoY = new NodeIDsInfo(hostsY, resourceY);
+    labelsToNodes.put(nodeLabelInfoY, nodeIDsInfoY);
+
+    NodeLabel labelZ = NodeLabel.newInstance("z", false);
+    NodeLabelInfo nodeLabelInfoZ = new NodeLabelInfo(labelZ);
+    ArrayList<String> hostsZ = new ArrayList<>(Arrays.asList("host3A", "host3B"));
+    Resource resourceZ = Resource.newInstance(80*1024, 40);
+    NodeIDsInfo nodeIDsInfoZ = new NodeIDsInfo(hostsZ, resourceZ);
+    labelsToNodes.put(nodeLabelInfoZ, nodeIDsInfoZ);
+
+    return new LabelsToNodesInfo(labelsToNodes);
+  }
+
+  @Override
+  public NodeLabelsInfo getClusterNodeLabels(HttpServletRequest hsr) throws IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    NodeLabel labelCpu = NodeLabel.newInstance("cpu", false);
+    NodeLabel labelGpu = NodeLabel.newInstance("gpu", false);
+    return new NodeLabelsInfo(Sets.newHashSet(labelCpu, labelGpu));
+  }
+
+  @Override
+  public NodeLabelsInfo getLabelsOnNode(HttpServletRequest hsr, String nodeId) throws IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    if (StringUtils.equalsIgnoreCase(nodeId, "node1")) {
+      NodeLabel labelCpu = NodeLabel.newInstance("x", false);
+      NodeLabel labelGpu = NodeLabel.newInstance("y", false);
+      return new NodeLabelsInfo(Sets.newHashSet(labelCpu, labelGpu));
+    } else {
+      return null;
+    }
   }
 }

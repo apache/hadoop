@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -69,6 +70,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
@@ -1455,6 +1457,35 @@ public final class S3ATestUtils {
           .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
           + s3AEncryptionMethod.getMethod()
           + " in " + secrets);
+    }
+  }
+
+
+  /**
+   * Get the input stream statistics of an input stream.
+   * Raises an exception if the inner stream is not an S3A input stream
+   * @param in wrapper
+   * @return the statistics for the inner stream
+   */
+  public static S3AInputStreamStatistics getInputStreamStatistics(
+          FSDataInputStream in) {
+    return getS3AInputStream(in).getS3AStreamStatistics();
+  }
+
+  /**
+   * Get the inner stream of an input stream.
+   * Raises an exception if the inner stream is not an S3A input stream
+   * @param in wrapper
+   * @return the inner stream
+   * @throws AssertionError if the inner stream is of the wrong type
+   */
+  public static S3AInputStream getS3AInputStream(
+          FSDataInputStream in) {
+    InputStream inner = in.getWrappedStream();
+    if (inner instanceof S3AInputStream) {
+      return (S3AInputStream) inner;
+    } else {
+      throw new AssertionError("Not an S3AInputStream: " + inner);
     }
   }
 }
