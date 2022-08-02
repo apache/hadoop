@@ -3630,7 +3630,7 @@ public class DataNode extends ReconfigurableBase
   public String getVolumeInfo() {
     if (data == null) {
       LOG.debug("Storage not yet initialized.");
-      return JSON.toString(new HashMap<String, Object>());
+      return "";
     }
     return JSON.toString(data.getVolumeInfoMap());
   }
