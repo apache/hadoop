@@ -1203,4 +1203,9 @@ public final class Constants {
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
   public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+
+  /**
+   * Prefix of auth classes in AWS SDK V1.
+   */
+  public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
 }

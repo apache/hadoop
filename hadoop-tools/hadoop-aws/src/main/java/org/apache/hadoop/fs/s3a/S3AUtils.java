@@ -637,6 +637,11 @@ public final class S3AUtils {
     AWSCredentialProviderList providers = new AWSCredentialProviderList();
     for (Class<?> aClass : awsClasses) {
 
+      if (aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
+        LOG.warn("Directly referencing AWS SDK V1 credential provider {}. AWS SDK V1 credential "
+            + "providers will be removed once S3A is upgraded to SDK V2", aClass.getName());
+      }
+
       if (forbidden.contains(aClass)) {
         throw new IOException(E_FORBIDDEN_AWS_PROVIDER
             + " in option " + key + ": " + aClass);

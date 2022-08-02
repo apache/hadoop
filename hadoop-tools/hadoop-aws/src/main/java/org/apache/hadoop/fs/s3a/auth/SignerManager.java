@@ -70,6 +70,10 @@ public class SignerManager implements Closeable {
       return;
     }
 
+    LOG.warn(
+        "The signer interface has changed in AWS SDK V2, custom signers will need to be updated "
+            + "once S3A is upgraded to SDK V2");
+
     for (String customSigner : customSigners) {
       String[] parts = customSigner.split(":");
       if (!(parts.length == 1 || parts.length == 2 || parts.length == 3)) {
