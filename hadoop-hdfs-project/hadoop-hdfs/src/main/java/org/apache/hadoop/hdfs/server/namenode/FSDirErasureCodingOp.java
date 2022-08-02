@@ -76,9 +76,7 @@ final class FSDirErasureCodingOp {
         .getEnabledPolicyByName(ecPolicyName);
     if (ecPolicy == null) {
       final String sysPolicies =
-          Arrays.asList(
-              fsn.getErasureCodingPolicyManager().getEnabledPolicies())
-              .stream()
+          Arrays.stream(fsn.getErasureCodingPolicyManager().getEnabledPolicies())
               .map(ErasureCodingPolicy::getName)
               .collect(Collectors.joining(", "));
       final String message = String.format("Policy '%s' does not match any " +

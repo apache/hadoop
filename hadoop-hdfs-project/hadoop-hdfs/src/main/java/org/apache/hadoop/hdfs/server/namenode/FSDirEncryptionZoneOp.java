@@ -21,7 +21,6 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XA
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.security.PrivilegedExceptionAction;
 import java.util.AbstractMap;
 import java.util.concurrent.ExecutorService;
 import java.util.EnumSet;
@@ -94,14 +93,11 @@ final class FSDirEncryptionZoneOp {
     // KMS does not need configuration to allow non-hdfs user GENERATE_EEK
     // operation.
     EncryptedKeyVersion edek = SecurityUtil.doAsLoginUser(
-        new PrivilegedExceptionAction<EncryptedKeyVersion>() {
-          @Override
-          public EncryptedKeyVersion run() throws IOException {
-            try {
-              return fsd.getProvider().generateEncryptedKey(ezKeyName);
-            } catch (GeneralSecurityException e) {
-              throw new IOException(e);
-            }
+        () -> {
+          try {
+            return fsd.getProvider().generateEncryptedKey(ezKeyName);
+          } catch (GeneralSecurityException e) {
+            throw new IOException(e);
           }
         });
     long generateEDEKTime = monotonicNow() - generateEDEKStartTime;

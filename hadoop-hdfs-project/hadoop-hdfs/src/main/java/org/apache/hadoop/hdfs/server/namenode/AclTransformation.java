@@ -246,19 +246,14 @@ final class AclTransformation {
    * All access ACL entries sort ahead of all default ACL entries.
    */
   static final Comparator<AclEntry> ACL_ENTRY_COMPARATOR =
-    new Comparator<AclEntry>() {
-      @Override
-      public int compare(AclEntry entry1, AclEntry entry2) {
-        return ComparisonChain.start()
+      (entry1, entry2) -> ComparisonChain.start()
           .compare(entry1.getScope(), entry2.getScope(),
-            Ordering.explicit(ACCESS, DEFAULT))
+              Ordering.explicit(ACCESS, DEFAULT))
           .compare(entry1.getType(), entry2.getType(),
-            Ordering.explicit(USER, GROUP, MASK, OTHER))
+              Ordering.explicit(USER, GROUP, MASK, OTHER))
           .compare(entry1.getName(), entry2.getName(),
-            Ordering.natural().nullsFirst())
+              Ordering.natural().nullsFirst())
           .result();
-      }
-    };
 
   /**
    * Builds the final list of ACL entries to return by trimming, sorting and

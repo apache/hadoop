@@ -34,8 +34,6 @@ import java.nio.channels.FileChannel;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -377,18 +375,15 @@ public final class FSImageFormatProtobuf {
 
       ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
           .getSectionsList());
-      Collections.sort(sections, new Comparator<FileSummary.Section>() {
-        @Override
-        public int compare(FileSummary.Section s1, FileSummary.Section s2) {
-          SectionName n1 = SectionName.fromString(s1.getName());
-          SectionName n2 = SectionName.fromString(s2.getName());
-          if (n1 == null) {
-            return n2 == null ? 0 : -1;
-          } else if (n2 == null) {
-            return -1;
-          } else {
-            return n1.ordinal() - n2.ordinal();
-          }
+      sections.sort((s1, s2) -> {
+        SectionName n1 = SectionName.fromString(s1.getName());
+        SectionName n2 = SectionName.fromString(s2.getName());
+        if (n1 == null) {
+          return n2 == null ? 0 : -1;
+        } else if (n2 == null) {
+          return -1;
+        } else {
+          return n1.ordinal() - n2.ordinal();
         }
       });
 
