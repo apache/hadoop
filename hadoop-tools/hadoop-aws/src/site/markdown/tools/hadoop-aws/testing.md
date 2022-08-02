@@ -1156,6 +1156,14 @@ We need a run through of the CLI to see if there have been changes there
 which cause problems, especially whether new log messages have surfaced,
 or whether some packaging change breaks that CLI.
 
+It is always interesting when doing this to enable IOStatistics reporting
+```xml
+<property>
+  <name>fs.iostatistics.logging.level</name>
+  <value>info</value>
+</property>
+```
+
 From the root of the project, create a command line release `mvn package -Pdist -DskipTests -Dmaven.javadoc.skip=true  -DskipShade`;
 
 1. Change into the `hadoop-dist/target/hadoop-x.y.z-SNAPSHOT` dir.
@@ -1275,6 +1283,21 @@ bin/hadoop s3guard markers -clean -verbose $BUCKET
 bin/hadoop s3guard markers -audit -verbose $BUCKET
 
 # ---------------------------------------------------
+# Copy to from local
+# ---------------------------------------------------
+
+time bin/hadoop fs -copyFromLocal -t 10  share/hadoop/tools/lib/*aws*jar $BUCKET/
+
+# expect the iostatistics object_list_request value to be O(directories)
+bin/hadoop fs -ls -R $BUCKET/
+
+# expect the iostatistics object_list_request and op_get_content_summary values to be 1
+bin/hadoop fs -du -h -s $BUCKET/
+
+mkdir tmp
+time bin/hadoop fs -copyToLocal -t 10  $BUCKET/\*aws\* tmp
+
+# ---------------------------------------------------
 # S3 Select on Landsat
 # ---------------------------------------------------
 
@@ -1282,6 +1305,17 @@ export LANDSATGZ=s3a://landsat-pds/scene_list.gz
 
 bin/hadoop s3guard select -header use -compression gzip $LANDSATGZ \
  "SELECT s.entityId,s.cloudCover FROM S3OBJECT s WHERE s.cloudCover < '0.0' LIMIT 100"
+
+
+# ---------------------------------------------------
+# Cloudstore
+# check out and build https://github.com/steveloughran/cloudstore
+# then for these tests, set CLOUDSTORE env var to point to the JAR
+# ---------------------------------------------------
+
+bin/hadoop jar $CLOUDSTORE storediag $BUCKET
+
+time bin/hadoop jar $CLOUDSTORE bandwidth 64M $BUCKET/testfile
 
 ```
 
