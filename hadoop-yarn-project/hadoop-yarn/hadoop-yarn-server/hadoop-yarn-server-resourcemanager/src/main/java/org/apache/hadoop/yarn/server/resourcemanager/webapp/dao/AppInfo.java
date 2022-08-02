@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -38,6 +39,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -69,6 +72,8 @@ public class AppInfo {
   protected ApplicationId applicationId;
   @XmlTransient
   private String schemePrefix;
+  @XmlTransient
+  private SubClusterIdInfo subClusterId;
 
   // these are ok for any user to see
   protected String id;
@@ -82,6 +87,7 @@ public class AppInfo {
   protected String trackingUrl;
   protected String diagnostics;
   protected long clusterId;
+  private String rmClusterId;
   protected String applicationType;
   protected String applicationTags = "";
   protected int priority;
@@ -182,6 +188,16 @@ public class AppInfo {
       this.finalStatus = app.getFinalApplicationStatus();
       this.clusterId = ResourceManager.getClusterTimeStamp();
       if (hasAccess) {
+        if(rm != null && rm.getConfig() != null) {
+          try {
+            subClusterId = new SubClusterIdInfo(
+                (YarnConfiguration.getClusterId(rm.getConfig())));
+            rmClusterId =
+                this.getSubClusterIdInfo().toId().toString();
+          } catch (HadoopIllegalArgumentException e) {
+            rmClusterId = null;
+          }
+        }
         this.startedTime = app.getStartTime();
         this.launchTime = app.getLaunchTime();
         this.finishedTime = app.getFinishTime();
@@ -452,6 +468,14 @@ public class AppInfo {
 
   public long getClusterId() {
     return this.clusterId;
+  }
+
+  public SubClusterIdInfo getSubClusterIdInfo() {
+    return this.subClusterId;
+  }
+
+  public String getRmClusterId() {
+    return this.rmClusterId;
   }
 
   public String getApplicationType() {

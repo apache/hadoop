@@ -103,6 +103,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
       conf.setClass(YarnConfiguration.RM_SCHEDULER, scheduler,
           ResourceScheduler.class);
+      conf.set(YarnConfiguration.RM_CLUSTER_ID, "subCluster1");
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
@@ -1825,6 +1826,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     }
     assertEquals("incorrect number of elements", expectedNumberOfElements,
         info.length());
+    assertEquals("rmClusterId is incorrect", "subCluster1",
+        info.getString("rmClusterId"));
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
         info.getString("name"), info.getString("applicationType"),
         info.getString("queue"), info.getInt("priority"),
