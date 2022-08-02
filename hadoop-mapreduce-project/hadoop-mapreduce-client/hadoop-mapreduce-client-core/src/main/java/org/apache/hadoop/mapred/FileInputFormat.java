@@ -172,35 +172,6 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
   }
 
   /**
-   * Add files in the input path recursively into the results.
-   * @param result
-   *          The List to store all files.
-   * @param fs
-   *          The FileSystem.
-   * @param path
-   *          The input path.
-   * @param inputFilter
-   *          The input filter that can be used to filter files/dirs. 
-   * @throws IOException
-   */
-  protected void addInputPathRecursively(List<FileStatus> result,
-      FileSystem fs, Path path, PathFilter inputFilter) 
-      throws IOException {
-    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(path);
-    while (iter.hasNext()) {
-      LocatedFileStatus stat = iter.next();
-      if (inputFilter.accept(stat.getPath())) {
-        if (stat.isDirectory()) {
-          addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
-        } else {
-          result.add(org.apache.hadoop.mapreduce.lib.input.
-              FileInputFormat.shrinkStatus(stat));
-        }
-      }
-    }
-  }
-  
-  /**
    * List input directories.
    * Subclasses may override to, e.g., select only files matching a regular
    * expression. 
@@ -283,17 +254,11 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         for (FileStatus globStat: matches) {
           if (globStat.isDirectory()) {
             RemoteIterator<LocatedFileStatus> iter =
-                fs.listLocatedStatus(globStat.getPath());
+                fs.listLocatedStatus(globStat.getPath(), recursive);
             while (iter.hasNext()) {
               LocatedFileStatus stat = iter.next();
               if (inputFilter.accept(stat.getPath())) {
-                if (recursive && stat.isDirectory()) {
-                  addInputPathRecursively(result, fs, stat.getPath(),
-                      inputFilter);
-                } else {
-                  result.add(org.apache.hadoop.mapreduce.lib.input.
-                      FileInputFormat.shrinkStatus(stat));
-                }
+                result.add(stat);
               }
             }
           } else {

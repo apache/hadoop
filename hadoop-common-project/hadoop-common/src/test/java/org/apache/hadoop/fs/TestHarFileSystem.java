@@ -120,10 +120,14 @@ public class TestHarFileSystem {
     void setQuota(Path f, long namespaceQuota, long storagespaceQuota);
     void setQuotaByStorageType(Path f, StorageType type, long quota);
     public FsStatus getStatus();
+    public FileStatus[] listStatus(Path f, boolean recursive);
     public FileStatus[] listStatus(Path f, PathFilter filter);
     public FileStatus[] listStatusBatch(Path f, byte[] token);
+    public FileStatus[] listStatus(Path f, PathFilter filter, boolean recursive);
     public FileStatus[] listStatus(Path[] files);
+    public FileStatus[] listStatus(Path[] files, boolean recursive);
     public FileStatus[] listStatus(Path[] files, PathFilter filter);
+    public FileStatus[] listStatus(Path[] files, PathFilter filter, boolean recursive);
     public FileStatus[] globStatus(Path pathPattern);
     public FileStatus[] globStatus(Path pathPattern, PathFilter filter);
 
@@ -131,8 +135,10 @@ public class TestHarFileSystem {
         boolean isRecursive);
 
     public Iterator<LocatedFileStatus> listLocatedStatus(Path f);
-    public Iterator<LocatedFileStatus> listLocatedStatus(Path f,
-        PathFilter filter);
+    public Iterator<LocatedFileStatus> listLocatedStatus(Path f, boolean recursive);
+    public Iterator<LocatedFileStatus> listLocatedStatus(Path f, PathFilter filter);
+    public Iterator<LocatedFileStatus> listLocatedStatus(Path f, PathFilter filter,
+        boolean recursive);
     public Iterator<FileStatus> listStatusIterator(Path f);
     public void copyFromLocalFile(Path src, Path dst);
     public void moveFromLocalFile(Path[] srcs, Path dst);

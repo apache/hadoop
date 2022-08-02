@@ -390,7 +390,7 @@ public class Globber {
      * not all Hadoop filesystems have this property.  So we sort here in order
      * to get consistent results.  See HADOOP-10798 for details.
      */
-    FileStatus ret[] = results.toArray(new FileStatus[0]);
+    FileStatus ret[] = results.toArray(new FileStatus[results.size()]);
     Arrays.sort(ret);
     return ret;
   }

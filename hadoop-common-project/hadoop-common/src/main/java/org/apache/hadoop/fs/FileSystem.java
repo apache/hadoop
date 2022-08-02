@@ -42,7 +42,6 @@ import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.Stack;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
@@ -2034,15 +2033,55 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * List the statuses of the files/directories in the given path if the path is
+   * a directory.
+   *
+   * @param f
+   *          given path
+   * @param recursive
+   *          whether to return recursive paths from directories in the given
+   *          path f. if false, only immediate children (files/directories) to f
+   *          are returned
+   * @return the statuses of the files/directories in the given patch
+   * @throws FileNotFoundException
+   *           when the path does not exist; IOException see specific
+   *           implementation
+   */
+  public FileStatus[] listStatus(Path f, boolean recursive) throws FileNotFoundException,
+      IOException {
+    FileStatus[] fileStatuses = listStatus(f);
+    if (fileStatuses == null || !recursive) {
+      return fileStatuses;
+    }
+    List<FileStatus> result = new ArrayList<FileStatus>();
+    for (FileStatus fileStatus : fileStatuses) {
+      if (fileStatus.isDirectory()) {
+        FileStatus[] childStatuses = listStatus(fileStatus.getPath(), true);
+        if (childStatuses != null) {
+          for (FileStatus child : childStatuses) {
+            result.add(child);
+          }
+        }
+      } else {
+        result.add(fileStatus);
+      }
+    }
+    return result.toArray(new FileStatus[result.size()]);
+  }
+
+  /*
    * Filter files/directories in the given path using the user-supplied path
    * filter. Results are added to the given array <code>results</code>.
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException see specific implementation
    */
   private void listStatus(ArrayList<FileStatus> results, Path f,
-      PathFilter filter) throws FileNotFoundException, IOException {
-    FileStatus listing[] = listStatus(f);
-    Preconditions.checkNotNull(listing, "listStatus should not return NULL");
+      PathFilter filter, boolean recursive) throws FileNotFoundException, IOException {
+    FileStatus listing[] = listStatus(f, recursive);
+    if (listing == null) {
+      throw new IOException("Error accessing " + f);
+    }
+
     for (int i = 0; i < listing.length; i++) {
       if (filter.accept(listing[i].getPath())) {
         results.add(listing[i]);
@@ -2084,8 +2123,13 @@ public abstract class FileSystem extends Configured
    */
   public FileStatus[] listStatus(Path f, PathFilter filter)
                                    throws FileNotFoundException, IOException {
+    return listStatus(f, filter, false);
+  }
+
+  public FileStatus[] listStatus(Path f, PathFilter filter, boolean recursive)
+      throws FileNotFoundException, IOException {
     ArrayList<FileStatus> results = new ArrayList<>();
-    listStatus(results, f, filter);
+    listStatus(results, f, filter, recursive);
     return results.toArray(new FileStatus[results.size()]);
   }
 
@@ -2108,6 +2152,11 @@ public abstract class FileSystem extends Configured
     return listStatus(files, DEFAULT_FILTER);
   }
 
+  public FileStatus[] listStatus(Path[] files, boolean recursive)
+      throws FileNotFoundException, IOException {
+    return listStatus(files, DEFAULT_FILTER, recursive);
+  }
+
   /**
    * Filter files/directories in the given list of paths using user-supplied
    * path filter.
@@ -2126,9 +2175,14 @@ public abstract class FileSystem extends Configured
    */
   public FileStatus[] listStatus(Path[] files, PathFilter filter)
       throws FileNotFoundException, IOException {
+    return  listStatus(files, filter, false);
+  }
+
+  public FileStatus[] listStatus(Path[] files, PathFilter filter, boolean recursive)
+      throws FileNotFoundException, IOException {
     ArrayList<FileStatus> results = new ArrayList<FileStatus>();
     for (int i = 0; i < files.length; i++) {
-      listStatus(results, files[i], filter);
+      listStatus(results, files[i], filter, recursive);
     }
     return results.toArray(new FileStatus[results.size()]);
   }
@@ -2229,6 +2283,11 @@ public abstract class FileSystem extends Configured
     return listLocatedStatus(f, DEFAULT_FILTER);
   }
 
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
+      boolean recursive) throws FileNotFoundException, IOException {
+    return listLocatedStatus(f, DEFAULT_FILTER, recursive);
+  }
+
   /**
    * List a directory.
    * The returned results include its block location if it is a file
@@ -2241,10 +2300,15 @@ public abstract class FileSystem extends Configured
    * @throws IOException if any I/O error occurred
    */
   protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
-      final PathFilter filter)
+      final PathFilter filter) throws FileNotFoundException, IOException {
+    return listLocatedStatus(f, filter, false);
+  }
+
+  protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
+      final PathFilter filter, final boolean recursive)
   throws FileNotFoundException, IOException {
     return new RemoteIterator<LocatedFileStatus>() {
-      private final FileStatus[] stats = listStatus(f, filter);
+      private final FileStatus[] stats = listStatus(f, filter, recursive);
       private int i = 0;
 
       @Override
@@ -2350,40 +2414,23 @@ public abstract class FileSystem extends Configured
       final Path f, final boolean recursive)
   throws FileNotFoundException, IOException {
     return new RemoteIterator<LocatedFileStatus>() {
-      private Stack<RemoteIterator<LocatedFileStatus>> itors = new Stack<>();
       private RemoteIterator<LocatedFileStatus> curItor =
-        listLocatedStatus(f);
+        listLocatedStatus(f, recursive);
       private LocatedFileStatus curFile;
 
       @Override
       public boolean hasNext() throws IOException {
         while (curFile == null) {
           if (curItor.hasNext()) {
-            handleFileStat(curItor.next());
-          } else if (!itors.empty()) {
-            curItor = itors.pop();
+            LocatedFileStatus next = curItor.next();
+            if (next.isFile()) {
+              curFile = next;
+            }
           } else {
             return false;
           }
         }
         return true;
-      }
-
-      /**
-       * Process the input stat.
-       * If it is a file, return the file stat.
-       * If it is a directory, traverse the directory if recursive is true;
-       * ignore it if recursive is false.
-       * @param stat input status
-       * @throws IOException if any IO error occurs
-       */
-      private void handleFileStat(LocatedFileStatus stat) throws IOException {
-        if (stat.isFile()) { // file
-          curFile = stat;
-        } else if (recursive) { // directory
-          itors.push(curItor);
-          curItor = listLocatedStatus(stat.getPath());
-        }
       }
 
       @Override

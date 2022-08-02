@@ -230,7 +230,19 @@ public class TestFileInputFormat {
     @Override
     public FileStatus[] listStatus(Path f) throws FileNotFoundException,
         IOException {
+      return listStatus(f, false);
+    }
+
+    @Override
+    public FileStatus[] listStatus(Path f, boolean recursive) throws FileNotFoundException,
+        IOException {
       if (f.toString().equals("test:/a1")) {
+        if (recursive) {
+          return new FileStatus[] {
+              new FileStatus(10, false, 1, 150, 150, new Path("test:/a1/file1")),
+              new FileStatus(10, false, 1, 150, 150, new Path("test:/a1/a2/file2")),
+              new FileStatus(10, false, 1, 151, 150, new Path("test:/a1/a2/file3")) };
+        }
         return new FileStatus[] {
             new FileStatus(0, true, 1, 150, 150, new Path("test:/a1/a2")),
             new FileStatus(10, false, 1, 150, 150, new Path("test:/a1/file1")) };
@@ -268,9 +280,9 @@ public class TestFileInputFormat {
 
     @Override
     protected RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f,
-        PathFilter filter) throws FileNotFoundException, IOException {
+        PathFilter filter, boolean recursive) throws FileNotFoundException, IOException {
       ++numListLocatedStatusCalls;
-      return super.listLocatedStatus(f, filter);
+      return super.listLocatedStatus(f, filter, recursive);
     }
   }
 }

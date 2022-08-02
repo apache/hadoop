@@ -101,10 +101,14 @@ public class TestFilterFileSystem {
     public short getReplication(Path src);
     public void processDeleteOnExit();
     public FsStatus getStatus();
-    public FileStatus[] listStatus(Path f, PathFilter filter);
+    FileStatus[] listStatus(Path f, boolean recursive);
+    FileStatus[] listStatus(Path f, PathFilter filter);
     public FileStatus[] listStatusBatch(Path f, byte[] token);
+    FileStatus[] listStatus(Path f, PathFilter filter, boolean recursive);
     public FileStatus[] listStatus(Path[] files);
+    FileStatus[] listStatus(Path[] files, boolean recursive);
     public FileStatus[] listStatus(Path[] files, PathFilter filter);
+    FileStatus[] listStatus(Path[] files, PathFilter filter, boolean recursive);
     public FileStatus[] globStatus(Path pathPattern);
     public FileStatus[] globStatus(Path pathPattern, PathFilter filter);
     public Iterator<LocatedFileStatus> listFiles(Path path,
@@ -143,6 +147,9 @@ public class TestFilterFileSystem {
     of the filter such as checksums.
      */
     MultipartUploaderBuilder createMultipartUploader(Path basePath);
+
+    Iterator<LocatedFileStatus> listLocatedStatus(Path f,
+        PathFilter filter, boolean recursive);
   }
 
   @Test

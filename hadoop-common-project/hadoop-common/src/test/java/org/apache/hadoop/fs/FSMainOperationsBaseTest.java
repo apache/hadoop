@@ -631,6 +631,55 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   }
 
   @Test
+  public void testListStatusWithRecursiveFlag() throws Exception {
+    Path testDir = getTestRootPath(fSys, "test");
+    Path inDir1 = new Path(testDir, "dir1");
+    Path inFile1 = new Path(testDir, "file1");
+
+    Path dir1File1 = new Path(inDir1, "file1");
+    Path dir1File2 = new Path(inDir1, "file2");
+    Path inDir1Dir2 = new Path(inDir1, "dir2");
+
+    Path dir1Dir2File1 = new Path(inDir1Dir2, "file1");
+    Path dir1Dir2File2 = new Path(inDir1Dir2, "file2");
+    Path inDir1Dir2Dir3 = new Path(inDir1Dir2, "dir3");
+
+    fSys.mkdirs(inDir1);
+    fSys.mkdirs(inDir1Dir2);
+    fSys.mkdirs(inDir1Dir2Dir3);
+
+    fSys.createNewFile(inFile1);
+    fSys.createNewFile(dir1File1);
+    fSys.createNewFile(dir1File2);
+    fSys.createNewFile(dir1Dir2File1);
+    fSys.createNewFile(dir1Dir2File2);
+
+    // test listStatus that returns an array
+    FileStatus[] paths = fSys.listStatus(testDir, false);
+    Assert.assertEquals(2, paths.length);
+    Assert.assertTrue(containsTestRootPath(inFile1, paths));
+    Assert.assertTrue(containsTestRootPath(inDir1, paths));
+
+    paths = fSys.listStatus(inDir1, false);
+    Assert.assertEquals(3, paths.length);
+    Assert.assertTrue(containsTestRootPath(dir1File1, paths));
+    Assert.assertTrue(containsTestRootPath(dir1File2, paths));
+    Assert.assertTrue(containsTestRootPath(inDir1Dir2, paths));
+
+    paths = fSys.listStatus(testDir, true);
+    Assert.assertEquals(5, paths.length);
+    Assert.assertTrue(containsTestRootPath(inFile1, paths));
+    Assert.assertTrue(containsTestRootPath(dir1File1, paths));
+    Assert.assertTrue(containsTestRootPath(dir1File2, paths));
+    Assert.assertTrue(containsTestRootPath(dir1Dir2File1, paths));
+    Assert.assertTrue(containsTestRootPath(dir1Dir2File2, paths));
+
+    paths = fSys.listStatus(inDir1Dir2Dir3, true);
+    Assert.assertEquals(0, paths.length);
+
+  }
+
+  @Test
   public void testGlobStatusThrowsExceptionForUnreadableDir()
       throws Exception {
     Path testRootDir = getTestRootPath(fSys, "test/hadoop/dir");
