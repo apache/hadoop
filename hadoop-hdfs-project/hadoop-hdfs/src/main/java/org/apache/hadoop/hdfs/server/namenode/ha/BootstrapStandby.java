@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -118,14 +117,11 @@ public class BootstrapStandby implements Tool, Configurable {
     SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
         DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, myAddr.getHostName());
 
-    return SecurityUtil.doAsLoginUserOrFatal(new PrivilegedAction<Integer>() {
-      @Override
-      public Integer run() {
-        try {
-          return doRun();
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+    return SecurityUtil.doAsLoginUserOrFatal(() -> {
+      try {
+        return doRun();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
     });
   }

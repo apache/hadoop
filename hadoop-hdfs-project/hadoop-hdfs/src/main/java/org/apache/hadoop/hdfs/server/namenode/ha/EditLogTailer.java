@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.Collections;
@@ -299,28 +298,23 @@ public class EditLogTailer {
     // Important to do tailing as the login user, in case the shared
     // edits storage is implemented by a JournalManager that depends
     // on security credentials to access the logs (eg QuorumJournalManager).
-    SecurityUtil.doAsLoginUser(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        long editsTailed = 0;
-        // Fully tail the journal to the end
-        do {
-          long startTime = timer.monotonicNow();
-          try {
-            NameNode.getNameNodeMetrics().addEditLogTailInterval(
-                startTime - lastLoadTimeMs);
-            // It is already under the name system lock and the checkpointer
-            // thread is already stopped. No need to acquire any other lock.
-            editsTailed = doTailEdits();
-          } catch (InterruptedException e) {
-            throw new IOException(e);
-          } finally {
-            NameNode.getNameNodeMetrics().addEditLogTailTime(
-                timer.monotonicNow() - startTime);
-          }
-        } while(editsTailed > 0);
-        return null;
-      }
+    SecurityUtil.doAsLoginUser((PrivilegedExceptionAction<Void>) () -> {
+      long editsTailed = 0;
+      // Fully tail the journal to the end
+      do {
+        long startTime = timer.monotonicNow();
+        try {
+          NameNode.getNameNodeMetrics().addEditLogTailInterval(startTime - lastLoadTimeMs);
+          // It is already under the name system lock and the checkpointer
+          // thread is already stopped. No need to acquire any other lock.
+          editsTailed = doTailEdits();
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        } finally {
+          NameNode.getNameNodeMetrics().addEditLogTailTime(timer.monotonicNow() - startTime);
+        }
+      } while(editsTailed > 0);
+      return null;
     });
   }
   
@@ -482,14 +476,10 @@ public class EditLogTailer {
     
     @Override
     public void run() {
-      SecurityUtil.doAsLoginUserOrFatal(
-          new PrivilegedAction<Object>() {
-          @Override
-          public Object run() {
-            doWork();
-            return null;
-          }
-        });
+      SecurityUtil.doAsLoginUserOrFatal(() -> {
+        doWork();
+        return null;
+      });
     }
     
     private void doWork() {

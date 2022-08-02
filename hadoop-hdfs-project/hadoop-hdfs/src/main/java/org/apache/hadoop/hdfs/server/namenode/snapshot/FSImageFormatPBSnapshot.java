@@ -28,8 +28,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -320,12 +318,7 @@ public class FSImageFormatPBSnapshot {
         addToDeletedList(deletedRef, dir);
       }
 
-      Collections.sort(dlist, new Comparator<INode>() {
-        @Override
-        public int compare(INode n1, INode n2) {
-          return n1.compareTo(n2.getLocalNameBytes());
-        }
-      });
+      dlist.sort((n1, n2) -> n1.compareTo(n2.getLocalNameBytes()));
       return dlist;
     }
 

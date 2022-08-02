@@ -155,25 +155,20 @@ public interface NamespaceVisitor {
   /** @return the children as {@link Element}s. */
   static Iterable<Element> getChildren(INodeDirectory dir, int snapshot) {
     final Iterator<INode> i = dir.getChildrenList(snapshot).iterator();
-    return new Iterable<Element>() {
+    return () -> new Iterator<Element>() {
       @Override
-      public Iterator<Element> iterator() {
-        return new Iterator<Element>() {
-          @Override
-          public boolean hasNext() {
-            return i.hasNext();
-          }
+      public boolean hasNext() {
+        return i.hasNext();
+      }
 
-          @Override
-          public Element next() {
-            return new Element(snapshot, i.next());
-          }
+      @Override
+      public Element next() {
+        return new Element(snapshot, i.next());
+      }
 
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException();
-          }
-        };
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
       }
     };
   }
@@ -183,41 +178,35 @@ public interface NamespaceVisitor {
       DirectorySnapshottableFeature snapshottable) {
     final Iterator<DirectoryWithSnapshotFeature.DirectoryDiff> i
         = snapshottable.getDiffs().iterator();
-    return new Iterable<Element>() {
+    return () -> new Iterator<Element>() {
+      private DirectoryWithSnapshotFeature.DirectoryDiff next = findNext();
+
+      private DirectoryWithSnapshotFeature.DirectoryDiff findNext() {
+        while (i.hasNext()) {
+          final DirectoryWithSnapshotFeature.DirectoryDiff diff = i.next();
+          if (diff.isSnapshotRoot()) {
+            return diff;
+          }
+        }
+        return null;
+      }
+
       @Override
-      public Iterator<Element> iterator() {
-        return new Iterator<Element>() {
-          private DirectoryWithSnapshotFeature.DirectoryDiff next = findNext();
+      public boolean hasNext() {
+        return next != null;
+      }
 
-          private DirectoryWithSnapshotFeature.DirectoryDiff findNext() {
-            for(; i.hasNext();) {
-              final DirectoryWithSnapshotFeature.DirectoryDiff diff = i.next();
-              if (diff.isSnapshotRoot()) {
-                return diff;
-              }
-            }
-            return null;
-          }
+      @Override
+      public Element next() {
+        final int id = next.getSnapshotId();
+        final Element e = new Element(id, snapshottable.getSnapshotById(id).getRoot());
+        next = findNext();
+        return e;
+      }
 
-          @Override
-          public boolean hasNext() {
-            return next != null;
-          }
-
-          @Override
-          public Element next() {
-            final int id = next.getSnapshotId();
-            final Element e = new Element(id,
-                snapshottable.getSnapshotById(id).getRoot());
-            next = findNext();
-            return e;
-          }
-
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException();
-          }
-        };
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
       }
     };
   }

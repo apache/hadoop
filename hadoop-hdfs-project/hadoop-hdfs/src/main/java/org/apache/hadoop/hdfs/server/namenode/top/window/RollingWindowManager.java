@@ -201,7 +201,7 @@ public class RollingWindowManager {
 
     @Override
     public boolean addAll(Collection<? extends User> users) {
-      users.forEach(user -> add(user));
+      users.forEach(this::add);
       return true;
     }
 

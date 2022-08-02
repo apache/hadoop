@@ -601,43 +601,37 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       out.print(", #snapshot=");
       out.println(n);
 
-      INodeDirectory.dumpTreeRecursively(out, prefix,
-          new Iterable<SnapshotAndINode>() {
+      INodeDirectory.dumpTreeRecursively(out, prefix, () -> new Iterator<SnapshotAndINode>() {
+        final private Iterator<DirectoryDiff> diffIterator = getDiffs().iterator();
+        private DirectoryDiff next = findNext();
+
+        private DirectoryDiff findNext() {
+          while (diffIterator.hasNext()) {
+            final DirectoryDiff diff = diffIterator.next();
+            if (diff.isSnapshotRoot()) {
+              return diff;
+            }
+          }
+          return null;
+        }
+
         @Override
-        public Iterator<SnapshotAndINode> iterator() {
-          return new Iterator<SnapshotAndINode>() {
-            final Iterator<DirectoryDiff> i = getDiffs().iterator();
-            private DirectoryDiff next = findNext();
+        public boolean hasNext() {
+          return next != null;
+        }
 
-            private DirectoryDiff findNext() {
-              for(; i.hasNext(); ) {
-                final DirectoryDiff diff = i.next();
-                if (diff.isSnapshotRoot()) {
-                  return diff;
-                }
-              }
-              return null;
-            }
+        @Override
+        public SnapshotAndINode next() {
+          final SnapshotAndINode pair = new SnapshotAndINode(next
+              .getSnapshotId(), getSnapshotById(next.getSnapshotId())
+              .getRoot());
+          next = findNext();
+          return pair;
+        }
 
-            @Override
-            public boolean hasNext() {
-              return next != null;
-            }
-
-            @Override
-            public SnapshotAndINode next() {
-              final SnapshotAndINode pair = new SnapshotAndINode(next
-                  .getSnapshotId(), getSnapshotById(next.getSnapshotId())
-                  .getRoot());
-              next = findNext();
-              return pair;
-            }
-
-            @Override
-            public void remove() {
-              throw new UnsupportedOperationException();
-            }
-          };
+        @Override
+        public void remove() {
+          throw new UnsupportedOperationException();
         }
       });
     }
