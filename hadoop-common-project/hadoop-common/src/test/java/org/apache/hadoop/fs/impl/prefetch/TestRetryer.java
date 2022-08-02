@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -34,30 +35,27 @@ public class TestRetryer extends AbstractHadoopTestBase {
     new Retryer(10, 50, 500);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'perRetryDelay' must be a positive integer",
-        () -> new Retryer(-1, 50, 500));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'perRetryDelay' must be a positive integer",
-        () -> new Retryer(0, 50, 500));
+         () -> new Retryer(-1, 50, 500));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
+        "'perRetryDelay' must be a positive integer",
+         () -> new Retryer(0, 50, 500));
+
+    intercept(IllegalArgumentException.class,
         "'maxDelay' (5) must be greater than 'perRetryDelay' (10)",
-        () -> new Retryer(10, 5, 500));
+         () -> new Retryer(10, 5, 500));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'statusUpdateInterval' must be a positive integer",
-        () -> new Retryer(10, 50, -1));
+         () -> new Retryer(10, 50, -1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'statusUpdateInterval' must be a positive integer",
-        () -> new Retryer(10, 50, 0));
+         () -> new Retryer(10, 50, 0));
+
   }
 
   @Test

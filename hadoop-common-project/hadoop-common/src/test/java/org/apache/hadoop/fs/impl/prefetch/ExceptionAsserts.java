@@ -47,7 +47,6 @@ public final class ExceptionAsserts {
       String partialMessage,
       LambdaTestUtils.VoidCallable code) throws Exception {
 
-
     intercept(expectedExceptionClass, partialMessage, code);
 
   }
@@ -55,6 +54,8 @@ public final class ExceptionAsserts {
   public static <E extends Exception> void assertThrows(
       Class<E> expectedExceptionClass,
       LambdaTestUtils.VoidCallable code) throws Exception {
-    assertThrows(expectedExceptionClass, null, code);
+
+    intercept(expectedExceptionClass, code);
+
   }
 }

@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
 
 /**
  * Provides functionality necessary for caching blocks of data read from FileSystem.
@@ -52,7 +53,7 @@ public class SingleFilePerBlockCache implements BlockCache {
   private static final Logger LOG = LoggerFactory.getLogger(SingleFilePerBlockCache.class);
 
   // Blocks stored in this cache.
-  private Map<Integer, Entry> blocks = new ConcurrentHashMap<>();
+  private final Map<Integer, Entry> blocks = new ConcurrentHashMap<>();
 
   // Number of times a block was read from this cache.
   // Used for determining cache utilization factor.
@@ -64,7 +65,7 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   // Cache entry.
   // Each block is stored as a separate file.
-  private static class Entry {
+  private static final class Entry {
     private final int blockNumber;
     private final Path path;
     private final int size;
@@ -81,7 +82,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     public String toString() {
       return String.format(
           "([%03d] %s: size = %d, checksum = %d)",
-          this.blockNumber, this.path, this.size, this.checksum);
+          blockNumber, path, size, checksum);
     }
   }
 
@@ -99,7 +100,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   @Override
   public boolean containsBlock(int blockNumber) {
-    return this.blocks.containsKey(blockNumber);
+    return blocks.containsKey(blockNumber);
   }
 
   /**
@@ -107,7 +108,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   @Override
   public Iterable<Integer> blocks() {
-    return Collections.unmodifiableList(new ArrayList<Integer>(this.blocks.keySet()));
+    return Collections.unmodifiableList(new ArrayList<>(blocks.keySet()));
   }
 
   /**
@@ -115,7 +116,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   @Override
   public int size() {
-    return this.blocks.size();
+    return blocks.size();
   }
 
   /**
@@ -125,15 +126,15 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   @Override
   public void get(int blockNumber, ByteBuffer buffer) throws IOException {
-    if (this.closed) {
+    if (closed) {
       return;
     }
 
-    Validate.checkNotNull(buffer, "buffer");
+    checkNotNull(buffer, "buffer");
 
-    Entry entry = this.getEntry(blockNumber);
+    Entry entry = getEntry(blockNumber);
     buffer.clear();
-    this.readFile(entry.path, buffer);
+    readFile(entry.path, buffer);
     buffer.rewind();
 
     validateEntry(entry, buffer);
@@ -154,11 +155,11 @@ public class SingleFilePerBlockCache implements BlockCache {
   private Entry getEntry(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    Entry entry = this.blocks.get(blockNumber);
+    Entry entry = blocks.get(blockNumber);
     if (entry == null) {
       throw new IllegalStateException(String.format("block %d not found in cache", blockNumber));
     }
-    this.numGets++;
+    numGets++;
     return entry;
   }
 
@@ -170,14 +171,14 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   @Override
   public void put(int blockNumber, ByteBuffer buffer) throws IOException {
-    if (this.closed) {
+    if (closed) {
       return;
     }
 
-    Validate.checkNotNull(buffer, "buffer");
+    checkNotNull(buffer, "buffer");
 
-    if (this.blocks.containsKey(blockNumber)) {
-      Entry entry = this.blocks.get(blockNumber);
+    if (blocks.containsKey(blockNumber)) {
+      Entry entry = blocks.get(blockNumber);
       validateEntry(entry, buffer);
       return;
     }
@@ -193,11 +194,11 @@ public class SingleFilePerBlockCache implements BlockCache {
       throw new IllegalStateException(message);
     }
 
-    this.writeFile(blockFilePath, buffer);
-    this.prefetchingStatistics.blockAddedToFileCache();
+    writeFile(blockFilePath, buffer);
+    prefetchingStatistics.blockAddedToFileCache();
     long checksum = BufferData.getChecksum(buffer);
     Entry entry = new Entry(blockNumber, blockFilePath, buffer.limit(), checksum);
-    this.blocks.put(blockNumber, entry);
+    blocks.put(blockNumber, entry);
   }
 
   private static final Set<? extends OpenOption> CREATE_OPTIONS =
@@ -220,19 +221,19 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   @Override
   public void close() throws IOException {
-    if (this.closed) {
+    if (closed) {
       return;
     }
 
-    this.closed = true;
+    closed = true;
 
-    LOG.info(this.getStats());
+    LOG.info(getStats());
     int numFilesDeleted = 0;
 
-    for (Entry entry : this.blocks.values()) {
+    for (Entry entry : blocks.values()) {
       try {
         Files.deleteIfExists(entry.path);
-        this.prefetchingStatistics.blockRemovedFromFileCache();
+        prefetchingStatistics.blockRemovedFromFileCache();
         numFilesDeleted++;
       } catch (IOException e) {
         // Ignore while closing so that we can delete as many cache files as possible.
@@ -250,7 +251,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     sb.append("stats: ");
     sb.append(getStats());
     sb.append(", blocks:[");
-    sb.append(this.getIntList(this.blocks()));
+    sb.append(getIntList(blocks()));
     sb.append("]");
     return sb.toString();
   }
@@ -310,7 +311,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     StringBuilder sb = new StringBuilder();
     sb.append(String.format(
         "#entries = %d, #gets = %d",
-        this.blocks.size(), this.numGets));
+        blocks.size(), numGets));
     return sb.toString();
   }
 

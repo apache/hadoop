@@ -21,6 +21,12 @@ package org.apache.hadoop.fs.impl.prefetch;
 
 import java.nio.ByteBuffer;
 
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNegative;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkPositiveInteger;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkState;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkWithinRange;
+
 /**
  * Provides functionality related to tracking the position within a file.
  *
@@ -31,7 +37,7 @@ import java.nio.ByteBuffer;
  * A file is made up of equal sized blocks. The last block may be of a smaller size.
  * The size of a buffer associated with this file is typically the same as block size.
  */
-public class FilePosition {
+public final class FilePosition {
   // Holds block based information about a file.
   private BlockData blockData;
 
@@ -62,11 +68,11 @@ public class FilePosition {
    * @throws IllegalArgumentException if blockSize is zero or negative.
    */
   public FilePosition(long fileSize, int blockSize) {
-    Validate.checkNotNegative(fileSize, "fileSize");
+    checkNotNegative(fileSize, "fileSize");
     if (fileSize == 0) {
-      Validate.checkNotNegative(blockSize, "blockSize");
+      checkNotNegative(blockSize, "blockSize");
     } else {
-      Validate.checkPositiveInteger(blockSize, "blockSize");
+      checkPositiveInteger(blockSize, "blockSize");
     }
 
     this.blockData = new BlockData(fileSize, blockSize);
@@ -88,32 +94,32 @@ public class FilePosition {
    * @throws IllegalArgumentException if readOffset is outside the range [startOffset, buffer end].
    */
   public void setData(BufferData bufferData, long startOffset, long readOffset) {
-    Validate.checkNotNull(bufferData, "bufferData");
-    Validate.checkNotNegative(startOffset, "startOffset");
-    Validate.checkNotNegative(readOffset, "readOffset");
-    Validate.checkWithinRange(
+    checkNotNull(bufferData, "bufferData");
+    checkNotNegative(startOffset, "startOffset");
+    checkNotNegative(readOffset, "readOffset");
+    checkWithinRange(
         readOffset,
         "readOffset",
         startOffset,
         startOffset + bufferData.getBuffer().limit() - 1);
 
-    this.data = bufferData;
-    this.buffer = bufferData.getBuffer().duplicate();
-    this.bufferStartOffset = startOffset;
-    this.readStartOffset = readOffset;
-    this.setAbsolute(readOffset);
+    data = bufferData;
+    buffer = bufferData.getBuffer().duplicate();
+    bufferStartOffset = startOffset;
+    readStartOffset = readOffset;
+    setAbsolute(readOffset);
 
-    this.resetReadStats();
+    resetReadStats();
   }
 
   public ByteBuffer buffer() {
     throwIfInvalidBuffer();
-    return this.buffer;
+    return buffer;
   }
 
   public BufferData data() {
     throwIfInvalidBuffer();
-    return this.data;
+    return data;
   }
 
   /**
@@ -123,7 +129,7 @@ public class FilePosition {
    */
   public long absolute() {
     throwIfInvalidBuffer();
-    return this.bufferStartOffset + this.relative();
+    return bufferStartOffset + relative();
   }
 
   /**
@@ -134,9 +140,9 @@ public class FilePosition {
    * @return true if the given current position was updated, false otherwise.
    */
   public boolean setAbsolute(long pos) {
-    if (this.isValid() && this.isWithinCurrentBuffer(pos)) {
-      int relativePos = (int) (pos - this.bufferStartOffset);
-      this.buffer.position(relativePos);
+    if (isValid() && isWithinCurrentBuffer(pos)) {
+      int relativePos = (int) (pos - bufferStartOffset);
+      buffer.position(relativePos);
       return true;
     } else {
       return false;
@@ -150,7 +156,7 @@ public class FilePosition {
    */
   public int relative() {
     throwIfInvalidBuffer();
-    return this.buffer.position();
+    return buffer.position();
   }
 
   /**
@@ -161,8 +167,8 @@ public class FilePosition {
    */
   public boolean isWithinCurrentBuffer(long pos) {
     throwIfInvalidBuffer();
-    long bufferEndOffset = this.bufferStartOffset + this.buffer.limit() - 1;
-    return (pos >= this.bufferStartOffset) && (pos <= bufferEndOffset);
+    long bufferEndOffset = bufferStartOffset + buffer.limit() - 1;
+    return (pos >= bufferStartOffset) && (pos <= bufferEndOffset);
   }
 
   /**
@@ -172,7 +178,7 @@ public class FilePosition {
    */
   public int blockNumber() {
     throwIfInvalidBuffer();
-    return this.blockData.getBlockNumber(this.bufferStartOffset);
+    return blockData.getBlockNumber(bufferStartOffset);
   }
 
   /**
@@ -181,7 +187,7 @@ public class FilePosition {
    * @return true if the current block is the last block in this file, false otherwise.
    */
   public boolean isLastBlock() {
-    return this.blockData.isLastBlock(this.blockNumber());
+    return blockData.isLastBlock(blockNumber());
   }
 
   /**
@@ -190,16 +196,16 @@ public class FilePosition {
    * @return true if the current position is valid, false otherwise.
    */
   public boolean isValid() {
-    return this.buffer != null;
+    return buffer != null;
   }
 
   /**
    * Marks the current position as invalid.
    */
   public void invalidate() {
-    this.buffer = null;
-    this.bufferStartOffset = -1;
-    this.data = null;
+    buffer = null;
+    bufferStartOffset = -1;
+    data = null;
   }
 
   /**
@@ -209,7 +215,7 @@ public class FilePosition {
    */
   public long bufferStartOffset() {
     throwIfInvalidBuffer();
-    return this.bufferStartOffset;
+    return bufferStartOffset;
   }
 
   /**
@@ -219,30 +225,30 @@ public class FilePosition {
    */
   public boolean bufferFullyRead() {
     throwIfInvalidBuffer();
-    return (this.bufferStartOffset == this.readStartOffset)
-        && (this.relative() == this.buffer.limit())
-        && (this.numBytesRead == this.buffer.limit());
+    return (bufferStartOffset == readStartOffset)
+        && (relative() == buffer.limit())
+        && (numBytesRead == buffer.limit());
   }
 
   public void incrementBytesRead(int n) {
-    this.numBytesRead += n;
+    numBytesRead += n;
     if (n == 1) {
-      this.numSingleByteReads++;
+      numSingleByteReads++;
     } else {
-      this.numBufferReads++;
+      numBufferReads++;
     }
   }
 
   public int numBytesRead() {
-    return this.numBytesRead;
+    return numBytesRead;
   }
 
   public int numSingleByteReads() {
-    return this.numSingleByteReads;
+    return numSingleByteReads;
   }
 
   public int numBufferReads() {
-    return this.numBufferReads;
+    return numBufferReads;
   }
 
   private void resetReadStats() {
@@ -253,21 +259,21 @@ public class FilePosition {
 
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    if (this.buffer == null) {
+    if (buffer == null) {
       sb.append("currentBuffer = null");
     } else {
-      int pos = this.buffer.position();
+      int pos = buffer.position();
       int val;
-      if (pos >= this.buffer.limit()) {
+      if (pos >= buffer.limit()) {
         val = -1;
       } else {
-        val = this.buffer.get(pos);
+        val = buffer.get(pos);
       }
       String currentBufferState =
-          String.format("%d at pos: %d, lim: %d", val, pos, this.buffer.limit());
+          String.format("%d at pos: %d, lim: %d", val, pos, buffer.limit());
       sb.append(String.format(
           "block: %d, pos: %d (CBuf: %s)%n",
-          this.blockNumber(), this.absolute(),
+          blockNumber(), absolute(),
           currentBufferState));
       sb.append("\n");
     }
@@ -275,8 +281,6 @@ public class FilePosition {
   }
 
   private void throwIfInvalidBuffer() {
-    if (!this.isValid()) {
-      Validate.checkState(buffer != null, "'buffer' must not be null");
-    }
+    checkState(buffer != null, "'buffer' must not be null");
   }
 }

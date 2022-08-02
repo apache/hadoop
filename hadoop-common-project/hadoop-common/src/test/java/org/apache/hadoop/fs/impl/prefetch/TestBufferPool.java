@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -42,44 +43,37 @@ public class TestBufferPool extends AbstractHadoopTestBase {
     BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, statistics);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'size' must be a positive integer",
-        () -> new BufferPool(0, 10, statistics));
+         () -> new BufferPool(0, 10, statistics));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'size' must be a positive integer",
-        () -> new BufferPool(-1, 10, statistics));
+         () -> new BufferPool(-1, 10, statistics));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'bufferSize' must be a positive integer",
-        () -> new BufferPool(10, 0, statistics));
+         () -> new BufferPool(10, 0, statistics));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'bufferSize' must be a positive integer",
-        () -> new BufferPool(1, -10, statistics));
+         () -> new BufferPool(1, -10, statistics));
 
-    ExceptionAsserts.assertThrows(
-        NullPointerException.class,
-        () -> new BufferPool(1, 10, null));
+    intercept(NullPointerException.class,
+         () -> new BufferPool(1, 10, null));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
-        () -> pool.acquire(-1));
+         () -> pool.acquire(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
-        () -> pool.tryAcquire(-1));
+         () -> pool.tryAcquire(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'data' must not be null",
+    intercept(IllegalArgumentException.class, "'data' must not be null",
         () -> pool.release((BufferData) null));
+
   }
 
   @Test
@@ -138,10 +132,10 @@ public class TestBufferPool extends AbstractHadoopTestBase {
     data.updateState(stateBeforeRelease, BufferData.State.BLANK);
 
     if (expectThrow) {
-      ExceptionAsserts.assertThrows(
-          IllegalArgumentException.class,
-          "Unable to release buffer",
+
+      intercept(IllegalArgumentException.class, "Unable to release buffer",
           () -> pool.release(data));
+
     } else {
       pool.release(data);
     }

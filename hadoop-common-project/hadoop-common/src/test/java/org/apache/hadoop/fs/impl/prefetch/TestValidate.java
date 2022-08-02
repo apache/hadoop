@@ -28,6 +28,25 @@ import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.EMPTY_BYTE_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.EMPTY_INT_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.EMPTY_LIST;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.EMPTY_LONG_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.EMPTY_SHORT_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NON_EMPTY_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NON_EMPTY_BYTE_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NON_EMPTY_INT_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NON_EMPTY_LONG_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NON_EMPTY_SHORT_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NULL_BYTE_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NULL_INT_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NULL_LIST;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NULL_LONG_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.NULL_SHORT_ARRAY;
+import static org.apache.hadoop.fs.impl.prefetch.SampleDataForTests.VALID_LIST;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkPositiveInteger;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+
 public class TestValidate extends AbstractHadoopTestBase {
   @Test
   public void testCheckNotNull() throws Exception {
@@ -38,10 +57,10 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkNotNull(nonNullArg, "nonNullArg");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'nullArg' must not be null",
+
+    intercept(IllegalArgumentException.class, "'nullArg' must not be null",
         () -> Validate.checkNotNull(nullArg, "nullArg"));
+
   }
 
   @Test
@@ -51,17 +70,18 @@ public class TestValidate extends AbstractHadoopTestBase {
     int negativeArg = -1;
 
     // Should not throw.
-    Validate.checkPositiveInteger(positiveArg, "positiveArg");
+    checkPositiveInteger(positiveArg, "positiveArg");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'negativeArg' must be a positive integer",
-        () -> Validate.checkPositiveInteger(negativeArg, "negativeArg"));
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+        () -> checkPositiveInteger(negativeArg, "negativeArg"));
+
+    intercept(IllegalArgumentException.class,
         "'zero' must be a positive integer",
-        () -> Validate.checkPositiveInteger(zero, "zero"));
+        () -> checkPositiveInteger(zero, "zero"));
+
   }
 
   @Test
@@ -75,10 +95,11 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkNotNegative(positiveArg, "positiveArg");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'negativeArg' must not be negative",
         () -> Validate.checkNotNegative(negativeArg, "negativeArg"));
+
   }
 
   @Test
@@ -87,10 +108,10 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkRequired(true, "arg");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'arg' is required",
+
+    intercept(IllegalArgumentException.class, "'arg' is required",
         () -> Validate.checkRequired(false, "arg"));
+
   }
 
   @Test
@@ -113,93 +134,90 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkValid(true, "arg", validValues);
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'arg' is invalid. Valid values are: foo, bar",
         () -> Validate.checkValid(false, "arg", validValues));
+
   }
 
   @Test
   public void testCheckNotNullAndNotEmpty() throws Exception {
     // Should not throw.
-    Validate.checkNotNullAndNotEmpty(SampleDataForTests.NON_EMPTY_ARRAY, "array");
-    Validate.checkNotNullAndNotEmpty(SampleDataForTests.NON_EMPTY_BYTE_ARRAY, "array");
-    Validate.checkNotNullAndNotEmpty(SampleDataForTests.NON_EMPTY_SHORT_ARRAY, "array");
-    Validate.checkNotNullAndNotEmpty(SampleDataForTests.NON_EMPTY_INT_ARRAY, "array");
-    Validate.checkNotNullAndNotEmpty(SampleDataForTests.NON_EMPTY_LONG_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(NON_EMPTY_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(NON_EMPTY_BYTE_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(NON_EMPTY_SHORT_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(NON_EMPTY_INT_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(NON_EMPTY_LONG_ARRAY, "array");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'string' must not be empty",
+
+    intercept(IllegalArgumentException.class, "'string' must not be empty",
         () -> Validate.checkNotNullAndNotEmpty("", "string"));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.NULL_ARRAY, "array"));
+    intercept(IllegalArgumentException.class, "'array' must not be null", () ->
+        Validate.checkNotNullAndNotEmpty(SampleDataForTests.NULL_ARRAY, "array"));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.EMPTY_ARRAY, "array"));
-
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.NULL_BYTE_ARRAY, "array"));
-
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.EMPTY_BYTE_ARRAY, "array"));
+    intercept(IllegalArgumentException.class,
+        "'array' must have at least one element", () ->
+            Validate.checkNotNullAndNotEmpty(SampleDataForTests.EMPTY_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.NULL_SHORT_ARRAY, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(NULL_BYTE_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.EMPTY_SHORT_ARRAY, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(EMPTY_BYTE_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.NULL_INT_ARRAY, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(NULL_SHORT_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.EMPTY_INT_ARRAY, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(EMPTY_SHORT_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.NULL_LONG_ARRAY, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(NULL_INT_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.EMPTY_LONG_ARRAY, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(EMPTY_INT_ARRAY, "array"));
+
+    ExceptionAsserts.assertThrows(
+        IllegalArgumentException.class,
+        "'array' must not be null",
+        () -> Validate.checkNotNullAndNotEmpty(NULL_LONG_ARRAY, "array"));
+
+    ExceptionAsserts.assertThrows(
+        IllegalArgumentException.class,
+        "'array' must have at least one element",
+        () -> Validate.checkNotNullAndNotEmpty(EMPTY_LONG_ARRAY, "array"));
   }
 
   @Test
   public void testCheckListNotNullAndNotEmpty() throws Exception {
     // Should not throw.
-    Validate.checkNotNullAndNotEmpty(SampleDataForTests.VALID_LIST, "list");
+    Validate.checkNotNullAndNotEmpty(VALID_LIST, "list");
 
     // Verify it throws.
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'list' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.NULL_LIST, "list"));
+        () -> Validate.checkNotNullAndNotEmpty(NULL_LIST, "list"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'list' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(SampleDataForTests.EMPTY_LIST, "list"));
+        () -> Validate.checkNotNullAndNotEmpty(EMPTY_LIST, "list"));
   }
 
   @Test
@@ -208,11 +226,9 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkNotNullAndNumberOfElements(Arrays.asList(1, 2, 3), 3, "arg");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'arg' must not be null",
-        () -> Validate.checkNotNullAndNumberOfElements(null, 3, "arg")
-    );
+
+    intercept(IllegalArgumentException.class, "'arg' must not be null",
+        () -> Validate.checkNotNullAndNumberOfElements(null, 3, "arg"));
 
     // Verify it throws.
     ExceptionAsserts.assertThrows(
@@ -228,10 +244,11 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkValuesEqual(1, "arg1", 1, "arg2");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'arg1' (1) must equal 'arg2' (2)",
         () -> Validate.checkValuesEqual(1, "arg1", 2, "arg2"));
+
   }
 
   @Test
@@ -240,10 +257,11 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkIntegerMultiple(10, "arg1", 5, "arg2");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'arg1' (10) must be an integer multiple of 'arg2' (3)",
         () -> Validate.checkIntegerMultiple(10, "arg1", 3, "arg2"));
+
   }
 
   @Test
@@ -252,10 +270,11 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkGreater(10, "arg1", 5, "arg2");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'arg1' (5) must be greater than 'arg2' (10)",
         () -> Validate.checkGreater(5, "arg1", 10, "arg2"));
+
   }
 
   @Test
@@ -264,10 +283,11 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkGreaterOrEqual(10, "arg1", 5, "arg2");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'arg1' (5) must be greater than or equal to 'arg2' (10)",
         () -> Validate.checkGreaterOrEqual(5, "arg1", 10, "arg2"));
+
   }
 
   @Test
@@ -277,15 +297,15 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkWithinRange(10.0, "arg", 5.0, 15.0);
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'arg' (5) must be within the range [10, 20]",
         () -> Validate.checkWithinRange(5, "arg", 10, 20));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'arg' (5.0) must be within the range [10.0, 20.0]",
         () -> Validate.checkWithinRange(5.0, "arg", 10.0, 20.0));
+
   }
 
   @Test
@@ -299,24 +319,19 @@ public class TestValidate extends AbstractHadoopTestBase {
     Validate.checkPathExists(tempDir, "tempDir");
 
     // Verify it throws.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'nullArg' must not be null",
+
+    intercept(IllegalArgumentException.class, "'nullArg' must not be null",
         () -> Validate.checkPathExists(null, "nullArg"));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "Path notFound (<not-found>) does not exist",
         () -> Validate.checkPathExists(notFound, "notFound"));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "must point to a directory",
+    intercept(IllegalArgumentException.class, "must point to a directory",
         () -> Validate.checkPathExistsAsDir(tempFile, "tempFile"));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "must point to a file",
+    intercept(IllegalArgumentException.class, "must point to a file",
         () -> Validate.checkPathExistsAsFile(tempDir, "tempDir"));
+
   }
 }

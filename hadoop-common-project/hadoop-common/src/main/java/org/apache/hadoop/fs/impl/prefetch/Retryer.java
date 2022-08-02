@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.fs.impl.prefetch;
 
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkGreater;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkPositiveInteger;
+
 /**
  * Provides retry related functionality.
  */
@@ -47,9 +50,9 @@ public class Retryer {
    * @throws IllegalArgumentException if statusUpdateInterval is zero or negative.
    */
   public Retryer(int perRetryDelay, int maxDelay, int statusUpdateInterval) {
-    Validate.checkPositiveInteger(perRetryDelay, "perRetryDelay");
-    Validate.checkGreater(maxDelay, "maxDelay", perRetryDelay, "perRetryDelay");
-    Validate.checkPositiveInteger(statusUpdateInterval, "statusUpdateInterval");
+    checkPositiveInteger(perRetryDelay, "perRetryDelay");
+    checkGreater(maxDelay, "maxDelay", perRetryDelay, "perRetryDelay");
+    checkPositiveInteger(statusUpdateInterval, "statusUpdateInterval");
 
     this.perRetryDelay = perRetryDelay;
     this.maxDelay = maxDelay;

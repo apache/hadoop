@@ -23,6 +23,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNegative;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
+
 /**
  * Provides read access to the underlying file one block at a time.
  *
@@ -32,7 +35,7 @@ import java.nio.ByteBuffer;
 public abstract class BlockManager implements Closeable {
 
   // Information about each block of the underlying file.
-  private BlockData blockData;
+  private final BlockData blockData;
 
   /**
    * Constructs an instance of {@code BlockManager}.
@@ -42,7 +45,7 @@ public abstract class BlockManager implements Closeable {
    * @throws IllegalArgumentException if blockData is null.
    */
   public BlockManager(BlockData blockData) {
-    Validate.checkNotNull(blockData, "blockData");
+    checkNotNull(blockData, "blockData");
 
     this.blockData = blockData;
   }
@@ -53,7 +56,7 @@ public abstract class BlockManager implements Closeable {
    * @return instance of {@code BlockData}.
    */
   public BlockData getBlockData() {
-    return this.blockData;
+    return blockData;
   }
 
   /**
@@ -70,12 +73,12 @@ public abstract class BlockManager implements Closeable {
    * @throws IllegalArgumentException if blockNumber is negative.
    */
   public BufferData get(int blockNumber) throws IOException {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
-    int size = this.blockData.getSize(blockNumber);
+    int size = blockData.getSize(blockNumber);
     ByteBuffer buffer = ByteBuffer.allocate(size);
-    long startOffset = this.blockData.getStartOffset(blockNumber);
-    this.read(buffer, startOffset, size);
+    long startOffset = blockData.getStartOffset(blockNumber);
+    read(buffer, startOffset, size);
     buffer.flip();
     return new BufferData(blockNumber, buffer);
   }
@@ -100,7 +103,7 @@ public abstract class BlockManager implements Closeable {
    * @throws IllegalArgumentException if data is null.
    */
   public void release(BufferData data) {
-    Validate.checkNotNull(data, "data");
+    checkNotNull(data, "data");
 
     // Do nothing because we allocate a new buffer each time.
   }
@@ -113,7 +116,7 @@ public abstract class BlockManager implements Closeable {
    * @throws IllegalArgumentException if blockNumber is negative.
    */
   public void requestPrefetch(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     // Do nothing because we do not support prefetches.
   }

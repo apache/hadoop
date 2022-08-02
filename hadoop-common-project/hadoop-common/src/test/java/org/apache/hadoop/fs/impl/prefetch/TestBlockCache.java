@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -44,14 +45,13 @@ public class TestBlockCache extends AbstractHadoopTestBase {
     ByteBuffer buffer = ByteBuffer.allocate(16);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'buffer' must not be null",
+    intercept(IllegalArgumentException.class, "'buffer' must not be null",
         () -> cache.put(42, null));
 
-    ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+
+    intercept(NullPointerException.class, null,
         () -> new SingleFilePerBlockCache(null));
+
   }
 
 

@@ -29,7 +29,9 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
@@ -45,35 +47,27 @@ public class TestBufferData extends AbstractHadoopTestBase {
     BufferData data = new BufferData(1, buffer);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
-        () -> new BufferData(-1, buffer));
+         () -> new BufferData(-1, buffer));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'buffer' must not be null",
-        () -> new BufferData(1, null));
+    intercept(IllegalArgumentException.class, "'buffer' must not be null",
+         () -> new BufferData(1, null));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'actionFuture' must not be null",
+    intercept(IllegalArgumentException.class, "'actionFuture' must not be null",
         () -> data.setPrefetch(null));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'actionFuture' must not be null",
+    intercept(IllegalArgumentException.class, "'actionFuture' must not be null",
         () -> data.setCaching(null));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'states' must not be null",
+    intercept(IllegalArgumentException.class, "'states' must not be null",
         () -> data.throwIfStateIncorrect((BufferData.State[]) null));
 
-    ExceptionAsserts.assertThrows(
-        IllegalStateException.class,
+    intercept(IllegalStateException.class,
         "Expected buffer state to be 'READY or CACHING' but found",
         () -> data.throwIfStateIncorrect(BufferData.State.READY, BufferData.State.CACHING));
+
   }
 
   @Test
