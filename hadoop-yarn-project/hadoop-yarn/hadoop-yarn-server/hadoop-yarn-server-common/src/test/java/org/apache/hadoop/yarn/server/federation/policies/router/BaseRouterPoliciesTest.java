@@ -122,7 +122,7 @@ public abstract class BaseRouterPoliciesTest
     FederationRouterPolicy policy = ((FederationRouterPolicy) getPolicy());
 
     LambdaTestUtils.intercept(FederationPolicyException.class,
-       "The ReservationSubmissionRequest cannot be null.",
+        "The ReservationSubmissionRequest cannot be null.",
         () -> policy.getReservationHomeSubcluster(null));
   }
 

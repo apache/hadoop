@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -99,6 +100,15 @@ public class GetSubClustersInfoResponsePBImpl
       return;
     }
     this.subClusterInfos = subClusters;
+  }
+
+  @Override
+  public void setSubClusters(Collection<SubClusterInfo> subClusters) {
+    if (subClusters == null) {
+      builder.clearSubClusterInfos();
+      return;
+    }
+    this.subClusterInfos.addAll(subClusters);
   }
 
   private void initSubClustersInfoList() {

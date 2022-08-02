@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 

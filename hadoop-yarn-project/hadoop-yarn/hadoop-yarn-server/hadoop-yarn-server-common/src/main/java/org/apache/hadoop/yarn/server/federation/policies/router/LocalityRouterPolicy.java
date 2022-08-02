@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Collections;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -109,7 +110,7 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
     }
 
     Map<SubClusterId, SubClusterInfo> activeSubClusters = getActiveSubclusters();
-    List<SubClusterId> validSubClusters = new ArrayList<>(activeSubClusters.keySet());
+    Set<SubClusterId> validSubClusters = activeSubClusters.keySet();
     FederationPolicyUtils.validateSubClusterAvailability(activeSubClusters.keySet(),
         blackListSubClusters);
 

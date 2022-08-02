@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
-import static org.junit.Assert.fail;
-
 import java.util.HashMap;
 import java.util.Map;
 

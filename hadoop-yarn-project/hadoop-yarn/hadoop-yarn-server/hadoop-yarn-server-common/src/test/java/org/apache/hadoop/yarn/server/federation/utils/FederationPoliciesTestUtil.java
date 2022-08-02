@@ -193,7 +193,7 @@ public final class FederationPoliciesTestUtil {
         activeSubClusters = new HashMap<>();
       }
       GetSubClustersInfoResponse response =
-          GetSubClustersInfoResponse.newInstance(new ArrayList<>(activeSubClusters.values()));
+          GetSubClustersInfoResponse.newInstance(activeSubClusters.values());
 
       when(fss.getSubClusters(any())).thenReturn(response);
       facade.reinitialize(fss, new Configuration());
