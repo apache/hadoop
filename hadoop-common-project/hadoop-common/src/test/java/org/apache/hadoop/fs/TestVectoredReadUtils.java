@@ -242,7 +242,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     );
 
     intercept(UnsupportedOperationException.class,
-            () -> validateNonOverlappingAndReturnSortedRanges(input));
+        () -> validateNonOverlappingAndReturnSortedRanges(input));
 
     List<FileRange> input1 = Arrays.asList(
             FileRange.createFileRange(100, 100),
@@ -252,7 +252,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     );
 
     intercept(UnsupportedOperationException.class,
-            () -> validateNonOverlappingAndReturnSortedRanges(input1));
+        () -> validateNonOverlappingAndReturnSortedRanges(input1));
 
     List<FileRange> input2 = Arrays.asList(
             FileRange.createFileRange(100, 100),
