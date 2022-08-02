@@ -186,6 +186,34 @@ public class TestCorruptReplicaInfo {
                 10, getStripedBlock(7).getBlockId())));
   }
   
+  @Test
+  public void testGetCorruptReplicaGenerationStamp() {
+    final CorruptReplicasMap crm = new CorruptReplicasMap();
+    final DatanodeDescriptor dn1 = DFSTestUtil.getLocalDatanodeDescriptor();
+    final DatanodeDescriptor dn2 = DFSTestUtil.getLocalDatanodeDescriptor();
+    final long len = 1000L;
+    short replFactor = 2;
+    
+    // Create block replicas with different GenStamps
+    final Block blk1v1 = new Block(1L, len, 1L);
+    final Block blk1v2 = new Block(1L, len, 2L);
+    final Block blk2 = new Block(2L, len, 100L);
+    addToCorruptReplicasMap(crm, new BlockInfoContiguous(blk1v1, replFactor), dn1);
+    addToCorruptReplicasMap(crm, new BlockInfoContiguous(blk1v2, replFactor), dn2);
+    addToCorruptReplicasMap(crm, new BlockInfoContiguous(blk2, replFactor), dn1);
+
+    // Validate correct GenStamp is reported for each replica; GenStamp is based on the
+    // DatanodeDescriptor object being passed & not based on the Block object being passed.
+    assertEquals(Long.valueOf(1L), crm.getCorruptReplicaGenerationStamp(blk1v1, dn1));
+    assertEquals(Long.valueOf(2L), crm.getCorruptReplicaGenerationStamp(blk1v1, dn2));
+    assertEquals(Long.valueOf(1L), crm.getCorruptReplicaGenerationStamp(blk1v2, dn1));
+    assertEquals(Long.valueOf(2L), crm.getCorruptReplicaGenerationStamp(blk1v2, dn2));
+    
+    // Validate null returned for non-existent block replica
+    assertEquals(Long.valueOf(100L), crm.getCorruptReplicaGenerationStamp(blk2, dn1));
+    assertNull(crm.getCorruptReplicaGenerationStamp(blk2, dn2));
+  }
+  
   private static void addToCorruptReplicasMap(CorruptReplicasMap crm,
       BlockInfo blk, DatanodeDescriptor dn) {
     crm.addToCorruptReplicasMap(blk, dn, "TEST", Reason.NONE, blk.isStriped());
