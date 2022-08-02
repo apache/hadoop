@@ -22,7 +22,10 @@ import static org.junit.Assert.fail;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -46,7 +49,7 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
     Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
 
-    long now = System.currentTimeMillis();
+    long now = Time.now();
 
     // simulate 20 active subclusters
     for (int i = 0; i < 20; i++) {
@@ -108,7 +111,7 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
   }
 
   @Test
-  public void testIfNoSubclustersWithWeightOne() {
+  public void testIfNoSubclustersWithWeightOne() throws Exception {
     setPolicy(new LoadBasedRouterPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
@@ -125,15 +128,13 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
 
-    try {
-      FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-          getPolicyInfo(), getActiveSubclusters());
-      ((FederationRouterPolicy) getPolicy())
-          .getHomeSubcluster(getApplicationSubmissionContext(), null);
-      fail();
-    } catch (YarnException ex) {
-      Assert.assertTrue(
-          ex.getMessage().contains("Zero Active Subcluster with weight 1."));
-    }
+
+    ConfigurableFederationPolicy policy = getPolicy();
+    FederationPoliciesTestUtil.initializePolicyContext(policy,
+        getPolicyInfo(), getActiveSubclusters());
+
+    LambdaTestUtils.intercept(YarnException.class, "Zero Active Subcluster with weight 1.",
+        () ->  ((FederationRouterPolicy) policy).
+        getHomeSubcluster(getApplicationSubmissionContext(), null));
   }
 }

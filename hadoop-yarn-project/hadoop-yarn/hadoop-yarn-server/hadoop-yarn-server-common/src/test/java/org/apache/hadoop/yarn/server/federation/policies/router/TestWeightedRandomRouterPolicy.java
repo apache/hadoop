@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
@@ -66,7 +67,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f) {
-        long now = System.currentTimeMillis();
+        long now = Time.now();
         SubClusterInfo federationSubClusterInfo =
             SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82",
             "dns1:83", now - 1000, SubClusterState.SC_RUNNING, now - 2000,

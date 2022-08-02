@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import static org.mockito.Mockito.mock;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -42,7 +43,7 @@ public class TestUniformRandomRouterPolicy extends BaseRouterPoliciesTest {
     setPolicyInfo(mock(WeightedPolicyInfo.class));
     for (int i = 1; i <= 2; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
-      long now = System.currentTimeMillis();
+      long now = Time.now();
       SubClusterInfo federationSubClusterInfo =
           SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82",
           "dns1:83", now - 1000, SubClusterState.SC_RUNNING, now - 2000,

@@ -175,8 +175,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
     List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
 
-    FederationPolicyUtils.validateSubClusterAvailability(
-        list, blackListSubClusters);
+    FederationPolicyUtils.validateSubClusterAvailability(list, blackListSubClusters);
 
     if (blackListSubClusters != null) {
 

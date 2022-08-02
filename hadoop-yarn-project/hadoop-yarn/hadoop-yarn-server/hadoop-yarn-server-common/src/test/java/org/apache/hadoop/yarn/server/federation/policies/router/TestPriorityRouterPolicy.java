@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -54,7 +55,7 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
 
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f || i == 5) {
-        long now = System.currentTimeMillis();
+        long now = Time.now();
         SubClusterInfo federationSubClusterInfo =
             SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83",
             now - 1000, SubClusterState.SC_RUNNING, now - 2000, generateClusterMetricsInfo(i));

@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
-
 /**
  * Base class for router policies tests, tests for null input cases.
  */
@@ -120,11 +119,11 @@ public abstract class BaseRouterPoliciesTest
 
   @Test
   public void testNullReservationContext() throws Exception {
-    FederationRouterPolicy policy =  ((FederationRouterPolicy) getPolicy());
+    FederationRouterPolicy policy = ((FederationRouterPolicy) getPolicy());
 
     LambdaTestUtils.intercept(FederationPolicyException.class,
-        "The ReservationSubmissionRequest cannot be null.",
-         () -> policy.getReservationHomeSubcluster(null));
+       "The ReservationSubmissionRequest cannot be null.",
+        () -> policy.getReservationHomeSubcluster(null));
   }
 
 }

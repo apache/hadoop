@@ -110,7 +110,8 @@ public class LocalityRouterPolicy extends WeightedRandomRouterPolicy {
 
     Map<SubClusterId, SubClusterInfo> activeSubClusters = getActiveSubclusters();
     List<SubClusterId> validSubClusters = new ArrayList<>(activeSubClusters.keySet());
-    FederationPolicyUtils.validateSubClusterAvailability(validSubClusters, blackListSubClusters);
+    FederationPolicyUtils.validateSubClusterAvailability(activeSubClusters.keySet(),
+        blackListSubClusters);
 
     if (blackListSubClusters != null) {
       // Remove from the active SubClusters from StateStore the blacklisted ones

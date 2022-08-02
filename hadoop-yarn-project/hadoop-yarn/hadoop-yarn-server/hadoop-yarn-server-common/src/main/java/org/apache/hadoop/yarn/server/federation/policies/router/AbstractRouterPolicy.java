@@ -132,8 +132,7 @@ public abstract class AbstractRouterPolicy extends
     Map<SubClusterId, SubClusterInfo> filteredSubClusters = prefilterSubClusters(
             appContext.getReservationID(), getActiveSubclusters());
 
-    FederationPolicyUtils.validateSubClusterAvailability(
-            new ArrayList<>(filteredSubClusters.keySet()), blackLists);
+    FederationPolicyUtils.validateSubClusterAvailability(filteredSubClusters.keySet(), blackLists);
 
     // remove black SubCluster
     if (blackLists != null) {
