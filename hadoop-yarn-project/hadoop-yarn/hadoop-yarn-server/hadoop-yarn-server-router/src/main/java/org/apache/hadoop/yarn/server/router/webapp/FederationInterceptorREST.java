@@ -101,6 +101,7 @@ import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -1414,6 +1415,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public ContainerInfo getContainer(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId,
       String containerId) {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest hsr)
+      throws AuthorizationException {
     throw new NotImplementedException("Code is not implemented");
   }
 
