@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.nio.ByteBuffer;
 
@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -44,84 +45,62 @@ public class TestFilePosition extends AbstractHadoopTestBase {
     new FilePosition(10, 5).setData(data, 3, 4);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'fileSize' must not be negative",
-        () -> new FilePosition(-1, 2));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'blockSize' must be a positive integer",
-        () -> new FilePosition(1, 0));
+    intercept(IllegalArgumentException.class, "'fileSize' must not be negative",
+         () -> new FilePosition(-1, 2));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockSize' must be a positive integer",
-        () -> new FilePosition(1, -1));
+         () -> new FilePosition(1, 0));
+
+    intercept(IllegalArgumentException.class,
+        "'blockSize' must be a positive integer",
+         () -> new FilePosition(1, -1));
 
     FilePosition pos = new FilePosition(10, 3);
 
     // Verify that we cannot obtain buffer properties without setting buffer.
-    ExceptionAsserts.assertThrows(
-        IllegalStateException.class,
-        "'buffer' must not be null",
-        () -> pos.buffer());
 
-    ExceptionAsserts.assertThrows(
-        IllegalStateException.class,
-        "'buffer' must not be null",
-        () -> pos.absolute());
+    intercept(IllegalStateException.class, "'buffer' must not be null",
+         () -> pos.buffer());
 
-    ExceptionAsserts.assertThrows(
-        IllegalStateException.class,
-        "'buffer' must not be null",
-        () -> pos.isWithinCurrentBuffer(2));
+    intercept(IllegalStateException.class, "'buffer' must not be null",
+         () -> pos.absolute());
 
-    ExceptionAsserts.assertThrows(
-        IllegalStateException.class,
-        "'buffer' must not be null",
-        () -> pos.blockNumber());
+    intercept(IllegalStateException.class, "'buffer' must not be null",
+         () -> pos.isWithinCurrentBuffer(2));
 
-    ExceptionAsserts.assertThrows(
-        IllegalStateException.class,
-        "'buffer' must not be null",
-        () -> pos.isLastBlock());
+    intercept(IllegalStateException.class, "'buffer' must not be null",
+         () -> pos.blockNumber());
 
-    ExceptionAsserts.assertThrows(
-        IllegalStateException.class,
-        "'buffer' must not be null",
-        () -> pos.bufferFullyRead());
+    intercept(IllegalStateException.class, "'buffer' must not be null",
+         () -> pos.isLastBlock());
+
+    intercept(IllegalStateException.class, "'buffer' must not be null",
+         () -> pos.bufferFullyRead());
 
     // Verify that we cannot set invalid buffer parameters.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'bufferData' must not be null",
+
+    intercept(IllegalArgumentException.class, "'bufferData' must not be null",
         () -> pos.setData(null, 4, 4));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'startOffset' must not be negative",
-        () -> pos.setData(data, -4, 4));
+    intercept(IllegalArgumentException.class,
+        "'startOffset' must not be negative", () -> pos.setData(data, -4, 4));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'readOffset' must not be negative",
-        () -> pos.setData(data, 4, -4));
+    intercept(IllegalArgumentException.class,
+        "'readOffset' must not be negative", () -> pos.setData(data, 4, -4));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'readOffset' must not be negative",
-        () -> pos.setData(data, 4, -4));
+    intercept(IllegalArgumentException.class,
+        "'readOffset' must not be negative", () -> pos.setData(data, 4, -4));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'readOffset' (15) must be within the range [4, 13]",
         () -> pos.setData(data, 4, 15));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'readOffset' (3) must be within the range [4, 13]",
         () -> pos.setData(data, 4, 3));
+
   }
 
   @Test

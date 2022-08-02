@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;

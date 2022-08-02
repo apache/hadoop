@@ -17,14 +17,16 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.lang.reflect.Method;
 
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertTrue;
 
 public class TestBlockOperations extends AbstractHadoopTestBase {
@@ -35,35 +37,31 @@ public class TestBlockOperations extends AbstractHadoopTestBase {
     BlockOperations ops = new BlockOperations();
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
         () -> ops.getPrefetched(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
         () -> ops.getCached(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
         () -> ops.getRead(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
         () -> ops.release(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
         () -> ops.requestPrefetch(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
         () -> ops.requestCaching(-1));
+
   }
 
   @Test

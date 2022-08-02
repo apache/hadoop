@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -37,30 +38,29 @@ public class TestBlockData extends AbstractHadoopTestBase {
     new BlockData(0, 10);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'fileSize' must not be negative",
+
+
+    intercept(IllegalArgumentException.class, "'fileSize' must not be negative",
         () -> new BlockData(-1, 2));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockSize' must be a positive integer",
         () -> new BlockData(10, 0));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockSize' must be a positive integer",
         () -> new BlockData(10, -2));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' (-1) must be within the range [0, 3]",
-        () -> new BlockData(10, 3).isLastBlock(-1));
+        () -> new BlockData(10, 3).isLastBlock(
+            -1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'blockNumber' (11) must be within the range [0, 3]",
-        () -> new BlockData(10, 3).isLastBlock(11));
+        () -> new BlockData(10, 3).isLastBlock(
+            11));
+
   }
 
   @Test

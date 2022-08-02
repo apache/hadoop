@@ -17,12 +17,14 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
 
 /**
  * Manages a fixed pool of resources.
@@ -50,7 +52,7 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
     Validate.checkPositiveInteger(size, "size");
 
     this.size = size;
-    this.items = new ArrayBlockingQueue<T>(size);
+    this.items = new ArrayBlockingQueue<>(size);
 
     // The created items are identified based on their object reference.
     this.createdItems = Collections.newSetFromMap(new IdentityHashMap<T, Boolean>());
@@ -79,41 +81,40 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
    */
   @Override
   public void release(T item) {
-    Validate.checkNotNull(item, "item");
+    checkNotNull(item, "item");
 
-    synchronized (this.createdItems) {
-      if (!this.createdItems.contains(item)) {
+    synchronized (createdItems) {
+      if (!createdItems.contains(item)) {
         throw new IllegalArgumentException("This item is not a part of this pool");
       }
     }
 
     // Return if this item was released earlier.
-    // We cannot use this.items.contains() because that check is not based on reference equality.
-    for (T entry : this.items) {
+    // We cannot use items.contains() because that check is not based on reference equality.
+    for (T entry : items) {
       if (entry == item) {
         return;
       }
     }
 
     try {
-      this.items.put(item);
-      return;
+      items.put(item);
     } catch (InterruptedException e) {
-      throw new IllegalStateException("release() should never block");
+      throw new IllegalStateException("release() should never block", e);
     }
   }
 
   @Override
   public synchronized void close() {
-    for (T item : this.createdItems) {
-      this.close(item);
+    for (T item : createdItems) {
+      close(item);
     }
 
-    this.items.clear();
-    this.items = null;
+    items.clear();
+    items = null;
 
-    this.createdItems.clear();
-    this.createdItems = null;
+    createdItems.clear();
+    createdItems = null;
   }
 
   /**
@@ -126,14 +127,14 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
 
   // Number of items created so far. Mostly for testing purposes.
   public int numCreated() {
-    synchronized (this.createdItems) {
-      return this.createdItems.size();
+    synchronized (createdItems) {
+      return createdItems.size();
     }
   }
 
   // Number of items available to be acquired. Mostly for testing purposes.
   public synchronized int numAvailable() {
-    return (this.size - this.numCreated()) + this.items.size();
+    return (size - numCreated()) + items.size();
   }
 
   // For debugging purposes.
@@ -141,7 +142,7 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
   public synchronized String toString() {
     return String.format(
         "size = %d, #created = %d, #in-queue = %d, #available = %d",
-        this.size, this.numCreated(), this.items.size(), this.numAvailable());
+        size, numCreated(), items.size(), numAvailable());
   }
 
   /**
@@ -153,16 +154,16 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
 
     // Prefer reusing an item if one is available.
     // That avoids unnecessarily creating new instances.
-    T result = this.items.poll();
+    T result = items.poll();
     if (result != null) {
       return result;
     }
 
-    synchronized (this.createdItems) {
+    synchronized (createdItems) {
       // Create a new instance if allowed by the capacity of this pool.
-      if (this.createdItems.size() < this.size) {
-        T item = this.createNew();
-        this.createdItems.add(item);
+      if (createdItems.size() < size) {
+        T item = createNew();
+        createdItems.add(item);
         return item;
       }
     }
@@ -170,7 +171,7 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
     if (canBlock) {
       try {
         // Block for an instance to be available.
-        return this.items.take();
+        return items.take();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         return null;

@@ -17,15 +17,15 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.nio.ByteBuffer;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -45,21 +45,20 @@ public class TestBlockCache extends AbstractHadoopTestBase {
     ByteBuffer buffer = ByteBuffer.allocate(16);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'buffer' must not be null",
+    intercept(IllegalArgumentException.class, "'buffer' must not be null",
         () -> cache.put(42, null));
 
-    ExceptionAsserts.assertThrows(
-        NullPointerException.class,
+
+    intercept(NullPointerException.class, null,
         () -> new SingleFilePerBlockCache(null));
+
   }
 
 
   @Test
   public void testPutAndGet() throws Exception {
     BlockCache cache =
-        new SingleFilePerBlockCache(new EmptyS3AStatisticsContext().newInputStreamStatistics());
+        new SingleFilePerBlockCache(EmptyPrefetchingStatistics.getInstance());
 
     ByteBuffer buffer1 = ByteBuffer.allocate(BUFFER_SIZE);
     for (byte i = 0; i < BUFFER_SIZE; i++) {

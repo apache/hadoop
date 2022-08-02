@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
@@ -32,6 +32,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNegative;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkState;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Manages a fixed pool of {@code ByteBuffer} instances.
@@ -94,8 +98,8 @@ public class BufferPool implements Closeable {
    * @return a list of all blocks in this pool.
    */
   public List<BufferData> getAll() {
-    synchronized (this.allocated) {
-      return Collections.unmodifiableList(new ArrayList<BufferData>(this.allocated.keySet()));
+    synchronized (allocated) {
+      return Collections.unmodifiableList(new ArrayList<>(allocated.keySet()));
     }
   }
 
@@ -113,11 +117,13 @@ public class BufferPool implements Closeable {
 
     do {
       if (retryer.updateStatus()) {
-        LOG.warn("waiting to acquire block: {}", blockNumber);
-        LOG.info("state = {}", this.toString());
-        this.releaseReadyBlock(blockNumber);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("waiting to acquire block: {}", blockNumber);
+          LOG.debug("state = {}", this);
+        }
+        releaseReadyBlock(blockNumber);
       }
-      data = this.tryAcquire(blockNumber);
+      data = tryAcquire(blockNumber);
     }
     while ((data == null) && retryer.continueRetry());
 
@@ -136,20 +142,20 @@ public class BufferPool implements Closeable {
    * @return the acquired block's {@code BufferData} or null.
    */
   public synchronized BufferData tryAcquire(int blockNumber) {
-    return this.acquireHelper(blockNumber, false);
+    return acquireHelper(blockNumber, false);
   }
 
   private synchronized BufferData acquireHelper(int blockNumber, boolean canBlock) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
-    this.releaseDoneBlocks();
+    releaseDoneBlocks();
 
-    BufferData data = this.find(blockNumber);
+    BufferData data = find(blockNumber);
     if (data != null) {
       return data;
     }
 
-    ByteBuffer buffer = canBlock ? this.pool.acquire() : this.pool.tryAcquire();
+    ByteBuffer buffer = canBlock ? pool.acquire() : pool.tryAcquire();
     if (buffer == null) {
       return null;
     }
@@ -157,10 +163,10 @@ public class BufferPool implements Closeable {
     buffer.clear();
     data = new BufferData(blockNumber, buffer.duplicate());
 
-    synchronized (this.allocated) {
-      Validate.checkState(this.find(blockNumber) == null, "buffer data already exists");
+    synchronized (allocated) {
+      checkState(find(blockNumber) == null, "buffer data already exists");
 
-      this.allocated.put(data, buffer);
+      allocated.put(data, buffer);
     }
 
     return data;
@@ -170,9 +176,9 @@ public class BufferPool implements Closeable {
    * Releases resources for any blocks marked as 'done'.
    */
   private synchronized void releaseDoneBlocks() {
-    for (BufferData data : this.getAll()) {
+    for (BufferData data : getAll()) {
       if (data.stateEqualsOneOf(BufferData.State.DONE)) {
-        this.release(data);
+        release(data);
       }
     }
   }
@@ -184,7 +190,7 @@ public class BufferPool implements Closeable {
    */
   private synchronized void releaseReadyBlock(int blockNumber) {
     BufferData releaseTarget = null;
-    for (BufferData data : this.getAll()) {
+    for (BufferData data : getAll()) {
       if (data.stateEqualsOneOf(BufferData.State.READY)) {
         if (releaseTarget == null) {
           releaseTarget = data;
@@ -215,29 +221,29 @@ public class BufferPool implements Closeable {
    * @throws IllegalArgumentException if data cannot be released due to its state.
    */
   public synchronized void release(BufferData data) {
-    Validate.checkNotNull(data, "data");
+    checkNotNull(data, "data");
 
     synchronized (data) {
-      Validate.checkArgument(
-          this.canRelease(data),
+      checkArgument(
+          canRelease(data),
           String.format("Unable to release buffer: %s", data));
 
-      ByteBuffer buffer = this.allocated.get(data);
+      ByteBuffer buffer = allocated.get(data);
       if (buffer == null) {
         // Likely released earlier.
         return;
       }
       buffer.clear();
-      this.pool.release(buffer);
-      this.allocated.remove(data);
+      pool.release(buffer);
+      allocated.remove(data);
     }
 
-    this.releaseDoneBlocks();
+    releaseDoneBlocks();
   }
 
   @Override
   public synchronized void close() {
-    for (BufferData data : this.getAll()) {
+    for (BufferData data : getAll()) {
       Future<Void> actionFuture = data.getActionFuture();
       if (actionFuture != null) {
         actionFuture.cancel(true);
@@ -259,9 +265,9 @@ public class BufferPool implements Closeable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(this.pool.toString());
+    sb.append(pool.toString());
     sb.append("\n");
-    List<BufferData> allData = new ArrayList<>(this.getAll());
+    List<BufferData> allData = new ArrayList<>(getAll());
     Collections.sort(allData, (d1, d2) -> d1.getBlockNumber() - d2.getBlockNumber());
     for (BufferData data : allData) {
       sb.append(data.toString());
@@ -273,18 +279,18 @@ public class BufferPool implements Closeable {
 
   // Number of ByteBuffers created so far.
   public synchronized int numCreated() {
-    return this.pool.numCreated();
+    return pool.numCreated();
   }
 
   // Number of ByteBuffers available to be acquired.
   public synchronized int numAvailable() {
-    this.releaseDoneBlocks();
-    return this.pool.numAvailable();
+    releaseDoneBlocks();
+    return pool.numAvailable();
   }
 
   private BufferData find(int blockNumber) {
-    synchronized (this.allocated) {
-      for (BufferData data : this.allocated.keySet()) {
+    synchronized (allocated) {
+      for (BufferData data : allocated.keySet()) {
         if ((data.getBlockNumber() == blockNumber)
             && !data.stateEqualsOneOf(BufferData.State.DONE)) {
           return data;

@@ -22,9 +22,9 @@ package org.apache.hadoop.fs.s3a.read;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.fs.common.BlockData;
-import org.apache.hadoop.fs.common.BlockManager;
-import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.impl.prefetch.BlockData;
+import org.apache.hadoop.fs.impl.prefetch.BlockManager;
+import org.apache.hadoop.fs.impl.prefetch.Validate;
 
 /**
  * Provides read access to S3 file one block at a time.

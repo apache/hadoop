@@ -21,7 +21,7 @@
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

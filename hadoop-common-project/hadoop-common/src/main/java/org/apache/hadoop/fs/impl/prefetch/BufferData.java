@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * Holding all of the state associated with a block allows us to validate and control
  * state transitions in a synchronized fashion.
  */
-public class BufferData {
+public final class BufferData {
   private static final Logger LOG = LoggerFactory.getLogger(BufferData.class);
 
   public enum State {

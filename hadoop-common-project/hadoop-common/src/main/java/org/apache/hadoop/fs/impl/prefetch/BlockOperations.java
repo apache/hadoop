@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * This class is used for debugging/logging. Calls to this class
  * can be safely removed without affecting the overall operation.
  */
-public class BlockOperations {
+public final class BlockOperations {
   private static final Logger LOG = LoggerFactory.getLogger(BlockOperations.class);
 
   public enum Kind {
@@ -68,7 +68,7 @@ public class BlockOperations {
     private static Map<String, Kind> shortNameToKind = new HashMap<>();
 
     public static Kind fromShortName(String shortName) {
-      if (shortNameToKind.size() == 0) {
+      if (shortNameToKind.isEmpty()) {
         for (Kind kind : Kind.values()) {
           shortNameToKind.put(kind.shortName, kind);
         }
@@ -89,30 +89,30 @@ public class BlockOperations {
     }
 
     public Kind getKind() {
-      return this.kind;
+      return kind;
     }
 
     public int getBlockNumber() {
-      return this.blockNumber;
+      return blockNumber;
     }
 
     public long getTimestamp() {
-      return this.timestamp;
+      return timestamp;
     }
 
     public void getSummary(StringBuilder sb) {
-      if (this.kind.hasBlock) {
-        sb.append(String.format("%s(%d)", this.kind.shortName, this.blockNumber));
+      if (kind.hasBlock) {
+        sb.append(String.format("%s(%d)", kind.shortName, blockNumber));
       } else {
-        sb.append(String.format("%s", this.kind.shortName));
+        sb.append(String.format("%s", kind.shortName));
       }
     }
 
     public String getDebugInfo() {
-      if (this.kind.hasBlock) {
-        return String.format("--- %s(%d)", this.kind.name, this.blockNumber);
+      if (kind.hasBlock) {
+        return String.format("--- %s(%d)", kind.name, blockNumber);
       } else {
-        return String.format("... %s()", this.kind.name);
+        return String.format("... %s()", kind.name);
       }
     }
   }
@@ -137,7 +137,7 @@ public class BlockOperations {
     }
 
     public double duration() {
-      return (this.getTimestamp() - this.op.getTimestamp()) / 1e9;
+      return (getTimestamp() - op.getTimestamp()) / 1e9;
     }
   }
 
@@ -149,11 +149,11 @@ public class BlockOperations {
   }
 
   public synchronized void setDebug(boolean state) {
-    this.debugMode = state;
+    debugMode = state;
   }
 
   private synchronized Operation add(Operation op) {
-    if (this.debugMode) {
+    if (debugMode) {
       LOG.info(op.getDebugInfo());
     }
     ops.add(op);
@@ -163,61 +163,61 @@ public class BlockOperations {
   public Operation getPrefetched(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    return this.add(new Operation(Kind.GET_PREFETCHED, blockNumber));
+    return add(new Operation(Kind.GET_PREFETCHED, blockNumber));
   }
 
   public Operation getCached(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    return this.add(new Operation(Kind.GET_CACHED, blockNumber));
+    return add(new Operation(Kind.GET_CACHED, blockNumber));
   }
 
   public Operation getRead(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    return this.add(new Operation(Kind.GET_READ, blockNumber));
+    return add(new Operation(Kind.GET_READ, blockNumber));
   }
 
   public Operation release(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    return this.add(new Operation(Kind.RELEASE, blockNumber));
+    return add(new Operation(Kind.RELEASE, blockNumber));
   }
 
   public Operation requestPrefetch(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    return this.add(new Operation(Kind.REQUEST_PREFETCH, blockNumber));
+    return add(new Operation(Kind.REQUEST_PREFETCH, blockNumber));
   }
 
   public Operation prefetch(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    return this.add(new Operation(Kind.PREFETCH, blockNumber));
+    return add(new Operation(Kind.PREFETCH, blockNumber));
   }
 
   public Operation cancelPrefetches() {
-    return this.add(new Operation(Kind.CANCEL_PREFETCHES, -1));
+    return add(new Operation(Kind.CANCEL_PREFETCHES, -1));
   }
 
   public Operation close() {
-    return this.add(new Operation(Kind.CLOSE, -1));
+    return add(new Operation(Kind.CLOSE, -1));
   }
 
   public Operation requestCaching(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    return this.add(new Operation(Kind.REQUEST_CACHING, blockNumber));
+    return add(new Operation(Kind.REQUEST_CACHING, blockNumber));
   }
 
   public Operation addToCache(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
-    return this.add(new Operation(Kind.CACHE_PUT, blockNumber));
+    return add(new Operation(Kind.CACHE_PUT, blockNumber));
   }
 
   public Operation end(Operation op) {
-    return this.add(new End(op));
+    return add(new End(op));
   }
 
   private static void append(StringBuilder sb, String format, Object... args) {
@@ -226,7 +226,7 @@ public class BlockOperations {
 
   public synchronized String getSummary(boolean showDebugInfo) {
     StringBuilder sb = new StringBuilder();
-    for (Operation op : this.ops) {
+    for (Operation op : ops) {
       if (op != null) {
         if (showDebugInfo) {
           sb.append(op.getDebugInfo());
@@ -239,14 +239,14 @@ public class BlockOperations {
     }
 
     sb.append("\n");
-    this.getDurationInfo(sb);
+    getDurationInfo(sb);
 
     return sb.toString();
   }
 
   public synchronized void getDurationInfo(StringBuilder sb) {
     Map<Kind, DoubleSummaryStatistics> durations = new HashMap<>();
-    for (Operation op : this.ops) {
+    for (Operation op : ops) {
       if (op instanceof End) {
         End endOp = (End) op;
         DoubleSummaryStatistics stats = durations.get(endOp.getKind());
@@ -293,7 +293,7 @@ public class BlockOperations {
     Map<Integer, List<Operation>> blockOps = new HashMap<>();
 
     // Group-by block number.
-    for (Operation op : this.ops) {
+    for (Operation op : ops) {
       if (op.blockNumber < 0) {
         continue;
       }
@@ -352,11 +352,11 @@ public class BlockOperations {
       }
     }
 
-    if (prefetchedNotUsed.size() > 0) {
+    if (!prefetchedNotUsed.isEmpty()) {
       append(sb, "Prefetched but not used: %s\n", getIntList(prefetchedNotUsed));
     }
 
-    if (cachedNotUsed.size() > 0) {
+    if (!cachedNotUsed.isEmpty()) {
       append(sb, "Cached but not used: %s\n", getIntList(cachedNotUsed));
     }
   }
@@ -410,7 +410,7 @@ public class BlockOperations {
         }
 
         if (op == null) {
-          LOG.warn("Start op not found: %s(%d)", endKind, blockNumber);
+          LOG.warn("Start op not found: {}({})", endKind, blockNumber);
         }
       }
     }

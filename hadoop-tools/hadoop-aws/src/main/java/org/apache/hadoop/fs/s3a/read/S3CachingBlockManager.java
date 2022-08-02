@@ -25,10 +25,10 @@ import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.common.BlockData;
-import org.apache.hadoop.fs.common.CachingBlockManager;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
-import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.impl.prefetch.BlockData;
+import org.apache.hadoop.fs.impl.prefetch.CachingBlockManager;
+import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
+import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 /**

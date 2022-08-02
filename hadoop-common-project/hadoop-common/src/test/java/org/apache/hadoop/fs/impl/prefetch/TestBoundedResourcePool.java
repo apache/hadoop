@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -27,7 +27,9 @@ import java.util.Set;
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -54,25 +56,22 @@ public class TestBoundedResourcePool extends AbstractHadoopTestBase {
     BufferPool pool = new BufferPool(5);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'size' must be a positive integer",
-        () -> new BufferPool(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "'size' must be a positive integer",
-        () -> new BufferPool(0));
+         () -> new BufferPool(-1));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'item' must not be null",
+    intercept(IllegalArgumentException.class,
+        "'size' must be a positive integer",
+         () -> new BufferPool(0));
+
+    intercept(IllegalArgumentException.class, "'item' must not be null",
         () -> pool.release(null));
 
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
+    intercept(IllegalArgumentException.class,
         "This item is not a part of this pool",
         () -> pool.release(ByteBuffer.allocate(4)));
+
   }
 
   @Test

@@ -17,12 +17,16 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
+
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNegative;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkPositiveInteger;
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkWithinRange;
 
 /**
  * Holds information about blocks of data in a file.
  */
-public class BlockData {
+public final class BlockData {
   // State of each block of data.
   enum State {
     // Data is not yet ready to be read from this block (still being prefetched).
@@ -61,11 +65,11 @@ public class BlockData {
    * @throws IllegalArgumentException if blockSize is zero or negative.
    */
   public BlockData(long fileSize, int blockSize) {
-    Validate.checkNotNegative(fileSize, "fileSize");
+    checkNotNegative(fileSize, "fileSize");
     if (fileSize == 0) {
-      Validate.checkNotNegative(blockSize, "blockSize");
+      checkNotNegative(blockSize, "blockSize");
     } else {
-      Validate.checkPositiveInteger(blockSize, "blockSize");
+      checkPositiveInteger(blockSize, "blockSize");
     }
 
     this.fileSize = fileSize;
@@ -74,7 +78,7 @@ public class BlockData {
         (fileSize == 0) ? 0 : ((int) (fileSize / blockSize)) + (fileSize % blockSize > 0 ? 1 : 0);
     this.state = new State[this.numBlocks];
     for (int b = 0; b < this.numBlocks; b++) {
-      this.setState(b, State.NOT_READY);
+      setState(b, State.NOT_READY);
     }
   }
 
@@ -84,7 +88,7 @@ public class BlockData {
    * @return the size of each block.
    */
   public int getBlockSize() {
-    return this.blockSize;
+    return blockSize;
   }
 
   /**
@@ -93,7 +97,7 @@ public class BlockData {
    * @return the size of the associated file.
    */
   public long getFileSize() {
-    return this.fileSize;
+    return fileSize;
   }
 
   /**
@@ -102,7 +106,7 @@ public class BlockData {
    * @return the number of blocks in the associated file.
    */
   public int getNumBlocks() {
-    return this.numBlocks;
+    return numBlocks;
   }
 
   /**
@@ -114,13 +118,13 @@ public class BlockData {
    * @throws IllegalArgumentException if blockNumber is invalid.
    */
   public boolean isLastBlock(int blockNumber) {
-    if (this.fileSize == 0) {
+    if (fileSize == 0) {
       return false;
     }
 
     throwIfInvalidBlockNumber(blockNumber);
 
-    return blockNumber == (this.numBlocks - 1);
+    return blockNumber == (numBlocks - 1);
   }
 
   /**
@@ -134,7 +138,7 @@ public class BlockData {
   public int getBlockNumber(long offset) {
     throwIfInvalidOffset(offset);
 
-    return (int) (offset / this.blockSize);
+    return (int) (offset / blockSize);
   }
 
   /**
@@ -144,14 +148,14 @@ public class BlockData {
    * @return the size of the given block.
    */
   public int getSize(int blockNumber) {
-    if (this.fileSize == 0) {
+    if (fileSize == 0) {
       return 0;
     }
 
-    if (this.isLastBlock(blockNumber)) {
-      return (int) (this.fileSize - (((long) this.blockSize) * (this.numBlocks - 1)));
+    if (isLastBlock(blockNumber)) {
+      return (int) (fileSize - (((long) blockSize) * (numBlocks - 1)));
     } else {
-      return this.blockSize;
+      return blockSize;
     }
   }
 
@@ -162,7 +166,7 @@ public class BlockData {
    * @return true if the given absolute offset is valid, false otherwise.
    */
   public boolean isValidOffset(long offset) {
-    return (offset >= 0) && (offset < this.fileSize);
+    return (offset >= 0) && (offset < fileSize);
   }
 
   /**
@@ -176,7 +180,7 @@ public class BlockData {
   public long getStartOffset(int blockNumber) {
     throwIfInvalidBlockNumber(blockNumber);
 
-    return blockNumber * (long) this.blockSize;
+    return blockNumber * (long) blockSize;
   }
 
   /**
@@ -191,7 +195,7 @@ public class BlockData {
   public int getRelativeOffset(int blockNumber, long offset) {
     throwIfInvalidOffset(offset);
 
-    return (int) (offset - this.getStartOffset(blockNumber));
+    return (int) (offset - getStartOffset(blockNumber));
   }
 
   /**
@@ -205,7 +209,7 @@ public class BlockData {
   public State getState(int blockNumber) {
     throwIfInvalidBlockNumber(blockNumber);
 
-    return this.state[blockNumber];
+    return state[blockNumber];
   }
 
   /**
@@ -219,17 +223,17 @@ public class BlockData {
   public void setState(int blockNumber, State blockState) {
     throwIfInvalidBlockNumber(blockNumber);
 
-    this.state[blockNumber] = blockState;
+    state[blockNumber] = blockState;
   }
 
   // Debug helper.
   public String getStateString() {
     StringBuilder sb = new StringBuilder();
     int blockNumber = 0;
-    while (blockNumber < this.numBlocks) {
-      State tstate = this.getState(blockNumber);
+    while (blockNumber < numBlocks) {
+      State tstate = getState(blockNumber);
       int endBlockNumber = blockNumber;
-      while ((endBlockNumber < this.numBlocks) && (this.getState(endBlockNumber) == tstate)) {
+      while ((endBlockNumber < numBlocks) && (getState(endBlockNumber) == tstate)) {
         endBlockNumber++;
       }
       sb.append(String.format("[%03d ~ %03d] %s%n", blockNumber, endBlockNumber - 1, tstate));
@@ -239,10 +243,10 @@ public class BlockData {
   }
 
   private void throwIfInvalidBlockNumber(int blockNumber) {
-    Validate.checkWithinRange(blockNumber, "blockNumber", 0, this.numBlocks - 1);
+    checkWithinRange(blockNumber, "blockNumber", 0, numBlocks - 1);
   }
 
   private void throwIfInvalidOffset(long offset) {
-    Validate.checkWithinRange(offset, "offset", 0, this.fileSize - 1);
+    checkWithinRange(offset, "offset", 0, fileSize - 1);
   }
 }

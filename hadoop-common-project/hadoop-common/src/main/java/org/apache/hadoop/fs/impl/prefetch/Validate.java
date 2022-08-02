@@ -17,11 +17,13 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.impl.prefetch;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * A superset of Validate class in Apache commons lang3.
@@ -63,7 +65,7 @@ public final class Validate {
     checkArgument(value >= 0, "'%s' must not be negative.", argName);
   }
 
-  /*
+  /**
    * Validates that the expression (that checks a required field is present) is true.
    *
    * @param isPresent indicates whether the given argument is present.
@@ -101,9 +103,9 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(String arg, String argName) {
-    Validate.checkNotNull(arg, argName);
-    Validate.checkArgument(
-        arg.length() > 0,
+    checkNotNull(arg, argName);
+    checkArgument(
+        !arg.isEmpty(),
         "'%s' must not be empty.",
         argName);
   }
@@ -116,7 +118,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static <T> void checkNotNullAndNotEmpty(T[] array, String argName) {
-    Validate.checkNotNull(array, argName);
+    checkNotNull(array, argName);
     checkNotEmpty(array.length, argName);
   }
 
@@ -127,7 +129,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(byte[] array, String argName) {
-    Validate.checkNotNull(array, argName);
+    checkNotNull(array, argName);
     checkNotEmpty(array.length, argName);
   }
 
@@ -138,7 +140,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(short[] array, String argName) {
-    Validate.checkNotNull(array, argName);
+    checkNotNull(array, argName);
     checkNotEmpty(array.length, argName);
   }
 
@@ -149,7 +151,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(int[] array, String argName) {
-    Validate.checkNotNull(array, argName);
+    checkNotNull(array, argName);
     checkNotEmpty(array.length, argName);
   }
 
@@ -160,7 +162,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(long[] array, String argName) {
-    Validate.checkNotNull(array, argName);
+    checkNotNull(array, argName);
     checkNotEmpty(array.length, argName);
   }
 
@@ -172,7 +174,7 @@ public final class Validate {
    * @param argName the name of the argument being validated.
    */
   public static <T> void checkNotNullAndNotEmpty(Iterable<T> iter, String argName) {
-    Validate.checkNotNull(iter, argName);
+    checkNotNull(iter, argName);
     int minNumElements = iter.iterator().hasNext() ? 1 : 0;
     checkNotEmpty(minNumElements, argName);
   }
@@ -187,7 +189,7 @@ public final class Validate {
    */
   public static <T> void checkNotNullAndNumberOfElements(
       Collection<T> collection, int numElements, String argName) {
-    Validate.checkNotNull(collection, argName);
+    checkNotNull(collection, argName);
     checkArgument(
         collection.size() == numElements,
         "Number of elements in '%s' must be exactly %s, %s given.",
@@ -388,16 +390,22 @@ public final class Validate {
     checkArgument(Files.isRegularFile(path), "Path %s (%s) must point to a file.", argName, path);
   }
 
-  public static void checkArgument(boolean expression, String format, Object... args) {
-    org.apache.commons.lang3.Validate.isTrue(expression, format, args);
-  }
 
+  /**
+   * Check state.
+   * @param expression expression which must hold.
+   * @param format format string
+   * @param args arguments for the error string
+   * @throws IllegalStateException if the state is not valid.
+   */
   public static void checkState(boolean expression, String format, Object... args) {
-    org.apache.commons.lang3.Validate.validState(expression, format, args);
+    if (!expression) {
+        throw new IllegalStateException(String.format(format, args));
+    }
   }
 
   private static void checkNotEmpty(int arraySize, String argName) {
-    Validate.checkArgument(
+    checkArgument(
         arraySize > 0,
         "'%s' must have at least one element.",
         argName);

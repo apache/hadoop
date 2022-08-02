@@ -26,10 +26,10 @@ import java.util.concurrent.Executors;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.common.BlockData;
-import org.apache.hadoop.fs.common.BufferData;
-import org.apache.hadoop.fs.common.ExceptionAsserts;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
+import org.apache.hadoop.fs.impl.prefetch.BlockData;
+import org.apache.hadoop.fs.impl.prefetch.BufferData;
+import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
+import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
