@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -228,10 +227,13 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       if (service.contains("s3-accesspoint") || service.contains("s3-outposts")
           || service.contains("s3-object-lambda")) {
         // If AccessPoint then bucketName is of format `accessPoint-accountId`;
-        String[] accessPointBits = hostBits[0].split("-");
-        int lastElem = accessPointBits.length - 1;
-        String accountId = accessPointBits[lastElem];
-        String accessPointName = String.join("", Arrays.copyOf(accessPointBits, lastElem));
+        String[] accessPointBits = bucketName.split("-");
+        String accountId = accessPointBits[accessPointBits.length - 1];
+        // Extract the access point name from bucket name. eg: if bucket name is
+        // test-custom-signer-<accountId>, get the access point name test-custom-signer by removing
+        // -<accountId> from the bucket name.
+        String accessPointName =
+            bucketName.substring(0, bucketName.length() - (accountId.length() + 1));
         Arn arn = Arn.builder()
             .withAccountId(accountId)
             .withPartition("aws")

@@ -84,6 +84,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     return allocate;
   }
 
+  public WeakReferencedElasticByteBufferPool getPool() {
+    return pool;
+  }
+
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -379,6 +383,13 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(100, 500));
     fileRanges.add(FileRange.createFileRange(400, 500));
+    return fileRanges;
+  }
+
+  protected List<FileRange> getConsecutiveRanges() {
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(FileRange.createFileRange(100, 500));
+    fileRanges.add(FileRange.createFileRange(600, 500));
     return fileRanges;
   }
 

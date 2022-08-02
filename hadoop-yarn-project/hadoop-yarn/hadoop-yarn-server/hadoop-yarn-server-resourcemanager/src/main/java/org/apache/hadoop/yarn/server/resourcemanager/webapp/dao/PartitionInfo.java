@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.Resources;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -42,5 +45,30 @@ public class PartitionInfo {
 
   public ResourceInfo getResourceAvailable() {
     return resourceAvailable;
+  }
+
+  /**
+   * This method will generate a new PartitionInfo object based on two PartitionInfo objects.
+   * The combination process is mainly based on the Resources.add method.
+   *
+   * @param left left PartitionInfo Object.
+   * @param right right PartitionInfo Object.
+   * @return new PartitionInfo Object.
+   */
+  public static PartitionInfo addTo(PartitionInfo left, PartitionInfo right) {
+    Resource leftResource = Resource.newInstance(0, 0);
+    if (left != null && left.getResourceAvailable() != null) {
+      ResourceInfo leftResourceInfo = left.getResourceAvailable();
+      leftResource = leftResourceInfo.getResource();
+    }
+
+    Resource rightResource = Resource.newInstance(0, 0);
+    if (right != null && right.getResourceAvailable() != null) {
+      ResourceInfo rightResourceInfo = right.getResourceAvailable();
+      rightResource = rightResourceInfo.getResource();
+    }
+
+    Resource resource = Resources.addTo(leftResource, rightResource);
+    return new PartitionInfo(new ResourceInfo(resource));
   }
 }
