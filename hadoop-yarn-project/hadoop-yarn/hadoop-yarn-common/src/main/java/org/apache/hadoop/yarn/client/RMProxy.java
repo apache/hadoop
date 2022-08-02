@@ -309,7 +309,7 @@ public class RMProxy<T> {
       return true;
     }
     if (HAUtil.isFederationEnabled(conf) && HAUtil.isFederationFailoverEnabled(conf)) {
-      //Considering both federation and federation failover are enabled.
+      // Considering both federation and federation failover are enabled.
       return true;
     }
     return false;
