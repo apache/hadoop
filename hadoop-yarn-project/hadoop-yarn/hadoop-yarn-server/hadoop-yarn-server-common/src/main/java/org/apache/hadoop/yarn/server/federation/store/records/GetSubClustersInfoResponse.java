@@ -37,19 +37,9 @@ public abstract class GetSubClustersInfoResponse {
   @Public
   @Unstable
   public static GetSubClustersInfoResponse newInstance(
-      List<SubClusterInfo> subClusters) {
-    GetSubClustersInfoResponse subClusterInfos =
-        Records.newRecord(GetSubClustersInfoResponse.class);
-    subClusterInfos.setSubClusters(subClusters);
-    return subClusterInfos;
-  }
-
-  @Public
-  @Unstable
-  public static GetSubClustersInfoResponse newInstance(
       Collection<SubClusterInfo> subClusters) {
     GetSubClustersInfoResponse subClusterInfos =
-            Records.newRecord(GetSubClustersInfoResponse.class);
+        Records.newRecord(GetSubClustersInfoResponse.class);
     subClusterInfos.setSubClusters(subClusters);
     return subClusterInfos;
   }
@@ -66,16 +56,6 @@ public abstract class GetSubClustersInfoResponse {
 
   /**
    * Set the list of {@link SubClusterInfo} representing the information about
-   * all sub-clusters that are currently participating in Federation.
-   *
-   * @param subClusters the list of {@link SubClusterInfo}
-   */
-  @Private
-  @Unstable
-  public abstract void setSubClusters(List<SubClusterInfo> subClusters);
-
-  /**
-   * Set the Collection of {@link SubClusterInfo} representing the information about
    * all sub-clusters that are currently participating in Federation.
    *
    * @param subClusters the list of {@link SubClusterInfo}

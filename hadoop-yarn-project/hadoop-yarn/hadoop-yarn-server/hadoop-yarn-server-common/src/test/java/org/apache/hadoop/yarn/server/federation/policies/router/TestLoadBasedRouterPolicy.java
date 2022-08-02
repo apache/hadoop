@@ -52,10 +52,9 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     // simulate 20 active subclusters
     for (int i = 0; i < 20; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo(String.format("sc%02d", i));
-      SubClusterInfo federationSubClusterInfo =
-          SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82",
-          "dns1:83", now - 1000, SubClusterState.SC_RUNNING, now - 2000,
-          generateClusterMetricsInfo(i));
+      SubClusterInfo federationSubClusterInfo = SubClusterInfo.newInstance(
+          sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83",
+          now - 1000, SubClusterState.SC_RUNNING, now - 2000, generateClusterMetricsInfo(i));
       getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
       float weight = getRand().nextInt(2);
       if (i == 5) {

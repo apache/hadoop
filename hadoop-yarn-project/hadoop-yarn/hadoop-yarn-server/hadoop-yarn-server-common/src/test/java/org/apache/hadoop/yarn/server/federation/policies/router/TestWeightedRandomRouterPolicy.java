@@ -68,10 +68,9 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f) {
         long now = Time.now();
-        SubClusterInfo federationSubClusterInfo =
-            SubClusterInfo.newInstance(sc.toId(), "dns1:80", "dns1:81", "dns1:82",
-            "dns1:83", now - 1000, SubClusterState.SC_RUNNING, now - 2000,
-            generateClusterMetricsInfo(i));
+        SubClusterInfo federationSubClusterInfo = SubClusterInfo.newInstance(
+            sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83",
+            now - 1000, SubClusterState.SC_RUNNING, now - 2000, generateClusterMetricsInfo(i));
         getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
       }
 

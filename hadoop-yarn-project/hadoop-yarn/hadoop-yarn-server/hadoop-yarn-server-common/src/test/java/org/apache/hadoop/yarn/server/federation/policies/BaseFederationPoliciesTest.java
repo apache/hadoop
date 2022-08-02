@@ -185,8 +185,8 @@ public abstract class BaseFederationPoliciesTest {
   public void setMockActiveSubclusters(int numSubclusters) {
     for (int i = 1; i <= numSubclusters; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
-      SubClusterInfo sci = SubClusterInfo.newInstance(sc.toId(),
-          "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+      SubClusterInfo sci = SubClusterInfo.newInstance(
+          sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
           System.currentTimeMillis(), "something");
       getActiveSubclusters().put(sc.toId(), sci);
     }
@@ -199,17 +199,13 @@ public abstract class BaseFederationPoliciesTest {
       mem = 1024 * 277 * 100;
     }
     String clusterMetrics =
-            "{\"clusterMetrics\":{\"appsSubmitted\":65," + "\"appsCompleted\":64,"
-                    + "\"appsPending\":0,\"appsRunning\":0,\"appsFailed\":0,"
-                    + "\"appsKilled\":1,\"reservedMB\":0,\"availableMB\":" + mem + ","
-                    + "\"allocatedMB\":0,\"reservedVirtualCores\":0,"
-                    + "\"availableVirtualCores\":2216,\"allocatedVirtualCores\":0,"
-                    + "\"containersAllocated\":0,\"containersReserved\":0,"
-                    + "\"containersPending\":0,\"totalMB\":28364800,"
-                    + "\"totalVirtualCores\":2216,\"totalNodes\":278,\"lostNodes\":1,"
-                    + "\"unhealthyNodes\":0,\"decommissionedNodes\":0,"
-                    + "\"rebootedNodes\":0,\"activeNodes\":277}}\n";
-
+        "{\"clusterMetrics\":{\"appsSubmitted\":65, \"appsCompleted\":64,\"appsPending\":0,"
+        + "\"appsRunning\":0, \"appsFailed\":0, \"appsKilled\":1,\"reservedMB\":0,\"availableMB\":"
+        + mem + ", \"allocatedMB\":0,\"reservedVirtualCores\":0, \"availableVirtualCores\":2216,"
+        + "\"allocatedVirtualCores\":0, \"containersAllocated\":0,\"containersReserved\":0,"
+        + "\"containersPending\":0,\"totalMB\":28364800, \"totalVirtualCores\":2216,\"totalNodes\":278,"
+        + "\"lostNodes\":1,\"unhealthyNodes\":0,\"decommissionedNodes\":0, \"rebootedNodes\":0,"
+        + "\"activeNodes\":277}}";
     return clusterMetrics;
   }
 

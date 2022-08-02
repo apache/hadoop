@@ -94,15 +94,6 @@ public class GetSubClustersInfoResponsePBImpl
   }
 
   @Override
-  public void setSubClusters(List<SubClusterInfo> subClusters) {
-    if (subClusters == null) {
-      builder.clearSubClusterInfos();
-      return;
-    }
-    this.subClusterInfos = subClusters;
-  }
-
-  @Override
   public void setSubClusters(Collection<SubClusterInfo> subClusters) {
     if (subClusters == null) {
       builder.clearSubClusterInfos();
