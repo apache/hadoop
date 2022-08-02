@@ -37,11 +37,11 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.common.BlockCache;
-import org.apache.hadoop.fs.common.BlockData;
-import org.apache.hadoop.fs.common.ExecutorServiceFuturePool;
-import org.apache.hadoop.fs.common.SingleFilePerBlockCache;
-import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.impl.prefetch.BlockCache;
+import org.apache.hadoop.fs.impl.prefetch.BlockData;
+import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
+import org.apache.hadoop.fs.impl.prefetch.SingleFilePerBlockCache;
+import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;

@@ -24,9 +24,9 @@ import java.nio.ByteBuffer;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.common.BlockData;
-import org.apache.hadoop.fs.common.BufferData;
-import org.apache.hadoop.fs.common.ExceptionAsserts;
+import org.apache.hadoop.fs.impl.prefetch.BlockData;
+import org.apache.hadoop.fs.impl.prefetch.BufferData;
+import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.junit.Assert.assertEquals;
