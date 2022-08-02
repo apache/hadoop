@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -104,11 +103,11 @@ class AbfsClientThrottlingAnalyzer {
   public void addBytesTransferred(long count, boolean isFailedOperation) {
     AbfsOperationMetrics metrics = blobMetrics.get();
     if (isFailedOperation) {
-      metrics.bytesFailed.addAndGet(count);
-      metrics.operationsFailed.incrementAndGet();
+      metrics.getBytesFailed().addAndGet(count);
+      metrics.getOperationsFailed().incrementAndGet();
     } else {
-      metrics.bytesSuccessful.addAndGet(count);
-      metrics.operationsSuccessful.incrementAndGet();
+      metrics.getBytesSuccessful().addAndGet(count);
+      metrics.getOperationsSuccessful().incrementAndGet();
     }
   }
 
@@ -137,16 +136,16 @@ class AbfsClientThrottlingAnalyzer {
   private int analyzeMetricsAndUpdateSleepDuration(AbfsOperationMetrics metrics,
                                                    int sleepDuration) {
     final double percentageConversionFactor = 100;
-    double bytesFailed = metrics.bytesFailed.get();
-    double bytesSuccessful = metrics.bytesSuccessful.get();
-    double operationsFailed = metrics.operationsFailed.get();
-    double operationsSuccessful = metrics.operationsSuccessful.get();
+    double bytesFailed = metrics.getBytesFailed().get();
+    double bytesSuccessful = metrics.getBytesSuccessful().get();
+    double operationsFailed = metrics.getOperationsFailed().get();
+    double operationsSuccessful = metrics.getOperationsSuccessful().get();
     double errorPercentage = (bytesFailed <= 0)
         ? 0
         : (percentageConversionFactor
         * bytesFailed
         / (bytesFailed + bytesSuccessful));
-    long periodMs = metrics.endTime - metrics.startTime;
+    long periodMs = metrics.getEndTime() - metrics.getStartTime();
 
     double newSleepDuration;
 
@@ -238,10 +237,10 @@ class AbfsClientThrottlingAnalyzer {
         }
 
         long now = System.currentTimeMillis();
-        if (now - blobMetrics.get().startTime >= analysisPeriodMs) {
+        if (now - blobMetrics.get().getStartTime() >= analysisPeriodMs) {
           AbfsOperationMetrics oldMetrics = blobMetrics.getAndSet(
               new AbfsOperationMetrics(now));
-          oldMetrics.endTime = now;
+          oldMetrics.setEndTime(now);
           sleepDuration = analyzeMetricsAndUpdateSleepDuration(oldMetrics,
               sleepDuration);
         }
@@ -253,23 +252,4 @@ class AbfsClientThrottlingAnalyzer {
     }
   }
 
-  /**
-   * Stores Abfs operation metrics during each analysis period.
-   */
-  private class AbfsOperationMetrics {
-    private AtomicLong bytesFailed;
-    private AtomicLong bytesSuccessful;
-    private AtomicLong operationsFailed;
-    private AtomicLong operationsSuccessful;
-    private long endTime;
-    private long startTime;
-
-    AbfsOperationMetrics(long startTime) {
-      this.startTime = startTime;
-      this.bytesFailed = new AtomicLong();
-      this.bytesSuccessful = new AtomicLong();
-      this.operationsFailed = new AtomicLong();
-      this.operationsSuccessful = new AtomicLong();
-    }
-  }
 }

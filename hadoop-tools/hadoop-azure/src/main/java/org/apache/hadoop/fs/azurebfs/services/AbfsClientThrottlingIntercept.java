@@ -48,7 +48,7 @@ public final class AbfsClientThrottlingIntercept {
   private static boolean isAutoThrottlingEnabled = false;
   private String accountName = "";
 
-  private synchronized static void setIsAutoThrottlingEnabled(boolean autoThrottlingEnabled) {
+  private synchronized void setIsAutoThrottlingEnabled(boolean autoThrottlingEnabled) {
     isAutoThrottlingEnabled = autoThrottlingEnabled;
   }
 
