@@ -46,9 +46,11 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -60,6 +62,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -91,12 +94,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -282,7 +287,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .entity(e.getLocalizedMessage()).build();
     }
 
-    List<SubClusterId> blacklist = new ArrayList<SubClusterId>();
+    List<SubClusterId> blacklist = new ArrayList<>();
 
     for (int i = 0; i < numSubmitRetries; ++i) {
 
@@ -295,7 +300,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             .entity(e.getLocalizedMessage()).build();
       }
 
-      LOG.debug("getNewApplication try #{} on SubCluster {}", i, subClusterId);
+      LOG.debug("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
 
       DefaultRequestInterceptorREST interceptor =
           getOrCreateInterceptorForSubCluster(subClusterId,
@@ -304,7 +309,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       try {
         response = interceptor.createNewApplication(hsr);
       } catch (Exception e) {
-        LOG.warn("Unable to create a new ApplicationId in SubCluster {}",
+        LOG.warn("Unable to create a new ApplicationId in SubCluster {}.",
             subClusterId.getId(), e);
       }
 
@@ -424,7 +429,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .build();
     }
 
-    List<SubClusterId> blacklist = new ArrayList<SubClusterId>();
+    List<SubClusterId> blacklist = new ArrayList<>();
 
     for (int i = 0; i < numSubmitRetries; ++i) {
 
@@ -441,7 +446,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             .entity(e.getLocalizedMessage())
             .build();
       }
-      LOG.info("submitApplication appId {} try #{} on SubCluster {}",
+      LOG.info("submitApplication appId {} try #{} on SubCluster {}.",
           applicationId, i, subClusterId);
 
       ApplicationHomeSubCluster appHomeSubCluster =
@@ -482,7 +487,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
                 .build();
           }
           if (subClusterId == subClusterIdInStateStore) {
-            LOG.info("Application {} already submitted on SubCluster {}",
+            LOG.info("Application {} already submitted on SubCluster {}.",
                 applicationId, subClusterId);
           } else {
             routerMetrics.incrAppsFailedSubmitted();
@@ -712,8 +717,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
           if (rmApps == null) {
             routerMetrics.incrMultipleAppsFailedRetrieved();
-            LOG.error("Subcluster {} failed to return appReport.",
-                info.getSubClusterId());
+            LOG.error("Subcluster {} failed to return appReport.", info.getSubClusterId());
             return null;
           }
           return rmApps;
@@ -873,8 +877,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
                   subclusterId, subcluster.getRMWebServiceAddress());
           return interceptor.getNode(nodeId);
         } catch (Exception e) {
-          LOG.error("Subcluster {} failed to return nodeInfo.",
-              subclusterId);
+          LOG.error("Subcluster {} failed to return nodeInfo.", subclusterId, e);
           return null;
         }
       });
@@ -953,58 +956,28 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public NodesInfo getNodes(String states) {
 
     NodesInfo nodes = new NodesInfo();
-
-    final Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = getActiveSubclusters();
-    } catch (Exception e) {
-      LOG.error("Cannot get nodes: {}", e.getMessage());
-      return new NodesInfo();
-    }
-
-    // Send the requests in parallel
-    CompletionService<NodesInfo> compSvc =
-        new ExecutorCompletionService<NodesInfo>(this.threadpool);
-
-    for (final SubClusterInfo info : subClustersActive.values()) {
-      compSvc.submit(new Callable<NodesInfo>() {
-        @Override
-        public NodesInfo call() {
-          DefaultRequestInterceptorREST interceptor =
-              getOrCreateInterceptorForSubCluster(
-                  info.getSubClusterId(), info.getRMWebServiceAddress());
-          try {
-            NodesInfo nodesInfo = interceptor.getNodes(states);
-            return nodesInfo;
-          } catch (Exception e) {
-            LOG.error("Subcluster {} failed to return nodesInfo.",
-                info.getSubClusterId());
-            return null;
-          }
-        }
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{String.class};
+      Object[] args = new Object[]{states};
+      ClientMethod remoteMethod = new ClientMethod("getNodes", argsClasses, args);
+      Map<SubClusterInfo, NodesInfo> nodesMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodesInfo.class);
+      nodesMap.values().stream().forEach(nodesInfo -> {
+        nodes.addAll(nodesInfo.getNodes());
       });
-    }
-
-    // Collect all the responses in parallel
-
-    for (int i = 0; i < subClustersActive.size(); i++) {
-      try {
-        Future<NodesInfo> future = compSvc.take();
-        NodesInfo nodesResponse = future.get();
-
-        if (nodesResponse != null) {
-          nodes.addAll(nodesResponse.getNodes());
-        }
-      } catch (Throwable e) {
-        LOG.warn("Failed to get nodes report ", e);
-      }
+    } catch (NotFoundException e) {
+      LOG.error("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      LOG.error("getNodes error.", e);
+    } catch (IOException e) {
+      LOG.error("getNodes error with io error.", e);
     }
 
     // Delete duplicate from all the node reports got from all the available
     // YARN RMs. Nodes can be moved from one subclusters to another. In this
     // operation they result LOST/RUNNING in the previous SubCluster and
     // NEW/RUNNING in the new one.
-
     return RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
   }
 
@@ -1172,13 +1145,53 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getNodeToLabels", argsClasses, args);
+      Map<SubClusterInfo, NodeToLabelsInfo> nodeToLabelsInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodeToLabelsInfo.class);
+      return RouterWebServiceUtil.mergeNodeToLabels(nodeToLabelsInfoMap);
+    } catch (NotFoundException e) {
+      LOG.error("Get all active sub cluster(s) error.", e);
+      throw new IOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      LOG.error("getNodeToLabels error.", e);
+      throw new IOException("getNodeToLabels error.", e);
+    }
   }
 
   @Override
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{Set.class};
+      Object[] args = new Object[]{labels};
+      ClientMethod remoteMethod = new ClientMethod("getLabelsToNodes", argsClasses, args);
+      Map<SubClusterInfo, LabelsToNodesInfo> labelsToNodesInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, LabelsToNodesInfo.class);
+
+      Map<NodeLabelInfo, NodeIDsInfo> labelToNodesMap = new HashMap<>();
+      labelsToNodesInfoMap.values().forEach(labelsToNode -> {
+        Map<NodeLabelInfo, NodeIDsInfo> values = labelsToNode.getLabelsToNodes();
+        for (Map.Entry<NodeLabelInfo, NodeIDsInfo> item : values.entrySet()) {
+          NodeLabelInfo key = item.getKey();
+          NodeIDsInfo leftValue = item.getValue();
+          NodeIDsInfo rightValue = labelToNodesMap.getOrDefault(key, null);
+          NodeIDsInfo newValue = NodeIDsInfo.add(leftValue, rightValue);
+          labelToNodesMap.put(key, newValue);
+        }
+      });
+      return new LabelsToNodesInfo(labelToNodesMap);
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowIOException("getLabelsToNodes error.", e);
+    }
+    return null;
   }
 
   @Override
@@ -1196,7 +1209,23 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeLabelsInfo getClusterNodeLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels", argsClasses, args);
+      Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
+      Set<NodeLabel> hashSets = Sets.newHashSet();
+      nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
+      return new NodeLabelsInfo(hashSets);
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
+    }
+    return null;
   }
 
   @Override
@@ -1214,7 +1243,23 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeLabelsInfo getLabelsOnNode(HttpServletRequest hsr, String nodeId)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class, String.class};
+      Object[] args = new Object[]{hsrCopy, nodeId};
+      ClientMethod remoteMethod = new ClientMethod("getLabelsOnNode", argsClasses, args);
+      Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
+           invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
+      Set<NodeLabel> hashSets = Sets.newHashSet();
+      nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
+      return new NodeLabelsInfo(hashSets);
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
+    }
+    return null;
   }
 
   @Override
@@ -1374,6 +1419,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest hsr)
+      throws AuthorizationException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
   public void setNextInterceptor(RESTRequestInterceptor next) {
     throw new YarnRuntimeException("setNextInterceptor is being called on "
         + "FederationInterceptorREST, which should be the last one "
@@ -1395,7 +1453,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   private <R> Map<SubClusterInfo, R> invokeConcurrent(Collection<SubClusterInfo> clusterIds,
-      ClientMethod request, Class<R> clazz) {
+      ClientMethod request, Class<R> clazz) throws YarnException {
 
     Map<SubClusterInfo, R> results = new HashMap<>();
 
@@ -1413,8 +1471,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           R ret = clazz.cast(retObj);
           return ret;
         } catch (Exception e) {
-          LOG.error("SubCluster {} failed to call {} method.", info.getSubClusterId(),
-              request.getMethodName(), e);
+          LOG.error("SubCluster {} failed to call {} method.",
+              info.getSubClusterId(), request.getMethodName(), e);
           return null;
         }
       });
@@ -1428,7 +1486,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           results.put(clusterId, response);
         }
       } catch (Throwable e) {
-        LOG.warn("SubCluster {} failed to {} report.", clusterId, request.getMethodName(), e);
+        String msg = String.format("SubCluster %s failed to %s report.",
+            clusterId, request.getMethodName());
+        LOG.warn(msg, e);
+        throw new YarnRuntimeException(msg, e);
       }
     });
     return results;

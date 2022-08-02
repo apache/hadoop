@@ -89,6 +89,7 @@ import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -954,6 +955,33 @@ public class RouterWebServices implements RMWebServiceProtocol {
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(req);
     return pipeline.getRootInterceptor().getContainer(req, res, appId,
         appAttemptId, containerId);
+  }
+
+  @PUT
+  @Path(RMWSConsts.SCHEDULER_CONF)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor()
+        .updateSchedulerConfiguration(mutationInfo, hsr);
+  }
+
+  @GET
+  @Path(RMWSConsts.SCHEDULER_CONF)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest hsr)
+      throws AuthorizationException {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor().getSchedulerConfiguration(hsr);
   }
 
   @VisibleForTesting

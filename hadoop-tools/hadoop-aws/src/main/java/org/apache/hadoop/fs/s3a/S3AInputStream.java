@@ -963,7 +963,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Override
   public void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
-
     LOG.debug("Starting vectored read on path {} for ranges {} ", pathStr, ranges);
     checkNotClosed();
     if (stopVectoredIOOperations.getAndSet(false)) {
@@ -978,6 +977,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     if (isOrderedDisjoint(sortedRanges, 1, minSeekForVectorReads())) {
       LOG.debug("Not merging the ranges as they are disjoint");
+      streamStatistics.readVectoredOperationStarted(sortedRanges.size(), sortedRanges.size());
       for (FileRange range: sortedRanges) {
         ByteBuffer buffer = allocate.apply(range.getLength());
         unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
@@ -987,6 +987,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       List<CombinedFileRange> combinedFileRanges = mergeSortedRanges(sortedRanges,
               1, minSeekForVectorReads(),
               maxReadSizeForVectorReads());
+      streamStatistics.readVectoredOperationStarted(sortedRanges.size(), combinedFileRanges.size());
       LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
               ranges.size(), combinedFileRanges.size());
       for (CombinedFileRange combinedFileRange: combinedFileRanges) {
@@ -1088,6 +1089,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       }
       drainBytes += readCount;
     }
+    streamStatistics.readVectoredBytesDiscarded(drainBytes);
     LOG.debug("{} bytes drained from stream ", drainBytes);
   }
 
@@ -1168,6 +1170,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     } else {
       readByteArray(objectContent, buffer.array(), 0, length);
     }
+    // update io stats.
+    incrementBytesRead(length);
   }
 
   /**
