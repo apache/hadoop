@@ -28,6 +28,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -87,7 +88,7 @@ public class AppInfo {
   protected String trackingUrl;
   protected String diagnostics;
   protected long clusterId;
-  private String rmClusterId;
+  protected String rmClusterId;
   protected String applicationType;
   protected String applicationTags = "";
   protected int priority;
@@ -188,13 +189,13 @@ public class AppInfo {
       this.finalStatus = app.getFinalApplicationStatus();
       this.clusterId = ResourceManager.getClusterTimeStamp();
       if (hasAccess) {
-        if(rm != null && rm.getConfig() != null) {
+        if (rm != null && rm.getConfig() != null) {
           try {
-            subClusterId = new SubClusterIdInfo(
-                (YarnConfiguration.getClusterId(rm.getConfig())));
-            rmClusterId =
-                this.getSubClusterIdInfo().toId().toString();
+            Configuration yarnConfig = rm.getConfig();
+            subClusterId = new SubClusterIdInfo(YarnConfiguration.getClusterId(yarnConfig));
+            rmClusterId = this.subClusterId.toId().toString();
           } catch (HadoopIllegalArgumentException e) {
+            subClusterId = null;
             rmClusterId = null;
           }
         }

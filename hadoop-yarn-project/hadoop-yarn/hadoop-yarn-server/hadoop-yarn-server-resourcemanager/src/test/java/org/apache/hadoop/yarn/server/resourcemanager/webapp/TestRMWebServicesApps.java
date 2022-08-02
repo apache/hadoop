@@ -1826,8 +1826,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     }
     assertEquals("incorrect number of elements", expectedNumberOfElements,
         info.length());
-    assertEquals("rmClusterId is incorrect", "subCluster1",
-        info.getString("rmClusterId"));
+    assertEquals("rmClusterId is incorrect", "subCluster1", info.getString("rmClusterId"));
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
         info.getString("name"), info.getString("applicationType"),
         info.getString("queue"), info.getInt("priority"),
