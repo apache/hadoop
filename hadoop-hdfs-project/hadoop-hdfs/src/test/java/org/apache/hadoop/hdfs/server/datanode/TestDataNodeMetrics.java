@@ -70,7 +70,6 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import javax.management.AttributeNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
@@ -592,7 +591,7 @@ public class TestDataNodeMetrics {
   }
 
   @Test
-  public void testNNRpcMetricsWithNonHA() throws Exception {
+  public void testNNRpcMetricsWithNonHA() throws IOException {
     Configuration conf = new HdfsConfiguration();
     // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
     // heartbeat periodically to NN during running test case, and bpServiceActor
@@ -600,16 +599,6 @@ public class TestDataNodeMetrics {
     conf.setTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY, 1, TimeUnit.HOURS);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
-    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-    final ObjectName mxbeanName =
-        new ObjectName("Hadoop:service=NameNode," +
-            "name=RpcDetailedActivityForPort" +
-            cluster.getNameNode().getNameNodeAddress().getPort());
-    try {
-      mbs.getAttribute(mxbeanName, "CommitBlockSynchronizationNumOps");
-    } catch (AttributeNotFoundException e) {
-      fail("Datanode protocol metrics have not been fully initialized.");
-    }
     DataNode dn = cluster.getDataNodes().get(0);
     MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
     assertCounter("HeartbeatsNumOps", 1L, rb);
