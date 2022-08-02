@@ -243,7 +243,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // go back and read from buffer is fCursor - limit.
       // There maybe case that we read less than requested data.
       long filePosAtStartOfBuffer = fCursor - limit;
-      if (firstRead && nextReadPos >= contentLength - 16 * ONE_KB) {
+      if (firstRead && nextReadPos >= contentLength - 20 * ONE_KB) {
         this.collectStreamMetrics = true;
         this.collectMetricsForNextRead = true;
         this.offsetOfFirstRead = nextReadPos;
