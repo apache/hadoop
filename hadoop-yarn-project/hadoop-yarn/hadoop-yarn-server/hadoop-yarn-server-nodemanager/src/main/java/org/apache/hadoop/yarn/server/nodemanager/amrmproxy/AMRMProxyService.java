@@ -587,7 +587,7 @@ public class AMRMProxyService extends CompositeService implements
       }
     }
 
-    if(isStopSuccess) {
+    if (isStopSuccess) {
       long endTime = clock.getTime();
       this.metrics.succeededAppStopRequests(endTime - startTime);
     } else {
@@ -633,7 +633,7 @@ public class AMRMProxyService extends CompositeService implements
 
       if (nextMasterKey != null) {
         MasterKey masterKey = nextMasterKey.getMasterKey();
-        if(masterKey.getKeyId() != amrmTokenIdentifier.getKeyId()){
+        if (masterKey.getKeyId() != amrmTokenIdentifier.getKeyId()) {
           Token<AMRMTokenIdentifier> localToken = context.getLocalAMRMToken();
           if (masterKey.getKeyId() != context.getLocalAMRMTokenKeyId()) {
             LOG.info("The local AMRMToken has been rolled-over."
