@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-class AbfsClientThrottlingInterceptFactory {
+final class AbfsClientThrottlingInterceptFactory {
 
   private AbfsClientThrottlingInterceptFactory() {
   }

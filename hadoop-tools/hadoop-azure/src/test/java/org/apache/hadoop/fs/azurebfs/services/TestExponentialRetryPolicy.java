@@ -31,7 +31,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+
 
 import java.util.Random;
 
@@ -39,7 +39,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import java.lang.reflect.Field;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import  org.apache.hadoop.fs.FileSystem;
