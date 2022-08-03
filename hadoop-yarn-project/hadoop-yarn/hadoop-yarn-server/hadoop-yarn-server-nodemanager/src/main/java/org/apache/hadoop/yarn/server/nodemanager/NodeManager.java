@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
@@ -146,6 +147,9 @@ public class NodeManager extends CompositeService
   private boolean shouldExitOnShutdownEvent = false;
 
   private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
+
+  private GenericEventTypeMetrics containerManagerEventTypeMetrics;
+
   /**
    * Default Container State transition listener.
    */
@@ -1007,7 +1011,12 @@ public class NodeManager extends CompositeService
    * Unit test friendly.
    */
   protected AsyncDispatcher createNMDispatcher() {
-    return new AsyncDispatcher("NM Event dispatcher");
+    dispatcher = new AsyncDispatcher("NM Event dispatcher");
+    containerManagerEventTypeMetrics = GenericEventTypeMetricsManager.create(
+        dispatcher.getName(), ContainerManagerEventType.class);
+    dispatcher.addMetrics(containerManagerEventTypeMetrics,
+        containerManagerEventTypeMetrics.getEnumClass());
+    return dispatcher;
   }
 
   //For testing
@@ -1051,5 +1060,17 @@ public class NodeManager extends CompositeService
   private NMLogAggregationStatusTracker createNMLogAggregationStatusTracker(
       Context ctxt) {
     return new NMLogAggregationStatusTracker(ctxt);
+  }
+
+  @VisibleForTesting
+  @Private
+  public AsyncDispatcher getDispatcher() {
+    return dispatcher;
+  }
+
+  @VisibleForTesting
+  @Private
+  public GenericEventTypeMetrics getContainerManagerEventTypeMetrics() {
+    return containerManagerEventTypeMetrics;
   }
 }
