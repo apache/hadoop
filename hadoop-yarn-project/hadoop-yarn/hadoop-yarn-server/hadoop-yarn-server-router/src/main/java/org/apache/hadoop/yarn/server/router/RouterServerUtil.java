@@ -137,6 +137,7 @@ public final class RouterServerUtil {
       interceptorClassNames.add(item.trim());
     }
     return interceptorClassNames;
+  }
 
   /**
    * Throws an IOException due to an error.
