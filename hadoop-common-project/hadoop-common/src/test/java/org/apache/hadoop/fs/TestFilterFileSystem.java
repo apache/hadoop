@@ -148,6 +148,7 @@ public class TestFilterFileSystem {
      */
     MultipartUploaderBuilder createMultipartUploader(Path basePath);
 
+    Iterator<LocatedFileStatus> listLocatedStatus(Path f, boolean recursive);
     Iterator<LocatedFileStatus> listLocatedStatus(Path f,
         PathFilter filter, boolean recursive);
   }

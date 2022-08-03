@@ -2077,7 +2077,7 @@ public abstract class FileSystem extends Configured
    */
   private void listStatus(ArrayList<FileStatus> results, Path f,
       PathFilter filter, boolean recursive) throws FileNotFoundException, IOException {
-    FileStatus listing[] = listStatus(f, recursive);
+    FileStatus[] listing = listStatus(f, recursive);
     if (listing == null) {
       throw new IOException("Error accessing " + f);
     }
@@ -2414,8 +2414,7 @@ public abstract class FileSystem extends Configured
       final Path f, final boolean recursive)
   throws FileNotFoundException, IOException {
     return new RemoteIterator<LocatedFileStatus>() {
-      private RemoteIterator<LocatedFileStatus> curItor =
-        listLocatedStatus(f, recursive);
+      private RemoteIterator<LocatedFileStatus> curItor = listLocatedStatus(f, recursive);
       private LocatedFileStatus curFile;
 
       @Override

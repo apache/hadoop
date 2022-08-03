@@ -19,7 +19,6 @@ package org.apache.hadoop.mapreduce.lib.input;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -465,10 +464,10 @@ public class TestFileInputFormat {
             new FileStatus(10, false, 1, 150, 150, new Path("test:/a1/file1")) };
       } else if (f.toString().equals("test:/a1/a2")) {
         return new FileStatus[] {
-            new FileStatus(10, false, 1, 150, 150,
-                new Path("test:/a1/a2/file2")),
-                new FileStatus(10, false, 1, 151, 150,
-                    new Path("test:/a1/a2/file3")) };
+            new FileStatus(10, false, 1, 150,
+                150, new Path("test:/a1/a2/file2")),
+            new FileStatus(10, false, 1, 151,
+                150, new Path("test:/a1/a2/file3"))};
       }
       return new FileStatus[0];
     }
